@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has 137 scenarios. X130 adds batch container Move/Undo/Redo and X131
-adds the remaining resolve operations. X132 adds multiple-range formatting and negotiated save hooks; their first runs are pending. The L69–L71/PLAT2c batch passes the ten selected cases
+The current catalog has 139 scenarios. X130 adds batch container Move/Undo/Redo and X131
+adds the remaining resolve operations. X132 adds multiple-range formatting and negotiated save hooks, X133 linked editing, and X134 external source watching; their first runs are pending. The L69–L71/PLAT2c batch passes the ten selected cases
 CFG2/X105/X118/X122/X124–X129 in both hosts across focused runs. IntelliJ's final receipts are
 `run-8616709537315408794` (eight cases) and `run-431060674485649448` (X124/X128), both with zero
 IDE errors. VS Code's receipts are `run-KEzKf8` (six cases) and `run-AW9amt` (four cases).
@@ -141,6 +141,63 @@ without external XDK paths. XML must resolve from the production bundle, while r
 remains unavailable because it is a binary library declaration. The full XDK, including XML/JSONDB
 and the other distribution libraries, is now shared by production and compiler tests.
 
+## Acceptance checklist for the 2026-09-30 batch
+
+Scope: `9f2c5ae8c` (external watches), `c748f9831` (native moves), `3888c15f2`
+(resolve/action application), `448b7f8a1` (save/sync/ranges), `19ba6422d` (labels and upstream
+markers), and the planned settings work in `4ccbda4d9`. Read the result as a checklist, not a
+passing receipt. Backend, protocol and native UI evidence are separate. The current catalog has
+139 shared scenarios; X130–X132 are added by this batch, and X124 has stronger assertions.
+
+Run in a disposable compiler-mode workspace using the build/run instructions below. Keep user
+projects out of destructive move/rename tests. For each editor record commit, catalog hash, selected
+IDs, pass/fail/not-run, IDE errors, language-server errors and logs. A timeout is a maximum wait
+for a response/state transition, not a prescribed pause. Do not silently retry a completed edit
+or Undo against an already modified fixture.
+
+| Check | Exact exercise and required result | Existing automation / remaining evidence |
+| --- | --- | --- |
+| External resource creation | Run X124 with the editor continuously focused. Create missing `generated/assets` and the resource from an external terminal; delete/recreate it, then switch to a missing replacement root. Problems must update without opening those folders or invoking Refresh. | Strengthened X124 in both drivers; first execution pending. |
+| External source changes | Put `Library.x` outside the workspace, configure Library and a local Consumer explicitly, open only Consumer, then change Library's return type on disk from Int to String and back. Problems must appear/clear and Definition must still find Library. Repeat after deleting/recreating the external source directory. | New X134 in both drivers covers unopened external sources, edit, delete and recreate; first execution pending. Directory deletion/recreation remains an additional manual check. |
+| Watch ownership and idle work | Configure two modules sharing an external root. Remove one, verify the other still updates; replace the last reference, then edit the retired root. Close/reopen the project and restart the server. Verify no obsolete diagnostic publication, duplicate subscription, growing server-process count or repeated idle compiler jobs. | Lease/coalescing/disposal unit tests; manual lifecycle/idle observation still required. A scheduled VFS refresh is not itself a compilation. |
+| Batch container move | Run X130: select both module containers, move them into `destination`, keep members/resources closed, verify the consumer, then Undo once and Redo once. All paths and bytes must match the shared fixture in each state. | X130 in both drivers; IntelliJ drives native Move. VS Code applies resource edits; Explorer drag/drop is a separate manual check. |
+| Single-file and package moves | Run X128's file/package Rename and X118's container move. Also move one source to an existing sibling directory through native Move; verify references, resources and one Undo/Redo. | X118/X128 shared; extra cross-directory single-file UI exercise remains manual. |
+| Collision and invalid destinations | Repeat Move with an existing file, existing directory, missing destination parent, target inside its own source, overlapping parent/child selection and duplicate target names. Cancel the dialog. Each rejected/canceled operation must leave every source, setting and path unchanged. | `FileMoveTargetsTest` covers filesystem validation; dialog/error presentation and cancellation still need manual checks. |
+| Source changes during proof | Start a move/rename on a larger fixture, edit an affected open buffer or create a destination collision while proof is pending, or cancel the operation. A stale result must not overwrite the new text/path. The next fresh operation must work. | Existing snapshot/epoch regressions and X57/X118; move-specific concurrent timing is not claimed by X130. Use tracing or deterministic backend barriers when the race cannot be reproduced manually. |
+| Deliberately refused operations | Try explicit-graph module relocation and a cross-package move requiring qualification changes; also try a read-only bundled-library declaration. Verify the reason, unchanged files/settings and responsive IDE. | Existing refusal tests/X101 and manual checks. Normal LSP null responses cannot veto arbitrary host file moves; compiler preflight claims apply to registered native actions. |
+| Lazy action listing and application | Run X105, X122 and X127. Opening/canceling intentions or resolving an action must not edit the document. Selecting the import/cleanup action must clear the intended diagnostic; one Undo and Redo must restore exact text and Problems. | Shared cases exercise the installed clients; IntelliJ's newly restored lazy-action path must pass again. |
+| Other lazy resolvers | Run X131, then inspect the native Run lens, comment URL, inferred type/parameter inlays and workspace symbol navigation. Initial/deferred properties must agree, positions and command arguments survive, and source edits invalidate old handles. | X131 is protocol acceptance. Existing feature UI scenarios cover presentation; it is not evidence that a tooltip/popup was displayed for every resolved property. |
+| Resolver lifetime | Resolve handles after a dependency/configuration change, close/reopen or server restart; send a foreign/evicted handle through a protocol test. Require a stale/invalid response, no stale edit and no leaked graph retained by handles. Eager clients must still receive complete payloads. | Resolve-store/service regressions; X127/X131 cover source-edit expiration only. Inspect test coverage before counting the other transitions complete. |
+| Normal save and formatting | Run X132, save a dirty file and verify disk/Problems; exercise whole-file, selection and on-type formatting with editor preferences both enabled and disabled. Saving must not unexpectedly reformat or block behind compilation. | X132 checks overlapping/disjoint range responses and negotiated default save hooks; existing formatting scenarios cover normal UI. Native save-on-large-compilation remains a manual responsiveness check. |
+| Incremental text transport | Run `DocumentSynchronizationTest`: sequential/mixed full-and-range changes, UTF-16 surrogate pairs, CRLF/bare CR, old versions, invalid batch atomicity and Full-mode refusal. The new packaged stdio test also negotiates incremental transport before sending these methods. | Backend and packaged stdio tests added. No shipped plugin setting exists yet; UI5/UI7 track wiring and native acceptance. This is not incremental compiler support. |
+| Opt-in save edits and range failures | Test `xtcDocumentSync.formatOnSave` independently from incremental transport; verify no extra compilation, unchanged server buffer until client didChange, malformed/reversed/out-of-document ranges and duplicate/conflicting formatting edits. Cancel/stale requests must not apply edits. | Backend tests plus X132's default mode. Opt-in native save UI, conflict/stale/cancel coverage and real transport coverage must have their own receipts; do not infer them from a default no-op. |
+| Terminology and compatibility | Inspect server panels, status bar, commands, Move/Rename dialogs, startup/error messages, templates and playbook progress. Labels should say Ecstasy; `.x`, `.xtc`, `xtc.*`, environment names and class/file prefixes remain technical identifiers. | Packaging/manifest checks plus visual inspection. Search production workarounds for `// TODO LSP4IJ:`; removal conditions must name the behavior to revalidate. |
+| Configuration UI follow-up | For UI1–UI7, later verify Apply/Cancel/Reset, user/project inheritance, multi-root scope, invalid-value retention, restart-required settings, live refresh and absence of duplicate format-on-save. | Planned, not implemented by this batch. The [settings inventory](../../docs/errs-integration-plan.md#editor-configuration-and-feature-controls-ui1ui7) is the acceptance source; no invented UI instructions for backend-only options. |
+
+Focused automated gate after compilation/unit checks: CFG2, X57, X101, X105, X118,
+X122–X134 in each host, plus the existing native lens/link/inlay/workspace-navigation checks
+when their display path changed. Run both newly added and modified tests. A full catalog checkpoint
+and longer idle/restart/memory runs remain the submission gate under L82; selected cases alone
+cannot establish full playbook completion.
+
+Backend command for the save/sync/range checks (no editor window):
+
+```bash
+./gradlew :lang:lsp-server:test --tests '*DocumentSynchronizationTest' \
+  -Plsp.adapter=compiler -PincludeBuildLang=true -PincludeBuildAttachLang=true \
+  --rerun-tasks --no-build-cache
+```
+
+Configuration examples belong in a custom client's initialization payload, **not** in an editor's
+settings file until UI5 wires a setting to them:
+
+```json
+{"initializationOptions":{"xtcDocumentSync":{"incremental":true,"formatOnSave":false}}}
+```
+
+Full transport and no server save edits are the defaults. Native editor format-on-save may already
+invoke normal formatting; enabling a second save-formatting path must not apply formatting twice.
+
 ## Feature Implementation Status
 
 > See [plan-ide-integration.md](plans/plan-ide-integration.md) for the canonical feature implementation matrix comparing Mock, Tree-sitter, and Compiler adapter capabilities.
@@ -148,12 +205,14 @@ and the other distribution libraries, is now shared by production and compiler t
 The [active compiler completion checklist (L55–L82)](../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist)
 tracks the remaining implementation and validation work. All 25 project-defined adapter
 capabilities have compiler implementations, many with explicit bounds; this is not full LSP
-coverage. Pull diagnostics, token range/delta, lazy resolve,
-broader refactorings, monikers, inline completion/values, colors and notebooks are among the
-absent features. Use the [absent-feature inventory](plans/plan-ide-integration.md#compiler-completeness-snapshot)
+coverage. Pull diagnostics and token range/delta have passing checkpoints. All six lazy-resolve
+operations, broader native moves and save/sync/formatting additions are implemented with batch
+validation pending. General refactorings, monikers, inline completion/values, colors and notebooks
+still have implementation gaps. Use the [absent-feature inventory](plans/plan-ide-integration.md#compiler-completeness-snapshot)
 to distinguish an unsupported feature from a failed playbook case.
 
-IntelliJ implements and passes all 113 shared scenarios, plus startup. The complete native run
+The earlier 113-scenario IntelliJ checkpoint passed, plus startup; that receipt does not cover
+the current 139-scenario catalog. The complete native run
 includes the 50 newly added cases and X20/X81/X82 assertion additions, with zero IDE errors.
 The [L60 validation checklist](../../docs/errs-integration-plan.md#intellij-parity-backlog-l60)
 records receipts and actual client gaps. L60 is complete. L55 passes both its 24-root memory
@@ -1122,7 +1181,7 @@ prefix and select from the completion popup).
 
 **LSP Method:** `textDocument/codeLens`
 **Status:** ✅ Done
-**Works with:** Tree-sitter adapter (both IntelliJ and VS Code)
+**Works with:** Tree-sitter and compiler adapters (both IntelliJ and VS Code)
 
 Code lenses appear as inline annotations above module declarations. LSP4IJ (IntelliJ)
 and VS Code render them automatically from the LSP server response — no plugin code needed.
@@ -1140,7 +1199,7 @@ and VS Code render them automatically from the LSP server response — no plugin
 
 **LSP Method:** `textDocument/semanticTokens/full`
 **Status:** ✅ Done (enabled by default)
-**Works with:** Tree-sitter adapter (both IntelliJ and VS Code)
+**Works with:** Tree-sitter and compiler adapters (both IntelliJ and VS Code)
 
 Semantic tokens layer on top of TextMate highlighting, providing AST-aware coloring
 that TextMate's regex patterns cannot achieve. The server logs `semantic tokens ENABLED`
@@ -1694,7 +1753,7 @@ this to workspace settings (`.vscode/settings.json`):
 
 No restart is needed. Relative URIs require one workspace folder; use absolute file URIs for
 multi-root workspaces. Other clients can supply `initializationOptions.xtcCompiler` or the
-`xtc.compiler` configuration section. In IntelliJ, use LSP4IJ's XTC Language Server
+`xtc.compiler` configuration section. In IntelliJ, use LSP4IJ's Ecstasy Language Server
 **Configuration** JSON with nested `xtc.compiler.sourceModules`, as shown in the
 [IntelliJ instructions](../intellij-plugin/README.md#compiler-source-module-configuration).
 These are IDE-wide server settings; there is no dedicated XTC project graph UI.
@@ -2139,7 +2198,7 @@ module Advanced {
 | X122 | At Box in each shared Actions variant, apply Implement or Override, then Undo/Redo/Undo. Cover ordinary signatures, a missing implementation diagnosed at construction, a conditional multiple return with a parameterized type/default, a generic method, an existing named call through a descendant, atomic implementation of all required members, a bundled Iterator contract, a compound return and fresh literal-default repair. Finish with an already implemented contract. | Both editors discover the action, compare the complete generated source and compile it. Native history restores exact source; the construction diagnostic returns after Undo and clears after Redo. No duplicate implementation is offered. |
 
 | X123 | Replace Navigation.x with the shared broken source, observe Problems, pull diagnostics twice with the returned result ID, repair the source, and pull using the old ID. Restore the fixture. | Both editors display and clear the compiler error. The installed connection returns full, unchanged, then empty full reports with a new result ID. |
-| X124 | Configure an external resource directory for Assets.x; test Reset and Apply in IntelliJ, explicit empty roots and restoration in VS Code; create, delete and recreate data.txt outside the workspace. | Missing-resource diagnostics clear and return through native file watchers; settings preserve the selected roots. |
+| X124 | Configure a nonexistent nested external resource directory for Assets.x; test Reset/Apply, empty roots, create/delete/recreate data.txt, then replace the configured root with another missing directory and create it. Keep the editor focused; do not open or manually refresh the external directory. | Missing-resource diagnostics clear and return through automatic native watchers; settings preserve the selected roots. Old receipts with manual VFS refresh do not count for this version. |
 | X125 | Hover a generic echo call; request signature help before an existing positional/named argument; complete direct and chained `.tr()`; navigate the narrowed JsonObject variable's type. | Hover identifies echo, active parameters are 1/0, completion offers trim, and type definition opens bundled Map.x. |
 | X126 | Request full tokens, insert a leading newline, request a delta and a range when negotiated, then close/reopen and request using the old ID. | Applying edits reconstructs the full result; empty ranges are empty; retired IDs return full data. Unsupported client operations are refused explicitly. |
 | X127 | Request an unused-import action, resolve its edit when negotiated, edit the source, then try resolving the old handle. | Initial lazy actions omit edits; resolve returns versioned edits without changing the title; obsolete handles are refused. Eager-only clients retain complete actions. |
@@ -2150,6 +2209,8 @@ module Advanced {
 
 | X131 | Request code lenses, document links, inlay hints and workspace symbols; resolve deferred properties when negotiated; edit the source and retry old handles. | Stable positions/labels, preserved command arguments, complete resolved payloads and explicit stale-handle refusal. Both drivers use their installed client connection; existing UI cases cover presentation/navigation. |
 | X132 | Request formatting for overlapping and disjoint line ranges, then negotiated pre-save hooks with default options. | Formatting edits are sorted and deduplicated; default save hooks return no edits. Both clients retain the unchanged buffer. Incremental UTF-16/CRLF patches and opt-in save edits have backend regression coverage. |
+| X133 | Use two methods with same-spelled locals. Request linked editing on one local, on a type and on a parameter; introduce a source error, then repair it. | Exactly that local declaration/use pair is linked; unrelated bindings, nonlocal symbols and invalid-source results stay unlinked. Both drivers assert the installed protocol; native linked-typing presentation remains separate. |
+| X134 | Configure an unopened Library.x outside the workspace and a local consumer. Change its return type externally, restore it, delete it and recreate it. | Consumer Problems appears/clears from OS file events without opening Library or manually refreshing VFS in either host. |
 
 For a project using the updated Gradle plugin, run `./gradlew exportXtcLspModel` in that project's
 root to export `.gradle/xtc/lsp-model.json`. Run `./gradlew prepareXtcLspModel` to process resources
@@ -2358,26 +2419,54 @@ The single automated check that exercises the manifest end-to-end:
 
 It downloads a pinned VS Code build into `.vscode-test/`, loads the extension from the build tree, opens `src/test/fixtures/hello.x`, and asserts `editor.document.languageId === 'xtc'`. Runs in <30 s after the first cached download.
 
-This is the only automated gate for V1/V2 (file association); everything else in this playbook is interactive. Wire `testVscodeExtension` into CI when you want a continuous canary for the manifest pipeline (needs `xvfb` on headless Linux runners — the wrapper auto-detects).
+This is the dedicated automated gate for V1/V2 (file association). The compiler shared scenarios also automate many provider/host workflows; the visual and physical-input checks in this section remain manual. Wire `testVscodeExtension` into CI when you want a continuous canary for the manifest pipeline (needs `xvfb` on headless Linux runners — the wrapper auto-detects).
 
 ---
 
-## Future Enhancements
+## Additional feature acceptance and remaining gaps
 
 ### 20. Linked Editing Ranges
 
-Linked editing ranges enable rename-on-type: when the cursor is on an identifier,
-all same-name occurrences in the file are highlighted and edited simultaneously.
+The compiler adapter implements linked ranges for repeated, rename-eligible **local variables**
+in one successful source snapshot. X133 now checks identity separation, nonlocal refusals, invalid
+source and recovery in both installed transports. Linked editing has no proposed-name proof;
+use Rename for binding-preserving refactoring. It does not link arbitrary same-spelled names or
+cross-file occurrences.
 
 | # | Test | Steps | Expected |
 |---|------|-------|----------|
-| 20.1 | Basic linked editing | Place cursor on a variable name used multiple times in a method → trigger linked editing (Ctrl+Shift+F2 in VS Code, or via LSP) | All occurrences highlighted; typing renames all simultaneously |
-| 20.2 | Single occurrence | Place cursor on identifier used only once | No linked editing ranges returned (need 2+ occurrences) |
-| 20.3 | Parameter name | Place cursor on a method parameter name used in the body | Parameter declaration and all uses linked |
-| 20.4 | Class name | Place cursor on a class name that appears in the file | All same-name occurrences linked (same-file, text-based) |
-| 20.5 | Non-identifier | Place cursor on a keyword or literal | No linked editing ranges |
+| 20.1 | Local identity | Use X133's two methods with same-spelled locals; request linked ranges on the first local. | Only its declaration and use are returned; second method untouched. |
+| 20.2 | Single occurrence | Declare an unused local; request linked ranges. | No linked range set requiring multiple occurrences. Backend coverage exists; add this variant to shared acceptance when extending X133. |
+| 20.3 | Unsupported symbols | Request linked ranges for a parameter, type/class, property, keyword or literal. | Compiler returns no linked ranges. Tree-sitter's heuristic scope is different. X133 includes type and parameter; remaining token classes are manual/adapter tests. |
+| 20.4 | Broken/repaired source | Introduce an unresolved type, request links, then repair it. | Broken semantic snapshots yield no linked edits; local ranges return after repair. |
+| 20.5 | Native presentation | Enable the editor's linked-editing feature if supported; type an innocuous local-name change and undo it. | Check synchronized occurrences, cursor/selection and exact restoration. If this host only exposes the protocol, record UI support as unavailable; do not substitute textual multi-cursor selection. |
 
-> **Adapter support**: TreeSitter (same-file text matching). Cross-file linked editing requires compiler/SemanticModel.
+### Existing-feature coverage audit (2026-09-30)
+
+All adapter feature families have implementation checks, but the shared catalog is not a claim
+of every native interaction or every language form. The following checks supplement existing
+sections instead of silently counting provider responses as complete UI acceptance:
+
+| Feature family | Existing shared evidence | Additional manual or targeted acceptance still needed |
+| --- | --- | --- |
+| Diagnostics and Problems | X1/X2/X23/X27/X46–X52/X123, 7a.8/7a.9 | Inspect error/warning presentation, source code and related-location navigation in Problems; verify closed/deleted URIs, duplicate-free warnings, configuration failures without modal loops, and refresh without changing buffer versions. Long editing/idle/restart runs are distinct from one successful correction. |
+| Completion and signature UI | X6–X20/X70–X98/X106–X108/X125 | Keyboard and mouse acceptance, Escape without edits, overload selection/active parameter after retrigger, IME/non-ASCII identifiers and end-of-file/no-final-newline boundaries. Existing UTF-16/CRLF and syntax-recovery variants remain mandatory; untested forms are not implied by a fitting result. |
+| Navigation, symbols and hierarchy | X3–X5/X21–X22/X28/X33–X44/X59/X63–X69/X99–X101/X131 | Native workspace-symbol search/navigation for closed roots, multiple declaration targets, back navigation, ambiguous/missing source attachments, inherited generic/compound edges and stale closed-file handles. Do not infer a complete conditional-mixin hierarchy or dynamic call graph. |
+| Highlights, folds and selection | X1/X4/X41/X92 and L56 startup test | Exact nested selection expansion/shrink, empty/recovered document fallback, folding boundaries after closing/reopening or deleting text, and theme/read/write visual distinctions. Startup race assertions are a separate harness test, not the normal readiness wait. |
+| Inlay hints | X42/X131 | Enable/disable through native controls, inspect tooltip rendering for locals/parameters/lambdas, verify no misleading names for unnamed function calls, named arguments or omitted defaults. A protocol tooltip does not prove the UI renders it. |
+| Formatting | X31/X132; backend token-preservation tests; sections 13–13c | Apply full/range/on-type edits through native actions; verify literal and multiline-string/comment bytes, CRLF, tabs, final-newline policy, untouched lines and idempotence. Check real supported settings; a max-line-width control does not establish wrapping. These variants are not all shared-driver scenarios yet. |
+| Document links | X131 plus lexical unit tests; section 15 | Click HTTP(S) URLs in comments/strings; verify exact ranges and absence of invented import/file/unsupported-scheme links. Malformed/partial literals must not create arbitrary targets. External browser launching is a manual action, separate from resolving a URI. |
+| Code lenses / Run | X131 verifies lens identity and command arguments; section 18 | Verify native lens placement and invocation target, no lens for an ordinary class-only member, and current arguments after moving a file. Successful persistent execution/rerun is **R1–R8 work**, not established by showing a Run lens. |
+| Semantic tokens | X41/X126, existing token tests; section 19 | Inspect theme fallback, enable/disable behavior, UTF-16/range clipping, edits/close/restart with old result IDs and refresh. Audit per-token claims (e.g. deprecated tags) against actual modifiers rather than claiming every row for every adapter. |
+| Rename, actions and resource edits | X53–X63/X102–X105/X109–X122/X127–X130 | Collision/capture refusals, cancellation, stale documents, graph persistence, closed consumers, one Undo/Redo and source text plus filesystem bytes; see the batch matrix. Explorer drag/drop and arbitrary third-party edit application are separate host paths. |
+| Discovery, paths and build settings | CFG1–CFG3/X99/X100/X124/X129/X134 | Multiple roots, Unicode/space-containing paths, symlinks, project close/reopen and external shared watch leases. Gradle-import failure, missing generated resources and no-Gradle projects must retain usable last-valid inputs and show actionable status. |
+| Generic editor integration | Separate sections 1, 16, 17 and VS Code V-cases | File association, TextMate fallback, comment/uncomment, templates/snippets, keybindings, plugin reload and Community-only startup. Compiler shared scenarios do not replace these checks or a default Tree-sitter smoke run. |
+| Reliability and configuration | X29/X30/X51/X57 plus process/retention suites | Cross-platform/remote filesystems, large-workspace latency/heap bounds, prolonged run/stop/crash cycles, cancellation under queue pressure, and UI1–UI7 settings acceptance remain explicit L82 gates. |
+
+A catalog entry's `coverage: full` means the driver implements that **case's stated assertions**;
+it does not mean the entire feature family is exhaustive. Manual checks should record pass/fail/
+unavailable/not-run and a reason. Promote repeatable missing variants into shared data and both
+drivers as they are implemented; keep genuine visual/OS/runtime checks explicitly separate.
 
 ### Semantic Tokens: Current Scope and Follow-ups
 
@@ -2440,7 +2529,7 @@ See the [L55/L61/L62 receipts](../../docs/errs-integration-plan.md#teaching-work
 ### Rename extension batch acceptance
 
 X119–X121 are shared by both drivers and add primary-header properties, lambda captures and
-escaped method values. The catalog now contains 126 cases; X119–X121 pass in VS Code
+escaped method values. At that checkpoint the catalog contained 126 cases; X119–X121 pass in VS Code
 `run-c7xgn7` and IntelliJ `run-14634841832018763989`. The latter also passes X57, X118 and
 CFG1–CFG3 plus START with zero IDE errors. VS Code's single-folder settings correction passes
 X118 and CFG1–CFG3 in `run-Z5w8sz`. No full 126-case receipt is claimed. Source-graph scope receipts on
