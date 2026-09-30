@@ -101,6 +101,7 @@ internal class PopupInspection(
 ) {
     private val document = driver.cast(editor.document, DocumentVersion::class)
     private val stamp = document.getModificationStamp()
+    private val originalText = editor.text
     private val nativeEditor = editor.editor
 
     fun recover() {
@@ -113,7 +114,8 @@ internal class PopupInspection(
     /** A cold intention request may populate its cache without opening a menu. */
     fun reopenUnapplied() {
         check(document.getModificationStamp() == stamp) {
-            "Source changed during popup inspection; refusing to replay an action"
+            "Source changed during popup inspection; refusing to replay an action. " +
+                "Before: ${originalText.take(300)}; now: ${editor.text.take(300)}"
         }
         driver.withContext(OnDispatcher.EDT) {
             driver.utility(NativeEditorUi::class).closeCompletion(nativeEditor)
