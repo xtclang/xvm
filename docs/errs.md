@@ -1,9 +1,11 @@
-Current checkpoint: L80/L81 protocol hardening and mutable-state/deprecated-API audit. Shared
-X136/X137/X140/X141 pass in both editors (146-scenario catalog), plus IntelliJ startup with zero
-IDE errors. Packaged transport passes 73 tests and IntelliJ unit tests pass 74; the full backend
-run and focused fixture corrections are detailed in the [protocol validation record](errs-integration-plan.md#protocol-hardening-batch-l80l81-2026-09-30).
-L80/L81 retain broader protocol work, and new L83 tracks missing constant-folded property-initializer
-semantic facts. Three remaining concurrency investigations are explicit in [the audit](errs-audit.md#mutable-state-and-deprecated-api-audit-2026-09-30-checkpoint).
+Current implementation checkpoint: three concurrency fixes, L83 detached initializer facts, and
+L80/L81 capability/partial-result/indexing follow-ups are committed separately. The shared catalog
+now contains 148 scenarios (new X142/X143); backend/transport validation and selected acceptance
+in both editors pass, with focused corrections documented in the receipt. The earlier
+X136/X137/X140/X141 receipt remains valid for that earlier scope, not this new batch. See the
+[follow-up extraction and validation record](errs-integration-plan.md#concurrency-and-initializer-follow-up-batch-2026-09-30)
+and [wire-format audit](errs-audit.md#l80-wire-format-and-edit-application-audit). Generic IntelliJ
+server-initiated edit version validation remains an explicit LSP4IJ boundary.
 
 # Threading `errs` through the compiler
 
@@ -2527,9 +2529,10 @@ initializers continue to validate the source-owned method normally. No AST field
 The hook belongs in this AST node because it owns the fold-versus-method decision and temporary
 method lifetime. `InitializerBinding` is in `org.xvm.compiler`, alongside `InvocationBinding`:
 these are successful full-compilation facts, not partial syntax. The existing attempt collector
-publishes them only for surviving source properties and clears its scratch maps. The additive
-`Compilation.initializerBindings()` accessor retains all older construction overloads. LSP model
+publishes them only for surviving source properties and clears its scratch maps. The new
+`Compilation.initializerBindings()` accessor retains all older construction overloads; record-pattern
+consumers must add the eighth component under the existing unreleased-API migration policy. LSP model
 conversion remains in Kotlin under `lang`; constants must still be copied on the compiler worker.
 
-Backend identity/navigation/rename regressions and shared X142 are added; validation is pending the
-combined run after this batch's remaining protocol changes.
+Backend identity/navigation/rename/token regressions and shared X142 pass in both editors,
+including native rename and Undo. The follow-up receipt records failed runs and corrections.
