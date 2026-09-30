@@ -1173,3 +1173,12 @@ writing. New dialogs, configuration/folder changes and model watcher events inva
 drafts; disposal retires them too. The resulting message asks the user to reopen the dialog rather
 than replacing newer settings. Extension regressions exercise invalidation, actual settings changes
 and disposal. Validation is batched with the remaining follow-ups.
+
+### Follow-up: disk indexing and editor overlays
+
+The Tree-sitter indexer now owns per-file revisions under its existing native-parser lock. Disk
+reads publish only into the revision that requested them, and scans/watcher events cannot replace
+an open buffer. Compilation indexes open buffers during initial scanning too. Closing restores
+the current disk contents (or removes a deleted/untitled file), while reopening invalidates an
+outstanding close read. Controlled read barriers cover these interleavings. No additional parser
+or AST locks are introduced. Validation is batched with the remaining follow-ups.
