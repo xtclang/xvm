@@ -1201,11 +1201,13 @@ or AST locks are introduced. The controlled regressions pass without skips.
 - Diagnostics/symbols currently emit no tags; no tag capability is needed until producers add them.
   Location results remain ordinary locations, valid with or without location-link support.
 - IntelliJ selected lazy actions and native Rename/Move use `XtcRenameEdit` snapshots, checked in
-  the write command. Generic server-initiated `workspace/applyEdit` still uses LSP4IJ's unchecked
-  version path; its document synchronizer exposes no public version accessor. Current IntelliJ
-  flows do not use that path, and the new legacy command route is not negotiated by literal clients.
-  A `TODO LSP4IJ:` now records this remaining boundary in `XtcLanguageClient`. Do not claim generic
-  server-initiated native edit acceptance from the existing rename/action tests.
+  the write command. Generic server-initiated text edits now reuse `DocumentStartupMessages` sent
+  versions/text/ownership and recheck all targets in one native Undo command. Closed versioned
+  documents and ambiguous reused versions after reopen are refused. Resource, snippet and
+  confirmation edits remain outside this generic path. `TODO LSP4IJ:` documents the upstream
+  version-validation gap in `XtcClientFeatures`. New X144 and unit regressions are written;
+  batched acceptance remains pending. Existing rename/action receipts do not establish X144.
+
 
 Regressions and updated realistic client fixtures pass in the focused backend and packaged stdio suites.
 
