@@ -31,11 +31,11 @@ export async function run(): Promise<void> {
     mocha.addFile(path.join(__dirname, 'playbook.test.js'));
     const results: { id: string; title: string; status: string; durationMs?: number; error?: string }[] = [];
     const progress = vscode.window.createStatusBarItem('xtc.playbook.progress', vscode.StatusBarAlignment.Left, 10_000);
-    progress.name = 'XTC playbook progress';
+    progress.name = 'Ecstasy playbook progress';
     const showProgress = (current: string, title: string) => {
         const completed = new Set(results.filter(result => selected.some(id => id === result.id)).map(result => result.id)).size;
         const failed = results.filter(result => result.status === 'failed').length;
-        const summary = `XTC playbook: ${completed}/${selected.length} completed, ${selected.length - completed} left | ${current}` +
+        const summary = `Ecstasy playbook: ${completed}/${selected.length} completed, ${selected.length - completed} left | ${current}` +
             (failed ? ` | ${failed} failed` : '');
         progress.text = `$(beaker) ${summary}`;
         progress.tooltip = title;

@@ -100,7 +100,7 @@
         <!-- TODO: Re-enable DAP registration when the feature is implemented and stable enough
              to ship without Plugin Verifier experimental API findings.
         <debugAdapterServer id="xtcDebugAdapter"
-                            name="XTC Debug Adapter"
+                            name="Ecstasy Debug Adapter"
                             factoryClass="org.xtclang.idea.dap.XtcDebugAdapterFactory"/>
         -->
     </extensions>
@@ -108,10 +108,10 @@
     <!-- LSP4IJ Language Server registration -->
     <extensions defaultExtensionNs="com.redhat.devtools.lsp4ij">
         <server id="xtcLanguageServer"
-                name="XTC Language Server"
+                name="Ecstasy Language Server"
                 factoryClass="org.xtclang.idea.lsp.XtcLanguageServerFactory">
             <description><![CDATA[
-                Provides language features for XTC (Ecstasy) files via LSP.
+                Provides language features for Ecstasy files via LSP.
                 Requires XDK_HOME to be set or the LSP server JAR to be bundled.
             ]]></description>
         </server>
