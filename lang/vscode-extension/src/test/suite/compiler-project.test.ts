@@ -8,13 +8,14 @@ const LIBRARY = 'module Library { static Int value() = 1; class Item {} }';
 const CONSUMER = 'module Consumer { package lib import Library; Int value = 10; ' +
     'private Int pick(Int input) = input; Int run() { Int local = pick(input = lib.value()); return local + value; } }';
 
-async function eventually(check: () => Promise<boolean> | boolean, description: string): Promise<void> {
+async function eventually(check: () => Promise<boolean> | boolean, description: string,
+    details: () => unknown = () => undefined): Promise<void> {
     const end = Date.now() + 30_000;
     while (Date.now() < end) {
         if (await check()) { return; }
         await new Promise(resolve => setTimeout(resolve, 100));
     }
-    assert.fail(`Timed out: ${description}`);
+    assert.fail(`Timed out: ${description}\n${JSON.stringify(details(), null, 2)}`);
 }
 
 async function replace(document: vscode.TextDocument, text: string): Promise<void> {
@@ -57,6 +58,7 @@ suite('Compiler editor acceptance', function () {
                 { name: 'Consumer', uri: consumer.toString(), dependencies: ['Library'] }
             ], vscode.ConfigurationTarget.Workspace);
             await eventually(() => vscode.languages.getDiagnostics(consumer).length === 0, 'configuration enables source compilation');
+            assert.strictEqual(document.getText(), CONSUMER, 'consumer fixture must remain unchanged while configuring compilation');
             const originalVersion = document.version;
             const dependency = await vscode.workspace.openTextDocument(library);
             await vscode.window.showTextDocument(dependency);
@@ -64,7 +66,11 @@ suite('Compiler editor acceptance', function () {
             await eventually(() => vscode.languages.getDiagnostics(consumer).length > 0, 'unchanged consumer reports new dependency type');
             assert.strictEqual(document.version, originalVersion);
             await replace(dependency, LIBRARY);
-            await eventually(() => vscode.languages.getDiagnostics(consumer).length === 0, 'dependency correction clears consumer errors');
+            await eventually(() => {
+                assert.strictEqual(document.getText(), CONSUMER, 'consumer fixture changed outside the dependency test');
+                assert.strictEqual(dependency.getText(), LIBRARY, 'dependency fixture changed after correction');
+                return vscode.languages.getDiagnostics(consumer).length === 0;
+            }, 'dependency correction clears consumer errors', () => vscode.languages.getDiagnostics(consumer));
             await vscode.window.showTextDocument(document);
 
             const definition = await vscode.commands.executeCommand<vscode.Location[]>('vscode.executeDefinitionProvider', consumer,
