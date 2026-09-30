@@ -66,8 +66,8 @@ import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.AdapterCapability
 import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.xdk.XdkAdapter
-import org.xvm.lsp.adapter.xdk.XdkLibraries
 import org.xvm.lsp.adapter.xdk.XdkDependency
+import org.xvm.lsp.adapter.xdk.XdkLibraries
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.XdkSources
 import org.xvm.lsp.model.Diagnostic
@@ -284,14 +284,17 @@ class XtcLanguageServer(
      * @see FormattingConfig.resolve
      */
     private val formattingState = EditorFormattingState()
-    val editorFormattingConfig: FormattingConfig? get() = formattingState.config
+    val editorFormattingConfig: FormattingConfig?
+        get() = formattingState.config
+
     private val canRefreshInlays = AtomicBoolean()
 
     fun refreshPresentation() {
-        if (canRefreshInlays.get()) client?.refreshInlayHints()?.exceptionally {
-            logger.warn("Unable to refresh Ecstasy inlay hints: {}", it.message)
-            null
-        }
+        if (canRefreshInlays.get())
+            client?.refreshInlayHints()?.exceptionally {
+                logger.warn("Unable to refresh Ecstasy inlay hints: {}", it.message)
+                null
+            }
     }
 
     /**
@@ -489,14 +492,16 @@ class XtcLanguageServer(
     /** Apply explicit notification settings, or pull them from configuration-capable clients. */
     fun changeCompilerConfig(raw: Any?) {
         if (adapter !is XdkAdapter) return
-        val settings = nextCompilerSettings()
         val value =
             try {
+                if (CompilerConfiguration.presentationOnly(raw)) return
                 CompilerConfiguration.changed(raw)
             } catch (e: IllegalArgumentException) {
+                nextCompilerSettings()
                 reportCompilerConfigError(e)
                 return
             }
+        val settings = nextCompilerSettings()
         if (value == null) requestCompilerConfig(settings) else applyCompilerConfig(value, settings)
     }
 
@@ -574,12 +579,22 @@ class XtcLanguageServer(
         val item = ConfigurationItem().apply { section = "xtc.formatting" }
         c.configuration(ConfigurationParams(listOf(item)))
             .thenAccept { results ->
-                if (formattingState.accept(revision, results?.firstOrNull()) { adapter.editorFormattingConfig = it }) {
-                    logger.info("workspace/configuration: effective formatting config={}", editorFormattingConfig)
+                if (
+                    formattingState.accept(revision, results?.firstOrNull()) {
+                        adapter.editorFormattingConfig = it
+                    }
+                ) {
+                    logger.info(
+                        "workspace/configuration: effective formatting config={}",
+                        editorFormattingConfig,
+                    )
                 }
             }
             .exceptionally { failure ->
-                logger.warn("Invalid or unavailable formatting configuration; previous values retained: {}", failure.message)
+                logger.warn(
+                    "Invalid or unavailable formatting configuration; previous values retained: {}",
+                    failure.message,
+                )
                 null
             }
     }
@@ -999,20 +1014,29 @@ class XtcLanguageServer(
      */
     @Suppress("unused")
     @JsonRequest("xtc/languageServiceStatus")
-    fun languageServiceStatus(): CompletableFuture<Map<String, Any?>> = CompletableFuture.completedFuture(
-        mapOf(
-            "adapter" to adapter.displayName, "version" to version,
-            "pid" to ProcessHandle.current().pid(), "runtime" to System.getProperty("java.runtime.version"),
-            "textSynchronization" to if (synchronization.incremental) "incremental" else "full",
-            "serverSaveFormatting" to (synchronization.formatOnSave && synchronization.waitUntil),
-            "saveHookSupported" to synchronization.waitUntil,
-            "formatting" to editorFormattingConfig,
-            "semanticTokens" to semanticTokensEnabled,
-            "capabilities" to buildServerCapabilities(),
-            "bundledXdk" to if (adapter is XdkAdapter) mapOf("readOnly" to true, "modules" to XdkLibraries.packagedResources) else null,
-            "compilerQueue" to (adapter as? XdkAdapter)?.compilerQueueSnapshot(),
+    fun languageServiceStatus(): CompletableFuture<Map<String, Any?>> =
+        CompletableFuture.completedFuture(
+            mapOf(
+                "adapter" to adapter.displayName,
+                "version" to version,
+                "pid" to ProcessHandle.current().pid(),
+                "runtime" to System.getProperty("java.runtime.version"),
+                "textSynchronization" to if (synchronization.incremental) "incremental" else "full",
+                "serverSaveFormatting" to
+                    (synchronization.formatOnSave && synchronization.waitUntil),
+                "saveHookSupported" to synchronization.waitUntil,
+                "formatting" to editorFormattingConfig,
+                "semanticTokens" to
+                    (semanticTokensEnabled &&
+                        AdapterCapability.SEMANTIC_TOKENS in adapter.capabilities),
+                "capabilities" to buildServerCapabilities(),
+                "bundledXdk" to
+                    if (adapter is XdkAdapter)
+                        mapOf("readOnly" to true, "modules" to XdkLibraries.packagedResources)
+                    else null,
+                "compilerQueue" to (adapter as? XdkAdapter)?.compilerQueueSnapshot(),
+            )
         )
-    )
 
     @JsonRequest("xtc/healthCheck")
     fun healthCheck(): CompletableFuture<Map<String, Any>> =
