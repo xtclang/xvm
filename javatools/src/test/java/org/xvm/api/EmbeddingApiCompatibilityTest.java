@@ -50,6 +50,8 @@ public class EmbeddingApiCompatibilityTest {
         var structural = new EmbeddingSupport.Compilation(null, file, null, List.of());
         var selectedCalls = new EmbeddingSupport.Compilation(null, file, null, List.of(), Map.of());
         var functionCalls = new EmbeddingSupport.Compilation(null, file, null, List.of(), Map.of(), Map.of());
+        var constructorCalls = new EmbeddingSupport.Compilation(null, file, null, List.of(), Map.of(), Map.of(), Map.of());
+        assertEquals(named, constructorCalls);
         assertEquals(named, original);
         assertEquals(named, structural);
         assertEquals(named, selectedCalls);
@@ -57,8 +59,8 @@ public class EmbeddingApiCompatibilityTest {
         assertSame(file.getConstantPool(), named.pool());
         assertEquals(0, switch (named) {
             case EmbeddingSupport.Compilation(var module, var structure, var ast,
-                    var trees, var bindings, var functions, var constructors) ->
-                        trees.size() + bindings.size() + functions.size() + constructors.size();
+                    var trees, var bindings, var functions, var constructors, var initializers) ->
+                        trees.size() + bindings.size() + functions.size() + constructors.size() + initializers.size();
         });
     }
 
