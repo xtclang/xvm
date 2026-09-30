@@ -2,6 +2,8 @@ package org.xvm.lsp.index
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assumptions
@@ -39,6 +41,42 @@ class WorkspaceIndexerTest {
     @AfterAll
     fun tearDown() {
         parser?.close()
+    }
+
+    @Test
+    fun `concurrent workspace scans do not starve their own bounded executor`(
+        @TempDir directory: Path
+    ) {
+        Files.writeString(directory.resolve("Concurrent.x"), "module Concurrent { class Value {} }")
+        val index = WorkspaceIndex()
+        WorkspaceIndexer(index, requireNotNull(parser).getLanguage()).use { indexer ->
+            val scans = List(12) { indexer.scanWorkspace(listOf(directory.toString())) }
+            CompletableFuture.allOf(*scans.toTypedArray()).get(15, SECONDS)
+            assertThat(index.findByName("Value")).hasSize(1)
+            indexer.close()
+            indexer.reindexFile(
+                directory.resolve("Concurrent.x").toUri().toString(),
+                "module Replaced {}",
+            )
+            assertThat(index.findByName("Value")).hasSize(1)
+            assertThat(index.findByName("Replaced")).isEmpty()
+        }
+    }
+
+    @Test
+    fun `concurrent native parser requests retain independent source trees`() {
+        XtcParser(requireNotNull(parser).getLanguage()).use { shared ->
+            val requests =
+                List(40) { number ->
+                    CompletableFuture.runAsync {
+                        val source = "module Parallel$number { Int value = $number; }"
+                        shared.parse(source).use { tree ->
+                            assertThat(tree.root.text).isEqualTo(source)
+                        }
+                    }
+                }
+            CompletableFuture.allOf(*requests.toTypedArray()).get(15, SECONDS)
+        }
     }
 
     // ========================================================================
