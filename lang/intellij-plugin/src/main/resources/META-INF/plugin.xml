@@ -101,6 +101,9 @@
                                    implementationClass="org.xtclang.idea.lsp.XtcParameterInfoHandler"/>
 
         <!-- Code Style settings for XTC (Settings > Editor > Code Style > Ecstasy) -->
+        <formattingService id="XtcFormattingService"
+                           order="before LSPFormattingOnlyService, before LSPFormattingAndRangeBothService"
+                           implementation="org.xtclang.idea.lsp.XtcFormattingService"/>
         <langCodeStyleSettingsProvider
             implementation="org.xtclang.idea.style.XtcLanguageCodeStyleSettingsProvider"/>
 

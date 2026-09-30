@@ -4,7 +4,9 @@ import com.google.gson.Gson
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.intellij.driver.client.Remote
+import com.intellij.driver.client.service
 import com.intellij.driver.model.OnDispatcher
+import com.intellij.driver.sdk.FileEditorManager
 import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.getToolWindow
 import com.intellij.driver.sdk.invokeAction
@@ -122,6 +124,14 @@ internal fun ParityScenarios.platformCases() {
     }
 
     case("X139") { data ->
+        val closed = open(data.string("closedFile"), data.string("closedSource"))
+        replace(closed, data.string("closedSource") + "\n")
+        with(driver) {
+            withContext(OnDispatcher.EDT) {
+                service<FileEditorManager>(singleProject())
+                    .closeFile(closed.editor.editor.getVirtualFile())
+            }
+        }
         val document = open(data.string("file"), data.string("source"))
         clean(document)
         val previous =
@@ -137,6 +147,9 @@ internal fun ParityScenarios.platformCases() {
                 invokeAction("SaveAll", component = document.editor.component)
                 awaitUi("native format on save", 30.seconds) {
                     document.text.contains("    Int value = 1;")
+                }
+                awaitUi("native format on save for a closed dirty tab", 30.seconds) {
+                    closed.text == data.string("closedFormatted") + "\n"
                 }
             }
             val status =
