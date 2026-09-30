@@ -7514,7 +7514,7 @@ public abstract class TypeConstant
             ClassDesc cdCommon = JitTypeDesc.requireJavaPrimitive(this);
             String    desc     = cdCommon.descriptorString();
 
-            reg1.load(code);
+            reg1 = reg1.load(code); // a Ref load can unbox its referent
             if (!reg1.cd().isPrimitive()) {
                 Builder.unbox(code, this);
             }

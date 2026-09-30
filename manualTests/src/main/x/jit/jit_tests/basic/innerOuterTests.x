@@ -73,20 +73,19 @@ package innerOuterTests {
     }
 
     void testAnonInner() {
-        // TODO: initializing the captured count fails at VAR_IN: Primitive -> Ref is unsupported
-        // class Inner {
-        //     construct(String text) {}
-        // }
-        //
-        // Int count = 4;
-        // var inner = new Inner("hello") {
-        //     void run() {
-        //         ++count;
-        //     }
-        // };
-        //
-        // inner.run();
-        // assert count == 5;
+        class Inner {
+            construct(String text) {}
+        }
+
+        Int count = 4;
+        var inner = new Inner("hello") {
+            void run() {
+                ++count;
+            }
+        };
+
+        inner.run();
+        assert count == 5;
     }
 
     void testFunky() {
