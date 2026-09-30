@@ -5,6 +5,7 @@
 import * as path from 'node:path';
 import { glob } from 'glob';
 import Mocha from 'mocha';
+import { showTestProgress } from '../progress';
 
 export async function run(): Promise<void> {
     const mocha = new Mocha({ ui: 'tdd', color: true, timeout: 10000 });
@@ -14,12 +15,14 @@ export async function run(): Promise<void> {
         mocha.addFile(path.resolve(testsRoot, file));
     }
     await new Promise<void>((resolve, reject) => {
-        mocha.run(failures => {
+        const runner = mocha.run(failures => {
             if (failures > 0) {
                 reject(new Error(`${failures} test(s) failed.`));
             } else {
                 resolve();
             }
         });
+        showTestProgress(runner, 'Ecstasy tests', test =>
+            test.title.length <= 48 ? test.title : test.title.slice(0, 45) + '…');
     });
 }
