@@ -1,5 +1,9 @@
 # Threading `errs` through the compiler
 
+L72 implementation is complete pending the batch tests: negotiated save hooks, opt-in incremental
+sync and multiple-range formatting. Full sync/no save edits remain defaults; shared X132 and
+backend UTF-16/CRLF/invalid-batch regressions are added.
+
 **Current follow-up batch:** external source/resource watch ownership is implemented; X124 now
 exercises missing nested roots and settings replacement without native fixture refresh. Tests
 will run after the four requested implementation commits. Community file-tree Move now handles
