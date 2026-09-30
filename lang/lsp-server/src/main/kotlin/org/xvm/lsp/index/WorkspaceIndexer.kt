@@ -2,6 +2,7 @@ package org.xvm.lsp.index
 
 import io.github.treesitter.jtreesitter.Language
 import java.io.Closeable
+import java.net.URI
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
@@ -40,6 +41,9 @@ import org.xvm.lsp.treesitter.XtcQueryEngine
 class WorkspaceIndexer(
     private val index: WorkspaceIndex,
     language: Language,
+    private val readFile: (Path) -> String? = { path ->
+        if (Files.isRegularFile(path)) path.readText() else null
+    },
 ) : Closeable {
     private val logger = LoggerFactory.getLogger(WorkspaceIndexer::class.java)
 
@@ -52,6 +56,12 @@ class WorkspaceIndexer(
     /** Serializes access to the non-thread-safe tree-sitter parser and query engine. */
     private val parseLock = Any()
     private val closed = AtomicBoolean()
+
+    // Owned by parseLock. Identity distinguishes reads across edits, closes and disk events;
+    // a later disk read must also supersede an earlier read of the same closed file.
+    private class Revision(val open: Boolean)
+
+    private val revisions = mutableMapOf<String, Revision>()
 
     private val threadPoolSize =
         minOf(Runtime.getRuntime().availableProcessors(), 4).coerceAtLeast(2)
@@ -127,6 +137,7 @@ class WorkspaceIndexer(
         val symbols =
             synchronized(parseLock) {
                 if (closed.get()) return
+                revisions[uri] = Revision(open = true)
                 parseAndExtractSymbols(uri, content).also { index.addSymbols(uri, it) }
             }
         logger.info("reindexed {}: {} symbols", uri.substringAfterLast('/'), symbols.size)
@@ -136,26 +147,42 @@ class WorkspaceIndexer(
     fun removeFile(uri: String) {
         synchronized(parseLock) {
             if (closed.get()) return
+            revisions[uri] = Revision(open = false)
             index.removeSymbolsForUri(uri)
         }
         logger.info("removed symbols for {}", uri.substringAfterLast('/'))
     }
 
+    /** Disk notifications and scans never replace an open editor buffer. */
+    fun refreshFile(uri: String) {
+        val source = URI.create(uri)
+        if (source.scheme == "file") indexFile(Path.of(source))
+    }
+
+    /** Closing an unsaved buffer restores the current disk file, or removes an absent file. */
+    fun closeDocument(uri: String) {
+        synchronized(parseLock) {
+            if (closed.get()) return
+            revisions[uri] = Revision(open = false)
+            index.removeSymbolsForUri(uri)
+        }
+        refreshFile(uri)
+    }
+
     private fun indexFile(path: Path) {
         val uri = path.toUri().toString()
+        val revision =
+            synchronized(parseLock) {
+                if (closed.get() || revisions[uri]?.open == true) return
+                Revision(open = false).also { revisions[uri] = it }
+            }
         try {
-            val content = path.readText()
-            val symbols =
-                synchronized(parseLock) {
-                    if (closed.get()) return
-                    parseAndExtractSymbols(uri, content).also { index.addSymbols(uri, it) }
-                }
-            logger.info(
-                "indexed {}: {} symbols ({} bytes)",
-                path.fileName,
-                symbols.size,
-                content.length,
-            )
+            val content = readFile(path)
+            synchronized(parseLock) {
+                if (closed.get() || revisions[uri] !== revision) return
+                if (content == null) index.removeSymbolsForUri(uri)
+                else index.addSymbols(uri, parseAndExtractSymbols(uri, content))
+            }
         } catch (e: Exception) {
             logger.warn("failed to index {}: {}", path, e.message)
         }
@@ -243,6 +270,7 @@ class WorkspaceIndexer(
         // A timed-out worker may still be inside native parsing. Never free either handle
         // until that critical section finishes; queued scans see closed before entering it.
         synchronized(parseLock) {
+            revisions.clear()
             queryEngine.close()
             parser.close()
         }
