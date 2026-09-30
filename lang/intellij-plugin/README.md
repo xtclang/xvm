@@ -137,7 +137,7 @@ uses JetBrains' `IdeaUltimate` artifact name, but the tested features require on
 Community feature set. No personal settings or license are copied into the test profile.
 See [JetBrains' unified distribution explanation](https://www.jetbrains.com/help/idea/intellij-idea-single-distribution.html).
 
-The suite reads all 135 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
+The suite reads all 136 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
 and source fixtures from the [manual playbook](../doc/manual-test-plan.md#xdkadapter-playbook).
 X124–X129 and the related CFG2/X105/X118/X122 regressions now have passing selected receipts:
 `run-8616709537315408794` covers eight cases and `run-431060674485649448` covers X124/X128,
@@ -764,3 +764,7 @@ The native file-tree Move action now requests compiler proof before moving selec
 or module containers. Shared X130 adds batch Move/Undo/Redo coverage (execution pending). Labels
 use Ecstasy; implementation names retain Xtc. Upstream compatibility bridges carry searchable
 `// TODO LSP4IJ:` comments with their removal conditions.
+
+Lazy action selection now uses a registered client command to resolve and apply the edit in a
+version-checked undo command; native acceptance remains pending. X131 adds protocol assertions
+for code-lens/link/inlay/symbol resolution through the installed client connection.
