@@ -4181,6 +4181,20 @@
         "limitations": []
       }
     },
+    "X131": {
+      "title": "negotiated code lens document link inlay hint and workspace symbol resolution",
+      "manual": [],
+      "values": {
+        "file": "Resolve.x",
+        "module": "Resolve",
+        "source": "module Resolve {\n    /** Read a number. */\n    Int read(Int value) = value;\n    void run() { var result = read(1); }\n    // https://xtclang.org/\n}\n",
+        "link": "https://xtclang.org/"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],

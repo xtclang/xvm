@@ -158,6 +158,7 @@ data class InlayHint(
     val kind: InlayHintKind,
     val paddingLeft: Boolean = false,
     val paddingRight: Boolean = false,
+    val tooltip: String? = null,
 ) {
     enum class InlayHintKind {
         TYPE,
