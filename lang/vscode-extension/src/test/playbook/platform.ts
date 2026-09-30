@@ -5,6 +5,7 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { ApplyWorkspaceEditParams, ApplyWorkspaceEditResponse, CodeAction, ProgressType } from 'vscode-languageclient/node';
 import { discovered } from './liveWorkspace';
+import { cutAndPasteDirectories } from '../explorer-move';
 import { modelPath } from '../../build-model';
 import { getClient, updateCompilerConfiguration } from '../../lsp-client';
 import { client, diagnostics, eventually, hover, label, noErrors, playbook, symbols, targets } from './support';
@@ -178,40 +179,8 @@ export function platformCases(): void {
             // Use Explorer's actual batch operation and its Undo source. A pure file-only
             // workspace.applyEdit is not on the unrelated Consumer editor's Undo stack.
             assert.deepStrictEqual(data.sources, ['old', 'second']);
-            const sourcePaths = data.sources.map(source => workspace.uri(source).fsPath).sort();
-            await vscode.commands.executeCommand('workbench.files.action.refreshFilesExplorer');
-            await eventually(async () => {
-                // A watcher refresh can retire Explorer nodes between selection and Cut. Only
-                // repeat this pre-mutation selection step; Paste, Undo and Redo each run once.
-                try {
-                    // revealInExplorer changes selection without guaranteeing keyboard focus.
-                    // List commands and Copy Path must target Explorer, not the Consumer editor.
-                    await vscode.commands.executeCommand('workbench.files.action.focusFilesExplorer');
-                    await vscode.commands.executeCommand('workbench.files.action.collapseExplorerFolders');
-                    await vscode.commands.executeCommand('revealInExplorer', workspace.uri(data.sources[0]));
-                    await vscode.commands.executeCommand('list.expandSelectionDown');
-                    await vscode.commands.executeCommand('copyFilePath');
-                    const selected = (await vscode.env.clipboard.readText()).split(/\r?\n/).sort();
-                    if (JSON.stringify(selected) !== JSON.stringify(sourcePaths)) return selected;
-                    await vscode.commands.executeCommand('filesExplorer.cut');
-                    return selected;
-                } catch (error) {
-                    if (!String(error).includes('Data tree node not found')) throw error;
-                    return [];
-                }
-            }, selected => JSON.stringify(selected) === JSON.stringify(sourcePaths), 'Explorer selects both source folders');
-            await vscode.commands.executeCommand('revealInExplorer', workspace.uri(data.destination));
-            const paste = await vscode.commands.executeCommand('filesExplorer.paste').then(
-                () => undefined,
-                (error: unknown) => {
-                    // VS Code can finish the move, then fail to repaint removed Cut nodes in
-                    // its finally block. Never repeat Paste. Verify Move/Undo/Redo below, then
-                    // report the original host error rather than losing the remaining evidence.
-                    assert.ok(error instanceof Error && error.message.includes('Data tree node not found')
-                        && error.stack?.includes('itemsCopied'), String(error));
-                    return error;
-                }
-            );
+            const paste = await cutAndPasteDirectories(
+                data.sources.map(source => workspace.uri(source)), workspace.uri(data.destination));
             const moved = async () => Promise.all(data.sources.map(async source => ({
                 old: await fs.stat(path.join(workspace.directory, source)).then(() => true, () => false),
                 new: await fs.stat(path.join(workspace.directory, data.destination, source)).then(() => true, () => false)
@@ -228,7 +197,7 @@ export function platformCases(): void {
                 const target = data.sources.some(source => file.file.startsWith(`${source}/`)) ? `${data.destination}/${file.file}` : file.file;
                 assert.strictEqual(await fs.readFile(path.join(workspace.directory, target), 'utf8'), file.text);
             }
-            if (paste) throw new Error(`Move, Undo, Redo and resource preservation passed; VS Code failed while clearing Cut highlighting:\n${paste.stack}`);
+            if (paste) throw new Error(`X130 FAILED: VS Code threw while clearing Cut highlighting. Move, Undo, Redo and resource assertions completed:\n${paste.stack}`);
         });
     });
 
