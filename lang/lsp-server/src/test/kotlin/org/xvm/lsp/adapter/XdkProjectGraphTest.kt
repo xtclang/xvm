@@ -1,5 +1,6 @@
 package org.xvm.lsp.adapter
 
+import java.nio.file.Files
 import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
@@ -29,6 +30,32 @@ class XdkProjectGraphTest {
                 source.parent.toFile().canonicalFile,
                 assets.toFile().canonicalFile,
             )
+    }
+
+    @Test
+    fun `resource membership survives missing source containers and generated ancestors`() {
+        val container = Files.createDirectory(directory.resolve("source"))
+        val root = container.resolve("App.x")
+        val assets = directory.resolve("generated/assets")
+        val implicit = XdkProject(listOf(XdkSourceModule("App", root.toUri().toString())))
+        Files.delete(container)
+        assertThat(implicit.inputWatchRoots()).contains(container.toFile().canonicalFile)
+        assertThat(implicit.resourceScopes(container.toUri().toString()))
+            .contains(root.toFile().canonicalFile.toURI().toString())
+        val explicit =
+            XdkProject(
+                listOf(
+                    XdkSourceModule(
+                        "App",
+                        root.toUri().toString(),
+                        resourceRoots = listOf(assets.toUri().toString()),
+                    )
+                )
+            )
+        assertThat(explicit.resourceScopes(assets.parent.toUri().toString()))
+            .containsExactly(root.toFile().canonicalFile.toURI().toString())
+        assertThat(explicit.resourceScopes(directory.resolve("unrelated").toUri().toString()))
+            .isEmpty()
     }
 
     @Test
