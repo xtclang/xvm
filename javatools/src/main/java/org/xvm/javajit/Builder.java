@@ -2127,7 +2127,6 @@ public abstract class Builder {
     public static final String N_Enumeration  = "org.xtclang.ecstasy.reflect.Enumeration";
     public static final String N_Exception    = "org.xtclang.ecstasy.Exception";
     public static final String N_Hashable     = "org.xtclang.ecstasy.collections.Hashable";
-    public static final String N_FPLiteral    = "org.xtclang.ecstasy.numbers.FPLiteral";
     public static final String N_Float8e4     = "org.xtclang.ecstasy.numbers.Float8e4";
     public static final String N_Float8e5     = "org.xtclang.ecstasy.numbers.Float8e5";
     public static final String N_BFloat16     = "org.xtclang.ecstasy.numbers.BFloat16";
@@ -2148,6 +2147,7 @@ public abstract class Builder {
     public static final String N_Ordered      = "org.xtclang.ecstasy.Ordered";
     public static final String N_OutOfBounds  = "org.xtclang.ecstasy.OutOfBounds";
     public static final String N_ReadOnly     = "org.xtclang.ecstasy.ReadOnly";
+    public static final String N_Ref          = "org.xtclang.ecstasy.reflect.Ref";
     public static final String N_String       = "org.xtclang.ecstasy.text.String";
     public static final String N_TypeMismatch = "org.xtclang.ecstasy.TypeMismatch";
     public static final String N_UInt8        = "org.xtclang.ecstasy.numbers.UInt8";
@@ -2155,6 +2155,7 @@ public abstract class Builder {
     public static final String N_UInt32       = "org.xtclang.ecstasy.numbers.UInt32";
     public static final String N_UInt64       = "org.xtclang.ecstasy.numbers.UInt64";
     public static final String N_UInt128      = "org.xtclang.ecstasy.numbers.UInt128";
+    public static final String N_Var          = "org.xtclang.ecstasy.reflect.Var";
     public static final String N_Date         = "org.xtclang.ecstasy.temporal.Date";
     public static final String N_Duration     = "org.xtclang.ecstasy.temporal.Duration";
     public static final String N_AppenderChar = "org.xtclang.ecstasy.AppenderᐸCharᐳ";

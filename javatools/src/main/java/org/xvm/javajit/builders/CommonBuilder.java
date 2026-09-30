@@ -1257,12 +1257,12 @@ public class CommonBuilder
 
         MethodTypeDesc md = jmd.standardMD;
         classBuilder.withMethodBody(prop.ensureGetterJitMethodName(typeSystem), md,
-                ClassFile.ACC_PUBLIC, code -> {
+                ClassFile.ACC_PUBLIC, code ->
             code.aload(0)
                 .getfield(art.CD(), Outer, CD_nObject)
                 .checkcast(md.returnType())
-                .areturn();
-        });
+                .areturn()
+        );
     }
 
     protected void generateTrivialGetter(ClassBuilder classBuilder, PropertyInfo prop) {
@@ -4263,15 +4263,11 @@ public class CommonBuilder
     };
 
     private static final Map<String, Set<String>> NO_JIT_METHODS = Map.ofEntries(
-        Map.entry("org.xtclang.ecstasy.reflect.Outer$Inner",
-            Set.of("get")), // TODO: MOV_THIS_A is not implemented
         Map.entry("org.xtclang.ecstasy.collections.deferred.DeferredCollection",
             Set.of("calc")), // TODO: applied @Lazy property state is not available on the host
         Map.entry("org.xtclang.ecstasy.collections.deferred.DistinctCollection",
             Set.of("calc",        // TODO: applied @Lazy property state is not available on the host
                    "evaluateInto")), // TODO: MapSet.addAll super return and SkiplistSet copy-constructor cap
-        Map.entry("org.xtclang.ecstasy.collections.UniformIndexed",
-            Set.of("elementAt")), // TODO: NEWCG_N is not implemented
         Map.entry("org.xtclang.ecstasy.maps.DiscreteEntry",
             Set.of("construct")),  // TODO: specialized return is incompatible with a conditional mixin
         Map.entry("org.xtclang.ecstasy.maps.HashMap",
@@ -4281,8 +4277,7 @@ public class CommonBuilder
             Set.of("duplicate")), // TODO: virtual constructor lookup returns no MethodInfo
         Map.entry("org.xtclang.ecstasy.maps.ListMap",
             Set.of("duplicate",  // TODO: virtual constructor lookup returns no MethodInfo
-                   "ensurePersistent", // TODO: private access requested on a nullable array union
-                   "process")),  // TODO: NEWC_1 virtual-child construction
+                   "ensurePersistent")), // TODO: private access requested on a nullable array union
         Map.entry("org.xtclang.ecstasy.maps.Map",
             Set.of("defaultCollector", // TODO: virtual constructor method constant
                    "map",              // TODO: incompatible formal result types in TypeMatrix

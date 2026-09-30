@@ -125,6 +125,11 @@ public class Var_C
     public int build(BuildContext bctx, CodeBuilder code) {
         RegisterInfo regSrc = bctx.loadArgument(code, m_nArgValue);
         RegisterInfo regDst = bctx.introduceRef(code, m_nVar, regSrc.type(), "", true);
+
+        if (!regSrc.cd().equals(regDst.cd())) {
+            // captured locals are backed by nRef, but the incoming signature can use Var
+            code.checkcast(regDst.cd());
+        }
         code.astore(regDst.slot());
         bctx.ensureRegisterScope(code, regDst);
         return -1;

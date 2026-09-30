@@ -306,11 +306,13 @@ public class NativeTypeSystem
         nativeByClass.put(pool.clzEnumValue(), Builder.N_nEnum);
         nativeByClass.put(pool.clzModule(),    Builder.N_nModule);
         nativeByClass.put(pool.clzObject(),    Builder.N_Object);
-        nativeByClass.put(pool.clzRef(),       Builder.N_nRef);
         nativeByClass.put(pool.clzService(),   Builder.N_nService);
         nativeByClass.put(pool.clzType(),      Builder.N_nType);
         nativeByClass.put(pool.clzTuple(),     Builder.N_nTuple);
-        nativeByClass.put(pool.clzVar(),       Builder.N_nRef);
+
+        // all Ref/Var L2 specializations share interfaces, implemented by nRef or generated classes
+        nativeByClass.put(pool.clzRef(),       Builder.N_Ref);
+        nativeByClass.put(pool.clzVar(),       Builder.N_Var);
 
         // various types used by native classes
         TypeConstant typeChar        = pool.typeChar();
