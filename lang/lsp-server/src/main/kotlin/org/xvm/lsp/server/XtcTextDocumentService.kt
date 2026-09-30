@@ -57,6 +57,7 @@ import org.eclipse.lsp4j.LocationLink
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.MarkupKind
 import org.eclipse.lsp4j.ParameterInformation
+import org.eclipse.lsp4j.PartialResultParams
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.PrepareRenameDefaultBehavior
 import org.eclipse.lsp4j.PrepareRenameParams
@@ -91,6 +92,7 @@ import org.eclipse.lsp4j.WillSaveTextDocumentParams
 import org.eclipse.lsp4j.WorkDoneProgressParams
 import org.eclipse.lsp4j.WorkspaceDiagnosticParams
 import org.eclipse.lsp4j.WorkspaceDiagnosticReport
+import org.eclipse.lsp4j.WorkspaceDiagnosticReportPartialResult
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.WorkspaceSymbol
 import org.eclipse.lsp4j.WorkspaceSymbolLocation
@@ -190,6 +192,8 @@ class XtcTextDocumentService(
         logResult: (R) -> String = { "completed" },
         uri: String? = null,
         sourceOnly: Boolean = false,
+        progress: WorkDoneProgressParams? = null,
+        partial: ((R) -> PartialResults.Plan<R>)? = null,
         block: () -> R,
     ): CompletableFuture<R> {
         val document = uri?.let { openDocuments[it] }
@@ -207,6 +211,8 @@ class XtcTextDocumentService(
             },
             workspace = uri == null,
             sourceOnly = sourceOnly,
+            progress = progress,
+            partial = partial,
         ) {
             it
         }
@@ -220,15 +226,20 @@ class XtcTextDocumentService(
         workspace: Boolean = false,
         sourceOnly: Boolean = false,
         progress: WorkDoneProgressParams? = null,
+        partial: ((R) -> PartialResults.Plan<R>)? = null,
         convert: (T) -> R,
     ): CompletableFuture<R> {
         val result = CompletableFuture<R>()
         val trace = ExecutionTrace.current()
-        val (document, documents) =
+        val (document, documents, revision) =
             synchronized(lifecycle) {
                 if (closed) return CompletableFuture.failedFuture(contentModified())
                 pendingQueries[result] = uri
-                openDocuments[uri] to if (workspace) openDocuments.toMap() else null
+                Triple(
+                    openDocuments[uri],
+                    if (workspace) openDocuments.toMap() else null,
+                    diagnosticRevision,
+                )
             }
 
         fun stale(): Boolean =
@@ -305,7 +316,20 @@ class XtcTextDocumentService(
             .whenComplete { _, failure ->
                 if (failure != null) result.completeExceptionally(failure)
             }
-        return server.observeQuery(method, progress, result)
+        val publication =
+            if (partial == null) result
+            else
+                server.partialResults.publish(
+                    (progress as? PartialResultParams)?.partialResultToken,
+                    result,
+                    {
+                        synchronized(lifecycle) {
+                            if (stale() || diagnosticRevision != revision) throw contentModified()
+                        }
+                    },
+                    partial,
+                )
+        return server.observeQuery(method, progress, publication)
     }
 
     private fun contentModified() =
@@ -639,6 +663,14 @@ class XtcTextDocumentService(
             params.identifier,
             workspace = true,
             progress = params,
+            partial = { report ->
+                PartialResults.Plan(
+                    report.items
+                        .chunked(PartialResults.BATCH_SIZE)
+                        .map(::WorkspaceDiagnosticReportPartialResult),
+                    WorkspaceDiagnosticReport(emptyList()),
+                )
+            },
         ) { results ->
             val current = diagnosticReports.record(results)
             diagnosticReports.workspace(
@@ -654,6 +686,7 @@ class XtcTextDocumentService(
         identifier: String?,
         workspace: Boolean,
         progress: WorkDoneProgressParams,
+        partial: ((T) -> PartialResults.Plan<T>)? = null,
         convert: (List<CompilationResult>) -> T,
     ): CompletableFuture<T> {
         if (!server.usesPullDiagnostics || (identifier != null && identifier != "xtc")) {
@@ -678,6 +711,7 @@ class XtcTextDocumentService(
                 else (adapter as XdkAdapter).workspaceDiagnosticsAsync()
             },
             progress = progress,
+            partial = partial,
             convert = { results ->
                 if (revision != diagnosticRevision) throw contentModified()
                 val owned = results.flatMap { it.documentUris }.toSet()
@@ -824,6 +858,8 @@ class XtcTextDocumentService(
                 }
             },
             uri = params.textDocument.uri,
+            progress = params,
+            partial = PartialResults::eitherLists,
         ) {
             adapter
                 .findDefinition(
@@ -855,6 +891,7 @@ class XtcTextDocumentService(
             },
             workspace = true,
             progress = params,
+            partial = PartialResults::list,
         ) { references ->
             references.map { it.toLsp() }
         }
@@ -872,6 +909,8 @@ class XtcTextDocumentService(
             params.textDocument.uri,
             { result -> "${result.size} symbols" },
             uri = params.textDocument.uri,
+            progress = params,
+            partial = PartialResults::list,
         ) {
             val uri = params.textDocument.uri
             val result = adapter.getCachedResult(uri) ?: return@supplyAsync emptyList()
@@ -1533,6 +1572,8 @@ class XtcTextDocumentService(
             "${params.textDocument.uri} at ${params.position.fmt()}",
             { result -> if (result.left.isEmpty()) "no result" else "found" },
             uri = params.textDocument.uri,
+            progress = params,
+            partial = PartialResults::eitherLists,
         ) {
             Either.forLeft(
                 adapter
@@ -1558,6 +1599,8 @@ class XtcTextDocumentService(
             "${params.textDocument.uri} at ${params.position.fmt()}",
             { result -> if (result.left.isEmpty()) "no result" else "found" },
             uri = params.textDocument.uri,
+            progress = params,
+            partial = PartialResults::eitherLists,
         ) {
             Either.forLeft(
                 adapter
@@ -1583,6 +1626,8 @@ class XtcTextDocumentService(
             "${params.textDocument.uri} at ${params.position.fmt()}",
             { result -> "${result.left.size} locations" },
             uri = params.textDocument.uri,
+            progress = params,
+            partial = PartialResults::eitherLists,
         ) {
             Either.forLeft(
                 adapter
@@ -1633,6 +1678,8 @@ class XtcTextDocumentService(
             params.item.name,
             { result -> "${result.size} items" },
             uri = params.item.uri,
+            progress = params,
+            partial = PartialResults::list,
         ) {
             adapter.getSupertypes(params.item.toAdapter()).map { it.toLsp(params.item.uri) }
         }
@@ -1650,6 +1697,8 @@ class XtcTextDocumentService(
             params.item.name,
             { result -> "${result.size} items" },
             uri = params.item.uri,
+            progress = params,
+            partial = PartialResults::list,
         ) {
             adapter.getSubtypes(params.item.toAdapter()).map { it.toLsp(params.item.uri) }
         }
@@ -1690,6 +1739,8 @@ class XtcTextDocumentService(
             params.item.name,
             { result -> "${result.size} calls" },
             uri = params.item.uri,
+            progress = params,
+            partial = PartialResults::list,
         ) {
             adapter.getIncomingCalls(params.item.toAdapterCallItem()).map { c ->
                 CallHierarchyIncomingCall().apply {
@@ -1712,6 +1763,8 @@ class XtcTextDocumentService(
             params.item.name,
             { result -> "${result.size} calls" },
             uri = params.item.uri,
+            progress = params,
+            partial = PartialResults::list,
         ) {
             adapter.getOutgoingCalls(params.item.toAdapterCallItem()).map { c ->
                 CallHierarchyOutgoingCall().apply {
@@ -1796,7 +1849,12 @@ class XtcTextDocumentService(
     internal fun workspaceSymbols(
         params: WorkspaceSymbolParams
     ): CompletableFuture<Either<List<SymbolInformation>, List<WorkspaceSymbol>>> =
-        supplyAsync("workspace/symbol", params.query) {
+        supplyAsync(
+            "workspace/symbol",
+            params.query,
+            progress = params,
+            partial = PartialResults::eitherLists,
+        ) {
             val symbols = adapter.findWorkspaceSymbols(params.query)
             if (!server.resolvesWorkspaceSymbolRange)
                 return@supplyAsync Either.forLeft(

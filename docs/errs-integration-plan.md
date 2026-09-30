@@ -7255,3 +7255,24 @@ full catalog/long-workload run for the L82 submission gate.
 Each slice includes regressions; execution is deliberately batched after L80/L81 implementation.
 X142 is added to both editor drivers, bringing the catalog to 147 scenarios. This is code coverage
 inventory, not a new passing acceptance receipt.
+
+### L80/L81 follow-up implementation
+
+- `5c088321a`: negotiated completion/action presentation and one-use legacy action commands, plus
+  the explicit edit-application audit in `errs-audit.md`.
+- L81: client-supplied partial-result tokens now stream bounded batches for references, workspace
+  symbols/diagnostics, document symbols, definition/declaration/type/implementation locations and
+  type/call hierarchy relations. Responses contain only the remainder, so delivered items are not
+  duplicated. No token keeps the existing full-result response. Batches come from one validated
+  snapshot; this does not make compilation incremental or expose intermediate compiler state.
+- Publication runs on a connection-owned dispatcher outside compiler/document locks. Cancellation,
+  source/configuration revision changes and disconnect stop further batches. Failure before
+  publication sends none. Controlled barriers cover cancellation between batches.
+- Workspace initialization has an additive future-returning adapter entry point; Tree-sitter now
+  reports its actual scan lifetime rather than immediately ending progress after scheduling it.
+  Reports carry file counts/percentages and cancellation retires the owned scan. Automatic token
+  creation waits for `initialized`; client-supplied initialization tokens work during initialization.
+- Shared X143 compares streamed and ordinary symbol results in both editors. X142/X143 bring the
+  catalog to 148. Full combined backend/transport validation and selected native acceptance follow
+  these implementation commits. Generic IntelliJ server-initiated edit version validation remains
+  the documented upstream boundary; do not mark all of L80 complete from this batch alone.
