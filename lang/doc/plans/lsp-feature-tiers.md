@@ -480,3 +480,6 @@ Compiler-client ownership checkpoint (2026-09-30): generic IntelliJ server text 
 verifiable document versions/epochs and recheck every target in one Undo command. Generic resource,
 snippet and confirmation edits are refused; native Rename/Move owns resource edits. X144 is shared
 with VS Code and written but not yet validated in this batch. No adapter capability is newly advertised.
+
+X145 adds native long-operation cancellation and pending-request restart coverage in both clients.
+It uses real compiler work; native progress/PID/unsaved-buffer assertions are pending execution.
