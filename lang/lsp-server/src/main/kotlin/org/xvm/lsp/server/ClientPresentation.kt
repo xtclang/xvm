@@ -1,6 +1,7 @@
 package org.xvm.lsp.server
 
 import java.nio.file.Path
+import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.MarkupKind
@@ -15,6 +16,10 @@ internal data class ClientPresentation(
     val diagnosticVersions: Boolean = false,
     val diagnosticRelatedInformation: Boolean = false,
     val workspaceConfiguration: Boolean = false,
+    val completionKinds: Set<CompletionItemKind> = legacyCompletionKinds,
+    val actionLiterals: Boolean = false,
+    val preferredActions: Boolean = false,
+    val applyEdit: Boolean = false,
 ) {
     fun hover(markdown: String): MarkupContent =
         if (markdownHover) MarkupContent(MarkupKind.MARKDOWN, markdown)
@@ -28,7 +33,21 @@ internal data class ClientPresentation(
             ?: SymbolKind.Variable
     }
 
+    fun completionKind(kind: CompletionItemKind): CompletionItemKind =
+        kind.takeIf { it in completionKinds }
+            ?: CompletionItemKind.Text.takeIf { it in completionKinds }
+            ?: completionKinds.minByOrNull { it.value }
+            ?: CompletionItemKind.Text
+
+    val codeActions: Boolean
+        get() = actionLiterals || applyEdit
+
     companion object {
+        const val APPLY_CODE_ACTION = "xtc.applyCodeAction"
+        private val legacyCompletionKinds =
+            CompletionItemKind.entries
+                .filter { it.value <= CompletionItemKind.Reference.value }
+                .toSet()
         private val legacyKinds = SymbolKind.entries.filter { it.value <= 18 }.toSet()
 
         fun read(params: InitializeParams): ClientPresentation {
@@ -44,8 +63,18 @@ internal data class ClientPresentation(
                 text?.publishDiagnostics?.versionSupport == true,
                 text?.publishDiagnostics?.relatedInformation == true,
                 params.capabilities?.workspace?.configuration == true,
+                text?.completion?.completionItemKind?.valueSet?.toSet() ?: legacyCompletionKinds,
+                text?.codeAction?.codeActionLiteralSupport != null,
+                text?.codeAction?.isPreferredSupport == true,
+                params.capabilities?.workspace?.applyEdit == true,
             )
         }
+
+        /**
+         * The empty kind selects everything; unknown client kinds are not invented or broadened.
+         */
+        fun matchesActionKind(kind: String, only: List<String>?): Boolean =
+            only == null || only.any { it.isEmpty() || kind == it || kind.startsWith("$it.") }
 
         /** Workspace folders take precedence, including an explicitly empty list. */
         fun workspaceUris(params: InitializeParams): List<String> =

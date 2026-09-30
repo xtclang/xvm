@@ -7,6 +7,8 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.CodeActionCapabilities
 import org.eclipse.lsp4j.CodeActionContext
+import org.eclipse.lsp4j.CodeActionKindCapabilities
+import org.eclipse.lsp4j.CodeActionLiteralSupportCapabilities
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.lsp4j.CodeActionResolveSupportCapabilities
 import org.eclipse.lsp4j.CompletionCapabilities
@@ -168,6 +170,10 @@ class XdkResolveProtocolTest {
                                                 }
                                             codeAction =
                                                 CodeActionCapabilities().apply {
+                                                    codeActionLiteralSupport =
+                                                        CodeActionLiteralSupportCapabilities(
+                                                            CodeActionKindCapabilities(listOf(""))
+                                                        )
                                                     dataSupport = resolve
                                                     resolveSupport =
                                                         CodeActionResolveSupportCapabilities(
