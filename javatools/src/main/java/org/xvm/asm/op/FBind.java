@@ -372,7 +372,7 @@ public class FBind
             .invokespecial(cdFn, INIT_NAME, md(CD_void, CD_Ctx, CD_TypeConstant,
                     CD_MethodHandle, CD_MethodHandle, CD_boolean));
 
-        RegisterInfo regRet = bctx.ensureRegister(m_nRetValue, typeFn, cdFn, "");
+        RegisterInfo regRet = bctx.ensureRegister(code, m_nRetValue, typeFn, cdFn, "");
         bctx.storeValue(code, regRet, typeFn);
         return -1;
     }
