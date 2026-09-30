@@ -768,3 +768,12 @@ in slow operation reports:
 - [Tree-sitter Feature Matrix](../tree-sitter/doc/functionality.md) - What Tree-sitter can/cannot do
 - [Tree-sitter Integration Plan](../doc/plans/plan-tree-sitter.md) - Full implementation details
 - [Formatting Plan](../doc/plans/formatting-plan.md) - On-type formatting design, configuration architecture, industry survey
+
+
+The L80/L81 protocol checkpoint explicitly uses UTF-16 positions and adapts hover, outline, symbol
+kinds and push diagnostic metadata to client capabilities. Long compiler queries support negotiated
+work-done progress and request-owned cancellation. Refresh requests are coalesced for negotiated
+diagnostics, semantic tokens, inlays, lenses and folding. `$/setTrace` accepts `off`, `messages` and
+`verbose`; server `$/logTrace` messages include timing and correlation metadata without source
+buffers. Partial-result streaming remains unimplemented. Shared X140/X141 cover UTF-16 and runtime
+trace in both clients; see the manual playbook for execution receipts.

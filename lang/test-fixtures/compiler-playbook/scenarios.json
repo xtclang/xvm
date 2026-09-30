@@ -4364,6 +4364,39 @@
         "limitations": []
       }
     },
+    "X140": {
+      "title": "UTF-16 negotiation preserves navigation after an astral character",
+      "manual": [],
+      "values": {
+        "file": "ProtocolEncoding.x",
+        "source": "module ProtocolEncoding { String marker = \"\ud83d\ude00\"; Int value = 1; Int copy = value; }\n",
+        "anchor": "value",
+        "expected": "Int"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X141": {
+      "title": "runtime client trace changes between messages and verbose without source payloads",
+      "manual": [
+        "Inspect long-operation progress and cancellation using a large configured project."
+      ],
+      "values": {
+        "file": "ProtocolTrace.x",
+        "source": "module ProtocolTrace { Int value = 1; }\n",
+        "anchor": "value",
+        "levels": [
+          "messages",
+          "verbose"
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
