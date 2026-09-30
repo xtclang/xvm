@@ -175,9 +175,30 @@ export function platformCases(): void {
         await discovered(workspace, async () => {
             const document = await workspace.open(data.consumer);
             await noErrors(document.uri);
-            const edit = new vscode.WorkspaceEdit();
-            for (const source of data.sources) edit.renameFile(workspace.uri(source), workspace.uri(`${data.destination}/${source}`), { overwrite: false });
-            assert.ok(await vscode.workspace.applyEdit(edit));
+            // Use Explorer's actual batch operation and its Undo source. A pure file-only
+            // workspace.applyEdit is not on the unrelated Consumer editor's Undo stack.
+            assert.deepStrictEqual(data.sources, ['old', 'second']);
+            const sourcePaths = data.sources.map(source => workspace.uri(source).fsPath).sort();
+            await vscode.commands.executeCommand('workbench.files.action.refreshFilesExplorer');
+            await eventually(async () => {
+                // A watcher refresh can retire Explorer nodes between selection and Cut. Only
+                // repeat this pre-mutation selection step; Paste, Undo and Redo each run once.
+                try {
+                    await vscode.commands.executeCommand('workbench.files.action.collapseExplorerFolders');
+                    await vscode.commands.executeCommand('revealInExplorer', workspace.uri(data.sources[0]));
+                    await vscode.commands.executeCommand('list.expandSelectionDown');
+                    await vscode.commands.executeCommand('copyFilePath');
+                    const selected = (await vscode.env.clipboard.readText()).split(/\r?\n/).sort();
+                    if (JSON.stringify(selected) !== JSON.stringify(sourcePaths)) return selected;
+                    await vscode.commands.executeCommand('filesExplorer.cut');
+                    return selected;
+                } catch (error) {
+                    if (!String(error).includes('Data tree node not found')) throw error;
+                    return [];
+                }
+            }, selected => JSON.stringify(selected) === JSON.stringify(sourcePaths), 'Explorer selects both source folders');
+            await vscode.commands.executeCommand('revealInExplorer', workspace.uri(data.destination));
+            await vscode.commands.executeCommand('filesExplorer.paste');
             const moved = async () => Promise.all(data.sources.map(async source => ({
                 old: await fs.stat(path.join(workspace.directory, source)).then(() => true, () => false),
                 new: await fs.stat(path.join(workspace.directory, data.destination, source)).then(() => true, () => false)
@@ -185,7 +206,7 @@ export function platformCases(): void {
             await eventually(moved, values => values.every(value => !value.old && value.new), 'All selected directories moved');
             await noErrors(document.uri);
             for (const [action, expected] of [['undo', false], ['redo', true]] as const) {
-                await vscode.window.showTextDocument(document);
+                await vscode.commands.executeCommand('workbench.files.action.focusFilesExplorer');
                 await vscode.commands.executeCommand(action);
                 await eventually(moved, values => values.every(value => value.old !== expected && value.new === expected), `${action} restores all paths`);
                 await noErrors(document.uri);
