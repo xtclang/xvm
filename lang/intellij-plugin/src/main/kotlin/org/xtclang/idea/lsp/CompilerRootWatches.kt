@@ -101,6 +101,8 @@ internal class CompilerRootWatches(
  * just these compiler roots on the shared scheduler. No new thread or OS watcher is created per
  * root. Unknown directories must be loaded for VFS to emit child create events.
  */
+// TODO LSP4IJ: dynamic watcher registrations need owned VFS roots and refresh while focused.
+// Remove this bridge when upstream covers unknown/missing external roots and disposal (X124).
 internal class CompilerVfsWatches : Disposable {
     private val files = LocalFileSystem.getInstance()
     private val roots =

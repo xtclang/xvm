@@ -3,13 +3,15 @@ package org.xtclang.idea.lsp
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.command.WriteCommandAction
+import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.redhat.devtools.lsp4ij.DocumentContentSynchronizer
 import com.redhat.devtools.lsp4ij.LSPIJUtils
 import com.redhat.devtools.lsp4ij.LanguageServerWrapper
 import com.redhat.devtools.lsp4ij.OpenedDocument
 import com.redhat.devtools.lsp4ij.internal.CancellationSupport
-import java.io.File
+import java.net.URI
+import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import org.eclipse.lsp4j.FileRename
 import org.eclipse.lsp4j.RenameFile
@@ -26,11 +28,14 @@ import org.eclipse.lsp4j.services.LanguageServer
  * application and check it under the same write action as all of the returned edits. No second
  * version counter or long-lived document listener is needed.
  */
+// TODO LSP4IJ: validate document versions before applying WorkspaceEdit; stale responses currently
+// overwrite newer edits. Retire this snapshot guard after upstream provides equivalent checks.
 class XtcRenameEdit
 private constructor(
     private val snapshot: Snapshot,
     val edit: WorkspaceEdit,
     private val graph: SourceGraphEdit? = null,
+    private val command: String = "Rename",
 ) {
     /** Return false without changing any file when the request's documents have been retired. */
     fun apply(): Boolean {
@@ -38,14 +43,53 @@ private constructor(
         val project = snapshot.wrapper.project
         if (project.isDisposed) return false
         return WriteCommandAction.writeCommandAction(project)
-            .withName("Rename")
+            .withName(command)
             .withGlobalUndo()
             .compute<Boolean, RuntimeException> {
-                if (!snapshot.isCurrent() || graph?.isCurrent() == false) {
+                val resourceMoves = edit.documentChanges.orEmpty().filter { it.isRight }
+                val targets =
+                    resourceMoves
+                        .mapNotNull {
+                            (it.right as? RenameFile)?.let { move ->
+                                Path.of(URI(move.oldUri)) to Path.of(URI(move.newUri))
+                            }
+                        }
+                        .toMap()
+                val local = LocalFileSystem.getInstance()
+                val resolved =
+                    targets
+                        .mapNotNull { (from, to) ->
+                            val file = local.findFileByNioFile(from) ?: return@mapNotNull null
+                            val parent =
+                                local.findFileByNioFile(to.parent) ?: return@mapNotNull null
+                            from to (file to parent)
+                        }
+                        .toMap()
+                if (
+                    !snapshot.isCurrent() ||
+                        graph?.isCurrent() == false ||
+                        resourceMoves.size != targets.size ||
+                        resolved.size != targets.size ||
+                        (targets.isNotEmpty() && !FileMoveTargets.valid(targets))
+                ) {
                     false
                 } else {
                     graph?.beforeApply()
-                    LSPIJUtils.applyWorkspaceEdit(edit)
+                    // TODO LSP4IJ: 0.21 only renames the basename, ignoring a changed parent URI.
+                    // Apply resource moves through VFS inside this same undo command.
+                    edit.documentChanges.orEmpty().forEach { change ->
+                        if (change.isRight && change.right is RenameFile) {
+                            val move = change.right as RenameFile
+                            val (file, parent) = resolved.getValue(Path.of(URI(move.oldUri)))
+                            val target = Path.of(URI(move.newUri))
+                            if (file.parent != parent) file.move(this, parent)
+                            if (file.name != target.fileName.toString())
+                                file.rename(this, target.fileName.toString())
+                        } else {
+                            LSPIJUtils.applyWorkspaceEdit(WorkspaceEdit(listOf(change)))
+                        }
+                    }
+                    if (edit.documentChanges == null) LSPIJUtils.applyWorkspaceEdit(edit)
                     graph?.apply()
                     true
                 }
@@ -69,14 +113,13 @@ private constructor(
         val file: VirtualFile,
         val url: String,
         val stamp: Long,
-        val name: String,
+        val target: Path,
     ) {
         fun isCurrent(): Boolean =
             file.isValid &&
                 file.url == url &&
                 file.modificationStamp == stamp &&
-                file.parent.findChild(name) == null &&
-                !File(file.parent.path, name).exists()
+                FileMoveTargets.valid(mapOf(Path.of(file.path) to target))
     }
 
     private data class Snapshot(
@@ -122,28 +165,40 @@ private constructor(
                 },
             )
 
-        /** Request before disk mutation; VFS before-events are already too late for LSP proof. */
+        /** Rename is the single-source special case of a preflighted file operation. */
         fun requestFileRename(
             wrapper: LanguageServerWrapper,
             file: VirtualFile,
             name: String,
+        ): CompletableFuture<XtcRenameEdit?> {
+            require(
+                name.isNotBlank() && name != "." && name != ".." && '/' !in name && '\\' !in name
+            ) {
+                "Enter a single file or directory name"
+            }
+            return requestFileMoves(
+                wrapper,
+                mapOf(file to Path.of(file.parent.path, name)),
+                "Rename",
+            )
+        }
+
+        /** Request before disk mutation; VFS before-events are already too late for LSP proof. */
+        fun requestFileMoves(
+            wrapper: LanguageServerWrapper,
+            requested: Map<VirtualFile, Path>,
+            command: String = "Move",
         ): CompletableFuture<XtcRenameEdit?> =
             ReadAction.computeBlocking<CompletableFuture<XtcRenameEdit?>, RuntimeException> {
-                require(
-                    name.isNotBlank() &&
-                        name != "." &&
-                        name != ".." &&
-                        '/' !in name &&
-                        '\\' !in name
-                ) {
-                    "Enter a single file or directory name"
-                }
-                val move = FileMove(file, file.url, file.modificationStamp, name)
-                if (!move.isCurrent())
+                if (!FileMoveTargets.valid(requested.mapKeys { Path.of(it.key.path) }))
                     return@computeBlocking CompletableFuture.completedFuture(null)
-                val snapshot = capture(wrapper).copy(moves = listOf(move))
-                val from = wrapper.toUriString(file)
-                val to = File(file.parent.path, name).toURI().toString()
+                val moves = requested.map { (file, target) ->
+                    FileMove(file, file.url, file.modificationStamp, target)
+                }
+                val snapshot = capture(wrapper).copy(moves = moves)
+                val operations = moves.map {
+                    FileRename(wrapper.toUriString(it.file), it.target.toFile().toURI().toString())
+                }
                 val cancellation = CancellationSupport()
                 val result =
                     snapshot
@@ -152,23 +207,29 @@ private constructor(
                             cancellation.checkCanceled()
                             cancellation.execute(
                                 snapshot.server.workspaceService.willRenameFiles(
-                                    RenameFilesParams(listOf(FileRename(from, to)))
+                                    RenameFilesParams(operations)
                                 )
                             )
                         }
                         .thenApply { edit ->
                             edit?.let {
                                 check(it.changes.isNullOrEmpty()) {
-                                    "File rename requires versioned edits"
+                                    "File operations require versioned edits"
                                 }
                                 val combined =
                                     WorkspaceEdit().apply {
                                         documentChanges = buildList {
                                             addAll(it.documentChanges.orEmpty())
-                                            add(Either.forRight(RenameFile(from, to)))
+                                            addAll(
+                                                operations.map { move ->
+                                                    Either.forRight(
+                                                        RenameFile(move.oldUri, move.newUri)
+                                                    )
+                                                }
+                                            )
                                         }
                                     }
-                                XtcRenameEdit(snapshot, combined)
+                                XtcRenameEdit(snapshot, combined, command = command)
                             }
                         }
                 result.whenComplete { _, _ -> if (result.isCancelled) cancellation.cancel() }
