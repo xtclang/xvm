@@ -4143,6 +4143,44 @@
         "limitations": []
       }
     },
+    "X130": {
+      "title": "native batch container Move preserves resources and supports one Undo and Redo",
+      "manual": [],
+      "values": {
+        "sources": [
+          "old",
+          "second"
+        ],
+        "destination": "destination",
+        "consumer": "Consumer.x",
+        "files": [
+          {
+            "file": "old/App.x",
+            "text": "module App { Box make() = new Box(); static String text() = $./data.txt; }"
+          },
+          {
+            "file": "old/App/Box.x",
+            "text": "class Box {}"
+          },
+          {
+            "file": "old/data.txt",
+            "text": "moved resource"
+          },
+          {
+            "file": "second/Library.x",
+            "text": "module Library { Int number() = 1; }"
+          },
+          {
+            "file": "Consumer.x",
+            "text": "module Consumer { package app import App; package lib import Library; app.Box make() = new app.Box(); Int number() = lib.number(); }"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],

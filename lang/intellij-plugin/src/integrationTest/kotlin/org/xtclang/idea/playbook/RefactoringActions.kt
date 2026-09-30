@@ -77,7 +77,7 @@ fun Driver.chooseXtcFileRename() {
                 chooser
                     .x {
                         byType("javax.swing.JRadioButton") and
-                            byAccessibleName("Rename xtc file and references")
+                            byAccessibleName("Rename ecstasy file and references")
                     }
                     .component,
                 NativeButton::class,

@@ -15,6 +15,8 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
  * protocol's unchanged report for repeated pulls of the same editor snapshot. State belongs to one
  * connection; edits and editor replacement require a full report again.
  */
+// TODO LSP4IJ: send previousResultId on automatic pulls and preserve unchanged quick fixes.
+// Remove this bridge once upstream owns the result lifecycle (diagnostic and quick-fix tests).
 internal class DiagnosticResultMessages(
     private val snapshot: (String) -> DocumentStartupMessages.Snapshot?
 ) {

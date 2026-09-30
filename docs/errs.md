@@ -2,7 +2,8 @@
 
 **Current follow-up batch:** external source/resource watch ownership is implemented; X124 now
 exercises missing nested roots and settings replacement without native fixture refresh. Tests
-will run after the four requested implementation commits.
+will run after the four requested implementation commits. Community file-tree Move now handles
+batch container moves in one undo command; shared X130 and destination guards are added.
 
 **Latest validated batch (L69–L71 / PLAT2c):** token range/delta, initial lazy resolution, bounded file
 operations and evaluated Gradle inputs pass backend/protocol checks and ten selected scenarios
