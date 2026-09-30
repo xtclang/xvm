@@ -1,3 +1,6 @@
+L81 shared X145 now adds real long-operation progress/cancel/disconnect acceptance to both editor
+drivers (150 catalog cases). The test implementation is complete; batched execution is next.
+
 Current work: L80 generic IntelliJ server text edits now have version/incarnation checks and
 native Undo. Shared X144 and regressions are added (149 catalog cases); validation is pending the
 batched L81 progress/cancellation work. No compiler/AST API changes are needed for this slice.

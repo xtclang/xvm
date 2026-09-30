@@ -4449,6 +4449,20 @@
         "limitations": []
       }
     },
+    "X145": {
+      "title": "visible compiler progress, native cancel and disconnect with pending work",
+      "manual": [],
+      "values": {
+        "file": "ProgressWork.x",
+        "module": "ProgressWork",
+        "source": "module ProgressWork { static Int value = 1; }\n",
+        "methods": 5000
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
