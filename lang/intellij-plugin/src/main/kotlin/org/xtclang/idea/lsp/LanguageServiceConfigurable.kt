@@ -38,7 +38,7 @@ open class LanguageServiceConfigurable(private val project: Project?) : Configur
                 add(hints); add(JBLabel("Native IDE inlay controls still apply."))
             }, BorderLayout.NORTH)
             add(JBLabel("<html>Full is the default. Incremental sends changed text; it does not enable incremental compilation.<br>" +
-                "Native format-on-save takes precedence over server save formatting.<br>" +
+                "Server save edits are unavailable in LSP4IJ. Use Tools → Actions on Save → Reformat code.<br>" +
                 "Indentation is configured under Editor → Code Style → Ecstasy. Line wrapping is not implemented.<br>" +
                 "Compiler paths remain under Ecstasy Compiler. Trace and runtime controls remain in Language Servers.</html>"), BorderLayout.CENTER)
         }
@@ -47,7 +47,9 @@ open class LanguageServiceConfigurable(private val project: Project?) : Configur
     private fun updateEnabled() {
         val editable = project == null || !inherit.isSelected
         synchronization.isEnabled = editable
-        saving.isEnabled = editable
+        // TODO LSP4IJ: enable server save formatting when native willSaveWaitUntil is implemented.
+        saving.isEnabled = false
+        saving.toolTipText = "LSP4IJ does not implement server save edits. Use native Actions on Save."
         hints.isEnabled = editable
     }
 

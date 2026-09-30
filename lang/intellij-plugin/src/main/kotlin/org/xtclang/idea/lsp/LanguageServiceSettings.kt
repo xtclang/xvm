@@ -19,6 +19,9 @@ internal object LanguageServiceSettings {
     fun effective(project: Project?): LanguageServiceConfiguration =
         LanguageServiceConfiguration.read(content(null), project?.let(::content))
 
+    fun validated(project: Project): LanguageServiceConfiguration =
+        project.getService(LanguageServicePreferences::class.java).read()
+
     fun install(project: Project?, content: String) {
         val store = store(project)
         val current = store.getLanguageServerSettings(CompilerSettings.SERVER_ID)

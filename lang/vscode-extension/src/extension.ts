@@ -11,11 +11,12 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 
 import { createStatusBar, updateStatusBar } from './status-bar';
-import { startLanguageClient, restartLanguageClient, stopLanguageClient, applyTraceConfig, updateCompilerConfiguration } from './lsp-client';
+import { startLanguageClient, restartLanguageClient, stopLanguageClient, applyTraceConfig, updateCompilerConfiguration, updateEditorConfiguration } from './lsp-client';
 import { XtcTaskProvider } from './task-provider';
 import { XtcDebugAdapterDescriptorFactory, XtcDebugConfigurationProvider } from './debug-adapter';
 import { registerCommands } from './commands';
 import { registerCompilerPaths } from './compiler-paths';
+import { readServiceSettings } from './editor-settings';
 import { compilerSettingsLocation } from './rename-proposal';
 
 function ensureXtcLanguageAssociation(document: vscode.TextDocument): void {
@@ -135,20 +136,22 @@ export function activate(context: vscode.ExtensionContext): void {
             if (event.affectsConfiguration('xtc.compiler.sourceModules')) {
                 void updateCompilerConfiguration().catch(error => outputChannel.error(`Compiler configuration update failed: ${error}`));
             }
+            if (event.affectsConfiguration('xtc.formatting') || event.affectsConfiguration('xtc.inlayHints.enabled')) {
+                void updateEditorConfiguration().catch(error => outputChannel.error(`Editor configuration update failed: ${error}`));
+            }
             const needsRestart = serverExists && (
-                event.affectsConfiguration('xtc.java.home') ||
-                event.affectsConfiguration('xtc.sourceRoots')
+                event.affectsConfiguration('xtc.java.home') || event.affectsConfiguration('xtc.sourceRoots') ||
+                event.affectsConfiguration('xtc.languageService')
             );
             if (needsRestart) {
-                const changed = event.affectsConfiguration('xtc.java.home') ? 'Java path' : 'Source roots';
-                vscode.window.showInformationMessage(
-                    `${changed} changed. Restart the language server?`,
-                    'Restart', 'Later'
-                ).then(choice => {
-                    if (choice === 'Restart') {
-                        void restartLanguageClient(context, serverJar, outputChannel);
-                    }
-                });
+                try {
+                    readServiceSettings();
+                    outputChannel.info('Connection settings changed; restarting Ecstasy and resynchronizing open buffers.');
+                    void restartLanguageClient(context, serverJar, outputChannel).catch(error => outputChannel.error(`Ecstasy restart failed: ${error}`));
+                } catch (error) {
+                    outputChannel.error(`Invalid Ecstasy settings; previous connection retained: ${error}`);
+                    void vscode.window.showErrorMessage(`Invalid Ecstasy settings; previous connection retained: ${error}`);
+                }
             }
         })
     );
@@ -156,7 +159,7 @@ export function activate(context: vscode.ExtensionContext): void {
     // Start language server or show build instructions
     if (serverExists) {
         updateStatusBar('starting');
-        startLanguageClient(context, serverJar, outputChannel);
+        void startLanguageClient(context, serverJar, outputChannel).catch(error => outputChannel.error(`Ecstasy startup failed: ${error}`));
     } else {
         const buildCmd = './gradlew :lang:vscode-extension:assemble -PincludeBuildLang=true -PincludeBuildAttachLang=true';
         console.log('Ecstasy Language Server JAR not found at:', serverJar);
