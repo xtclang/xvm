@@ -15,8 +15,8 @@ import org.xtclang.idea.XtcIntelliJLanguage
  * - No tab characters
  * - 120-character right margin
  *
- * These defaults match the XTC standard library source style. When a project-level
- * `xtc-format.toml` config file is present, it takes precedence over these IDE settings.
+ * The formatter implements indentation and whitespace cleanup. The right margin is visual
+ * guidance; wrapping and `xtc-format.toml` configuration are not implemented.
  */
 class XtcLanguageCodeStyleSettingsProvider : LanguageCodeStyleSettingsProvider() {
     override fun getLanguage(): Language = XtcIntelliJLanguage
@@ -42,8 +42,6 @@ class XtcLanguageCodeStyleSettingsProvider : LanguageCodeStyleSettingsProvider()
                 "CONTINUATION_INDENT_SIZE",
                 "TAB_SIZE",
                 "USE_TAB_CHARACTER",
-                "SMART_TABS",
-                "KEEP_INDENTS_ON_EMPTY_LINES",
             )
         }
     }
