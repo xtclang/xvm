@@ -206,6 +206,7 @@ class XdkModuleServerTest {
                 .`when`(client)
                 .publishDiagnostics(any())
             server.connect(client)
+            server.initialize(editorInitializeParams()).get()
         }
 
         fun open(
