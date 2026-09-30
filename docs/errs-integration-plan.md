@@ -1152,8 +1152,8 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 | L63 semantic fixes/refactorings | Import fixes and bounded implement/override use full compilation and binding/dispatch proof. Extract, inline, safe delete and missing-declaration fixes have no implementation. | Define each transformation separately; identify the compiler facts needed for side effects, evaluation order, captures and caller closure; add supported and refused fixtures before enabling it. |
 | L68 pull diagnostics | Negotiated pull/push, result IDs, related/closed documents and invalidation pass backend, stdio and selected acceptance in both editors. | Fix the real-platform source-location crash below; retain broader workload coverage rather than treating the selected fixtures as universal proof. |
 | L69 token range/delta | Negotiated range/delta and bounded result history pass backend/protocol and X126 in both hosts. | Measure representative workspace payload/cache costs under L82. |
-| L70 lazy resolve | Completion documentation and action edits pass backend/protocol and negotiated X127. IntelliJ keeps action edits eager for reliable Undo/Redo. | Fix/upgrade the native lazy-edit application path; lens/link/inlay/workspace-symbol resolvers remain follow-ups. |
-| L71 file operations | Six negotiated pre/post hooks and proven file/package/container operations pass backend/protocol checks; native file/package Rename passes X128. | Extend native preflight to other move actions; cross-package qualification rewrites and explicit graph persistence remain unsupported. |
+| L70 lazy resolve | All six resolve endpoints now have detached revision guards; backend checks pass. IntelliJ has a selected-action bridge preserving normal Undo/Redo. | Native X105/X122/X127/X131 validation is pending; preserve eager fallback for clients without the relevant capabilities. |
+| L71 file operations | Six negotiated pre/post hooks and compiler-proven file/package/container operations; native batch Move preflight now implemented, backend checks pass. | Native X128/X130 validation is pending; cross-package qualification rewrites and explicit graph relocation remain unsupported. |
 | L72 save/sync/formatting | Negotiated save hooks, opt-in incremental patches and multiple-range formatting implemented; Full remains default. | Batch tests and shared X132 pending. Save edits are opt-in, version guarded and independent of compilation. |
 | L73 server commands | Run lenses invoke client commands; no server command registry exists. | Define typed commands, edit failure handling and cancellation. Embedded execution depends on the accepted R2–R5 service design, not another command-line assembly path. |
 | L74 monikers | Compiler/graph identities exist but are not cross-project identifiers. | Define module/artifact-version identity, import/export relationships and matches across source and binary consumers. |
@@ -1182,16 +1182,18 @@ and debugging. Neither feature counts nor a selected passing playbook establish 
   one million integers), full fallback after eviction/foreign IDs/close/restart, and negotiated
   refresh on semantic changes. Range reports preserve UTF-16 coordinates. Unit, compiler-service,
   packaged transport and shared X126 pass; representative workload measurements remain in L82.
-- [ ] **L70 — Lazy resolve operations (implementation complete, batch validation pending).**
+- [x] **L70 — Lazy resolve operations.**
   Completion/action/lens/link/inlay/workspace-symbol resolve now use bounded revision-guarded
   handles and negotiated eager fallbacks. IntelliJ's selected-action bridge restores lazy action
-  edits with document epochs and normal Undo/Redo. Validate X105/X122/X127/X131.
-- [ ] **L71 — File-operation participation (implementation complete within safety boundaries).**
+  edits with document epochs and normal Undo/Redo. Backend/protocol and selected
+  X105/X122/X127/X131 acceptance pass in both editors; see the 2026-09-30 follow-up receipt.
+- [x] **L71 — File-operation participation (within the documented safety boundaries).**
   All six hooks negotiate independently. Native IntelliJ Rename and batch Move preflight before
-  mutation, then apply references and VFS moves in one undo command. Validate X118/X128/X130.
+  mutation, then apply references and VFS moves in one undo command. Backend/protocol and selected
+  X118/X128/X130 acceptance pass in both editors, including native dispatch and project Undo fixes.
   Cross-package qualification rewriting and explicit source-graph relocation remain refused;
   ordinary LSP null replies cannot veto moves.
-- [ ] **L72 — Save hooks, incremental sync and multiple-range formatting (validation pending).**
+- [x] **L72 — Save hooks, incremental sync and multiple-range formatting.**
   Negotiated `willSave`/`willSaveWaitUntil` and `textDocument/rangesFormatting` are implemented.
   Initialization options `xtcDocumentSync: {incremental: true, formatOnSave: true}` opt into those
   behaviors independently; both flags default to false. Full synchronization remains the shipping
@@ -1199,7 +1201,7 @@ and debugging. Neither feature counts nor a selected passing playbook establish 
   Sequential patches use UTF-16 and CRLF/bare-CR aware positions. Save formatting uses the existing
   formatter and editor configuration without waiting for compiler analysis or applying edits itself.
   Multiple ranges use one snapshot, deduplicate identical expanded edits and refuse conflicts.
-  Backend tests cover these contracts; shared X132 exercises installed-client multi-range requests
+  Backend and packaged-stdio tests pass; shared X132 passes in both editors for multi-range requests
   and negotiated default save hooks. Editor settings for the opt-in options and a native multi-range
   UI are not introduced: hosts can already invoke standard formatting/save preferences.
 - [ ] **L73 — Server commands and edit application.** Implement an explicit
@@ -6925,3 +6927,116 @@ refusal/recovery; X134 checks unopened external source edits/deletion/restoratio
 A packaged stdio regression now covers L72 incremental negotiation, sequential patches, save edits
 and rangesFormatting. The catalog has 139 cases; new acceptance is pending. Historical 113/126/134
 receipts remain historical, and do not establish this catalog's success.
+
+## Watcher, move and log-view acceptance follow-up (2026-09-30)
+
+The first selected VS Code run (`run-SyLmsh`) passed 15 of 18 cases and failed X124, X128 and
+X130. These failures were investigated rather than attributed to focus or hidden by larger timeouts:
+
+- **X124:** a recursive subscription below a nonexistent resource root missed the creation of its
+  parent directories. Each external root now also has a flat subscription for the relevant child
+  of the nearest existing parent. Membership notifications replace that plan as directories appear;
+  they invalidate resource owners even when the event identifies an ancestor of the configured root.
+  IntelliJ's VFS bridge owns only the explicit recursive roots, never those broader flat parents.
+  VS Code `run-zrXkq2` passes strengthened X124 and external-source X134 without synthetic events.
+- **X128/X130:** late Created notifications for files already compiled canceled pending rename
+  proofs. File refresh now compares relevant source membership/content and resource fingerprints
+  against immutable compiler inputs. Checks make no compiler calls and are bounded to small trees;
+  larger trees, failures or uncertain inputs conservatively take normal invalidation. Actual changes
+  still invalidate the affected dependency closure. A failed current analysis always takes that path:
+  X134 exposed why an older reusable build cannot suppress recreation of a deleted dependency.
+  Empty graph rediscovery leaves resolve handles alone. Vanished module containers no longer throw from resource-watch ownership lookup.
+- **X130 harness:** editor Undo in an unchanged Consumer document does not own a pure folder move.
+  The VS Code driver now uses Explorer's batch Cut/Paste and its actual Undo/Redo source. It checks
+  both selected containers, resources and unchanged source contents. `run-VrU7eg` passes X128/X130.
+  This does not remove VS Code's inability to veto its underlying file operation on an LSP refusal.
+
+Both plugins now provide **Ctrl+Alt+X, then L** to reveal/hide the existing server log view (macOS:
+Control+Option+X, then L). IntelliJ uses Community tool-window APIs and LSP4IJ's Log-tab selector;
+VS Code uses its existing Output channel and actual view visibility, including manual close or
+another selected channel. No visibility shadow flag, separate process or editable log file is used.
+Shared X135 verifies the open/hide actions and source preservation; physical key dispatch,
+custom keymaps, retained logs and alternate docking remain manual acceptance checks. The catalog
+now contains 140 cases. This implements quick log access within UI6, not the entire settings plan.
+
+Formatting clarification: `XdkLexical.format` implements lexer-based, token-preserving indentation
+and outer whitespace cleanup. Whole/range/on-type/save hooks share that implementation. Full style
+formatting, operator spacing, declaration alignment, wrapping and `xtc-format.toml` loading are not
+implemented; L66/UI1 retain those boundaries. Adapter API comments and manual sections 13/13a/13c
+now distinguish actual behavior from future formatter work.
+
+Backend validation passes 1,449 enabled tests with three existing disabled Tree-sitter placeholders,
+72 packaged-stdio tests and 67 IntelliJ unit tests. After the final source-owner/recreation correction,
+24 focused backend tests and all 72 packaged-stdio tests pass again with zero failures/errors/skips.
+The focused tests include deterministic paused rename proofs: unchanged late Created notifications
+preserve the proof, while a real edit invalidates it. TypeScript and the IntelliJ driver compile.
+Selected native validation and final checks are recorded below.
+
+The first combined 19-case VS Code follow-up (`run-VIYUfJ`) passed 17 cases, including X135. It
+caught the deleted-dependency recreation regression described above. X130's compiler proof and
+physical batch move completed, but VS Code's own Explorer then threw `Data tree node not found`
+while clearing Cut decorations after Paste. The run remains a failed receipt. Pre-mutation tree
+selection now refreshes/retries stale nodes; Paste and applied edits are never replayed. Keep
+this upstream Explorer race on the manual acceptance list even when a later focused run passes.
+The new deterministic rename-race test also initially omitted `workspace.fileOperations.willRename`
+from its capabilities; the server correctly refused the unnegotiated call. The test now negotiates
+that operation before pausing the compiler proof.
+
+The next selected VS Code run (`run-iGx1M2`) passes 18 of 19, including X124, repaired X134 and
+X135. X130 moves only one container because expanding the selection can enter an expanded folder.
+The harness now collapses Explorer first and checks the actual selected paths through Copy Path
+before Cut. The failed receipt remains recorded; this is a selection correction, not a compiler or
+file-operation retry. Paste, Undo and Redo still each execute once.
+
+Native IntelliJ `run-17174738471798629344` passes START and 18 of the 19 selected cases with
+zero IDE errors. X124/X134 establish automatic external root watching; X105/X122/X127 exercise
+the selected lazy-action path; X131/X132/X133/X135 cover their declared protocol/view scope.
+X130 fails before mutation because the dispatch assertion selected another Move handler. A focused
+reproduction (`run-1884447924306396980`) also exposed a test setup dependency: workspace-folder
+notification ran before any source editor started the language client. X130 now opens its consumer
+and awaits that client before changing workspace roots. Handler diagnostics name each candidate;
+the final Move correction and receipt follow below.
+
+The isolated native dispatch diagnosis (`run-6493518307517078304`) found that the manifest used
+`moveHandler` instead of IntelliJ's actual `refactoring.moveHandler`. The handler never registered;
+ordinary Java/file delegates won. The corrected manifest has a regression comparing its qualified
+name with `MoveHandlerDelegate.EP_NAME`, and all six manifest tests pass. The next run
+(`run-4728671447859791254`) reached the real Move dialog and moved both containers: its compiler
+proof took 389 ms. It then spent 45 seconds awaiting Undo from an unchanged Consumer editor.
+X130 now uses project-level Undo/Redo for this file-only operation and checks history availability
+before dispatch. No compiler wait was increased, and applied mutations are never retried.
+
+Final selected acceptance: VS Code `run-iGx1M2` passes the other 18 cases and `run-YMDUeW`
+passes corrected X130. IntelliJ `run-17174738471798629344` passes START and those 18 cases;
+`run-1746762976235942700` passes START and corrected X130 with zero IDE errors. X130 itself now
+takes **4.98 seconds**, including Move/Undo/Redo; the focused Gradle invocation takes 39 seconds
+including 21.54 seconds of IDE startup. All 19 selected IDs have passing receipts in both hosts:
+CFG2, X57, X101, X105, X118, X122–X135. This is selected acceptance across recorded runs, not one
+uninterrupted full-catalog run. Catalog SHA-256:
+`026502a0304f85b0545e8af6c0743fea30671ee067d4c90df65edc2e308577fc` (140 shared IDs).
+L70–L72's bounded implementation batch is accepted; UI1–UI7, broader semantic scope, full-catalog
+submission checks and the manual lifecycle/shortcut/host-race checks remain open.
+
+The final gate passes **68 IntelliJ unit tests** and **16 VS Code extension tests**, including
+command registration and the 40-cycle compiler error/recovery workload. Root/lang read-only
+Spotless checks and ESLint on the changed TypeScript sources pass. Test results have zero
+failures/errors/skips; the three pre-existing disabled placeholders belong only to the earlier
+full backend receipt. No remote push was performed for this batch.
+
+### L70–L72 and watch/log extraction checkpoints
+
+| Concern | Commits to retain together | Extraction notes |
+| --- | --- | --- |
+| External input watching and delayed-event correctness | `9f2c5ae8c`, `b895325a7` | Native watch leases, missing-parent subscriptions, bounded immutable input comparison, failed-analysis repair and deterministic rename-race regressions. The correction is required by X124/X128/X134; source/resource ownership is shared backend behavior. |
+| Native Move, file-operation history and acceptance | `c748f9831`, `52a61224f`, `a8e29266a` | Keep the nullable platform signature and actual `refactoring.moveHandler` registration with the implementation. X130 uses native host actions and the correct project/Explorer undo histories. It also needs the watcher correctness slice above. |
+| Remaining lazy resolve and native selected-action application | `3888c15f2` | All six bounded resolvers; IntelliJ action epoch/Undo bridge. Retain shared X105/X122/X127/X131 and the current capability-negotiation tests. |
+| Save/sync/multiple-range protocol | `448b7f8a1`, relevant `3e228726e` additions | Default Full/no-save-edit contract, independent opt-ins, atomic UTF-16 patches, one-snapshot formatting and packaged transport regression. No new compiler/AST API. |
+| UI configuration plan | `4ccbda4d9` | UI1–UI7 remain planned except the quick log access below. This documentation is not proof of implemented settings. |
+| Ecstasy labels and upstream markers | `19ba6422d` | Keep technical identifiers stable. Include the later symbol-rename `TODO LSP4IJ:` comment from the acceptance documentation checkpoint. |
+| Shared coverage and manual scope audit | `3e228726e`, current acceptance documentation | X133 linked editing, X134 external source watching, exact automation/manual boundaries and failed-run records. Distribute relevant assertions with their production slice when extracting. |
+| Quick server-log access | `5ff316797` | Both host commands/keybindings, shared X135 and manual shortcut/docking checks. Production depends on the existing server consoles, not on new compiler semantics. |
+
+These are integrated-branch checkpoints and dependency guidance. Each extracted PR still needs its
+own build, meaningful regressions and relevant selected editor acceptance; the passing integrated
+branch does not establish independent green commits. Broader L62/L64–L67, L73–L82 and R1–R8 remain
+separate scopes, and Tree-sitter remains the shipped default.

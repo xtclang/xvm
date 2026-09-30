@@ -1,19 +1,34 @@
 # Failures with nowhere to go
 
-**Watch follow-up:** compiler registrations now acquire/release native VFS leases and request
-asynchronous refresh while IntelliJ remains focused. Unknown directory contents are loaded on
-a shared worker, never the LSP transport thread. Strengthened X124 acceptance is pending.
+**Current watch/rename audit:** missing external roots need a flat watch at their nearest existing
+ancestor as well as the eventual recursive root. Delayed Created events for already compiled inputs
+must not cancel rename proofs; source membership/text and resource fingerprints now distinguish
+those no-op events from real changes. The comparison is bounded and uses no compiler API. Failed
+current analyses always invalidate, even if recreated files match an older successful build. A
+vanished module container also retains a missing resource input instead of throwing during lookup.
+Deterministic paused-proof and recreation regressions pass in the latest 24-test selection; all 72
+packaged protocol checks pass. X124/X134 pass in VS Code without manual refresh.
 
-**Latest validated native audit:** X118's indefinite Rename was a lock cycle between the IDE write lock,
-LSP4IJ's synchronous file-operation listener and our diagnostic refresh acquiring a read lock on
-the transport worker. Ordered shared-pool cache updates fix it; native Rename/Undo/Redo passes
-repeatedly in about seven seconds. X128 now preflights at the host Rename action because VFS
-before-events arrive after the physical move. LSP4IJ's undo-transparent lazy-action application
-also broke X122 Redo; selective capability negotiation keeps action edits eager while completion
-documentation stays lazy. All ten selected new/regression cases have passing native receipts,
-with zero IDE errors. External-resource tests use explicit VFS loading/refresh; autonomous
-watching of unopened external roots is still open. See the
-[diagnoses, receipts and remaining tasks](errs-integration-plan.md#next-implementation-batch-l69l71--plat2c-2026-09-29).
+**Current editor acceptance:** the VS Code selection passes across `run-iGx1M2` (18 cases) and
+`run-YMDUeW` (corrected X130 selection). The latter verifies both source folders before native
+Cut/Paste, then one Undo/Redo. An earlier run exposed an upstream Explorer `Data tree node not found`
+error after the physical move; that failed receipt and manual follow-up remain recorded. Native
+IntelliJ passes the same selection across `run-17174738471798629344` and
+`run-1746762976235942700`, plus START, with zero IDE errors. The shared catalog has 140 cases;
+these are selected receipts.
+See [the diagnoses and validation record](errs-integration-plan.md#watcher-move-and-log-view-acceptance-follow-up-2026-09-30).
+
+**Native Move acceptance correction:** the manifest registered `moveHandler` instead of the
+actual `refactoring.moveHandler`; a new regression checks IntelliJ's extension-point constant.
+The registered handler now reaches compiler proof before mutation. X130 also needs project-level
+Undo for a file-only move, not the unchanged Consumer editor's history. Its previous 45-second wait
+was a harness timeout after a 389 ms proof; corrected Move/Undo/Redo takes 4.98 seconds.
+
+**Previous native audit:** X118's indefinite Rename was a lock cycle between the IDE write lock,
+LSP4IJ's synchronous file-operation listener and diagnostic refresh acquiring a read lock on the
+transport worker. Ordered shared-pool cache updates fixed it. X128 preflights at the host action
+because VFS before-events arrive after physical Rename. The temporary eager-action compatibility
+fix is now superseded by the selected lazy-action bridge, which uses a normal undo command.
 
 **Earlier hardening batch validated:** L12 fixes anonymous declaration token overlap; L16/L27
 add project source-graph settings; L68 adds negotiated pull diagnostics, including closed roots
