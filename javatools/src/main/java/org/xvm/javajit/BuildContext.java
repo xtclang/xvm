@@ -1855,8 +1855,9 @@ public class BuildContext {
             }
         }
 
+        // a captured local stores a referent value; Ref.store() handles the backing nRef
         JitFlavor srcFlavor = regFrom.flavor();
-        JitFlavor dstFlavor = regTo.flavor();
+        JitFlavor dstFlavor = regTo instanceof Ref ref ? ref.referentFlavor() : regTo.flavor();
 
         if (srcFlavor == AlwaysNull) {
             // a narrowed Null is loaded as the boxed singleton, just like a Null constant
@@ -1879,9 +1880,7 @@ public class BuildContext {
                 Builder.unbox(code, typeTo);
                 break;
 
-            case "Specific->Widened",
-                 "Specific->Ref",
-                 "Widened->Ref":
+            case "Specific->Widened":
                 // no additional transformations
                 break;
 
@@ -2011,10 +2010,11 @@ public class BuildContext {
             }
         }
 
-        int          slot  = scope.allocateLocal(regId, TypeKind.REFERENCE);
-        JitTypeDesc  jtd   = type.getJitDesc(builder);
-        RegisterInfo ref   = new Ref(this, regId, slot, name, isVar, type.getParamType(0), jtd.flavor);
-        Label        label = code.newLabel();
+        TypeConstant referentType = type.getParamType(0);
+        int          slot         = scope.allocateLocal(regId, TypeKind.REFERENCE);
+        JitTypeDesc  jtd          = referentType.getJitDesc(builder);
+        RegisterInfo ref          = new Ref(this, regId, slot, name, isVar, referentType, jtd.flavor);
+        Label        label        = code.newLabel();
 
         registerInfos.put(regId, ref);
         ref.addStartLabel(label);
