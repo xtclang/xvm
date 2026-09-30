@@ -876,3 +876,9 @@ document's current native format-on-save preference. The formatter still does no
 normalize operator spacing. Broader UI1–UI7 work (advanced runtime controls, richer build/import
 status, source attachment editing, log export/retention and remote-workspace acceptance) is not
 claimed complete by this checkpoint.
+
+
+L80/L81 protocol hardening adds shared X140/X141 (146 total scenarios): UTF-16 ranges after astral
+characters and runtime server trace switching. Both drivers are implemented; selected native/VS Code
+validation is pending. Server progress, cancellation, lifecycle and refresh have controlled protocol
+regressions; partial results and visible long-operation/cancel acceptance remain separately tracked.

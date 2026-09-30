@@ -1,3 +1,7 @@
+Current work: L80/L81 protocol hardening, X140/X141 shared acceptance (146 scenarios), plus a
+mutable-state/deprecated-API audit requested during implementation. Validation of this batch is
+pending; the previous checkpoint receipts below remain unchanged.
+
 # Threading `errs` through the compiler
 
 Current settings checkpoint: UI1–UI7's bounded editor integration is written in five slices, with
