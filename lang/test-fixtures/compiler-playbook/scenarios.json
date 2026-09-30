@@ -4245,6 +4245,50 @@
         "limitations": []
       }
     },
+    "X133": {
+      "title": "linked editing follows local identity and refuses nonlocal or broken symbols",
+      "manual": [
+        "Native linked-edit typing and highlight appearance depend on the editor; this case verifies the installed LSP response."
+      ],
+      "values": {
+        "file": "Linked.x",
+        "module": "Linked",
+        "source": "module Linked { Int one() { Int value = 1; return value; } Int two() { Int value = 2; return value; } Int identity(Int input) = input; }",
+        "anchor": "value",
+        "uses": [
+          "value = 1",
+          "value; } Int two"
+        ],
+        "refused": [
+          "Int one",
+          "input)"
+        ],
+        "broken": "module Linked { Missing broken; Int one() { Int value = 1; return value; } }"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X134": {
+      "title": "unopened external source changes refresh local consumers without manual VFS refresh",
+      "manual": [
+        "Watch retirement, shared-root ownership and repeated project close/reopen are separate lifecycle acceptance checks."
+      ],
+      "values": {
+        "file": "ExternalConsumer.x",
+        "module": "ExternalConsumer",
+        "consumer": "module ExternalConsumer { package lib import ExternalLibrary; Int answer() = lib.answer(); }",
+        "libraryFile": "ExternalLibrary.x",
+        "libraryModule": "ExternalLibrary",
+        "library": "module ExternalLibrary { static Int answer() = 1; }",
+        "brokenLibrary": "module ExternalLibrary { static String answer() = \"text\"; }"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
