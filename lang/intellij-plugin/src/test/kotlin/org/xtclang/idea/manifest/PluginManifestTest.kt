@@ -83,6 +83,7 @@ class PluginManifestTest {
                 "defaultLiveTemplates", // /liveTemplates/XTC snippets
                 "lang.commenter", // Ctrl+/ via XtcCommenter
                 "renameHandler", // guarded compiler rename via XtcRenameHandler
+                "moveHandler", // compiler preflight before native filesystem mutation
                 "langCodeStyleSettingsProvider", // Settings -> Code Style -> Ecstasy
                 "enterHandlerDelegate", // auto-indent on Enter
                 "postStartupActivity", // XtcEditorStartupActivity
