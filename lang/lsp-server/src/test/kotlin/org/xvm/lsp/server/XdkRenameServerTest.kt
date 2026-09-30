@@ -459,6 +459,7 @@ class XdkRenameServerTest {
         InitializeParams().apply {
             capabilities =
                 ClientCapabilities().apply {
+                    textDocument = editorInitializeParams().capabilities.textDocument
                     workspace =
                         WorkspaceClientCapabilities().apply {
                             workspaceEdit =
