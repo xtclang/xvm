@@ -12,7 +12,7 @@ pluginManagement {
 }
 
 plugins {
-    id("com.gradle.develocity").version("4.4.1")
+    id("com.gradle.develocity").version("4.6.0")
     id("org.gradle.toolchains.foojay-resolver").version("1.0.0")
 }
 

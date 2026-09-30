@@ -19,7 +19,7 @@ buildscript {
     }
     configurations.classpath {
         resolutionStrategy {
-            force("org.jsoup:jsoup:1.23.1")
+            force("org.jsoup:jsoup:1.23.2")
         }
     }
 }
