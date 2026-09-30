@@ -1205,8 +1205,8 @@ or AST locks are introduced. The controlled regressions pass without skips.
   versions/text/ownership and recheck all targets in one native Undo command. Closed versioned
   documents and ambiguous reused versions after reopen are refused. Resource, snippet and
   confirmation edits remain outside this generic path. `TODO LSP4IJ:` documents the upstream
-  version-validation gap in `XtcClientFeatures`. New X144 and unit regressions are written;
-  batched acceptance remains pending. Existing rename/action receipts do not establish X144.
+  version-validation gap in `XtcClientFeatures`. New X144 and unit regressions pass;
+  its actual receipts are recorded below, independently of the older rename/action checks.
 
 
 Regressions and updated realistic client fixtures pass in the focused backend and packaged stdio suites.
@@ -1215,3 +1215,78 @@ Validation-review correction: unacknowledged watcher removals retain retry owner
 from active subscriptions. Late acknowledgements retire only their IDs. File URI spelling
 (`file:/` versus `file:///`) is normalized for disk/overlay ownership. The VS Code draft invalidation
 event is fired before its emitter is disposed.
+
+### L80/L81 native acceptance and L82 lexical workload follow-up
+
+Native generic edit guarding is implemented in `992b47f26`: the existing transport lock owns
+sent versions/text/epochs; immutable edit plans cross to the EDT, which rechecks every target
+before writing. No private version accessor, duplicate counter, new AST field or compiler API
+is introduced. X144 passes in VS Code `run-4fS87C` and IntelliJ
+`run-9059436229437082618` (current edit, native Undo, all-target refusal for a stale batch).
+
+Shared X145 was added in `7a312dd9d`. Harness corrections observe the actual SDK progress model,
+match the human title, and retry only ContentModified reads after delayed fixture-create watches.
+The current 5,000-method workload passes IntelliJ `run-5136524067786146169` in 7.6 seconds;
+the current workload also passes VS Code `run-06Z6tq` in 16.0 seconds after that correction.
+Cancellation uses the native progress model/token, not a synthetic server cancellation or sleep.
+
+Live stack sampling identified repeated whole-source line scans in lexical resource detection
+and semantic-token projection. `3987e26c1` creates immutable line indexes once per projection;
+three large UTF-16/newline regressions and eleven existing presentation/resource tests pass.
+No cache, lifetime ownership or AST/embedding changes are needed. Full catalogs are in progress.
+
+### Native Save All and fixture cleanup follow-up (2026-09-30)
+
+The long IntelliJ run exposed error notifications that the IDE fatal-error collector does not see.
+LSP4IJ 0.21.0's `LSPFormattingSupport.format` passes a nullable editor through request creation
+but calls `editor.getDocument()` when applying the reply. Dirty closed tabs therefore fail during
+Save All. The Ecstasy formatting service uses the captured document and native asynchronous edit
+application instead; X139 adds that closed-tab regression. Keep this workaround with its
+`TODO LSP4IJ:` marker until upstream fixes the nullable-editor path.
+
+Separately, completed parity scenarios left dirty, closed documents in IntelliJ. Later save actions
+and shutdown could touch those fixtures, including the X127 File Cache Conflict captured by the
+user. Cleanup now explicitly discards only the completed scenario's dirty documents. It does not
+silence conflicts or discard edits in an active scenario. X57/X126 no longer require a started
+server to observe a completed close, and X143 collects its token's actual wire batches through a
+scoped lifecycle listener instead of counting a rolling console. The focused seven-case run
+`run-5152567950207711961` passes with startup, zero IDE errors and a successful Gradle exit.
+The failed full/resume receipts remain in the integration plan.
+
+### No-op directory watches during incomplete queries (2026-09-30)
+
+The full VS Code run ends with 126 passes and 24 failures. Its trace shows delayed directory-created
+events cancelling incomplete completion/signature requests with ContentModified. The watcher proof
+used disk text for unsaved sources and rejected every failed analysis, including current analyses
+with valid captured inputs. Compare those inputs with the open overlay instead; retain conservative
+invalidation for actual changes and fallback builds that predate a dependency failure. Controlled
+in-flight cursor tests cover both no-op preservation and real-change cancellation, alongside resource
+and dependency recreation regressions (38 focused tests pass). X130 independently needs Explorer
+keyboard focus before verifying a multi-folder selection. Corrected full VS Code `run-06Z6tq`
+passes all 23 previously failing cursor cases, with only the host repaint failure below remaining.
+
+
+X130 follow-up: the pinned VS Code 1.140.0 host can throw while clearing Cut highlighting after a
+successful move. Its bundled `Lln` Paste handler calls `setToCopy([], false)` in `finally`, which
+passes retired source nodes to `itemsCopied` and unconditionally rerenders them. The full
+`run-06Z6tq` reproduces this after the compiler-proven move; native Undo/Redo and all resource
+contents pass before the test rethrows the host exception. This remains an explicit native UI
+failure, not a compiler failure or a green full-catalog receipt. No VS Code binaries are patched.
+
+
+Native harness ownership follow-up (`05841a78a`): `OpenedDocument` can exist before its nullable
+synchronizer is installed; startup waits now model that lifecycle explicitly. Also, focusing an
+editor component does not necessarily retire the active Find Usages tool window. X105's server
+reply contained the correct import action, but the native action used the earlier preview's context.
+The driver now activates the editor area without moving the pointer and checks editor data identity
+before native actions. X100/X103/X105 pass together in the resumed run; complete receipts follow
+in the integration plan. These changes belong to the test driver, not the compiler or client API.
+
+Final verification: uninterrupted IntelliJ `run-1843149430446112481` passes all 150 scenarios
+plus startup, reports no IDE errors and shuts down successfully. X139 exercises the corrected open
+and closed Save All paths; X127 cleanup no longer leaves a shutdown conflict. Current backend and
+packaged transport results are 1,504 passed plus three existing disabled tests, and 74/74,
+respectively. The full VS Code run remains **149 passed / 1 failed**, not green: X130 retains
+the host repaint exception described above. Smoke fixture/settings isolation passes 23/23;
+both VS Code runners now share a status counter, with selected X144/X145 also passing. Detailed
+receipts, commit separation and remaining acceptance are in the integration plan.
