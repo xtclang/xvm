@@ -75,7 +75,9 @@ class XtcLanguageServerFactory : LanguageServerFactory {
     override fun createClientFeatures() =
         object : LSPClientFeatures() {
             init {
-                // XtcRenameHandler supplies native symbol rename with stale-document checks.
+                // TODO LSP4IJ: remove this override when native symbol rename checks document
+                // epochs.
+                // XtcRenameHandler supplies the guarded native entry point until then.
                 // Keep LSP4IJ's independent file-operation support enabled.
                 setRenameFeature(
                     object : LSPRenameFeature() {
