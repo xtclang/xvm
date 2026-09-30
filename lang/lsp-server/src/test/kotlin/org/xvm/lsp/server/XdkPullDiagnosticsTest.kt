@@ -21,6 +21,7 @@ import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.FileChangeType
 import org.eclipse.lsp4j.FileEvent
 import org.eclipse.lsp4j.InitializeParams
+import org.eclipse.lsp4j.InitializedParams
 import org.eclipse.lsp4j.PreviousResultId
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.ServerCapabilities
@@ -383,6 +384,7 @@ class XdkPullDiagnosticsTest {
                     )
                     .get(10, SECONDS)
                     .capabilities
+            server.initialized(InitializedParams())
         }
 
         fun open(uri: String, text: String, version: Int) =
