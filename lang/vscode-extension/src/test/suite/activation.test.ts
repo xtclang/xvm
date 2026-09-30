@@ -14,6 +14,7 @@ const EXPECTED_COMMANDS = [
     'xtc.restartServer',
     'xtc.showServerOutput',
     'xtc.hideServerOutput',
+    'xtc.openLanguageSettings',
 ];
 
 suite('Extension activation surfaces', () => {
@@ -33,6 +34,17 @@ suite('Extension activation surfaces', () => {
             `commands declared in package.json's contributes.commands are not registered at runtime: ${missing.join(', ')}. ` +
                 'Check that registerCommands() in extension.ts wires every command ID listed in package.json.',
         );
+    });
+
+    test('connection preferences are window scoped and ineffective formatting fields are explicit', () => {
+        const properties = vscode.extensions.getExtension(PUBLISHER_AND_NAME)!.packageJSON.contributes.configuration.properties;
+        for (const key of ['textSynchronization', 'saveFormatting']) {
+            assert.strictEqual(properties[`xtc.languageService.${key}`].scope, 'window');
+        }
+        assert.strictEqual(properties['xtc.languageService.textSynchronization'].default, 'full');
+        assert.strictEqual(properties['xtc.languageService.saveFormatting'].default, 'editor');
+        assert.ok(properties['xtc.formatting.tabSize'].deprecationMessage);
+        assert.ok(properties['xtc.formatting.maxLineWidth'].deprecationMessage);
     });
 
     test('xtc.showServerOutput executes without throwing', async () => {

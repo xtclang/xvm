@@ -16,6 +16,8 @@ function validateProjectName(value: string): string | null {
 
 export function registerCommands(context: vscode.ExtensionContext, outputChannel: vscode.OutputChannel): void {
     context.subscriptions.push(
+        vscode.commands.registerCommand('xtc.openLanguageSettings', () =>
+            vscode.commands.executeCommand('workbench.action.openSettings', '@ext:xtclang.xtc-language')),
         vscode.commands.registerCommand('xtc.runModule', async (_uri: string, moduleName: string) => {
             if (!moduleName) {
                 const input = await vscode.window.showInputBox({
