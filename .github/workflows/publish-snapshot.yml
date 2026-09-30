@@ -35,6 +35,10 @@ on:
                 description: 'Also build and publish the IntelliJ plugin snapshot ZIP'
                 required: false
                 default: 'false'
+            publish-vscode-extension:
+                description: 'Also publish the VS Code extension snapshot VSIX'
+                required: false
+                default: 'false'
             extra-gradle-options:
                 description: 'Extra Gradle options to pass to the publish steps'
                 required: false
@@ -554,32 +558,23 @@ jobs:
 
                   echo "📥 Publishing IntelliJ plugin snapshot to: $RELEASE_TAG"
 
+                  # Recreate instead of editing: GitHub never moves an existing tag, so an edited
+                  # release would keep pointing at the commit of its first publication. Download
+                  # URLs are keyed by tag and stay stable (same approach as xdk-snapshots).
                   if gh release view "$RELEASE_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
-                      echo "Updating existing IntelliJ plugin snapshot release..."
-                      gh release edit "$RELEASE_TAG" \
-                          --repo "${{ github.repository }}" \
-                          --title "XTC IntelliJ Plugin Snapshots" \
-                          --notes "$RELEASE_NOTES" \
-                          --prerelease \
-                          --latest=false \
-                          --target "$COMMIT"
-                      gh release upload "$RELEASE_TAG" \
-                          "$ASSET_NAME" \
-                          "$CHECKSUM_NAME" \
-                          --repo "${{ github.repository }}" \
-                          --clobber
-                  else
-                      echo "Creating IntelliJ plugin snapshot release..."
-                      gh release create "$RELEASE_TAG" \
-                          "$ASSET_NAME" \
-                          "$CHECKSUM_NAME" \
-                          --repo "${{ github.repository }}" \
-                          --title "XTC IntelliJ Plugin Snapshots" \
-                          --notes "$RELEASE_NOTES" \
-                          --prerelease \
-                          --latest=false \
-                          --target "$COMMIT"
+                      echo "Replacing existing IntelliJ plugin snapshot release so its tag moves to $COMMIT..."
+                      gh release delete "$RELEASE_TAG" --yes --cleanup-tag --repo "${{ github.repository }}"
                   fi
+                  echo "Creating IntelliJ plugin snapshot release..."
+                  gh release create "$RELEASE_TAG" \
+                      "$ASSET_NAME" \
+                      "$CHECKSUM_NAME" \
+                      --repo "${{ github.repository }}" \
+                      --title "XTC IntelliJ Plugin Snapshots" \
+                      --notes "$RELEASE_NOTES" \
+                      --prerelease \
+                      --latest=false \
+                      --target "$COMMIT"
 
                   echo "✅ IntelliJ plugin snapshot published"
 
@@ -594,6 +589,129 @@ jobs:
                   echo "- **Commit:** ${{ steps.commit.outputs.commit }}" >> $GITHUB_STEP_SUMMARY
                   echo "- **Release tag:** intellij-plugin-snapshots" >> $GITHUB_STEP_SUMMARY
                   echo "- **Marketplace channel:** ${{ steps.artifact.outputs.release-channel }}" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "**Assets:**" >> $GITHUB_STEP_SUMMARY
+                  echo "- \`${{ steps.prepare.outputs.asset-name }}\`" >> $GITHUB_STEP_SUMMARY
+                  echo "- \`${{ steps.prepare.outputs.checksum-name }}\`" >> $GITHUB_STEP_SUMMARY
+
+    publish-vscode-extension-snapshot:
+        name: Publish VS Code extension snapshot
+        if: ${{ github.event.inputs.publish-vscode-extension == 'true' }}
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Determine source CI run and commit
+              id: commit
+              shell: bash
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  if [ -z "${{ github.event.inputs.ci-run-id }}" ]; then
+                      echo "❌ ERROR: ci-run-id is required for VS Code extension snapshot publication"
+                      echo "This workflow publishes the VSIX that CI built and tested; it does not rebuild it."
+                      exit 1
+                  fi
+                  RUN_ID="${{ github.event.inputs.ci-run-id }}"
+                  GH_COMMIT=$(gh api /repos/${{ github.repository }}/actions/runs/$RUN_ID --jq '.head_sha')
+                  echo "📌 Using CI run from input: $RUN_ID (commit: $GH_COMMIT)"
+                  echo "run-id=$RUN_ID" >> $GITHUB_OUTPUT
+                  echo "commit=$GH_COMMIT" >> $GITHUB_OUTPUT
+
+            - name: Download VS Code extension artifact from CI
+              uses: actions/download-artifact@v8
+              with:
+                  name: vscode-extension-${{ steps.commit.outputs.commit }}
+                  path: ./artifacts/vscode-extension
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  repository: ${{ github.repository }}
+                  run-id: ${{ steps.commit.outputs.run-id }}
+
+            - name: Prepare release assets
+              id: prepare
+              shell: bash
+              run: |
+                  VSIX_FILES=(artifacts/vscode-extension/*.vsix)
+                  if [ "${#VSIX_FILES[@]}" -ne 1 ] || [ ! -f "${VSIX_FILES[0]}" ]; then
+                      echo "❌ ERROR: expected exactly one .vsix in the CI artifact, found: ${VSIX_FILES[*]}"
+                      exit 1
+                  fi
+                  # The VSIX name (xtc-language-<version>.vsix) is stable within a version, so the
+                  # GitHub release asset is replaced in place instead of accumulating.
+                  ASSET_NAME=$(basename "${VSIX_FILES[0]}")
+                  CHECKSUM_NAME="${ASSET_NAME}.sha256"
+                  cp "${VSIX_FILES[0]}" "$ASSET_NAME"
+                  sha256sum "$ASSET_NAME" > "$CHECKSUM_NAME"
+                  VERSION=$(unzip -p "$ASSET_NAME" extension/package.json | jq -r '.version')
+
+                  echo "asset-name=$ASSET_NAME" >> $GITHUB_OUTPUT
+                  echo "checksum-name=$CHECKSUM_NAME" >> $GITHUB_OUTPUT
+                  echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+                  echo "📦 Prepared release assets (extension version $VERSION):"
+                  ls -lh "$ASSET_NAME" "$CHECKSUM_NAME"
+
+            - name: Publish VS Code extension snapshot release
+              shell: bash
+              env:
+                  # Same org-level PAT as the IntelliJ plugin snapshot release: the workflow
+                  # GITHUB_TOKEN can be denied release creation in downstream runs.
+                  # Secret name: ORG_XTCLANG_GITHUB_RELEASE_TOKEN
+                  GH_TOKEN: ${{ secrets.ORG_XTCLANG_GITHUB_RELEASE_TOKEN }}
+              run: |
+                  if [ -z "$GH_TOKEN" ]; then
+                      echo "❌ ERROR: ORG_XTCLANG_GITHUB_RELEASE_TOKEN is required for VS Code GitHub release publication."
+                      exit 1
+                  fi
+
+                  RELEASE_TAG="vscode-extension-snapshots"
+                  VERSION="${{ steps.prepare.outputs.version }}"
+                  COMMIT="${{ steps.commit.outputs.commit }}"
+                  ASSET_NAME="${{ steps.prepare.outputs.asset-name }}"
+                  CHECKSUM_NAME="${{ steps.prepare.outputs.checksum-name }}"
+                  BUILD_DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
+                  RELEASE_NOTES="**Automated VS Code extension snapshot builds**
+
+                  Extension version: **${VERSION}**
+                  Build commit: \`${COMMIT}\`
+                  Build date: ${BUILD_DATE}
+
+                  Requires VS Code 1.101 or newer. Install from the Extensions view via ... -> Install from VSIX...,
+                  or from a terminal: \`code --install-extension ${ASSET_NAME}\`
+
+                  Download the current GitHub snapshot VSIX: \`${ASSET_NAME}\`."
+
+                  echo "📥 Publishing VS Code extension snapshot to: $RELEASE_TAG"
+
+                  # Recreate instead of editing: GitHub never moves an existing tag, so an edited
+                  # release would keep pointing at the commit of its first publication. Download
+                  # URLs are keyed by tag and stay stable (same approach as xdk-snapshots).
+                  if gh release view "$RELEASE_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+                      echo "Replacing existing VS Code extension snapshot release so its tag moves to $COMMIT..."
+                      gh release delete "$RELEASE_TAG" --yes --cleanup-tag --repo "${{ github.repository }}"
+                  fi
+                  echo "Creating VS Code extension snapshot release..."
+                  gh release create "$RELEASE_TAG" \
+                      "$ASSET_NAME" \
+                      "$CHECKSUM_NAME" \
+                      --repo "${{ github.repository }}" \
+                      --title "XTC VS Code Extension Snapshots" \
+                      --notes "$RELEASE_NOTES" \
+                      --prerelease \
+                      --latest=false \
+                      --target "$COMMIT"
+
+                  echo "✅ VS Code extension snapshot published"
+
+            - name: Summary
+              if: success()
+              shell: bash
+              run: |
+                  echo "### ✅ VS Code Extension Snapshot Published" >> $GITHUB_STEP_SUMMARY
+                  echo "" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Extension version:** ${{ steps.prepare.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Commit:** ${{ steps.commit.outputs.commit }}" >> $GITHUB_STEP_SUMMARY
+                  echo "- **Release tag:** vscode-extension-snapshots" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "**Assets:**" >> $GITHUB_STEP_SUMMARY
                   echo "- \`${{ steps.prepare.outputs.asset-name }}\`" >> $GITHUB_STEP_SUMMARY

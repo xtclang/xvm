@@ -54,7 +54,8 @@ Behavior to know:
 - [trigger-publish.sh](trigger-publish.sh): trigger and monitor the publish
   workflow chain for the current branch.
 - [validate-dependabot-config.sh](validate-dependabot-config.sh): validate
-  Dependabot team references through the GitHub CLI.
+  `.github/dependabot.yml` against the published Dependabot schema (also run by
+  the `Validate Dependabot Configuration` workflow).
 
 The license for these helper scripts is the Apache License, Version 2.0; see
 [LICENSE](LICENSE).

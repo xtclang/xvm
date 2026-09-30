@@ -5,8 +5,6 @@ on:
 
 permissions:
     contents: read
-    issues: write
-    pull-requests: write
 
 jobs:
     validate:
@@ -26,138 +24,24 @@ jobs:
                   fi
                   echo "✅ File exists and is readable"
 
-            - name: Validate team references
-              env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              run: |
-                  echo "🔍 Validating team references in dependabot.yml..."
-
-                  # Extract team references from dependabot.yml
-                  TEAMS=$(grep -E '^\s+- ".*"' .github/dependabot.yml | sed 's/.*"\(.*\)".*/\1/' | sort -u)
-
-                  echo "Found team references:"
-                  echo "$TEAMS"
-                  echo ""
-
-                  for TEAM_REF in $TEAMS; do
-                      echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                      echo "Validating: $TEAM_REF"
-                      echo ""
-
-                      # Parse org/team format
-                      if [[ $TEAM_REF == *"/"* ]]; then
-                          ORG=$(echo $TEAM_REF | cut -d'/' -f1)
-                          TEAM_SLUG=$(echo $TEAM_REF | cut -d'/' -f2)
-
-                          echo "  Organization: $ORG"
-                          echo "  Team slug: $TEAM_SLUG"
-
-                          # Check if team exists
-                          if gh api "orgs/$ORG/teams/$TEAM_SLUG" > /dev/null 2>&1; then
-                              echo "  ✅ Team exists"
-
-                              # Get team details
-                              TEAM_NAME=$(gh api "orgs/$ORG/teams/$TEAM_SLUG" --jq '.name')
-                              TEAM_PRIVACY=$(gh api "orgs/$ORG/teams/$TEAM_SLUG" --jq '.privacy')
-                              echo "  Team name: $TEAM_NAME"
-                              echo "  Privacy: $TEAM_PRIVACY"
-
-                              # Check team members
-                              MEMBER_COUNT=$(gh api "orgs/$ORG/teams/$TEAM_SLUG/members" --jq 'length')
-                              echo "  Members: $MEMBER_COUNT"
-
-                              if [ "$MEMBER_COUNT" -eq 0 ]; then
-                                  echo "  ⚠️  WARNING: Team has no members!"
-                              else
-                                  echo "  Team members:"
-                                  gh api "orgs/$ORG/teams/$TEAM_SLUG/members" --jq '.[] | "    - " + .login'
-                              fi
-
-                              # Check if team has access to this repo
-                              REPO_OWNER=$(gh repo view --json owner --jq '.owner.login')
-                              REPO_NAME=$(gh repo view --json name --jq '.name')
-
-                              if gh api "orgs/$ORG/teams/$TEAM_SLUG/repos/$REPO_OWNER/$REPO_NAME" > /dev/null 2>&1; then
-                                  PERMISSION=$(gh api "orgs/$ORG/teams/$TEAM_SLUG/repos/$REPO_OWNER/$REPO_NAME" --jq '.permissions | to_entries | map(select(.value == true)) | .[0].key')
-                                  echo "  ✅ Team has access to this repository (permission: $PERMISSION)"
-                              else
-                                  echo "  ❌ ERROR: Team does NOT have access to this repository!"
-                                  echo "  This will cause Dependabot to fail!"
-                                  exit 1
-                              fi
-
-                          else
-                              echo "  ❌ ERROR: Team does not exist!"
-                              echo "  Dependabot will fail with this configuration!"
-                              exit 1
-                          fi
-                      else
-                          echo "  ❌ ERROR: Invalid team format '$TEAM_REF'"
-                          echo "  Team references must be in format 'org/team-slug'"
-                          echo "  Example: 'xtclang/maintainers'"
-                          exit 1
-                      fi
-                      echo ""
-                  done
-
-                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                  echo "✅ All team references are valid!"
-
-            - name: Test team assignment capability
-              env:
-                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              run: |
-                  echo "🧪 Testing if teams can be assigned to issues..."
-                  echo ""
-                  echo "Creating a test issue to verify team assignment works..."
-
-                  # Create a test issue
-                  ISSUE_NUMBER=$(gh issue create \
-                      --title "[Test] Dependabot team assignment validation" \
-                      --body "This is a test issue to validate that the maintainers team can be assigned. This issue will be closed automatically." \
-                      --label "test" \
-                      --assignee "@me" \
-                      --json number \
-                      --jq '.number')
-
-                  echo "Created test issue #$ISSUE_NUMBER"
-
-                  # Try to add team members as assignees
-                  # Note: GitHub doesn't support assigning teams directly, only team members
-                  # Dependabot will assign individual team members
-
-                  echo ""
-                  echo "ℹ️  Note: Dependabot will assign individual team members, not the team itself"
-                  echo "   When you specify 'xtclang/maintainers', Dependabot will:"
-                  echo "   1. Request review from the team (visible in PR sidebar)"
-                  echo "   2. Assign individual team members to the PR"
-
-                  # Close the test issue
-                  gh issue close $ISSUE_NUMBER --comment "Test completed. Team configuration is valid."
-
-                  echo ""
-                  echo "✅ Test issue created and closed successfully"
-                  echo "   Team members can be assigned to issues/PRs"
+            # GitHub removed the dependabot.yml reviewers option on 2025-08-08 (reviewers come
+            # from CODEOWNERS), so there are no team references left to check. The schema catches
+            # real configuration errors: unknown keys, invalid values, malformed groups.
+            - name: Validate against the Dependabot schema
+              run: bin/validate-dependabot-config.sh
 
             - name: Summary
               if: success()
               run: |
                   echo "### ✅ Dependabot Configuration Valid" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
-                  echo "All team references in \`.github/dependabot.yml\` are valid:" >> $GITHUB_STEP_SUMMARY
-                  echo "" >> $GITHUB_STEP_SUMMARY
-                  echo "- ✅ Teams exist in the organization" >> $GITHUB_STEP_SUMMARY
-                  echo "- ✅ Teams have access to this repository" >> $GITHUB_STEP_SUMMARY
-                  echo "- ✅ Teams have members that can be assigned" >> $GITHUB_STEP_SUMMARY
-                  echo "- ✅ Team format is correct (org/team-slug)" >> $GITHUB_STEP_SUMMARY
-                  echo "" >> $GITHUB_STEP_SUMMARY
-                  echo "Dependabot should work correctly with this configuration." >> $GITHUB_STEP_SUMMARY
+                  echo "\`.github/dependabot.yml\` matches the published Dependabot configuration schema." >> $GITHUB_STEP_SUMMARY
 
             - name: Summary - Failure
               if: failure()
               run: |
                   echo "### ❌ Dependabot Configuration Invalid" >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
-                  echo "There are issues with the team references in \`.github/dependabot.yml\`." >> $GITHUB_STEP_SUMMARY
+                  echo "\`.github/dependabot.yml\` does not match the Dependabot configuration schema." >> $GITHUB_STEP_SUMMARY
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "Please check the workflow logs for details." >> $GITHUB_STEP_SUMMARY

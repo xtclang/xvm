@@ -3,6 +3,14 @@ import com.github.gradle.node.task.NodeTask
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 
+// Build-classpath security constraint: node-gradle 7.1.0 drags Jackson 2.14.2 onto this
+// project's build classpath. The Jackson BOM raises it to at least the patched version.
+buildscript {
+    dependencies {
+        classpath(platform(libs.lang.jackson.bom))
+    }
+}
+
 plugins {
     base
     alias(libs.plugins.xdk.build.properties) apply false // Shared build task types
@@ -13,6 +21,12 @@ node {
     version.set(libs.versions.lang.node.asProvider())
     download.set(true)
 }
+
+// node-gradle does not treat the Node version as a task input, so switching it would reuse
+// results produced by the previous Node and its bundled npm. That includes npm install, whose
+// output depends on the npm version (npm 11 skips unapproved dependency install scripts).
+tasks.withType<NpmTask>().configureEach { inputs.property("nodeVersion", node.version) }
+tasks.withType<NodeTask>().configureEach { inputs.property("nodeVersion", node.version) }
 
 // Configuration to consume TextMate grammar from root project
 val textMateGrammar = configurations.create("textMateGrammar") {
@@ -107,17 +121,14 @@ val npmCompile = tasks.register<NpmTask>("npmCompile") {
 
 // Bundle separately from tsc's development output so packaging never rewrites npmCompile's files.
 val bundledExtension = layout.buildDirectory.file("bundle/extension.js")
-val npmBundle = tasks.register<NpmTask>("npmBundle") {
+val npmBundle = tasks.register<NodeTask>("npmBundle") {
     description = "Bundle extension runtime dependencies for packaging"
     dependsOn(npmInstall)
-    args.set(bundledExtension.map { output ->
-        listOf(
-            "exec", "--no", "--", "esbuild", "src/extension.ts", "--bundle",
-            "--outfile=${output.asFile.absolutePath}", "--external:vscode",
-            "--platform=node", "--target=node22", "--minify"
-        )
-    })
+    val scriptFile = layout.projectDirectory.file("scripts/bundle.cjs")
+    script.set(scriptFile.asFile)
+    args.set(bundledExtension.map { listOf(it.asFile.absolutePath) })
     inputs.dir(layout.projectDirectory.dir("src"))
+    inputs.file(scriptFile)
     inputs.files(layout.projectDirectory.file("package.json"), layout.projectDirectory.file("package-lock.json"))
     outputs.file(bundledExtension)
 }

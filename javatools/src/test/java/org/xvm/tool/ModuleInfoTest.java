@@ -32,6 +32,18 @@ class ModuleInfoTest {
     // ----- Helper methods ------------------------------------------------------------------------
 
     /**
+     * Returns a path inside a sibling XDK project. Tests run from the javatools project directory
+     * and those sources are part of every checkout, so a missing path means the repository layout
+     * changed; fail instead of letting the test pass without checking anything.
+     */
+    private static File siblingProjectPath(String relativePath) {
+        var file = new File(relativePath);
+        assertTrue(file.exists(), () -> "Missing " + file.getAbsolutePath()
+                + " (expected in the repository checkout, relative to the javatools project directory)");
+        return file;
+    }
+
+    /**
      * Sets a file's modification time to one year in the past.
      */
     private void setTimestampOneYearAgo(File file) {
@@ -773,10 +785,7 @@ class ModuleInfoTest {
      */
     @Test
     void testGetSourceTreeWithRealNetModule() {
-        var netSourceFile = new File("../lib_net/src/main/x/net.x");
-        if (!netSourceFile.exists()) {
-            return;
-        }
+        var netSourceFile = siblingProjectPath("../lib_net/src/main/x/net.x");
 
         var info = new ModuleInfo(netSourceFile, false);
         var errs = new ErrorList(1000);
@@ -799,10 +808,7 @@ class ModuleInfoTest {
      */
     @Test
     void testGetSourceTreeWithRealJsonModule() {
-        var jsonSourceFile = new File("../lib_json/src/main/x/json.x");
-        if (!jsonSourceFile.exists()) {
-            return;
-        }
+        var jsonSourceFile = siblingProjectPath("../lib_json/src/main/x/json.x");
 
         var info = new ModuleInfo(jsonSourceFile, false);
         var errs = new ErrorList(1000);
@@ -820,10 +826,7 @@ class ModuleInfoTest {
      */
     @Test
     void testGetSourceTreeWithRealWebModule() {
-        var webSourceFile = new File("../lib_web/src/main/x/web.x");
-        if (!webSourceFile.exists()) {
-            return;
-        }
+        var webSourceFile = siblingProjectPath("../lib_web/src/main/x/web.x");
 
         var info = new ModuleInfo(webSourceFile, false);
         var errs = new ErrorList(1000);
@@ -835,12 +838,11 @@ class ModuleInfoTest {
         assertNotNull(node);
         assertFalse(errs.hasSeriousErrors(), "Parse errors: " + errs);
 
-        if (info.isSourceTree()) {
-            assertInstanceOf(ModuleInfo.DirNode.class, node);
-            var dirNode = (ModuleInfo.DirNode) node;
-            assertNotNull(dirNode.sourceNode());
-            assertNotNull(dirNode.children());
-        }
+        assertTrue(info.isSourceTree(), "lib_web has a web/ directory beside web.x");
+        assertInstanceOf(ModuleInfo.DirNode.class, node);
+        var dirNode = (ModuleInfo.DirNode) node;
+        assertNotNull(dirNode.sourceNode());
+        assertNotNull(dirNode.children());
     }
 
     /**
@@ -848,10 +850,7 @@ class ModuleInfoTest {
      */
     @Test
     void testModuleInfoDeduceWithRealProject() {
-        var projectDir = new File("../lib_net");
-        if (!projectDir.exists()) {
-            return;
-        }
+        var projectDir = siblingProjectPath("../lib_net");
 
         var info = new ModuleInfo(projectDir, true);
         assertEquals("net.xtclang.org", info.getQualifiedModuleName());
@@ -1085,24 +1084,42 @@ class ModuleInfoTest {
         assertTrue(nodeResDir.getLocations().contains(resourceDir.toFile()));
     }
 
-    // ----- Real .xtc binary file tests -----------------------------------------------------------
+    // ----- projectDirFromSubDir ------------------------------------------------------------------
 
     /**
-     * projectDirFromSubDir works with real .xtc binary directory.
+     * Compiler output directories map back to the project that owns them. The lookup works on
+     * directory names only, so none of these layouts needs a compiled XDK.
      */
     @Test
-    void testWithRealXtcBinaryFile() {
-        var ecstasyXtc = new File("../xdk/build/xdk/lib/ecstasy.xtc");
-        if (!ecstasyXtc.exists()) {
-            ecstasyXtc = new File("../lib_ecstasy/build/ecstasy.xtc");
-            if (!ecstasyXtc.exists()) {
-                return;
-            }
-        }
+    void testProjectDirFromBuildOutputDir() {
+        var projectDir = tempDir.resolve("lib_ecstasy").toFile();
+        assertEquals(projectDir, ModuleInfo.projectDirFromSubDir(new File(projectDir, "build")));
+        assertEquals(projectDir, ModuleInfo.projectDirFromSubDir(new File(projectDir, "target")));
+    }
 
-        var binaryDir = ecstasyXtc.getParentFile();
-        assertNotNull(binaryDir);
-        assertNotNull(ModuleInfo.projectDirFromSubDir(binaryDir));
+    /**
+     * Every level of the src/main/x source convention maps back to the project.
+     */
+    @Test
+    void testProjectDirFromSourceDir() {
+        var projectDir = tempDir.resolve("lib_net").toFile();
+        var srcDir     = new File(projectDir, "src");
+        assertEquals(projectDir, ModuleInfo.projectDirFromSubDir(srcDir));
+        assertEquals(projectDir, ModuleInfo.projectDirFromSubDir(new File(srcDir, "main")));
+        assertEquals(projectDir, ModuleInfo.projectDirFromSubDir(new File(srcDir, "main/x")));
+        assertEquals(projectDir, ModuleInfo.projectDirFromSubDir(new File(srcDir, "test/x")));
+        assertEquals(projectDir, ModuleInfo.projectDirFromSubDir(new File(srcDir, "main/ecstasy")));
+        assertEquals(projectDir, ModuleInfo.projectDirFromSubDir(new File(projectDir, "source")));
+    }
+
+    /**
+     * A directory that follows none of the conventions, such as the XDK's installed library
+     * directory, is its own best guess.
+     */
+    @Test
+    void testProjectDirFromUnconventionalDir() {
+        var libDir = tempDir.resolve("xdk/build/xdk/lib").toFile();
+        assertEquals(libDir, ModuleInfo.projectDirFromSubDir(libDir));
     }
 
     /**

@@ -10,7 +10,7 @@
         "url": "https://github.com/xtclang/xvm"
     },
     "engines": {
-        "vscode": "^1.96.0"
+        "vscode": "^1.101.0"
     },
     "categories": [
         "Programming Languages",
@@ -247,9 +247,9 @@
     "scripts": {
         "vscode:prepublish": "npm run generate:icons && npm run bundle",
         "generate:icons": "node scripts/generate-icons.cjs ../../doc/logo/x.jpg icons",
-        "bundle": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --platform=node --target=node22 --minify",
+        "bundle": "node scripts/bundle.cjs out/extension.js",
         "compile": "tsc -p ./",
-        "watch": "esbuild src/extension.ts --bundle --outfile=out/extension.js --external:vscode --platform=node --target=node22 --watch",
+        "watch": "node scripts/bundle.cjs out/extension.js --watch",
         "package": "vsce package",
         "lint": "eslint src/",
         "test:vscode": "node ./scripts/run-vscode-tests.cjs"
@@ -262,26 +262,25 @@
         "@eslint/js": "^10.0.1",
         "@types/glob": "^8.1.0",
         "@types/mocha": "^10.0.10",
-        "@types/node": "^22.20.4",
-        "@types/vscode": "1.96.0",
+        "@types/node": "~22.15.35",
+        "@types/vscode": "1.101.0",
         "@vscode/test-electron": "^3.1.0",
-        "@vscode/vsce": "^3.9.2",
+        "@vscode/vsce": "^4.0.0",
         "esbuild": "^0.28.2",
         "eslint": "^10.11.0",
         "glob": "^13.0.6",
-        "mocha": "^11.8.0",
+        "mocha": "^12.0.2",
         "sharp": "^0.35.4",
         "typescript": "^6.0.3",
         "typescript-eslint": "^8.70.1"
     },
     "overrides": {
         "diff": "^8.0.3",
-        "form-data": "^4.0.6",
-        "js-yaml": "^4.3.0",
-        "linkify-it": "^5.0.2",
-        "markdown-it": "^14.3.0",
-        "serialize-javascript": "^7.0.5",
-        "tmp": "^0.2.7",
-        "undici": "^7.28.0"
+        "js-yaml": "^4.3.2",
+        "serialize-javascript": "^7.0.5"
+    },
+    "allowScripts": {
+        "esbuild": true,
+        "@vscode/vsce-sign": true
     }
 }

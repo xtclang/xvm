@@ -204,6 +204,12 @@ runs:
               cache-disabled: false
               cache-read-only: ${{ inputs.cache-read-only }}
               gradle-version: ${{ steps.get-versions.outputs.gradle-version }}
+              # IntelliJ IDE distributions (~1.4 GB each: the IDE the plugin compiles against and
+              # the one the Plugin Verifier checks) would otherwise make the saved Gradle cache
+              # several GB. Past the repository's 10 GB cache quota that evicts master's cache.
+              # Lang runs download them from JetBrains instead.
+              gradle-home-cache-excludes: |
+                  caches/modules-2/files-2.1/idea
           env:
               GRADLE_BUILD_ACTION_CACHE_DEBUG_ENABLED: ${{ inputs.enable-debug }}
               ACTIONS_STEP_DEBUG: ${{ inputs.enable-debug }}

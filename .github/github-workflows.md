@@ -63,7 +63,7 @@ The XVM CI/CD pipeline follows a clear separation between internal build artifac
 │              │   │              │   │Release and optional plugin ZIP       │
 └──────────────┘   └──────────────┘   └──────────────────────────────────────┘
      multi-arch         xdk-latest         xdk-snapshots
-     amd64/arm64        .rb formula        .zip release + optional intellij-plugin-snapshots
+     amd64/arm64        .rb formula        .zip release + optional intellij-plugin-snapshots / vscode-extension-snapshots
 ```
 
 ### Flow Summary
@@ -77,7 +77,7 @@ The XVM CI/CD pipeline follows a clear separation between internal build artifac
    - `commit.yml` directly triggers workflows via `gh workflow run --field ci-run-id=...`
    - `publish-docker.yml` - Builds multi-platform Docker images
    - `homebrew-update.yml` - Updates Homebrew tap formula
-   - `publish-snapshot.yml` - Publishes Maven + GitHub snapshot release, and can optionally publish an installable IntelliJ plugin ZIP snapshot
+   - `publish-snapshot.yml` - Publishes Maven + GitHub snapshot release, and can optionally publish installable IntelliJ plugin ZIP and VS Code extension VSIX snapshots
    - Each workflow receives `ci-run-id` to download artifacts from CI run
 
 3. **Manual Release** (two-phase process):
@@ -248,6 +248,7 @@ The validation step passes `-PincludeBuildLang=true -PincludeBuildAttachLang=tru
 | XDK Maven snapshots | always on `push` to `master` | Maven Central Snapshots, GitHub Packages |
 | XDK GitHub release (snapshot) | always on `push` to `master` | GitHub Releases |
 | **IntelliJ plugin snapshot ZIP** | per the table above (`effective-publish-intellij=true`) | GitHub Releases (attached to the snapshot release) |
+| **VS Code extension snapshot VSIX** | same lane as the IntelliJ plugin ZIP | GitHub Releases (`vscode-extension-snapshots` prerelease) |
 | IntelliJ Marketplace | **not** by this workflow — release-only via `promote-release.yml` | JetBrains Marketplace |
 
 Note on Marketplace: snapshot CI never pushes to JetBrains Marketplace. That's intentional — Marketplace is for tagged releases, handled by the separate `promote-release.yml` flow.
@@ -340,6 +341,12 @@ gh workflow run commit.yml \
 - Asset name: `xdk-{VERSION}.zip` (e.g., `xdk-0.4.4-SNAPSHOT.zip`)
 - Overwrites previous snapshot (always latest)
 - Includes commit SHA in release notes
+
+**VS Code extension snapshot** (`publish-vscode-extension=true`, passed by `commit.yml` on the IntelliJ plugin lane):
+- Downloads the CI-built `vscode-extension-{commit}` artifact; it does not rebuild the extension
+- Release tag: `vscode-extension-snapshots` (prerelease)
+- Assets: `xtc-language-{VERSION}.vsix` and its `.sha256`
+- Like `intellij-plugin-snapshots` (and `xdk-snapshots`), the release is recreated on each publish so its tag follows the build commit; download URLs are keyed by tag and stay stable
 
 **Manual Trigger**:
 ```bash

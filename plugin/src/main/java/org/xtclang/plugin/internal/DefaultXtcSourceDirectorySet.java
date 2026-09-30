@@ -11,7 +11,7 @@ import org.xtclang.plugin.XtcSourceDirectorySet;
 /**
  * Compatibility adapter for the typed XTC source-set DSL.
  *
- * <p>Gradle 9.7.1 recognizes nested source directories through an instanceof check
+ * <p>Gradle recognizes nested source directories through an instanceof check
  * against DefaultSourceDirectorySet, rather than the public SourceDirectorySet interface.
  * A public-API forwarding wrapper is treated as a collection of source files used as
  * directory paths, breaking allSource composition and configuration-cache storage.

@@ -203,6 +203,14 @@ val jar = tasks.named<Jar>("jar") {
     }
 }
 
+// ModuleInfoTest parses real module sources of sibling XDK projects. Declare them as inputs so
+// an edit to those sources re-runs the tests instead of reusing an up-to-date or cached result.
+tasks.test {
+    inputs.files(listOf("lib_net", "lib_json", "lib_web").map { File(compositeRoot, "$it/src/main/x") })
+        .withPropertyName("siblingModuleSources")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+}
+
 val versionOutputTest = tasks.register<Test>("versionOutputTest") {
     description = "Run tests that verify version output contains git and API information"
     group = VERIFICATION_GROUP

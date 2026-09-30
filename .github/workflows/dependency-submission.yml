@@ -45,6 +45,10 @@ jobs:
                       --no-configuration-cache
                       ${{ steps.setup.outputs.gradle-options }}
                   dependency-graph: generate-and-submit
-                  cache-provider: basic
+                  # Resolving the lang composite downloads IntelliJ IDE distributions (~1.4 GB each).
+                  # The default (enhanced) cache provider can exclude them from the saved Gradle cache;
+                  # the basic provider saved all of ~/.gradle/caches, IDEs included, on every master push.
                   cache-read-only: false
+                  gradle-home-cache-excludes: |
+                      caches/modules-2/files-2.1/idea
                   validate-wrappers: true
