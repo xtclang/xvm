@@ -32,6 +32,10 @@ import org.xtclang.idea.XtcIntelliJLanguage
  * them as a JSON-compatible map. Code Style changes refresh the server's immutable formatting
  * snapshot. `xtc-format.toml` and line wrapping are not implemented.
  */
+// TODO LSP4IJ: expose protocol document versions and validate them in workspace/applyEdit.
+// Generic server-initiated edits still use the upstream application path. Ecstasy's current
+// IntelliJ actions/file operations use XtcRenameEdit snapshots instead; the server's legacy
+// command fallback is negotiated only for clients without code-action literal support.
 class XtcLanguageClient(project: Project) : LanguageClientImpl(project) {
     private val compilerWatches = CompilerVfsWatches()
     private val preferences = AtomicReference(LanguageServiceSettings.validated(project))

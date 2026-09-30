@@ -6,6 +6,7 @@ import org.eclipse.lsp4j.DeleteFilesParams
 import org.eclipse.lsp4j.DidChangeConfigurationParams
 import org.eclipse.lsp4j.DidChangeWatchedFilesParams
 import org.eclipse.lsp4j.DidChangeWorkspaceFoldersParams
+import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.FileChangeType
 import org.eclipse.lsp4j.FileEvent
 import org.eclipse.lsp4j.RenameFilesParams
@@ -121,6 +122,9 @@ class XtcWorkspaceService(
         params: WorkspaceSymbolParams
     ): CompletableFuture<Either<List<SymbolInformation>, List<WorkspaceSymbol>>> =
         server.workspaceSymbols(params)
+
+    override fun executeCommand(params: ExecuteCommandParams): CompletableFuture<Any> =
+        server.executeCodeAction(params)
 
     override fun resolveWorkspaceSymbol(
         symbol: WorkspaceSymbol

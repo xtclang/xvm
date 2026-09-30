@@ -8,6 +8,8 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.measureTimedValue
+import org.eclipse.lsp4j.ApplyWorkspaceEditParams
+import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
 import org.eclipse.lsp4j.CodeActionOptions
 import org.eclipse.lsp4j.CodeLensOptions
 import org.eclipse.lsp4j.CompletionOptions
@@ -18,6 +20,8 @@ import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
 import org.eclipse.lsp4j.DocumentLinkOptions
 import org.eclipse.lsp4j.DocumentOnTypeFormattingOptions
 import org.eclipse.lsp4j.DocumentRangeFormattingOptions
+import org.eclipse.lsp4j.ExecuteCommandOptions
+import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.FileOperationFilter
 import org.eclipse.lsp4j.FileOperationOptions
 import org.eclipse.lsp4j.FileOperationPattern
@@ -225,6 +229,20 @@ class XtcLanguageServer(
     internal val resolvesWorkspaceSymbolRange: Boolean
         get() = resolveCapabilities.get().symbolRange
 
+    internal fun applyEdit(
+        params: ApplyWorkspaceEditParams
+    ): CompletableFuture<ApplyWorkspaceEditResponse> {
+        val current =
+            client?.takeUnless { compilerSettings.get().closed }
+                ?: return CompletableFuture.failedFuture(
+                    IllegalStateException("Language client disconnected")
+                )
+        return current.applyEdit(params)
+    }
+
+    internal fun executeCodeAction(params: ExecuteCommandParams): CompletableFuture<Any> =
+        textDocumentService.executeCodeAction(params)
+
     internal fun workspaceSymbols(
         params: WorkspaceSymbolParams
     ): CompletableFuture<Either<List<SymbolInformation>, List<WorkspaceSymbol>>> =
@@ -420,7 +438,8 @@ class XtcLanguageServer(
                     ?.resolveSupport
                     ?.properties
                     ?.contains("documentation") == true,
-                textCapabilities?.codeAction?.dataSupport == true &&
+                presentation.actionLiterals &&
+                    textCapabilities?.codeAction?.dataSupport == true &&
                     textCapabilities.codeAction.resolveSupport?.properties?.contains("edit") ==
                         true,
                 textCapabilities?.codeLens?.let {
@@ -821,9 +840,17 @@ class XtcLanguageServer(
                     }
                 )
             codeActionProvider =
-                if (resolvesCodeActionEdit)
+                if (!presentation.codeActions) Either.forLeft(false)
+                else if (resolvesCodeActionEdit)
                     Either.forRight(CodeActionOptions().apply { resolveProvider = true })
                 else Either.forLeft(true)
+            if (
+                !presentation.actionLiterals &&
+                    presentation.applyEdit &&
+                    AdapterCapability.CODE_ACTION in adapter.capabilities
+            )
+                executeCommandProvider =
+                    ExecuteCommandOptions(listOf(ClientPresentation.APPLY_CODE_ACTION))
             documentFormattingProvider = Either.forLeft(true)
             documentRangeFormattingProvider =
                 Either.forRight(DocumentRangeFormattingOptions().apply { rangesSupport = true })

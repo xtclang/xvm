@@ -2,6 +2,9 @@ package org.xvm.lsp.server
 
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.ClientCapabilities
+import org.eclipse.lsp4j.CodeActionCapabilities
+import org.eclipse.lsp4j.CodeActionKindCapabilities
+import org.eclipse.lsp4j.CodeActionLiteralSupportCapabilities
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DocumentSymbolCapabilities
 import org.eclipse.lsp4j.DocumentSymbolParams
@@ -125,6 +128,14 @@ internal fun editorInitializeParams() =
                 workspace = WorkspaceClientCapabilities().apply { configuration = true }
                 textDocument =
                     TextDocumentClientCapabilities().apply {
+                        codeAction =
+                            CodeActionCapabilities().apply {
+                                codeActionLiteralSupport =
+                                    CodeActionLiteralSupportCapabilities(
+                                        CodeActionKindCapabilities(listOf(""))
+                                    )
+                                isPreferredSupport = true
+                            }
                         documentSymbol =
                             DocumentSymbolCapabilities().apply {
                                 hierarchicalDocumentSymbolSupport = true
