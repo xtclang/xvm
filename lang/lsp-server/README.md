@@ -777,3 +777,8 @@ diagnostics, semantic tokens, inlays, lenses and folding. `$/setTrace` accepts `
 `verbose`; server `$/logTrace` messages include timing and correlation metadata without source
 buffers. Partial-result streaming remains unimplemented. Shared X140/X141 cover UTF-16 and runtime
 trace in both clients; see the manual playbook for execution receipts.
+
+Known compiler fact gap: constant-folded property initializers can lose reference bindings when
+their temporary initializer is discarded. Their hover/navigation/reference coverage is incomplete;
+[L83](../../docs/errs-integration-plan.md#protocol-correctness-and-the-completion-gate) tracks the
+ownership fix and acceptance. This is separate from the passing UTF-16 method-body checks.
