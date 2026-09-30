@@ -89,6 +89,21 @@
             {
                 "command": "xtc.showServerOutput",
                 "title": "Ecstasy: Show Language Server Output"
+            },
+            {
+                "command": "xtc.hideServerOutput",
+                "title": "Ecstasy: Hide Language Server Output"
+            }
+        ],
+        "keybindings": [
+            {
+                "command": "xtc.showServerOutput",
+                "key": "ctrl+alt+x l"
+            },
+            {
+                "command": "xtc.hideServerOutput",
+                "key": "ctrl+alt+x l",
+                "when": "view.workbench.panel.output.visible && activeOutputChannel =~ /xtclang\\.xtc-language\\.Ecstasy Language Server(?:\\.\\d+)?\\.log$/"
             }
         ],
         "taskDefinitions": [

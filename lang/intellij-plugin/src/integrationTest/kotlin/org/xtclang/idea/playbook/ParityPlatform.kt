@@ -5,6 +5,7 @@ import com.google.gson.JsonParser
 import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Project
+import com.intellij.driver.sdk.getToolWindow
 import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.invokeGlobalBackendAction
 import com.intellij.driver.sdk.singleProject
@@ -16,6 +17,24 @@ import java.nio.file.Path
 import kotlin.time.Duration.Companion.seconds
 
 internal fun ParityScenarios.platformCases() {
+    case("X135") { data ->
+        write(data.string("file"), data.string("source"))
+        val document = open(data.string("file"))
+        clean(document)
+        with(driver) {
+            withContext(OnDispatcher.EDT) { getToolWindow("Language Servers").hide() }
+            listOf(true, false, true, false).forEach { visible ->
+                invokeAction("xtc.toggleServerLog")
+                awaitUi("Ecstasy server log visibility = $visible", 15.seconds) {
+                    withContext(OnDispatcher.EDT) {
+                        getToolWindow("Language Servers").isVisible()
+                    } == visible
+                }
+            }
+        }
+        check(document.text == data.string("source"))
+    }
+
     case("X124") { data ->
         val external = Files.createTempDirectory("xtc-playbook-resources-").toRealPath()
         try {

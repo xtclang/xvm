@@ -304,4 +304,16 @@ export function platformCases(): void {
         } finally { await workspace.configure([]); await fs.rm(external, { recursive: true, force: true }); }
     });
 
+    playbook('X135', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await noErrors(document.uri);
+        const visible = () => vscode.window.visibleTextEditors.some(editor =>
+            /Ecstasy Language Server(?:\.\d+)?\.log$/.test(editor.document.uri.path));
+        for (const command of ['xtc.showServerOutput', 'xtc.hideServerOutput', 'xtc.showServerOutput', 'xtc.hideServerOutput']) {
+            await vscode.commands.executeCommand(command);
+            await eventually(async () => visible(), value => value === (command === 'xtc.showServerOutput'), command);
+        }
+        assert.strictEqual(document.getText(), data.source);
+    });
+
 }
