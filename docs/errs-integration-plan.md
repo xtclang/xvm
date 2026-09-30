@@ -7243,3 +7243,15 @@ stale path-editor drafts, disk-index/open-buffer ownership) in separate commits;
 facts for L83; then complete the remaining L80 capability audit and L81 partial-result work. Add
 controlled regressions and shared editor cases where observable, batch validation, and reserve a
 full catalog/long-workload run for the L82 submission gate.
+
+### Concurrency and initializer follow-up batch (2026-09-30)
+
+- `966b19c89`: bounded watcher acknowledgements, late registration cleanup and disconnect retirement.
+- `239c39f72`: VS Code compiler path draft invalidation before settings writes.
+- `6601c7689`: Tree-sitter disk/overlay ownership, including initial scan and close/reopen.
+- L83 implementation: detached successful constant-initializer facts, additive embedding accessor,
+  Kotlin semantic copying and shared X142. See the AST ownership record in `errs.md`.
+
+Each slice includes regressions; execution is deliberately batched after L80/L81 implementation.
+X142 is added to both editor drivers, bringing the catalog to 147 scenarios. This is code coverage
+inventory, not a new passing acceptance receipt.
