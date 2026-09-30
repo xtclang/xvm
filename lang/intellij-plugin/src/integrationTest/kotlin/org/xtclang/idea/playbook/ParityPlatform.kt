@@ -469,6 +469,46 @@ internal fun ParityScenarios.platformCases() {
                 )
             }
     }
+    case("X132") { data ->
+        write(data.string("file"), data.string("source"))
+        configure(
+            listOf(
+                SharedScenarios.SourceModule(
+                    data.string("module"),
+                    uri(data.string("file")),
+                    emptyList(),
+                )
+            )
+        )
+        val document = open(data.string("file"))
+        clean(document)
+        val edits =
+            query(
+                    "textDocument/rangesFormatting",
+                    document,
+                    extra =
+                        mapOf(
+                            "options" to mapOf("tabSize" to 4, "insertSpaces" to true),
+                            "ranges" to data["ranges"],
+                        ),
+                )
+                .rows()
+        check(
+            edits.map { it["range"].asJsonObject["start"].asJsonObject["line"].asInt } ==
+                data["lines"].asJsonArray.map { it.asInt }
+        )
+        check(edits.all { it.string("newText") == data.string("indent") })
+        val sync = protocol.capabilities().asJsonObject["textDocumentSync"]
+        if (sync.isJsonObject) {
+            val save =
+                mapOf("textDocument" to mapOf("uri" to uri(data.string("file"))), "reason" to 1)
+            if (sync.asJsonObject["willSave"]?.asBoolean == true)
+                protocol.notify("textDocument/willSave", save)
+            if (sync.asJsonObject["willSaveWaitUntil"]?.asBoolean == true)
+                check(protocol.query("textDocument/willSaveWaitUntil", save).rows().isEmpty())
+        }
+        check(document.text == data.string("source"))
+    }
 }
 
 @Remote("org.xtclang.idea.playbook.probe.FileTreeOperations", plugin = "org.xtclang.playbook.probe")
