@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import org.xvm.lsp.treesitter.SemanticTokenLegend
 
 class XdkInitializerTest {
     @Test
@@ -25,7 +26,19 @@ class XdkInitializerTest {
             assertThat(adapter.findDefinition(uri, 0, offset)?.startColumn)
                 .isEqualTo(source.indexOf("value"))
             assertThat(adapter.findReferences(uri, 0, offset, true)).hasSize(3)
-            assertThat(adapter.getSemanticTokens(uri)).isNotNull()
+            val tokens =
+                requireNotNull(adapter.getSemanticTokens(uri))
+                    .data
+                    .chunked(5)
+                    .runningFold(listOf(0, 0, 0, 0, 0)) { previous, delta ->
+                        listOf(
+                            previous[0] + delta[0],
+                            if (delta[0] == 0) previous[1] + delta[1] else delta[1],
+                        ) + delta.drop(2)
+                    }
+                    .drop(1)
+            val reference = tokens.single { it[0] == 0 && it[1] == offset }
+            assertThat(SemanticTokenLegend.tokenTypes[reference[3]]).isEqualTo("property")
             assertThat(adapter.prepareRename(uri, 0, offset)).isNotNull()
             val edits =
                 requireNotNull(adapter.rename(uri, 0, offset, "number")).changes.getValue(uri)

@@ -48,7 +48,7 @@ class SemanticModelTest {
         val rejected = compile("module Failed { Int copy = absent; }", succeeds = false)
         assertThat(rejected.initializerBindings()).isEmpty()
         val source =
-            "module Runtime { Int /*declaration*/value = make(); Int copy = /*use*/value; Int make() = 1; }"
+            "module Runtime { Int /*declaration*/value = make(); Int copy = /*use*/value; static Int make() = 1; }"
         val model = compile(source).semanticSnapshot()
         assertThat(occurrence(model, source, "use").symbol)
             .isEqualTo(occurrence(model, source, "declaration").symbol)
