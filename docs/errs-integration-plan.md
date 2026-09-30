@@ -7605,3 +7605,29 @@ The implementation batch and its regressions are complete. The full cross-editor
 Physical Cancel-button selection, the broader P3/P4 manual acceptance, representative response-time
 and peak-memory targets, and prolonged supported-platform lifecycle workloads remain separate L82
 work. Extracted PRs must still pass independently; these integrated-branch receipts do not prove that.
+
+### Reliability follow-up batch (X130, P3/P4, L82, 2026-09-30)
+
+The next four separate checkpoints are authorized: isolate X130 without Ecstasy, automate P3/P4
+where the installed hosts expose the necessary state, make representative workload measurements
+reproducible, and reconcile completed versus remaining scope. Validation is batched afterward.
+
+1. **X130 host isolation — implementation checkpoint.** The pinned VS Code bundle's
+   `ExplorerView.itemsCopied` unconditionally rerenders previous Cut items. Paste's `finally`
+   invokes it after the bulk move, when those nodes can already be absent. There is no public
+   extension API to repair that tree. `explorer-move.ts` shares the exact guarded selection and
+   single Cut/Paste path between X130 and an isolated plain-text reproduction. The reproduction
+   loads an empty extension, asserts Ecstasy is absent, then records Move/Undo/Redo and contents.
+   An unreproduced attempt does not establish a fix. X130 still reports the original exception;
+   no retries, vendor patches, suppressed failures or substituted file-only moves are introduced.
+
+   After compiling the extension tests, run from `lang/vscode-extension`:
+
+   ```bash
+   node scripts/run-vscode-tests.cjs --explorer-move-probe
+   ```
+
+   Results and host logs remain in `build/reports/explorer-probe/run-*/`. It exits unsuccessfully
+   on a reproduced error; `not-reproduced` is explicitly distinct from proving X130 fixed.
+   The standalone reproduction and X130 will run in the final validation batch. An upstream
+   issue/PR has not been submitted.
