@@ -4,6 +4,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { CodeAction } from 'vscode-languageclient/node';
+import { discovered } from './liveWorkspace';
 import { modelPath } from '../../build-model';
 import { updateCompilerConfiguration } from '../../lsp-client';
 import { client, diagnostics, eventually, hover, label, noErrors, playbook, targets } from './support';
@@ -166,6 +167,34 @@ export function platformCases(): void {
             await settings.update('sourceModules', previous, vscode.ConfigurationTarget.Workspace);
             await updateCompilerConfiguration();
         }
+    });
+
+    playbook('X130', async (workspace, data) => {
+        for (const file of data.files) await workspace.write(file.file, file.text);
+        await fs.mkdir(path.join(workspace.directory, data.destination));
+        await discovered(workspace, async () => {
+            const document = await workspace.open(data.consumer);
+            await noErrors(document.uri);
+            const edit = new vscode.WorkspaceEdit();
+            for (const source of data.sources) edit.renameFile(workspace.uri(source), workspace.uri(`${data.destination}/${source}`), { overwrite: false });
+            assert.ok(await vscode.workspace.applyEdit(edit));
+            const moved = async () => Promise.all(data.sources.map(async source => ({
+                old: await fs.stat(path.join(workspace.directory, source)).then(() => true, () => false),
+                new: await fs.stat(path.join(workspace.directory, data.destination, source)).then(() => true, () => false)
+            })));
+            await eventually(moved, values => values.every(value => !value.old && value.new), 'All selected directories moved');
+            await noErrors(document.uri);
+            for (const [action, expected] of [['undo', false], ['redo', true]] as const) {
+                await vscode.window.showTextDocument(document);
+                await vscode.commands.executeCommand(action);
+                await eventually(moved, values => values.every(value => value.old !== expected && value.new === expected), `${action} restores all paths`);
+                await noErrors(document.uri);
+            }
+            for (const file of data.files) {
+                const target = data.sources.some(source => file.file.startsWith(`${source}/`)) ? `${data.destination}/${file.file}` : file.file;
+                assert.strictEqual(await fs.readFile(path.join(workspace.directory, target), 'utf8'), file.text);
+            }
+        });
     });
 
 }

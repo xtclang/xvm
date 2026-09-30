@@ -827,3 +827,10 @@ External-root follow-up (2026-09-30): source roots join resource roots in dynami
 registrations. IntelliJ owns the native watch leases and refreshes those roots asynchronously
 while focused. Missing-root creation, settings replacement and disposal have new unit/driver
 coverage; execution is pending the four-commit batch.
+
+L71 native Move follow-up (2026-09-30): the Community Move delegate preflights one or multiple
+source/container moves before disk mutation. Parent changes are applied through VFS because
+LSP4IJ 0.21 only applies the new basename. References and paths share a global undo command.
+Shared X130 covers two discovered module containers and embedded resources with Undo/Redo;
+validation is pending. Explicit-graph relocation and cross-package qualification rewriting remain
+refusals. Search `// TODO LSP4IJ:` in the plugin for removable upstream compatibility bridges.

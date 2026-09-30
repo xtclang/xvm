@@ -87,7 +87,7 @@ class XtcLanguageServerFactory : LanguageServerFactory {
 
             override fun initializeParams(params: InitializeParams) {
                 super.initializeParams(params)
-                // LSP4IJ 0.21.0 applies resolved action edits in an undo-transparent action,
+                // TODO LSP4IJ: 0.21.0 applies resolved action edits in an undo-transparent action,
                 // losing Redo. Negotiate eager edits until that native application path is fixed.
                 params.capabilities.textDocument?.codeAction?.resolveSupport?.let { resolve ->
                     resolve.properties = resolve.properties.filterNot { it == "edit" }
@@ -221,6 +221,7 @@ class XtcLspConnectionProvider(private val project: Project) : OSProcessStreamCo
 
     override fun start() {
         logger.info("Starting XTC LSP Server (out-of-process via JBR)")
+        // TODO LSP4IJ: make OS process start/stop atomic and reject starts after stop/disposal.
         // LSP4IJ starts on a pooled thread: project disposal or cancellation can stop the
         // provider first. Its OS provider otherwise starts even after its stop flag is set.
         if (project.isDisposed) lifetime.stop()
