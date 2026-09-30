@@ -610,9 +610,26 @@ jobs:
                   echo "✅ VS Code extension tests: PASSED"
 
                   echo ""
+                  echo "📋 Bundling and packaging the VS Code extension (VSIX)..."
+                  ./gradlew $GRADLE_OPTIONS $LANG_OPTS :lang:vscode-extension:packageExtension
+                  echo "✅ VS Code extension packaged: $(ls lang/vscode-extension/build/distributions/*.vsix)"
+
+                  echo ""
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                   echo "🎉 ALL LANG VALIDATION COMPLETE"
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            - name: Upload VS Code extension
+              if: |
+                  success() &&
+                  matrix.os == 'ubuntu-latest' &&
+                  steps.publish-flags.outputs.validate-lang == 'true'
+              uses: actions/upload-artifact@v7
+              with:
+                  name: vscode-extension-${{ env.ARTIFACT_SHA }}
+                  path: lang/vscode-extension/build/distributions/*.vsix
+                  if-no-files-found: error
+                  retention-days: 14
 
             - name: Upload Plugin Verifier reports
               if: |
