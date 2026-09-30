@@ -223,4 +223,22 @@ export function platformCases(): void {
         }
     });
 
+    playbook('X132', async (workspace, data) => {
+        await workspace.write(data.file, data.source);
+        await workspace.configure([{ name: data.module, uri: workspace.uri(data.file).toString() }]);
+        const document = await workspace.open(data.file);
+        await noErrors(document.uri);
+        const params = { textDocument: { uri: document.uri.toString() }, options: { tabSize: 4, insertSpaces: true }, ranges: data.ranges };
+        const edits = await client().sendRequest<import('vscode-languageclient/node').TextEdit[]>('textDocument/rangesFormatting', params);
+        assert.deepStrictEqual(edits.map(edit => edit.range.start.line), data.lines);
+        assert.ok(edits.every(edit => edit.newText === data.indent));
+        const sync = client().initializeResult?.capabilities.textDocumentSync;
+        if (typeof sync === 'object') {
+            const save = { textDocument: params.textDocument, reason: 1 };
+            if (sync.willSave) await client().sendNotification('textDocument/willSave', save);
+            if (sync.willSaveWaitUntil) assert.deepStrictEqual(await client().sendRequest('textDocument/willSaveWaitUntil', save), []);
+        }
+        assert.strictEqual(document.getText(), data.source);
+    });
+
 }
