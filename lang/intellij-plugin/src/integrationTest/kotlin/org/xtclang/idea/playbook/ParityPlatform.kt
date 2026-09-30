@@ -150,6 +150,54 @@ internal fun ParityScenarios.platformCases() {
         }
     }
 
+    case("X143") { data ->
+        val source =
+            "module ${data.string("module")} {\n" +
+                (0 until data["declarations"].asInt).joinToString("\n") {
+                    "    class ${data.string("prefix")}$it {}"
+                } +
+                "\n}\n"
+        write(data.string("file"), source)
+        configure(
+            listOf(
+                SharedScenarios.SourceModule(
+                    data.string("module"),
+                    uri(data.string("file")),
+                    emptyList(),
+                )
+            )
+        )
+        val document = open(data.string("file"))
+        clean(document)
+        query("textDocument/documentSymbol", document)
+        val normal =
+            protocol.query("workspace/symbol", mapOf("query" to data.string("prefix"))).rows()
+        val before = trace.notifications("$/progress").size
+        val final =
+            protocol
+                .query(
+                    "workspace/symbol",
+                    mapOf(
+                        "query" to data.string("prefix"),
+                        "partialResultToken" to data.string("token"),
+                    ),
+                )
+                .rows()
+        val batches =
+            trace
+                .notifications("$/progress")
+                .drop(before)
+                .filter { it["token"]?.asString == data.string("token") }
+                .map { it["value"].asJsonArray }
+        check(final.isEmpty())
+        check(normal.size == data["declarations"].asInt)
+        check(batches.size > 1 && batches.all { it.size() <= data["batchSize"].asInt })
+        check(
+            batches.flatMap { it.map { row -> row.asJsonObject.string("name") } } ==
+                normal.map { it.string("name") }
+        )
+    }
+
     case("X142") { data ->
         write(data.string("file"), data.string("source"))
         configure(
