@@ -128,9 +128,9 @@ class XdkFeatureResolveProtocolTest {
                     server.workspaceService
                         .symbol(WorkspaceSymbolParams("Resolve"))
                         .get(30, SECONDS)
-                        .right
+                        .left
                 )
-                .allMatch { it.location.isLeft }
+                .allMatch { it.location.range != null }
             assertThatThrownBy { documents.resolveCodeLens(lens).get(10, SECONDS) }
                 .hasMessageContaining("not negotiated")
         }
