@@ -22,6 +22,12 @@ node {
     download.set(true)
 }
 
+// node-gradle does not treat the Node version as a task input, so switching it would reuse
+// results produced by the previous Node and its bundled npm. That includes npm install, whose
+// output depends on the npm version (npm 11 skips unapproved dependency install scripts).
+tasks.withType<NpmTask>().configureEach { inputs.property("nodeVersion", node.version) }
+tasks.withType<NodeTask>().configureEach { inputs.property("nodeVersion", node.version) }
+
 // Configuration to consume TextMate grammar from root project
 val textMateGrammar = configurations.create("textMateGrammar") {
     isCanBeConsumed = false
