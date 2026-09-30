@@ -7,11 +7,12 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.attribute.BasicFileAttributes
+import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.io.path.extension
 import kotlin.io.path.readText
 import kotlin.time.measureTimedValue
@@ -50,6 +51,7 @@ class WorkspaceIndexer(
 
     /** Serializes access to the non-thread-safe tree-sitter parser and query engine. */
     private val parseLock = Any()
+    private val closed = AtomicBoolean()
 
     private val threadPoolSize =
         minOf(Runtime.getRuntime().availableProcessors(), 4).coerceAtLeast(2)
@@ -87,35 +89,20 @@ class WorkspaceIndexer(
                             return@supplyAsync
                         }
 
-                        val indexed = AtomicInteger(0)
-                        val total = files.size
-
-                        // Process files in parallel batches using the dedicated thread pool
-                        val futures = files.map { file ->
-                            CompletableFuture.runAsync(
-                                {
-                                    indexFile(file)
-                                    val done = indexed.incrementAndGet()
-                                    if (done % 50 == 0 || done == total) {
-                                        val percent = (done * 100) / total
-                                        progressReporter?.invoke(
-                                            "Indexing: $done/$total files",
-                                            percent,
-                                        )
-                                        logger.info(
-                                            "progress: {}/{} files ({}%)",
-                                            done,
-                                            total,
-                                            percent,
-                                        )
-                                    }
-                                },
-                                threadPool,
-                            )
+                        // Parsing is serialized by parseLock. Do not enqueue children and join
+                        // them on this same bounded pool: concurrent scans can starve all workers,
+                        // and shutdownNow leaves queued CompletableFutures uncompleted.
+                        files.forEachIndexed { index, file ->
+                            if (closed.get())
+                                throw CancellationException("Workspace indexer closed")
+                            indexFile(file)
+                            val done = index + 1
+                            if (done % 50 == 0 || done == files.size)
+                                progressReporter?.invoke(
+                                    "Indexing: $done/${files.size} files",
+                                    done * 100 / files.size,
+                                )
                         }
-
-                        // Wait for all to complete
-                        CompletableFuture.allOf(*futures.toTypedArray()).join()
                         progressReporter?.invoke("Indexing complete", 100)
                     }
 
@@ -137,14 +124,20 @@ class WorkspaceIndexer(
         uri: String,
         content: String,
     ) {
-        val symbols = parseAndExtractSymbols(uri, content)
-        index.addSymbols(uri, symbols)
+        val symbols =
+            synchronized(parseLock) {
+                if (closed.get()) return
+                parseAndExtractSymbols(uri, content).also { index.addSymbols(uri, it) }
+            }
         logger.info("reindexed {}: {} symbols", uri.substringAfterLast('/'), symbols.size)
     }
 
     /** Remove all symbols for a file (e.g., when it's deleted). */
     fun removeFile(uri: String) {
-        index.removeSymbolsForUri(uri)
+        synchronized(parseLock) {
+            if (closed.get()) return
+            index.removeSymbolsForUri(uri)
+        }
         logger.info("removed symbols for {}", uri.substringAfterLast('/'))
     }
 
@@ -152,8 +145,11 @@ class WorkspaceIndexer(
         val uri = path.toUri().toString()
         try {
             val content = path.readText()
-            val symbols = parseAndExtractSymbols(uri, content)
-            index.addSymbols(uri, symbols)
+            val symbols =
+                synchronized(parseLock) {
+                    if (closed.get()) return
+                    parseAndExtractSymbols(uri, content).also { index.addSymbols(uri, it) }
+                }
             logger.info(
                 "indexed {}: {} symbols ({} bytes)",
                 path.fileName,
@@ -233,6 +229,7 @@ class WorkspaceIndexer(
     }
 
     override fun close() {
+        if (!closed.compareAndSet(false, true)) return
         logger.info(
             "shutting down (index has {} symbols in {} files)",
             index.symbolCount,
@@ -243,8 +240,12 @@ class WorkspaceIndexer(
             logger.warn("thread pool did not terminate in 5s, forcing shutdown")
             threadPool.shutdownNow()
         }
-        queryEngine.close()
-        parser.close()
+        // A timed-out worker may still be inside native parsing. Never free either handle
+        // until that critical section finishes; queued scans see closed before entering it.
+        synchronized(parseLock) {
+            queryEngine.close()
+            parser.close()
+        }
         logger.info("closed")
     }
 }
