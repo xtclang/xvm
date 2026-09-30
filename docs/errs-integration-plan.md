@@ -7141,3 +7141,25 @@ its JUnit result and IDE failure report are clean.
 Remaining broader UI items are explicit: advanced JVM controls, build progress/cancel
 presentation, source attachment editors, log export/retention and remote/untrusted-workspace coverage.
 X136–X139 exercise the local shipped controls, not those planned extensions.
+
+
+### Protocol hardening batch (L80/L81, 2026-09-30)
+
+Accepted order: (1) capability/wire-format corrections, (2) long-operation progress,
+(3) cancellation and transport lifecycle, (4) negotiated refresh and runtime trace,
+(5) shared editor acceptance and documentation. Each slice gets a local commit with tests;
+the combined validation runs after implementation.
+
+1. Capability checkpoint: explicit UTF-16; legacy workspace URI/path fallback; negotiated
+   hover markup, flat/hierarchical outlines, symbol-kind fallback and push diagnostic metadata.
+   Definition/reference Locations, plain completion inserts and string signature documentation
+   are already legal baseline formats; no snippet or location-link support is claimed. Existing
+   versioned/resource edit guards and code-action `context.only` filtering remain in force.
+2. Progress: client request tokens and post-handshake server-created tokens for long compiler
+   queries, with terminal success/failure/cancellation notifications.
+3. Lifecycle: retire requests waiting for shared analysis without cancelling another request's
+   compilation; reject invalid transport lifecycle requests and clean up owned pending work.
+4. Refresh/trace: only negotiated implemented providers; coalesce notifications outside compiler
+   locks; runtime off/messages/verbose tracing without source text.
+5. Acceptance: protocol regression tests plus shared editor checks; update evidence and extraction
+   map after the batched run. Broader L80/L81/L82 remain open until their other audits are complete.
