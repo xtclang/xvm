@@ -1165,3 +1165,11 @@ registration is removed by its unique ID; a removal timeout retires its IDs so l
 cannot reuse a subscription still being removed. Disconnect releases outstanding and queued
 updates. Controlled-future regressions cover each interleaving without elapsed-time sleeps.
 Validation is batched with the other concurrency and protocol follow-ups.
+
+### Follow-up: compiler path dialog ownership
+
+VS Code path edits and reset now validate the captured settings, workspace and connection before
+writing. New dialogs, configuration/folder changes and model watcher events invalidate older
+drafts; disposal retires them too. The resulting message asks the user to reopen the dialog rather
+than replacing newer settings. Extension regressions exercise invalidation, actual settings changes
+and disposal. Validation is batched with the remaining follow-ups.
