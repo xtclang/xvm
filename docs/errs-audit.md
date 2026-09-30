@@ -1124,18 +1124,17 @@ Concrete fixes in this batch:
 The protocol progress collections are confined to a single dispatcher. Refresh uses one atomic
 running/dirty pair per provider, sends outside compiler locks, and coalesces changes while awaiting
 a reply. These ownership rules require regression testing; they are not a claim that every
-possible interleaving is proven safe. Remaining concerns to investigate: background disk indexing
-versus an open overlay, long-lived VS Code configuration pickers, and stalled watcher registration
-replies. Selected editor restart/settings checks exercise the normal flows; they do not exhaustively
+possible interleaving is proven safe. The three follow-up concerns below now have implementations and controlled regressions;
+validation of the new batch is pending. Selected editor restart/settings checks exercise the normal flows; they do not exhaustively
 schedule every late callback or settings race.
 
 Follow-up checks, with controlled interleavings rather than timing sleeps:
 
-- [ ] `WorkspaceIndexer` / `TreeSitterAdapter`: make open-buffer content win over a scan that read
+- [x] Implementation: `WorkspaceIndexer` / `TreeSitterAdapter`: make open-buffer content win over a scan that read
   an older disk snapshot; cover edits during initial indexing and close/reopen.
-- [ ] VS Code `compiler-paths.ts`: reject or merge a stale path-editor draft if source-module
+- [x] Implementation: VS Code `compiler-paths.ts`: reject or merge a stale path-editor draft if source-module
   settings change while its Quick Pick/input dialogs are open.
-- [ ] `ResourceFileWatchers`: bound stalled registration/unregistration replies and retire the
+- [x] Implementation: `ResourceFileWatchers`: bound stalled registration/unregistration replies and retire the
   queue on disconnect without allowing an old registration to replace current watch ownership.
 
 Deprecated API inventory: no Kotlin suppression remains for legacy LSP roots. `rootUri`/`rootPath`
@@ -1156,7 +1155,8 @@ records the full backend run and focused fixture correction, 73 packaged tests, 
 tests and selected X136/X137/X140/X141 in both editors. Native parser/index concurrency regressions
 ran without skips. The first Unicode fixture also exposed missing semantic facts in constant-folded
 property initializers, independently of character encoding; L83 records the compiler ownership
-follow-up. This remains a semantic limitation, not a concurrency fix or a passing fixture.
+follow-up. That earlier receipt does not cover L83; the subsequent detached-initializer implementation
+and X142 acceptance are recorded in the current follow-up validation receipt.
 
 ### Follow-up: bounded resource watcher replies
 
@@ -1164,7 +1164,7 @@ Registration and removal acknowledgements now have a ten-second bound. A late su
 registration is removed by its unique ID; a removal timeout retires its IDs so later roots
 cannot reuse a subscription still being removed. Disconnect releases outstanding and queued
 updates. Controlled-future regressions cover each interleaving without elapsed-time sleeps.
-Validation is batched with the other concurrency and protocol follow-ups.
+The controlled regressions pass in the 51-test focused backend run.
 
 ### Follow-up: compiler path dialog ownership
 
@@ -1172,7 +1172,7 @@ VS Code path edits and reset now validate the captured settings, workspace and c
 writing. New dialogs, configuration/folder changes and model watcher events invalidate older
 drafts; disposal retires them too. The resulting message asks the user to reopen the dialog rather
 than replacing newer settings. Extension regressions exercise invalidation, actual settings changes
-and disposal. Validation is batched with the remaining follow-ups.
+and disposal. All three regressions pass in the 23-test VS Code extension run.
 
 ### Follow-up: disk indexing and editor overlays
 
@@ -1181,7 +1181,7 @@ reads publish only into the revision that requested them, and scans/watcher even
 an open buffer. Compilation indexes open buffers during initial scanning too. Closing restores
 the current disk contents (or removes a deleted/untitled file), while reopening invalidates an
 outstanding close read. Controlled read barriers cover these interleavings. No additional parser
-or AST locks are introduced. Validation is batched with the remaining follow-ups.
+or AST locks are introduced. The controlled regressions pass without skips.
 
 ### L80 wire-format and edit application audit
 
@@ -1207,4 +1207,9 @@ or AST locks are introduced. Validation is batched with the remaining follow-ups
   A `TODO LSP4IJ:` now records this remaining boundary in `XtcLanguageClient`. Do not claim generic
   server-initiated native edit acceptance from the existing rename/action tests.
 
-Regressions and updated realistic client fixtures are included; execution remains batched.
+Regressions and updated realistic client fixtures pass in the focused backend and packaged stdio suites.
+
+Validation-review correction: unacknowledged watcher removals retain retry ownership separately
+from active subscriptions. Late acknowledgements retire only their IDs. File URI spelling
+(`file:/` versus `file:///`) is normalized for disk/overlay ownership. The VS Code draft invalidation
+event is fired before its emitter is disposed.
