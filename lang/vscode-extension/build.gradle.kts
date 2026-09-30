@@ -3,6 +3,14 @@ import com.github.gradle.node.task.NodeTask
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 
+// Build-classpath security constraint: node-gradle 7.1.0 drags Jackson 2.14.2 onto this
+// project's build classpath. The Jackson BOM raises it to at least the patched version.
+buildscript {
+    dependencies {
+        classpath(platform(libs.lang.jackson.bom))
+    }
+}
+
 plugins {
     base
     alias(libs.plugins.xdk.build.properties) apply false // Shared build task types

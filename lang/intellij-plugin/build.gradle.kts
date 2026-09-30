@@ -10,16 +10,16 @@ import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
 import java.io.File
 
 // Build-classpath security constraints: the IntelliJ Platform Gradle Plugin drags vulnerable
-// transitive dependencies onto this project's build classpath. Force known-patched versions
-// until the plugin itself updates (tracked by Dependabot alerts on this repo).
+// transitive dependencies onto this project's build classpath. The Jackson BOM raises all
+// Jackson modules to at least the patched version; jsoup is forced until the plugin itself
+// updates (tracked by Dependabot alerts on this repo).
 buildscript {
+    dependencies {
+        classpath(platform(libs.lang.jackson.bom))
+    }
     configurations.classpath {
         resolutionStrategy {
-            force(
-                "com.fasterxml.jackson.core:jackson-databind:2.21.5",
-                "com.fasterxml.jackson.core:jackson-core:2.21.5",
-                "org.jsoup:jsoup:1.23.1",
-            )
+            force("org.jsoup:jsoup:1.23.1")
         }
     }
 }

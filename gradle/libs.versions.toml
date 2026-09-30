@@ -97,6 +97,14 @@ tukaani-xz = "1.12"
 # Zig compiler for cross-compiling native tree-sitter libraries
 lang-zig = "0.15.2"
 
+# =============================================================================
+# Lang tooling - Gradle plugin classpath floors
+# =============================================================================
+# Not a project dependency. The IntelliJ Platform and node-gradle Gradle plugins put
+# vulnerable Jackson versions on their build script classpaths, and both are already
+# at their latest release. The Jackson BOM raises that floor without pinning.
+lang-jackson = "2.21.7"
+
 [plugins]
 
 # =============================================================================
@@ -215,6 +223,11 @@ lang-intellij-junit4-compat = { module = "junit:junit", version.ref = "lang-inte
 apache-commons-compress = { module = "org.apache.commons:commons-compress", version.ref = "apache-commons-compress" }
 lang-jtreesitter = { module = "io.github.tree-sitter:jtreesitter", version.ref = "lang-jtreesitter" }
 tukaani-xz = { module = "org.tukaani:xz", version.ref = "tukaani-xz" }
+
+# =============================================================================
+# Lang tooling - Gradle plugin classpath floors (see version comment above)
+# =============================================================================
+lang-jackson-bom = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "lang-jackson" }
 
 [bundles]
 unicode = ["jakarta-activation-api", "jakarta-xml-bind-api", "jaxb-runtime"]
