@@ -16,11 +16,13 @@ import { buildDirectory, markUsedAndPrune, removeCheckoutBuilds, sharedCachePath
 async function main(): Promise<void> {
     // __dirname at runtime resolves to <ext>/out/test, so the extension
     // root and the fixtures directory are two levels up.
-    const extensionDevelopmentPath = path.resolve(__dirname, '..', '..');
+    const extensionRoot = path.resolve(__dirname, '..', '..');
     const args = process.argv.slice(2);
-    if (args.some(argument => argument !== '--playbook' && argument !== '--multi-root' && !argument.startsWith('--cases='))) {
-        throw new Error('Expected --playbook and optional --cases=ID[,ID] and --multi-root');
+    if (args.some(argument => !['--playbook', '--multi-root', '--explorer-move-probe'].includes(argument) && !argument.startsWith('--cases='))) {
+        throw new Error('Expected --playbook with optional --cases=ID[,ID] and --multi-root, or --explorer-move-probe');
     }
+    const explorerProbe = args.includes('--explorer-move-probe');
+    if (explorerProbe && args.length !== 1) throw new Error('Run --explorer-move-probe alone');
     const playbook = args.includes('--playbook');
     const multiRoot = args.includes('--multi-root');
     if (multiRoot && !playbook) throw new Error('Use --multi-root with --playbook');
@@ -31,15 +33,22 @@ async function main(): Promise<void> {
     const selected = playbook
         ? (await import('./playbook/shared.js')).selectedScenarioIds(selections[0]?.slice('--cases='.length))
         : [];
-    const extensionTestsPath = path.resolve(__dirname, playbook ? 'playbook' : 'suite', 'index');
-    const reports = path.join(extensionDevelopmentPath, 'build', 'reports', playbook ? 'compiler-playbook' : 'extension-tests');
+    const extensionTestsPath = path.resolve(__dirname, explorerProbe ? 'explorer-probe' : playbook ? 'playbook' : 'suite', 'index');
+    const reports = path.join(extensionRoot, 'build', 'reports', explorerProbe ? 'explorer-probe' : playbook ? 'compiler-playbook' : 'extension-tests');
     await fs.mkdir(reports, { recursive: true });
     const runDirectory = await fs.mkdtemp(path.join(reports, 'run-'));
+    const extensionDevelopmentPath = explorerProbe ? path.join(runDirectory, 'empty-extension') : extensionRoot;
+    if (explorerProbe) {
+        await fs.mkdir(extensionDevelopmentPath);
+        await fs.writeFile(path.join(extensionDevelopmentPath, 'package.json'), JSON.stringify({
+            name: 'explorer-move-probe', publisher: 'local-test', version: '0.0.0', engines: { vscode: '^1.95.0' }
+        }, null, 2) + '\n');
+    }
     // Unix-domain sockets inside user-data-dir have a short OS path limit (103 on macOS).
     // Smoke tests also mutate settings; never reuse a profile or the repository fixtures.
     const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'xtc-code-'));
     const fixturesPath = path.join(runDirectory, 'workspace');
-    if (!playbook) {
+    if (!playbook && !explorerProbe) {
         await fs.cp(path.join(extensionDevelopmentPath, 'src', 'test', 'fixtures'), fixturesPath, {
             recursive: true, filter: source => path.basename(source) !== '.vscode'
         });
@@ -104,7 +113,7 @@ async function main(): Promise<void> {
                 XTC_PLAYBOOK_CASES: selected.join(','),
                 XTC_PLAYBOOK_COMMIT: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: extensionDevelopmentPath, encoding: 'utf8' }).trim(),
                 XTC_PLAYBOOK_DIRTY: execFileSync('git', ['status', '--porcelain'], { cwd: extensionDevelopmentPath, encoding: 'utf8' }).trim()
-            } : undefined,
+            } : explorerProbe ? { XTC_EXPLORER_PROBE_REPORT: runDirectory } : undefined,
         });
         }
     } catch (error) {
