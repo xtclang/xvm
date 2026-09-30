@@ -150,6 +150,53 @@ internal fun ParityScenarios.platformCases() {
         }
     }
 
+    case("X140") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        clean(document)
+        check(protocol.capabilities().asJsonObject.string("positionEncoding") == "utf-16")
+        val offset = document.text.lastIndexOf(data.string("anchor"))
+        check(
+            query("textDocument/hover", document, offset)
+                .toString()
+                .contains(data.string("expected"))
+        )
+        val prepared =
+            query("textDocument/prepareRename", document, offset).asJsonObject["range"].asJsonObject
+        check(prepared["start"].asJsonObject["character"].asInt == offset)
+        check(
+            prepared["end"].asJsonObject["character"].asInt == offset + data.string("anchor").length
+        )
+    }
+    case("X141") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        clean(document)
+        try {
+            data["levels"]
+                .asJsonArray
+                .map { it.asString }
+                .forEach { level ->
+                    protocol.notify("$/setTrace", mapOf("value" to level))
+                    val before = trace.notifications("$/logTrace").size
+                    query(
+                        "textDocument/hover",
+                        document,
+                        document.text.indexOf(data.string("anchor")),
+                    )
+                    with(driver) {
+                        awaitUi("server runtime trace $level", 15.seconds) {
+                            trace.notifications("$/logTrace").drop(before).any {
+                                it.string("message").startsWith("textDocument/hover:") &&
+                                    (it.has("verbose") == (level == "verbose")) &&
+                                    !it.toString().contains(data.string("source").trim())
+                            }
+                        }
+                    }
+                }
+        } finally {
+            protocol.notify("$/setTrace", mapOf("value" to "verbose"))
+        }
+    }
+
     case("X135") { data ->
         write(data.string("file"), data.string("source"))
         val document = open(data.string("file"))

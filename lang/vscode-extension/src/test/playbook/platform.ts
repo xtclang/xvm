@@ -427,4 +427,43 @@ export function platformCases(): void {
         }
     });
 
+    playbook('X140', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await noErrors(document.uri);
+        assert.strictEqual(client().initializeResult!.capabilities.positionEncoding, 'utf-16');
+        const offset = data.source.lastIndexOf(data.anchor);
+        const at = document.positionAt(offset);
+        assert.ok((await hover(document, at)).includes(data.expected));
+        const prepared = await client().sendRequest<{ range: { start: { character: number }; end: { character: number } } }>('textDocument/prepareRename', {
+            textDocument: { uri: document.uri.toString() }, position: at,
+        });
+        assert.strictEqual(prepared.range.start.character, offset);
+        assert.strictEqual(prepared.range.end.character, offset + data.anchor.length);
+    });
+
+    playbook('X141', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await noErrors(document.uri);
+        const messages: { message: string; verbose?: string }[] = [];
+        const registration = client().onNotification('$/logTrace', value => { messages.push(value); });
+        try {
+            for (const level of data.levels) {
+                await client().sendNotification('$/setTrace', { value: level });
+                const before = messages.length;
+                await client().sendRequest('textDocument/hover', {
+                    textDocument: { uri: document.uri.toString() },
+                    position: document.positionAt(data.source.indexOf(data.anchor)),
+                });
+                const trace = await eventually(async () => messages.slice(before).find(value => value.message.startsWith('textDocument/hover:')),
+                    value => !!value, 'Server runtime trace');
+                assert.strictEqual(typeof trace!.verbose === 'string', level === 'verbose');
+                assert.ok(!JSON.stringify(trace).includes(data.source.trim()));
+            }
+        } finally {
+            registration.dispose();
+            // Reconnect to restore the language client's own logTrace handler after this observer.
+            await vscode.commands.executeCommand('xtc.restartServer');
+        }
+    });
+
 }

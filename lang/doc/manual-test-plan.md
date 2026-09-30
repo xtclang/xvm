@@ -1,6 +1,6 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has 144 scenarios. X136–X139 add language-service settings, effective state,
+The current catalog has 146 scenarios. X136–X139 add language-service settings, effective state,
 transport restarts, live formatting and save ownership; their new validation receipt is pending.
 The preceding accepted batch had 140 scenarios. This batch adds X130 batch Move/Undo/Redo, X131 lazy
 resolvers, X132 save/range formatting, X133 linked editing, X134 external source watching and X135
@@ -1387,14 +1387,14 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 144 scenarios: X1–X139, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 146 scenarios: X1–X141, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
 `${0}` templates substitute literal values without evaluating code.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 144 cases. IntelliJ now has assertions for the same 144, plus a separate startup check.
+all 146 cases. IntelliJ now has assertions for the same 146, plus a separate startup check.
 Current selected native pass receipts are recorded above; implementation is not validation. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
 case was unselected or prevented from running, such as after an earlier failure. Partial coverage never appears
@@ -2220,6 +2220,8 @@ module Advanced {
 | X137 | Leave a buffer unsaved; select Incremental text synchronization, then Full. | Each applied transport change restarts the existing connection and restores current unsaved text. This is text transport, not incremental compilation. |
 | X138 | Change indentation to 2, format, then supply an invalid indentation value. | Valid change applies without restarting; invalid settings retain the previous formatter. Effective status identifies native save-hook availability. |
 | X139 | Enable native format-on-save and save an unindented source. In VS Code also select server save formatting with native formatting disabled. | Source is indented. VS Code suppresses the server hook when native formatting is enabled; IntelliJ explicitly uses native Actions on Save because LSP4IJ has no server save-edit hook. |
+| X140 | Open the shared source with an emoji before an `Int` reference on the same line. Hover and prepare rename on the final `value`. | UTF-16 is explicit; hover resolves `Int` and rename selects exactly `value`, without shifting after the surrogate pair. |
+| X141 | Switch runtime server trace between `messages` and `verbose`, then request hover. Restore the editor trace setting. | Both log the method and timing; only verbose adds correlation metadata. No source buffer or request payload appears in server trace notifications. |
 
 
 For a project using the updated Gradle plugin, run `./gradlew exportXtcLspModel` in that project's
@@ -2601,3 +2603,14 @@ versus workspace VS Code precedence, two workspace folders and folder-specific n
 preferences. Check invalid JSON retains a running service, native Reset/Cancel never saves a draft,
 and restart never saves a dirty source. Remote filesystems, alternate keymaps and restricted
 workspace build execution remain explicit boundaries, not assertions covered by these local runs.
+
+
+Protocol hardening acceptance (L80/L81): X140/X141 are implemented in both drivers; execution is
+pending for this batch. For a large configured project, request workspace diagnostics or references
+and observe the work-done progress notification. Cancel the request: its progress must end, while
+another reader and document analysis remain usable. Check no stuck progress after restart/close.
+Unit tests control the queue and delayed creation acknowledgements deterministically; short editor
+fixtures do not guarantee a visible progress popup. Partial-result streaming is not implemented.
+Check dependency changes refresh supported inlays/lenses/folding without editing the consumer.
+Legacy/minimal-client capability shapes and pre-initialize/shutdown errors are protocol tests, not
+features exercised by changing the modern IDE's capability declaration.
