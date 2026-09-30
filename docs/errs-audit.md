@@ -1157,3 +1157,11 @@ tests and selected X136/X137/X140/X141 in both editors. Native parser/index conc
 ran without skips. The first Unicode fixture also exposed missing semantic facts in constant-folded
 property initializers, independently of character encoding; L83 records the compiler ownership
 follow-up. This remains a semantic limitation, not a concurrency fix or a passing fixture.
+
+### Follow-up: bounded resource watcher replies
+
+Registration and removal acknowledgements now have a ten-second bound. A late successful
+registration is removed by its unique ID; a removal timeout retires its IDs so later roots
+cannot reuse a subscription still being removed. Disconnect releases outstanding and queued
+updates. Controlled-future regressions cover each interleaving without elapsed-time sleeps.
+Validation is batched with the other concurrency and protocol follow-ups.
