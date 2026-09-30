@@ -50,6 +50,8 @@ interface StartedLanguageServer {
 
     fun getLanguageServer(): RemoteLanguageServer
 
+    fun getServerStatus(): ClientServerStatus
+
     fun getServerCapabilitiesSync(): ClientValue
 
     fun restart()
@@ -59,6 +61,11 @@ interface StartedLanguageServer {
     fun getTraces(): List<ClientTraceEntry>
 
     fun getServerTrace(): ClientTraceLevel
+}
+
+@Remote("com.redhat.devtools.lsp4ij.ServerStatus", plugin = "com.redhat.devtools.lsp4ij")
+interface ClientServerStatus {
+    fun name(): String
 }
 
 @Remote(
