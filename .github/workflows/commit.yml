@@ -134,7 +134,7 @@ concurrency:
 jobs:
     build-and-test:
         outputs:
-            lang-changed: ${{ steps.changes.outputs.lang }}
+            lang-changed: ${{ steps.lang-changes.outputs.lang }}
             effective-publish-intellij: ${{ steps.publish-flags.outputs.effective }}
         strategy:
             matrix:
@@ -168,16 +168,47 @@ jobs:
                         - 'gradlew'
                         - 'gradlew.bat'
                         - 'gradle/wrapper/**'
-                        # The version catalog pins the lang toolchain and dependencies (lang-*
-                        # entries, Node, the IntelliJ platform, the Jackson build-classpath
-                        # floor), so a catalog-only bump such as a grouped Dependabot update
-                        # must still build and test the plugins.
+                      # The version catalog also holds XDK dependencies; the next step decides
+                      # whether a catalog change touched a lang entry.
+                      catalog:
                         - 'gradle/libs.versions.toml'
+
+            # A catalog change is a lang change only when it touches a lang-* entry (versions,
+            # libraries, plugins: the lang toolchain, Node, the IntelliJ platform, the Jackson
+            # build-classpath floor). XDK-only bumps leave the lang tree and the plugins alone.
+            - name: Check for lang version catalog changes
+              id: lang-changes
+              shell: bash
+              run: |
+                  LANG_CHANGED=false
+                  REASON="no changes under the lang paths or to lang catalog entries"
+                  if [ "${{ steps.changes.outputs.lang }}" = "true" ]; then
+                      LANG_CHANGED=true
+                      REASON="lang paths changed"
+                  elif [ "${{ steps.changes.outputs.catalog }}" = "true" ]; then
+                      case "${{ github.event_name }}" in
+                          pull_request) BASE="${{ github.event.pull_request.base.sha }}" ;;
+                          push) BASE="${{ github.event.before }}" ;;
+                          *) BASE=$(git merge-base origin/master HEAD) ;;
+                      esac
+                      if ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
+                          LANG_CHANGED=true
+                          REASON="gradle/libs.versions.toml changed and its comparison base '$BASE' is unavailable"
+                      elif git diff "$BASE"...HEAD -- gradle/libs.versions.toml | grep -q -E '^[+-][[:space:]]*lang[-.]'; then
+                          LANG_CHANGED=true
+                          REASON="lang entries changed in gradle/libs.versions.toml"
+                      else
+                          REASON="gradle/libs.versions.toml changed, but no lang entries"
+                      fi
+                  fi
+                  echo "lang=$LANG_CHANGED" >> "$GITHUB_OUTPUT"
+                  echo "reason=$REASON" >> "$GITHUB_OUTPUT"
+                  echo "🌳 lang changed: $LANG_CHANGED ($REASON)"
 
             - name: 🌳 Lang validation decision
               shell: bash
               run: |
-                  LANG_CHANGED="${{ steps.changes.outputs.lang }}"
+                  LANG_CHANGED="${{ steps.lang-changes.outputs.lang }}"
                   echo ""
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                   if [ "$LANG_CHANGED" = "true" ]; then
@@ -186,7 +217,7 @@ jobs:
                       echo "⏭️ no changes under lang/ -- WILL SKIP lang composite build and LSP/tree-sitter tests"
                       echo "   (the rest of the build runs without -PincludeBuildLang=true to avoid the IntelliJ plugin resolution cost)"
                   fi
-                  echo "  📋 path-filter result : lang=${LANG_CHANGED:-<unset>}"
+                  echo "  📋 lang changed       : ${LANG_CHANGED:-<unset>} (${{ steps.lang-changes.outputs.reason }})"
                   echo "  📋 runner             : ${{ matrix.os }} (lang validation only runs on ubuntu-latest)"
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                   echo ""
@@ -198,7 +229,7 @@ jobs:
                   FORCE="${{ github.event.inputs.force-publish-intellij-plugin }}"
                   REQUESTED="${{ github.event.inputs.publish-intellij-plugin }}"
                   INCLUDE_LANG="${{ github.event.inputs.include-lang }}"
-                  LANG_CHANGED="${{ steps.changes.outputs.lang }}"
+                  LANG_CHANGED="${{ steps.lang-changes.outputs.lang }}"
                   EVENT_NAME="${{ github.event_name }}"
                   REF="${{ github.ref }}"
                   EFFECTIVE=false
