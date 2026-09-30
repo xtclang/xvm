@@ -121,6 +121,8 @@ internal constructor(
             ::analyzeIncomplete,
         )
 
+    internal fun compilerQueueSnapshot(): Map<String, Any> = queueTrace.snapshot()
+
     override val displayName: String = "XDK"
 
     override val capabilities: Set<AdapterCapability> =

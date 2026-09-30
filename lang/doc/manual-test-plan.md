@@ -1,6 +1,8 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has 140 scenarios. This batch adds X130 batch Move/Undo/Redo, X131 lazy
+The current catalog has 144 scenarios. X136–X139 add language-service settings, effective state,
+transport restarts, live formatting and save ownership; their new validation receipt is pending.
+The preceding accepted batch had 140 scenarios. This batch adds X130 batch Move/Undo/Redo, X131 lazy
 resolvers, X132 save/range formatting, X133 linked editing, X134 external source watching and X135
 server-log show/hide. X124 now exercises missing external roots without manual refresh.
 VS Code passes all 19 selected cases across `run-iGx1M2` (18) and `run-YMDUeW` (corrected X130).
@@ -1385,14 +1387,14 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 140 scenarios: X1–X135, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 144 scenarios: X1–X139, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
 `${0}` templates substitute literal values without evaluating code.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 140 cases. IntelliJ now has assertions for the same 140, plus a separate startup check.
+all 144 cases. IntelliJ now has assertions for the same 144, plus a separate startup check.
 Current selected native pass receipts are recorded above; implementation is not validation. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
 case was unselected or prevented from running, such as after an earlier failure. Partial coverage never appears
@@ -2214,6 +2216,11 @@ module Advanced {
 | X133 | Use two methods with same-spelled locals. Request linked editing on one local, on a type and on a parameter; introduce a source error, then repair it. | Exactly that local declaration/use pair is linked; unrelated bindings, nonlocal symbols and invalid-source results stay unlinked. Both drivers assert the installed protocol; native linked-typing presentation remains separate. |
 | X134 | Configure an unopened Library.x outside the workspace and a local consumer. Change its return type externally, restore it, delete it and recreate it. | Consumer Problems appears/clears from OS file events without opening Library or manually refreshing VFS in either host. |
 | X135 | Use the server-log actions to open/hide the docked log twice, then return to the source. | The log view opens and hides without modifying source. Physical shortcut dispatch, remapped shortcuts and alternate docking are manual checks. |
+| X136 | Open the language-service settings, change inlays, Reset/Cancel, then Apply; inspect effective configuration. | Live presentation changes preserve source and compiler graph ownership; report includes PID, adapter and queue names/count. IntelliJ drives the actual settings components; VS Code uses native configuration and the contributed report command. |
+| X137 | Leave a buffer unsaved; select Incremental text synchronization, then Full. | Each applied transport change restarts the existing connection and restores current unsaved text. This is text transport, not incremental compilation. |
+| X138 | Change indentation to 2, format, then supply an invalid indentation value. | Valid change applies without restarting; invalid settings retain the previous formatter. Effective status identifies native save-hook availability. |
+| X139 | Enable native format-on-save and save an unindented source. In VS Code also select server save formatting with native formatting disabled. | Source is indented. VS Code suppresses the server hook when native formatting is enabled; IntelliJ explicitly uses native Actions on Save because LSP4IJ has no server save-edit hook. |
+
 
 For a project using the updated Gradle plugin, run `./gradlew exportXtcLspModel` in that project's
 root to export `.gradle/xtc/lsp-model.json`. Run `./gradlew prepareXtcLspModel` to process resources
@@ -2564,3 +2571,28 @@ found` while clearing Cut decorations after a successful batch Paste. If it occu
 inspect actual paths before doing anything else; never replay an already applied move. Verify
 Explorer refresh and its Undo/Redo separately and retain the failed receipt. This is tracked in
 [the watcher/move acceptance record](../../docs/errs-integration-plan.md#watcher-move-and-log-view-acceptance-follow-up-2026-09-30).
+
+
+### Language-service settings acceptance (UI1–UI7)
+
+IntelliJ Community: Settings → Languages & Frameworks → **Ecstasy Language Service Defaults**
+(application) or **Ecstasy Language Service** (project). The project page inherits defaults until
+unchecked. Use Apply, Reset, Cancel and re-open to verify persistence. Transport applies with a
+restart; inlays and Code Style apply live. Server save formatting is disabled with an explanation;
+use Tools → Actions on Save → Reformat code. The effective view is read-only and refreshed on
+request. Compiler source/resource paths stay in **Ecstasy Compiler**, now with native path choosers.
+
+VS Code: run **Ecstasy: Open Language Service Settings**, or filter Settings by
+`@ext:xtclang.xtc-language`. Connection options are user/workspace scoped, not folder scoped.
+Use **Ecstasy: Show Effective Language Service Configuration** for configured values and origin,
+running capabilities, queue and bundled read-only libraries. **Ecstasy: Show Effective Compiler
+Paths** remains the detailed source/build-model view. Trace and logs use the existing controls.
+Legacy formatter tab width and line width are explicitly deprecated: they do not implement wrapping.
+
+Additional manual acceptance: change an application default while a project inherits it, then add
+and remove a project override; reopen the IDE and verify persistence. Edit a compiler graph through
+rename/Undo while the service page is open and ensure unrelated fields survive Apply. Verify user
+versus workspace VS Code precedence, two workspace folders and folder-specific native save/inlay
+preferences. Check invalid JSON retains a running service, native Reset/Cancel never saves a draft,
+and restart never saves a dirty source. Remote filesystems, alternate keymaps and restricted
+workspace build execution remain explicit boundaries, not assertions covered by these local runs.

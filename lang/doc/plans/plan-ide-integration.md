@@ -856,3 +856,20 @@ Ecstasy Language Server Output channel. X135 covers the actions; physical shortc
 custom docking/keymaps remain manual checks. No separate log process or editable file is created.
 The [current acceptance record](../../../docs/errs-integration-plan.md#watcher-move-and-log-view-acceptance-follow-up-2026-09-30)
 distinguishes the 140-case catalog from selected passing runs.
+
+
+### Editor settings checkpoint (2026-09-30)
+
+UI1–UI7 now have a bounded implementation: shared preference semantics, IntelliJ application/project
+pages in the existing LSP4IJ store, VS Code native settings, transport restart wiring, live Code Style
+and inlay refresh, and effective configuration/queue views. X136–X139 extend the catalog to 144 cases;
+validation is pending until the combined run. Full synchronization, native editor save ownership and
+Tree-sitter as the shipping adapter remain defaults. Incremental transport does not mean incremental
+compilation. Invalid formatting settings and late replies cannot replace the last valid snapshot.
+
+LSP4IJ 0.21.0 does not implement native `willSaveWaitUntil`; its server-save control is disabled and
+native Actions on Save remains the supported path. VS Code guards the server save hook against each
+document's current native format-on-save preference. The formatter still does not wrap, align or
+normalize operator spacing. Broader UI1–UI7 work (advanced runtime controls, richer build/import
+status, source attachment editing, log export/retention and remote-workspace acceptance) is not
+claimed complete by this checkpoint.

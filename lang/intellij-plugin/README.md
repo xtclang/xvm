@@ -137,7 +137,7 @@ uses JetBrains' `IdeaUltimate` artifact name, but the tested features require on
 Community feature set. No personal settings or license are copied into the test profile.
 See [JetBrains' unified distribution explanation](https://www.jetbrains.com/help/idea/intellij-idea-single-distribution.html).
 
-The suite reads all 140 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
+The suite reads all 144 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
 and source fixtures from the [manual playbook](../doc/manual-test-plan.md#xdkadapter-playbook).
 The current selected run `run-17174738471798629344` passes START and 18 of 19 cases with zero
 IDE errors. Automatic external watch creation/repair and settings replacement pass without fixture
@@ -780,3 +780,12 @@ Press **Ctrl+Alt+X, then L** (**Control+Option+X, then L** on macOS) to show/hid
 The view retains its history while hidden. Change the shortcut in the editor's native keymap.
 See the [manual playbook](../doc/manual-test-plan.md#server-log-shortcut-acceptance) for acceptance
 steps and the distinction between server logs and protocol tracing.
+
+
+Language-service preferences are under **Settings → Languages & Frameworks → Ecstasy Language
+Service**; **Ecstasy Language Service Defaults** supplies application defaults. Project overrides
+share LSP4IJ storage and preserve compiler graph/Undo ownership. Changing Full/Incremental text
+transport restarts the service and restores unsaved buffers. Inlay changes and Code Style settings
+apply live. The read-only effective view includes PID, runtime, capabilities, bundled read-only XDK
+libraries and compiler queue names/count. Server save edits are unavailable in LSP4IJ 0.21.0; use
+native **Actions on Save → Reformat code**. Line wrapping is not implemented.

@@ -11,7 +11,7 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 
 import { createStatusBar, updateStatusBar } from './status-bar';
-import { startLanguageClient, restartLanguageClient, stopLanguageClient, applyTraceConfig, updateCompilerConfiguration, updateEditorConfiguration } from './lsp-client';
+import { startLanguageClient, restartLanguageClient, stopLanguageClient, applyTraceConfig, updateCompilerConfiguration, updateEditorConfiguration, getClient, connectionSettingsChanged } from './lsp-client';
 import { XtcTaskProvider } from './task-provider';
 import { XtcDebugAdapterDescriptorFactory, XtcDebugConfigurationProvider } from './debug-adapter';
 import { registerCommands } from './commands';
@@ -115,7 +115,23 @@ export function activate(context: vscode.ExtensionContext): void {
     const serverExists = fs.existsSync(serverJar);
 
     // Register LSP-related commands
-    context.subscriptions.push(
+    const effectiveOutput = vscode.window.createOutputChannel('Ecstasy Effective Configuration');
+    context.subscriptions.push(effectiveOutput,
+        vscode.commands.registerCommand('xtc.showLanguageServiceStatus', async () => {
+            const settings = vscode.workspace.getConfiguration('xtc');
+            const keys = ['languageService.textSynchronization', 'languageService.saveFormatting', 'inlayHints.enabled'];
+            const configured = Object.fromEntries(keys.map(key => {
+                const value = settings.inspect(key);
+                return [key, { value: settings.get(key), origin: value?.workspaceValue !== undefined ? 'workspace' : value?.globalValue !== undefined ? 'user' : 'default' }];
+            }));
+            const running = getClient();
+            const effective = running ? await running.sendRequest('xtc/languageServiceStatus') : { status: 'not running' };
+            const report = { configured, effective, sourceRoots: settings.get('sourceRoots', []), compilerPaths: 'Ecstasy: Show Effective Compiler Paths', log: 'Ecstasy: Show Language Server Output' };
+            effectiveOutput.clear();
+            effectiveOutput.appendLine(JSON.stringify(report, null, 2));
+            effectiveOutput.show(true);
+            return report;
+        }),
         vscode.commands.registerCommand('xtc.restartServer', async () => {
             if (serverExists) {
                 await restartLanguageClient(context, serverJar, outputChannel);
@@ -146,6 +162,7 @@ export function activate(context: vscode.ExtensionContext): void {
             if (needsRestart) {
                 try {
                     readServiceSettings();
+                    if (!connectionSettingsChanged()) return;
                     outputChannel.info('Connection settings changed; restarting Ecstasy and resynchronizing open buffers.');
                     void restartLanguageClient(context, serverJar, outputChannel).catch(error => outputChannel.error(`Ecstasy restart failed: ${error}`));
                 } catch (error) {
