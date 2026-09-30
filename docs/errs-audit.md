@@ -1077,3 +1077,20 @@ explicitly disables server-save selection and uses native Actions on Save. VS Co
 save edits and suppresses that hook when native formatting owns the current document's save.
 Settings-only project overrides were also checked against inherited compiler graphs, so preference
 changes cannot steal source graph ownership. Combined validation follows the five local commits.
+
+Editor acceptance found that `XdkAdapter` inherited the interface's no-op formatting setter:
+the server reported the requested indentation while the adapter used request defaults. A final
+atomic holder now carries the immutable preference into document, range and on-type formatting;
+tests also verify resetting to request defaults. Presentation-only notifications preserve pending
+compiler configuration and do not schedule compilation. LSP4IJ's unsupported save-hook flags are
+cleared during initialization, alongside the existing disabled save-owner control.
+
+X137's VS Code delay was an execute-command symbol cache in the harness, not slow compilation:
+the captured worker dump was idle, the measured compile took 62 ms, and the corrected case takes
+3.3 seconds for both transport restarts. Native save acceptance must invoke Save All/Save Document
+actions; calling `FileDocumentManager.saveDocument` directly does not trigger Actions on Save.
+
+Final selected acceptance passes X118/X132/X135–X139 in both editors and IntelliJ START with no IDE
+errors. The final correction checks pass 27 backend tests and 73 IntelliJ unit tests, alongside
+the earlier full backend/packaged/VS Code extension results. Exact receipts and remaining manual
+boundaries are in the integration plan's editor-settings checkpoint.

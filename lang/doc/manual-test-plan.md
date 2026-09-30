@@ -165,10 +165,10 @@ or Undo against an already modified fixture.
 | Other lazy resolvers | Run X131, then inspect the native Run lens, comment URL, inferred type/parameter inlays and workspace symbol navigation. Initial/deferred properties must agree, positions and command arguments survive, and source edits invalidate old handles. | X131 is protocol acceptance. Existing feature UI scenarios cover presentation; it is not evidence that a tooltip/popup was displayed for every resolved property. |
 | Resolver lifetime | Resolve handles after a dependency/configuration change, close/reopen or server restart; send a foreign/evicted handle through a protocol test. Require a stale/invalid response, no stale edit and no leaked graph retained by handles. Eager clients must still receive complete payloads. | Resolve-store/service regressions; X127/X131 cover source-edit expiration only. Inspect test coverage before counting the other transitions complete. |
 | Normal save and formatting | Run X132, save a dirty file and verify disk/Problems; exercise whole-file, selection and on-type formatting with editor preferences both enabled and disabled. Saving must not unexpectedly reformat or block behind compilation. | X132 checks overlapping/disjoint range responses and negotiated default save hooks; existing formatting scenarios cover normal UI. Native save-on-large-compilation remains a manual responsiveness check. |
-| Incremental text transport | Run `DocumentSynchronizationTest`: sequential/mixed full-and-range changes, UTF-16 surrogate pairs, CRLF/bare CR, old versions, invalid batch atomicity and Full-mode refusal. The new packaged stdio test also negotiates incremental transport before sending these methods. | Backend and packaged stdio tests added. No shipped plugin setting exists yet; UI5/UI7 track wiring and native acceptance. This is not incremental compiler support. |
+| Incremental text transport | Run `DocumentSynchronizationTest`: sequential/mixed full-and-range changes, UTF-16 surrogate pairs, CRLF/bare CR, old versions, invalid batch atomicity and Full-mode refusal. The packaged stdio test also negotiates incremental transport. Change the plugin's Full/Incremental preference with an unsaved file. | Backend/packaged tests and shared X137 cover the wiring. Full remains default. This is not incremental compiler support. |
 | Opt-in save edits and range failures | Test `xtcDocumentSync.formatOnSave` independently from incremental transport; verify no extra compilation, unchanged server buffer until client didChange, malformed/reversed/out-of-document ranges and duplicate/conflicting formatting edits. Cancel/stale requests must not apply edits. | Backend tests plus X132's default mode. Opt-in native save UI, conflict/stale/cancel coverage and real transport coverage must have their own receipts; do not infer them from a default no-op. |
 | Terminology and compatibility | Inspect server panels, status bar, commands, Move/Rename dialogs, startup/error messages, templates and playbook progress. Labels should say Ecstasy; `.x`, `.xtc`, `xtc.*`, environment names and class/file prefixes remain technical identifiers. | Packaging/manifest checks plus visual inspection. Search production workarounds for `// TODO LSP4IJ:`; removal conditions must name the behavior to revalidate. |
-| Configuration UI follow-up | For UI1–UI7, later verify Apply/Cancel/Reset, user/project inheritance, multi-root scope, invalid-value retention, restart-required settings, live refresh and absence of duplicate format-on-save. | Planned, not implemented by this batch. The [settings inventory](../../docs/errs-integration-plan.md#editor-configuration-and-feature-controls-ui1ui7) is the acceptance source; no invented UI instructions for backend-only options. |
+| Configuration UI follow-up | Verify Apply/Cancel/Reset, user/project inheritance, multi-root scope, invalid-value retention, restart-required settings, live refresh and absence of duplicate format-on-save. | X136–X139 cover the implemented local settings subset. Physical dialog navigation, multi-root and fresh-IDE persistence remain manual checks in the settings acceptance section below. |
 
 Focused automated gate after compilation/unit checks: CFG2, X57, X101, X105, X118,
 X122–X134 in each host, plus the existing native lens/link/inlay/workspace-navigation checks
@@ -2575,11 +2575,16 @@ Explorer refresh and its Undo/Redo separately and retain the failed receipt. Thi
 
 ### Language-service settings acceptance (UI1–UI7)
 
+Selected X118/X132/X135–X139 pass in VS Code `run-1aSPTX` and IntelliJ
+`run-3866544261762285778` (also START; zero IDE errors). The [settings validation record](../../docs/errs-integration-plan.md#editor-settings-implementation-batch-ui1ui7-2026-09-30)
+retains the earlier failures and fixes. These receipts cover seven selected scenarios, not all 144.
+
 IntelliJ Community: Settings → Languages & Frameworks → **Ecstasy Language Service Defaults**
 (application) or **Ecstasy Language Service** (project). The project page inherits defaults until
 unchecked. Use Apply, Reset, Cancel and re-open to verify persistence. Transport applies with a
 restart; inlays and Code Style apply live. Server save formatting is disabled with an explanation;
-use Tools → Actions on Save → Reformat code. The effective view is read-only and refreshed on
+use Settings → Tools → Actions on Save → Reformat code, then the native Save action. X139 deliberately
+starts with `Int` at column 0 and must indent it four spaces when saved. The effective view is read-only and refreshed on
 request. Compiler source/resource paths stay in **Ecstasy Compiler**, now with native path choosers.
 
 VS Code: run **Ecstasy: Open Language Service Settings**, or filter Settings by

@@ -843,8 +843,8 @@ passing acceptance gates in the current receipt; earlier eager-action receipts r
 Editor settings follow-up: [UI1–UI7](../../../docs/errs-integration-plan.md#editor-configuration-and-feature-controls-ui1ui7)
 now tracks the full settings inventory, common scope/precedence semantics, Community IntelliJ
 pages, VS Code native Settings and commands, live/restart behavior, effective capability/status
-views and shared acceptance. L72 incremental transport/save options are currently initialization
-options only, not plugin preferences. Formatting-on-save must have one owner to avoid duplicate edits.
+views and shared acceptance. Both plugins now expose L72 transport preferences; VS Code also exposes
+save ownership, while IntelliJ uses native Actions on Save. Formatting-on-save has a single owner.
 
 The [2026-09-30 acceptance checklist](../manual-test-plan.md#acceptance-checklist-for-the-2026-09-30-batch)
 now separates shared automation from remaining manual/native, protocol-lifetime and settings-UI
@@ -862,12 +862,15 @@ distinguishes the 140-case catalog from selected passing runs.
 
 UI1–UI7 now have a bounded implementation: shared preference semantics, IntelliJ application/project
 pages in the existing LSP4IJ store, VS Code native settings, transport restart wiring, live Code Style
-and inlay refresh, and effective configuration/queue views. X136–X139 extend the catalog to 144 cases;
-validation is pending until the combined run. Full synchronization, native editor save ownership and
+and inlay refresh, and effective configuration/queue views. X136–X139 extend the catalog to 144 cases.
+Selected X118/X132/X135–X139 pass in both editors (plus IntelliJ startup and zero IDE errors), as
+recorded in the [settings receipt](../../../docs/errs-integration-plan.md#editor-settings-implementation-batch-ui1ui7-2026-09-30).
+This is not a full-catalog rerun. Full synchronization, native editor save ownership and
 Tree-sitter as the shipping adapter remain defaults. Incremental transport does not mean incremental
 compilation. Invalid formatting settings and late replies cannot replace the last valid snapshot.
 
-LSP4IJ 0.21.0 does not implement native `willSaveWaitUntil`; its server-save control is disabled and
+LSP4IJ 0.21.0 does not implement native `willSaveWaitUntil`; its incorrect capability flag is cleared,
+its server-save control is disabled and
 native Actions on Save remains the supported path. VS Code guards the server save hook against each
 document's current native format-on-save preference. The formatter still does not wrap, align or
 normalize operator spacing. Broader UI1–UI7 work (advanced runtime controls, richer build/import

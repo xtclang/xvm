@@ -1,7 +1,8 @@
 # Threading `errs` through the compiler
 
 Current settings checkpoint: UI1–UI7's bounded editor integration is written in five slices, with
-shared X136–X139 (144 scenarios total). Combined validation is pending. Both editors expose
+shared X136–X139 (144 scenarios total). X118/X132/X135–X139 pass in both editors, plus IntelliJ
+startup with no IDE errors. This is selected acceptance, not a full-catalog rerun. Both editors expose
 transport/presentation preferences and effective state; IntelliJ retains native save formatting
 because LSP4IJ has no `willSaveWaitUntil` implementation. See the current editor-settings section
 in [the integration plan](errs-integration-plan.md#editor-settings-implementation-batch-ui1ui7-2026-09-30).
