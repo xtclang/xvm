@@ -103,7 +103,7 @@ lang-zig = "0.15.2"
 # Not a project dependency. The IntelliJ Platform and node-gradle Gradle plugins put
 # vulnerable Jackson versions on their build script classpaths, and both are already
 # at their latest release. The Jackson BOM raises that floor without pinning.
-lang-jackson = "2.21.7"
+lang-jackson = "2.22.3"
 
 [plugins]
 
