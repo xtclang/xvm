@@ -7,6 +7,7 @@ import org.eclipse.lsp4j.DocumentSymbolCapabilities
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.HoverCapabilities
 import org.eclipse.lsp4j.InitializeParams
+import org.eclipse.lsp4j.InitializedParams
 import org.eclipse.lsp4j.MarkupKind
 import org.eclipse.lsp4j.PublishDiagnosticsCapabilities
 import org.eclipse.lsp4j.SymbolKind
@@ -14,11 +15,27 @@ import org.eclipse.lsp4j.SymbolKindCapabilities
 import org.eclipse.lsp4j.TextDocumentClientCapabilities
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
+import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import org.eclipse.lsp4j.WorkspaceFolder
+import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.verifyNoInteractions
 import org.xvm.lsp.adapter.mock.MockAdapter
 
 class ClientPresentationTest {
+    @Test
+    fun `minimal client receives no unnegotiated configuration or refresh requests`() {
+        XtcLanguageServer(MockAdapter()).use { server ->
+            val client = mock(LanguageClient::class.java)
+            server.connect(client)
+            server.initialize(InitializeParams()).join()
+            server.initialized(InitializedParams())
+            server.refreshPresentation()
+            verifyNoInteractions(client)
+        }
+    }
+
     @Test
     fun `server advertises UTF16 and serves flat symbols without hierarchical support`() {
         XtcLanguageServer(MockAdapter()).use { server ->
@@ -90,6 +107,7 @@ internal fun editorInitializeParams() =
     InitializeParams().apply {
         capabilities =
             ClientCapabilities().apply {
+                workspace = WorkspaceClientCapabilities().apply { configuration = true }
                 textDocument =
                     TextDocumentClientCapabilities().apply {
                         documentSymbol =
