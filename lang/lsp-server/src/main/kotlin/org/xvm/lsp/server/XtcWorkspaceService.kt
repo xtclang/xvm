@@ -46,6 +46,7 @@ class XtcWorkspaceService(
     override fun didChangeConfiguration(params: DidChangeConfigurationParams) {
         logger.info("workspace/didChangeConfiguration: updating editor configuration")
         server.requestFormattingConfig()
+        server.refreshPresentation()
         server.changeCompilerConfig(params.settings)
     }
 
