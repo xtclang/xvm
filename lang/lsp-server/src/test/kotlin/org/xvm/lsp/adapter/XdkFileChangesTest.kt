@@ -5,6 +5,8 @@ import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkFileChanges
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
@@ -43,6 +45,39 @@ class XdkFileChangesTest {
         assertThat(XdkFileChanges.unchanged(member.parentFile, root, inputs)).isFalse()
         Files.delete(member.toPath())
         assertThat(XdkFileChanges.unchanged(member, root, inputs)).isFalse()
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `incomplete overlay owns no-op proofs while real closed source and resource changes retire them`(
+        resourceChange: Boolean
+    ) {
+        CompilerTestSupport.configure()
+        directory = directory.toRealPath()
+        val root =
+            directory.resolve("App.x").toFile().apply {
+                writeText("module App { String resource = \$./data.txt; void run() {} }")
+            }
+        val member =
+            directory.resolve("App/Box.x").toFile().apply {
+                parentFile.mkdirs()
+                writeText("class Box {}")
+            }
+        val resource = directory.resolve("data.txt").toFile().apply { writeText("first") }
+        val overlay =
+            root.readText().replace("void run() {}", "void run() { Int size = resource.si; }")
+        XdkAdapter().use { adapter ->
+            val uri = root.toURI().toString()
+            assertThat(adapter.compile(uri, overlay).success).isFalse()
+            listOf(root, root.parentFile, member).forEach {
+                assertThat(adapter.changedFileScopes(it.toURI().toString()))
+                    .describedAs(it.path)
+                    .isEmpty()
+            }
+            if (resourceChange) resource.writeText("second")
+            else member.writeText("class Box { Int changed = 1; }")
+            assertThat(adapter.changedFileScopes(root.parentFile.toURI().toString())).contains(uri)
+        }
     }
 
     @Test
