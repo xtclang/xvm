@@ -6,6 +6,17 @@ import org.junit.jupiter.api.Test
 
 class EditorFormattingStateTest {
     @Test
+    fun `disconnect rejects delayed configuration and requests created after close`() {
+        val state = EditorFormattingState()
+        val pending = state.request()
+        state.close()
+        listOf(pending, state.request()).forEach { revision ->
+            assertThat(state.accept(revision, mapOf("indentSize" to 2)) { error("closed install") })
+                .isFalse()
+        }
+    }
+
+    @Test
     fun `late replies cannot replace current settings or restore reset configuration`() {
         val state = EditorFormattingState()
         val old = state.request()

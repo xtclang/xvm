@@ -5,8 +5,12 @@ import java.util.concurrent.atomic.AtomicReference
 import org.xvm.lsp.adapter.FormattingConfig
 
 /** A late configuration reply cannot undo a newer preference or restore a reset value. */
-internal class EditorFormattingState {
-    private data class Snapshot(val revision: Long = 0, val config: FormattingConfig? = null)
+internal class EditorFormattingState : AutoCloseable {
+    private data class Snapshot(
+        val revision: Long = 0,
+        val config: FormattingConfig? = null,
+        val closed: Boolean = false,
+    )
 
     private val current = AtomicReference(Snapshot())
     val config: FormattingConfig?
@@ -17,11 +21,16 @@ internal class EditorFormattingState {
 
     @Synchronized
     fun accept(revision: Long, raw: Any?, install: (FormattingConfig?) -> Unit): Boolean {
-        if (current.get().revision != revision) return false
+        if (current.get().let { it.closed || it.revision != revision }) return false
         val config = parse(raw)
         current.set(Snapshot(revision, config))
         install(config)
         return true
+    }
+
+    @Synchronized
+    override fun close() {
+        current.updateAndGet { it.copy(closed = true) }
     }
 
     companion object {
