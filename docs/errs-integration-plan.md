@@ -920,9 +920,12 @@ X124 establishes external-resource reactions after native VFS refresh, with the 
 loaded first; it does not establish autonomous OS watching of arbitrary roots unknown to VFS.
 Track that distinction instead of treating synthetic LSP notifications as editor coverage:
 
-- [ ] PLAT2/L67: register/lifetime-manage external source/resource roots with IntelliJ's VFS and
-  verify disk changes while the IDE remains focused, including roots not previously opened,
-  missing-root creation and settings replacement. Current acceptance explicitly refreshes VFS.
+- [ ] PLAT2/L67 validation: implementation now owns external source/resource VFS watch leases per
+  connection, coalesces asynchronous refreshes on the shared scheduler, observes missing roots
+  through their nearest existing parent, and releases subscriptions on replacement/disposal.
+  X124 in both drivers now creates an unopened nested root and replaces it through settings;
+  IntelliJ no longer primes or refreshes the fixture manually. Unit tests cover shared leases,
+  delayed refresh, replacement, disposal and wire-pattern decoding. Batch validation pending.
 - [ ] L70: repair or upgrade LSP4IJ's lazy-action application path, then re-enable edit resolution
   only after native import/member generation and Undo/Redo pass together.
 - [ ] L71: extend native preflight beyond single file/package Rename to the remaining supported

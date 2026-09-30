@@ -822,3 +822,8 @@ follow-ups; each exported root has an explicit refresh action.
 External-resource X124 passes create/delete/repair after explicit native VFS refresh and directory
 loading. Automatic IntelliJ watching of external roots that have never been opened remains a
 PLAT2/L67 follow-up; this acceptance does not prove that lifecycle.
+
+External-root follow-up (2026-09-30): source roots join resource roots in dynamic external watch
+registrations. IntelliJ owns the native watch leases and refreshes those roots asynchronously
+while focused. Missing-root creation, settings replacement and disposal have new unit/driver
+coverage; execution is pending the four-commit batch.

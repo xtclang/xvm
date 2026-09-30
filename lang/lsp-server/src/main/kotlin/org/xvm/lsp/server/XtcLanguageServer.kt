@@ -1064,7 +1064,7 @@ class XtcLanguageServer(
         val folders = compilerSettings.get().folders.mapNotNull { XdkSources.file(it)?.toPath() }
         val external =
             compiler
-                .resourceWatchRoots()
+                .inputWatchRoots()
                 .filter { root ->
                     folders.none { root.toPath().startsWith(it) }
                 }
