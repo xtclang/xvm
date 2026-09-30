@@ -7163,3 +7163,24 @@ the combined validation runs after implementation.
    locks; runtime off/messages/verbose tracing without source text.
 5. Acceptance: protocol regression tests plus shared editor checks; update evidence and extraction
    map after the batched run. Broader L80/L81/L82 remain open until their other audits are complete.
+
+
+Protocol batch extraction checkpoints (validation pending):
+
+| Commit | Slice |
+| --- | --- |
+| `78f949700` | L80 client presentation and workspace-root fallback |
+| `47ebab51b` | L81 negotiated progress and query-owned cancellation |
+| `1e285d18e` | L81 pending readers and transport lifecycle |
+| `494b18c06` | L81 coalesced refresh and runtime trace |
+| Shared acceptance commit following these | X140 UTF-16 ranges; X141 runtime trace in both installed clients |
+
+Progress is wired to references, rename proposals, code actions and workspace diagnostics;
+client-provided initialization tokens cover synchronous compiler discovery. Server-created tokens
+wait for `initialized`, client support and creation acknowledgement. Fast work avoids a popup.
+This does not yet stream partial result batches or report Tree-sitter's asynchronous initial scan.
+Refresh is negotiated for diagnostics, semantic tokens, inlays, lenses and folding; no runtime
+inline-value provider is claimed. Lifecycle gating is at the real transport, with direct server
+embedding retained for host/tests. L80 still needs the full code-action literal/kind, completion
+kind, diagnostic-tag and workspace-edit failure-handling audit; L81 partial results and L82 broader
+acceptance remain open. X140/X141 implementations are not passing receipts until run.
