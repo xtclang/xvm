@@ -1,5 +1,6 @@
 package org.xtclang.idea.lsp
 
+import java.util.concurrent.atomic.AtomicReference
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DocumentDiagnosticParams
@@ -17,6 +18,54 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 import org.junit.jupiter.api.Test
 
 class DiagnosticResultMessagesTest {
+    @Test
+    fun `close or cancellation during reply snapshot lookup cannot reinsert a retired result`() {
+        listOf(false, true).forEach { cancel ->
+            val duringSnapshot = AtomicReference<(() -> Unit)?>(null)
+            val guard = DiagnosticResultMessages {
+                duringSnapshot.getAndSet(null)?.invoke()
+                initial
+            }
+            val sent = mutableListOf<Message>()
+            val outgoing = guard.outgoing(MessageConsumer { sent.add(it) })
+            val incoming = guard.incoming(MessageConsumer {})
+            fun request(id: String) =
+                RequestMessage().apply {
+                    this.id = id
+                    method = "textDocument/diagnostic"
+                    params = DocumentDiagnosticParams(TextDocumentIdentifier(uri))
+                }
+            outgoing.consume(request("pending"))
+            duringSnapshot.set {
+                outgoing.consume(
+                    NotificationMessage().apply {
+                        method = if (cancel) "$/cancelRequest" else "textDocument/didClose"
+                        params =
+                            if (cancel) CancelParams().apply { id = "pending" }
+                            else DidCloseTextDocumentParams(TextDocumentIdentifier(uri))
+                    }
+                )
+            }
+            incoming.consume(
+                ResponseMessage().apply {
+                    id = "pending"
+                    result =
+                        DocumentDiagnosticReport(
+                            RelatedFullDocumentDiagnosticReport(emptyList()).apply {
+                                resultId = "retired"
+                            }
+                        )
+                }
+            )
+            outgoing.consume(request("next"))
+            assertThat(
+                    ((sent.last() as RequestMessage).params as DocumentDiagnosticParams)
+                        .previousResultId
+                )
+                .isNull()
+        }
+    }
+
     private val uri = "file:///Diagnostics.x"
     private val initial = DocumentStartupMessages.Snapshot(Any(), 1, "module Diagnostics {}")
     private val buffers = mutableMapOf(uri to initial)
