@@ -19,6 +19,13 @@ internal object CompilerConfiguration {
     fun changed(settings: Any?): JsonElement? =
         objectValue(objectValue(settings)?.get("xtc"))?.get("compiler")
 
+    /** Explicit presentation notifications do not request or replace the compiler graph. */
+    fun presentationOnly(settings: Any?): Boolean =
+        objectValue(objectValue(settings)?.get("xtc"))?.keySet()?.let { sections ->
+            sections.isNotEmpty() &&
+                sections.all { it in setOf("formatting", "presentation", "languageService") }
+        } == true
+
     fun automatic(raw: Any?): Boolean = objectValue(raw)?.get("sourceModules")?.isJsonNull == true
 
     fun buildModel(raw: Any?): XdkBuildModel? {

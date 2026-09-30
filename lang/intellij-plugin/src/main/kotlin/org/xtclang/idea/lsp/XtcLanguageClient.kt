@@ -36,9 +36,13 @@ class XtcLanguageClient(project: Project) : LanguageClientImpl(project) {
     private val compilerWatches = CompilerVfsWatches()
     private val preferences = AtomicReference(LanguageServiceSettings.validated(project))
     private val updateQueued = AtomicBoolean()
-    private val settingsStores = listOf(LanguageServiceSettings.store(null), LanguageServiceSettings.store(project))
+    private val settingsStores =
+        listOf(LanguageServiceSettings.store(null), LanguageServiceSettings.store(project))
     private val settingsListener = LanguageServerSettingsListener { event ->
-        if (event.languageServerId() == CompilerSettings.SERVER_ID && event.configurationContentChanged()) {
+        if (
+            event.languageServerId() == CompilerSettings.SERVER_ID &&
+                event.configurationContentChanged()
+        ) {
             if (updateQueued.compareAndSet(false, true)) {
                 ApplicationManager.getApplication().invokeLater {
                     updateQueued.set(false)
@@ -46,7 +50,8 @@ class XtcLanguageClient(project: Project) : LanguageClientImpl(project) {
                         val next = LanguageServiceSettings.validated(project)
                         val before = preferences.getAndSet(next)
                         if (before.textSynchronization != next.textSynchronization) {
-                            LanguageServiceAccessor.getInstance(project).startedServers
+                            LanguageServiceAccessor.getInstance(project)
+                                .startedServers
                                 .filter { it.serverDefinition.id == CompilerSettings.SERVER_ID }
                                 .forEach { it.restart() }
                         } else if (before.inlayHints != next.inlayHints) {
@@ -60,9 +65,14 @@ class XtcLanguageClient(project: Project) : LanguageClientImpl(project) {
 
     init {
         settingsStores.forEach { it.addSettingsListener(settingsListener) }
-        project.messageBus.connect(this).subscribe(CodeStyleSettingsListener.TOPIC, CodeStyleSettingsListener {
-            if (!isDisposed && !project.isDisposed) triggerChangeConfiguration()
-        })
+        project.messageBus
+            .connect(this)
+            .subscribe(
+                CodeStyleSettingsListener.TOPIC,
+                CodeStyleSettingsListener {
+                    if (!isDisposed && !project.isDisposed) triggerChangeConfiguration()
+                },
+            )
     }
 
     override fun dispose() {

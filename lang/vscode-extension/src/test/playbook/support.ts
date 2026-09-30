@@ -11,7 +11,7 @@ let fixtures: Map<string, string>;
 
 export function client() {
     const result = getClient();
-    assert.ok(result?.initializeResult, 'Compiler language client must be initialized');
+    assert.ok(result?.initializeResult && result.isRunning(), 'Compiler language client must be running');
     return result;
 }
 
@@ -221,6 +221,7 @@ export class Workspace {
 
     async dispose(): Promise<void> {
         // Every buffer and setting belongs to this test's isolated VS Code workspace.
+        await eventually(async () => getClient()?.isRunning(), running => running === true, 'Client ready for fixture cleanup');
         for (const document of vscode.workspace.textDocuments.filter(doc => doc.uri.fsPath.startsWith(this.directory + path.sep) && doc.languageId === 'xtc')) {
             await this.discard(document);
         }
@@ -250,8 +251,10 @@ export function playbook<K extends ScenarioId>(id: K, body: (workspace: Workspac
                     await fs.writeFile(file, document.getText());
                 }
             }
+            try { await workspace.dispose(); }
+            catch (cleanupError) { console.error(`Case ${id} also failed during fixture cleanup:`, cleanupError); }
             throw error;
         }
-        finally { await workspace.dispose(); }
+        await workspace.dispose();
     });
 }

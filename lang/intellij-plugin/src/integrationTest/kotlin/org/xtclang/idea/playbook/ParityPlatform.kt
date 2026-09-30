@@ -20,9 +20,15 @@ internal fun ParityScenarios.platformCases() {
     case("X136") { data ->
         val document = open(data.string("file"), data.string("source"))
         clean(document)
-        val before = protocol.query("xtc/languageServiceStatus", emptyMap<String, Any>()).asJsonObject
-        with(driver) { withContext(OnDispatcher.EDT) { utility(LanguageServicePage::class).exercise(singleProject()) } }
-        val after = protocol.query("xtc/languageServiceStatus", emptyMap<String, Any>()).asJsonObject
+        val before =
+            protocol.query("xtc/languageServiceStatus", emptyMap<String, Any>()).asJsonObject
+        with(driver) {
+            withContext(OnDispatcher.EDT) {
+                utility(LanguageServicePage::class).exercise(singleProject())
+            }
+        }
+        val after =
+            protocol.query("xtc/languageServiceStatus", emptyMap<String, Any>()).asJsonObject
         check(before["pid"] == after["pid"])
         val queue = after["compilerQueue"].asJsonObject
         check(queue["queueSize"].asInt == queue["queuedJobs"].asJsonArray.size())
@@ -36,58 +42,111 @@ internal fun ParityScenarios.platformCases() {
         try {
             listOf("incremental", "full").forEach { transport ->
                 with(driver) {
-                    withContext(OnDispatcher.EDT) { utility(LanguageServicePage::class).transport(singleProject(), transport) }
+                    withContext(OnDispatcher.EDT) {
+                        utility(LanguageServicePage::class).transport(singleProject(), transport)
+                    }
                     awaitUi("transport restart into $transport", 45.seconds) {
                         protocol.server().getCurrentProcessId()?.let { it != previous } == true
                     }
                 }
                 previous = protocol.server().getCurrentProcessId()
-                val status = protocol.query("xtc/languageServiceStatus", emptyMap<String, Any>()).asJsonObject
+                val status =
+                    protocol
+                        .query("xtc/languageServiceStatus", emptyMap<String, Any>())
+                        .asJsonObject
                 check(status.string("textSynchronization") == transport)
                 check(document.text == data.string("edited"))
                 settle(document)
                 clean(document)
             }
         } finally {
-            with(driver) { withContext(OnDispatcher.EDT) { utility(LanguageServicePage::class).restore(singleProject(), original) } }
+            with(driver) {
+                withContext(OnDispatcher.EDT) {
+                    utility(LanguageServicePage::class).restore(singleProject(), original)
+                }
+            }
         }
     }
     case("X138") { data ->
         val document = open(data.string("file"), data.string("source"))
         clean(document)
         val previousPid = protocol.server().getCurrentProcessId()
-        val original = with(driver) { withContext(OnDispatcher.EDT) { utility(LanguageServicePage::class).indent(singleProject(), data["indent"].asInt) } }
+        val original =
+            with(driver) {
+                withContext(OnDispatcher.EDT) {
+                    utility(LanguageServicePage::class)
+                        .indent(singleProject(), data["indent"].asInt)
+                }
+            }
         try {
-            with(driver) { awaitUi("live Code Style configuration", 15.seconds) {
-                protocol.query("xtc/languageServiceStatus", emptyMap<String, Any>()).asJsonObject["formatting"]
-                    ?.takeIf { it.isJsonObject }?.asJsonObject?.get("indentSize")?.asInt == data["indent"].asInt
-            } }
-            fun formatted() = query("textDocument/formatting", document,
-                extra = mapOf("options" to mapOf("tabSize" to 4, "insertSpaces" to true))).rows()
+            with(driver) {
+                awaitUi("live Code Style configuration", 15.seconds) {
+                    protocol
+                        .query("xtc/languageServiceStatus", emptyMap<String, Any>())
+                        .asJsonObject["formatting"]
+                        ?.takeIf { it.isJsonObject }
+                        ?.asJsonObject
+                        ?.get("indentSize")
+                        ?.asInt == data["indent"].asInt
+                }
+            }
+            fun formatted() =
+                query(
+                        "textDocument/formatting",
+                        document,
+                        extra = mapOf("options" to mapOf("tabSize" to 4, "insertSpaces" to true)),
+                    )
+                    .rows()
             check(formatted().any { it.string("newText") == data.string("expectedIndent") })
-            with(driver) { withContext(OnDispatcher.EDT) { utility(LanguageServicePage::class).indent(singleProject(), 0) } }
+            with(driver) {
+                withContext(OnDispatcher.EDT) {
+                    utility(LanguageServicePage::class).indent(singleProject(), 0)
+                }
+            }
             check(formatted().any { it.string("newText") == data.string("expectedIndent") })
-            val status = protocol.query("xtc/languageServiceStatus", emptyMap<String, Any>()).asJsonObject
-            check(!status["saveHookSupported"].asBoolean && !status["serverSaveFormatting"].asBoolean)
+            val status =
+                protocol.query("xtc/languageServiceStatus", emptyMap<String, Any>()).asJsonObject
+            check(
+                !status["saveHookSupported"].asBoolean && !status["serverSaveFormatting"].asBoolean
+            )
             check(protocol.server().getCurrentProcessId() == previousPid)
             check(document.text == data.string("source"))
         } finally {
-            with(driver) { withContext(OnDispatcher.EDT) { utility(LanguageServicePage::class).indent(singleProject(), original) } }
+            with(driver) {
+                withContext(OnDispatcher.EDT) {
+                    utility(LanguageServicePage::class).indent(singleProject(), original)
+                }
+            }
         }
     }
 
     case("X139") { data ->
         val document = open(data.string("file"), data.string("source"))
         clean(document)
-        val previous = with(driver) { withContext(OnDispatcher.EDT) { utility(LanguageServicePage::class).saveFormatting(singleProject(), true) } }
+        val previous =
+            with(driver) {
+                withContext(OnDispatcher.EDT) {
+                    utility(LanguageServicePage::class).saveFormatting(singleProject(), true)
+                }
+            }
         try {
             replace(document, data.string("source") + "\n")
-            save(document)
-            with(driver) { awaitUi("native format on save", 30.seconds) { document.text.contains("    Int value = 1;") } }
-            val status = protocol.query("xtc/languageServiceStatus", emptyMap<String, Any>()).asJsonObject
+            with(driver) {
+                // A bare FileDocumentManager.saveDocument bypasses Actions on Save.
+                invokeAction("SaveAll", component = document.editor.component)
+                awaitUi("native format on save", 30.seconds) {
+                    document.text.contains("    Int value = 1;")
+                }
+            }
+            val status =
+                protocol.query("xtc/languageServiceStatus", emptyMap<String, Any>()).asJsonObject
             check(!status["serverSaveFormatting"].asBoolean)
         } finally {
-            with(driver) { withContext(OnDispatcher.EDT) { utility(LanguageServicePage::class).saveFormatting(singleProject(), previous) } }
+            with(driver) {
+                withContext(OnDispatcher.EDT) {
+                    utility(LanguageServicePage::class).saveFormatting(singleProject(), previous)
+                }
+            }
         }
     }
 

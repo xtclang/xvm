@@ -25,7 +25,9 @@ class ClientProtocol(private val driver: Driver) {
                     getter = {
                         service<LanguageClients>(singleProject()).getStartedServers().toList()
                     },
-                    checker = { it.size == 1 },
+                    checker = { servers ->
+                        servers.singleOrNull()?.getServerStatus()?.name() == "started"
+                    },
                 )
                 .single()
         }

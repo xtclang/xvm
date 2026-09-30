@@ -1268,8 +1268,9 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
 
 ### Editor configuration and feature controls (UI1–UI7)
 
-This is part of LSP product completeness, alongside L67/L72/L80–L82. It is a plan, not a claim
-that initialization options already have plugin controls. Audited 2026-09-30 against the VS Code
+This is part of LSP product completeness, alongside L67/L72/L80–L82. The broader checklist remains
+open; the [editor settings checkpoint](#editor-settings-implementation-batch-ui1ui7-2026-09-30)
+records the implemented subset and its acceptance separately. Audited 2026-09-30 against the VS Code
 manifest/client and IntelliJ `CompilerProjectConfigurable`, `CompilerSettings`, code style and
 connection provider. Use **Ecstasy** in visible labels; preserve stable `xtc.*` setting/command IDs.
 
@@ -1287,7 +1288,7 @@ and [IntelliJ settings](https://plugins.jetbrains.com/docs/intellij/settings-gui
 | Build import and generated inputs | Both plugins have explicit Gradle model refresh/preparation. | Expose import state, last refresh, pending generated inputs, cancellation and actionable failure. Use evaluated Gradle inputs; never infer paths by reading build-script text or run builds on every keystroke. |
 | Libraries, XDK and external sources | Bundled XDK is implicit/read-only; build models provide inputs; VS Code `xtc.sourceRoots` is machine-overridable. | Show effective read-only libraries and source attachments; add ordered host library/source overrides only where the backend has a supported contract. Distinguish source indexing from compiler module dependencies. Keep the bundled XDK usable without any external installation. |
 | JVM, startup and lifecycle | VS Code `xtc.java.home`; IntelliJ uses JBR. Restart/status/log actions exist. | Display the effective runtime, server PID/version and restart reason. Add advanced JVM options only with validation and a clear restart boundary. Machine paths must not leak into shared project settings; preserve one server per project/connection owner. |
-| Incremental text synchronization | L72 accepts `initializationOptions.xtcDocumentSync.incremental`; no plugin control exists. | Advanced Full/Incremental selector mapped to the same option in both clients, restart required. Label this as text transport, not incremental compilation. Default Full until both native client paths have acceptance evidence. |
+| Incremental text synchronization | L72 accepts `initializationOptions.xtcDocumentSync.incremental`; both plugins now expose a Full/Incremental preference with restart. | This changes text transport, not incremental compilation. Full remains the default; X137 checks restarts and unsaved buffers. |
 | Formatting and save behavior | Whole/range/on-type formatting; VS Code five `xtc.formatting.*` fields; IntelliJ Ecstasy Code Style. L72 save formatting is initialization-only. | Prefer each editor's existing format-on-save/on-type and language-specific formatting controls. Define a single owner so editor formatting and `willSaveWaitUntil` never format twice. Audit which existing fields actually affect output: a visible max-line-width value must not promise line wrapping the formatter does not implement. Server-side save formatting stays optional. |
 | Presentation features | VS Code `xtc.inlayHints.enabled`; IDE/LSP4IJ controls and an environment/system-property semantic-token switch. | Use native completion, parameter info, inlay, semantic highlighting, lens, hover, folding and navigation preferences where available. Add Ecstasy-specific options only for missing useful controls, with supported-adapter gating and live refresh. Do not add a toggle for every LSP method. |
 | Diagnostics and analysis | Compiler diagnostics, push/pull negotiation and automatic reanalysis work; editor Problems filtering is available. | Prefer native severity/filter controls; expose analysis/status and refresh/rebuild commands. Any future debounce, excludes or on-save analysis option must define stale-diagnostic behavior and graph coverage. No switch may bypass rename/type proof or silently suppress internal failures. |
@@ -7088,12 +7089,13 @@ Neither remote filesystem execution nor restricted-workspace build execution is 
 | 2: UI3 | `b8c8fb904` | IntelliJ application/project pages, supported formatting controls and compiler path choosers; service-only overrides do not claim compiler graph ownership. |
 | 3: UI4 | `fb80b423d` | VS Code Settings schema/scopes, path chooser, settings command and explicit deprecation of inert formatter options. |
 | 4: UI5 | `cebf00b36` | Serialized VS Code restart/start, coalesced IntelliJ transport restart, live hints/formatting and last-valid/versioned formatting configuration. |
-| 5: UI6/UI7 | This checkpoint | Effective configuration/queue API and views, packaged protocol assertions, shared X136–X139 and manual acceptance updates. |
+| 5: UI6/UI7 | `a7f83e9f0` | Effective configuration/queue API and views, packaged protocol assertions, shared X136–X139 and manual acceptance updates. |
 
 LSP4IJ source-bytecode inspection found `DocumentContentSynchronizer.documentSaved` sends only
 `didSave`; no native `willSaveWaitUntil` implementation exists. The IntelliJ save-owner control is
 therefore disabled with a searchable `TODO LSP4IJ:` comment and an explanation. Its connection keeps
-server save edits off. Native Actions on Save is tested separately. VS Code checks native save
+server save edits off. The client also clears LSP4IJ's incorrectly advertised save-hook capabilities.
+Native Actions on Save is tested separately. VS Code checks native save
 ownership per document in its `willSaveWaitUntil` middleware, so changing a language/folder preference
 cannot introduce duplicate save edits during an existing connection.
 
@@ -7104,7 +7106,38 @@ changing graph ownership. VS Code rejects invalid connection settings before sto
 server. The effective report separates configured values from negotiated server values and obtains
 queue metadata without waiting for the compiler worker or invoking Java compiler APIs.
 
-The five implementation slices are ready for combined validation; no new acceptance result is
-claimed yet. Remaining broader UI items are explicit: advanced JVM controls, build progress/cancel
+Combined validation found and corrected an inherited no-op formatting setter in `XdkAdapter`:
+the status report accepted editor indentation while all three formatting entry points still used
+request defaults. A final atomic holder now retains the immutable preference; a regression checks
+document/range/on-type formatting after changes and reset. Explicit presentation notifications
+also preserve pending source-graph replies and cached compilation without adding compiler work.
+
+VS Code `run-1aSPTX` passes X118/X132/X135–X139 (seven selected cases). Earlier receipts retain the
+initial failures: `run-NQhAKs` masked failures during restart cleanup; `run-SblieN` and `run-sCRIFj`
+exposed formatting and restart assertions; `run-on3vZt` includes accidental external typing;
+`run-PNAR7e` isolated the cached empty document-symbol response. Its captured `jcmd` dump shows an
+idle compiler worker, and the server trace records a 62 ms compile. Reusing the harness's registered
+symbol-provider helper avoids VS Code's execute-command cache: X137 now takes 3.3 seconds for both
+restarts, with each connection ready in about 0.7 seconds and its unsaved document in 1.4 seconds.
+Fixture cleanup preserves the original failure instead of replacing it with a cleanup exception.
+
+IntelliJ's first selection, `run-12398066746544159936`, passes START/X118/X132/X135/X136 and fails
+X137–X139, with zero IDE failures. It identified a PID-before-initialization readiness assumption,
+incorrect save-hook advertisement, and a low-level single-document save that bypasses Actions on
+Save. The corrected selection waits for the wrapper's started state and invokes native Save All.
+`run-3866544261762285778` passes START and all seven selected cases with zero IDE failures; X137
+takes 3.9 seconds and X139 takes 1.8 seconds. These seven-case receipts do not establish a new
+full 144-case catalog pass.
+
+The combined backend run passes 1,453 enabled tests with three existing disabled placeholders;
+the packaged process suite passes all 72 tests. The editor suites pass 73 IntelliJ unit tests
+and 20 VS Code extension tests. The final focused backend run passes 27 tests with zero skips,
+failures or errors (`EditorFormattingStateTest`, `CompilerConfigurationTest`,
+`FormattingConfigRoundTripTest*`, `XdkEditingTest`). Root and `:lang:spotlessCheck` pass. TypeScript
+compilation passes; ESLint reports zero errors and five existing unused-fixture-argument warnings
+in untouched playbook files. The native launcher’s shutdown-supervisor message is normal teardown;
+its JUnit result and IDE failure report are clean.
+
+Remaining broader UI items are explicit: advanced JVM controls, build progress/cancel
 presentation, source attachment editors, log export/retention and remote/untrusted-workspace coverage.
 X136–X139 exercise the local shipped controls, not those planned extensions.
