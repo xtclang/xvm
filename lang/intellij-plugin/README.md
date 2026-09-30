@@ -145,7 +145,8 @@ both with zero IDE errors. This is not a full 134-case checkpoint. File/package 
 the registered XTC preflight handler and real scope/name dialogs. Code-action edits are eager
 in IntelliJ until LSP4IJ's lazy-edit path preserves Redo; completion documentation remains lazy.
 External-resource acceptance loads the fixture directory and explicitly refreshes VFS; automatic
-watching of previously unopened external roots remains a follow-up. The following receipts
+watching of previously unopened external roots is now implemented with connection-owned leases
+and shared asynchronous VFS refresh; strengthened X124 validation is pending. The following receipts
 describe the preceding catalog.
 Startup and the preceding 113 scenarios have a complete passing checkpoint recorded below. The
 [current demo record](../../docs/errs-integration-plan.md#native-intellij-demo-continuation-2026-09-29)

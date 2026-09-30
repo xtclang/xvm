@@ -11,6 +11,27 @@ class XdkProjectGraphTest {
     @TempDir lateinit var directory: Path
 
     @Test
+    fun `watch roots include unopened sources and missing resources`() {
+        val source = directory.resolve("external/sources/Library.x")
+        val assets = directory.resolve("generated/assets")
+        val project =
+            XdkProject(
+                listOf(
+                    XdkSourceModule(
+                        "Library",
+                        source.toUri().toString(),
+                        resourceRoots = listOf(assets.toUri().toString()),
+                    )
+                )
+            )
+        assertThat(project.inputWatchRoots())
+            .containsExactlyInAnyOrder(
+                source.parent.toFile().canonicalFile,
+                assets.toFile().canonicalFile,
+            )
+    }
+
+    @Test
     fun `affected modules include transitive diamond consumers once in dependency order`() {
         fun module(
             name: String,

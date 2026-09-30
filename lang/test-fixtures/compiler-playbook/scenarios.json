@@ -3990,12 +3990,13 @@
       }
     },
     "X124": {
-      "title": "external resource settings survive reset and repair through editor file watchers",
+      "title": "unopened missing external roots repair through editor watchers and settings replacement",
       "manual": [],
       "values": {
         "file": "Assets.x",
         "text": "module Assets { static String text() = $./data.txt; }",
         "resource": "data.txt",
+        "resourceDirectory": "generated/assets",
         "contents": "resource repaired",
         "module": "Assets"
       },

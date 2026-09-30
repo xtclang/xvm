@@ -113,10 +113,10 @@ internal class XdkProject(modules: List<XdkSourceModule>) {
             .mapTo(linkedSetOf()) { it.uri }
     }
 
-    fun resourceWatchRoots(): Set<File> =
+    fun inputWatchRoots(): Set<File> =
         modules.values
             .flatMap {
-                XdkResources.roots(it.root, it.resourceFiles)
+                XdkResources.roots(it.root, it.resourceFiles) + it.root.parentFile
             }
             .toSet()
 
