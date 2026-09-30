@@ -137,17 +137,16 @@ uses JetBrains' `IdeaUltimate` artifact name, but the tested features require on
 Community feature set. No personal settings or license are copied into the test profile.
 See [JetBrains' unified distribution explanation](https://www.jetbrains.com/help/idea/intellij-idea-single-distribution.html).
 
-The suite reads all 139 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
+The suite reads all 140 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
 and source fixtures from the [manual playbook](../doc/manual-test-plan.md#xdkadapter-playbook).
-X124–X129 and the related CFG2/X105/X118/X122 regressions now have passing selected receipts:
-`run-8616709537315408794` covers eight cases and `run-431060674485649448` covers X124/X128,
-both with zero IDE errors. This is not a full 134-case checkpoint. File/package Rename uses
-the registered XTC preflight handler and real scope/name dialogs. Code-action edits are eager
-in IntelliJ until LSP4IJ's lazy-edit path preserves Redo; completion documentation remains lazy.
-External-resource acceptance loads the fixture directory and explicitly refreshes VFS; automatic
-watching of previously unopened external roots is now implemented with connection-owned leases
-and shared asynchronous VFS refresh; strengthened X124 validation is pending. The following receipts
-describe the preceding catalog.
+The current selected run `run-17174738471798629344` passes START and 18 of 19 cases with zero
+IDE errors. Automatic external watch creation/repair and settings replacement pass without fixture
+VFS refresh; the selected lazy-action bridge passes import/member generation and Undo/Redo. X130's
+native batch Move/Undo/Redo now passes in `run-1746762976235942700`, including START and zero
+IDE errors. The manifest uses the platform `refactoring.moveHandler` extension point; file-only
+Move uses project-level Undo. This is not a full 140-case checkpoint.
+See the [current acceptance record](../../docs/errs-integration-plan.md#watcher-move-and-log-view-acceptance-follow-up-2026-09-30).
+The following receipts describe the preceding catalog.
 Startup and the preceding 113 scenarios have a complete passing checkpoint recorded below. The
 [current demo record](../../docs/errs-integration-plan.md#native-intellij-demo-continuation-2026-09-29)
 tracks the 128-case selection and its resumed/focused runs separately: all 128 cases have passing
@@ -761,15 +760,23 @@ Ensure you have the Gradle plugin enabled in IntelliJ (bundled by default).
 Apache License 2.0 - See [LICENSE](../../LICENSE) for details.
 
 The native file-tree Move action now requests compiler proof before moving selected source files
-or module containers. Shared X130 adds batch Move/Undo/Redo coverage (execution pending). Labels
+or module containers. Shared X130 passes native batch Move and project Undo/Redo. Labels
 use Ecstasy; implementation names retain Xtc. Upstream compatibility bridges carry searchable
 `// TODO LSP4IJ:` comments with their removal conditions.
 
 Lazy action selection now uses a registered client command to resolve and apply the edit in a
-version-checked undo command; native acceptance remains pending. X131 adds protocol assertions
+version-checked undo command; selected native X105/X122/X127 acceptance passes. X131 adds protocol assertions
 for code-lens/link/inlay/symbol resolution through the installed client connection.
 
-L72 adds shared X132 for multiple-range formatting and negotiated save hooks (validation pending).
+L72 adds shared X132 for multiple-range formatting and negotiated save hooks; selected native
+acceptance and the backend/packaged transport regressions pass.
 The server defaults to full synchronization and no save-time edits; custom LSP hosts can set
 `initializationOptions.xtcDocumentSync` with independent `incremental` and `formatOnSave` booleans.
 No additional compiler process or compilation is needed for save formatting.
+
+### Quick server log access
+
+Press **Ctrl+Alt+X, then L** (**Control+Option+X, then L** on macOS) to show/hide the server log.
+The view retains its history while hidden. Change the shortcut in the editor's native keymap.
+See the [manual playbook](../doc/manual-test-plan.md#server-log-shortcut-acceptance) for acceptance
+steps and the distinction between server logs and protocol tracing.

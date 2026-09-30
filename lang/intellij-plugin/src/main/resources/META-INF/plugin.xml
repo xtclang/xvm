@@ -33,6 +33,13 @@
 
     <actions>
         <action id="xtc.resolveCodeAction" class="org.xtclang.idea.lsp.XtcResolveCodeAction"/>
+        <action id="xtc.toggleServerLog" class="org.xtclang.idea.lsp.XtcServerLogAction"
+                text="Toggle Ecstasy Language Server Log"
+                description="Show the Ecstasy server log or hide the Language Servers tool window">
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt X" second-keystroke="L"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="ctrl alt X" second-keystroke="L"/>
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
     </actions>
 
     <extensions defaultExtensionNs="com.intellij">

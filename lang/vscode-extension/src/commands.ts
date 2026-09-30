@@ -41,6 +41,10 @@ export function registerCommands(context: vscode.ExtensionContext, outputChannel
             outputChannel.show();
         }),
 
+        vscode.commands.registerCommand('xtc.hideServerOutput', () => {
+            outputChannel.hide();
+        }),
+
         vscode.commands.registerCommand('xtc.createProject', async () => {
             const projectName = await vscode.window.showInputBox({
                 prompt: 'Enter project name',
