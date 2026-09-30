@@ -181,13 +181,13 @@ public class CmpExpression
                 exprName.getLeftExpression() == null && !exprName.isSuppressDeref() &&
                 ctx.getVar(exprName.getName()) instanceof Register reg) {
             type1Orig = reg.getOriginalType();
-            fDeclare1 = !type1Orig.equals(type1);
+            fDeclare1 = reg.isInPlace() && !type1Orig.equals(type1);
         }
         if (expr2 instanceof NameExpression exprName &&
                 exprName.getLeftExpression() == null && !exprName.isSuppressDeref() &&
                 ctx.getVar(exprName.getName()) instanceof Register reg) {
             type2Orig = reg.getOriginalType();
-            fDeclare2 = !type2Orig.equals(type2);
+            fDeclare2 = reg.isInPlace() && !type2Orig.equals(type2);
         }
 
         TypeConstant typeRequest = chooseCommonType(pool, fEqual, type1, type1Orig, false,
@@ -230,7 +230,7 @@ public class CmpExpression
                 boolean fConst2 = expr2New.isConstant();
 
                 // compute the type to compare the left value to the right value as;
-                // use the shared declared type for comparisons between local variables
+                // use the shared declared type for assignment-narrowed locals
                 TypeConstant typeCommon;
                 if (fDeclare1 && fDeclare2 && type1Orig.equals(type2Orig)) {
                     typeCommon = chooseCommonType(pool, fEqual, type1Orig, fConst1, type2Orig, fConst2, true);
