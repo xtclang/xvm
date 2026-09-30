@@ -226,7 +226,7 @@ local or import-alias declarations and inherited written member contracts, prese
 | Pull document/workspace diagnostics | Implemented for negotiated compiler clients: result IDs, related/closed documents, refresh and removal reports. Shared X123 and updated X76/X118 pass in both editors; push remains for other clients. PLAT1's source-location crash is fixed. The native demo also corrected a closed standalone-member pull gap; X27/X123 pass after that correction. | L68 implemented; demo receipts and nine pull-diagnostic tests |
 | Semantic-token range/delta requests | Negotiated range/delta with bounded result history; backend/protocol and both host checks pass | L69 / X126 |
 | Completion/action/lens/link/inlay/workspace-symbol resolve requests | All six endpoints implemented with bounded revision guards. IntelliJ selects and applies lazy actions through its undo-aware bridge. Batch validation pending. | L70 / X127, X131 |
-| File-operation pre-edit requests; explicit create/delete notifications | All six hooks pass backend/protocol checks; native file/package Rename passes. Other IntelliJ move actions need preflight integration; cross-package qualification and explicit graph replacement remain refused. | L71 / X128 |
+| File-operation pre-edit requests; explicit create/delete notifications | All six hooks pass backend/protocol checks; native file/package Rename passes. Batch native Move preflight is implemented pending X130; cross-package qualification and explicit graph replacement remain refused. | L71 / X128, X130 |
 | Save-time edits, incremental sync, multiple-range formatting | Negotiated save hooks, opt-in incremental UTF-16 updates and multiple-range formatting implemented; default Full/no save edits preserved. Validation pending. | L72 / X132 |
 | Server-side `workspace/executeCommand` | Module Run lenses invoke an existing client command | L73 |
 | Cross-project monikers | Detached identities scoped to compiler snapshots/graphs | L74 |
@@ -847,3 +847,7 @@ now tracks the full settings inventory, common scope/precedence semantics, Commu
 pages, VS Code native Settings and commands, live/restart behavior, effective capability/status
 views and shared acceptance. L72 incremental transport/save options are currently initialization
 options only, not plugin preferences. Formatting-on-save must have one owner to avoid duplicate edits.
+
+The [2026-09-30 acceptance checklist](../manual-test-plan.md#acceptance-checklist-for-the-2026-09-30-batch)
+now separates shared automation from remaining manual/native, protocol-lifetime and settings-UI
+checks for the complete follow-up batch. X130–X132 alone are not full acceptance evidence.
