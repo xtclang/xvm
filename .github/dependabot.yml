@@ -5,7 +5,10 @@
 # locally without pushing. Two options:
 #
 #   1. check-jsonschema (recommended — uses the official SchemaStore schema
-#      bundled with the tool, so it knows about `directories:` + globs):
+#      bundled with the tool, so it knows about `directories:` + globs).
+#      bin/validate-dependabot-config.sh runs it with a pinned version, and the
+#      `Validate Dependabot Configuration` workflow runs that script in CI
+#      (gh workflow run validate-dependabot.yml). Or directly:
 #        uvx check-jsonschema --builtin-schema vendor.dependabot .github/dependabot.yml
 #        # or, if you prefer pipx:
 #        pipx install check-jsonschema
@@ -23,8 +26,6 @@
 #     https://github.com/xtclang/xvm/network/updates  (Insights → Dependency
 #     graph → Dependabot) and watch the next scheduled run, or click
 #     "Check for updates" on any ecosystem row to force one immediately.
-#   - Or run the repo's `Validate Dependabot Configuration` workflow:
-#        gh workflow run validate-dependabot.yml
 # ─────────────────────────────────────────────────────────────────────────────
 
 version: 2
