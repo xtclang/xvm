@@ -9,6 +9,8 @@ import com.google.gson.stream.JsonWriter
 import org.eclipse.lsp4j.DidChangeConfigurationParams
 
 /** Explicit null settings reset configuration; Gson's normal omission would keep the old value. */
+// TODO LSP4IJ: preserve explicit null configuration fields in the client Gson configuration.
+// Remove this adapter once reset-to-discovery survives a wire round trip without it.
 internal object ConfigurationJson : TypeAdapterFactory {
     override fun <T> create(
         gson: Gson,

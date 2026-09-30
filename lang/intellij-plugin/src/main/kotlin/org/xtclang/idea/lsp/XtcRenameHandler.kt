@@ -25,6 +25,8 @@ import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 
 /** Uses Community platform refactoring UI with an atomic stale-document guard. */
+// TODO LSP4IJ: apply rename edits only after checking captured document versions/epochs.
+// This native handler can go once upstream provides the guarded application used by XtcRenameEdit.
 class XtcRenameHandler : RenameHandler {
     override fun isAvailableOnDataContext(dataContext: DataContext): Boolean {
         val file = CommonDataKeys.PSI_FILE.getData(dataContext) ?: return false

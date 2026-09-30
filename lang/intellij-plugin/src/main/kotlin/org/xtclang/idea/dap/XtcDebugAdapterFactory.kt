@@ -20,7 +20,7 @@ import java.io.File
 import org.xtclang.idea.PluginPaths
 
 /**
- * Factory for creating XTC Debug Adapter (DAP) descriptors.
+ * Factory for creating Ecstasy Debug Adapter (DAP) descriptors.
  *
  * Registered via the `com.redhat.devtools.lsp4ij.debugAdapterServer` extension point. LSP4IJ uses
  * this factory to create DAP sessions when users launch debug configurations for `.x` files.
@@ -35,7 +35,7 @@ class XtcDebugAdapterFactory : DebugAdapterDescriptorFactory() {
         options: RunConfigurationOptions,
         environment: ExecutionEnvironment,
     ): DebugAdapterDescriptor {
-        logger.info("Creating XTC DAP descriptor")
+        logger.info("Creating Ecstasy DAP descriptor")
         return XtcDebugAdapterDescriptor(options, environment, serverDefinition)
     }
 
@@ -46,7 +46,7 @@ class XtcDebugAdapterFactory : DebugAdapterDescriptorFactory() {
 }
 
 /**
- * Descriptor that launches the XTC DAP server as an out-of-process Java application.
+ * Descriptor that launches the Ecstasy DAP server as an out-of-process Java application.
  *
  * The DAP server communicates over stdio (JSON-RPC), matching the architecture of the LSP server.
  * Uses IntelliJ's JBR java binary to spawn the server process.
@@ -99,7 +99,7 @@ class XtcDebugAdapterDescriptor(
                 serverJar.toString(),
             )
 
-        logger.info("Starting XTC DAP server: ${commandLine.commandLineString}")
+        logger.info("Starting Ecstasy DAP server: ${commandLine.commandLineString}")
         return OSProcessHandler(commandLine)
     }
 
@@ -117,7 +117,7 @@ class XtcDebugAdapterDescriptor(
     override fun getDebugMode(): DebugMode = DebugMode.LAUNCH
 
     override fun getServerReadyConfig(debugMode: DebugMode): ServerReadyConfig =
-        ServerReadyConfig("XTC Debug Adapter")
+        ServerReadyConfig("Ecstasy Debug Adapter")
 
     override fun getFileType(): FileType? =
         FileTypeManager.getInstance().getFileTypeByExtension("x")
