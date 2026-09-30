@@ -212,6 +212,9 @@ internal fun ParityScenarios.platformCases() {
         val document = open(data.string("file"))
         clean(document)
         val offset = document.text.indexOf(data.string("anchor"))
+        check(document.text == data.string("source")) {
+            "Initializer fixture changed before rename: ${Gson().toJson(document.text)}"
+        }
         check(
             query("textDocument/hover", document, offset)
                 .toString()
@@ -238,10 +241,17 @@ internal fun ParityScenarios.platformCases() {
         check(
             document.text ==
                 data.string("source").replace(data.string("name"), data.string("newName"))
-        )
-        with(driver) { invokeAction("Undo", component = document.editor.component) }
+        ) {
+            "Initializer rename result: ${Gson().toJson(document.text)}"
+        }
+        with(driver) {
+            invokeAction("\$Undo", now = false, component = document.editor.component)
+            awaitUi("initializer rename Undo restores every occurrence", 15.seconds) {
+                document.text == data.string("source")
+            }
+        }
         settle(document)
-        check(document.text == data.string("source"))
+        clean(document)
     }
 
     case("X140") { data ->
