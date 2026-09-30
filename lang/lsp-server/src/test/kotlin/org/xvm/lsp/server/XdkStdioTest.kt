@@ -29,8 +29,10 @@ import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DocumentDiagnosticParams
 import org.eclipse.lsp4j.DocumentHighlightParams
+import org.eclipse.lsp4j.DocumentRangesFormattingParams
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.FoldingRangeRequestParams
+import org.eclipse.lsp4j.FormattingOptions
 import org.eclipse.lsp4j.HoverParams
 import org.eclipse.lsp4j.ImplementationParams
 import org.eclipse.lsp4j.InitializeParams
@@ -53,15 +55,19 @@ import org.eclipse.lsp4j.SemanticTokensParams
 import org.eclipse.lsp4j.SemanticTokensRangeParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
 import org.eclipse.lsp4j.SignatureHelpParams
+import org.eclipse.lsp4j.SynchronizationCapabilities
 import org.eclipse.lsp4j.TextDocumentClientCapabilities
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
+import org.eclipse.lsp4j.TextDocumentSaveReason
+import org.eclipse.lsp4j.TextDocumentSyncKind
 import org.eclipse.lsp4j.TypeDefinitionParams
 import org.eclipse.lsp4j.TypeHierarchyPrepareParams
 import org.eclipse.lsp4j.TypeHierarchySubtypesParams
 import org.eclipse.lsp4j.TypeHierarchySupertypesParams
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
+import org.eclipse.lsp4j.WillSaveTextDocumentParams
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import org.eclipse.lsp4j.WorkspaceEditCapabilities
 import org.eclipse.lsp4j.launch.LSPLauncher
@@ -78,6 +84,51 @@ import org.junit.jupiter.params.provider.ValueSource
 @Tag("compiler-stdio")
 class XdkStdioTest {
     @TempDir lateinit var directory: Path
+
+    @Test
+    fun `incremental patches save hooks and formatting ranges round trip the packaged transport`() {
+        Session(packagedJar(), directory).use { session ->
+            session.initialize(documentSync = mapOf("incremental" to true, "formatOnSave" to true))
+            val source = "module Stdio { // 😀\r\nInt value = 1;\r\n}"
+            session.open(source)
+            assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+            val documents = session.server.textDocumentService
+            val id = TextDocumentIdentifier(URI)
+            documents.didChange(
+                DidChangeTextDocumentParams(
+                    VersionedTextDocumentIdentifier(URI, 2),
+                    listOf(
+                        TextDocumentContentChangeEvent().apply {
+                            range = Range(Position(1, 0), Position(1, 3))
+                            text = "String"
+                        },
+                        TextDocumentContentChangeEvent().apply {
+                            range = Range(Position(1, 15), Position(1, 16))
+                            text = "\"text\""
+                        },
+                    ),
+                )
+            )
+            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
+            val save = WillSaveTextDocumentParams(id, TextDocumentSaveReason.Manual)
+            documents.willSave(save)
+            val saved = session.await(documents.willSaveWaitUntil(save))
+            assertThat(saved.map { it.newText }).contains("    ", "\r\n")
+            val ranges =
+                listOf(Range(Position(1, 0), Position(2, 0)), Range(Position(1, 0), Position(1, 5)))
+            val edits =
+                session.await(
+                    documents.rangesFormatting(
+                        DocumentRangesFormattingParams(id, FormattingOptions(4, true), ranges)
+                    )
+                )
+            assertThat(edits).hasSize(1)
+            assertThat(edits.single().newText).isEqualTo("    ")
+            // Resolving save edits never applies them; a second request sees the same source.
+            assertThat(session.await(documents.willSaveWaitUntil(save))).isEqualTo(saved)
+            session.shutdownAndExit()
+        }
+    }
 
     @Test
     fun `semantic token range and deltas round trip the packaged transport`() {
@@ -1431,19 +1482,25 @@ class XdkStdioTest {
             versionedEdits: Boolean = false,
             pullDiagnostics: Boolean = false,
             sourceModules: List<Map<String, Any>>? = null,
+            documentSync: Map<String, Boolean> = emptyMap(),
         ) {
             val initialized =
                 await(
                     server.initialize(
                         InitializeParams().apply {
-                            sourceModules?.let {
-                                initializationOptions =
-                                    mapOf("xtcCompiler" to mapOf("sourceModules" to it))
+                            initializationOptions = buildMap {
+                                sourceModules?.let {
+                                    put("xtcCompiler", mapOf("sourceModules" to it))
+                                }
+                                put("xtcDocumentSync", documentSync)
                             }
                             capabilities =
                                 ClientCapabilities().apply {
                                     textDocument =
                                         TextDocumentClientCapabilities().apply {
+                                            if (documentSync.isNotEmpty())
+                                                synchronization =
+                                                    SynchronizationCapabilities(true, true, true)
                                             if (pullDiagnostics)
                                                 diagnostic = DiagnosticCapabilities()
                                             semanticTokens =
@@ -1467,6 +1524,11 @@ class XdkStdioTest {
                                 }
                         }
                     )
+                )
+            assertThat(initialized.capabilities.textDocumentSync.right.change)
+                .isEqualTo(
+                    if (documentSync["incremental"] == true) TextDocumentSyncKind.Incremental
+                    else TextDocumentSyncKind.Full
                 )
             assertThat(initialized.capabilities.definitionProvider.left).isTrue()
             assertThat(initialized.capabilities.typeDefinitionProvider.left).isTrue()

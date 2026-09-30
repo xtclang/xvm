@@ -509,6 +509,74 @@ internal fun ParityScenarios.platformCases() {
         }
         check(document.text == data.string("source"))
     }
+    case("X133") { data ->
+        write(data.string("file"), data.string("source"))
+        configure(
+            listOf(
+                SharedScenarios.SourceModule(
+                    data.string("module"),
+                    uri(data.string("file")),
+                    emptyList(),
+                )
+            )
+        )
+        val document = open(data.string("file"))
+        clean(document)
+        fun linked(anchor: String) =
+            query("textDocument/linkedEditingRange", document, document.text.indexOf(anchor))
+                .asJsonObject
+        fun ranges(anchor: String) =
+            linked(anchor)["ranges"]?.takeUnless { it.isJsonNull }?.asJsonArray
+        check(
+            ranges(data.string("anchor"))!!.map {
+                it.asJsonObject["start"].asJsonObject["character"].asInt
+            } == data.strings("uses").map { data.string("source").indexOf(it) }
+        )
+        data.strings("refused").forEach { check(ranges(it)?.size() in listOf(null, 0)) }
+        replace(document, data.string("broken"))
+        errors(document)
+        check(ranges(data.string("anchor"))?.size() in listOf(null, 0))
+        replace(document, data.string("source"))
+        clean(document)
+        check(ranges(data.string("anchor"))?.size() == 2)
+    }
+    case("X134") { data ->
+        val external = Files.createTempDirectory("xtc-playbook-source-").toRealPath()
+        try {
+            val library = external.resolve(data.string("libraryFile"))
+            Files.writeString(library, data.string("library"))
+            write(data.string("file"), data.string("consumer"))
+            configure(
+                listOf(
+                    SharedScenarios.SourceModule(
+                        data.string("libraryModule"),
+                        library.toUri().toString(),
+                        emptyList(),
+                    ),
+                    SharedScenarios.SourceModule(
+                        data.string("module"),
+                        uri(data.string("file")),
+                        listOf(data.string("libraryModule")),
+                    ),
+                )
+            )
+            val document = open(data.string("file"))
+            clean(document)
+            Files.writeString(library, data.string("brokenLibrary"))
+            errors(document)
+            Files.writeString(library, data.string("library"))
+            clean(document)
+            Files.delete(library)
+            errors(document)
+            Files.writeString(library, data.string("library"))
+            clean(document)
+        } finally {
+            configure(emptyList())
+            Files.walk(external).use { paths ->
+                paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists)
+            }
+        }
+    }
 }
 
 @Remote("org.xtclang.idea.playbook.probe.FileTreeOperations", plugin = "org.xtclang.playbook.probe")

@@ -137,7 +137,7 @@ uses JetBrains' `IdeaUltimate` artifact name, but the tested features require on
 Community feature set. No personal settings or license are copied into the test profile.
 See [JetBrains' unified distribution explanation](https://www.jetbrains.com/help/idea/intellij-idea-single-distribution.html).
 
-The suite reads all 137 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
+The suite reads all 139 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
 and source fixtures from the [manual playbook](../doc/manual-test-plan.md#xdkadapter-playbook).
 X124–X129 and the related CFG2/X105/X118/X122 regressions now have passing selected receipts:
 `run-8616709537315408794` covers eight cases and `run-431060674485649448` covers X124/X128,
