@@ -325,6 +325,15 @@ interface Adapter : Closeable {
         progressReporter: ((String, Int) -> Unit)? = null,
     ) {}
 
+    /** Completion/cancellation ownership for hosts that report background indexing progress. */
+    fun initializeWorkspaceAsync(
+        workspaceFolders: List<String>,
+        progressReporter: ((String, Int) -> Unit)? = null,
+    ): CompletableFuture<Unit> {
+        initializeWorkspace(workspaceFolders, progressReporter)
+        return CompletableFuture.completedFuture(Unit)
+    }
+
     /**
      * Notification that a watched file has changed on disk.
      *

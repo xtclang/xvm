@@ -2,6 +2,7 @@ package org.xvm.lsp.adapter.treesitter
 
 import java.net.URI
 import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.io.path.extension
@@ -223,21 +224,26 @@ class TreeSitterAdapter : AbstractAdapter() {
         workspaceFolders: List<String>,
         progressReporter: ((String, Int) -> Unit)?,
     ) {
+        initializeWorkspaceAsync(workspaceFolders, progressReporter)
+    }
+
+    override fun initializeWorkspaceAsync(
+        workspaceFolders: List<String>,
+        progressReporter: ((String, Int) -> Unit)?,
+    ): CompletableFuture<Unit> {
         logger.info("initializeWorkspace: {} folders: {}", workspaceFolders.size, workspaceFolders)
-        indexer
-            .scanWorkspace(workspaceFolders, progressReporter)
-            .thenRun {
+        val scan = indexer.scanWorkspace(workspaceFolders, progressReporter)
+        scan.whenComplete { _, failure ->
+            if (failure == null) {
                 indexReady.set(true)
                 logger.info(
                     "workspace index ready: {} symbols in {} files",
                     workspaceIndex.symbolCount,
                     workspaceIndex.fileCount,
                 )
-            }
-            .exceptionally { e ->
-                logger.error("workspace indexing failed: {}", e.message, e)
-                null
-            }
+            } else if (!scan.isCancelled) logger.error("workspace indexing failed", failure)
+        }
+        return scan
     }
 
     override fun didChangeWatchedFile(

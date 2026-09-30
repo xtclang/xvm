@@ -8,6 +8,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.ProgressParams
 import org.eclipse.lsp4j.WorkDoneProgressCreateParams
 import org.eclipse.lsp4j.WorkDoneProgressKind
+import org.eclipse.lsp4j.WorkDoneProgressReport
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
@@ -48,6 +49,25 @@ class ConnectionProgressTest {
         override fun close() {
             progress.close()
             assertThat(dispatcher.awaitTermination(5, SECONDS)).isTrue()
+        }
+    }
+
+    @Test
+    fun `index progress reports belong to the live operation and finish after its future`() {
+        Session().use { session ->
+            val work = CompletableFuture<Unit>()
+            session.progress.track("Indexing", Either.forLeft("index"), work)
+            session.event()
+            session.progress.report(work, "Indexing: 50/100 files", 50)
+            val report = session.event().value.left as WorkDoneProgressReport
+            assertThat(report.percentage).isEqualTo(50)
+            assertThat(report.message).contains("50/100")
+            assertThat(work.isDone).isFalse()
+            work.complete(Unit)
+            assertThat(session.event().value.left.kind).isEqualTo(WorkDoneProgressKind.end)
+            session.progress.report(work, "Late report", 100)
+            session.flush()
+            assertThat(session.events).isEmpty()
         }
     }
 

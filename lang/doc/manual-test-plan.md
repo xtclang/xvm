@@ -1,6 +1,6 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has 147 scenarios; new X142 awaits this batch’s validation. X140/X141 add explicit UTF-16 navigation and runtime server
+The current catalog has 148 scenarios; new X142/X143 await this batch’s validation. X140/X141 add explicit UTF-16 navigation and runtime server
 trace switching; X136/X137/X140/X141 pass in both editors, plus IntelliJ startup with zero IDE errors.
 See the [protocol receipt and open limits](../../docs/errs-integration-plan.md#protocol-hardening-batch-l80l81-2026-09-30).
 X136–X139 previously added language-service settings, effective state, transport restarts, live
@@ -1391,14 +1391,14 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 147 scenarios: X1–X142, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 148 scenarios: X1–X143, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
 `${0}` templates substitute literal values without evaluating code.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 147 cases. IntelliJ now has assertions for the same 147, plus a separate startup check.
+all 148 cases. IntelliJ now has assertions for the same 148, plus a separate startup check.
 Current selected native pass receipts are recorded above; implementation is not validation. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
 case was unselected or prevented from running, such as after an earlier failure. Partial coverage never appears
@@ -2683,3 +2683,12 @@ initializer and method-body reference must all appear. Rename to `number`; all t
 must change and compilation must remain clean. Undo must restore the original source. Both editor
 drivers now perform these steps; results are pending the batched acceptance run. Backend tests
 also cover expression types, semantic-token availability, nonconstant initializers and rejected probes.
+
+### Partial-result acceptance (X143)
+
+Both editor drivers create a configured module containing 130 classes, request its workspace
+symbols normally and with a partial-result token, and compare every name in order. Progress batches
+must contain at most 64 items and the final response must be empty. Unit tests additionally cover
+cancellation between batches, stale publication, disconnect and backend failure. Acceptance results
+are pending the combined run. Initial Tree-sitter scanning now reports the actual scan lifetime;
+its begin/report/end and cancellation ownership have controlled regressions.

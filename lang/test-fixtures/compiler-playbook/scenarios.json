@@ -4507,6 +4507,22 @@
         "coverage": "full",
         "limitations": []
       }
+    },
+    "X143": {
+      "title": "partial workspace symbols have bounded batches and no duplicate final items",
+      "manual": [],
+      "values": {
+        "file": "X143/PartialSymbols.x",
+        "module": "PartialSymbols",
+        "declarations": 130,
+        "prefix": "PartialItem",
+        "token": "xtc-playbook-partial-symbols",
+        "batchSize": 64
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
     }
   }
 }
