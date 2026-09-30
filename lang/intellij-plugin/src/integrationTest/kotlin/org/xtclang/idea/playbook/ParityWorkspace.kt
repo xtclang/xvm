@@ -183,7 +183,10 @@ class ParityWorkspace(
     /** Wait for transport delivery without waiting for the compiler query that tests may cancel. */
     fun flush(document: Document) {
         val pending =
-            requireNotNull(clientDocument(document)).getSynchronizer().flushPendingChanges()
+            requireNotNull(clientDocument(document)?.getSynchronizer()) {
+                    "Document synchronizer is not ready for $id/${document.file}"
+                }
+                .flushPendingChanges()
         with(driver) {
             awaitUi("client sends current $id/${document.file}", 45.seconds) { pending.isDone() }
         }
