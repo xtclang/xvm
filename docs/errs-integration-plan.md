@@ -7078,3 +7078,33 @@ inheritance removes that section. VS Code uses native user/workspace settings; c
 are window-scoped, never a misleading per-folder switch. Presentation can be resource scoped.
 Invalid values are rejected before persistence/start; a running valid connection is retained.
 Neither remote filesystem execution nor restricted-workspace build execution is newly enabled.
+
+
+### UI3–UI7 implementation boundaries and checkpoints
+
+| Slice | Local checkpoint | Scope |
+| --- | --- | --- |
+| 1: UI1/UI2 | `574a27ab3` | Immutable preferences, ownership audit, strict values, inherited service fields and guarded section replacement. |
+| 2: UI3 | `b8c8fb904` | IntelliJ application/project pages, supported formatting controls and compiler path choosers; service-only overrides do not claim compiler graph ownership. |
+| 3: UI4 | `fb80b423d` | VS Code Settings schema/scopes, path chooser, settings command and explicit deprecation of inert formatter options. |
+| 4: UI5 | `cebf00b36` | Serialized VS Code restart/start, coalesced IntelliJ transport restart, live hints/formatting and last-valid/versioned formatting configuration. |
+| 5: UI6/UI7 | This checkpoint | Effective configuration/queue API and views, packaged protocol assertions, shared X136–X139 and manual acceptance updates. |
+
+LSP4IJ source-bytecode inspection found `DocumentContentSynchronizer.documentSaved` sends only
+`didSave`; no native `willSaveWaitUntil` implementation exists. The IntelliJ save-owner control is
+therefore disabled with a searchable `TODO LSP4IJ:` comment and an explanation. Its connection keeps
+server save edits off. Native Actions on Save is tested separately. VS Code checks native save
+ownership per document in its `willSaveWaitUntil` middleware, so changing a language/folder preference
+cannot introduce duplicate save edits during an existing connection.
+
+Both settings stores preserve compiler graph fields. IntelliJ compares only the service section
+before saving into the latest project content; invalid external settings retain a project's last
+valid immutable preferences. Its project compiler page preserves an existing service section while
+changing graph ownership. VS Code rejects invalid connection settings before stopping a running
+server. The effective report separates configured values from negotiated server values and obtains
+queue metadata without waiting for the compiler worker or invoking Java compiler APIs.
+
+The five implementation slices are ready for combined validation; no new acceptance result is
+claimed yet. Remaining broader UI items are explicit: advanced JVM controls, build progress/cancel
+presentation, source attachment editors, log export/retention and remote/untrusted-workspace coverage.
+X136–X139 exercise the local shipped controls, not those planned extensions.
