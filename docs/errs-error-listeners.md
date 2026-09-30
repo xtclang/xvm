@@ -350,16 +350,23 @@ remain deprecated. Diagnostic origin metadata helps trace reporting without affe
 The [XdkAdapter](../lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkAdapter.kt) converts
 compiler diagnostics into editor data and owns one analysis per module scope. An edit invalidates
 all of that module's views; only its current request may install the replacement. The server
-publishes diagnostics at each member's URI with that open document's version, including unchanged
-siblings reanalysed because of the edit. Closed members receive unversioned diagnostics. Removed
+publishes diagnostics at each member's URI, including unchanged siblings reanalysed because of the
+edit. Open-document versions are included only when the client advertises diagnostic version
+support; version checks still guard publication internally for every client. Closed members receive unversioned diagnostics. Removed
 members are cleared; closing an overlay restores disk input and refreshes surviving open siblings.
 Closing the last open document releases the module analysis and clears its publications.
 
-Diagnostics outside the captured source set remain related information on the requesting document;
+Diagnostics outside the captured source set remain related information on the requesting document
+when the client supports that metadata;
 they are not evidence that the server owns that dependency's source. These versioning, stale-result
 rejection and publication policies belong in `lang`, not in compiler listeners or AST nodes. A
 compiler listener cannot know whether the user has typed again unless the host supplies that
 information.
+
+L80/L81 also makes pending reader ownership explicit: canceling a hover/reference request does not
+cancel shared document analysis, and close retires the public request even if its analysis ignores
+cancellation. Progress tokens own only their requests. The [protocol coverage map](../lang/doc/manual-test-plan.md#protocol-and-lifecycle-coverage-map)
+links the controlled cancellation, negotiation and publication tests to editor acceptance.
 
 The semantic source bindings added to AST nodes serve hover and navigation. They are a separate
 concern from diagnostic delivery; their rationale and ownership are documented in the
