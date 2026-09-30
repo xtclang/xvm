@@ -16,6 +16,12 @@ internal object XdkLibraries {
         val revisions: Map<String, String>,
     )
 
+    /** Package metadata can be displayed without constructing compiler constants or repositories. */
+    val packagedResources: List<String> by lazy {
+        Properties().apply { resource("modules.properties").use { load(it) } }
+            .getProperty("modules").split(',').sorted()
+    }
+
     private val bundle by lazy {
         val index = Properties().apply { resource("modules.properties").use { load(it) } }
         val names =

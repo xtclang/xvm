@@ -128,31 +128,22 @@ internal class CompilerQueueTrace {
         }
     }
 
-    /** One consistent snapshot: the queued list is in executor submission order. */
-    private fun log(
-        span: ExecutionTrace.Span,
-        event: String,
-        fields: Map<String, Any?> = emptyMap(),
-    ) {
+    /** Copied metadata only; never enters compiler code or waits for the worker. */
+    fun snapshot(): Map<String, Any> = synchronized(lock) {
         fun Job.label() = "#${this.span.id} ${this.span.operation} ${this.span.uri}"
         val queued = readyOrder.mapNotNull(jobs::get).map { it.label() }
         val waiting = jobs.values.filter { it.phase == Phase.DEBOUNCING }.map { it.label() }
         val running = jobs.values.filter { it.phase == Phase.RUNNING }.map { it.label() }
-        ExecutionTrace.event(
-            span,
-            event,
-            mapOf(
-                "queue" to queue,
-                "submittedTotal" to submitted.get(),
-                "startedTotal" to started.get(),
-                "queueSize" to queued.size,
-                "queuedJobs" to queued,
-                "debouncingSize" to waiting.size,
-                "debouncingJobs" to waiting,
-                "runningSize" to running.size,
-                "runningJobs" to running,
-            ) + fields,
+        mapOf(
+            "queue" to queue, "submittedTotal" to submitted.get(), "startedTotal" to started.get(),
+            "queueSize" to queued.size, "queuedJobs" to queued,
+            "debouncingSize" to waiting.size, "debouncingJobs" to waiting,
+            "runningSize" to running.size, "runningJobs" to running,
         )
+    }
+
+    private fun log(span: ExecutionTrace.Span, event: String, fields: Map<String, Any?> = emptyMap()) {
+        ExecutionTrace.event(span, event, snapshot() + fields)
     }
 
     private companion object {
