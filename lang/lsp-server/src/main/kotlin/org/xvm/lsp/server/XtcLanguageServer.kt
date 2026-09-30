@@ -1003,6 +1003,7 @@ class XtcLanguageServer(
             }
         if (alreadyClosed) return
         formattingState.close()
+        resourceFileWatchers.close()
         refresh.close()
         clientTrace.close()
         progress.close()
