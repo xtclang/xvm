@@ -82,7 +82,7 @@ interface ClientDocument {
 
     fun getDiagnostics(): Collection<ClientDiagnostic>
 
-    fun getSynchronizer(): DocumentSynchronizer
+    fun getSynchronizer(): DocumentSynchronizer?
 }
 
 @Remote(

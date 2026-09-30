@@ -4,10 +4,12 @@ import com.intellij.codeInsight.completion.CompletionPhase
 import com.intellij.codeInsight.completion.impl.CompletionServiceImpl
 import com.intellij.codeInsight.lookup.LookupManager
 import com.intellij.ide.DataManager
+import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.editor.Editor
 import com.intellij.openapi.editor.ScrollType
 import com.intellij.openapi.wm.IdeFocusManager
+import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.ui.AppIcon
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
@@ -46,9 +48,22 @@ object EditorUi {
         ApplicationManager.getApplication().assertIsDispatchThread()
         val manager = IdeFocusManager.getInstance(editor.project)
         SwingUtilities.invokeLater {
-            if (!editor.isDisposed) manager.requestFocus(editor.contentComponent, true)
+            if (!editor.isDisposed) {
+                // Component focus alone can leave Find Usages as the active tool window;
+                // editor actions then use its preview's context instead of this source tab.
+                editor.project?.let { ToolWindowManager.getInstance(it).activateEditorComponent() }
+                manager.requestFocus(editor.contentComponent, true)
+            }
         }
     }
+
+    @JvmStatic
+    fun isEditorActive(editor: Editor): Boolean =
+        editor.contentComponent.isFocusOwner &&
+            editor.project?.let { ToolWindowManager.getInstance(it).activeToolWindowId } == null &&
+            DataManager.getInstance()
+                .getDataContext(editor.contentComponent)
+                .getData(CommonDataKeys.EDITOR) === editor
 
     @JvmStatic
     fun focusState(editor: Editor): String {
@@ -58,7 +73,8 @@ object EditorUi {
         return "editorDisposed=${editor.isDisposed}, window=${window?.javaClass?.simpleName}, " +
             "windowFocused=${window?.isFocused}, active=${manager.activeWindow?.javaClass?.simpleName}, " +
             "focused=${manager.focusedWindow?.javaClass?.simpleName}, owner=${manager.focusOwner?.javaClass?.name}, " +
-            "editorFocused=${editor.contentComponent.isFocusOwner}"
+            "editorFocused=${editor.contentComponent.isFocusOwner}, " +
+            "activeToolWindow=${editor.project?.let { ToolWindowManager.getInstance(it).activeToolWindowId}}"
     }
 
     /** A disposable, unowned window exercises real focus loss without touching another app. */
