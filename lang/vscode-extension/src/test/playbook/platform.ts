@@ -197,4 +197,30 @@ export function platformCases(): void {
         });
     });
 
+    playbook('X131', async (workspace, data) => {
+        await workspace.write(data.file, data.source);
+        await workspace.configure([{ name: data.module, uri: workspace.uri(data.file).toString() }]);
+        const document = await workspace.open(data.file);
+        await noErrors(document.uri);
+        const id = { textDocument: { uri: document.uri.toString() } };
+        const lenses = await client().sendRequest<import('vscode-languageclient/node').CodeLens[]>('textDocument/codeLens', id);
+        const links = await client().sendRequest<import('vscode-languageclient/node').DocumentLink[]>('textDocument/documentLink', id);
+        const hints = await client().sendRequest<import('vscode-languageclient/node').InlayHint[]>('textDocument/inlayHint', { ...id, range: { start: { line: 0, character: 0 }, end: { line: 6, character: 0 } } });
+        const symbols = await client().sendRequest<import('vscode-languageclient/node').WorkspaceSymbol[]>('workspace/symbol', { query: data.module });
+        const lens = lenses[0], link = links[0], hint = hints.find(item => item.data || item.tooltip)!, symbol = symbols[0];
+        const resolve = async <T extends { data?: unknown }>(method: string, item: T): Promise<T> => item.data ? client().sendRequest<T>(method, item) : item;
+        const resolvedLens = await resolve('codeLens/resolve', lens);
+        assert.deepStrictEqual(resolvedLens.range, lens.range);
+        assert.strictEqual(resolvedLens.command?.arguments?.length, 2);
+        assert.strictEqual((await resolve('documentLink/resolve', link)).target, data.link);
+        const resolvedHint = await resolve('inlayHint/resolve', hint);
+        assert.deepStrictEqual(resolvedHint.label, hint.label);
+        assert.ok(resolvedHint.tooltip);
+        assert.ok('range' in (await resolve('workspaceSymbol/resolve', symbol)).location);
+        await workspace.replace(document, '\n' + data.source);
+        for (const [method, item] of [['codeLens/resolve', lens], ['documentLink/resolve', link], ['inlayHint/resolve', hint], ['workspaceSymbol/resolve', symbol]] as const) {
+            if (item.data) await assert.rejects(client().sendRequest(method, item), /expired or changed/);
+        }
+    });
+
 }

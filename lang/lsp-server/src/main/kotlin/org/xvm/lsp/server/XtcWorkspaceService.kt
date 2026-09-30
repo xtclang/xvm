@@ -19,7 +19,6 @@ import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.WorkspaceService
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.Adapter
-import org.xvm.lsp.model.toLsp
 
 /**
  * Workspace service for Ecstasy Language Server. Handles workspace-wide features like symbol search
@@ -38,13 +37,6 @@ class XtcWorkspaceService(
     override fun diagnostic(
         params: WorkspaceDiagnosticParams
     ): CompletableFuture<WorkspaceDiagnosticReport> = server.workspaceDiagnostics(params)
-
-    private fun <R> supplyAsync(
-        method: String,
-        logParams: String,
-        logResult: (R) -> String = { "completed" },
-        block: () -> R,
-    ): CompletableFuture<R> = server.supplyAsync(method, logParams, logResult, block)
 
     /**
      * LSP: workspace/didChangeConfiguration
@@ -127,19 +119,9 @@ class XtcWorkspaceService(
     override fun symbol(
         params: WorkspaceSymbolParams
     ): CompletableFuture<Either<List<SymbolInformation>, List<WorkspaceSymbol>>> =
-        supplyAsync(
-            "workspace/symbol",
-            "query='${params.query}'",
-            { result -> "${result.right.size} symbols" },
-        ) {
-            Either.forRight(
-                adapter.findWorkspaceSymbols(params.query).map { s ->
-                    WorkspaceSymbol().apply {
-                        name = s.name
-                        kind = s.kind.toLsp()
-                        location = Either.forLeft(s.location.toLsp())
-                    }
-                }
-            )
-        }
+        server.workspaceSymbols(params)
+
+    override fun resolveWorkspaceSymbol(
+        symbol: WorkspaceSymbol
+    ): CompletableFuture<WorkspaceSymbol> = server.resolveWorkspaceSymbol(symbol)
 }
