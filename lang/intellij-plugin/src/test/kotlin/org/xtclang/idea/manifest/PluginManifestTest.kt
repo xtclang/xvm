@@ -72,7 +72,7 @@ class PluginManifestTest {
 
         val required =
             setOf(
-                "notificationGroup", // notification group "XTC Language Server" used by
+                "notificationGroup", // notification group "Ecstasy Language Server" used by
                 // XtcLspServerSupportProvider
                 "fileType", // registers *.x as Ecstasy so IntelliJ does not suggest unrelated
                 // plugins
