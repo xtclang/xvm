@@ -4291,12 +4291,78 @@
     },
     "X135": {
       "title": "server log view opens and hides without changing source",
-      "manual": ["Physical shortcut dispatch, remapped keymaps and alternate dock locations"],
+      "manual": [
+        "Physical shortcut dispatch, remapped keymaps and alternate dock locations"
+      ],
       "values": {
         "file": "LogPanel.x",
         "source": "module LogPanel {}\n"
       },
-      "intellij": { "coverage": "full", "limitations": [] }
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X136": {
+      "title": "language-service preferences preserve graph ownership and expose effective state",
+      "manual": [
+        "Physical Settings dialog navigation, keyboard accessibility and defaults across a fresh IDE session."
+      ],
+      "values": {
+        "file": "ServicePreferences.x",
+        "source": "module ServicePreferences { Int count = 1; }\n"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X137": {
+      "title": "transport preference restarts one service and preserves unsaved buffers",
+      "manual": [
+        "Connection options are window/project scoped; remote filesystem execution is not enabled."
+      ],
+      "values": {
+        "file": "ServiceTransport.x",
+        "source": "module ServiceTransport { Int value = 1; }\n",
+        "edited": "module ServiceTransport { Int value = 2; } // unsaved\n"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X138": {
+      "title": "live formatting settings retain valid values and expose save ownership",
+      "manual": [
+        "IntelliJ server save edits are unavailable in LSP4IJ; use native Actions on Save.",
+        "Per-folder VS Code native format-on-save overrides and physical Code Style editing."
+      ],
+      "values": {
+        "file": "ServiceFormatting.x",
+        "source": "module ServiceFormatting {\nInt value = 1;\n}\n",
+        "indent": 2,
+        "expectedIndent": "  "
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X139": {
+      "title": "native save formatting and server save edits have a single owner",
+      "manual": [
+        "LSP4IJ has no server save hook; its case verifies native Actions on Save instead."
+      ],
+      "values": {
+        "file": "ServiceSave.x",
+        "source": "module ServiceSave {\nInt value = 1;\n}\n",
+        "formatted": "module ServiceSave {\n    Int value = 1;\n}\n"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
     },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",

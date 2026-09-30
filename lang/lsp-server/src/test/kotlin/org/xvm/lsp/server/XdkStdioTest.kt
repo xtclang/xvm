@@ -1,5 +1,7 @@
 package org.xvm.lsp.server
 
+import com.google.gson.Gson
+
 import com.google.gson.JsonParser
 import java.nio.file.Files
 import java.nio.file.Path
@@ -89,6 +91,11 @@ class XdkStdioTest {
     fun `incremental patches save hooks and formatting ranges round trip the packaged transport`() {
         Session(packagedJar(), directory).use { session ->
             session.initialize(documentSync = mapOf("incremental" to true, "formatOnSave" to true))
+            val status = session.status()
+            assertThat(status["textSynchronization"].asString).isEqualTo("incremental")
+            assertThat(status["serverSaveFormatting"].asBoolean).isTrue()
+            assertThat(status["pid"].asLong).isPositive()
+            assertThat(status["compilerQueue"].asJsonObject["queueSize"].asInt).isZero()
             val source = "module Stdio { // 😀\r\nInt value = 1;\r\n}"
             session.open(source)
             assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
@@ -1477,6 +1484,8 @@ class XdkStdioTest {
             }
         private val listening = launcher.startListening()
         val server = launcher.remoteProxy
+
+        fun status() = Gson().toJsonTree(await(launcher.remoteEndpoint.request("xtc/languageServiceStatus", null))).asJsonObject
 
         fun initialize(
             versionedEdits: Boolean = false,

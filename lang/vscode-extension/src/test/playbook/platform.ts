@@ -6,7 +6,7 @@ import * as vscode from 'vscode';
 import { CodeAction } from 'vscode-languageclient/node';
 import { discovered } from './liveWorkspace';
 import { modelPath } from '../../build-model';
-import { updateCompilerConfiguration } from '../../lsp-client';
+import { getClient, updateCompilerConfiguration } from '../../lsp-client';
 import { client, diagnostics, eventually, hover, label, noErrors, playbook, targets } from './support';
 
 export function platformCases(): void {
@@ -314,6 +314,105 @@ export function platformCases(): void {
             await eventually(async () => visible(), value => value === (command === 'xtc.showServerOutput'), command);
         }
         assert.strictEqual(document.getText(), data.source);
+    });
+
+    playbook('X136', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await noErrors(document.uri);
+        const before = await client().sendRequest<{ pid: number }>('xtc/languageServiceStatus');
+        const config = vscode.workspace.getConfiguration('xtc');
+        const original = config.inspect('inlayHints.enabled')?.workspaceValue;
+        const graph = config.get('compiler.sourceModules');
+        try {
+            await config.update('inlayHints.enabled', false, vscode.ConfigurationTarget.Workspace);
+            const hints = await vscode.commands.executeCommand<vscode.InlayHint[]>('vscode.executeInlayHintProvider', document.uri, new vscode.Range(0, 0, document.lineCount, 0));
+            assert.deepStrictEqual(hints, []);
+            const report = await vscode.commands.executeCommand<{ configured: object; effective: { pid: number; compilerQueue: { queueSize: number; queuedJobs: string[] } } }>('xtc.showLanguageServiceStatus');
+            assert.strictEqual(report?.effective.pid, before.pid);
+            assert.ok(Array.isArray(report.effective.compilerQueue.queuedJobs));
+            assert.strictEqual(report.effective.compilerQueue.queueSize, report.effective.compilerQueue.queuedJobs.length);
+            assert.deepStrictEqual(config.get('compiler.sourceModules'), graph);
+            assert.strictEqual(document.getText(), data.source);
+        } finally { await config.update('inlayHints.enabled', original, vscode.ConfigurationTarget.Workspace); }
+    });
+
+    playbook('X137', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await workspace.replace(document, data.edited);
+        const config = vscode.workspace.getConfiguration('xtc.languageService');
+        const original = config.inspect('textSynchronization')?.workspaceValue;
+        const status = async () => {
+            const current = getClient();
+            if (!current?.initializeResult) return undefined;
+            try { return await current.sendRequest<{ pid: number; textSynchronization: string }>('xtc/languageServiceStatus'); }
+            catch { return undefined; }
+        };
+        let previous = (await status())!.pid;
+        try {
+            for (const transport of ['incremental', 'full']) {
+                await config.update('textSynchronization', transport, vscode.ConfigurationTarget.Workspace);
+                const after = await eventually(status, value => value?.textSynchronization === transport && value.pid !== previous, `Restart into ${transport}`);
+                previous = after!.pid;
+                assert.strictEqual(document.getText(), data.edited);
+                assert.ok(document.isDirty, 'Restart must not save the buffer');
+                await noErrors(document.uri);
+                const symbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>('vscode.executeDocumentSymbolProvider', document.uri);
+                assert.ok(symbols?.length);
+            }
+        } finally { await config.update('textSynchronization', original, vscode.ConfigurationTarget.Workspace); }
+    });
+
+    playbook('X138', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        const config = vscode.workspace.getConfiguration('xtc.formatting');
+        const original = config.inspect('indentSize')?.workspaceValue;
+        const before = await client().sendRequest<{ pid: number }>('xtc/languageServiceStatus');
+        try {
+            await config.update('indentSize', data.indent, vscode.ConfigurationTarget.Workspace);
+            await eventually(async () => client().sendRequest<{ formatting: { indentSize: number } }>('xtc/languageServiceStatus'), value => value.formatting?.indentSize === data.indent, 'Live formatter configuration');
+            const format = () => vscode.commands.executeCommand<vscode.TextEdit[]>('vscode.executeFormatDocumentProvider', document.uri, { tabSize: 4, insertSpaces: true });
+            assert.ok((await format())?.some(edit => edit.newText === data.expectedIndent));
+            await config.update('indentSize', 0, vscode.ConfigurationTarget.Workspace);
+            await client().sendNotification('workspace/didChangeConfiguration', { settings: {} });
+            assert.ok((await format())?.some(edit => edit.newText === data.expectedIndent));
+            const after = await client().sendRequest<{ pid: number; serverSaveFormatting: boolean }>('xtc/languageServiceStatus');
+            assert.strictEqual(after.pid, before.pid);
+            assert.strictEqual(after.serverSaveFormatting, false);
+            assert.strictEqual(document.getText(), data.source);
+        } finally { await config.update('indentSize', original, vscode.ConfigurationTarget.Workspace); }
+    });
+
+    playbook('X139', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        const config = vscode.workspace.getConfiguration('xtc.languageService');
+        const editor = vscode.workspace.getConfiguration('editor', { uri: document.uri, languageId: 'xtc' });
+        const previousOwner = config.inspect('saveFormatting')?.workspaceValue;
+        const previousNative = editor.inspect('formatOnSave')?.workspaceValue;
+        const running = async () => {
+            const current = getClient();
+            if (!current?.initializeResult) return undefined;
+            try { return await current.sendRequest<{ serverSaveFormatting: boolean }>('xtc/languageServiceStatus'); }
+            catch { return undefined; }
+        };
+        try {
+            await editor.update('formatOnSave', false, vscode.ConfigurationTarget.Workspace);
+            await config.update('saveFormatting', 'server', vscode.ConfigurationTarget.Workspace);
+            await eventually(running, value => value?.serverSaveFormatting === true, 'Server save edits enabled');
+            await workspace.replace(document, data.source + '
+');
+            await document.save();
+            assert.ok(document.getText().includes('    Int value = 1;'));
+            await editor.update('formatOnSave', true, vscode.ConfigurationTarget.Workspace);
+            const middleware = client().clientOptions.middleware!.willSaveWaitUntil!;
+            assert.deepStrictEqual(await middleware({ document, reason: vscode.TextDocumentSaveReason.Manual, waitUntil: () => {} }, () => { throw new Error('Native format-on-save must suppress the server hook'); }), []);
+            await workspace.replace(document, data.source);
+            await document.save();
+            assert.strictEqual(document.getText(), data.formatted);
+        } finally {
+            await editor.update('formatOnSave', previousNative, vscode.ConfigurationTarget.Workspace);
+            await config.update('saveFormatting', previousOwner, vscode.ConfigurationTarget.Workspace);
+            await eventually(running, value => value?.serverSaveFormatting === false, 'Editor save ownership restored');
+        }
     });
 
 }
