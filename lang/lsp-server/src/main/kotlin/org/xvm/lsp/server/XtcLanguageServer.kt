@@ -104,7 +104,9 @@ class XtcLanguageServer(
     private val adapter: Adapter,
     private val onExit: (Int) -> Unit = {},
 ) : LanguageServer, LanguageClientAware, AutoCloseable {
-    private var client: LanguageClient? = null
+    private val connectedClient = AtomicReference<LanguageClient?>()
+    private val client: LanguageClient?
+        get() = connectedClient.get()
 
     private val refresh = ClientRefresh { client }
     internal val clientTrace = ClientTrace { client }
@@ -337,7 +339,7 @@ class XtcLanguageServer(
     }
 
     override fun connect(client: LanguageClient) {
-        this.client = client
+        connectedClient.set(client)
         logger.info("connect: connected to language client")
     }
 
@@ -627,6 +629,7 @@ class XtcLanguageServer(
      * [FormattingConfig] and stored as [editorFormattingConfig].
      */
     fun requestFormattingConfig() {
+        if (!presentation.workspaceConfiguration || compilerSettings.get().closed) return
         val c = client ?: return
         val revision = formattingState.request()
         val item = ConfigurationItem().apply { section = "xtc.formatting" }
@@ -999,6 +1002,7 @@ class XtcLanguageServer(
                 compilerSettings.getAndUpdate { it.copy(closed = true) }.closed
             }
         if (alreadyClosed) return
+        formattingState.close()
         refresh.close()
         clientTrace.close()
         progress.close()

@@ -9,6 +9,7 @@ import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.InitializeParams
+import org.eclipse.lsp4j.InitializedParams
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.SemanticTokensCapabilities
@@ -71,6 +72,7 @@ class XdkSemanticTokenProtocolTest {
                     )
                     .get()
                     .capabilities
+            server.initialized(InitializedParams())
             assertThat(capabilities.semanticTokensProvider.full.right.delta).isTrue()
             assertThat(capabilities.semanticTokensProvider.range.left).isTrue()
             val service = server.textDocumentService
