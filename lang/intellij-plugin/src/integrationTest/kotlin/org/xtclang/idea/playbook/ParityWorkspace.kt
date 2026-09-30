@@ -256,7 +256,7 @@ class ParityWorkspace(
         return open(setup.string("root")).also(::clean)
     }
 
-    fun configure(modules: List<SharedScenarios.SourceModule>) =
+    fun configure(modules: List<SharedScenarios.SourceModule>?) =
         with(driver) {
             val content =
                 Gson()
