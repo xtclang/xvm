@@ -116,6 +116,8 @@ class ClientProtocol(private val driver: Driver) {
                 "textDocument/selectionRange",
                 "textDocument/inlayHint",
                 "textDocument/formatting",
+                "textDocument/rangesFormatting",
+                "textDocument/willSaveWaitUntil",
                 "textDocument/prepareTypeHierarchy",
                 "typeHierarchy/supertypes",
                 "typeHierarchy/subtypes",
