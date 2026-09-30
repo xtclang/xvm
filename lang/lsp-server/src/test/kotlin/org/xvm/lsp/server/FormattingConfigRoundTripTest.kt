@@ -7,7 +7,6 @@ import org.eclipse.lsp4j.ConfigurationParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.FormattingOptions
-import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializedParams
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.TextDocumentIdentifier
@@ -161,7 +160,7 @@ class FormattingConfigRoundTripTest {
             val client = mockClientWithConfig(customConfig)
             val server = XtcLanguageServer(adapter!!)
             server.connect(client)
-            server.initialize(InitializeParams()).get()
+            server.initialize(editorInitializeParams()).get()
 
             // Trigger the initialized callback — this sends workspace/configuration
             server.initialized(InitializedParams())
@@ -188,7 +187,7 @@ class FormattingConfigRoundTripTest {
             val client = mockClientWithConfig(customConfig)
             val server = XtcLanguageServer(adapter!!)
             server.connect(client)
-            server.initialize(InitializeParams()).get()
+            server.initialize(editorInitializeParams()).get()
             server.initialized(InitializedParams())
 
             // Allow async config request to complete
@@ -214,7 +213,7 @@ class FormattingConfigRoundTripTest {
             val client = mockClientWithJsonConfig(customConfig)
             val server = XtcLanguageServer(adapter!!)
             server.connect(client)
-            server.initialize(InitializeParams()).get()
+            server.initialize(editorInitializeParams()).get()
             server.initialized(InitializedParams())
 
             Thread.sleep(100)
@@ -231,7 +230,7 @@ class FormattingConfigRoundTripTest {
             val client = mockClientWithoutConfig()
             val server = XtcLanguageServer(adapter!!)
             server.connect(client)
-            server.initialize(InitializeParams()).get()
+            server.initialize(editorInitializeParams()).get()
             server.initialized(InitializedParams())
 
             Thread.sleep(100)
@@ -257,7 +256,7 @@ class FormattingConfigRoundTripTest {
             val client = mockClientWithConfig(customConfig)
             val server = XtcLanguageServer(adapter!!)
             server.connect(client)
-            server.initialize(InitializeParams()).get()
+            server.initialize(editorInitializeParams()).get()
             server.initialized(InitializedParams())
 
             // Wait for async config to be stored
@@ -277,7 +276,7 @@ class FormattingConfigRoundTripTest {
             val client = mockClientWithoutConfig()
             val server = XtcLanguageServer(adapter!!)
             server.connect(client)
-            server.initialize(InitializeParams()).get()
+            server.initialize(editorInitializeParams()).get()
             server.initialized(InitializedParams())
 
             Thread.sleep(100)
@@ -303,7 +302,7 @@ class FormattingConfigRoundTripTest {
             val client = mockClientWithConfig(customConfig)
             val server = XtcLanguageServer(adapter!!)
             server.connect(client)
-            server.initialize(InitializeParams()).get()
+            server.initialize(editorInitializeParams()).get()
             server.initialized(InitializedParams())
 
             Thread.sleep(100)
@@ -331,7 +330,7 @@ class FormattingConfigRoundTripTest {
             val client = mockClientWithConfig(customConfig)
             val server = XtcLanguageServer(adapter!!)
             server.connect(client)
-            server.initialize(InitializeParams()).get()
+            server.initialize(editorInitializeParams()).get()
             server.initialized(InitializedParams())
 
             Thread.sleep(100)
@@ -374,7 +373,7 @@ class FormattingConfigRoundTripTest {
             val client = mockClientWithConfig(customConfig)
             val server = XtcLanguageServer(adapter!!)
             server.connect(client)
-            server.initialize(InitializeParams()).get()
+            server.initialize(editorInitializeParams()).get()
             server.initialized(InitializedParams())
 
             Thread.sleep(100)
@@ -437,7 +436,7 @@ class FormattingConfigRoundTripTest {
 
             val server = XtcLanguageServer(adapter!!)
             server.connect(client)
-            server.initialize(InitializeParams()).get()
+            server.initialize(editorInitializeParams()).get()
             server.initialized(InitializedParams())
 
             Thread.sleep(100)

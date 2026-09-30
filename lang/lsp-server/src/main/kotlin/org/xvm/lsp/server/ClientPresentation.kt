@@ -14,6 +14,7 @@ internal data class ClientPresentation(
     val workspaceKinds: Set<SymbolKind> = legacyKinds,
     val diagnosticVersions: Boolean = false,
     val diagnosticRelatedInformation: Boolean = false,
+    val workspaceConfiguration: Boolean = false,
 ) {
     fun hover(markdown: String): MarkupContent =
         if (markdownHover) MarkupContent(MarkupKind.MARKDOWN, markdown)
@@ -42,6 +43,7 @@ internal data class ClientPresentation(
                     ?: legacyKinds,
                 text?.publishDiagnostics?.versionSupport == true,
                 text?.publishDiagnostics?.relatedInformation == true,
+                params.capabilities?.workspace?.configuration == true,
             )
         }
 
