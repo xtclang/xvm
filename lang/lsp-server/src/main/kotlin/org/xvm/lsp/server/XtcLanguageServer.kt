@@ -575,7 +575,7 @@ class XtcLanguageServer(
                     )
                 } else {
                     logger.info(
-                        "workspace/configuration: no usable formatting config from client (type={}); effective config will come from per-request LSP FormattingOptions or XTC defaults",
+                        "workspace/configuration: no usable formatting config from client (type={}); effective config will come from per-request LSP FormattingOptions or Ecstasy defaults",
                         config?.javaClass?.name ?: "null",
                     )
                 }
@@ -642,7 +642,8 @@ class XtcLanguageServer(
      * - What adapter level is needed to implement it properly:
      *     - **mock**: regex-based, no parse tree needed
      *     - **treesitter**: requires syntax tree (structural parsing)
-     *     - **compiler**: requires XTC compiler integration (type resolution, semantic analysis)
+     *     - **compiler**: requires Ecstasy compiler integration (type resolution, semantic
+     *       analysis)
      *
      * ### Currently implemented (server advertises these):
      * | Capability        | Description                                           | Adapter    |
@@ -969,7 +970,7 @@ class XtcLanguageServer(
     override fun getWorkspaceService(): WorkspaceService = workspaceService
 
     // =========================================================================
-    // Custom XTC LSP Methods
+    // Custom Ecstasy LSP Methods
     // =========================================================================
     //
     // LSP allows servers to define custom methods beyond the standard protocol.

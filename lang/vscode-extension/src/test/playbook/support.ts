@@ -67,7 +67,7 @@ export async function symbols(document: vscode.TextDocument): Promise<vscode.Doc
     // The execute command caches results at an unchanged editor version, so ask the
     // registered provider directly when the module snapshot may have changed.
     const provider = client().getFeature('textDocument/documentSymbol').getProvider(document);
-    assert.ok(provider, 'Registered XTC document-symbol provider');
+    assert.ok(provider, 'Registered Ecstasy document-symbol provider');
     const token = new vscode.CancellationTokenSource();
     try { return await provider.provideDocumentSymbols(document, token.token) as vscode.DocumentSymbol[] ?? []; }
     finally { token.dispose(); }
