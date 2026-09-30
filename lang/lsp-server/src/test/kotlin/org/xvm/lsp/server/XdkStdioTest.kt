@@ -1562,7 +1562,7 @@ class XdkStdioTest {
             assertThat(initialized.capabilities.inlayHintProvider.left).isTrue()
             assertThat(initialized.capabilities.semanticTokensProvider).isNotNull()
             assertThat(initialized.capabilities.hoverProvider.left).isTrue()
-            assertThat(initialized.capabilities.referencesProvider.left).isTrue()
+            assertThat(initialized.capabilities.referencesProvider.right.workDoneProgress).isTrue()
             assertThat(initialized.capabilities.documentHighlightProvider.left).isTrue()
             assertThat(initialized.capabilities.completionProvider).isNotNull()
             if (versionedEdits) {
