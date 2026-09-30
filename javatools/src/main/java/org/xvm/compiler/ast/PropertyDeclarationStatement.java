@@ -39,6 +39,8 @@ import org.xvm.asm.op.P_Var;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Constants;
+import org.xvm.compiler.InitializerBinding;
+import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.ast.partial.PartialSyntax;
 
@@ -437,8 +439,11 @@ public class PropertyDeclarationStatement
                     // if it could be discarded and replaced with a constant
                     // IMPORTANT NOTE: this goes forward BEYOND validation, so the caller's context
                     // must be ready to resolve the corresponding names (e.g. see NewExpression)
+                    var bindings = mgr.getInvocationBindings().isEnabled()
+                            ? new InvocationBinding.Collector() : InvocationBinding.Collector.NONE;
+                    var written = bindings.isEnabled() ? InitializerBinding.writtenNodes(stmtInit) : List.<AstNode>of();
                     ErrorListener errsTmp = errs.branch(this);
-                    if (!(new StageMgr(stmtInit, Stage.Emitted, errsTmp).fastForward(10)) ||
+                    if (!(new StageMgr(stmtInit, Stage.Emitted, errsTmp, bindings).fastForward(10)) ||
                             errsTmp.hasSeriousErrors()) {
                         stmtClone.discardInitializer(methodInit);
                         stmtInit.discard(true);
@@ -503,6 +508,13 @@ public class PropertyDeclarationStatement
                         }
                     } else {
                         prop.setInitialValue(null);
+                    }
+
+                    // Only successful constant folding publishes clone-free facts. Real methods
+                    // validate their source-owned initializer below; failed/revisited probes publish none.
+                    if (!fMethodRequired && bindings.isEnabled() && !errs.isAbortDesired() && !errs.hasSeriousErrors()) {
+                        mgr.getInvocationBindings().record(this,
+                                InitializerBinding.capture(written, bindings.finishFacts(List.of(stmtInit))));
                     }
 
                     // at this point, we are done with the "test clone"

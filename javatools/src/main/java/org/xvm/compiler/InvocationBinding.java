@@ -16,6 +16,7 @@ import org.xvm.compiler.ast.Expression;
 import org.xvm.compiler.ast.InvocationExpression;
 import org.xvm.compiler.ast.LabeledExpression;
 import org.xvm.compiler.ast.NewExpression;
+import org.xvm.compiler.ast.PropertyDeclarationStatement;
 
 import static java.util.Objects.requireNonNull;
 
@@ -42,11 +43,19 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
      */
     public record Facts(Map<InvocationExpression, InvocationBinding> methods,
                         Map<InvocationExpression, FunctionCall> functions,
-                        Map<NewExpression, InvocationBinding> constructors) {
+                        Map<NewExpression, InvocationBinding> constructors,
+                        Map<PropertyDeclarationStatement, InitializerBinding> initializers) {
         public Facts {
             methods      = identitySnapshot(methods);
             functions    = identitySnapshot(functions);
             constructors = identitySnapshot(constructors);
+            initializers = identitySnapshot(initializers);
+        }
+
+        public Facts(Map<InvocationExpression, InvocationBinding> methods,
+                     Map<InvocationExpression, FunctionCall> functions,
+                     Map<NewExpression, InvocationBinding> constructors) {
+            this(methods, functions, constructors, Map.of());
         }
 
         public Facts(Map<InvocationExpression, InvocationBinding> methods,
@@ -168,6 +177,13 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
             }
         }
 
+        /** A discarded synthetic initializer keeps detached facts anchored to its source property. */
+        public void record(PropertyDeclarationStatement property, InitializerBinding binding) {
+            if (f_enabled) {
+                f_initializers.put(property, binding);
+            }
+        }
+
         /** Finish the attempt, returning immutable facts for the surviving source trees. */
         public Map<InvocationExpression, InvocationBinding> finish(List<? extends AstNode> roots) {
             return finishFacts(roots).methods();
@@ -178,6 +194,7 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
             Map<InvocationExpression, InvocationBinding> result = new IdentityHashMap<>();
             Map<InvocationExpression, FunctionCall> functions = new IdentityHashMap<>();
             Map<NewExpression, InvocationBinding> constructors = new IdentityHashMap<>();
+            Map<PropertyDeclarationStatement, InitializerBinding> initializers = new IdentityHashMap<>();
             List<AstNode> nodes = new ArrayList<>(roots);
             for (int i = 0; i < nodes.size(); ++i) {
                 AstNode node = nodes.get(i);
@@ -199,12 +216,19 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
                         constructors.put(construction, binding);
                     }
                 }
+                if (node instanceof PropertyDeclarationStatement property) {
+                    InitializerBinding binding = f_initializers.get(property);
+                    if (binding != null) {
+                        initializers.put(property, binding);
+                    }
+                }
                 node.children().forEachRemaining(nodes::add);
             }
             f_bindings.clear();
             f_functions.clear();
             f_constructors.clear();
-            return new Facts(result, functions, constructors);
+            f_initializers.clear();
+            return new Facts(result, functions, constructors, initializers);
         }
 
         /** Ordinary compiler clients need not collect tooling facts. This instance never writes. */
@@ -215,5 +239,6 @@ public record InvocationBinding(MethodConstant method, SignatureConstant signatu
         private final Map<InvocationExpression, InvocationBinding> f_bindings = new IdentityHashMap<>();
         private final Map<InvocationExpression, FunctionCall> f_functions = new IdentityHashMap<>();
         private final Map<NewExpression, InvocationBinding> f_constructors = new IdentityHashMap<>();
+        private final Map<PropertyDeclarationStatement, InitializerBinding> f_initializers = new IdentityHashMap<>();
     }
 }
