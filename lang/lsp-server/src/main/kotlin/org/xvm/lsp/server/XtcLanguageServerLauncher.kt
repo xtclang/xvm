@@ -181,7 +181,7 @@ fun launchStdio(
     // Own the dispatcher as well as the server: LSP4J's default cached platform-thread
     // executor survives EOF, and adapter workers can keep the JVM alive indefinitely.
     val executor = Executors.newVirtualThreadPerTaskExecutor()
-    val trace = ProtocolTrace()
+    val trace = ProtocolTrace(server.clientTrace)
     val lifecycle = ProtocolLifecycle()
     try {
         val launcher: Launcher<LanguageClient> =
