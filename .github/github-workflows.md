@@ -345,7 +345,8 @@ gh workflow run commit.yml \
 **VS Code extension snapshot** (`publish-vscode-extension=true`, passed by `commit.yml` on the IntelliJ plugin lane):
 - Downloads the CI-built `vscode-extension-{commit}` artifact; it does not rebuild the extension
 - Release tag: `vscode-extension-snapshots` (prerelease)
-- Assets: `xtc-language-{VERSION}.vsix` and its `.sha256`, replaced in place
+- Assets: `xtc-language-{VERSION}.vsix` and its `.sha256`
+- Like `intellij-plugin-snapshots` (and `xdk-snapshots`), the release is recreated on each publish so its tag follows the build commit; download URLs are keyed by tag and stay stable
 
 **Manual Trigger**:
 ```bash

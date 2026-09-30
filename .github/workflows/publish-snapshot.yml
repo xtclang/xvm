@@ -558,32 +558,23 @@ jobs:
 
                   echo "📥 Publishing IntelliJ plugin snapshot to: $RELEASE_TAG"
 
+                  # Recreate instead of editing: GitHub never moves an existing tag, so an edited
+                  # release would keep pointing at the commit of its first publication. Download
+                  # URLs are keyed by tag and stay stable (same approach as xdk-snapshots).
                   if gh release view "$RELEASE_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
-                      echo "Updating existing IntelliJ plugin snapshot release..."
-                      gh release edit "$RELEASE_TAG" \
-                          --repo "${{ github.repository }}" \
-                          --title "XTC IntelliJ Plugin Snapshots" \
-                          --notes "$RELEASE_NOTES" \
-                          --prerelease \
-                          --latest=false \
-                          --target "$COMMIT"
-                      gh release upload "$RELEASE_TAG" \
-                          "$ASSET_NAME" \
-                          "$CHECKSUM_NAME" \
-                          --repo "${{ github.repository }}" \
-                          --clobber
-                  else
-                      echo "Creating IntelliJ plugin snapshot release..."
-                      gh release create "$RELEASE_TAG" \
-                          "$ASSET_NAME" \
-                          "$CHECKSUM_NAME" \
-                          --repo "${{ github.repository }}" \
-                          --title "XTC IntelliJ Plugin Snapshots" \
-                          --notes "$RELEASE_NOTES" \
-                          --prerelease \
-                          --latest=false \
-                          --target "$COMMIT"
+                      echo "Replacing existing IntelliJ plugin snapshot release so its tag moves to $COMMIT..."
+                      gh release delete "$RELEASE_TAG" --yes --cleanup-tag --repo "${{ github.repository }}"
                   fi
+                  echo "Creating IntelliJ plugin snapshot release..."
+                  gh release create "$RELEASE_TAG" \
+                      "$ASSET_NAME" \
+                      "$CHECKSUM_NAME" \
+                      --repo "${{ github.repository }}" \
+                      --title "XTC IntelliJ Plugin Snapshots" \
+                      --notes "$RELEASE_NOTES" \
+                      --prerelease \
+                      --latest=false \
+                      --target "$COMMIT"
 
                   echo "✅ IntelliJ plugin snapshot published"
 
@@ -692,32 +683,23 @@ jobs:
 
                   echo "📥 Publishing VS Code extension snapshot to: $RELEASE_TAG"
 
+                  # Recreate instead of editing: GitHub never moves an existing tag, so an edited
+                  # release would keep pointing at the commit of its first publication. Download
+                  # URLs are keyed by tag and stay stable (same approach as xdk-snapshots).
                   if gh release view "$RELEASE_TAG" --repo "${{ github.repository }}" >/dev/null 2>&1; then
-                      echo "Updating existing VS Code extension snapshot release..."
-                      gh release edit "$RELEASE_TAG" \
-                          --repo "${{ github.repository }}" \
-                          --title "XTC VS Code Extension Snapshots" \
-                          --notes "$RELEASE_NOTES" \
-                          --prerelease \
-                          --latest=false \
-                          --target "$COMMIT"
-                      gh release upload "$RELEASE_TAG" \
-                          "$ASSET_NAME" \
-                          "$CHECKSUM_NAME" \
-                          --repo "${{ github.repository }}" \
-                          --clobber
-                  else
-                      echo "Creating VS Code extension snapshot release..."
-                      gh release create "$RELEASE_TAG" \
-                          "$ASSET_NAME" \
-                          "$CHECKSUM_NAME" \
-                          --repo "${{ github.repository }}" \
-                          --title "XTC VS Code Extension Snapshots" \
-                          --notes "$RELEASE_NOTES" \
-                          --prerelease \
-                          --latest=false \
-                          --target "$COMMIT"
+                      echo "Replacing existing VS Code extension snapshot release so its tag moves to $COMMIT..."
+                      gh release delete "$RELEASE_TAG" --yes --cleanup-tag --repo "${{ github.repository }}"
                   fi
+                  echo "Creating VS Code extension snapshot release..."
+                  gh release create "$RELEASE_TAG" \
+                      "$ASSET_NAME" \
+                      "$CHECKSUM_NAME" \
+                      --repo "${{ github.repository }}" \
+                      --title "XTC VS Code Extension Snapshots" \
+                      --notes "$RELEASE_NOTES" \
+                      --prerelease \
+                      --latest=false \
+                      --target "$COMMIT"
 
                   echo "✅ VS Code extension snapshot published"
 
