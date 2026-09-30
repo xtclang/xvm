@@ -4397,6 +4397,40 @@
         "limitations": []
       }
     },
+    "X142": {
+      "title": "constant property initializer retains semantic navigation and rename",
+      "manual": [],
+      "values": {
+        "file": "X142/FoldedInitializer.x",
+        "module": "FoldedInitializer",
+        "source": "module FoldedInitializer { Int value = 1; Int copy = value; Int run() = value; }\n",
+        "anchor": "value; Int run",
+        "name": "value",
+        "newName": "number",
+        "references": 3,
+        "expected": "Int"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X143": {
+      "title": "partial workspace symbols have bounded batches and no duplicate final items",
+      "manual": [],
+      "values": {
+        "file": "X143/PartialSymbols.x",
+        "module": "PartialSymbols",
+        "declarations": 130,
+        "prefix": "PartialItem",
+        "token": "xtc-playbook-partial-symbols",
+        "batchSize": 64
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
@@ -4489,40 +4523,7 @@
         "coverage": "full",
         "limitations": []
       }
-    },
-    "X142": {
-      "title": "constant property initializer retains semantic navigation and rename",
-      "manual": [],
-      "values": {
-        "file": "X142/FoldedInitializer.x",
-        "module": "FoldedInitializer",
-        "source": "module FoldedInitializer { Int value = 1; Int copy = value; Int run() = value; }\n",
-        "anchor": "value; Int run",
-        "name": "value",
-        "newName": "number",
-        "references": 3,
-        "expected": "Int"
-      },
-      "intellij": {
-        "coverage": "full",
-        "limitations": []
-      }
-    },
-    "X143": {
-      "title": "partial workspace symbols have bounded batches and no duplicate final items",
-      "manual": [],
-      "values": {
-        "file": "X143/PartialSymbols.x",
-        "module": "PartialSymbols",
-        "declarations": 130,
-        "prefix": "PartialItem",
-        "token": "xtc-playbook-partial-symbols",
-        "batchSize": 64
-      },
-      "intellij": {
-        "coverage": "full",
-        "limitations": []
-      }
     }
+
   }
 }
