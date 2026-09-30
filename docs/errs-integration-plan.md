@@ -6917,3 +6917,11 @@ Terminology/compatibility checkpoint (2026-09-30): visible server/command/status
 use Ecstasy; class names, setting IDs, environment variables and the existing notification preference
 ID remain stable. LSP4IJ workarounds carry searchable `// TODO LSP4IJ:` markers explaining the
 upstream gap and removal condition, including its bundled LSP4J diagnostic-union decoder.
+
+Playbook audit follow-up (2026-09-30): the manual playbook now contains a batch acceptance
+matrix and an existing-feature coverage audit, separating native presentation, provider/transport
+assertions, manual OS/lifecycle checks and planned UI. New X133 checks linked local identity and
+refusal/recovery; X134 checks unopened external source edits/deletion/restoration through each host.
+A packaged stdio regression now covers L72 incremental negotiation, sequential patches, save edits
+and rangesFormatting. The catalog has 139 cases; new acceptance is pending. Historical 113/126/134
+receipts remain historical, and do not establish this catalog's success.
