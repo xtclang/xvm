@@ -1,6 +1,6 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has 134 scenarios. The L69–L71/PLAT2c batch passes the ten selected cases
+The current catalog has 135 scenarios. X130 adds batch container Move/Undo/Redo; its first run is pending. The L69–L71/PLAT2c batch passes the ten selected cases
 CFG2/X105/X118/X122/X124–X129 in both hosts across focused runs. IntelliJ's final receipts are
 `run-8616709537315408794` (eight cases) and `run-431060674485649448` (X124/X128), both with zero
 IDE errors. VS Code's receipts are `run-KEzKf8` (six cases) and `run-AW9amt` (four cases).
@@ -2144,6 +2144,8 @@ module Advanced {
 | X127 | Request an unused-import action, resolve its edit when negotiated, edit the source, then try resolving the old handle. | Initial lazy actions omit edits; resolve returns versioned edits without changing the title; obsolete handles are refused. Eager-only clients retain complete actions. |
 | X128 | Rename Box.x to Crate.x and an implicit tools package folder to util using the IntelliJ project-tree Rename action (Shift+F6), or the VS Code file Rename action. | Compiler-proven declaration/reference edits and the move apply together; root and member diagnostics remain clear. IntelliJ invokes the registered handler and actual Rename dialog. Raw VFS moves occur too early for LSP4IJ's before-listener to obtain proof and are not equivalent coverage. |
 | X129 | Import an evaluated Gradle model with processed resources; refresh to empty roots and back; try a malformed report; enable an explicit empty-resource override and refresh again; reset to the build model. | Diagnostics follow the imported paths, malformed reports retain the last valid import, refresh preserves explicit settings, and resetting restores the model. Both drivers exercise the installed client configuration path. |
+
+| X130 | Select the two shared module containers, Move them into the destination directory, then Undo and Redo once. | Both modules, member files and embedded resources follow the move; the unchanged consumer still resolves its imports. IntelliJ uses the registered Community Move handler and dialog; VS Code uses a native workspace resource edit. |
 
 For a project using the updated Gradle plugin, run `./gradlew exportXtcLspModel` in that project's
 root to export `.gradle/xtc/lsp-model.json`. Run `./gradlew prepareXtcLspModel` to process resources

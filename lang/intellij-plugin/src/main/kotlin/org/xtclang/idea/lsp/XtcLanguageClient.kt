@@ -57,6 +57,7 @@ class XtcLanguageClient(project: Project) : LanguageClientImpl(project) {
     private val semanticUpdates =
         SequentialTaskExecutor.createSequentialApplicationPoolExecutor("XTC semantic updates")
 
+    // TODO LSP4IJ: merge project/global configuration in createSettings upstream.
     // LSP4IJ already subscribes/disposes listeners for both stores, but its default
     // createSettings reads only the global store. Project settings take precedence here.
     override fun createSettings(): Any? =
@@ -99,6 +100,7 @@ class XtcLanguageClient(project: Project) : LanguageClientImpl(project) {
             val psi = PsiManager.getInstance(project).findFile(file) ?: return@runBlocking
             if (!LSPFileSupport.hasSupport(psi)) return@runBlocking
             val support = LSPFileSupport.getSupport(psi)
+            // TODO LSP4IJ: invalidate semantic caches on diagnostic refresh, not just PSI changes.
             // A dependency can change this file's semantics without changing its PSI stamp.
             // LSP4IJ keys these caches to that stamp, so retire completed results when the
             // compiler publishes a new analysis. Pending requests already target the current
