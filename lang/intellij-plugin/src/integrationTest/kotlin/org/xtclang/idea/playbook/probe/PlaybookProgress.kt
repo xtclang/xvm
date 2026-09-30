@@ -47,7 +47,7 @@ object PlaybookProgress {
         (WindowManager.getInstance().getStatusBar(project)?.getWidget(ID) as Widget).label.text
 
     private class Widget(private val frame: JFrame?) : CustomStatusBarWidget {
-        val label = JLabel("XTC playbook: starting")
+        val label = JLabel("Ecstasy playbook: starting")
         private val originalTitle = frame?.title
         private val titleListener = PropertyChangeListener { updateTitle() }
 

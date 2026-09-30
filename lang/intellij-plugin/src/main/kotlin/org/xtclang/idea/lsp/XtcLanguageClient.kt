@@ -31,7 +31,7 @@ import org.xtclang.idea.XtcIntelliJLanguage
  * 1. `xtc-format.toml` in the project tree (not yet implemented)
  * 2. IntelliJ Code Style settings (this client provides them)
  * 3. LSP `FormattingOptions` from the editor (tabSize / insertSpaces)
- * 4. XTC defaults (4-space indent, 8-space continuation, no tabs)
+ * 4. Ecstasy defaults (4-space indent, 8-space continuation, no tabs)
  */
 class XtcLanguageClient(project: Project) : LanguageClientImpl(project) {
     private val compilerWatches = CompilerVfsWatches()
@@ -55,7 +55,7 @@ class XtcLanguageClient(project: Project) : LanguageClientImpl(project) {
     // Never acquire a read lock on the transport thread. Use the shared application pool and
     // preserve notification order without creating a dedicated thread per connection.
     private val semanticUpdates =
-        SequentialTaskExecutor.createSequentialApplicationPoolExecutor("XTC semantic updates")
+        SequentialTaskExecutor.createSequentialApplicationPoolExecutor("Ecstasy semantic updates")
 
     // TODO LSP4IJ: merge project/global configuration in createSettings upstream.
     // LSP4IJ already subscribes/disposes listeners for both stores, but its default
@@ -75,7 +75,7 @@ class XtcLanguageClient(project: Project) : LanguageClientImpl(project) {
         }
             .exceptionally { failure ->
                 if (!isDisposed && !project.isDisposed)
-                    logger.warn("Failed to publish XTC diagnostics", failure)
+                    logger.warn("Failed to publish Ecstasy diagnostics", failure)
                 null
             }
     }
