@@ -3,7 +3,7 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { CodeAction } from 'vscode-languageclient/node';
+import { CodeAction, ProgressType } from 'vscode-languageclient/node';
 import { discovered } from './liveWorkspace';
 import { modelPath } from '../../build-model';
 import { getClient, updateCompilerConfiguration } from '../../lsp-client';
@@ -483,6 +483,25 @@ export function platformCases(): void {
         await noErrors(document.uri);
         await vscode.commands.executeCommand('undo');
         assert.strictEqual(document.getText(), data.source);
+    });
+
+    playbook('X143', async (workspace, data) => {
+        const source = `module ${data.module} {\n${Array.from({ length: data.declarations }, (_, i) => `    class ${data.prefix}${i} {}`).join('\n')}\n}\n`;
+        await workspace.write(data.file, source);
+        await workspace.configure([{ name: data.module, uri: workspace.uri(data.file).toString() }]);
+        const document = await workspace.open(data.file);
+        await noErrors(document.uri);
+        await symbols(document);
+        const batches: { name: string }[][] = [];
+        const observer = client().onProgress(new ProgressType<{ name: string }[]>(), data.token, values => { batches.push(values); });
+        try {
+            const normal = await client().sendRequest<{ name: string }[]>('workspace/symbol', { query: data.prefix });
+            const final = await client().sendRequest<{ name: string }[]>('workspace/symbol', { query: data.prefix, partialResultToken: data.token });
+            assert.deepStrictEqual(final, []);
+            assert.ok(batches.length > 1 && batches.every(values => values.length <= data.batchSize));
+            assert.strictEqual(normal.length, data.declarations);
+            assert.deepStrictEqual(batches.flat().map(value => value.name), normal.map(value => value.name));
+        } finally { observer.dispose(); }
     });
 
 }
