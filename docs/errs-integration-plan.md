@@ -1164,8 +1164,8 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 | L77 colors | No color-value provider exists. | Decide which XTC values have unambiguous color meaning and reversible source edits. Implement that scope or record why it is inapplicable. |
 | L78 notebooks | Current ownership is file/module based; there are no notebook sessions. | Decide whether XTC notebooks are a product requirement, then define cell/module identity and execution order before synchronization. Record an explicit exclusion if out of scope. |
 | L79 debug inline values | Compiler inlay hints are not runtime values; DAP remains a stub. | Depend on R6–R7 real sessions, stack/source mapping and stop-state ownership; define evaluation safety before exposing values. |
-| L80 negotiation | Presentation, action forms/preferred metadata, completion kinds and edit-format audits pass focused backend, packaged transport and selected editor checks. | Generic IntelliJ text-edit guarding and shared X144 are implemented; validation is batched with L81. Resource/snippet/confirmation edits are refused by this generic path. |
-| L81 progress/trace/refresh | Partial batches and actual Tree-sitter scan progress now join the previous owned progress/cancellation, refresh and trace implementation. | X143 and controlled regressions pass; visible long-operation/cancel acceptance remains a distinct check. |
+| L80 negotiation | Presentation, action forms/preferred metadata, completion kinds and edit-format audits pass backend, packaged transport and editor checks. Generic IntelliJ text-edit guarding and shared X144 pass both hosts. | Generic resource/snippet/confirmation edits are refused; native Rename/Move owns resource edits. The comprehensive capability audit remains separate from this bounded acceptance. |
+| L81 progress/trace/refresh | Partial batches and actual Tree-sitter scan progress join owned progress/cancellation, refresh and trace. X143 and X145 pass both hosts, including cancellation and restart during pending work. | Physical Cancel-button selection and broader P3/P4 refresh/late-callback acceptance remain manual checks; full-catalog limits are recorded under L82. |
 | L83 initializer facts | Detached successful initializer facts are implemented with no new AST fields; backend regressions and shared X142 are added. | Backend and shared X142 pass; preserve the explicit eight-component record-pattern migration note. |
 
 L76–L79 require explicit scope decisions; their presence in this inventory does not make notebooks,
@@ -1279,10 +1279,12 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
   eighth `initializerBindings` component under the explicit unreleased-API migration policy.
 
 L80/L81 follow-up status: negotiated action/command forms, completion kinds, file-operation formats,
-partial batches and actual asynchronous scan progress now pass their regressions. L80 remains open
-for generic IntelliJ server-initiated edit version checks and native stale-application acceptance.
-L81 retains visible long-operation/cancel acceptance (P1/P2), and L82 retains the full catalog,
-representative-workspace performance and prolonged lifecycle gates. Their unchecked headings do not
+partial batches and actual asynchronous scan progress pass their regressions. Generic IntelliJ server
+text edits have an ownership guard; X144 and X145 progress/cancel/restart acceptance pass both clients.
+The current batch is validated: IntelliJ passes all 150 cases plus startup in one run; VS Code passes
+149/150, with X130's host Explorer repaint exception still failing the test. L80/L81 retain their
+broader audit/manual acceptance scope. L82 retains that host failure, representative-workspace
+performance targets, peak-memory and prolonged lifecycle gates. Their unchecked headings do not
 mean the implemented protocol paths above are absent.
 
 ### Editor configuration and feature controls (UI1–UI7)
@@ -7371,10 +7373,235 @@ with the L80 native-client extraction slice, after the startup-message ownership
 **L81 acceptance implementation checkpoint:** shared **X145** uses a 5,000-method compiler
 fixture, not a delayed fake response. Both drivers require a references request to remain pending
 when native progress becomes visible. IntelliJ observes/cancels the status bar's actual progress
-model and opens the background-task panel. VS Code observes the SDK's real `window.withProgress`
-call, forwarding its reporter/token unchanged, then invokes the workbench notification Cancel
-action. Both require cancellation, a successful later hover, restart with a pending reader,
+model and opens the background-task panel. VS Code observes the SDK's actual workbench progress reporter/token and cancels that
+token through the same callback used by the Cancel button. The driver opens the progress list;
+it does not automate selection of a particular notification's button. Both require cancellation, a successful later hover, restart with a pending reader,
 unsaved-text preservation, disappearance of progress and old-PID termination. A workload that
 finishes before these actions fails as unexercised. Catalog: **150** scenarios. Compilation is
 checked during implementation; the full validation batch follows the two separate commits.
 No production progress delay or test RPC was introduced.
+
+### L80/L81 batched validation history
+
+- Implementation commits: `992b47f26` (native generic edit ownership, X144), `7a312dd9d`
+  (native progress/cancel/restart scenario X145). They remain separate extraction slices.
+- Forced compiler/backend batch: Java **512 passed**, 40 known disabled/opt-in skips; backend
+  **1,497 passed**, three disabled placeholders; packaged stdio **74 passed**; IntelliJ unit
+  **80 passed**. No failures/errors or missing-XDK skips. This precedes the lexical performance fix.
+- Retention at the standard 120 cycles: 960 edit requests, 2,473 weak references, zero retained;
+  rebuild p50 **222 ms**, p95 **238 ms**, including debounce. An extended 360-cycle run follows.
+- VS Code `run-4fS87C`: X144 passes. X145 correctly received ContentModified from a delayed
+  fixture-create watch, before progress began. The harness now reissues only that read with
+  unchanged-source proof; it never repeats the mutation.
+- Progress observer failures `run-64QWrf`, `run-LFE6zj`, `run-M0BlfU` were harness failures:
+  the observer must use the bundled SDK's real progress objects, and match the actual human title
+  **Ecstasy: finding references**, not the protocol method name. They are not passing receipts.
+- VS Code `run-qwm8wB`: X145 **passes**, 87.1 seconds for 1,500 methods, including native
+  cancellation, subsequent hover, pending restart, old-PID exit and unsaved-buffer preservation.
+  Cancellation uses the workbench-owned token callback; choosing/clicking its particular button
+  remains a manual rendering check.
+- A live `jcmd` sample during this fixture identified quadratic lexical processing: every token
+  rescanned all source line breaks in `XdkRename.offset`; semantic token output also split the whole
+  source per token. The fix builds immutable per-call line indexes once. A large CR/LF/CRLF and
+  emoji regression checks exact token spans under a generous timeout. This changes adapter
+  presentation/resource scanning only, without new compiler/AST state or APIs.
+
+Full editor catalogs, the lexical fix's tests and the extended workload are still in progress.
+
+IntelliJ selected receipts: `run-9059436229437082618` passes START/X144; X145 finishes before
+cancellation takes effect after the performance fix (an unexercised timing case, not a pass).
+`run-5136524067786146169` passes START/X145 with 5,000 methods in **7,622 ms** and zero IDE errors.
+The first 360-cycle Gradle run had a test-report output collision with a concurrent focused
+`:lsp-server:test`; it is invalid evidence and is being rerun with exclusive ownership of that task.
+
+`3987e26c1` is the independent L82 lexical performance slice. Its three large lexical regressions,
+eight presentation tests and three resource-input tests pass with zero skips. This can be extracted
+after the lexical presentation implementation; it does not require the generic client edit guard.
+
+The exclusive extended retention run passes: **360 cycles**, **2,880 edit requests**, **7,346 weak
+references**, zero retained, rebuild p50 **223 ms**, p95 **255 ms** (includes debounce),
+271.3 seconds, zero skips; Gradle configuration cache stored successfully. The previous report
+collision is not counted.
+
+Full IntelliJ `run-11435582978373867143` passes 74 checks (including START), then X105's
+no-replay guard stops the run. The captured editor contains `2Document` instead of `Document`;
+no import action accounts for this extra character. Its origin is not established. The guard is
+retained and its diagnostic now includes bounded before/after text. X105 and the 76 unrun cases
+continue in a fresh selected run; the original receipt is not relabelled as a clean full run.
+
+The resumed IntelliJ receipt `run-5480270557660243469` passes 75 checks including START and
+X105/X142, but fails X57/X126 while cleanup requires an already stopped server to be running,
+and X143 while reading partial results from a rolling console buffer. Its shutdown also exposes
+a File Cache Conflict for X127 and formatting-error notifications. These are failures, even though
+the IDE error collector reports none: notifications and modal dialogs need their own acceptance.
+The harness now checks the captured connection on close, observes X143's token directly through
+LSP4IJ's lifecycle listener, and discards only the completed scenario's dirty documents.
+
+The formatting notifications expose a separate production bug in LSP4IJ 0.21.0:
+`LSPFormattingSupport.format` accepts a nullable editor, then dereferences it while applying the
+reply. Save All reaches it for dirty, closed tabs. `XtcFormattingService` retains native asynchronous
+formatting/Undo and LSP4IJ request/cancellation support but applies replies against a captured
+document, with a current-text check. Its `TODO LSP4IJ:` comment identifies the upstream removal
+condition. X139 now explicitly includes a dirty, closed tab alongside the open document. This
+client workaround belongs in its own extraction slice; it changes no embedding or AST API.
+
+Post-lexical-fix full backend verification passes **1,500 tests**, with three existing disabled
+placeholders; packaged stdio passes **74**, with zero skips. Final native regression and VS Code
+catalog receipts remain pending.
+
+`8254048a0` fixes closed-document formatting and adds its native X139 regression. IntelliJ
+`run-5152567950207711961` passes START and X57/X126/X127/X132/X138/X139/X143, zero IDE errors,
+with a successful Gradle exit. Combined with the full and resumed receipts above, all **150**
+catalog cases have passed. This is combined coverage, not a single clean full run. The prior
+`run-4858840074776310971` passed its six native checks but its launcher failed while scanning an
+IDE-only lifecycle-listener probe; test discovery now includes only `*Test.class`. Configuration
+cache works with the real native task. Plugin units pass **80/80** after the formatter correction;
+root and lang Spotless checks pass.
+
+`cff4c1283` is the native harness correction slice: scenario-scoped dirty-document cleanup,
+close observation without demanding restart, bounded no-replay failure messages, a scoped
+partial-result listener, and test discovery excluding IDE-only probes. Keep the listener and test
+discovery changes together when extracting it.
+
+`6b7b4dacb` is the independent L82 workload-configuration slice. The longer retention workload
+is reproducible without editing test sources:
+
+```bash
+./gradlew :lang:lsp-server:test --tests '*XdkRetentionTest' \
+  -Plsp.retentionCycles=360 -Plsp.adapter=compiler \
+  -PincludeBuildLang=true -PincludeBuildAttachLang=true --no-build-cache
+```
+
+Run it with exclusive ownership of `:lang:lsp-server:test`; concurrent invocations share Gradle's
+test-result directory. The default remains 120 cycles. These sampled weak-reference and latency
+results do not establish a peak-memory budget or performance targets for large platform projects.
+
+Full VS Code `run-SAWG42` finishes **126 passed / 24 failed**. X144 passes, and X145 now
+passes with the current 5,000-method workload in **15,736 ms**. The failed cases are
+X7/X8/X10/X32/X71/X73/X74/X76/X77/X80/X82/X83/X84/X87/X88/X90/X91/X93/X94/X95/X96/X97/X107
+and X130. This is not a clean catalog receipt.
+
+The server trace identifies spurious cursor invalidation: delayed directory-created notifications
+arrive during incomplete-source completion/signature requests. The no-op watcher check treated
+every failed analysis as stale and compared unsaved sources with disk instead of their current
+overlays. It could therefore send ContentModified even though effective compiler inputs had not
+changed. The correction compares current captured inputs with authoritative open text, while still
+invalidating real membership, closed-source and resource changes. Older fallback builds after a
+failed dependency lookup remain conservative so recreating a dependency still repairs consumers.
+Controlled server regressions hold a cursor in flight while delivering directory notifications;
+unchanged inputs preserve its result, and changed closed inputs retire it. All **38** focused watcher,
+cursor and rename regressions pass with zero skips. Editor revalidation follows.
+
+X130 is separate: Explorer's reveal command did not guarantee keyboard focus, so Copy Path read
+the active Consumer editor rather than both selected source directories. The exact-selection guard
+stopped before the move. The harness now focuses Explorer before its repeatable selection phase;
+Cut/Paste/Undo/Redo remain single applications.
+
+
+`f8fa59c86` is the separate L82 watcher-correction slice: compare current failed analyses against
+open overlays and retain conservative dependency-recreation behavior. It includes the controlled
+in-flight cursor tests and independently exercises closed-source and resource changes. The corrected
+focused run passes **38/38**. VS Code `run-s4TD4a` passes all 23 formerly failing cursor cases;
+X130 completes its move but fails in VS Code 1.140.0's `itemsCopied` repaint of removed Cut nodes.
+The harness now retains that error, verifies Move/Undo/Redo/resource contents, and then reports it;
+it does not replay Paste or count a repaint exception as a pass. Fresh focused `run-SlqjAz` passes
+X130 without the repaint exception. The complete current catalog is running again.
+
+
+Additional validation commits: `abd8b1a66` keeps the native progress-model observer corrections
+with L81/X145. `636cad4b8` keeps explicit Explorer focus and post-move failure reporting with
+X130's native resource-operation acceptance. Neither changes production adapter capabilities.
+
+
+Current full VS Code `run-06Z6tq`: **149 passed / 1 failed**, catalog hash
+`4bea60d80c9662dc45c932b2643f5aa9c2fc1df6ad6783d9eafb01e81dc1740c` (150 cases).
+All 23 incomplete-query failures are corrected. X144 passes in 11,571 ms and X145 in 15,966 ms.
+X130 verifies Move/Undo/Redo and every resource before reporting the host repaint exception; do
+not describe this as a clean full pass or retry the completed mutation.
+
+- [ ] **L82 native host follow-up — X130:** isolate/report or verify an upstream fix for VS Code
+  1.140.0's post-Paste `itemsCopied` rerender of retired Cut nodes. Keep the host failure visible
+  while preserving separate evidence for compiler move correctness and native Undo/Redo.
+
+
+Final current-server backend verification: **1,504 passed**, three existing disabled placeholders
+(1,507 total), and **74 packaged stdio tests passed**, zero stdio skips. Root and lang Spotless
+checks pass. The included standard retention workload completes 120 cycles / 960 edit requests /
+2,452 sampled weak references, zero retained; p50 228 ms, p95 400 ms including debounce while
+editor tests were also running. Use the earlier exclusive 360-cycle receipt for isolated timing.
+
+The ordinary VS Code extension smoke run exposes a separate harness isolation bug: unlike the
+playbook it reused a profile and edited repository fixtures, then restored settings by writing the
+file directly after the configuration API had loaded it. The next settings update reports unsaved
+or externally modified settings (22 passed / 1 failed). All editor runs now get fresh workspaces
+and profiles; compiler acceptance restores settings through the API only. Its rerun follows the
+native IntelliJ catalog so two GUI harnesses never compete for focus.
+
+
+Full IntelliJ `run-11631573891218503883` aborts at X103 after **71 passed / 1 failed**, leaving
+79 cases unrun (startup is counted separately). The native driver observed an `OpenedDocument`
+before LSP4IJ attached its synchronizer; its remote API incorrectly declared that value non-null.
+The readiness predicate now waits for the synchronizer and successful didOpen completion within
+the existing timeout. No action is replayed. The full run repeats after this harness correction;
+zero IDE fatal errors in the failed attempt do not make its incomplete catalog a pass.
+
+
+The next native full run, `run-2198032552241181704`, passes X103 and reaches **74 passed / 1 failed**
+at X105 (76 unrun). Source is unchanged and the server returns the correct Document import action.
+The subsequent native intention request targets the old Find Usages preview (`HealthyGraph.x`),
+not `AutoImports.x`. Merely focusing an editor component can leave that tool window active. The
+harness now activates the native editor area and checks both active-tool-window state and editor
+data-context identity before invoking actions. It still uses pointer-free focus and refuses to
+replay edits. Resume covers X105 and all unrun cases, plus X100/X103 to reproduce the preceding
+native context. The earlier partial receipts remain explicitly incomplete.
+
+
+`05841a78a` is the native document-readiness/action-context correction slice. Resumed
+`run-12646132691690647657` passes **79 selected cases plus START**, zero IDE fatal errors and a
+successful Gradle exit. It includes X100/X103/X105 together, X127 cleanup, X130 Move/Undo/Redo,
+X139 open/closed Save All, and X145 progress/cancel/restart. Combined with the previous current-server
+run, all 150 catalog cases have passing evidence. A final uninterrupted native catalog follows;
+the earlier aborted full runs are not counted as clean full passes.
+
+
+`586c5585c` is the independent VS Code smoke-isolation slice. Fresh isolated
+`extension-tests/run-jgVHtx` passes **23/23**, including 40 error/recovery cycles (p50 609 ms,
+p95 615 ms for each edit/recovery/hover cycle). Settings-draft ownership now passes after the
+compiler workload, and no settings file is written into repository fixtures. Root/lang Spotless
+checks and TypeScript compilation pass. Playbook behavior keeps its existing isolated workspace;
+this extends that ownership to the ordinary extension suite.
+
+### Final native and batch receipt (2026-09-30)
+
+The uninterrupted IntelliJ `run-1843149430446112481` passes **all 150 catalog cases plus START**,
+with **zero IDE errors** and successful Gradle/IDE shutdown. IDE 2026.2.3 runs with Ultimate
+disabled and LSP4IJ 0.21.0. Its catalog hash is
+`4bea60d80c9662dc45c932b2643f5aa9c2fc1df6ad6783d9eafb01e81dc1740c`.
+This replaces combined coverage as the final native checkpoint without rewriting the failed runs
+above. X105 passes in 4,165 ms, X127 in 4,961 ms, X139 in 14,008 ms, X144 in 5,201 ms and
+X145 in 9,902 ms. In particular, open/closed Save All and completed-fixture cleanup no longer
+produce the formatting notifications or shutdown File Cache Conflict from the failed run.
+
+| Validation | Result and limits |
+| --- | --- |
+| Compiler/backend | 1,504 passed; three existing disabled tests; no failures/errors |
+| Packaged stdio | 74 passed; no failures/errors/skips |
+| IntelliJ unit suite | 80 passed; no failures/errors/skips |
+| Java compiler suite | 512 passed; 40 known disabled/opt-in skips, no missing-XDK skips; unchanged since the earlier forced run |
+| Extended retention | 360 cycles, 2,880 edit requests, 7,346 sampled weak references, zero retained; not a peak-memory or large-project performance claim |
+| Full IntelliJ catalog | 150/150 plus startup; zero IDE errors; successful shutdown |
+| Full VS Code catalog | **149/150, one failure: X130** in `run-06Z6tq`; Explorer's Cut-highlight repaint still throws after Move/Undo/Redo/resource assertions succeed |
+| VS Code smoke suite | 23/23 in `extension-tests/run-Ts46BQ`; includes 40 error/recovery cycles (p50 513 ms, p95 613 ms) |
+| VS Code selected reporter check | X144/X145 pass in `run-aBMhCu`; 148 other cases are not selected, not newly rerun |
+
+`0f4bcd1ab` is the separate test-progress slice. The ordinary VS Code smoke runner previously
+had no status counter; it now shares the playbook's reporter. Both show completed/total, remaining,
+current test, failures and skips in the left status bar, with full titles in the tooltip. Mocha owns
+the counts; there is no second mutable result counter. Keep this with editor test infrastructure,
+after the corresponding runner files, when extracting PRs.
+
+The implementation batch and its regressions are complete. The full cross-editor gate remains
+**open**, because X130 is a failed native test, not a passing test with an ignored warning.
+Physical Cancel-button selection, the broader P3/P4 manual acceptance, representative response-time
+and peak-memory targets, and prolonged supported-platform lifecycle workloads remain separate L82
+work. Extracted PRs must still pass independently; these integrated-branch receipts do not prove that.
