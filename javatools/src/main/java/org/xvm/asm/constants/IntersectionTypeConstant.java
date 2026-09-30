@@ -726,7 +726,7 @@ public class IntersectionTypeConstant
     }
 
     @Override
-    public TypeConstant getCallableJitType() {
+    public TypeConstant getJitCCType() {
         return combineJitType(m_constType1, m_constType2);
     }
 
@@ -740,17 +740,17 @@ public class IntersectionTypeConstant
         }
 
         if (type1.isJitPrimitive()) {
-            return type1.getCallableJitType();
+            return type1.getJitCCType();
         }
 
         if (type2.isJitPrimitive()) {
-            return type2.getCallableJitType();
+            return type2.getJitCCType();
         }
 
         // while the original intersection contributions are not assignable to each other, the
         // canonical types might be
-        type1 = type1.getCallableJitType();
-        type2 = type2.getCallableJitType();
+        type1 = type1.getJitCCType();
+        type2 = type2.getJitCCType();
 
         return type2.isA(type1)
                 ? type1

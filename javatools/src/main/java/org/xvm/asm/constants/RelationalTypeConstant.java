@@ -632,7 +632,7 @@ public abstract class RelationalTypeConstant
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getCallableJitType() {
+    public TypeConstant getJitCCType() {
         return getConstantPool().typeObject();
     }
 

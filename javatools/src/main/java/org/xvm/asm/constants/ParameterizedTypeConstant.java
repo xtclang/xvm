@@ -804,7 +804,7 @@ public class ParameterizedTypeConstant
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getCallableJitType() {
+    public TypeConstant getJitCCType() {
         assert isSingleUnderlyingClass(true);
 
         TypeConstant typeJit = m_typeJitCallable;
@@ -854,7 +854,7 @@ public class ParameterizedTypeConstant
                     : this;
         }
 
-        TypeConstant typeResolved = typeOrig.getCallableJitType();
+        TypeConstant typeResolved = typeOrig.getJitCCType();
         boolean      fTrivial     = true;
 
         TypeConstant[] aconstOriginal  = m_atypeParams;
@@ -863,7 +863,7 @@ public class ParameterizedTypeConstant
             TypeConstant typeParamOriginal = aconstOriginal[i];
             if (typeParamOriginal.isJitPrimitive()) {
                 aconstCanonical = cow(aconstOriginal, aconstCanonical, i,
-                        aconstOriginal[i].getCallableJitType());
+                        aconstOriginal[i].getJitCCType());
                 fTrivial = false;
             } else {
                 var            entryParam     = listTypeParams.get(i);
@@ -915,7 +915,7 @@ public class ParameterizedTypeConstant
     private TypeConstant[] toCallableTypes(TypeConstant[] atype) {
         TypeConstant[] atypeCanonical = atype;
         for (int i = 0, c = atype.length; i < c; ++i) {
-            atypeCanonical = cow(atype, atypeCanonical, i, atype[i].getCallableJitType());
+            atypeCanonical = cow(atype, atypeCanonical, i, atype[i].getJitCCType());
         }
         return atypeCanonical;
     }
