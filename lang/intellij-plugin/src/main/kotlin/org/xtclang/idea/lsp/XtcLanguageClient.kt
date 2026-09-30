@@ -12,6 +12,8 @@ import com.redhat.devtools.lsp4ij.LSPFileSupport
 import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
 import java.util.concurrent.CompletableFuture
 import org.eclipse.lsp4j.PublishDiagnosticsParams
+import org.eclipse.lsp4j.RegistrationParams
+import org.eclipse.lsp4j.UnregistrationParams
 import org.xtclang.idea.XtcIntelliJLanguage
 
 /**
@@ -32,6 +34,23 @@ import org.xtclang.idea.XtcIntelliJLanguage
  * 4. XTC defaults (4-space indent, 8-space continuation, no tabs)
  */
 class XtcLanguageClient(project: Project) : LanguageClientImpl(project) {
+    private val compilerWatches = CompilerVfsWatches()
+
+    override fun dispose() {
+        compilerWatches.dispose()
+        super.dispose()
+    }
+
+    override fun registerCapability(params: RegistrationParams): CompletableFuture<Void> =
+        super.registerCapability(params).thenRunAsync {
+            if (!isDisposed && !project.isDisposed) compilerWatches.register(params.registrations)
+        }
+
+    override fun unregisterCapability(params: UnregistrationParams): CompletableFuture<Void> =
+        super.unregisterCapability(params).thenRun {
+            compilerWatches.unregister(params.unregisterations.map { it.id }.toSet())
+        }
+
     // Rename/file-operation listeners can hold the IDE write lock while awaiting an LSP reply.
     // Never acquire a read lock on the transport thread. Use the shared application pool and
     // preserve notification order without creating a dedicated thread per connection.

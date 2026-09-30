@@ -13,20 +13,28 @@ export function platformCases(): void {
         const external = await fs.mkdtemp(path.join(os.tmpdir(), 'xtc-playbook-resources-'));
         try {
             await workspace.write(data.file, data.text);
-            const modules = [{ name: data.module, uri: workspace.uri(data.file).toString(), resourceRoots: [vscode.Uri.file(external).toString()] }];
+            const resourceRoot = path.join(external, data.resourceDirectory);
+            const modules = [{ name: data.module, uri: workspace.uri(data.file).toString(), resourceRoots: [vscode.Uri.file(resourceRoot).toString()] }];
             await workspace.configure(modules);
             const document = await workspace.open(data.file);
             await diagnostics(document.uri, values => values.length > 0, 'Missing external resource');
-            await fs.writeFile(path.join(external, data.resource), data.contents);
+            await fs.mkdir(resourceRoot, { recursive: true });
+            await fs.writeFile(path.join(resourceRoot, data.resource), data.contents);
             await noErrors(document.uri);
             await workspace.configure([{ ...modules[0], resourceRoots: [] }]);
             await diagnostics(document.uri, values => values.length > 0, 'Explicitly disabled resources');
             await workspace.configure(modules);
             await noErrors(document.uri);
             assert.deepStrictEqual(vscode.workspace.getConfiguration('xtc.compiler').get('sourceModules'), modules);
-            await fs.unlink(path.join(external, data.resource));
+            await fs.unlink(path.join(resourceRoot, data.resource));
             await diagnostics(document.uri, values => values.length > 0, 'Deleted external resource');
-            await fs.writeFile(path.join(external, data.resource), data.contents);
+            await fs.writeFile(path.join(resourceRoot, data.resource), data.contents);
+            await noErrors(document.uri);
+            const replacement = path.join(external, 'replacement');
+            await workspace.configure([{ ...modules[0], resourceRoots: [vscode.Uri.file(replacement).toString()] }]);
+            await diagnostics(document.uri, values => values.length > 0, 'Replacement root is missing');
+            await fs.mkdir(replacement);
+            await fs.writeFile(path.join(replacement, data.resource), data.contents);
             await noErrors(document.uri);
         } finally { await fs.rm(external, { recursive: true, force: true }); }
     });
