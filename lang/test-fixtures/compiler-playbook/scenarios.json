@@ -4289,6 +4289,15 @@
         "limitations": []
       }
     },
+    "X135": {
+      "title": "server log view opens and hides without changing source",
+      "manual": ["Physical shortcut dispatch, remapped keymaps and alternate dock locations"],
+      "values": {
+        "file": "LogPanel.x",
+        "source": "module LogPanel {}\n"
+      },
+      "intellij": { "coverage": "full", "limitations": [] }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
