@@ -1096,7 +1096,7 @@ the earlier full backend/packaged/VS Code extension results. Exact receipts and 
 boundaries are in the integration plan's editor-settings checkpoint.
 
 
-### Mutable-state and deprecated-API audit (2026-09-30, in progress)
+### Mutable-state and deprecated-API audit (2026-09-30, checkpoint)
 
 Reviewed the LSP server's document/publication lock, detached resolve/diagnostic/token stores,
 compiler queue snapshots and configuration revisions; IntelliJ connection ownership, root leases,
@@ -1113,13 +1113,30 @@ Concrete fixes in this batch:
 - Tree-sitter scan coordinators no longer join child jobs submitted to the same bounded executor.
   Parsing was already serialized, so the nested scheduling added a starvation/shutdown hazard.
   Native parsing and disposal now share ownership locks; post-close reindexing is ignored.
+- VS Code connection callbacks and rename middleware retain their owning connection. A retired
+  connection cannot restart itself or replace the current connection's status; crash counters are
+  scoped to each connection.
+- IntelliJ compiler-settings reports use a revision guard, including disposal, so an older reply
+  cannot overwrite a newer refresh. Server formatting settings likewise reject replies after close.
+- Server configuration requests require the client's advertised `workspace.configuration` support.
+  Minimal clients receive neither configuration nor unnegotiated refresh requests.
 
 The protocol progress collections are confined to a single dispatcher. Refresh uses one atomic
 running/dirty pair per provider, sends outside compiler locks, and coalesces changes while awaiting
 a reply. These ownership rules require regression testing; they are not a claim that every
 possible interleaving is proven safe. Remaining concerns to investigate: background disk indexing
-versus an open overlay, VS Code retired-connection callbacks and long-lived configuration pickers,
-and stalled watcher registration replies.
+versus an open overlay, long-lived VS Code configuration pickers, and stalled watcher registration
+replies. Selected editor restart/settings checks exercise the normal flows; they do not exhaustively
+schedule every late callback or settings race.
+
+Follow-up checks, with controlled interleavings rather than timing sleeps:
+
+- [ ] `WorkspaceIndexer` / `TreeSitterAdapter`: make open-buffer content win over a scan that read
+  an older disk snapshot; cover edits during initial indexing and close/reopen.
+- [ ] VS Code `compiler-paths.ts`: reject or merge a stale path-editor draft if source-module
+  settings change while its Quick Pick/input dialogs are open.
+- [ ] `ResourceFileWatchers`: bound stalled registration/unregistration replies and retire the
+  queue on disconnect without allowing an old registration to replace current watch ownership.
 
 Deprecated API inventory: no Kotlin suppression remains for legacy LSP roots. `rootUri`/`rootPath`
 are protocol-deprecated compatibility inputs only; current clients should send `workspaceFolders`.
@@ -1127,4 +1144,16 @@ The TypeScript compiler API found no selected deprecated call signatures: Output
 assert.fail have deprecated overloads, but our calls select supported overloads. Hover's inherited
 MarkedString union is still accepted as input by VS Code. Deprecated formatter configuration keys
 are compatibility aliases explicitly marked in the manifest, not deprecated implementation calls.
-Fresh JVM compilation and the combined tests are still pending for the final batch.
+Fresh nonincremental JVM compilation of the DAP server, DSL and IntelliJ production/unit/integration
+sources passes without deprecation warnings. TypeScript compilation passes. The VS Code run still
+logs Node `DEP0169` (`url.parse`) from editor processes; no call exists in the extension's own
+source/scripts, and the warning does not identify its dependency stack. IntelliJ's launcher also
+logs JNA native-access restrictions. Neither is evidence of a deprecated Kotlin call; neither is
+silenced by this audit.
+
+The [protocol validation record](errs-integration-plan.md#protocol-hardening-batch-l80l81-2026-09-30)
+records the full backend run and focused fixture correction, 73 packaged tests, 74 IntelliJ unit
+tests and selected X136/X137/X140/X141 in both editors. Native parser/index concurrency regressions
+ran without skips. The first Unicode fixture also exposed missing semantic facts in constant-folded
+property initializers, independently of character encoding; L83 records the compiler ownership
+follow-up. This remains a semantic limitation, not a concurrency fix or a passing fixture.
