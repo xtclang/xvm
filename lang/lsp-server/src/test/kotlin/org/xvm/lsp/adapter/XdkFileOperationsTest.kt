@@ -96,6 +96,36 @@ class XdkFileOperationsTest {
     }
 
     @Test
+    fun `batch moves to another directory preserve discovered imports and embedded resources`() {
+        write(
+            "old/App.x",
+            "module App { Box make() = new Box(); static String text() = $./data.txt; }",
+        )
+        write("old/App/Box.x", "class Box {}")
+        write("old/data.txt", "resource")
+        write("second/Library.x", "module Library { Int number() = 1; }")
+        write(
+            "Consumer.x",
+            "module Consumer { package app import App; package lib import Library; app.Box make() = new app.Box(); Int number() = lib.number(); }",
+        )
+        Files.createDirectory(directory.resolve("destination"))
+        session { adapter ->
+            val moves =
+                mapOf(
+                    uri("old") to uri("destination/old"),
+                    uri("second") to uri("destination/second"),
+                )
+            val edit = requireNotNull(adapter.renameFilesAsync(moves).get(30, SECONDS))
+            assertThat(edit.changes).isEmpty()
+            apply(edit, moves)
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(Files.readString(directory.resolve("destination/old/data.txt")))
+                .isEqualTo("resource")
+        }
+    }
+
+    @Test
     fun `configured root moves collisions symlinks and overlapping requests are refused without writes`() {
         write("App.x", "module App { Box make() = new Box(); }")
         write("App/Box.x", "class Box {}")
