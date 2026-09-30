@@ -1641,9 +1641,10 @@ class CompilerPlaybook(
                 .flatMap { it.getOpenedDocuments() }
                 .filter { it.getFile().getPath() == editor.editor.getVirtualFile().getPath() }
                 .any {
-                    it.getSynchronizer().getDidOpenFuture().let { future ->
+                    // OpenedDocument is registered before its synchronizer is installed.
+                    it.getSynchronizer()?.getDidOpenFuture()?.let { future ->
                         future.isDone() && !future.isCompletedExceptionally()
-                    }
+                    } == true
                 }
         }
         return editor
