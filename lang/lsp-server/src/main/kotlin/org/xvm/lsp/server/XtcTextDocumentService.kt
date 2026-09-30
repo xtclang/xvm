@@ -188,31 +188,24 @@ class XtcTextDocumentService(
         sourceOnly: Boolean = false,
         block: () -> R,
     ): CompletableFuture<R> {
-        val trace = ExecutionTrace.current()
         val document = uri?.let { openDocuments[it] }
-        val ready =
-            if (sourceOnly) CompletableFuture.completedFuture(null)
-            else document?.analysis ?: CompletableFuture.completedFuture(null)
-        return ready
-            .handle { _, _ -> null }
-            .thenCompose {
-                ExecutionTrace.within(trace) {
-                    server.supplyAsync(method, logParams, logResult) {
-                        synchronized(lifecycle) {
-                            if (closed || (uri != null && openDocuments[uri] !== document)) {
-                                throw ResponseErrorException(
-                                    ResponseError(
-                                        ResponseErrorCode.ContentModified,
-                                        "Document changed during analysis",
-                                        null,
-                                    )
-                                )
-                            }
-                            block()
-                        }
+        return queryAsync(
+            method,
+            uri.orEmpty(),
+            request = {
+                server.supplyAsync(method, logParams, logResult) {
+                    synchronized(lifecycle) {
+                        if (closed || (uri != null && openDocuments[uri] !== document))
+                            throw contentModified()
+                        block()
                     }
                 }
-            }
+            },
+            workspace = uri == null,
+            sourceOnly = sourceOnly,
+        ) {
+            it
+        }
     }
 
     /** A semantic query owns its backend future, while the module analysis remains shared. */
@@ -221,6 +214,7 @@ class XtcTextDocumentService(
         uri: String,
         request: () -> CompletableFuture<T>,
         workspace: Boolean = false,
+        sourceOnly: Boolean = false,
         progress: WorkDoneProgressParams? = null,
         convert: (T) -> R,
     ): CompletableFuture<R> {
@@ -252,7 +246,8 @@ class XtcTextDocumentService(
             )
         }
         val ready =
-            if (documents != null)
+            if (sourceOnly) CompletableFuture.completedFuture(null)
+            else if (documents != null)
                 CompletableFuture.allOf(
                     *documents.values.map { it.analysis }.distinct().toTypedArray()
                 )
