@@ -168,6 +168,12 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 **Done** below means implemented within the scope written in that row; it is not a claim of
 support for every XTC construct, optional LSP extension or native editor presentation.
 
+Known semantic boundary (L83): references inside a constant-folded property initializer can lose
+their resolved facts when the compiler discards its temporary initializer clone. Hover, navigation,
+references and semantic tokens for those occurrences are incomplete; rename must still pass the
+existing proof. Method-body references after UTF-16 surrogate pairs are covered separately by X140.
+See the [L83 task and reproducer](../../../docs/errs-integration-plan.md#protocol-correctness-and-the-completion-gate).
+
 | Feature | Mock | Tree-sitter | Compiler (XdkAdapter) |
 |---------|------|-------------|----------|
 | Syntax highlighting | - | TextMate + semantic tokens (lexer) | TextMate plus Java lexical tokens and compiler-resolved names |
@@ -879,6 +885,7 @@ claimed complete by this checkpoint.
 
 
 L80/L81 protocol hardening adds shared X140/X141 (146 total scenarios): UTF-16 ranges after astral
-characters and runtime server trace switching. Both drivers are implemented; selected native/VS Code
-validation is pending. Server progress, cancellation, lifecycle and refresh have controlled protocol
+characters and runtime server trace switching. X136/X137/X140/X141 pass in both editors, plus
+IntelliJ startup with zero IDE errors. See the [protocol validation record](../../../docs/errs-integration-plan.md#protocol-hardening-batch-l80l81-2026-09-30).
+Server progress, cancellation, lifecycle and refresh have controlled protocol
 regressions; partial results and visible long-operation/cancel acceptance remain separately tracked.
