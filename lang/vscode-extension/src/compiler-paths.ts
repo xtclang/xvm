@@ -86,7 +86,11 @@ export function registerCompilerPaths(context: vscode.ExtensionContext): void {
         const previous = effective.find(module => module.name === chosen);
         const name = previous?.name ?? await vscode.window.showInputBox({ prompt: 'Module name' });
         if (!name) return;
-        const uri = await vscode.window.showInputBox({ prompt: 'Module root file URI or path relative to the selected workspace folder', value: previous?.uri });
+        const mode = await vscode.window.showQuickPick(['Choose module file', 'Enter module path']);
+        if (!mode) return;
+        const uri = mode === 'Choose module file'
+            ? (await vscode.window.showOpenDialog({ canSelectFiles: true, canSelectFolders: false, canSelectMany: false, filters: { Ecstasy: ['x'] }, defaultUri: owner.uri }))?.[0]?.toString()
+            : await vscode.window.showInputBox({ prompt: 'Module root file URI or path relative to the selected workspace folder', value: previous?.uri });
         if (!uri) return;
         const resources = await vscode.window.showInputBox({ prompt: 'Ordered resource paths as a JSON array; blank = conventions, [] = none', value: previous?.resourceRoots == null ? '' : JSON.stringify(previous.resourceRoots) });
         if (resources === undefined) return;
