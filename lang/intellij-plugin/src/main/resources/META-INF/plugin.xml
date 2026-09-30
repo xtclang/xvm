@@ -43,6 +43,12 @@
     </actions>
 
     <extensions defaultExtensionNs="com.intellij">
+        <applicationConfigurable id="xtc.service.defaults" parentId="language"
+                                 displayName="Ecstasy Language Service Defaults"
+                                 instance="org.xtclang.idea.lsp.LanguageServiceApplicationConfigurable"/>
+        <projectConfigurable id="xtc.service" parentId="language"
+                             displayName="Ecstasy Language Service"
+                             instance="org.xtclang.idea.lsp.LanguageServiceProjectConfigurable"/>
         <projectConfigurable id="xtc.compiler" parentId="language" displayName="Ecstasy Compiler"
                              instance="org.xtclang.idea.lsp.CompilerProjectConfigurable"/>
         <!-- Notification group for LSP status messages -->
