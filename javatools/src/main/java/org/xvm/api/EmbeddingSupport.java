@@ -41,6 +41,7 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.InstantRepository;
+import org.xvm.compiler.InitializerBinding;
 import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
@@ -49,6 +50,7 @@ import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.AstNode;
 import org.xvm.compiler.ast.InvocationExpression;
 import org.xvm.compiler.ast.NewExpression;
+import org.xvm.compiler.ast.PropertyDeclarationStatement;
 import org.xvm.compiler.ast.Statement;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
@@ -379,17 +381,30 @@ public class EmbeddingSupport {
      *                          ownership is the same as for callBindings
      * @param constructorBindings validated constructor and argument provenance; the same ownership
      *                            rules apply, with no additional state on the construction AST
+     * @param initializerBindings successful constant-initializer facts anchored to surviving source
+     *                            properties; no speculative clone nodes or contexts are retained
      */
     public record Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
                               List<StatementBlock> sourceTrees,
                               Map<InvocationExpression, InvocationBinding> callBindings,
                               Map<InvocationExpression, InvocationBinding.FunctionCall> functionBindings,
-                              Map<NewExpression, InvocationBinding> constructorBindings) {
+                              Map<NewExpression, InvocationBinding> constructorBindings,
+                              Map<PropertyDeclarationStatement, InitializerBinding> initializerBindings) {
         public Compilation {
             sourceTrees         = List.copyOf(sourceTrees);
             callBindings        = identitySnapshot(callBindings);
             functionBindings    = identitySnapshot(functionBindings);
             constructorBindings = identitySnapshot(constructorBindings);
+            initializerBindings = identitySnapshot(initializerBindings);
+        }
+
+        /** Retain hosts that supply constructor bindings without folded initializer facts. */
+        public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
+                           List<StatementBlock> sourceTrees,
+                           Map<InvocationExpression, InvocationBinding> callBindings,
+                           Map<InvocationExpression, InvocationBinding.FunctionCall> functionBindings,
+                           Map<NewExpression, InvocationBinding> constructorBindings) {
+            this(module, file, ast, sourceTrees, callBindings, functionBindings, constructorBindings, Map.of());
         }
 
         /** Retain hosts that supply method and function bindings. */
@@ -881,7 +896,7 @@ public class EmbeddingSupport {
         Compilation result() {
             var facts = bindings.finishFacts(ast == null ? List.of() : List.of(ast));
             return new Compilation(module, file, ast, sourceTrees, facts.methods(), facts.functions(),
-                    facts.constructors());
+                    facts.constructors(), facts.initializers());
         }
 
         /**

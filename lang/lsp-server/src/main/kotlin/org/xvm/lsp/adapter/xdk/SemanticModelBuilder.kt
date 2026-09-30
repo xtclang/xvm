@@ -304,6 +304,38 @@ private class SemanticModelBuilder(
             compilation.pool(),
             compilation.succeeded(),
         )
+        compilation.initializerBindings().forEach { (owner, binding) ->
+            binding.references().forEach { reference ->
+                val span = reference.span()
+                val at = location(owner.source, span.startPosition(), span.endPosition())
+                if (occurrences[at]?.symbol == null) {
+                    occurrences.remove(at)
+                    refer(reference.name(), at, reference.target(), reference.type())
+                }
+            }
+            binding.expressions().forEach { expression ->
+                val span = expression.span()
+                type(expression.type())?.let { resolved ->
+                    expressions[location(owner.source, span.startPosition(), span.endPosition())] =
+                        resolved
+                }
+            }
+            binding.calls().forEach { call ->
+                copyCall(
+                    owner.source,
+                    location(owner.source, call.span().startPosition(), call.span().endPosition()),
+                    location(
+                            owner.source,
+                            call.callee().startPosition(),
+                            call.callee().endPosition(),
+                        )
+                        .range,
+                    call.binding(),
+                    callableNodes[owner],
+                    call.construction(),
+                )
+            }
+        }
         compilation.constructorBindings().forEach { (node, binding) ->
             copyConstruction(node, binding)
         }
@@ -663,13 +695,43 @@ private class SemanticModelBuilder(
         node: InvocationExpression,
         binding: InvocationBinding,
     ) {
+        copyCall(
+            node.source,
+            location(node.source, node.startPosition, node.endPosition),
+            location(
+                    node.source,
+                    node.invokedExpression.startPosition,
+                    node.invokedExpression.endPosition,
+                )
+                .range,
+            binding,
+            caller(node),
+        )
+    }
+
+    private fun caller(node: AstNode): SymbolId? =
+        generateSequence(node.parent) { it.parent }
+            .firstOrNull {
+                it in callableNodes ||
+                    it is PropertyDeclarationStatement ||
+                    it is TypeCompositionStatement
+            }
+            ?.let(callableNodes::get)
+
+    private fun copyCall(
+        source: Source?,
+        site: SourceLocation,
+        callee: SemanticModel.Range,
+        binding: InvocationBinding,
+        caller: SymbolId?,
+        construction: Boolean = false,
+    ) {
         val method = binding.method().component as? MethodStructure ?: return
-        val selected = signature(method, binding.signature(), visibleOnly = true) ?: return
         val target = symbol(binding.method(), method.name, SymbolKind.METHOD) ?: return
         binding.arguments().forEach { argument ->
             val label = argument.label() ?: return@forEach
             val parameter = parameter(method, argument.parameterIndex()) ?: return@forEach
-            val at = location(node.source, label.startPosition(), label.endPosition())
+            val at = location(source, label.startPosition(), label.endPosition())
             occurrences[at] =
                 Occurrence(
                     at.range,
@@ -679,32 +741,32 @@ private class SemanticModelBuilder(
                     symbols[parameter]?.type,
                 )
         }
-        val site = location(node.source, node.startPosition, node.endPosition)
-        val callee = node.invokedExpression
+        // Synthetic shorthand constructors have compiler-proven identity, but no invented
+        // declaration.
+        if (
+            construction &&
+                symbols[target]?.declaration == null &&
+                !(method.isSynthetic && method.isShorthandConstructor)
+        )
+            return
+        val selected = signature(method, binding.signature(), visibleOnly = true) ?: return
         calls[site] =
             SemanticModel.CallSite(
                 range = site.range,
-                callee = location(node.source, callee.startPosition, callee.endPosition).range,
+                callee = callee,
                 method = target,
                 signature = selected,
                 arguments =
                     immutableList(
                         binding.arguments().map {
                             SemanticModel.CallArgument(
-                                location(node.source, it.startPosition(), it.endPosition()).range,
+                                location(source, it.startPosition(), it.endPosition()).range,
                                 it.parameterIndex(),
                                 it.named(),
                             )
                         }
                     ),
-                caller =
-                    generateSequence(node.parent) { it.parent }
-                        .firstOrNull {
-                            it in callableNodes ||
-                                it is PropertyDeclarationStatement ||
-                                it is TypeCompositionStatement
-                        }
-                        ?.let(callableNodes::get),
+                caller = caller,
             )
     }
 
@@ -728,52 +790,8 @@ private class SemanticModelBuilder(
         node: NewExpression,
         binding: InvocationBinding,
     ) {
-        val method = binding.method().component as? MethodStructure ?: return
-        val target = symbol(binding.method(), method.name, SymbolKind.METHOD) ?: return
-        binding.arguments().forEach { argument ->
-            val label = argument.label() ?: return@forEach
-            val parameter = parameter(method, argument.parameterIndex()) ?: return@forEach
-            val at = location(node.source, label.startPosition(), label.endPosition())
-            occurrences[at] =
-                Occurrence(
-                    at.range,
-                    label.name(),
-                    Role.REFERENCE,
-                    parameter,
-                    symbols[parameter]?.type,
-                )
-        }
-        // A synthetic shorthand constructor has a compiler-proven owner identity for rename
-        // proof, but no fabricated written declaration or source call-hierarchy target.
-        if (
-            symbols[target]?.declaration == null &&
-                !(method.isSynthetic && method.isShorthandConstructor)
-        )
-            return
-        val selected = signature(method, binding.signature(), visibleOnly = true) ?: return
         val at = location(node.source, node.startPosition, node.endPosition)
-        calls[at] =
-            SemanticModel.CallSite(
-                at.range,
-                at.range,
-                target,
-                selected,
-                binding.arguments().map {
-                    SemanticModel.CallArgument(
-                        location(node.source, it.startPosition(), it.endPosition()).range,
-                        it.parameterIndex(),
-                        it.named(),
-                    )
-                },
-                caller =
-                    generateSequence(node.parent) { it.parent }
-                        .firstOrNull {
-                            it in callableNodes ||
-                                it is PropertyDeclarationStatement ||
-                                it is TypeCompositionStatement
-                        }
-                        ?.let(callableNodes::get),
-            )
+        copyCall(node.source, at, at.range, binding, caller(node), construction = true)
     }
 
     private fun copyFunctionCall(
@@ -1308,9 +1326,24 @@ private class SemanticModelBuilder(
         usage: SemanticModel.Usage? = null,
     ) {
         if (token == null) return
-        val location = location(source, token.startPosition, token.endPosition)
+        refer(
+            token.valueText,
+            location(source, token.startPosition, token.endPosition),
+            target,
+            expressionType,
+            usage,
+        )
+    }
+
+    private fun refer(
+        name: String,
+        location: SourceLocation,
+        target: Argument?,
+        expressionType: TypeConstant?,
+        usage: SemanticModel.Usage? = null,
+    ) {
         if (location in occurrences) return
-        val symbol = symbol(target, token.valueText, kind(target))
+        val symbol = symbol(target, name, kind(target))
         // Failed name validation can leave a required/placeholder type on the expression.
         val type = if (symbol == null) null else type(expressionType) ?: symbols[symbol]?.type
         val access =
@@ -1321,7 +1354,7 @@ private class SemanticModelBuilder(
                 else -> null
             }
         occurrences[location] =
-            Occurrence(location.range, token.valueText, Role.REFERENCE, symbol, type, access)
+            Occurrence(location.range, name, Role.REFERENCE, symbol, type, access)
     }
 
     private fun symbol(
