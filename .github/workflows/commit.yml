@@ -401,7 +401,10 @@ jobs:
               uses: ./.github/actions/setup-xvm-project
               with:
                   setup-build: true
-                  cache-read-only: false
+                  # Only master writes the Gradle cache that PR runs restore from. Caches saved from
+                  # a PR ref are visible only to later runs of that same PR, and saving one cost
+                  # about 75 s of "Post Setup" per run.
+                  cache-read-only: ${{ github.ref != 'refs/heads/master' }}
                   enable-debug: false
 
             - name: Debug Environment (Windows)
@@ -476,10 +479,10 @@ jobs:
 
                 cwd_path=$(pwd)
                 echo "Executing primary Gradle build from: '$cwd_path'"
-                ls -la build/ 2>/dev/null && echo "Build directory exists - will be cleaned" || echo "✅ No previous build outputs"
+                # No clean: GitHub-hosted runners start from a fresh checkout with no build outputs,
+                # so `./gradlew clean` only cost a full configuration pass (about 50 s).
 
                 inspect_gradle_cache "before build"
-                ./gradlew $GRADLE_OPTIONS clean
 
                 if [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
                     echo "📦 Folding consumer Maven repository publication into the main CI build..."
