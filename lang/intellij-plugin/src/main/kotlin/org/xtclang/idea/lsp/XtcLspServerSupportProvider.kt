@@ -19,7 +19,6 @@ import java.net.URI
 import java.nio.file.Path
 import java.util.Properties
 import java.util.concurrent.atomic.AtomicBoolean
-import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.RemoteEndpoint
@@ -85,15 +84,6 @@ class XtcLanguageServerFactory : LanguageServerFactory {
                 )
             }
 
-            override fun initializeParams(params: InitializeParams) {
-                super.initializeParams(params)
-                // TODO LSP4IJ: 0.21.0 applies resolved action edits in an undo-transparent action,
-                // losing Redo. Negotiate eager edits until that native application path is fixed.
-                params.capabilities.textDocument?.codeAction?.resolveSupport?.let { resolve ->
-                    resolve.properties = resolve.properties.filterNot { it == "edit" }
-                }
-            }
-
             override fun <S : LanguageServer> createLauncherBuilder(): Launcher.Builder<S> =
                 object : DefaultLauncherBuilder<S>(this) {
                         private fun snapshot(uri: String): DocumentStartupMessages.Snapshot? {
@@ -118,7 +108,9 @@ class XtcLanguageServerFactory : LanguageServerFactory {
                         ): MessageConsumer {
                             val wrapped = super.wrapMessageConsumer(consumer)
                             return if (consumer is RemoteEndpoint)
-                                documents.incoming(diagnostics.incoming(wrapped))
+                                documents.incoming(
+                                    diagnostics.incoming(CodeActionMessages.incoming(wrapped))
+                                )
                             else documents.outgoing(diagnostics.outgoing(wrapped))
                         }
                     }

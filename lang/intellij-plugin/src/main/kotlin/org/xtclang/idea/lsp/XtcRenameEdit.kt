@@ -13,6 +13,7 @@ import com.redhat.devtools.lsp4ij.internal.CancellationSupport
 import java.net.URI
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
+import org.eclipse.lsp4j.CodeAction
 import org.eclipse.lsp4j.FileRename
 import org.eclipse.lsp4j.RenameFile
 import org.eclipse.lsp4j.RenameFilesParams
@@ -147,6 +148,32 @@ private constructor(
     }
 
     companion object {
+        /** A selected lazy action shares Rename's document epoch and undo-command safeguards. */
+        fun requestAction(
+            wrapper: LanguageServerWrapper,
+            action: CodeAction,
+        ): CompletableFuture<XtcRenameEdit?> =
+            ReadAction.computeBlocking<CompletableFuture<XtcRenameEdit?>, RuntimeException> {
+                val snapshot = capture(wrapper)
+                val cancellation = CancellationSupport()
+                val result =
+                    snapshot
+                        .flush()
+                        .thenCompose {
+                            cancellation.checkCanceled()
+                            cancellation.execute(
+                                snapshot.server.textDocumentService.resolveCodeAction(action)
+                            )
+                        }
+                        .thenApply { resolved ->
+                            resolved.edit?.let {
+                                XtcRenameEdit(snapshot, it, command = resolved.title)
+                            }
+                        }
+                result.whenComplete { _, _ -> if (result.isCancelled) cancellation.cancel() }
+                result
+            }
+
         private fun capture(wrapper: LanguageServerWrapper): Snapshot =
             Snapshot(
                 wrapper,
