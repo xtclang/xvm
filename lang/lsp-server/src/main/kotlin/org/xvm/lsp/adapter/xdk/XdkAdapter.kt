@@ -83,6 +83,11 @@ internal constructor(
         ) -> EmbeddingSupport.PartialAnalysis,
 ) : AbstractAdapter() {
     private val compiler = CompilerCalls(compileSource, compileTree, analyzeCursor)
+    private val formattingPreferences = AtomicReference<FormattingConfig?>()
+
+    override var editorFormattingConfig: FormattingConfig?
+        get() = formattingPreferences.get()
+        set(value) = formattingPreferences.set(value)
 
     internal constructor(
         compileSource: (Source, ErrorListener) -> EmbeddingSupport.Compilation,

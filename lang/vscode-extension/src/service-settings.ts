@@ -6,9 +6,9 @@ export interface ServiceSettings {
 }
 
 export function parseServiceSettings(raw: Record<string, unknown>): ServiceSettings {
-    const textSynchronization = raw.textSynchronization ?? 'full';
-    const saveFormatting = raw.saveFormatting ?? 'editor';
-    const inlayHints = raw.inlayHints ?? true;
+    const textSynchronization = raw.textSynchronization === undefined ? 'full' : raw.textSynchronization;
+    const saveFormatting = raw.saveFormatting === undefined ? 'editor' : raw.saveFormatting;
+    const inlayHints = raw.inlayHints === undefined ? true : raw.inlayHints;
     if (textSynchronization !== 'full' && textSynchronization !== 'incremental') {
         throw new Error('Text synchronization must be full or incremental');
     }
