@@ -187,8 +187,9 @@ internal object XdkLexical {
     /**
      * Absolute token tuples; semantic name bindings take precedence when the streams are merged.
      */
-    fun tokens(text: String): List<List<Int>> =
-        lex(text).orEmpty().flatMap { token ->
+    fun tokens(text: String): List<List<Int>> {
+        val lines = text.split(newlines)
+        return lex(text).orEmpty().flatMap { token ->
             val kind =
                 when {
                     token.id in comments -> "comment"
@@ -202,7 +203,6 @@ internal object XdkLexical {
 
                     else -> return@flatMap emptyList()
                 }
-            val lines = text.split(newlines)
             (token.range.start.line..token.range.end.line).mapNotNull { line ->
                 val start = if (line == token.range.start.line) token.range.start.column else 0
                 val end =
@@ -218,6 +218,7 @@ internal object XdkLexical {
                     )
             }
         }
+    }
 
     private fun lex(text: String): List<Span>? {
         val errors = ErrorList()
@@ -230,12 +231,15 @@ internal object XdkLexical {
                 return null
             }
         if (errors.hasSeriousErrors()) return null
+        // Index this immutable source once. Scanning all line breaks for every token makes even
+        // resource detection quadratic in file size, before compilation has started.
+        val lineStarts = listOf(0) + newlines.findAll(text).map { it.range.last + 1 }.toList()
         return tokens.map { token ->
             fun position(value: Long) =
                 Position(Source.calculateLine(value), Source.calculateOffset(value))
             val range = Range(position(token.startPosition), position(token.endPosition))
-            val start = offset(text, range.start)
-            val end = offset(text, range.end)
+            val start = lineStarts[range.start.line] + range.start.column
+            val end = lineStarts[range.end.line] + range.end.column
             Span(token.id, range, start, end, text.substring(start, end))
         }
     }
