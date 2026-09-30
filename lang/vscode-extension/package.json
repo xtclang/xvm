@@ -265,23 +265,18 @@
         "@types/node": "~22.15.35",
         "@types/vscode": "1.101.0",
         "@vscode/test-electron": "^3.1.0",
-        "@vscode/vsce": "^3.9.2",
+        "@vscode/vsce": "^4.0.0",
         "esbuild": "^0.28.2",
         "eslint": "^10.11.0",
         "glob": "^13.0.6",
-        "mocha": "^11.8.0",
+        "mocha": "^12.0.2",
         "sharp": "^0.35.4",
         "typescript": "^6.0.3",
         "typescript-eslint": "^8.70.1"
     },
     "overrides": {
         "diff": "^8.0.3",
-        "form-data": "^4.0.6",
         "js-yaml": "^4.3.2",
-        "linkify-it": "^5.0.2",
-        "markdown-it": "^14.3.1",
-        "serialize-javascript": "^7.0.5",
-        "tmp": "^0.2.7",
-        "undici": "^7.29.1"
+        "serialize-javascript": "^7.0.5"
     }
 }
