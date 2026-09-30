@@ -1063,3 +1063,17 @@ These are selected runs, not a new full 126-case receipt. Unsupported generated/
 dispatch fixtures and native multi-root/racing-settings acceptance remain explicit gaps.
 The later [structural checkpoint](errs-integration-plan.md#next-checkpoint-isolate-partial-ast-syntax)
 implements the bounded four-node `ast.partial` move and documents why semantic helpers remain in `ast`.
+
+
+## Editor settings audit (2026-09-30)
+
+The UI1–UI7 batch found an unused VS Code `inlayHintsEnabled` initialization field, missing live
+formatting notifications, inert legacy tab-width/line-width controls, and unguarded ordering of
+formatting configuration replies. Inlays now use native provider filtering; formatting changes
+notify the existing connection; a revisioned immutable formatter state rejects stale/invalid replies.
+
+IntelliJ LSP4IJ 0.21.0 has `didSave` but no native `willSaveWaitUntil` implementation. The plugin
+explicitly disables server-save selection and uses native Actions on Save. VS Code supports server
+save edits and suppresses that hook when native formatting owns the current document's save.
+Settings-only project overrides were also checked against inherited compiler graphs, so preference
+changes cannot steal source graph ownership. Combined validation follows the five local commits.
