@@ -137,9 +137,10 @@ class WorkspaceIndexer(
      * re-indexes from the provided content.
      */
     fun reindexFile(
-        uri: String,
+        sourceUri: String,
         content: String,
     ) {
+        val uri = canonicalUri(sourceUri)
         val symbols =
             synchronized(parseLock) {
                 if (closed.get()) return
@@ -150,7 +151,8 @@ class WorkspaceIndexer(
     }
 
     /** Remove all symbols for a file (e.g., when it's deleted). */
-    fun removeFile(uri: String) {
+    fun removeFile(sourceUri: String) {
+        val uri = canonicalUri(sourceUri)
         synchronized(parseLock) {
             if (closed.get()) return
             revisions[uri] = Revision(open = false)
@@ -166,7 +168,8 @@ class WorkspaceIndexer(
     }
 
     /** Closing an unsaved buffer restores the current disk file, or removes an absent file. */
-    fun closeDocument(uri: String) {
+    fun closeDocument(sourceUri: String) {
+        val uri = canonicalUri(sourceUri)
         synchronized(parseLock) {
             if (closed.get()) return
             revisions[uri] = Revision(open = false)
@@ -175,8 +178,13 @@ class WorkspaceIndexer(
         refreshFile(uri)
     }
 
+    private fun canonicalUri(uri: String): String =
+        URI.create(uri).let {
+            if (it.scheme == "file") Path.of(it).normalize().toUri().toString() else uri
+        }
+
     private fun indexFile(path: Path) {
-        val uri = path.toUri().toString()
+        val uri = path.normalize().toUri().toString()
         val revision =
             synchronized(parseLock) {
                 if (closed.get() || revisions[uri]?.open == true) return
