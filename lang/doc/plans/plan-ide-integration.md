@@ -841,3 +841,9 @@ tooltips expose compiler-derived declaration/call signatures. IntelliJ now resol
 code action through a client command and version-checks its edit in a normal undo command,
 working around LSP4IJ's undo-transparent application. X105/X122/X127 and new shared X131 are
 the acceptance gates; earlier eager-action receipts do not validate this change.
+
+Editor settings follow-up: [UI1–UI7](../../../docs/errs-integration-plan.md#editor-configuration-and-feature-controls-ui1ui7)
+now tracks the full settings inventory, common scope/precedence semantics, Community IntelliJ
+pages, VS Code native Settings and commands, live/restart behavior, effective capability/status
+views and shared acceptance. L72 incremental transport/save options are currently initialization
+options only, not plugin preferences. Formatting-on-save must have one owner to avoid duplicate edits.
