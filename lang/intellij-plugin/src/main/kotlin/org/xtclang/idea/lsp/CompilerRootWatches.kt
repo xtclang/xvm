@@ -79,6 +79,9 @@ internal class CompilerRootWatches(
                     val pattern = watcher.globPattern
                     runCatching {
                         if (pattern.isRight) {
+                            // Flat ancestor watches are handled by LSP4IJ. Only own recursive
+                            // compiler roots here; never recursively refresh a broad ancestor.
+                            if (pattern.right.pattern != "**/*") return@mapNotNull null
                             val base = pattern.right.baseUri
                             Path.of(URI(if (base.isLeft) base.left.uri else base.right))
                         } else {
