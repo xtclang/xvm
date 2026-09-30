@@ -241,4 +241,46 @@ export function platformCases(): void {
         assert.strictEqual(document.getText(), data.source);
     });
 
+    playbook('X133', async (workspace, data) => {
+        await workspace.write(data.file, data.source);
+        await workspace.configure([{ name: data.module, uri: workspace.uri(data.file).toString() }]);
+        const document = await workspace.open(data.file);
+        await noErrors(document.uri);
+        const linked = async (anchor: string) => client().sendRequest<import('vscode-languageclient/node').LinkedEditingRanges>('textDocument/linkedEditingRange', {
+            textDocument: { uri: document.uri.toString() }, position: document.positionAt(document.getText().indexOf(anchor))
+        });
+        const result = await linked(data.anchor);
+        assert.deepStrictEqual(result.ranges.map(range => document.offsetAt(new vscode.Position(range.start.line, range.start.character))), data.uses.map((anchor: string) => data.source.indexOf(anchor)));
+        for (const anchor of data.refused) assert.strictEqual((await linked(anchor)).ranges?.length ?? 0, 0);
+        await workspace.replace(document, data.broken);
+        await diagnostics(document.uri, values => values.length > 0, 'Broken source');
+        assert.strictEqual((await linked(data.anchor)).ranges?.length ?? 0, 0);
+        await workspace.replace(document, data.source);
+        await noErrors(document.uri);
+        assert.strictEqual((await linked(data.anchor)).ranges.length, 2);
+    });
+
+    playbook('X134', async (workspace, data) => {
+        const external = await fs.mkdtemp(path.join(os.tmpdir(), 'xtc-playbook-source-'));
+        try {
+            const library = path.join(external, data.libraryFile);
+            await fs.writeFile(library, data.library);
+            await workspace.write(data.file, data.consumer);
+            await workspace.configure([
+                { name: data.libraryModule, uri: vscode.Uri.file(library).toString() },
+                { name: data.module, uri: workspace.uri(data.file).toString(), dependencies: [data.libraryModule] }
+            ]);
+            const document = await workspace.open(data.file);
+            await noErrors(document.uri);
+            await fs.writeFile(library, data.brokenLibrary);
+            await diagnostics(document.uri, values => values.length > 0, 'External source changed');
+            await fs.writeFile(library, data.library);
+            await noErrors(document.uri);
+            await fs.rm(library);
+            await diagnostics(document.uri, values => values.length > 0, 'External source deleted');
+            await fs.writeFile(library, data.library);
+            await noErrors(document.uri);
+        } finally { await workspace.configure([]); await fs.rm(external, { recursive: true, force: true }); }
+    });
+
 }
