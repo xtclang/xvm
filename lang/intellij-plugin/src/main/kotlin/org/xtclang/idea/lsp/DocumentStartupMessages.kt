@@ -18,6 +18,8 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
  * behind that open, and bind folding responses to the requesting editor incarnation. State belongs
  * to one transport and uses the client's existing versions and document identities.
  */
+// TODO LSP4IJ: serialize didOpen/change/close and reject folding responses for retired editors.
+// Remove this transport bridge once upstream passes startup typing and close/reopen regressions.
 internal class DocumentStartupMessages(private val snapshot: (String) -> Snapshot?) {
     data class Snapshot(
         val owner: Any,

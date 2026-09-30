@@ -5,7 +5,11 @@ import com.google.gson.JsonParser
 import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Project
+import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.singleProject
+import com.intellij.driver.sdk.ui.components.elements.button
+import com.intellij.driver.sdk.ui.components.elements.dialog
+import com.intellij.driver.sdk.ui.ui
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.time.Duration.Companion.seconds
@@ -336,10 +340,74 @@ internal fun ParityScenarios.platformCases() {
             refresh()
         }
     }
+    case("X130") { data ->
+        data["files"].rows().forEach { write(it.string("file"), it.string("text")) }
+        val target = Files.createDirectories(directory.resolve(data.string("destination")))
+        refresh(target)
+        val root = with(driver) { Path.of(singleProject().getBasePath()) }
+        with(driver) { changeWorkspaceFolders(root, directory) }
+        configure(null)
+        try {
+            val document = open(data.string("consumer"))
+            clean(document)
+            with(driver) {
+                withContext(OnDispatcher.EDT) {
+                    utility(FileTreeOperations::class)
+                        .move(
+                            singleProject(),
+                            data.strings("sources").map { directory.resolve(it).toString() },
+                            target.toString(),
+                        )
+                }
+                val dialog = ui.dialog(title = "Move Ecstasy Sources")
+                awaitUi("native Move dialog", 45.seconds) { dialog.present() }
+                withContext(OnDispatcher.EDT) {
+                    cast(dialog.button("Refactor").component, NativeButton::class).doClick()
+                }
+                fun moved(expected: Boolean) =
+                    data.strings("sources").all {
+                        Files.exists(target.resolve(it)) == expected &&
+                            Files.exists(directory.resolve(it)) != expected
+                    }
+                awaitUi("all selected containers moved", 45.seconds) { moved(true) }
+                clean(document)
+                listOf("\$Undo" to false, "\$Redo" to true).forEach { (action, expected) ->
+                    focusEditor(document.editor)
+                    invokeAction(action, now = false, component = document.editor.component)
+                    awaitUi("one $action restores all container paths", 45.seconds) {
+                        val confirm = ui.dialog(title = if (expected) "Redo" else "Undo")
+                        if (confirm.present())
+                            withContext(OnDispatcher.EDT) {
+                                cast(
+                                        confirm.button(if (expected) "Redo" else "Undo").component,
+                                        NativeButton::class,
+                                    )
+                                    .doClick()
+                            }
+                        moved(expected)
+                    }
+                    clean(document)
+                }
+            }
+            data["files"].rows().forEach { file ->
+                val original = file.string("file")
+                val moved =
+                    if (data.strings("sources").any { original.startsWith("$it/") })
+                        "${data.string("destination")}/$original"
+                    else original
+                check(Files.readString(directory.resolve(moved)) == file.string("text"))
+            }
+        } finally {
+            configure(emptyList())
+            with(driver) { changeWorkspaceFolders(directory, root) }
+        }
+    }
 }
 
 @Remote("org.xtclang.idea.playbook.probe.FileTreeOperations", plugin = "org.xtclang.playbook.probe")
 interface FileTreeOperations {
+    fun move(project: Project, paths: List<String>, destination: String)
+
     fun rename(project: Project, path: String)
 
     fun loadDirectory(path: String)
