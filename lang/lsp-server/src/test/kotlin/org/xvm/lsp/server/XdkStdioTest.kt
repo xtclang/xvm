@@ -6,6 +6,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Properties
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
@@ -44,6 +45,7 @@ import org.eclipse.lsp4j.InlayHintParams
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.ProgressParams
 import org.eclipse.lsp4j.PublishDiagnosticsCapabilities
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.Range
@@ -73,9 +75,11 @@ import org.eclipse.lsp4j.TypeHierarchySupertypesParams
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WillSaveTextDocumentParams
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
+import org.eclipse.lsp4j.WorkspaceDiagnosticParams
 import org.eclipse.lsp4j.WorkspaceEditCapabilities
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
+import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.lsp4j.services.LanguageClient
@@ -98,6 +102,46 @@ class XdkStdioTest {
     }
 
     @TempDir lateinit var directory: Path
+
+    @Test
+    fun `partial references and workspace diagnostics cross the packaged transport without duplicate final items`(
+        @TempDir directory: Path
+    ) {
+        Session(packagedJar(), directory).use { session ->
+            session.initialize(pullDiagnostics = true)
+            val source = "module Stdio { Int value = 1; Int copy = value; Int run() = value; }"
+            session.open(source)
+            val params =
+                ReferenceParams(
+                        TextDocumentIdentifier(URI),
+                        Position(0, source.lastIndexOf("value")),
+                        ReferenceContext(true),
+                    )
+                    .apply { partialResultToken = Either.forLeft("references") }
+            assertThat(session.await(session.server.textDocumentService.references(params)))
+                .isEmpty()
+            val references =
+                session.progress
+                    .filter { it.token.left == "references" }
+                    .flatMap { Gson().toJsonTree(it.value.right).asJsonArray.toList() }
+            assertThat(references).hasSize(3)
+            assertThat(references.map { it.asJsonObject["uri"].asString }).containsOnly(URI)
+            val diagnostics =
+                WorkspaceDiagnosticParams().apply { partialResultToken = Either.forRight(17) }
+            assertThat(session.await(session.server.workspaceService.diagnostic(diagnostics)).items)
+                .isEmpty()
+            val reports =
+                session.progress
+                    .filter { it.token.isRight && it.token.right == 17 }
+                    .flatMap {
+                        Gson().toJsonTree(it.value.right).asJsonObject["items"].asJsonArray.toList()
+                    }
+            assertThat(reports).hasSize(1)
+            assertThat(reports.single().asJsonObject["uri"].asString).isEqualTo(URI)
+            assertThat(reports.single().asJsonObject["items"].asJsonArray).isEmpty()
+            session.shutdownAndExit()
+        }
+    }
 
     @Test
     fun `packaged transport rejects requests outside the initialized lifecycle`() {
@@ -1469,6 +1513,7 @@ class XdkStdioTest {
             } ?: directory.resolve(".xtc/logs")
         private val stderr = directory.resolve("stderr.log")
         private val published = LinkedBlockingQueue<PublishDiagnosticsParams>()
+        val progress = CopyOnWriteArrayList<ProgressParams>()
         private val executor = Executors.newVirtualThreadPerTaskExecutor()
         private val process =
             ProcessBuilder(
@@ -1492,6 +1537,10 @@ class XdkStdioTest {
             object : LanguageClient {
                 override fun publishDiagnostics(params: PublishDiagnosticsParams) {
                     published.add(params)
+                }
+
+                override fun notifyProgress(params: ProgressParams) {
+                    progress.add(params)
                 }
 
                 override fun telemetryEvent(value: Any?) = Unit
