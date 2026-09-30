@@ -1,6 +1,9 @@
-Current work: L80/L81 protocol hardening, X140/X141 shared acceptance (146 scenarios), plus a
-mutable-state/deprecated-API audit requested during implementation. Validation of this batch is
-pending; the previous checkpoint receipts below remain unchanged.
+Current checkpoint: L80/L81 protocol hardening and mutable-state/deprecated-API audit. Shared
+X136/X137/X140/X141 pass in both editors (146-scenario catalog), plus IntelliJ startup with zero
+IDE errors. Packaged transport passes 73 tests and IntelliJ unit tests pass 74; the full backend
+run and focused fixture corrections are detailed in the [protocol validation record](errs-integration-plan.md#protocol-hardening-batch-l80l81-2026-09-30).
+L80/L81 retain broader protocol work, and new L83 tracks missing constant-folded property-initializer
+semantic facts. Three remaining concurrency investigations are explicit in [the audit](errs-audit.md#mutable-state-and-deprecated-api-audit-2026-09-30-checkpoint).
 
 # Threading `errs` through the compiler
 
