@@ -32,6 +32,18 @@ class ModuleInfoTest {
     // ----- Helper methods ------------------------------------------------------------------------
 
     /**
+     * Returns a path inside a sibling XDK project. Tests run from the javatools project directory
+     * and those sources are part of every checkout, so a missing path means the repository layout
+     * changed; fail instead of letting the test pass without checking anything.
+     */
+    private static File siblingProjectPath(String relativePath) {
+        var file = new File(relativePath);
+        assertTrue(file.exists(), () -> "Missing " + file.getAbsolutePath()
+                + " (expected in the repository checkout, relative to the javatools project directory)");
+        return file;
+    }
+
+    /**
      * Sets a file's modification time to one year in the past.
      */
     private void setTimestampOneYearAgo(File file) {
@@ -773,10 +785,7 @@ class ModuleInfoTest {
      */
     @Test
     void testGetSourceTreeWithRealNetModule() {
-        var netSourceFile = new File("../lib_net/src/main/x/net.x");
-        if (!netSourceFile.exists()) {
-            return;
-        }
+        var netSourceFile = siblingProjectPath("../lib_net/src/main/x/net.x");
 
         var info = new ModuleInfo(netSourceFile, false);
         var errs = new ErrorList(1000);
@@ -799,10 +808,7 @@ class ModuleInfoTest {
      */
     @Test
     void testGetSourceTreeWithRealJsonModule() {
-        var jsonSourceFile = new File("../lib_json/src/main/x/json.x");
-        if (!jsonSourceFile.exists()) {
-            return;
-        }
+        var jsonSourceFile = siblingProjectPath("../lib_json/src/main/x/json.x");
 
         var info = new ModuleInfo(jsonSourceFile, false);
         var errs = new ErrorList(1000);
@@ -820,10 +826,7 @@ class ModuleInfoTest {
      */
     @Test
     void testGetSourceTreeWithRealWebModule() {
-        var webSourceFile = new File("../lib_web/src/main/x/web.x");
-        if (!webSourceFile.exists()) {
-            return;
-        }
+        var webSourceFile = siblingProjectPath("../lib_web/src/main/x/web.x");
 
         var info = new ModuleInfo(webSourceFile, false);
         var errs = new ErrorList(1000);
@@ -835,12 +838,11 @@ class ModuleInfoTest {
         assertNotNull(node);
         assertFalse(errs.hasSeriousErrors(), "Parse errors: " + errs);
 
-        if (info.isSourceTree()) {
-            assertInstanceOf(ModuleInfo.DirNode.class, node);
-            var dirNode = (ModuleInfo.DirNode) node;
-            assertNotNull(dirNode.sourceNode());
-            assertNotNull(dirNode.children());
-        }
+        assertTrue(info.isSourceTree(), "lib_web has a web/ directory beside web.x");
+        assertInstanceOf(ModuleInfo.DirNode.class, node);
+        var dirNode = (ModuleInfo.DirNode) node;
+        assertNotNull(dirNode.sourceNode());
+        assertNotNull(dirNode.children());
     }
 
     /**
@@ -848,10 +850,7 @@ class ModuleInfoTest {
      */
     @Test
     void testModuleInfoDeduceWithRealProject() {
-        var projectDir = new File("../lib_net");
-        if (!projectDir.exists()) {
-            return;
-        }
+        var projectDir = siblingProjectPath("../lib_net");
 
         var info = new ModuleInfo(projectDir, true);
         assertEquals("net.xtclang.org", info.getQualifiedModuleName());
