@@ -1182,3 +1182,29 @@ an open buffer. Compilation indexes open buffers during initial scanning too. Cl
 the current disk contents (or removes a deleted/untitled file), while reopening invalidates an
 outstanding close read. Controlled read barriers cover these interleavings. No additional parser
 or AST locks are introduced. Validation is batched with the remaining follow-ups.
+
+### L80 wire-format and edit application audit
+
+- Completion kinds now fall back to the advertised set; completions explicitly use plain text.
+  No snippet, insert/replace, annotation or draft snippet-edit payloads are emitted.
+- Code-action literals require negotiation; preferred metadata requires its own capability.
+  `context.only` matches descendants and the empty root kind. The protocol explicitly lets literal
+  clients handle unknown kinds gracefully; their `valueSet` is not an action suppression list.
+- Legacy command clients with `workspace.applyEdit` get one-use bounded action handles. Execution
+  checks the connection's diagnostic revision before sending an edit, rejects replay/stale handles,
+  handles client refusal and bounds the reply. Clients supporting neither form get no action provider.
+- Resource renames require `documentChanges` and the rename resource operation. Text edits precede
+  moves, never overwrite destinations, and never degrade into unversioned edits. The client owns
+  its advertised `failureHandling` policy (abort/transactional/text-only-transactional/undo); the
+  server does not assume an edit succeeded or update its source graph on proposal. File/document
+  notifications remain authoritative. No server rollback guarantee is implied.
+- Diagnostics/symbols currently emit no tags; no tag capability is needed until producers add them.
+  Location results remain ordinary locations, valid with or without location-link support.
+- IntelliJ selected lazy actions and native Rename/Move use `XtcRenameEdit` snapshots, checked in
+  the write command. Generic server-initiated `workspace/applyEdit` still uses LSP4IJ's unchecked
+  version path; its document synchronizer exposes no public version accessor. Current IntelliJ
+  flows do not use that path, and the new legacy command route is not negotiated by literal clients.
+  A `TODO LSP4IJ:` now records this remaining boundary in `XtcLanguageClient`. Do not claim generic
+  server-initiated native edit acceptance from the existing rename/action tests.
+
+Regressions and updated realistic client fixtures are included; execution remains batched.
