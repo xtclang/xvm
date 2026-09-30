@@ -1,26 +1,20 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has 139 scenarios. X130 adds batch container Move/Undo/Redo and X131
-adds the remaining resolve operations. X132 adds multiple-range formatting and negotiated save hooks, X133 linked editing, and X134 external source watching; their first runs are pending. The L69–L71/PLAT2c batch passes the ten selected cases
-CFG2/X105/X118/X122/X124–X129 in both hosts across focused runs. IntelliJ's final receipts are
-`run-8616709537315408794` (eight cases) and `run-431060674485649448` (X124/X128), both with zero
-IDE errors. VS Code's receipts are `run-KEzKf8` (six cases) and `run-AW9amt` (four cases).
-These are selected checks, not a new full 134-case run. See the
-[batch record](../../docs/errs-integration-plan.md#next-implementation-batch-l69l71--plat2c-2026-09-29)
-for the rename deadlock fix, native file Rename preflight and eager action-edit compatibility.
-Those X124 receipts used explicit VFS refresh. The strengthened X124 now creates a missing,
-unopened nested root, repairs/deletes its resource, then replaces the configured root, with no
-manual native refresh. Automatic watch ownership is implemented; the new acceptance run is pending. The older receipts below cover the preceding
-128-case catalog. The
-[2026-09-29 IntelliJ demo record](../../docs/errs-integration-plan.md#native-intellij-demo-continuation-2026-09-29)
-tracks the full selection, resumed cases, failures and focused corrections separately. Historical
-113-case full-run receipts below are preserved as historical evidence. All 128 scenarios plus START
-have passing native receipts across resumed runs. The final X105/X122/X123 recheck verifies the
-diagnostic result-ID correction restores native import quick fixes. This is not one uninterrupted
-full-suite checkpoint. VS Code 1.139.1 passes all 128 cases in one complete run, `run-b59XBq`, after
-correcting X60's source/resource invalidation and sorting the X77/X78 literal expectations.
-IntelliJ `run-5742519770640114134` rechecks the final code with START and
-X60/X77/X78/X105/X122/X123: all pass, with zero IDE errors.
+The current catalog has 140 scenarios. This batch adds X130 batch Move/Undo/Redo, X131 lazy
+resolvers, X132 save/range formatting, X133 linked editing, X134 external source watching and X135
+server-log show/hide. X124 now exercises missing external roots without manual refresh.
+VS Code passes all 19 selected cases across `run-iGx1M2` (18) and `run-YMDUeW` (corrected X130).
+IntelliJ `run-17174738471798629344` passes START and 18 selected cases with zero IDE errors;
+X130 then passes in `run-1746762976235942700` with START and zero IDE errors. These are selected receipts, not a full 140-case checkpoint.
+The [current acceptance record](../../docs/errs-integration-plan.md#watcher-move-and-log-view-acceptance-follow-up-2026-09-30)
+keeps failed runs, corrections and manual limits visible.
+
+Earlier L69–L71/PLAT2c receipts used explicit VFS refresh for X124 and eager IntelliJ action edits;
+the current automatic watch ownership and undo-aware lazy-action bridge supersede those paths.
+The [2026-09-29 demo record](../../docs/errs-integration-plan.md#native-intellij-demo-continuation-2026-09-29)
+retains the preceding 128-case selection and its resumed/focused receipts. All 128 cases plus START
+have passing native receipts across those runs, with zero IDE errors; VS Code `run-b59XBq` passes
+all 128 in one run. Historical 113-case full-run receipts below remain historical evidence.
 
 L64 expands shared X97 to 24 variants and X108 to 13. The additions accept compiler-validated
 `0`, empty-string, `True` and `Null` arguments and recursive written formal names. Both drivers
@@ -147,7 +141,7 @@ Scope: `9f2c5ae8c` (external watches), `c748f9831` (native moves), `3888c15f2`
 (resolve/action application), `448b7f8a1` (save/sync/ranges), `19ba6422d` (labels and upstream
 markers), and the planned settings work in `4ccbda4d9`. Read the result as a checklist, not a
 passing receipt. Backend, protocol and native UI evidence are separate. The current catalog has
-139 shared scenarios; X130–X132 are added by this batch, and X124 has stronger assertions.
+140 shared scenarios; X130–X135 are added by this batch, and X124 has stronger assertions.
 
 Run in a disposable compiler-mode workspace using the build/run instructions below. Keep user
 projects out of destructive move/rename tests. For each editor record commit, catalog hash, selected
@@ -157,15 +151,15 @@ or Undo against an already modified fixture.
 
 | Check | Exact exercise and required result | Existing automation / remaining evidence |
 | --- | --- | --- |
-| External resource creation | Run X124 with the editor continuously focused. Create missing `generated/assets` and the resource from an external terminal; delete/recreate it, then switch to a missing replacement root. Problems must update without opening those folders or invoking Refresh. | Strengthened X124 in both drivers; first execution pending. |
-| External source changes | Put `Library.x` outside the workspace, configure Library and a local Consumer explicitly, open only Consumer, then change Library's return type on disk from Int to String and back. Problems must appear/clear and Definition must still find Library. Repeat after deleting/recreating the external source directory. | New X134 in both drivers covers unopened external sources, edit, delete and recreate; first execution pending. Directory deletion/recreation remains an additional manual check. |
+| External resource creation | Run X124 with the editor continuously focused. Create missing `generated/assets` and the resource from an external terminal; delete/recreate it, then switch to a missing replacement root. Problems must update without opening those folders or invoking Refresh. | Strengthened X124 passes in both drivers without manual refresh. |
+| External source changes | Put `Library.x` outside the workspace, configure Library and a local Consumer explicitly, open only Consumer, then change Library's return type on disk from Int to String and back. Problems must appear/clear and Definition must still find Library. Repeat after deleting/recreating the external source directory. | X134 passes in both drivers for unopened external source edit, delete and recreation. Directory deletion/recreation remains an additional manual check. |
 | Watch ownership and idle work | Configure two modules sharing an external root. Remove one, verify the other still updates; replace the last reference, then edit the retired root. Close/reopen the project and restart the server. Verify no obsolete diagnostic publication, duplicate subscription, growing server-process count or repeated idle compiler jobs. | Lease/coalescing/disposal unit tests; manual lifecycle/idle observation still required. A scheduled VFS refresh is not itself a compilation. |
-| Batch container move | Run X130: select both module containers, move them into `destination`, keep members/resources closed, verify the consumer, then Undo once and Redo once. All paths and bytes must match the shared fixture in each state. | X130 in both drivers; IntelliJ drives native Move. VS Code applies resource edits; Explorer drag/drop is a separate manual check. |
-| Single-file and package moves | Run X128's file/package Rename and X118's container move. Also move one source to an existing sibling directory through native Move; verify references, resources and one Undo/Redo. | X118/X128 shared; extra cross-directory single-file UI exercise remains manual. |
+| Batch container move | Run X130: select both module containers, move them into `destination`, keep members/resources closed, verify the consumer, then Undo once and Redo once. All paths and bytes must match the shared fixture in each state. | X130 passes in both drivers; IntelliJ drives native Move with project Undo/Redo and VS Code drives Explorer batch Cut/Paste with its Undo/Redo. Explorer drag/drop is a separate manual check. |
+| Single-file and package moves | Run X128's file/package Rename and X118's explicit-graph module rename. Also move one source to an existing sibling directory through native Move; verify references, resources and one Undo/Redo. | X118/X128 shared; extra cross-directory single-file UI exercise remains manual. |
 | Collision and invalid destinations | Repeat Move with an existing file, existing directory, missing destination parent, target inside its own source, overlapping parent/child selection and duplicate target names. Cancel the dialog. Each rejected/canceled operation must leave every source, setting and path unchanged. | `FileMoveTargetsTest` covers filesystem validation; dialog/error presentation and cancellation still need manual checks. |
 | Source changes during proof | Start a move/rename on a larger fixture, edit an affected open buffer or create a destination collision while proof is pending, or cancel the operation. A stale result must not overwrite the new text/path. The next fresh operation must work. | Existing snapshot/epoch regressions and X57/X118; move-specific concurrent timing is not claimed by X130. Use tracing or deterministic backend barriers when the race cannot be reproduced manually. |
 | Deliberately refused operations | Try explicit-graph module relocation and a cross-package move requiring qualification changes; also try a read-only bundled-library declaration. Verify the reason, unchanged files/settings and responsive IDE. | Existing refusal tests/X101 and manual checks. Normal LSP null responses cannot veto arbitrary host file moves; compiler preflight claims apply to registered native actions. |
-| Lazy action listing and application | Run X105, X122 and X127. Opening/canceling intentions or resolving an action must not edit the document. Selecting the import/cleanup action must clear the intended diagnostic; one Undo and Redo must restore exact text and Problems. | Shared cases exercise the installed clients; IntelliJ's newly restored lazy-action path must pass again. |
+| Lazy action listing and application | Run X105, X122 and X127. Opening/canceling intentions or resolving an action must not edit the document. Selecting the import/cleanup action must clear the intended diagnostic; one Undo and Redo must restore exact text and Problems. | Shared cases pass in both installed clients, including IntelliJ lazy-action application and Undo/Redo. |
 | Other lazy resolvers | Run X131, then inspect the native Run lens, comment URL, inferred type/parameter inlays and workspace symbol navigation. Initial/deferred properties must agree, positions and command arguments survive, and source edits invalidate old handles. | X131 is protocol acceptance. Existing feature UI scenarios cover presentation; it is not evidence that a tooltip/popup was displayed for every resolved property. |
 | Resolver lifetime | Resolve handles after a dependency/configuration change, close/reopen or server restart; send a foreign/evicted handle through a protocol test. Require a stale/invalid response, no stale edit and no leaked graph retained by handles. Eager clients must still receive complete payloads. | Resolve-store/service regressions; X127/X131 cover source-edit expiration only. Inspect test coverage before counting the other transitions complete. |
 | Normal save and formatting | Run X132, save a dirty file and verify disk/Problems; exercise whole-file, selection and on-type formatting with editor preferences both enabled and disabled. Saving must not unexpectedly reformat or block behind compilation. | X132 checks overlapping/disjoint range responses and negotiated default save hooks; existing formatting scenarios cover normal UI. Native save-on-large-compilation remains a manual responsiveness check. |
@@ -292,7 +286,7 @@ log file: /Users/you/.xtc/logs/lsp-server.log
 
 The `backend:` line is the answer:
 - `backend: Tree-sitter` - tree-sitter is active
-- `backend: XTC Compiler` - the real compiler is active
+- `backend: Ecstasy Compiler` - the real compiler is active
 - `backend: Mock` - mock adapter is active
 - `backend: Mock` **together with** `tree-sitter was requested but failed to initialize` -
   tree-sitter was asked for and fell back. The two lines together are the fallback; the `backend:`
@@ -750,8 +744,15 @@ assignment target receives WRITE. Use X41 for the compiler-specific expectations
 ### 13. Document Formatting
 
 **LSP Method:** `textDocument/formatting` + `textDocument/rangeFormatting`
-**Status:** ✅ Done
-**Works with:** Both adapters
+**Status:** Implemented with bounded formatting rules; not a complete style formatter.
+**Works with:** Tree-sitter and compiler adapters (Mock only cleans whitespace).
+
+Compiler mode uses the Java compiler lexer to indent brace blocks and parenthesis/bracket
+continuations, trim trailing whitespace and optionally insert the final newline. It preserves
+multiline literals/comments and refuses edits if lexing fails or the token stream would change.
+It does not normalize operator spacing, align declarations, wrap long expressions, reorder code,
+or implement every Ecstasy layout convention. `maxLineWidth` is not a wrapping implementation.
+Range and save-time requests use these same rules. See X102/X107/X132 and the adapter matrix.
 
 **How to trigger (full document):**
 - *IntelliJ:* Ctrl+Alt+L (Reformat Code)
@@ -766,7 +767,7 @@ assignment target receives WRITE. Use X41 for the compiler-specific expectations
 | 13.1 | Remove trailing whitespace | Add spaces at end of a line, format | Trailing whitespace removed |
 | 13.2 | Insert final newline | Remove final newline from file, format | Final newline added |
 | 13.3 | Range format | Select 2-3 lines with trailing spaces, format selection | Only selected lines cleaned |
-| 13.4 | No-op on clean file | Format a file with no trailing whitespace | No changes |
+| 13.4 | No-op on clean file | Format a correctly indented file with no trailing whitespace and the configured final newline | No changes |
 
 ---
 
@@ -774,11 +775,12 @@ assignment target receives WRITE. Use X41 for the compiler-specific expectations
 
 **LSP Method:** `textDocument/onTypeFormatting`
 **Status:** ✅ Done
-**Works with:** Tree-sitter adapter only
+**Works with:** Tree-sitter and compiler adapters, with different formatting breadth.
 
-The LSP server uses tree-sitter AST context to auto-indent as you type. Trigger characters
-are `Enter`, `}`, and `;`. This is strictly better than regex-based TextMate indentation
-because it understands nesting depth, continuation lines, and string literals.
+Tree-sitter mode uses AST context for auto-indentation. Compiler mode uses the Java lexer for
+current-line indentation/whitespace; it does not use Tree-sitter. Trigger characters are `Enter`,
+`}`, and `;`. The cases below describe intended editing behavior; bounded compiler formatting
+and native IntelliJ Enter handling must be checked separately (X102/X107).
 
 **How it works:** Automatic — indentation is adjusted immediately when you type a trigger
 character. No manual action needed.
@@ -843,25 +845,25 @@ Code Style settings for XTC appear under Settings > Editor > Code Style > Ecstas
 
 **Provider:** `XtcLanguageClient` (workspace/configuration) + `XtcLanguageServer`
 **Status:** ✅ Done
-**Works with:** IntelliJ only (VS Code falls back to LSP `FormattingOptions`)
+**Works with:** IntelliJ Code Style and VS Code `xtc.formatting.*` preferences; clients that omit workspace formatting configuration fall back to LSP `FormattingOptions`.
 
 IntelliJ Code Style settings are forwarded to the LSP server via `workspace/configuration`
 at startup. Changes are pushed via `workspace/didChangeConfiguration`. The server uses
-these settings for on-type formatting when no project-level `xtc-format.toml` is present.
+these settings for formatting. Project-level `xtc-format.toml` loading is not implemented.
 
 **How to verify the config flow:**
-1. Open an IntelliJ instance running the XTC plugin
-2. Check the LSP server log for `workspace/configuration: editor formatting config:` — this
+1. Open an IntelliJ instance running the Ecstasy plugin
+2. Check the LSP server log for `workspace/configuration: parsed config` — this
    confirms the server received the settings
 
 | # | Test | Steps | Expected Result |
 |---|------|-------|-----------------|
-| 13c.1 | Default config flows to server | Open a `.x` file, check LSP log | Log shows `editor formatting config: XtcFormattingConfig(indentSize=4, ...)` |
+| 13c.1 | Default config flows to server | Open a `.x` file, check LSP log | Log shows `workspace/configuration: parsed config` with `indentSize=4` |
 | 13c.2 | Custom indent flows to server | Set Code Style indent to 2, restart LSP server | Log shows `indentSize=2` |
 | 13c.3 | 2-space indent affects formatting | Set Code Style indent to 2, type `module Foo {` then Enter | New line indented by 2 spaces (not 4) |
 | 13c.4 | Nested indent with custom config | Set indent to 3, type class inside module, then method, press Enter after `{` | Indent at 9 (3 * 3 levels) |
 | 13c.5 | No TextMate interference | Open a `.x` file with custom indent | Syntax highlighting works normally (no white background, correct colors) |
-| 13c.6 | VS Code fallback | Open same project in VS Code with `editor.tabSize: 2` | On-type formatting uses 2-space indent from LSP FormattingOptions |
+| 13c.6 | VS Code configuration | Set `xtc.formatting.indentSize: 2`, then format an unindented nonblank body line | Compiler formatter uses 2-space indentation. `editor.tabSize` alone does not override the workspace formatting configuration. |
 | 13c.7 | Auto-close brace honors custom indent | Set indent to 2, type `void foo() {` then Enter in IntelliJ | Blank body line indents to 4 spaces and the auto-inserted `}` aligns to 2 spaces |
 
 **How to restart the LSP server** (to pick up changed Code Style settings):
@@ -1383,15 +1385,15 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 126 scenarios: X1–X121, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 140 scenarios: X1–X135, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
 `${0}` templates substitute literal values without evaluating code.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 126 cases. IntelliJ now has assertions for the same 126, plus a separate startup check.
-The newly added cases still need native pass receipts; implementation is not validation. A missing driver implementation
+all 140 cases. IntelliJ now has assertions for the same 140, plus a separate startup check.
+Current selected native pass receipts are recorded above; implementation is not validation. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
 case was unselected or prevented from running, such as after an earlier failure. Partial coverage never appears
 as a full pass. A failed implemented check fails the Gradle task.
@@ -1419,7 +1421,7 @@ task too: a later build without it can restore the default backend.
     -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
 ```
 
-Open a scratch folder in that editor window. Confirm `backend: XTC Compiler` in
+Open a scratch folder in that editor window. Confirm `backend: Ecstasy Compiler` in
 `~/.xtc/logs/lsp-server.log`; the health-check adapter name is `XDK`. The matching XDK libraries
 are bundled, so no `XDK_HOME`, extracted distribution or separate compiler installation is needed.
 Confirm the backend in the log even when colors look familiar: compiler semantic tokens cover
@@ -2211,12 +2213,13 @@ module Advanced {
 | X132 | Request formatting for overlapping and disjoint line ranges, then negotiated pre-save hooks with default options. | Formatting edits are sorted and deduplicated; default save hooks return no edits. Both clients retain the unchanged buffer. Incremental UTF-16/CRLF patches and opt-in save edits have backend regression coverage. |
 | X133 | Use two methods with same-spelled locals. Request linked editing on one local, on a type and on a parameter; introduce a source error, then repair it. | Exactly that local declaration/use pair is linked; unrelated bindings, nonlocal symbols and invalid-source results stay unlinked. Both drivers assert the installed protocol; native linked-typing presentation remains separate. |
 | X134 | Configure an unopened Library.x outside the workspace and a local consumer. Change its return type externally, restore it, delete it and recreate it. | Consumer Problems appears/clears from OS file events without opening Library or manually refreshing VFS in either host. |
+| X135 | Use the server-log actions to open/hide the docked log twice, then return to the source. | The log view opens and hides without modifying source. Physical shortcut dispatch, remapped shortcuts and alternate docking are manual checks. |
 
 For a project using the updated Gradle plugin, run `./gradlew exportXtcLspModel` in that project's
 root to export `.gradle/xtc/lsp-model.json`. Run `./gradlew prepareXtcLspModel` to process resources
 and export the model together. These tasks do not compile application modules; declared source
 generators may run to establish source membership. In IntelliJ, open **Languages & Frameworks >
-Ecstasy Compiler**; in VS Code, invoke **XTC: Configure Compiler Paths**. Inspect the model origin,
+Ecstasy Compiler**; in VS Code, invoke **Ecstasy: Configure Compiler Paths**. Inspect the model origin,
 main/test owner, source roots, processed resource roots and missing outputs. Use **Refresh Gradle
 model**, **Prepare generated resources**, **Open build file** and reset controls. An explicit
 source/resource override must survive refresh. Missing or malformed reports must not crash the
@@ -2346,8 +2349,8 @@ code /path/to/xtc-project
 |---|-------|-----|----------------|
 | P1 | Extension is loaded | Extensions panel → search "Ecstasy" | "Ecstasy Language Support" listed with version `0.4.4`+ |
 | P2 | `.x` files map to Ecstasy language | Open any `.x` file | Status bar (bottom right) reads "Ecstasy" |
-| P3 | LSP server started | Status bar (bottom right) | Shows `✓ XTC` (green check). `⟳ XTC` = starting, `⚠ XTC` = error, `✗ XTC` = stopped |
-| P4 | Adapter selection visible | Output panel (`Cmd/Ctrl+Shift+U`) → "XTC Language Server" channel | `Backend: TreeSitter` (or `Backend: Mock` if `-Plsp.adapter=mock` build) |
+| P3 | LSP server started | Status bar (bottom right) | Shows `✓ Ecstasy` (green check). `⟳ Ecstasy` = starting, `⚠ Ecstasy` = error, `✗ Ecstasy` = stopped |
+| P4 | Adapter selection visible | Output panel (`Cmd/Ctrl+Shift+U`) → "Ecstasy Language Server" channel | `Backend: TreeSitter` (or `Backend: Mock` if `-Plsp.adapter=mock` build) |
 | P5 | Semantic tokens enabled | Same output channel | `semantic tokens ENABLED (23 types, 10 modifiers)` |
 | P6 | Java runtime detected | Same output channel at startup | `Java home: /path/to/java` (Java 25+) |
 | P7 | Snippets registered | Type `mod` then `Tab` in a `.x` file | Expands to a `module` declaration skeleton |
@@ -2393,9 +2396,9 @@ These have no IntelliJ analogue (or are surfaced differently). They round out th
 |---|---------|--------------|----------------|
 | V1 | File association on stale profile | Open a workspace where `files.associations` in user `settings.json` maps `"*.x"` to `"plaintext"` or another language | Status bar still shows "Ecstasy" within ~1s; the extension's `ensureXtcLanguageAssociation` hook overrides via `setTextDocumentLanguage`. |
 | V2 | File association on tab restore | Close VS Code with a `.x` file open in a non-active tab → reopen the workspace → click the tab | Tab loads with `Ecstasy` language, not the default. Verifies the `onDidChangeActiveTextEditor` listener. |
-| V3 | Status bar lifecycle | Watch the bottom-right status item during server startup, idle, restart | Transitions `⟳ XTC` → `✓ XTC` on start; `✓` → `⟳` → `✓` on Cmd-Palette "Ecstasy: Restart Language Server"; `✗ XTC` on crash (LSP server JAR removed or JVM killed) |
-| V4 | Output channel routing | Open Output panel → dropdown | Two channels: `XTC Language Server` (LSP traffic) and `Log (Extension Host)` (extension's own `console.log`/warn/error). No errors in either under normal use. |
-| V5 | Trace setting | Set `xtc.trace.server: "verbose"` in `settings.json` → restart server | `XTC Language Server` output channel now shows every JSON-RPC frame |
+| V3 | Status bar lifecycle | Watch the bottom-right status item during server startup, idle, restart | Transitions `⟳ Ecstasy` → `✓ Ecstasy` on start; `✓` → `⟳` → `✓` on Cmd-Palette "Ecstasy: Restart Language Server"; `✗ Ecstasy` on crash (LSP server JAR removed or JVM killed) |
+| V4 | Output channel routing | Open Output panel → dropdown | Two channels: `Ecstasy Language Server` (LSP traffic) and `Log (Extension Host)` (extension's own `console.log`/warn/error). No errors in either under normal use. |
+| V5 | Trace setting | Set `xtc.trace.server: "verbose"` in `settings.json` → restart server | `Ecstasy Language Server` output channel now shows every JSON-RPC frame |
 | V6 | Java discovery fallback | Unset `JAVA_HOME`, leave `xtc.java.home` empty → restart VS Code | Extension finds Java via `jdk-utils` (SDKMAN, mise, Homebrew, Gradle cache, etc.) — log line `Java home: …` at startup |
 | V7 | Java auto-download | On a machine with no Java 25+: same as V6, but `jdk-utils` finds nothing | Progress notification `Downloading Java 25 JRE for Ecstasy Language Support`; subsequent restart uses the cached JRE silently |
 | V8 | Tasks (Gradle build / test / clean / run) | In a workspace with a `build.gradle.kts`, open Terminal → Run Task… | "Build", "Test", "Clean" tasks listed under "xtc"; selecting runs `./gradlew build/test/clean` |
@@ -2536,3 +2539,28 @@ X118 and CFG1–CFG3 in `run-Z5w8sz`. No full 126-case receipt is claimed. Sourc
 `xtc/rename` describe configured/discovered inputs, including explicitly registered external
 roots. Unknown external consumers are not discovered by rename. Register them in sourceModules
 before renaming; an unreadable registered source refuses the proposal rather than reducing scope.
+
+### Server log shortcut acceptance
+
+Press **Ctrl+Alt+X, then L** (macOS: **Control+Option+X, then L**) in either editor.
+IntelliJ opens **Language Servers** with the Ecstasy **Log** tab selected; repeat the shortcut
+to hide that tool window. VS Code selects **Ecstasy Language Server** in Output; repeat to hide
+that output view. Remap the actions in native Keymap/Keyboard Shortcuts settings. Showing logs
+does not start another server, clear history or change the logging level.
+
+- Open the log from a source editor and verify recent queue/job, compile and request timing lines.
+- Toggle closed/open; manually close the panel and invoke the shortcut again.
+- Select a different VS Code output channel, then invoke the shortcut: select Ecstasy output.
+- Move/dock the view and verify the shortcut still opens/hides it. In IntelliJ, a visible
+  Language Servers window is hidden even if its selected tab is Settings or Trace.
+- Stop/restart the server and verify retained logs remain accessible without a source edit.
+- Verify the chord does not modify the source and a custom keymap binding works.
+
+Shared X135 passes in both editors for view open/hide and unchanged source. Physical
+shortcut dispatch and log-tab selection remain explicit manual checks.
+
+Known native-host regression to watch: VS Code 1.139.1 can throw an Explorer `Data tree node not
+found` while clearing Cut decorations after a successful batch Paste. If it occurs in X130,
+inspect actual paths before doing anything else; never replay an already applied move. Verify
+Explorer refresh and its Undo/Redo separately and retain the failed receipt. This is tracked in
+[the watcher/move acceptance record](../../docs/errs-integration-plan.md#watcher-move-and-log-view-acceptance-follow-up-2026-09-30).

@@ -13,6 +13,7 @@ const EXPECTED_COMMANDS = [
     'xtc.runModule',
     'xtc.restartServer',
     'xtc.showServerOutput',
+    'xtc.hideServerOutput',
 ];
 
 suite('Extension activation surfaces', () => {
