@@ -14,7 +14,12 @@ internal object XdkFileChanges {
     private const val MAX_ENTRIES = 512L
     private const val MAX_BYTES = 1_000_000L
 
-    fun unchanged(file: File, root: File, inputs: XdkSources.Inputs): Boolean = runCatching {
+    fun unchanged(
+        file: File,
+        root: File,
+        inputs: XdkSources.Inputs,
+        overlays: Map<File, String> = emptyMap(),
+    ): Boolean = runCatching {
         val path = file.toPath()
         val member = root.parentFile.resolve(root.nameWithoutExtension).toPath()
         val sourceRoots = listOf(root.toPath(), member).filter { it.overlaps(path) }
@@ -31,7 +36,8 @@ internal object XdkFileChanges {
         if (sourceEntries != expectedSources || !bounded(sourceEntries)) return@runCatching false
         if (
             sourceEntries.any {
-                Files.isRegularFile(it) && Files.readString(it) != inputs.text[it.toFile()]
+                Files.isRegularFile(it) &&
+                    (overlays[it.toFile()] ?: Files.readString(it)) != inputs.text[it.toFile()]
             }
         )
             return@runCatching false
