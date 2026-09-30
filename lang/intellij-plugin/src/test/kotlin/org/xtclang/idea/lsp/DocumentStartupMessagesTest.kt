@@ -1,11 +1,14 @@
 package org.xtclang.idea.lsp
 
+import java.net.URI
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.FoldingRange
 import org.eclipse.lsp4j.FoldingRangeRequestParams
+import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
@@ -24,9 +27,87 @@ class DocumentStartupMessagesTest {
         mutableMapOf(uri to DocumentStartupMessages.Snapshot(Any(), 1, "module Startup {}"))
     private val sent = mutableListOf<Message>()
     private val received = mutableListOf<Message>()
-    private val guard = DocumentStartupMessages(buffers::get)
+    private val guard = DocumentStartupMessages { requested ->
+        buffers.entries.singleOrNull { URI(it.key) == URI(requested) }?.value
+    }
     private val outgoing = guard.outgoing(MessageConsumer { sent.add(it) })
     private val incoming = guard.incoming(MessageConsumer { received.add(it) })
+
+    @Test
+    fun `server edits require the transmitted version and unchanged buffer ownership`() {
+        open("initial")
+        val initial = requireNotNull(guard.editSnapshot(uri, 1))
+        assertThat(guard.editSnapshot(uri, 2)).isNull()
+        buffers[uri] = initial.copy(stamp = 2, text = "unsent typing")
+        assertThat(guard.editSnapshot(uri, 1)).isNull()
+        change(2, "unsent typing")
+        assertThat(guard.editSnapshot(uri, 1)).isNull()
+        assertThat(guard.editSnapshot(uri, 2)).isEqualTo(buffers[uri])
+        assertThat(guard.isCurrent(uri, 1, initial)).isFalse()
+        val current = requireNotNull(guard.editSnapshot(uri, 2))
+        buffers[uri] = current.copy(stamp = 3)
+        assertThat(guard.isCurrent(uri, 2, current)).isFalse()
+    }
+
+    @Test
+    fun `reused versions after reopen cannot authorize an old server edit`() {
+        open("initial")
+        change(4, buffers.getValue(uri).text)
+        buffers.clear()
+        outgoing.consume(
+            notification(
+                "textDocument/didClose",
+                DidCloseTextDocumentParams(TextDocumentIdentifier(uri)),
+            )
+        )
+        assertThat(guard.editSnapshot(uri, 4)).isNull()
+        buffers[uri] = DocumentStartupMessages.Snapshot(Any(), 1, "module Reopened {}")
+        open("reopened")
+        assertThat(guard.editSnapshot(uri, 1)).isNull()
+        change(4, buffers.getValue(uri).text)
+        assertThat(guard.editSnapshot(uri, 4)).isNull()
+        change(5, buffers.getValue(uri).text)
+        assertThat(guard.editSnapshot(uri, 5)).isEqualTo(buffers[uri])
+    }
+
+    @Test
+    fun `sequential incremental changes preserve the actual wire version across CRLF and emoji`() {
+        val before = "// 😀\r\nmodule Startup {}\r\n"
+        buffers[uri] = buffers.getValue(uri).copy(text = before)
+        open(before)
+        val after = "// 😀!\r\nmodule Updated {}\r\n"
+        buffers[uri] = buffers.getValue(uri).copy(stamp = 2, text = after)
+        outgoing.consume(
+            notification(
+                "textDocument/didChange",
+                DidChangeTextDocumentParams(
+                    VersionedTextDocumentIdentifier(uri, 7),
+                    listOf(
+                        TextDocumentContentChangeEvent().apply {
+                            range = Range(Position(0, 5), Position(0, 5))
+                            text = "!"
+                        },
+                        TextDocumentContentChangeEvent().apply {
+                            range = Range(Position(1, 7), Position(1, 14))
+                            text = "Updated"
+                        },
+                    ),
+                ),
+            )
+        )
+        assertThat(guard.editSnapshot("file:/Startup.x", 7)).isEqualTo(buffers[uri])
+        assertThat(guard.editSnapshot(uri, 7)).isEqualTo(buffers[uri])
+    }
+
+    @Test
+    fun `late older changes cannot regress the transmitted version or text`() {
+        open("initial")
+        change(4, buffers.getValue(uri).text)
+        change(3, "stale text")
+        assertThat(sent).hasSize(2)
+        assertThat(guard.editSnapshot(uri, 4)).isEqualTo(buffers[uri])
+        assertThat(guard.editSnapshot(uri, 3)).isNull()
+    }
 
     @Test
     fun `typing and replacement before asynchronous open preserve latest client version`() {

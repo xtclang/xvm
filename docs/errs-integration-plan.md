@@ -1157,14 +1157,14 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 | L70 lazy resolve | All six resolve endpoints have detached revision guards; backend and X105/X122/X127/X131 checks pass. IntelliJ has a selected-action bridge preserving normal Undo/Redo. | Preserve eager fallback for clients without the relevant capabilities; broaden stale-application acceptance under L80/L82. |
 | L71 file operations | Six negotiated pre/post hooks and compiler-proven file/package/container operations; backend and selected X128/X130 checks pass in both editors. | Cross-package qualification rewrites and explicit graph relocation remain unsupported. Retain the VS Code file-operation refusal limitation. |
 | L72 save/sync/formatting | Negotiated save hooks, opt-in incremental patches and multiple-range formatting pass backend and selected X132/X137–X139 checks; Full remains default. | Broaden workspace/save ownership coverage; IntelliJ uses native save formatting because LSP4IJ lacks `willSaveWaitUntil`. Save edits remain version guarded and independent of compilation. |
-| L73 server commands | Run lenses invoke client commands; no server command registry exists. | Define typed commands, edit failure handling and cancellation. Embedded execution depends on the accepted R2–R5 service design, not another command-line assembly path. |
+| L73 server commands | Run lenses invoke client commands; negotiated legacy code actions have a bounded one-use resolve/apply command. | Broader server commands and embedded Run remain separate scopes; define typed commands, edit failure handling and cancellation. Embedded execution depends on the accepted R2–R5 service design, not another command-line assembly path. |
 | L74 monikers | Compiler/graph identities exist but are not cross-project identifiers. | Define module/artifact-version identity, import/export relationships and matches across source and binary consumers. |
 | L75 document content | Matching indexed sources open as read-only files. | Establish client support and URI/revision ownership for virtual or archived sources; define refresh and stale-content behavior. |
 | L76 inline completion | No inline provider exists. | Decide useful compiler/snippet use cases and client support first; no generative service is implied. Implement and test the agreed scope or record an explicit exclusion. |
 | L77 colors | No color-value provider exists. | Decide which XTC values have unambiguous color meaning and reversible source edits. Implement that scope or record why it is inapplicable. |
 | L78 notebooks | Current ownership is file/module based; there are no notebook sessions. | Decide whether XTC notebooks are a product requirement, then define cell/module identity and execution order before synchronization. Record an explicit exclusion if out of scope. |
 | L79 debug inline values | Compiler inlay hints are not runtime values; DAP remains a stub. | Depend on R6–R7 real sessions, stack/source mapping and stop-state ownership; define evaluation safety before exposing values. |
-| L80 negotiation | Presentation, action forms/preferred metadata, completion kinds and edit-format audits pass focused backend, packaged transport and selected editor checks. | Generic IntelliJ server-initiated edit version checking remains the recorded LSP4IJ boundary; broaden native stale-application acceptance. |
+| L80 negotiation | Presentation, action forms/preferred metadata, completion kinds and edit-format audits pass focused backend, packaged transport and selected editor checks. | Generic IntelliJ text-edit guarding and shared X144 are implemented; validation is batched with L81. Resource/snippet/confirmation edits are refused by this generic path. |
 | L81 progress/trace/refresh | Partial batches and actual Tree-sitter scan progress now join the previous owned progress/cancellation, refresh and trace implementation. | X143 and controlled regressions pass; visible long-operation/cancel acceptance remains a distinct check. |
 | L83 initializer facts | Detached successful initializer facts are implemented with no new AST fields; backend regressions and shared X142 are added. | Backend and shared X142 pass; preserve the explicit eight-component record-pattern migration note. |
 
@@ -1210,7 +1210,7 @@ and debugging. Neither feature counts nor a selected passing playbook establish 
 - [ ] **L73 — Server commands and edit application.** Implement an explicit
   `workspace/executeCommand` registry if server-run actions are required, with negotiated
   `workspace/applyEdit` and failure handling. Current module Run lenses use a client command;
-  no server execute-command provider is advertised. Do not conflate running XTC with debugging.
+  the only negotiated server command resolves/applies a one-use legacy code action. Broader commands remain open. Do not conflate running XTC with debugging.
   Embedded Run commands must route to the shared build/execution service defined by R2–R5,
   rather than assembling another CLI command or duplicating compilation in a protocol handler.
 - [ ] **L74 — Cross-project symbol identities.** Implement `textDocument/moniker` and stable
@@ -7346,3 +7346,24 @@ Follow-up correction commits for later extraction:
 When extracting independent PRs, split the shared validation commit by its owning feature and retain
 both the scenario catalog and manual-table entries with each editor case. The integration receipts
 above validate this combined branch; each extracted PR still requires its own build and tests.
+
+### Native edit ownership and visible progress batch (2026-09-30)
+
+1. **L80 generic text edits — implementation checkpoint.** `XtcLanguageClient.applyEdit` now
+   uses the existing transport's actual sent versions, text and opened-document identities. There
+   is no second version counter or private synchronizer reflection. Preparation checks every target;
+   the single native Undo command rechecks connection, URI, document stamp and incarnation before
+   writing any target. Cancellation/disposal retires pending applications. Closed documents accept
+   only unversioned edits. Reopened version numbers at or below the retired ceiling are ambiguous
+   and refused. Resource operations, snippets, confirmation annotations, overlapping edits and
+   invalid UTF-16 boundaries are refused; native guarded Rename/Move remains the resource route.
+   LSP4IJ's old/new text-edit representations are normalized at the boundary without replacing IDE
+   libraries. Unit regressions and shared **X144** cover version proof and current/stale application
+   with Undo. Catalog: **149** cases. Tests are written; acceptance is pending the batched run.
+2. **L81 visible progress/cancel/disconnect** follows in a separate commit.
+3. **L82 validation** follows both implementation commits: compiler/backend/packaged transport,
+   full editor catalogs and a longer editing/restart workload. Preserve the prior unexplained
+   X142 and consumer-diagnostic failures as unresolved until this evidence is collected.
+
+This slice changes client ownership only; it adds no compiler, embedding or AST API. It belongs
+with the L80 native-client extraction slice, after the startup-message ownership bridge.

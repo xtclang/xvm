@@ -4431,6 +4431,24 @@
         "limitations": []
       }
     },
+    "X144": {
+      "title": "installed client rejects stale versioned edits and preserves native Undo",
+      "manual": [],
+      "values": {
+        "file": "GuardedEdit.x",
+        "module": "GuardedEdit",
+        "source": "module GuardedEdit { Int value = 1; }\n",
+        "changed": "module GuardedEdit { Int value = 2; }\n",
+        "otherFile": "OtherEdit.x",
+        "otherModule": "OtherEdit",
+        "otherSource": "module OtherEdit { Int value = 1; }\n",
+        "otherChanged": "module OtherEdit { Int value = 3; }\n"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
