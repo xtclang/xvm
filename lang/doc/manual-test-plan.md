@@ -2230,6 +2230,7 @@ module Advanced {
 | X142 | Open configured `FoldedInitializer.x`; hover and navigate from `Int copy = value`, find references, rename `value` to `number`, then Undo. | The declaration, folded initializer and method body share one semantic identity; all three rename together, compile cleanly and restore on Undo. |
 | X143 | Configure `PartialSymbols.x` with 130 classes. Compare ordinary workspace symbols with a request carrying a partial-result token. | Ordered progress batches contain at most 64 symbols each; their combined names match the ordinary result exactly and the final response is empty. |
 | X144 | Apply a current versioned text edit through the installed client, Undo it, then send a two-document edit with one stale version. | Current edit and native Undo succeed. A stale target refuses the whole batch and preserves both current buffers. Drivers invoke the installed application handler; packaged tests separately exercise server-to-client transport. |
+| X145 | Replace ProgressWork with the shared 5,000-method workload and request references. Show native progress, cancel, verify hover still works; repeat and restart while pending. | Cancellation terminates only the request; progress disappears. Restart preserves unsaved text, retires the pending reader and exits the old PID. Both drivers use real compiler work and native progress; a request finishing too early fails as unexercised. New case; current-batch receipt pending. |
 
 
 For a project using the updated Gradle plugin, run `./gradlew exportXtcLspModel` in that project's
