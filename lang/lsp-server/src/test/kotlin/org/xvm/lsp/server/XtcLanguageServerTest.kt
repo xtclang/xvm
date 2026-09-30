@@ -221,7 +221,7 @@ class XtcLanguageServerTest {
                 .isTrue()
             assertThat(caps.codeActionProvider?.left).describedAs("codeAction").isTrue()
             assertThat(caps.documentFormattingProvider?.left).describedAs("formatting").isTrue()
-            assertThat(caps.documentRangeFormattingProvider?.left)
+            assertThat(caps.documentRangeFormattingProvider?.right?.rangesSupport)
                 .describedAs("rangeFormatting")
                 .isTrue()
             assertThat(caps.documentOnTypeFormattingProvider)
@@ -242,7 +242,7 @@ class XtcLanguageServerTest {
             assertThat(caps.workspaceSymbolProvider?.left).describedAs("workspaceSymbol").isTrue()
 
             // Sync
-            assertThat(caps.textDocumentSync?.left).describedAs("textDocumentSync").isNotNull()
+            assertThat(caps.textDocumentSync?.right).describedAs("textDocumentSync").isNotNull()
         }
 
         @Test
