@@ -21,7 +21,11 @@ import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verifyNoInteractions
+import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.mock.MockAdapter
+import org.xvm.lsp.model.CompilationResult
+import org.xvm.lsp.model.Location
+import org.xvm.lsp.model.SymbolInfo
 
 class ClientPresentationTest {
     @Test
@@ -38,13 +42,22 @@ class ClientPresentationTest {
 
     @Test
     fun `server advertises UTF16 and serves flat symbols without hierarchical support`() {
-        XtcLanguageServer(MockAdapter()).use { server ->
+        val uri = "file:///Presentation.x"
+        val child = SymbolInfo.of("Child", SymbolInfo.SymbolKind.CLASS, Location(uri, 1, 4, 1, 18))
+        val module =
+            SymbolInfo.of("Presentation", SymbolInfo.SymbolKind.MODULE, Location(uri, 0, 0, 2, 1))
+                .withChildren(listOf(child))
+        val adapter =
+            object : Adapter by MockAdapter() {
+                override fun getCachedResult(uri: String) =
+                    CompilationResult.success(uri, listOf(module))
+            }
+        XtcLanguageServer(adapter).use { server ->
             assertThat(server.initialize(InitializeParams()).join().capabilities.positionEncoding)
                 .isEqualTo("utf-16")
-            val uri = "file:///Presentation.x"
             server.textDocumentService.didOpen(
                 DidOpenTextDocumentParams(
-                    TextDocumentItem(uri, "xtc", 1, "module Presentation { class Child {} }")
+                    TextDocumentItem(uri, "xtc", 1, "module Presentation {\n    class Child {}\n}")
                 )
             )
             val symbols =
@@ -53,6 +66,8 @@ class ClientPresentationTest {
                     .join()
             assertThat(symbols).isNotEmpty().allSatisfy { assertThat(it.isLeft).isTrue() }
             assertThat(symbols.map { it.left.name }).contains("Presentation", "Child")
+            assertThat(symbols.single { it.left.name == "Child" }.left.containerName)
+                .isEqualTo("Presentation")
         }
     }
 
