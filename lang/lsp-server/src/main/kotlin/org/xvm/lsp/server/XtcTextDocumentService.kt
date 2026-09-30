@@ -84,6 +84,7 @@ import org.eclipse.lsp4j.TypeHierarchySubtypesParams
 import org.eclipse.lsp4j.TypeHierarchySupertypesParams
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WillSaveTextDocumentParams
+import org.eclipse.lsp4j.WorkDoneProgressParams
 import org.eclipse.lsp4j.WorkspaceDiagnosticParams
 import org.eclipse.lsp4j.WorkspaceDiagnosticReport
 import org.eclipse.lsp4j.WorkspaceEdit
@@ -220,6 +221,7 @@ class XtcTextDocumentService(
         uri: String,
         request: () -> CompletableFuture<T>,
         workspace: Boolean = false,
+        progress: WorkDoneProgressParams? = null,
         convert: (T) -> R,
     ): CompletableFuture<R> {
         val result = CompletableFuture<R>()
@@ -304,7 +306,7 @@ class XtcTextDocumentService(
             .whenComplete { _, failure ->
                 if (failure != null) result.completeExceptionally(failure)
             }
-        return result
+        return server.observeQuery(method, progress, result)
     }
 
     private fun contentModified() =
@@ -616,6 +618,7 @@ class XtcTextDocumentService(
             params.textDocument.uri,
             params.identifier,
             workspace = false,
+            progress = params,
         ) { results ->
             val current = diagnosticReports.record(results)
             // Unknown or removed documents have an empty report, never an old cached error.
@@ -631,8 +634,13 @@ class XtcTextDocumentService(
     internal fun workspaceDiagnostics(
         params: WorkspaceDiagnosticParams
     ): CompletableFuture<WorkspaceDiagnosticReport> =
-        pullDiagnostics("workspace/diagnostic", "", params.identifier, workspace = true) { results
-            ->
+        pullDiagnostics(
+            "workspace/diagnostic",
+            "",
+            params.identifier,
+            workspace = true,
+            progress = params,
+        ) { results ->
             val current = diagnosticReports.record(results)
             diagnosticReports.workspace(
                 current,
@@ -646,6 +654,7 @@ class XtcTextDocumentService(
         uri: String,
         identifier: String?,
         workspace: Boolean,
+        progress: WorkDoneProgressParams,
         convert: (List<CompilationResult>) -> T,
     ): CompletableFuture<T> {
         if (!server.usesPullDiagnostics || (identifier != null && identifier != "xtc")) {
@@ -669,6 +678,7 @@ class XtcTextDocumentService(
                     CompletableFuture.completedFuture(listOf(open.analysis.join()))
                 else (adapter as XdkAdapter).workspaceDiagnosticsAsync()
             },
+            progress = progress,
             convert = { results ->
                 if (revision != diagnosticRevision) throw contentModified()
                 val owned = results.flatMap { it.documentUris }.toSet()
@@ -734,6 +744,7 @@ class XtcTextDocumentService(
                     params.context?.triggerCharacter,
                 )
             },
+            progress = params,
         ) { completions ->
             val items = completions.map { c ->
                 CompletionItem(c.label).apply {
@@ -843,6 +854,7 @@ class XtcTextDocumentService(
                 )
             },
             workspace = true,
+            progress = params,
         ) { references ->
             references.map { it.toLsp() }
         }
@@ -1026,6 +1038,7 @@ class XtcTextDocumentService(
                     params.position.character,
                 )
             },
+            progress = params,
         ) { result ->
             result?.let { help ->
                 SignatureHelp().apply {
@@ -1106,6 +1119,7 @@ class XtcTextDocumentService(
                 )
             },
             workspace = true,
+            progress = params,
         ) { edit ->
             edit?.let(::protocolEdit)
         }
@@ -1222,6 +1236,7 @@ class XtcTextDocumentService(
                 )
             },
             workspace = true,
+            progress = params,
         ) { actions ->
             actions.mapNotNull { action ->
                 val kind = action.kind.toLsp()
