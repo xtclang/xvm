@@ -176,13 +176,18 @@ class ParityWorkspace(
     }
 
     fun settle(document: Document) {
+        flush(document)
+        query("textDocument/documentSymbol", document)
+    }
+
+    /** Wait for transport delivery without waiting for the compiler query that tests may cancel. */
+    fun flush(document: Document) {
         val pending =
             requireNotNull(clientDocument(document)).getSynchronizer().flushPendingChanges()
         with(driver) {
             awaitUi("client sends current $id/${document.file}", 45.seconds) { pending.isDone() }
         }
         check(!pending.isCompletedExceptionally()) { "Document synchronization failed" }
-        query("textDocument/documentSymbol", document)
     }
 
     fun query(
