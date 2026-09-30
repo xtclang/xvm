@@ -2,7 +2,6 @@
 // Runs inside a real VS Code instance via @vscode/test-electron.
 
 import * as assert from 'node:assert';
-import * as path from 'node:path';
 import * as vscode from 'vscode';
 
 const PUBLISHER_AND_NAME = 'xtclang.xtc-language';
@@ -28,10 +27,8 @@ suite('Ecstasy file association', () => {
     });
 
     test('opens .x files with languageId "xtc"', async () => {
-        // The runTest launcher opens VS Code with src/test/fixtures as the
-        // workspace folder, so this absolute path resolves cleanly.
-        const fixture = path.resolve(__dirname, '..', '..', '..', 'src', 'test', 'fixtures', 'hello.x');
-        const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(fixture));
+        const fixture = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, 'hello.x');
+        const doc = await vscode.workspace.openTextDocument(fixture);
         const langId = await waitForLanguageId(doc, 'xtc');
         assert.strictEqual(
             langId,
