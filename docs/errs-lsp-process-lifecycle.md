@@ -139,3 +139,10 @@ results do not claim the entire native playbook has passed.
 
 Existing orphaned JVMs are not adopted by a newly installed plugin. The fix prevents new
 instances following these paths; already running old servers still require explicit cleanup.
+
+The later L80/L81 work on `errs` adds pre-initialize/duplicate-initialize/shutdown request gating,
+pending-reader retirement and connection-owned progress. This is separate from the standalone
+orphan-process extraction above. Its packaged suite passes 73 tests; shared X137 passes repeated
+transport restarts with unsaved buffers in both editors. Pending-work/project-close overlap remains
+manual acceptance P2 in the [protocol coverage map](../lang/doc/manual-test-plan.md#protocol-and-lifecycle-coverage-map),
+not a claim established by the startup/restart scenario alone.
