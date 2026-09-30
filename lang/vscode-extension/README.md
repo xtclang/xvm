@@ -343,9 +343,13 @@ The headless test uses `@vscode/test-electron` to download self-contained VS Cod
 
 The wrapper script (`scripts/run-vscode-tests.cjs`) does the platform detection in Node so the Gradle task definition stays platform-independent.
 
-The compiler playbook shows completed/selected cases, remaining cases, the current case and failure
-counts in the test window's status bar. The display is test-only and uses the selected total for
-focused runs. It uses the same launcher and display requirements. It reads fixtures from the
+Both test runners show completed/total, remaining tests, the current test, failures and skips at
+the left of the test window's status bar. **Ecstasy tests** identifies the smoke suite;
+**Ecstasy playbook** identifies the compiler catalog. Long names have a full tooltip. Focused
+playbook runs use the selected total. Both runners use isolated workspaces and profiles; smoke
+logs remain under `build/reports/extension-tests/run-*/`.
+
+The compiler playbook uses the same launcher and display requirements. It reads fixtures from the
 [XdkAdapter playbook](../doc/manual-test-plan.md#automated-vs-code-run), fails if compiler mode is
 missing, and records remaining visual/manual checks explicitly. `latest-run.txt` points to its
 latest `results.txt`/`results.json` and retained scratch workspace. After assembling the compiler
