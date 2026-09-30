@@ -12,7 +12,7 @@ and refactoring proofs still fail closed. This adds no AST state or compiler lis
 See [scope, ownership and validation](../../../docs/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
 
 
-> **Last Updated**: 2026-09-29 (member generation, explicit missing-feature investigations and partial AST package implementation)
+> **Last Updated**: 2026-09-30 (watch ownership, file operations, resolve/save/sync support and server-log access)
 
 The P1–P4 compiler organization checkpoint moves the four incomplete-syntax nodes into
 `org.xvm.compiler.ast.partial` and updates the adapter's imports. It changes no advertised LSP
@@ -225,9 +225,9 @@ local or import-alias declarations and inherited written member contracts, prese
 | Extract/inline/safe-delete refactorings and general missing-declaration fixes | Bounded proven rename, import cleanup, public-type imports and proven implement/override | L62–L63 |
 | Pull document/workspace diagnostics | Implemented for negotiated compiler clients: result IDs, related/closed documents, refresh and removal reports. Shared X123 and updated X76/X118 pass in both editors; push remains for other clients. PLAT1's source-location crash is fixed. The native demo also corrected a closed standalone-member pull gap; X27/X123 pass after that correction. | L68 implemented; demo receipts and nine pull-diagnostic tests |
 | Semantic-token range/delta requests | Negotiated range/delta with bounded result history; backend/protocol and both host checks pass | L69 / X126 |
-| Completion/action/lens/link/inlay/workspace-symbol resolve requests | All six endpoints implemented with bounded revision guards. IntelliJ selects and applies lazy actions through its undo-aware bridge. Batch validation pending. | L70 / X127, X131 |
-| File-operation pre-edit requests; explicit create/delete notifications | All six hooks pass backend/protocol checks; native file/package Rename passes. Batch native Move preflight is implemented pending X130; cross-package qualification and explicit graph replacement remain refused. | L71 / X128, X130 |
-| Save-time edits, incremental sync, multiple-range formatting | Negotiated save hooks, opt-in incremental UTF-16 updates and multiple-range formatting implemented; default Full/no save edits preserved. Validation pending. | L72 / X132 |
+| Completion/action/lens/link/inlay/workspace-symbol resolve requests | All six endpoints implemented with bounded revision guards. IntelliJ selects and applies lazy actions through its undo-aware bridge. Backend/protocol and selected acceptance pass in both editors. | L70 / X127, X131 |
+| File-operation pre-edit requests; explicit create/delete notifications | All six hooks pass backend/protocol checks; native file/package Rename passes. Batch native Move/Undo/Redo passes X130; cross-package qualification and explicit graph replacement remain refused. | L71 / X128, X130 |
+| Save-time edits, incremental sync, multiple-range formatting | Negotiated save hooks, opt-in incremental UTF-16 updates and multiple-range formatting implemented; default Full/no save edits preserved. Backend/packaged transport and selected X132 pass in both editors. | L72 / X132 |
 | Server-side `workspace/executeCommand` | Module Run lenses invoke an existing client command | L73 |
 | Cross-project monikers | Detached identities scoped to compiler snapshots/graphs | L74 |
 | Server-provided document content/refresh | Matching bundled/host-indexed source files, opened read-only | L75 |
@@ -797,21 +797,19 @@ L69 range/delta is now implemented with negotiated capabilities, bounded detache
 close/restart retirement and semantic refresh. Shared X126 and backend/transport regressions pass.
 Full tokens remain available to clients without range/delta capabilities.
 
-L70 now negotiates lazy completion documentation and code-action edits with bounded detached
-handles and stale-result rejection. Completion insertion/type details remain eager; compiler proof
-is still performed before offering an action. X127 and service tests pass. IntelliJ negotiates
-eager action edits to avoid LSP4IJ 0.21.0's undo-transparent resolve path; its completion
-documentation still resolves lazily. Native lazy-action application is an explicit follow-up.
-Code lens, link, inlay-hint and workspace-symbol resolve remain explicit follow-ups.
+L70 implements all six lazy resolve endpoints with bounded detached handles, stable identities,
+stale-result rejection and negotiated eager fallbacks. Completion insertion/type details remain
+eager; compiler proof occurs before offering an action. IntelliJ resolves only the selected action
+and applies its version-checked edit through a normal undo command. This supersedes the temporary
+eager-action workaround for LSP4IJ 0.21.0's undo-transparent application. Backend and selected
+VS Code/IntelliJ acceptance pass, including X105/X122/X127/X131.
 
-L71 pre/post file-operation handlers are implemented, with compiler-proven member/package renames,
-combined batch proof and safe container moves. X128 drives each host's file Rename path;
-IntelliJ uses an XTC handler before disk mutation because its low-level VFS before-event occurs
-after the physical rename. Native X128 passes the scope/name dialogs and resulting edits. The handler refuses unproven moves;
-raw VFS operations still cannot promise reference updates. Native cross-directory/container
-actions need their own preflight integration. Cross-package qualification rewrites and explicit
-source-graph replacement are still refused. Ordinary LSP pre-operation null replies cannot
-prevent other host actions from moving a file.
+L71 pre/post file-operation handlers negotiate independently. Compiler proof covers bounded
+member/package renames, combined batches and safe container moves. IntelliJ's Rename/Move
+handlers preflight before disk mutation and apply references/paths in one global undo command;
+raw VFS changes still cannot promise reference updates. X128 and X130 drive the real host actions.
+Cross-package qualification rewrites and explicit source-graph relocation remain refused.
+Ordinary LSP pre-operation null replies cannot veto arbitrary host file moves.
 
 PLAT2c/L67 now imports the evaluated Gradle model in both hosts and exposes effective source/resource
 paths and origin. Explicit overrides survive refresh; invalid model files retain the last valid host
@@ -819,28 +817,28 @@ import. Gradle export/prepare actions run in the host, never in LSP. Both `.grad
 are handled by Gradle itself. TestKit, importer/server tests and shared X129 pass.
 Automatic IntelliJ Gradle-sync refresh and aggregation of nested/composite build roots remain
 follow-ups; each exported root has an explicit refresh action.
-External-resource X124 passes create/delete/repair after explicit native VFS refresh and directory
-loading. Automatic IntelliJ watching of external roots that have never been opened remains a
-PLAT2/L67 follow-up; this acceptance does not prove that lifecycle.
+Earlier X124 receipts used explicit native VFS refresh. The strengthened case creates previously
+missing external roots without opening them or manually refreshing; those earlier receipts remain
+historical and do not prove automatic watch ownership.
 
 External-root follow-up (2026-09-30): source roots join resource roots in dynamic external watch
 registrations. IntelliJ owns the native watch leases and refreshes those roots asynchronously
 while focused. Missing-root creation, settings replacement and disposal have new unit/driver
-coverage; execution is pending the four-commit batch.
+coverage. Backend and selected X124/X134 pass in both editors without manual VFS refresh.
 
 L71 native Move follow-up (2026-09-30): the Community Move delegate preflights one or multiple
 source/container moves before disk mutation. Parent changes are applied through VFS because
 LSP4IJ 0.21 only applies the new basename. References and paths share a global undo command.
 Shared X130 covers two discovered module containers and embedded resources with Undo/Redo;
-validation is pending. Explicit-graph relocation and cross-package qualification rewriting remain
-refusals. Search `// TODO LSP4IJ:` in the plugin for removable upstream compatibility bridges.
+selected acceptance passes in both editors. Explicit-graph relocation and cross-package
+qualification rewriting remain refusals. Search `// TODO LSP4IJ:` in the plugin for removable upstream compatibility bridges.
 
-L70 follow-up (2026-09-30, validation pending): codeLens/documentLink/inlayHint/workspaceSymbol
+L70 follow-up (2026-09-30, selected acceptance passed): codeLens/documentLink/inlayHint/workspaceSymbol
 resolve endpoints now preserve stable identities and reject obsolete detached handles. Inlay
 tooltips expose compiler-derived declaration/call signatures. IntelliJ now resolves the selected
 code action through a client command and version-checks its edit in a normal undo command,
 working around LSP4IJ's undo-transparent application. X105/X122/X127 and new shared X131 are
-the acceptance gates; earlier eager-action receipts do not validate this change.
+passing acceptance gates in the current receipt; earlier eager-action receipts remain historical.
 
 Editor settings follow-up: [UI1–UI7](../../../docs/errs-integration-plan.md#editor-configuration-and-feature-controls-ui1ui7)
 now tracks the full settings inventory, common scope/precedence semantics, Community IntelliJ
@@ -851,3 +849,10 @@ options only, not plugin preferences. Formatting-on-save must have one owner to 
 The [2026-09-30 acceptance checklist](../manual-test-plan.md#acceptance-checklist-for-the-2026-09-30-batch)
 now separates shared automation from remaining manual/native, protocol-lifetime and settings-UI
 checks for the complete follow-up batch. X130–X132 alone are not full acceptance evidence.
+
+Both editors now offer **Ctrl+Alt+X, then L** (macOS: Control+Option+X, then L) for quick log
+show/hide within UI6. IntelliJ selects LSP4IJ's Log tab in Language Servers; VS Code reveals its
+Ecstasy Language Server Output channel. X135 covers the actions; physical shortcut dispatch and
+custom docking/keymaps remain manual checks. No separate log process or editable file is created.
+The [current acceptance record](../../../docs/errs-integration-plan.md#watcher-move-and-log-view-acceptance-follow-up-2026-09-30)
+distinguishes the 140-case catalog from selected passing runs.

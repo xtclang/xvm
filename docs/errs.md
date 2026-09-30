@@ -1,23 +1,29 @@
 # Threading `errs` through the compiler
 
-L72 implementation is complete pending the batch tests: negotiated save hooks, opt-in incremental
-sync and multiple-range formatting. Full sync/no save edits remain defaults; shared X132 and
-backend UTF-16/CRLF/invalid-batch regressions are added.
+**Current L70–L72/watch batch:** all six lazy resolve endpoints, IntelliJ's selected-action
+Undo/Redo bridge, native batch Move, external source/resource watch ownership, negotiated save
+hooks, opt-in incremental synchronization and multiple-range formatting are implemented. The
+backend batch passes 1,449 enabled tests (three existing disabled placeholders), 72 packaged
+protocol tests; the final plugin suite passes 68 IntelliJ unit tests and 16 VS Code extension tests. Final watcher/recreation and deterministic rename-race
+corrections pass another 24 focused backend tests and all 72 protocol tests. Full sync/no save
+edits remain the defaults; no incremental compiler or new settings UI is implied.
 
-**Current follow-up batch:** external source/resource watch ownership is implemented; X124 now
-exercises missing nested roots and settings replacement without native fixture refresh. Tests
-will run after the four requested implementation commits. Community file-tree Move now handles
-batch container moves in one undo command; shared X130 and destination guards are added.
+All 19 selected VS Code cases now have passing receipts: `run-iGx1M2` passes 18 and the corrected
+Explorer selection passes X130 in `run-YMDUeW`. The earlier failed Explorer receipts remain recorded;
+no applied Move or Undo was retried. IntelliJ passes the same 19 selected cases across
+`run-17174738471798629344` and
+`run-1746762976235942700`, plus START, with zero IDE errors. This is not a full
+140-case rerun. See the [current validation record](errs-integration-plan.md#watcher-move-and-log-view-acceptance-follow-up-2026-09-30).
 
-**Latest validated batch (L69–L71 / PLAT2c):** token range/delta, initial lazy resolution, bounded file
-operations and evaluated Gradle inputs pass backend/protocol checks and ten selected scenarios
-in both hosts. IntelliJ acceptance exposed and fixed a diagnostic-refresh/Rename deadlock and
-file-event ordering; it keeps code-action edits eager to preserve Undo/Redo with LSP4IJ 0.21.0.
-The backend has 1,436 enabled tests passing (three existing disabled placeholders), packaged
-protocol has 71 and IntelliJ unit coverage has 62, with no failures. The selected native receipts
-have zero IDE errors. This is not a full 134-case rerun. Native lazy-action application, other
-move entry points and automatic VFS ownership of unopened external roots remain explicit tasks.
-See the [validation and extraction map](errs-integration-plan.md#next-implementation-batch-l69l71--plat2c-2026-09-29).
+Both plugins have a server-log show/hide shortcut: **Ctrl+Alt+X, then L** (macOS:
+Control+Option+X, then L). It reuses each host's existing log panel; X135 checks the actions.
+Formatting is deliberately bounded: Java-lexer indentation and outer whitespace cleanup, guarded
+by token equality. Operator spacing, wrapping/alignment and `xtc-format.toml` are not implemented.
+
+**Previous L69–L71 / PLAT2c checkpoint:** selected native testing fixed a diagnostic-refresh/Rename
+deadlock and file-event ordering. It temporarily kept code-action edits eager because LSP4IJ's
+lazy path broke Redo; the current bridge replaces that workaround. Previous X124 receipts used
+explicit VFS refresh and do not validate the new automatic ownership.
 
 **Earlier hardening batch validated:** L12 fixes anonymous declaration token overlap; L16/L27
 add project source-graph settings; L68 adds negotiated pull diagnostics, including closed roots
