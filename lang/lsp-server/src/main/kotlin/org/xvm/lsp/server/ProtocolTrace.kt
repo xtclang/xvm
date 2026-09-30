@@ -15,7 +15,7 @@ import org.xvm.lsp.util.ExecutionTrace
 /**
  * Server-side receive-to-write latency, including asynchronous waits and response serialization.
  */
-internal class ProtocolTrace : AutoCloseable {
+internal class ProtocolTrace(private val clientTrace: ClientTrace? = null) : AutoCloseable {
     private val incoming = ConcurrentHashMap<Either<String, Number>, ExecutionTrace.Span>()
     private val outgoing = ConcurrentHashMap<Either<String, Number>, ExecutionTrace.Span>()
 
@@ -55,6 +55,7 @@ internal class ProtocolTrace : AutoCloseable {
                 try {
                     next.consume(message)
                     span?.let {
+                        if (!received) clientTrace?.completed(it, message.error?.code)
                         ExecutionTrace.event(
                             it,
                             "end",
