@@ -72,14 +72,22 @@ internal class DiagnosticResultMessages(
 
     fun incoming(next: MessageConsumer): MessageConsumer = MessageConsumer { message ->
         val response = message as? ResponseMessage
-        val pending = synchronized(lock) { response?.let { requests.remove(it.id) } }
+        val pending = synchronized(lock) { response?.let { requests[it.id] } }
         val current = pending?.key?.uri?.let(snapshot)
         val report = response?.result as? DocumentDiagnosticReport
         val id = report?.left?.resultId ?: report?.right?.resultId
-        if (
-            pending != null && current == pending.snapshot && response?.error == null && id != null
-        ) {
-            synchronized(lock) { results[pending.key] = Result(pending.snapshot, id) }
+        if (pending != null && response != null) {
+            synchronized(lock) {
+                // Snapshot lookup runs outside this lock. Close/cancel may retire the request
+                // while it runs; only the still-owned request can seed the result cache.
+                if (
+                    requests.remove(response.id, pending) &&
+                        current == pending.snapshot &&
+                        response.error == null &&
+                        id != null
+                )
+                    results[pending.key] = Result(pending.snapshot, id)
+            }
         }
         // Client callbacks may re-enter the transport; never invoke them under our lock.
         next.consume(message)
