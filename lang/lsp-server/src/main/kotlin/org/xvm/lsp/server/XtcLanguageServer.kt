@@ -66,6 +66,7 @@ import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.AdapterCapability
 import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.XdkLibraries
 import org.xvm.lsp.adapter.xdk.XdkDependency
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.XdkSources
@@ -997,6 +998,22 @@ class XtcLanguageServer(
      * extension) sending a request with method "xtc/health check". LSP4J dispatches via reflection.
      */
     @Suppress("unused")
+    @JsonRequest("xtc/languageServiceStatus")
+    fun languageServiceStatus(): CompletableFuture<Map<String, Any?>> = CompletableFuture.completedFuture(
+        mapOf(
+            "adapter" to adapter.displayName, "version" to version,
+            "pid" to ProcessHandle.current().pid(), "runtime" to System.getProperty("java.runtime.version"),
+            "textSynchronization" to if (synchronization.incremental) "incremental" else "full",
+            "serverSaveFormatting" to (synchronization.formatOnSave && synchronization.waitUntil),
+            "saveHookSupported" to synchronization.waitUntil,
+            "formatting" to editorFormattingConfig,
+            "semanticTokens" to semanticTokensEnabled,
+            "capabilities" to buildServerCapabilities(),
+            "bundledXdk" to if (adapter is XdkAdapter) mapOf("readOnly" to true, "modules" to XdkLibraries.packagedResources) else null,
+            "compilerQueue" to (adapter as? XdkAdapter)?.compilerQueueSnapshot(),
+        )
+    )
+
     @JsonRequest("xtc/healthCheck")
     fun healthCheck(): CompletableFuture<Map<String, Any>> =
         supplyAsync(

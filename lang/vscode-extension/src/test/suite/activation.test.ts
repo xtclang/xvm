@@ -15,6 +15,7 @@ const EXPECTED_COMMANDS = [
     'xtc.showServerOutput',
     'xtc.hideServerOutput',
     'xtc.openLanguageSettings',
+    'xtc.showLanguageServiceStatus',
 ];
 
 suite('Extension activation surfaces', () => {

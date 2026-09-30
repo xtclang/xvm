@@ -8,6 +8,9 @@ import org.eclipse.lsp4j.services.LanguageServer
 
 /** Standard Rename remains available to clients that cannot persist compiler graph changes. */
 interface XtcLanguageServer : LanguageServer {
+    @JsonRequest("xtc/languageServiceStatus")
+    fun languageServiceStatus(): CompletableFuture<Map<String, Any?>>
+
     @JsonRequest("xtc/compilerSourceModules")
     fun compilerSourceModules(): CompletableFuture<List<SourceModuleConfiguration>>
 

@@ -21,6 +21,16 @@ import { compilerSourceModules, renameWithConfiguration } from './rename-proposa
 import { updateStatusBar } from './status-bar';
 
 let client: LanguageClient | undefined;
+let activeConnectionKey: string | undefined;
+
+function connectionKey(): string {
+    const settings = readServiceSettings();
+    const config = vscode.workspace.getConfiguration('xtc');
+    return JSON.stringify([settings.textSynchronization, settings.saveFormatting, config.get('java.home', ''), config.get('sourceRoots', [])]);
+}
+
+export function connectionSettingsChanged(): boolean { return connectionKey() !== activeConnectionKey; }
+
 let crashCount = 0;
 let hasEverReachedRunning = false;
 const MAX_CRASH_RESTARTS = 3;
@@ -67,6 +77,7 @@ export function startLanguageClient(context: vscode.ExtensionContext, serverJar:
 
 async function startConnection(context: vscode.ExtensionContext, serverJar: string, outputChannel: vscode.LogOutputChannel): Promise<void> {
     const preferences = readServiceSettings();
+    const requestedKey = connectionKey();
     let lastFormatting = formattingSettings();
     const javaExecutable = await findJavaExecutable(context);
     const logLevel = process.env.XTC_LOG_LEVEL?.toUpperCase() ?? 'INFO';
@@ -176,6 +187,7 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
     (client as unknown as { stop: (timeout?: number) => Promise<void> }).stop =
         (timeout?: number) => originalStop(timeout).catch(() => {});
 
+    activeConnectionKey = requestedKey;
     const startingClient = client;
     client.onDidChangeState(({ newState }) => {
         const stateMap = {
