@@ -42,10 +42,9 @@ class ClientPresentationTest {
     @Test
     fun `minimal clients get plain hover legacy symbol kinds and no optional diagnostics`() {
         val policy = ClientPresentation.read(InitializeParams())
-        assertThat(policy.hover("### Value\n```xtc\nInt value\n```\nUse `value`.")).satisfies {
-            assertThat(it.kind).isEqualTo(MarkupKind.PLAINTEXT)
-            assertThat(it.value).isEqualTo("Value\nInt value\nUse value.")
-        }
+        val hover = policy.hover("### Value\n```xtc\nInt value\n```\nUse `value`.")
+        assertThat(hover.kind).isEqualTo(MarkupKind.PLAINTEXT)
+        assertThat(hover.value).isEqualTo("Value\nInt value\nUse value.")
         assertThat(policy.hierarchicalSymbols).isFalse()
         assertThat(policy.symbolKind(SymbolKind.TypeParameter)).isEqualTo(SymbolKind.Variable)
         assertThat(policy.diagnosticVersions).isFalse()
