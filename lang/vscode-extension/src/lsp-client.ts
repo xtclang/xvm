@@ -12,6 +12,8 @@ import {
     TransportKind
 } from 'vscode-languageclient/node';
 
+import { formattingSettings, nativeFormatOnSave, readServiceSettings } from './editor-settings';
+import { synchronizationOptions } from './service-settings';
 import { compilerBuildModels } from './compiler-paths';
 import { BuildModel } from './build-model';
 import { buildJvmArgs, findJavaExecutable } from './java';
@@ -29,6 +31,12 @@ export function getClient(): LanguageClient | undefined {
 
 function compilerConfiguration(): { sourceModules: unknown[] | null; buildModels: BuildModel[] } {
     return { sourceModules: compilerSourceModules(), buildModels: compilerBuildModels() };
+}
+
+export async function updateEditorConfiguration(): Promise<void> {
+    if (client?.state === State.Running) {
+        await client.sendNotification('workspace/didChangeConfiguration', { settings: { xtc: { presentation: {} } } });
+    }
 }
 
 export async function updateCompilerConfiguration(): Promise<void> {
@@ -51,7 +59,15 @@ async function safeStop(): Promise<void> {
     }
 }
 
-export async function startLanguageClient(context: vscode.ExtensionContext, serverJar: string, outputChannel: vscode.LogOutputChannel): Promise<void> {
+let starting: Promise<void> | undefined;
+export function startLanguageClient(context: vscode.ExtensionContext, serverJar: string, outputChannel: vscode.LogOutputChannel): Promise<void> {
+    starting ??= startConnection(context, serverJar, outputChannel).finally(() => { starting = undefined; });
+    return starting;
+}
+
+async function startConnection(context: vscode.ExtensionContext, serverJar: string, outputChannel: vscode.LogOutputChannel): Promise<void> {
+    const preferences = readServiceSettings();
+    let lastFormatting = formattingSettings();
     const javaExecutable = await findJavaExecutable(context);
     const logLevel = process.env.XTC_LOG_LEVEL?.toUpperCase() ?? 'INFO';
     const jvmArgs = buildJvmArgs(serverJar, logLevel);
@@ -83,11 +99,19 @@ export async function startLanguageClient(context: vscode.ExtensionContext, serv
             fileEvents: vscode.workspace.createFileSystemWatcher('**/*.x')
         },
         initializationOptions: {
-            inlayHintsEnabled: vscode.workspace.getConfiguration('xtc').get<boolean>('inlayHints.enabled', true),
+            xtcDocumentSync: synchronizationOptions(preferences, false),
             xtcSourceRoots: vscode.workspace.getConfiguration('xtc').get<string[]>('sourceRoots', []),
             xtcCompiler: compilerConfiguration()
         },
         middleware: {
+            provideInlayHints: (document, range, token, next) => {
+                const value = vscode.workspace.getConfiguration('xtc', document.uri).get<unknown>('inlayHints.enabled', true);
+                const enabled = typeof value === 'boolean' ? value : preferences.inlayHints;
+                return enabled ? next(document, range, token) : [];
+            },
+            // Save ownership is checked per document at the instant of saving, including
+            // language/folder overrides changed after initialization.
+            willSaveWaitUntil: (event, next) => nativeFormatOnSave(event.document) ? Promise.resolve([]) : next(event),
             provideRenameEdits: (document, position, name, token, next) => {
                 const current = client;
                 return current?.initializeResult?.capabilities.experimental?.xtcRenameProposal === 1
@@ -101,14 +125,9 @@ export async function startLanguageClient(context: vscode.ExtensionContext, serv
                             return compilerConfiguration();
                         }
                         if (item.section === 'xtc.formatting') {
-                            const config = vscode.workspace.getConfiguration('xtc.formatting');
-                            return {
-                                indentSize: config.get<number>('indentSize', 4),
-                                continuationIndentSize: config.get<number>('continuationIndentSize', 8),
-                                tabSize: config.get<number>('tabSize', 4),
-                                insertSpaces: config.get<boolean>('insertSpaces', true),
-                                maxLineWidth: config.get<number>('maxLineWidth', 120)
-                            };
+                            try { lastFormatting = formattingSettings(); }
+                            catch (error) { outputChannel.warn(`Retaining previous Ecstasy formatting settings: ${error}`); }
+                            return lastFormatting;
                         }
                         return {};
                     });
@@ -157,6 +176,7 @@ export async function startLanguageClient(context: vscode.ExtensionContext, serv
     (client as unknown as { stop: (timeout?: number) => Promise<void> }).stop =
         (timeout?: number) => originalStop(timeout).catch(() => {});
 
+    const startingClient = client;
     client.onDidChangeState(({ newState }) => {
         const stateMap = {
             [State.Starting]: 'starting' as const,
@@ -177,7 +197,7 @@ export async function startLanguageClient(context: vscode.ExtensionContext, serv
 
     updateStatusBar('starting');
 
-    void client.start().catch(err => {
+    await startingClient.start().catch(err => {
         const message = err?.message ?? String(err);
         console.warn('Ecstasy Language Server failed to start:', message);
 
@@ -193,18 +213,36 @@ export async function startLanguageClient(context: vscode.ExtensionContext, serv
         }
 
         updateStatusBar('error');
-        client = undefined;
+        if (client === startingClient) client = undefined;
+        throw err;
     });
+    await applyTraceConfig();
 }
 
-export async function restartLanguageClient(context: vscode.ExtensionContext, serverJar: string, outputChannel: vscode.LogOutputChannel): Promise<void> {
-    crashCount = 0;
-    hasEverReachedRunning = false;
-    await safeStop();
-    await startLanguageClient(context, serverJar, outputChannel);
+// Restart requests share one operation; settings changes during startup are applied in order.
+let restarting: Promise<void> | undefined;
+let restartRevision = 0;
+export function restartLanguageClient(context: vscode.ExtensionContext, serverJar: string, outputChannel: vscode.LogOutputChannel): Promise<void> {
+    readServiceSettings();
+    formattingSettings(); // Reject malformed settings before stopping a valid connection.
+    restartRevision++;
+    restarting ??= (async () => {
+        let applied: number;
+        do {
+            applied = restartRevision;
+            crashCount = 0;
+            hasEverReachedRunning = false;
+            await starting?.catch(() => {});
+            await safeStop();
+            await startLanguageClient(context, serverJar, outputChannel);
+        } while (applied !== restartRevision);
+    })().finally(() => { restarting = undefined; });
+    return restarting;
 }
 
 export async function stopLanguageClient(): Promise<void> {
+    await restarting?.catch(() => {});
+    await starting?.catch(() => {});
     await safeStop();
 }
 
