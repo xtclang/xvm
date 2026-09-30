@@ -267,30 +267,32 @@ internal fun ParityScenarios.platformCases() {
         query("textDocument/documentSymbol", document)
         val normal =
             protocol.query("workspace/symbol", mapOf("query" to data.string("prefix"))).rows()
-        val before = trace.notifications("$/progress").size
-        val final =
-            protocol
-                .query(
-                    "workspace/symbol",
-                    mapOf(
-                        "query" to data.string("prefix"),
-                        "partialResultToken" to data.string("token"),
-                    ),
-                )
-                .rows()
-        val batches =
-            trace
-                .notifications("$/progress")
-                .drop(before)
-                .filter { it["token"]?.asString == data.string("token") }
-                .map { it["value"].asJsonArray }
-        check(final.isEmpty())
-        check(normal.size == data["declarations"].asInt)
-        check(batches.size > 1 && batches.all { it.size() <= data["batchSize"].asInt })
-        check(
-            batches.flatMap { it.map { row -> row.asJsonObject.string("name") } } ==
-                normal.map { it.string("name") }
-        )
+        val capture =
+            with(driver) {
+                utility(PartialResults::class).listen(singleProject(), data.string("token"))
+            }
+        try {
+            val final =
+                protocol
+                    .query(
+                        "workspace/symbol",
+                        mapOf(
+                            "query" to data.string("prefix"),
+                            "partialResultToken" to data.string("token"),
+                        ),
+                    )
+                    .rows()
+            val batches = capture.values().map { JsonParser.parseString(it).asJsonArray }
+            check(final.isEmpty())
+            check(normal.size == data["declarations"].asInt)
+            check(batches.size > 1 && batches.all { it.size() <= data["batchSize"].asInt })
+            check(
+                batches.flatMap { it.map { row -> row.asJsonObject.string("name") } } ==
+                    normal.map { it.string("name") }
+            )
+        } finally {
+            capture.dispose()
+        }
     }
 
     case("X142") { data ->
@@ -985,6 +987,15 @@ internal fun ParityScenarios.platformCases() {
             }
         }
     }
+}
+
+@Remote("org.xtclang.idea.playbook.probe.PartialResults", plugin = "org.xtclang.playbook.probe")
+interface PartialResults {
+    fun listen(project: Project, token: String): PartialResults
+
+    fun values(): List<String>
+
+    fun dispose()
 }
 
 @Remote("org.xtclang.idea.playbook.probe.WorkspaceEdits", plugin = "org.xtclang.playbook.probe")
