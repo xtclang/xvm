@@ -136,6 +136,7 @@ jobs:
         outputs:
             lang-changed: ${{ steps.lang-changes.outputs.lang }}
             effective-publish-intellij: ${{ steps.publish-flags.outputs.effective }}
+            effective-publish-vscode: ${{ steps.publish-flags.outputs.effective-vscode }}
         strategy:
             matrix:
                 os: ${{ github.event.inputs.platforms == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || github.event.inputs.platforms == 'windows-latest' && fromJSON('["windows-latest"]') || github.event.inputs.platforms == 'all' && fromJSON('["ubuntu-latest", "windows-latest"]') || fromJSON('["ubuntu-latest"]') }}
@@ -168,6 +169,10 @@ jobs:
                         - 'gradlew'
                         - 'gradlew.bat'
                         - 'gradle/wrapper/**'
+                      # A subset of `lang`. When every lang change falls in it, the IntelliJ
+                      # plugin is unaffected (see the next step).
+                      vscode:
+                        - 'lang/vscode-extension/**'
                       # The version catalog also holds XDK dependencies; the next step decides
                       # whether a catalog change touched a lang entry.
                       catalog:
@@ -176,16 +181,29 @@ jobs:
             # A catalog change is a lang change only when it touches a lang-* entry (versions,
             # libraries, plugins: the lang toolchain, Node, the IntelliJ platform, the Jackson
             # build-classpath floor). XDK-only bumps leave the lang tree and the plugins alone.
+            #
+            # The IntelliJ plugin is affected by every lang change except one confined to
+            # lang/vscode-extension/. Skipping it there avoids building and verifying the plugin,
+            # and downloading the two IntelliJ distributions (~3 GB) that needs, on VS Code-only
+            # changes such as the weekly Dependabot npm bumps. Lang catalog changes count as
+            # IntelliJ changes.
             - name: Check for lang version catalog changes
               id: lang-changes
               shell: bash
               run: |
                   LANG_CHANGED=false
+                  INTELLIJ_CHANGED=false
                   REASON="no changes under the lang paths or to lang catalog entries"
                   if [ "${{ steps.changes.outputs.lang }}" = "true" ]; then
                       LANG_CHANGED=true
-                      REASON="lang paths changed"
-                  elif [ "${{ steps.changes.outputs.catalog }}" = "true" ]; then
+                      if [ "${{ steps.changes.outputs.lang_count }}" != "${{ steps.changes.outputs.vscode_count }}" ]; then
+                          INTELLIJ_CHANGED=true
+                          REASON="lang paths changed"
+                      else
+                          REASON="lang paths changed, all under lang/vscode-extension/"
+                      fi
+                  fi
+                  if [ "${{ steps.changes.outputs.catalog }}" = "true" ]; then
                       case "${{ github.event_name }}" in
                           pull_request) BASE="${{ github.event.pull_request.base.sha }}" ;;
                           push) BASE="${{ github.event.before }}" ;;
@@ -193,17 +211,20 @@ jobs:
                       esac
                       if ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
                           LANG_CHANGED=true
+                          INTELLIJ_CHANGED=true
                           REASON="gradle/libs.versions.toml changed and its comparison base '$BASE' is unavailable"
                       elif git diff "$BASE"...HEAD -- gradle/libs.versions.toml | grep -q -E '^[+-][[:space:]]*lang[-.]'; then
                           LANG_CHANGED=true
+                          INTELLIJ_CHANGED=true
                           REASON="lang entries changed in gradle/libs.versions.toml"
-                      else
+                      elif [ "$LANG_CHANGED" != "true" ]; then
                           REASON="gradle/libs.versions.toml changed, but no lang entries"
                       fi
                   fi
                   echo "lang=$LANG_CHANGED" >> "$GITHUB_OUTPUT"
+                  echo "intellij=$INTELLIJ_CHANGED" >> "$GITHUB_OUTPUT"
                   echo "reason=$REASON" >> "$GITHUB_OUTPUT"
-                  echo "🌳 lang changed: $LANG_CHANGED ($REASON)"
+                  echo "🌳 lang changed: $LANG_CHANGED, IntelliJ plugin affected: $INTELLIJ_CHANGED ($REASON)"
 
             - name: 🌳 Lang validation decision
               shell: bash
@@ -230,35 +251,45 @@ jobs:
                   REQUESTED="${{ github.event.inputs.publish-intellij-plugin }}"
                   INCLUDE_LANG="${{ github.event.inputs.include-lang }}"
                   LANG_CHANGED="${{ steps.lang-changes.outputs.lang }}"
+                  INTELLIJ_CHANGED="${{ steps.lang-changes.outputs.intellij }}"
                   EVENT_NAME="${{ github.event_name }}"
                   REF="${{ github.ref }}"
                   EFFECTIVE=false
                   REASON=""
                   # Gating policy:
                   #   1. force-publish-intellij-plugin=true (workflow_dispatch only) -> always publish
-                  #   2. push to master with lang changes detected -> auto-publish
-                  #   3. workflow_dispatch with publish-intellij-plugin=true and lang changes detected -> publish
-                  # Anything else -> skip, with a reason.
+                  #   2. push to master with IntelliJ plugin changes detected -> auto-publish
+                  #   3. workflow_dispatch with publish-intellij-plugin=true and IntelliJ plugin changes detected -> publish
+                  # Anything else -> skip, with a reason. IntelliJ plugin changes are lang changes
+                  # outside lang/vscode-extension/ (see the lang-changes step).
                   if [ "$FORCE" = "true" ]; then
                       EFFECTIVE=true
                       REASON="forced via force-publish-intellij-plugin=true (overrides all other gating)"
-                  elif [ "$EVENT_NAME" = "push" ] && [ "$REF" = "refs/heads/master" ] && [ "$LANG_CHANGED" = "true" ]; then
+                  elif [ "$EVENT_NAME" = "push" ] && [ "$REF" = "refs/heads/master" ] && [ "$INTELLIJ_CHANGED" = "true" ]; then
                       EFFECTIVE=true
                       REASON="auto-publish on master merge with changes detected under lang/"
+                  elif [ "$EVENT_NAME" = "push" ] && [ "$REF" = "refs/heads/master" ] && [ "$LANG_CHANGED" = "true" ]; then
+                      REASON="master push with lang changes only under lang/vscode-extension/ -- IntelliJ plugin unchanged"
                   elif [ "$EVENT_NAME" = "push" ] && [ "$REF" = "refs/heads/master" ]; then
                       REASON="master push but no changes under lang/ -- nothing to publish (use force-publish-intellij-plugin=true via workflow_dispatch to override)"
-                  elif [ "$REQUESTED" = "true" ] && [ "$LANG_CHANGED" = "true" ]; then
+                  elif [ "$REQUESTED" = "true" ] && [ "$INTELLIJ_CHANGED" = "true" ]; then
                       EFFECTIVE=true
                       REASON="manual dispatch with publish-intellij-plugin=true and changes detected under lang/"
                   elif [ "$REQUESTED" = "true" ]; then
-                      REASON="manual dispatch with publish-intellij-plugin=true but no changes detected under lang/ (set force-publish-intellij-plugin=true to override)"
+                      REASON="manual dispatch with publish-intellij-plugin=true but no IntelliJ plugin changes detected (set force-publish-intellij-plugin=true to override)"
                   elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
                       REASON="manual dispatch but neither publish-intellij-plugin nor force-publish-intellij-plugin was enabled"
                   else
                       REASON="event=$EVENT_NAME on $REF -- IntelliJ plugin only publishes on master push or manual dispatch"
                   fi
-                  # Lang validation (tree-sitter + LSP tests + IntelliJ Plugin Verifier)
-                  # runs whenever ANY of these are true:
+                  # The VS Code extension publishes under the same policy, but on any lang change.
+                  EFFECTIVE_VSCODE=false
+                  if [ "$FORCE" = "true" ] || { [ "$LANG_CHANGED" = "true" ] && \
+                     { { [ "$EVENT_NAME" = "push" ] && [ "$REF" = "refs/heads/master" ]; } || [ "$REQUESTED" = "true" ]; }; }; then
+                      EFFECTIVE_VSCODE=true
+                  fi
+                  # Lang validation (tree-sitter + LSP tests + VS Code extension) runs whenever
+                  # ANY of these are true:
                   #   - lang/ paths changed (auto)
                   #   - workflow_dispatch with include-lang=true (user opted into lang)
                   #   - workflow_dispatch with publish-intellij-plugin=true (publish path)
@@ -281,8 +312,17 @@ jobs:
                   else
                       VALIDATE_REASON="no lang/ changes and no manual override"
                   fi
+                  # The Plugin Verifier runs on IntelliJ plugin changes and on every manual override
+                  # above, but not on lang changes confined to the VS Code extension.
+                  VERIFY_INTELLIJ=false
+                  if [ "$INTELLIJ_CHANGED" = "true" ] || [ "$FORCE" = "true" ] || \
+                     [ "$REQUESTED" = "true" ] || [ "$INCLUDE_LANG" = "true" ]; then
+                      VERIFY_INTELLIJ=true
+                  fi
 
                   echo "effective=$EFFECTIVE" >> $GITHUB_OUTPUT
+                  echo "effective-vscode=$EFFECTIVE_VSCODE" >> $GITHUB_OUTPUT
+                  echo "verify-intellij=$VERIFY_INTELLIJ" >> $GITHUB_OUTPUT
                   echo "force=$FORCE" >> $GITHUB_OUTPUT
                   echo "requested=$REQUESTED" >> $GITHUB_OUTPUT
                   echo "reason=$REASON" >> $GITHUB_OUTPUT
@@ -300,13 +340,19 @@ jobs:
                   echo "  📋 publish-intellij-plugin       : ${REQUESTED:-<unset>}"
                   echo "  📋 include-lang                  : ${INCLUDE_LANG:-<unset>}"
                   echo "  📋 lang/ changed                 : ${LANG_CHANGED:-<unset>}"
+                  echo "  📋 IntelliJ plugin affected      : ${INTELLIJ_CHANGED:-<unset>}"
                   echo "  📋 event                         : $EVENT_NAME on $REF"
                   if [ "$VALIDATE_LANG" = "true" ]; then
-                      echo "🌳 Lang validation (tree-sitter + LSP + verifyPlugin + vscode-extension): WILL RUN"
+                      echo "🌳 Lang validation (tree-sitter + LSP + vscode-extension): WILL RUN"
                   else
-                      echo "⏭️ Lang validation (tree-sitter + LSP + verifyPlugin + vscode-extension): WILL SKIP"
+                      echo "⏭️ Lang validation (tree-sitter + LSP + vscode-extension): WILL SKIP"
                   fi
                   echo "  📋 Validation reason  : $VALIDATE_REASON"
+                  if [ "$VERIFY_INTELLIJ" = "true" ]; then
+                      echo "🔌 IntelliJ Plugin Verifier: WILL RUN"
+                  else
+                      echo "⏭️ IntelliJ Plugin Verifier: WILL SKIP"
+                  fi
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                   echo ""
 
@@ -457,7 +503,7 @@ jobs:
               env:
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
                   ENABLE_INTELLIJ_RELEASE_BUILD: ${{ matrix.os == 'ubuntu-latest' && steps.publish-flags.outputs.effective == 'true' }}
-                  ENABLE_INTELLIJ_VERIFY: ${{ matrix.os == 'ubuntu-latest' && steps.publish-flags.outputs.validate-lang == 'true' }}
+                  ENABLE_INTELLIJ_VERIFY: ${{ matrix.os == 'ubuntu-latest' && steps.publish-flags.outputs.verify-intellij == 'true' }}
                   ENABLE_SNAPSHOT_BUNDLE_BUILD: ${{ matrix.os == 'ubuntu-latest' && ((github.ref == 'refs/heads/master' && github.event_name == 'push') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.publish-snapshots == true || github.event.inputs.publish-snapshots == 'true'))) }}
                   ORG_GRADLE_PROJECT_githubUsername: ${{ github.actor }}
                   ORG_GRADLE_PROJECT_githubPassword: ${{ secrets.GITHUB_TOKEN }}
@@ -644,7 +690,7 @@ jobs:
               if: |
                   always() &&
                   matrix.os == 'ubuntu-latest' &&
-                  steps.publish-flags.outputs.validate-lang == 'true'
+                  steps.publish-flags.outputs.verify-intellij == 'true'
               uses: actions/upload-artifact@v7
               with:
                   name: plugin-verifier-reports-${{ env.ARTIFACT_SHA }}
@@ -1201,6 +1247,7 @@ jobs:
               run: |
                   PUBLISH_XDK_SNAPSHOTS=false
                   PUBLISH_INTELLIJ_PLUGIN=false
+                  PUBLISH_VSCODE_EXTENSION=false
 
                   if [ "${{ github.ref }}" = "refs/heads/master" ] && [ "${{ github.event_name }}" = "push" ]; then
                       PUBLISH_XDK_SNAPSHOTS=true
@@ -1215,11 +1262,16 @@ jobs:
                   else
                       echo "⏭️ IntelliJ plugin publish lane: DISABLED (effective-publish-intellij=false from build-and-test)"
                   fi
-                  # The VS Code extension follows the same lang plugin lane: whenever that lane is
-                  # effective, lang validation ran and uploaded the vscode-extension-<sha> VSIX.
-                  PUBLISH_VSCODE_EXTENSION=$PUBLISH_INTELLIJ_PLUGIN
+                  # The VS Code extension has its own lane: it is effective on any lang change,
+                  # including one confined to lang/vscode-extension/ that leaves the IntelliJ plugin
+                  # out. Whenever it is effective, lang validation ran and uploaded the
+                  # vscode-extension-<sha> VSIX.
+                  if [ "${{ needs.build-and-test.outputs.effective-publish-vscode }}" = "true" ]; then
+                      PUBLISH_VSCODE_EXTENSION=true
+                  fi
 
-                  if [ "$PUBLISH_XDK_SNAPSHOTS" != "true" ] && [ "$PUBLISH_INTELLIJ_PLUGIN" != "true" ]; then
+                  if [ "$PUBLISH_XDK_SNAPSHOTS" != "true" ] && [ "$PUBLISH_INTELLIJ_PLUGIN" != "true" ] && \
+                     [ "$PUBLISH_VSCODE_EXTENSION" != "true" ]; then
                       echo "⏭️ No effective snapshot publication lanes remain after gating; skipping publish-snapshot.yml dispatch"
                       exit 0
                   fi
