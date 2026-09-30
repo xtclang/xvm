@@ -30,6 +30,76 @@ class ConfigurationCacheCompatibilityTest {
     @TempDir
     Path testProjectDir;
 
+    @Test
+    void disablingRebuildCannotRestoreOutputsFromAnOlderCompiler() throws IOException {
+        Files.writeString(testProjectDir.resolve("settings.gradle.kts"), """
+            rootProject.name = "rebuild-cache"
+            buildCache {
+                local { directory = file("local-cache") }
+            }
+            """);
+        Files.writeString(testProjectDir.resolve("build.gradle.kts"), """
+            import org.xtclang.plugin.tasks.XtcCompileTask
+
+            plugins {
+                id("org.xtclang.xtc-plugin")
+            }
+            version = "1.0"
+            // The fixture supplies its compiler directly in the extracted XDK directory.
+            tasks.named("extractXdk") { enabled = false }
+            tasks.named<XtcCompileTask>("compileXtc") {
+                // Keep the real compiler inputs and cache policy; simulate the compiler's
+                // timestamp shortcut without bootstrapping an XDK in this TestKit fixture.
+                actions.clear()
+                val compiler = layout.buildDirectory.file("xtc/xdk/lib/javatools.jar")
+                val destination = outputDirectory
+                val force = rebuild
+                doLast {
+                    val output = destination.get().file("Example.xtc").asFile
+                    output.parentFile.mkdirs()
+                    if (force.get() || !output.exists()) {
+                        output.writeText(compiler.get().asFile.readText())
+                    }
+                }
+            }
+            """);
+        final Path sources = Files.createDirectories(testProjectDir.resolve("src/main/x"));
+        Files.writeString(sources.resolve("Example.x"), "module Example {}");
+        final Path libraries = Files.createDirectories(testProjectDir.resolve("build/xtc/xdk/lib"));
+        final Path compiler = Files.writeString(libraries.resolve("javatools.jar"), "old compiler");
+        final Path output = testProjectDir.resolve("build/xtc/main/lib/Example.xtc");
+
+        final BuildResult old = runBuild("compileXtc", "--build-cache", "-PxtcDefaultRebuild=false");
+        assertEquals(TaskOutcome.SUCCESS, old.task(":compileXtc").getOutcome());
+        assertEquals("old compiler", Files.readString(output));
+
+        edit(compiler, "fixed compiler");
+        final BuildResult fixed = runBuild("compileXtc", "--build-cache");
+        assertEquals(TaskOutcome.SUCCESS, fixed.task(":compileXtc").getOutcome());
+        assertEquals("fixed compiler", Files.readString(output));
+
+        final BuildResult disabled = runBuild("compileXtc", "--build-cache", "-PxtcDefaultRebuild=false");
+        assertEquals(TaskOutcome.SUCCESS, disabled.task(":compileXtc").getOutcome());
+        assertEquals("fixed compiler", Files.readString(output));
+
+        edit(compiler, "another compiler");
+        final BuildResult unchanged = runBuild("compileXtc", "--build-cache", "-PxtcDefaultRebuild=false");
+        assertTrue(unchanged.getOutput().contains("Configuration cache entry reused"));
+        assertEquals(TaskOutcome.UP_TO_DATE, unchanged.task(":compileXtc").getOutcome());
+        assertEquals("fixed compiler", Files.readString(output));
+
+        Files.delete(output);
+        final BuildResult missing = runBuild("compileXtc", "--build-cache", "-PxtcDefaultRebuild=false");
+        assertEquals(TaskOutcome.SUCCESS, missing.task(":compileXtc").getOutcome());
+        assertEquals("another compiler", Files.readString(output));
+
+        edit(compiler, "fixed compiler");
+        Files.delete(output);
+        final BuildResult cached = runBuild("compileXtc", "--build-cache");
+        assertEquals(TaskOutcome.FROM_CACHE, cached.task(":compileXtc").getOutcome());
+        assertEquals("fixed compiler", Files.readString(output));
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {"xtc/main/resources", "custom-resources"})
     void resourcesFollowLateConfigurationAndChangesOnCacheReuse(final String resourceDestination) throws IOException {

@@ -121,6 +121,11 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
         this.hasVersionedOutputName = objects.property(Boolean.class).convention(ext.getVersionedOutputName());
         this.rebuild = objects.property(Boolean.class).convention(ext.getRebuild());
         this.xtcVersion = objects.property(String.class).convention(ext.getXtcVersion());
+
+        // without compiler inputs, cached outputs may have been produced by an older compiler;
+        // retain local up-to-date checks, but never load or store those outputs in the build cache
+        getOutputs().doNotCacheIf("Compiler inputs are not tracked when rebuild is disabled",
+            task -> !((XtcCompileTask) task).getRebuild().get());
     }
 
     @Internal
