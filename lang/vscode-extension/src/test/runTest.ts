@@ -30,26 +30,28 @@ async function main(): Promise<void> {
         ? (await import('./playbook/shared.js')).selectedScenarioIds(selections[0]?.slice('--cases='.length))
         : [];
     const extensionTestsPath = path.resolve(__dirname, playbook ? 'playbook' : 'suite', 'index');
-    const reports = path.join(extensionDevelopmentPath, 'build', 'reports', 'compiler-playbook');
-    if (playbook) { await fs.mkdir(reports, { recursive: true }); }
-    const runDirectory = playbook ? await fs.mkdtemp(path.join(reports, 'run-')) : undefined;
+    const reports = path.join(extensionDevelopmentPath, 'build', 'reports', playbook ? 'compiler-playbook' : 'extension-tests');
+    await fs.mkdir(reports, { recursive: true });
+    const runDirectory = await fs.mkdtemp(path.join(reports, 'run-'));
     // Unix-domain sockets inside user-data-dir have a short OS path limit (103 on macOS).
-    const profile = playbook ? await fs.mkdtemp(path.join(os.tmpdir(), 'xtc-code-')) : undefined;
-    const fixturesPath = runDirectory
-        ? path.join(runDirectory, 'workspace')
-        : path.resolve(extensionDevelopmentPath, 'src', 'test', 'fixtures');
-    if (runDirectory) {
-        await fs.mkdir(path.join(fixturesPath, '.vscode'), { recursive: true });
-        await fs.writeFile(path.join(fixturesPath, '.vscode', 'settings.json'), JSON.stringify({
-            'files.autoSave': 'off', 'editor.semanticHighlighting.enabled': true,
-            'editor.inlayHints.enabled': 'on', 'xtc.inlayHints.enabled': true
-        }, null, 2));
-        console.log(`[compiler-playbook] Reports and isolated workspace: ${runDirectory}`);
-        await fs.writeFile(path.join(reports, 'latest-run.txt'), runDirectory + '\n');
+    // Smoke tests also mutate settings; never reuse a profile or the repository fixtures.
+    const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'xtc-code-'));
+    const fixturesPath = path.join(runDirectory, 'workspace');
+    if (!playbook) {
+        await fs.cp(path.join(extensionDevelopmentPath, 'src', 'test', 'fixtures'), fixturesPath, {
+            recursive: true, filter: source => path.basename(source) !== '.vscode'
+        });
     }
-    const workspaceFile = runDirectory && multiRoot ? path.join(runDirectory, 'compiler.code-workspace') : undefined;
+    await fs.mkdir(path.join(fixturesPath, '.vscode'), { recursive: true });
+    await fs.writeFile(path.join(fixturesPath, '.vscode', 'settings.json'), JSON.stringify({
+        'files.autoSave': 'off', 'editor.semanticHighlighting.enabled': true,
+        'editor.inlayHints.enabled': 'on', 'xtc.inlayHints.enabled': true
+    }, null, 2));
+    console.log(`[vscode-test] Reports and isolated workspace: ${runDirectory}`);
+    await fs.writeFile(path.join(reports, 'latest-run.txt'), runDirectory + '\n');
+    const workspaceFile = multiRoot ? path.join(runDirectory, 'compiler.code-workspace') : undefined;
     if (workspaceFile) {
-        await fs.mkdir(path.join(runDirectory!, 'external'), { recursive: true });
+        await fs.mkdir(path.join(runDirectory, 'external'), { recursive: true });
         await fs.writeFile(workspaceFile, JSON.stringify({
             folders: [{ path: 'workspace' }, { path: 'external' }], settings: {}
         }, null, 2) + '\n');
@@ -64,10 +66,10 @@ async function main(): Promise<void> {
             // preempting our language registration; that way the test asserts
             // OUR behaviour, not the intersection of the user's installed
             // extensions and ours.
-            launchArgs: [workspaceFile ?? fixturesPath, '--disable-extensions', ...(runDirectory ? [
+            launchArgs: [workspaceFile ?? fixturesPath, '--disable-extensions',
                 `--user-data-dir=${profile}`, '--skip-welcome', '--skip-release-notes'
-            ] : [])],
-            extensionTestsEnv: runDirectory ? {
+            ],
+            extensionTestsEnv: playbook ? {
                 XTC_PLAYBOOK_REPORT_DIR: runDirectory,
                 XTC_PLAYBOOK_CASES: selected.join(','),
                 XTC_PLAYBOOK_COMMIT: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: extensionDevelopmentPath, encoding: 'utf8' }).trim(),
@@ -75,15 +77,11 @@ async function main(): Promise<void> {
             } : undefined,
         });
     } catch (error) {
-        if (runDirectory) {
-            await fs.writeFile(path.join(runDirectory, 'launcher-error.txt'), String(error) + '\n');
-        }
+        await fs.writeFile(path.join(runDirectory, 'launcher-error.txt'), String(error) + '\n');
         throw error;
     } finally {
-        if (runDirectory && profile) {
-            await fs.cp(path.join(profile, 'logs'), path.join(runDirectory, 'logs'), { recursive: true }).catch(() => undefined);
-            await fs.rm(profile, { recursive: true, force: true });
-        }
+        await fs.cp(path.join(profile, 'logs'), path.join(runDirectory, 'logs'), { recursive: true }).catch(() => undefined);
+        await fs.rm(profile, { recursive: true, force: true });
     }
 }
 
