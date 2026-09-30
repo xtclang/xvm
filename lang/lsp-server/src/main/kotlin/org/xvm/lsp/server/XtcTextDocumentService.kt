@@ -467,7 +467,7 @@ class XtcTextDocumentService(
             server.publishDiagnostics(uri, diagnostics, openDocuments[uri]?.version)
         }
         server.refreshDiagnostics()
-        server.refreshSemanticTokens()
+        server.refreshSemanticFeatures()
         // Root discovery can change after file creation/removal; release publications of old
         // scopes.
         val inactive =
@@ -508,7 +508,7 @@ class XtcTextDocumentService(
             diagnosticReports.record(uri, emptyList())
             server.publishDiagnostics(uri, emptyList(), document?.version)
             server.refreshDiagnostics()
-            server.refreshSemanticTokens()
+            server.refreshSemanticFeatures()
             refreshScopes(affected + retired)
             if (openDocuments.values.none { it.scope == document?.scope }) {
                 clearUnowned(publishedByScope.remove(document?.scope).orEmpty() - uri)
@@ -530,7 +530,7 @@ class XtcTextDocumentService(
             diagnosticRevision++
             clearResolveReports()
             server.refreshDiagnostics()
-            server.refreshSemanticTokens()
+            server.refreshSemanticFeatures()
             refreshScopes(affected + publishedByScope.filterValues { uri in it }.keys)
         }
     }
@@ -545,7 +545,7 @@ class XtcTextDocumentService(
             clearResolveReports()
             refreshScopes(affected)
             server.refreshDiagnostics()
-            server.refreshSemanticTokens()
+            server.refreshSemanticFeatures()
         }
     }
 
