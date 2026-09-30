@@ -1553,7 +1553,7 @@ public class MethodInfo
         ConstantPool pool = typeContainer.getConstantPool();
         if (typeContainer.isA(pool.typeRef()) &&
                 NativeNames.findReservedJitName(getJitIdentity()) != null) {
-            // all Ref and Var specializations share nRef, whose native methods use erased signatures
+            // all Ref and Var specializations share the native interfaces' erased signatures
             TypeConstant typeBase = typeContainer.isA(pool.typeVar())
                     ? pool.typeVar()
                     : pool.typeRef();

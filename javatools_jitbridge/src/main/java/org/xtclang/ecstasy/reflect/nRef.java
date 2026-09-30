@@ -98,15 +98,6 @@ public class nRef
     }
 
     @Override
-    public boolean peek$p(Ctx ctx) {
-        if (assigned$get$p(ctx)) {
-            ctx.o0 = get(ctx);
-            return true;
-        }
-        return false;
-    }
-
-    @Override
     public void set(Ctx ctx, Object value) {
         if (!$isVar) {
             throw Exception.$ro(ctx, "Ref is read-only");
@@ -139,52 +130,63 @@ public class nRef
      * <pre>{@code
      *     static <CompileType extends Ref> Boolean equals(CompileType value1, CompileType value2)
      * }</pre>
+     * Used by {@link Ref#equals$p(Ctx, nType, Ref, Ref)} for native and generated references.
      */
-    public static boolean equals$p(Ctx ctx, nType CompileType, nRef ref1, nRef ref2) {
-        if (ref1.$referentType.isJitPrimitive() && ref2.$referentType.equals(ref1.$referentType)) {
-            if (ref1.$referent instanceof org.xtclang.ecstasy.numbers.Number) {
-                return switch (ref1.$referent) {
-                    case Bit    n1 -> n1.$value == ((Bit)    ref2.$referent).$value;
-                    case Nibble n1 -> n1.$value == ((Nibble) ref2.$referent).$value;
-                    case Int8   n1 -> n1.$value == ((Int8)   ref2.$referent).$value;
-                    case Int16  n1 -> n1.$value == ((Int16)  ref2.$referent).$value;
-                    case Int32  n1 -> n1.$value == ((Int32)  ref2.$referent).$value;
-                    case Int64  n1 -> n1.$value == ((Int64)  ref2.$referent).$value;
-                    case UInt8  n1 -> n1.$value == ((UInt8)  ref2.$referent).$value;
-                    case UInt16 n1 -> n1.$value == ((UInt16) ref2.$referent).$value;
-                    case UInt32 n1 -> n1.$value == ((UInt32) ref2.$referent).$value;
-                    case UInt64 n1 -> n1.$value == ((UInt64) ref2.$referent).$value;
+    public static boolean equals$p(Ctx ctx, nType CompileType, Ref ref1, Ref ref2) {
+        nObject value1 = (nObject) ref1.get(ctx);
+        nObject value2 = (nObject) ref2.get(ctx);
+        if (value1 == value2) {
+            return true;
+        }
+        if (value1 == null || value2 == null) {
+            return false;
+        }
 
-                    case Int128  n1 -> n1.$lowValue  == ((Int128)  ref2.$referent).$lowValue
-                                   && n1.$highValue  == ((Int128)  ref2.$referent).$highValue;
-                    case UInt128 n1 -> n1.$lowValue  == ((UInt128) ref2.$referent).$lowValue
-                                    && n1.$highValue == ((UInt128) ref2.$referent).$highValue;
+        TypeConstant type1 = value1.$xvmType(ctx);
+        if (type1.isJitPrimitive() && value2.$xvmType(ctx).equals(type1)) {
+            if (value1 instanceof org.xtclang.ecstasy.numbers.Number) {
+                return switch (value1) {
+                    case Bit    n1 -> n1.$value == ((Bit)    value2).$value;
+                    case Nibble n1 -> n1.$value == ((Nibble) value2).$value;
+                    case Int8   n1 -> n1.$value == ((Int8)   value2).$value;
+                    case Int16  n1 -> n1.$value == ((Int16)  value2).$value;
+                    case Int32  n1 -> n1.$value == ((Int32)  value2).$value;
+                    case Int64  n1 -> n1.$value == ((Int64)  value2).$value;
+                    case UInt8  n1 -> n1.$value == ((UInt8)  value2).$value;
+                    case UInt16 n1 -> n1.$value == ((UInt16) value2).$value;
+                    case UInt32 n1 -> n1.$value == ((UInt32) value2).$value;
+                    case UInt64 n1 -> n1.$value == ((UInt64) value2).$value;
 
-                    case BFloat16 n1 -> n1.$value == ((BFloat16) ref2.$referent).$value;
-                    case Float8e4 n1 -> Float8e4.$compare(n1.$value, ((Float8e4) ref2.$referent).$value) == 0;
-                    case Float8e5 n1 -> Float8e5.$compare(n1.$value, ((Float8e5) ref2.$referent).$value) == 0;
-                    case Float16 n1 -> n1.$value == ((Float16) ref2.$referent).$value;
-                    case Float32 n1 -> n1.$value == ((Float32) ref2.$referent).$value;
-                    case Float64 n1 -> n1.$value == ((Float64) ref2.$referent).$value;
+                    case Int128  n1 -> n1.$lowValue  == ((Int128)  value2).$lowValue
+                                   && n1.$highValue  == ((Int128)  value2).$highValue;
+                    case UInt128 n1 -> n1.$lowValue  == ((UInt128) value2).$lowValue
+                                    && n1.$highValue == ((UInt128) value2).$highValue;
 
-                    case Dec32  n1 -> n1.$bits == ((Dec32)  ref2.$referent).$bits;
-                    case Dec64  n1 -> n1.$bits == ((Dec64)  ref2.$referent).$bits;
-                    case Dec128 n1 -> n1.$highBits == ((Dec128) ref2.$referent).$highBits
-                                   && n1.$lowBits  == ((Dec128) ref2.$referent).$lowBits;
-                    default -> throw new UnsupportedOperationException(ref1.$referentType.getValueString());
+                    case BFloat16 n1 -> n1.$value == ((BFloat16) value2).$value;
+                    case Float8e4 n1 -> Float8e4.$compare(n1.$value, ((Float8e4) value2).$value) == 0;
+                    case Float8e5 n1 -> Float8e5.$compare(n1.$value, ((Float8e5) value2).$value) == 0;
+                    case Float16 n1 -> n1.$value == ((Float16) value2).$value;
+                    case Float32 n1 -> n1.$value == ((Float32) value2).$value;
+                    case Float64 n1 -> n1.$value == ((Float64) value2).$value;
+
+                    case Dec32  n1 -> n1.$bits == ((Dec32)  value2).$bits;
+                    case Dec64  n1 -> n1.$bits == ((Dec64)  value2).$bits;
+                    case Dec128 n1 -> n1.$highBits == ((Dec128) value2).$highBits
+                                   && n1.$lowBits  == ((Dec128) value2).$lowBits;
+                    default -> throw new UnsupportedOperationException(type1.getValueString());
                 };
             }
             // else non-number JIT primitive
-            return switch (ref1.$referent) {
-                case Date     dt -> Date.$equals(dt.epochDay, ((Date) ref2.$referent).epochDay);
+            return switch (value1) {
+                case Date     dt -> Date.$equals(dt.epochDay, ((Date) value2).epochDay);
                 case Duration d1 -> {
-                    Duration d2 = (Duration) ref2.$referent;
+                    Duration d2 = (Duration) value2;
                     yield Duration.$equals(d1.picoseconds$0, d1.picoseconds$1,
                                            d2.picoseconds$0, d2.picoseconds$1);
                 }
-                default -> throw new UnsupportedOperationException("TODO " + ref1.$referentType);
+                default -> throw new UnsupportedOperationException("TODO " + type1);
             };
         }
-        return ref1.$referent == ref2.$referent;
+        return false;
     }
 }

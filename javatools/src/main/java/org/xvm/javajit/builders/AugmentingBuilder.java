@@ -61,9 +61,8 @@ public class AugmentingBuilder extends CommonBuilder {
 
     @Override
     public boolean assembleClass(ClassBuilder classBuilder) {
-        // do not augment Object and since nRef is both Ref and Var, ignore "Var" interface; it
-        // causes circular initialization
-        if (thisId.equals(pool().clzObject()) || thisId.equals(pool().clzVar())) {
+        // do not augment Object
+        if (thisId.equals(pool().clzObject())) {
             return false;
         }
 

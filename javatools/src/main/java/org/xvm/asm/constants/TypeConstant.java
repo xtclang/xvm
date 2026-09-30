@@ -7366,11 +7366,9 @@ public abstract class TypeConstant
      *         cast explicitly to {@code nObject} class to invoke its methods
      */
     public boolean isJitInterface() {
-        // Ref/Var, Tuple and Type are always represented by native classes
-        ConstantPool pool    = getConstantPool();
+        // Tuple and Type are always represented by native classes
         TypeConstant typeJit = getCallableJitType();
         return typeJit.isInterfaceType()
-                && !typeJit.isA(pool.typeRef())
                 && !typeJit.isTuple()
                 && !typeJit.isTypeOfType();
     }
