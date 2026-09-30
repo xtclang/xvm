@@ -1,6 +1,10 @@
 # Threading `errs` through the compiler
 
-**Latest batch (L69–L71 / PLAT2c):** token range/delta, initial lazy resolution, bounded file
+**Current follow-up batch:** external source/resource watch ownership is implemented; X124 now
+exercises missing nested roots and settings replacement without native fixture refresh. Tests
+will run after the four requested implementation commits.
+
+**Latest validated batch (L69–L71 / PLAT2c):** token range/delta, initial lazy resolution, bounded file
 operations and evaluated Gradle inputs pass backend/protocol checks and ten selected scenarios
 in both hosts. IntelliJ acceptance exposed and fixed a diagnostic-refresh/Rename deadlock and
 file-event ordering; it keeps code-action edits eager to preserve Undo/Redo with LSP4IJ 0.21.0.
