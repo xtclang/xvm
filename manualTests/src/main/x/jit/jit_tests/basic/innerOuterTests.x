@@ -52,8 +52,7 @@ package innerOuterTests {
     }
 
     void testOuterIdentity() {
-        // TODO: Child.testOuter() fails in L_GET with a TypeMatrix type-assignment assertion
-        // new IdentityParent().new Child().testOuter();
+        new IdentityParent().new Child().testOuter();
     }
 
     class IdentityParent {

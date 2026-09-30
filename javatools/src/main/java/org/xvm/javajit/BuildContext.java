@@ -1162,7 +1162,7 @@ public class BuildContext {
                 PropertyInfo prop = typeInfo.findProperty(propId);
                 assert prop != null;
 
-                type = prop.inferImmutable(thisType);
+                type = prop.inferImmutable(thisType).resolveAutoNarrowing(pool(), false, thisType, null);
                 type = typeMatrix.augmentPropertyType(type, addr);
             } else if (isSpecialized &&
                     constant instanceof MethodConstant methodId && methodId.isLambda()) {
@@ -1317,14 +1317,15 @@ public class BuildContext {
      * Ensure an unnamed {@link RegisterInfo} for the specified register id and an optimized
      * ClassDesc for the specified type.
      */
-    public RegisterInfo ensureRegister(int regId, TypeConstant type) {
-        return ensureRegister(regId, type, JitTypeDesc.getJitClass(builder, type), "");
+    public RegisterInfo ensureRegister(CodeBuilder code, int regId, TypeConstant type) {
+        return ensureRegister(code, regId, type, JitTypeDesc.getJitClass(builder, type), "");
     }
 
     /**
      * Ensure a {@link RegisterInfo} for the specified register id, type, ClassDesc and name.
      */
-    public RegisterInfo ensureRegister(int regId, TypeConstant type, ClassDesc cd, String name) {
+    public RegisterInfo ensureRegister(CodeBuilder code, int regId, TypeConstant type,
+                                       ClassDesc cd, String name) {
         return regId == Op.A_IGNORE
             ? new SingleSlot(regId, -2, Specific, type, cd, name)
             : registerInfos.computeIfAbsent(regId, ix -> {
@@ -1362,7 +1363,10 @@ public class BuildContext {
                                 "Unsupported register flavor: " + flavor);
                     }
                 } else {
-                    throw new UnsupportedOperationException("buildCreateRef");
+                    int slot = scope.allocateLocal(regId, TypeKind.REFERENCE);
+                    Ref ref  = new Ref(this, regId, slot, name, isVar, type, jitDesc.flavor);
+                    ref.addStartLabel(code.newLabel());
+                    return ref;
                 }
             }
         );
@@ -1661,7 +1665,7 @@ public class BuildContext {
             // the register represents a property that the value(s) on the stack must be stored into
             buildSetPropertyFromStack(code, regId, type, jitDesc.flavor);
         } else {
-            RegisterInfo reg = adjustRegister(code, ensureRegister(regId, type));
+            RegisterInfo reg = adjustRegister(code, ensureRegister(code, regId, type));
             reg.store(this, code, type);
             ensureRegisterScope(code, reg);
         }
@@ -1809,7 +1813,7 @@ public class BuildContext {
      */
     public void moveRegister(CodeBuilder code, int fromVarId, int toVarId, boolean allowUpcast) {
         RegisterInfo regFrom = loadArgument(code, fromVarId);
-        RegisterInfo regTo   = ensureRegister(toVarId, regFrom.type());
+        RegisterInfo regTo   = ensureRegister(code, toVarId, regFrom.type());
 
         moveRegister(code, regFrom, regTo, allowUpcast);
     }
@@ -2014,10 +2018,9 @@ public class BuildContext {
         int          slot         = scope.allocateLocal(regId, TypeKind.REFERENCE);
         JitTypeDesc  jtd          = referentType.getJitDesc(builder);
         RegisterInfo ref          = new Ref(this, regId, slot, name, isVar, referentType, jtd.flavor);
-        Label        label        = code.newLabel();
 
         registerInfos.put(regId, ref);
-        ref.addStartLabel(label);
+        ref.addStartLabel(code.newLabel());
         return ref;
     }
 
@@ -3196,7 +3199,7 @@ public class BuildContext {
             TypeConstant destType = getReturnType(regId);
             assert destType != null;
 
-            RegisterInfo reg = ensureRegister(regId, destType);
+            RegisterInfo reg = ensureRegister(code, regId, destType);
             if (typeMatrix.needsInitialization(regId, currOpAddr)) {
                 // the False path still needs initialized slots for the Java verifier
                 Builder.defaultStore(code, reg);
