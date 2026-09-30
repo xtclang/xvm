@@ -19,6 +19,41 @@ import org.xvm.lsp.adapter.xdk.semanticSnapshot
 
 /** Consumer contracts: all semantic answers survive independently of the compiler and its pool. */
 class SemanticModelTest {
+    @ParameterizedTest
+    @ValueSource(strings = ["plain", "😀"])
+    fun `folded property initializers retain source identities and expression types`(
+        marker: String
+    ) {
+        val source =
+            "module Folded { String marker = \"$marker\"; Int /*declaration*/value = 1; " +
+                "Int copy = /*use*/value; Int sum = /*sum*/value + 2; }"
+        val compilation = compile(source)
+        val model = compilation.semanticSnapshot()
+        val declared = occurrence(model, source, "declaration")
+        listOf("use", "sum").forEach { marker ->
+            val reference = occurrence(model, source, marker)
+            assertThat(reference.symbol).isEqualTo(declared.symbol)
+            assertThat(reference.type).isEqualTo(declared.type)
+            assertThat(reference.usage).isEqualTo(SemanticModel.Usage.READ)
+        }
+        assertThat(compilation.initializerBindings().values.flatMap { it.references() }).anyMatch {
+            it.name() == "value"
+        }
+        assertThatThrownBy { (compilation.initializerBindings() as MutableMap).clear() }
+            .isInstanceOf(UnsupportedOperationException::class.java)
+    }
+
+    @Test
+    fun `failed initializer probes do not publish clone facts and real methods retain source facts`() {
+        val rejected = compile("module Failed { Int copy = absent; }", succeeds = false)
+        assertThat(rejected.initializerBindings()).isEmpty()
+        val source =
+            "module Runtime { Int /*declaration*/value = make(); Int copy = /*use*/value; Int make() = 1; }"
+        val model = compile(source).semanticSnapshot()
+        assertThat(occurrence(model, source, "use").symbol)
+            .isEqualTo(occurrence(model, source, "declaration").symbol)
+    }
+
     @Test
     fun `class and method type parameters point to their written declarations`() {
         val source =

@@ -150,6 +150,52 @@ internal fun ParityScenarios.platformCases() {
         }
     }
 
+    case("X142") { data ->
+        write(data.string("file"), data.string("source"))
+        configure(
+            listOf(
+                SharedScenarios.SourceModule(
+                    data.string("module"),
+                    uri(data.string("file")),
+                    emptyList(),
+                )
+            )
+        )
+        val document = open(data.string("file"))
+        clean(document)
+        val offset = document.text.indexOf(data.string("anchor"))
+        check(
+            query("textDocument/hover", document, offset)
+                .toString()
+                .contains(data.string("expected"))
+        )
+        val definitions = query("textDocument/definition", document, offset).rows()
+        check(
+            definitions.any {
+                it["range"].asJsonObject["start"].asJsonObject["character"].asInt ==
+                    document.text.indexOf(data.string("name"))
+            }
+        )
+        check(
+            query(
+                    "textDocument/references",
+                    document,
+                    offset,
+                    mapOf("context" to mapOf("includeDeclaration" to true)),
+                )
+                .rows()
+                .size == data["references"].asInt
+        )
+        applyRename(document, offset, data.string("newName"))
+        check(
+            document.text ==
+                data.string("source").replace(data.string("name"), data.string("newName"))
+        )
+        with(driver) { invokeAction("Undo", component = document.editor.component) }
+        settle(document)
+        check(document.text == data.string("source"))
+    }
+
     case("X140") { data ->
         val document = open(data.string("file"), data.string("source"))
         clean(document)
