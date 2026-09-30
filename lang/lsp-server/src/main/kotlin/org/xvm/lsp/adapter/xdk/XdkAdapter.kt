@@ -286,23 +286,60 @@ internal constructor(
 
     override fun affectedAnalysisScopes(uri: String): Set<String> =
         synchronized(lifecycle) {
-            val sources = project.affected(analysisScope(uri))
-            val resources =
-                project
-                    .resourceScopes(uri)
-                    .filter { scope ->
-                        val root = project.modules.values.single { it.uri == scope }
-                        val inputs =
-                            completed[scope]?.sourceInputs
-                                ?: builds[root.name]?.key?.sources
-                                ?: diagnosticCache.snapshot().builds[scope]?.key?.sources
-                        requests[scope]?.result?.isDone == false ||
-                            inputs == null ||
-                            inputs.resources.entries.isNotEmpty()
-                    }
-                    .flatMapTo(linkedSetOf(), project::affected)
-            project.orderedScopes(sources + resources)
+            project.orderedScopes(inputScopes(uri).flatMapTo(linkedSetOf(), project::affected))
         }
+
+    /**
+     * Only filesystem refreshes may coalesce against compiled inputs; editor changes still retire
+     * queries.
+     */
+    internal fun changedFileScopes(uri: String): Set<String> =
+        synchronized(lifecycle) {
+            val file = XdkSources.file(uri)
+            val changed =
+                inputScopes(uri).filter { scope ->
+                    val module = project.modules.values.firstOrNull { it.uri == scope }
+                    val inputs = sourceInputs(scope)
+                    val root = module?.root ?: XdkSources.file(scope)
+                    file == null ||
+                        root == null ||
+                        inputs == null ||
+                        requests[scope]?.result?.isDone == false ||
+                        // Failed analyses can retain an older reusable build. Recreated inputs
+                        // must repair the current failure even when they match that older build.
+                        project.affected(scope).any { completed[it]?.succeeded == false } ||
+                        !XdkFileChanges.unchanged(file, root, inputs)
+                }
+            project.orderedScopes(changed.flatMapTo(linkedSetOf(), project::affected))
+        }
+
+    private fun sourceInputs(scope: String): XdkSources.Inputs? =
+        completed[scope]?.sourceInputs
+            ?: project.modules.values
+                .firstOrNull { it.uri == scope }
+                ?.let { builds[it.name]?.key?.sources }
+            ?: diagnosticCache.snapshot().builds[scope]?.key?.sources
+
+    private fun inputScopes(uri: String): Set<String> {
+        val file = XdkSources.file(uri)?.toPath()
+        val known = project.modules.values.map { it.uri }.toSet() + requests.keys + completed.keys
+        val sources = known.filter { scope ->
+            val root = XdkSources.file(scope)?.toPath()
+            if (root == null || file == null) scope == uri
+            else {
+                val members = root.parent.resolve(root.fileName.toString().removeSuffix(".x"))
+                root.startsWith(file) || file.startsWith(members)
+            }
+        }
+        val resources =
+            project.resourceScopes(uri).filter { scope ->
+                val inputs = sourceInputs(scope)
+                requests[scope]?.result?.isDone == false ||
+                    inputs == null ||
+                    inputs.resources.entries.isNotEmpty()
+            }
+        return (sources + resources).toSet()
+    }
 
     fun inputWatchRoots(): Set<File> = synchronized(lifecycle) { project.inputWatchRoots() }
 

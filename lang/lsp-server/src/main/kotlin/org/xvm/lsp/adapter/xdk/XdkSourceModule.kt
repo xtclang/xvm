@@ -107,7 +107,7 @@ internal class XdkProject(modules: List<XdkSourceModule>) {
         return modules.values
             .filter { module ->
                 XdkResources.roots(module.root, module.resourceFiles).any {
-                    file.startsWith(it.toPath())
+                    file.startsWith(it.toPath()) || it.toPath().startsWith(file)
                 }
             }
             .mapTo(linkedSetOf()) { it.uri }

@@ -70,6 +70,15 @@ class CompilerRootWatchesTest {
                 )
             )
             .containsExactly(Path.of("/outside/source"))
+        assertThat(
+                CompilerRootWatches.roots(
+                    registration(
+                        "xtc-resources-flat",
+                        """{"baseUri":"file:///","pattern":"generated"}""",
+                    )
+                )
+            )
+            .isEmpty()
         assertThat(CompilerRootWatches.roots(registration("xtc-file-watcher", "\"**/*.x\"")))
             .isEmpty()
         assertThat(
