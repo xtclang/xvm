@@ -1,6 +1,7 @@
 package org.xtclang.idea.playbook
 
 import com.google.gson.Gson
+import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
@@ -148,6 +149,87 @@ internal fun ParityScenarios.platformCases() {
                 }
             }
         }
+    }
+
+    case("X144") { data ->
+        write(data.string("file"), data.string("source"))
+        write(data.string("otherFile"), data.string("otherSource"))
+        configure(
+            listOf(
+                SharedScenarios.SourceModule(
+                    data.string("module"),
+                    uri(data.string("file")),
+                    emptyList(),
+                ),
+                SharedScenarios.SourceModule(
+                    data.string("otherModule"),
+                    uri(data.string("otherFile")),
+                    emptyList(),
+                ),
+            )
+        )
+        val other = open(data.string("otherFile"))
+        val document = open(data.string("file"))
+        fun change(target: ParityWorkspace.Document, version: Int, text: String) =
+            mapOf(
+                "textDocument" to mapOf("uri" to target.uri, "version" to version),
+                "edits" to
+                    listOf(
+                        mapOf(
+                            "range" to
+                                mapOf(
+                                    "start" to ParityWorkspace.position(target.text, 0),
+                                    "end" to
+                                        ParityWorkspace.position(target.text, target.text.length),
+                                ),
+                            "newText" to text,
+                        )
+                    ),
+            )
+        fun apply(changes: List<Map<String, Any>>): JsonObject {
+            val pending =
+                with(driver) {
+                    utility(WorkspaceEdits::class)
+                        .apply(
+                            singleProject(),
+                            Gson()
+                                .toJson(
+                                    mapOf(
+                                        "label" to "Ecstasy guarded edit",
+                                        "edit" to mapOf("documentChanges" to changes),
+                                    )
+                                ),
+                        )
+                }
+            return protocol.await("workspace/applyEdit", pending).asJsonObject
+        }
+        check(
+            apply(listOf(change(document, version(document), data.string("changed"))))["applied"]
+                .asBoolean
+        )
+        check(document.text == data.string("changed"))
+        with(driver) {
+            focusEditor(document.editor)
+            invokeAction("\$Undo", now = false, component = document.editor.component)
+            awaitUi("server edit Undo restores the source", 15.seconds) {
+                document.text == data.string("source")
+            }
+        }
+        val oldVersion = version(other)
+        replace(other, data.string("otherChanged"))
+        check(
+            !apply(
+                    listOf(
+                        change(document, version(document), data.string("changed")),
+                        change(other, oldVersion, data.string("otherSource")),
+                    )
+                )["applied"]
+                .asBoolean
+        )
+        check(document.text == data.string("source"))
+        check(other.text == data.string("otherChanged"))
+        clean(document)
+        clean(other)
     }
 
     case("X143") { data ->
@@ -890,6 +972,11 @@ internal fun ParityScenarios.platformCases() {
             }
         }
     }
+}
+
+@Remote("org.xtclang.idea.playbook.probe.WorkspaceEdits", plugin = "org.xtclang.playbook.probe")
+interface WorkspaceEdits {
+    fun apply(project: Project, json: String): ClientFuture
 }
 
 @Remote("org.xtclang.idea.playbook.probe.FileTreeOperations", plugin = "org.xtclang.playbook.probe")

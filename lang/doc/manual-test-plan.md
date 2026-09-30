@@ -2229,6 +2229,7 @@ module Advanced {
 | X141 | Switch runtime server trace between `messages` and `verbose`, then request hover. Restore the editor trace setting. | Both log the method and timing; only verbose adds correlation metadata. No source buffer or request payload appears in server trace notifications. |
 | X142 | Open configured `FoldedInitializer.x`; hover and navigate from `Int copy = value`, find references, rename `value` to `number`, then Undo. | The declaration, folded initializer and method body share one semantic identity; all three rename together, compile cleanly and restore on Undo. |
 | X143 | Configure `PartialSymbols.x` with 130 classes. Compare ordinary workspace symbols with a request carrying a partial-result token. | Ordered progress batches contain at most 64 symbols each; their combined names match the ordinary result exactly and the final response is empty. |
+| X144 | Apply a current versioned text edit through the installed client, Undo it, then send a two-document edit with one stale version. | Current edit and native Undo succeed. A stale target refuses the whole batch and preserves both current buffers. Drivers invoke the installed application handler; packaged tests separately exercise server-to-client transport. |
 
 
 For a project using the updated Gradle plugin, run `./gradlew exportXtcLspModel` in that project's
@@ -2682,7 +2683,8 @@ Pending manual acceptance in both editors:
 The disk-index/open-buffer, long-lived path-picker and stalled watcher-registration fixes and
 their deterministic regressions are explicit in the [state audit](../../docs/errs-audit.md#mutable-state-and-deprecated-api-audit-2026-09-30-checkpoint).
 Partial-result streaming and L83 initializer facts are implemented; their acceptance and remaining
-limits are recorded below. Generic IntelliJ server-initiated edit version checking remains open.
+limits are recorded below. Generic IntelliJ server-initiated text-edit checking is implemented;
+X144 acceptance is pending the current batched run. The current catalog contains 149 cases.
 
 ### Constant-folded initializer acceptance (X142)
 

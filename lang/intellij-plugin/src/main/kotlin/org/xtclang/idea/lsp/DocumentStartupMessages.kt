@@ -1,9 +1,12 @@
 package org.xtclang.idea.lsp
 
+import java.net.URI
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.FoldingRangeRequestParams
+import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
@@ -37,10 +40,35 @@ internal class DocumentStartupMessages(private val snapshot: (String) -> Snapsho
         val snapshot: Snapshot?,
     )
 
+    // The actual transmitted version, never a second counter. A closed entry retains only the
+    // version ceiling: LSP4IJ can reuse versions on reopen, making old server edits ambiguous.
+    private data class Sent(
+        val owner: Any?,
+        val version: Int,
+        val text: String,
+        val retiredVersion: Int = -1,
+    )
+
     private val lock = Any()
     private val opening = mutableMapOf<String, Opening>()
-    private val opened = mutableMapOf<String, Any>()
+    private val opened = mutableMapOf<URI, Sent>()
     private val folds = mutableMapOf<String, Fold>()
+
+    /** Prove that an incoming edit's version describes this live editor incarnation and text. */
+    fun editSnapshot(uri: String, version: Int?): Snapshot? {
+        val current = snapshot(uri) ?: return null
+        return synchronized(lock) {
+            val sent = opened[URI(uri)] ?: return@synchronized null
+            current.takeIf {
+                sent.owner === it.owner &&
+                    sent.text == it.text &&
+                    (version == null || (version == sent.version && version > sent.retiredVersion))
+            }
+        }
+    }
+
+    fun isCurrent(uri: String, version: Int?, expected: Snapshot): Boolean =
+        editSnapshot(uri, version) == expected
 
     fun outgoing(next: MessageConsumer): MessageConsumer = MessageConsumer { message ->
         val params = (message as? NotificationMessage)?.params
@@ -114,7 +142,7 @@ internal class DocumentStartupMessages(private val snapshot: (String) -> Snapsho
             close(uri, current, next)
             return
         }
-        if (opened[uri] === current.owner) return
+        if (opened[URI(uri)]?.owner === current.owner) return
         retire(uri, next)
         val pending = opening.remove(uri)?.takeIf { it.owner === current.owner }?.change
         // Edits before the synchronizer was attached have no didChange. Read the actual buffer
@@ -129,7 +157,8 @@ internal class DocumentStartupMessages(private val snapshot: (String) -> Snapsho
                 DidOpenTextDocumentParams(TextDocumentItem(uri, item.languageId, version, content)),
             )
         )
-        opened[uri] = current.owner
+        opened[URI(uri)] =
+            Sent(current.owner, version, content, opened[URI(uri)]?.retiredVersion ?: -1)
     }
 
     private fun change(
@@ -140,8 +169,12 @@ internal class DocumentStartupMessages(private val snapshot: (String) -> Snapsho
     ) {
         val uri = params.textDocument.uri
         if (current == null) return
-        if (opened[uri] === current.owner) {
+        if (opened[URI(uri)]?.owner === current.owner) {
+            val before = opened.getValue(URI(uri))
+            if (params.textDocument.version <= before.version) return
+            val text = applyChanges(before.text, params.contentChanges)
             next.consume(message)
+            opened[URI(uri)] = before.copy(version = params.textDocument.version, text = text)
         } else {
             retire(uri, next)
             val previous = opening[uri]?.takeIf { it.owner === current.owner }?.change
@@ -162,7 +195,7 @@ internal class DocumentStartupMessages(private val snapshot: (String) -> Snapsho
         // A delayed close cannot discard the reopened incarnation, even before its open arrives.
         if (
             current != null &&
-                (opened[uri] === current.owner || opening[uri]?.owner === current.owner)
+                (opened[URI(uri)]?.owner === current.owner || opening[uri]?.owner === current.owner)
         )
             return
         retire(uri, next)
@@ -173,7 +206,10 @@ internal class DocumentStartupMessages(private val snapshot: (String) -> Snapsho
         uri: String,
         next: MessageConsumer,
     ) {
-        if (opened.remove(uri) != null) {
+        val before = opened[URI(uri)]
+        if (before?.owner != null) {
+            opened[URI(uri)] =
+                Sent(null, before.version, "", maxOf(before.version, before.retiredVersion))
             next.consume(
                 notification(
                     "textDocument/didClose",
@@ -182,6 +218,24 @@ internal class DocumentStartupMessages(private val snapshot: (String) -> Snapsho
             )
         }
     }
+
+    /** Reconstruct only the wire text, including sequential incremental patches and CRLF. */
+    private fun applyChanges(text: String, changes: List<TextDocumentContentChangeEvent>): String =
+        changes.fold(text) { content, change ->
+            val range = change.range
+            if (range == null) change.text
+            else {
+                val breaks = Regex("\r\n|\r|\n").findAll(content).toList()
+                val starts = listOf(0) + breaks.map { it.range.last + 1 }
+                val ends = breaks.map { it.range.first } + content.length
+                fun offset(at: Position): Int {
+                    require(at.line in starts.indices && at.character >= 0)
+                    return starts[at.line] +
+                        at.character.coerceAtMost(ends[at.line] - starts[at.line])
+                }
+                content.replaceRange(offset(range.start), offset(range.end), change.text)
+            }
+        }
 
     private fun notification(
         method: String,
