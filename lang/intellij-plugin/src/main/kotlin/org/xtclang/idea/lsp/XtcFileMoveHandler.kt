@@ -38,7 +38,7 @@ class XtcFileMoveHandler : MoveHandlerDelegate() {
             XtcFileOperations.server(elements.first().project) != null &&
             (targetContainer == null || targetContainer is PsiDirectory)
 
-    override fun isValidTarget(target: PsiElement, sources: Array<out PsiElement>): Boolean =
+    override fun isValidTarget(target: PsiElement?, sources: Array<out PsiElement>): Boolean =
         target is PsiDirectory
 
     override fun doMove(
