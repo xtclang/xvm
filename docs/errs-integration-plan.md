@@ -7367,3 +7367,14 @@ above validate this combined branch; each extracted PR still requires its own bu
 
 This slice changes client ownership only; it adds no compiler, embedding or AST API. It belongs
 with the L80 native-client extraction slice, after the startup-message ownership bridge.
+
+**L81 acceptance implementation checkpoint:** shared **X145** uses a 5,000-method compiler
+fixture, not a delayed fake response. Both drivers require a references request to remain pending
+when native progress becomes visible. IntelliJ observes/cancels the status bar's actual progress
+model and opens the background-task panel. VS Code observes the SDK's real `window.withProgress`
+call, forwarding its reporter/token unchanged, then invokes the workbench notification Cancel
+action. Both require cancellation, a successful later hover, restart with a pending reader,
+unsaved-text preservation, disappearance of progress and old-PID termination. A workload that
+finishes before these actions fails as unexercised. Catalog: **150** scenarios. Compilation is
+checked during implementation; the full validation batch follows the two separate commits.
+No production progress delay or test RPC was introduced.

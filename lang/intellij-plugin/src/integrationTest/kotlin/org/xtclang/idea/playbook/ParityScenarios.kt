@@ -20,6 +20,7 @@ class ParityScenarios(
         renameCases()
         graphCases()
         platformCases()
+        progressCases()
     }
 
     internal fun case(
