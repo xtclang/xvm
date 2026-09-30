@@ -265,6 +265,10 @@ tasks.withType<Test>().configureEach {
 }
 
 tasks.test {
+    systemProperty(
+        "xtc.lsp.retentionCycles",
+        providers.gradleProperty("lsp.retentionCycles").orElse("120").get(),
+    )
     // Prefer the real logger over javatools' shaded no-op provider, without setting a provider
     // property on Gradle's separate bootstrap classloader (which cannot see test dependencies).
     classpath =
