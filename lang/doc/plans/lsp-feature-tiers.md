@@ -479,7 +479,17 @@ After those, every meaningful improvement requires the semantic model from Tier 
 Compiler-client ownership checkpoint (2026-09-30): generic IntelliJ server text edits now require
 verifiable document versions/epochs and recheck every target in one Undo command. Generic resource,
 snippet and confirmation edits are refused; native Rename/Move owns resource edits. X144 is shared
-with VS Code and written but not yet validated in this batch. No adapter capability is newly advertised.
+with VS Code and passes both clients. No adapter capability is newly advertised.
 
 X145 adds native long-operation cancellation and pending-request restart coverage in both clients.
-It uses real compiler work; native progress/PID/unsaved-buffer assertions are pending execution.
+It uses real compiler work; selected native progress/PID/unsaved-buffer assertions pass in both clients.
+Final catalog receipts and timing differences are recorded in the integration plan.
+
+IntelliJ formatting uses a document-based asynchronous service to handle dirty closed tabs during
+Save All; LSP4IJ 0.21.0 dereferences a nullable editor in its default reply path. Native X139
+verifies both open and closed tabs. This is a client correction, without new compiler capabilities.
+
+Final native acceptance passes all 150 IntelliJ scenarios plus startup in one uninterrupted run,
+with zero IDE errors. The full VS Code catalog passes 149/150; X130 remains failed on a host
+Explorer repaint exception despite successful Move/Undo/Redo/resource assertions. The canonical
+feature matrix and integration plan retain that distinction and the remaining manual checks.

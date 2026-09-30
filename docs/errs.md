@@ -1,13 +1,25 @@
-L81 shared X145 now adds real long-operation progress/cancel/disconnect acceptance to both editor
-drivers (150 catalog cases). The test implementation is complete; batched execution is next.
+Current batch: native server text-edit ownership (L80, `992b47f26`) and real editor progress,
+cancellation and pending-work restart acceptance (L81, `7a312dd9d`). X144 passes both clients;
+X145 passes both clients, including their final full-catalog runs.
+A live stack sample also found quadratic lexical line scans; `3987e26c1` fixes them with immutable
+per-call indexes, without AST/embedding changes. The catalog contains 150 cases. The broad
+compiler/backend/stdio/plugin unit batch and focused performance regressions pass; the extended
+360-cycle workload passes with zero retained sampled compiler objects. IntelliJ passes all 150 cases
+plus startup in one uninterrupted run, with zero IDE errors and successful shutdown. The corrected
+full VS Code run passes 149/150 cases:
+all 23 incomplete-query failures are fixed by `f8fa59c86` (38 focused regressions pass).
+X130 verifies Move/Undo/Redo and resources but still reports VS Code's post-Paste Explorer repaint
+exception. The full catalog is therefore not clean; the native host follow-up remains tracked.
+The native run also exposed a closed-tab Save All failure in LSP4IJ; `8254048a0` fixes it and
+X139 passes for open and closed tabs. Harness lifecycle/fixture corrections are `cff4c1283`.
+Both VS Code test runners now show completed/remaining counts in the status bar; the ordinary
+smoke suite passes 23/23. Final backend results are 1,504 passed plus three existing disabled tests,
+74 packaged stdio tests passed, and 80 IntelliJ unit tests passed. See the integration plan for
+the final receipts, preserved failures and remaining acceptance limits.
 
-Current work: L80 generic IntelliJ server text edits now have version/incarnation checks and
-native Undo. Shared X144 and regressions are added (149 catalog cases); validation is pending the
-batched L81 progress/cancellation work. No compiler/AST API changes are needed for this slice.
-
-Current implementation checkpoint: three concurrency fixes, L83 detached initializer facts, and
+Previous implementation checkpoint: three concurrency fixes, L83 detached initializer facts, and
 L80/L81 capability/partial-result/indexing follow-ups are committed separately. The shared catalog
-now contains 148 scenarios (new X142/X143); backend/transport validation and selected acceptance
+then contained 148 scenarios (new X142/X143); backend/transport validation and selected acceptance
 in both editors pass, with focused corrections documented in the receipt. The earlier
 X136/X137/X140/X141 receipt remains valid for that earlier scope, not this new batch. See the
 [follow-up extraction and validation record](errs-integration-plan.md#concurrency-and-initializer-follow-up-batch-2026-09-30)

@@ -12,7 +12,7 @@ and refactoring proofs still fail closed. This adds no AST state or compiler lis
 See [scope, ownership and validation](../../../docs/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
 
 
-> **Last Updated**: 2026-09-30 (watch ownership, file operations, resolve/save/sync support and server-log access)
+> **Last Updated**: 2026-09-30 (native edit ownership, progress/cancellation and full editor acceptance)
 
 The P1–P4 compiler organization checkpoint moves the four incomplete-syntax nodes into
 `org.xvm.compiler.ast.partial` and updates the adapter's imports. It changes no advertised LSP
@@ -232,7 +232,7 @@ local or import-alias declarations and inherited written member contracts, prese
 | Pull document/workspace diagnostics | Implemented for negotiated compiler clients: result IDs, related/closed documents, refresh and removal reports. Shared X123 and updated X76/X118 pass in both editors; push remains for other clients. PLAT1's source-location crash is fixed. The native demo also corrected a closed standalone-member pull gap; X27/X123 pass after that correction. | L68 implemented; demo receipts and nine pull-diagnostic tests |
 | Semantic-token range/delta requests | Negotiated range/delta with bounded result history; backend/protocol and both host checks pass | L69 / X126 |
 | Completion/action/lens/link/inlay/workspace-symbol resolve requests | All six endpoints implemented with bounded revision guards. IntelliJ selects and applies lazy actions through its undo-aware bridge. Backend/protocol and selected acceptance pass in both editors. | L70 / X127, X131 |
-| File-operation pre-edit requests; explicit create/delete notifications | All six hooks pass backend/protocol checks; native file/package Rename passes. Batch native Move/Undo/Redo passes X130; cross-package qualification and explicit graph replacement remain refused. | L71 / X128, X130 |
+| File-operation pre-edit requests; explicit create/delete notifications | All six hooks pass backend/protocol checks; native file/package Rename passes. Batch native Move/Undo/Redo and resource assertions pass X130, but the current full VS Code run fails that case on the host's post-Paste Explorer repaint. IntelliJ passes. Cross-package qualification and explicit graph replacement remain refused. | L71 / X128, X130 |
 | Save-time edits, incremental sync, multiple-range formatting | Negotiated save hooks, opt-in incremental UTF-16 updates and multiple-range formatting implemented; default Full/no save edits preserved. Backend/packaged transport and selected X132 pass in both editors. | L72 / X132 |
 | Server-side `workspace/executeCommand` | Module Run lenses invoke an existing client command | L73 |
 | Cross-project monikers | Detached identities scoped to compiler snapshots/graphs | L74 |
@@ -241,7 +241,7 @@ local or import-alias declarations and inherited written member contracts, prese
 | Document colors and color presentations | Ordinary token coloring; no color-value provider | L77 |
 | Notebook synchronization | File/module document sessions | L78 |
 | Debug inline values | Compiler type/parameter inlay hints; no runtime values | L79 |
-| Application work-done progress, refresh, partial results and trace controls | Negotiated progress/create/cancel, lifecycle gating, coalesced refresh and runtime trace are implemented and tested. Bounded partial-result batches and actual Tree-sitter scan progress are now implemented; controlled regressions and shared X143 pass; visible long-operation/cancel acceptance remains open. | L81 / X141; [coverage map](../manual-test-plan.md#protocol-and-lifecycle-coverage-map) |
+| Application work-done progress, refresh, partial results and trace controls | Negotiated progress/create/cancel, lifecycle gating, coalesced refresh and runtime trace are implemented and tested. Bounded partial-result batches, actual Tree-sitter scan progress and shared X143 pass. X145 verifies native progress-model cancellation and restart during pending work in both editors. Physical Cancel-button selection and broader P3/P4 checks remain manual. | L81 / X141, X143, X145; [coverage map](../manual-test-plan.md#protocol-and-lifecycle-coverage-map) |
 | Constant-folded property initializer facts | Detached initializer facts survive constant folding; backend and shared X142 pass in both editors | L83 |
 
 Every absent feature above has an explicit task and a
@@ -891,7 +891,17 @@ IntelliJ startup with zero IDE errors. See the [protocol validation record](../.
 Server progress, cancellation, lifecycle and refresh have controlled protocol
 regressions; partial results and visible long-operation/cancel acceptance remain separately tracked.
 
-Current follow-up catalog: 148 scenarios, including X142 initializer navigation/rename and X143
-partial workspace symbols. These implementations have separate commits, passing backend/transport
-checks and selected acceptance in both editors. See `errs-audit.md` for the negotiated action/completion audit and the remaining
-LSP4IJ generic server-initiated edit limitation; selected actions and Rename/Move use snapshot guards.
+Current catalog: 150 scenarios, including X142 initializer navigation/rename, X143 partial workspace
+symbols, X144 guarded client edits and X145 progress/cancel/restart. IntelliJ passes all 150 plus
+startup in `run-1843149430446112481`, with zero IDE errors and successful shutdown. Full VS Code
+`run-06Z6tq` passes 149/150; X130's host repaint exception remains a failure after successful
+Move/Undo/Redo/resource assertions. No completed mutation is replayed or failure hidden.
+
+Generic IntelliJ server text edits now validate transmitted document versions/epochs and recheck
+all targets within one native Undo command. Resource/snippet/confirmation edits remain refused by
+this generic path. Save All uses a document-based formatting service for dirty closed tabs, avoiding
+LSP4IJ 0.21.0's nullable-editor reply bug; shared X139 proves both open and closed documents.
+Delayed no-op directory watches preserve incomplete queries against current open overlays; real
+closed-source/resource changes still invalidate them. These corrections add no embedding or AST API.
+See the [final batch receipt](../../../docs/errs-integration-plan.md#final-native-and-batch-receipt-2026-09-30)
+and [audit](../../../docs/errs-audit.md#native-save-all-and-fixture-cleanup-follow-up-2026-09-30).
