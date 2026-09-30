@@ -6,6 +6,8 @@ import org.gradle.api.provider.Property
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.TaskAction
+import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
+import org.jetbrains.intellij.platform.gradle.models.ProductRelease
 import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
 import java.io.File
 
@@ -430,12 +432,13 @@ intellijPlatform {
 
     // Plugin Verifier statically analyses the built plugin against real IDE
     // distributions to catch binary-incompat regressions (removed APIs, missing
-    // classes, signature changes) before users hit them. `recommended()` verifies
-    // against every IDE build in the plugin's declared compatibility range
-    // (since-build "261" through any future until-build), so newly-released
-    // 2026.1.x patches and 2026.2 EAPs are checked as soon as JetBrains
-    // publishes them. failureLevel is explicit so the build fails on real
-    // breaks but not on every deprecated/experimental API touch.
+    // classes, signature changes) before users hit them. It checks a single IDE: the
+    // latest stable IntelliJ IDEA release at or above the plugin's since-build, which
+    // JetBrains' release feed resolves on each run. The plugin compiles against the
+    // minimum (lang-intellij-ide), so this pairs the oldest API with the newest stable
+    // one. Verifying every build in range (`recommended()`) also downloaded EAPs and
+    // cost ~1 GB and a verification per IDE. failureLevel is explicit so the build fails
+    // on real breaks but not on every deprecated/experimental API touch.
     //
     // INTERNAL_API_USAGES is included so the build fails if the plugin calls an
     // IntelliJ API marked @ApiStatus.Internal. Such APIs are not meant for client
@@ -446,7 +449,11 @@ intellijPlatform {
     // generating a JetBrains verifier email on every Marketplace upload.
     pluginVerification {
         ides {
-            recommended()
+            latest {
+                types = listOf(IntelliJPlatformType.IntellijIdea)
+                channels = listOf(ProductRelease.Channel.RELEASE)
+                sinceBuild = intellijSinceBuild
+            }
         }
         failureLevel =
             listOf(
