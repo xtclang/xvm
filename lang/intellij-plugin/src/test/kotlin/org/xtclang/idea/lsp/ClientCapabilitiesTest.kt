@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test
 
 class ClientCapabilitiesTest {
     @Test
-    fun `negotiate eager action edits without disabling completion documentation resolve`() {
+    fun `negotiate lazy action edits and completion documentation resolve`() {
         val actions = CodeActionResolveSupportCapabilities(listOf("edit", "command"))
         val completion = CompletionItemResolveSupportCapabilities(listOf("documentation"))
         val params =
@@ -35,7 +35,7 @@ class ClientCapabilitiesTest {
                     }
             }
         XtcLanguageServerFactory().createClientFeatures().initializeParams(params)
-        assertThat(actions.properties).containsExactly("command")
+        assertThat(actions.properties).containsExactly("edit", "command")
         assertThat(completion.properties).containsExactly("documentation")
     }
 

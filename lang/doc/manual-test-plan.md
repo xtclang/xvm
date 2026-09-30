@@ -1,6 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has 135 scenarios. X130 adds batch container Move/Undo/Redo; its first run is pending. The L69–L71/PLAT2c batch passes the ten selected cases
+The current catalog has 136 scenarios. X130 adds batch container Move/Undo/Redo and X131
+adds the remaining resolve operations; their first runs are pending. The L69–L71/PLAT2c batch passes the ten selected cases
 CFG2/X105/X118/X122/X124–X129 in both hosts across focused runs. IntelliJ's final receipts are
 `run-8616709537315408794` (eight cases) and `run-431060674485649448` (X124/X128), both with zero
 IDE errors. VS Code's receipts are `run-KEzKf8` (six cases) and `run-AW9amt` (four cases).
@@ -2146,6 +2147,8 @@ module Advanced {
 | X129 | Import an evaluated Gradle model with processed resources; refresh to empty roots and back; try a malformed report; enable an explicit empty-resource override and refresh again; reset to the build model. | Diagnostics follow the imported paths, malformed reports retain the last valid import, refresh preserves explicit settings, and resetting restores the model. Both drivers exercise the installed client configuration path. |
 
 | X130 | Select the two shared module containers, Move them into the destination directory, then Undo and Redo once. | Both modules, member files and embedded resources follow the move; the unchanged consumer still resolves its imports. IntelliJ uses the registered Community Move handler and dialog; VS Code uses a native workspace resource edit. |
+
+| X131 | Request code lenses, document links, inlay hints and workspace symbols; resolve deferred properties when negotiated; edit the source and retry old handles. | Stable positions/labels, preserved command arguments, complete resolved payloads and explicit stale-handle refusal. Both drivers use their installed client connection; existing UI cases cover presentation/navigation. |
 
 For a project using the updated Gradle plugin, run `./gradlew exportXtcLspModel` in that project's
 root to export `.gradle/xtc/lsp-model.json`. Run `./gradlew prepareXtcLspModel` to process resources
