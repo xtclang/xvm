@@ -46,8 +46,7 @@ fun Driver.focusEditor(editor: JEditorUiComponent) {
         withContext(OnDispatcher.EDT) { window.isFocused() }
     }
     withContext(OnDispatcher.EDT) {
-        if (!editor.component.isFocusOwner())
-            utility(NativeEditorUi::class).focusEditor(nativeEditor)
+        utility(NativeEditorUi::class).focusEditor(nativeEditor)
     }
     awaitUi(
         "native editor focus",
@@ -58,7 +57,9 @@ fun Driver.focusEditor(editor: JEditorUiComponent) {
             }
         },
     ) {
-        withContext(OnDispatcher.EDT) { window.isFocused() && editor.component.isFocusOwner() }
+        withContext(OnDispatcher.EDT) {
+            window.isFocused() && utility(NativeEditorUi::class).isEditorActive(nativeEditor)
+        }
     }
 }
 
@@ -136,6 +137,8 @@ internal fun JEditorUiComponent.scrollToCaretNow() {
 @Remote("org.xtclang.idea.playbook.probe.EditorUi", plugin = "org.xtclang.playbook.probe")
 internal interface NativeEditorUi {
     fun focusEditor(editor: Editor)
+
+    fun isEditorActive(editor: Editor): Boolean
 
     fun focusState(editor: Editor): String
 
