@@ -29,7 +29,7 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
  * - The adapter is selected at build time via: ./gradlew :lang:lsp-server:fatJar
  *   -Plsp.adapter=treesitter
  * - Default is 'treesitter' (syntax-aware, requires native library bundled in JAR)
- * - Use 'compiler' for real diagnostics from the XTC compiler and its bundled XDK libraries
+ * - Use 'compiler' for real diagnostics from the Ecstasy compiler and its bundled XDK libraries
  * - Use 'mock' for regex-based features (no native dependencies)
  *
  * Important: This LSP server uses stdio for communication. All logging goes to stderr to keep
@@ -57,7 +57,7 @@ private fun loadBuildProperties(): Properties =
 internal enum class AdapterBackend(val displayName: String) {
     MOCK("Mock"),
     TREE_SITTER("Tree-sitter"),
-    COMPILER("XTC Compiler");
+    COMPILER("Ecstasy Compiler");
 
     companion object {
         fun fromSetting(setting: String? = null): AdapterBackend =
@@ -86,7 +86,7 @@ internal enum class AdapterBackend(val displayName: String) {
 private fun createAdapter(requested: AdapterBackend): Pair<Adapter, AdapterBackend> =
     when (requested) {
         AdapterBackend.COMPILER -> {
-            logger.info("using the XTC compiler for diagnostics and document symbols")
+            logger.info("using the Ecstasy compiler for diagnostics and document symbols")
             XdkAdapter() to AdapterBackend.COMPILER
         }
 

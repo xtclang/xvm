@@ -1347,7 +1347,7 @@ class CompilerPlaybook(
         val done = completed.count { it.id != "START" }
         val failed = completed.count { it.status == "failed" }
         val text =
-            "XTC playbook: $done/$total completed, ${total - done} left | $id $status" +
+            "Ecstasy playbook: $done/$total completed, ${total - done} left | $id $status" +
                 if (failed > 0) " | $failed failed" else ""
         withContext(OnDispatcher.EDT) {
             utility(PlaybookProgress::class).update(singleProject(), text)

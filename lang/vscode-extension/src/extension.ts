@@ -21,7 +21,7 @@ import { compilerSettingsLocation } from './rename-proposal';
 function ensureXtcLanguageAssociation(document: vscode.TextDocument): void {
     if (document.fileName.endsWith('.x') && document.languageId !== 'xtc') {
         vscode.languages.setTextDocumentLanguage(document, 'xtc').then(
-            () => console.log(`Set language to XTC for ${document.fileName}`),
+            () => console.log(`Set language to Ecstasy for ${document.fileName}`),
             err => console.error(`Failed to set language for ${document.fileName}:`, err)
         );
     }
@@ -56,7 +56,7 @@ async function fixFilesAssociation(context: vscode.ExtensionContext): Promise<vo
 }
 
 export function activate(context: vscode.ExtensionContext): void {
-    console.log('XTC Language Support is now active');
+    console.log('Ecstasy Language Support is now active');
 
     // Handle unhandled promise rejections from VS Code's git integration trying to stat .x.git files
     const rejectionHandler = (reason: unknown) => {
@@ -94,7 +94,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.workspace.textDocuments.forEach(ensureXtcLanguageAssociation);
 
     // Create output channel for LSP server
-    const outputChannel = vscode.window.createOutputChannel('XTC Language Server', { log: true });
+    const outputChannel = vscode.window.createOutputChannel('Ecstasy Language Server', { log: true });
 
     // Register all providers and UI components
     const statusBar = createStatusBar();
@@ -119,7 +119,7 @@ export function activate(context: vscode.ExtensionContext): void {
             if (serverExists) {
                 await restartLanguageClient(context, serverJar, outputChannel);
             } else {
-                vscode.window.showWarningMessage('XTC Language Server JAR not found. Build the extension first.');
+                vscode.window.showWarningMessage('Ecstasy Language Server JAR not found. Build the extension first.');
             }
         }),
 
@@ -159,10 +159,10 @@ export function activate(context: vscode.ExtensionContext): void {
         startLanguageClient(context, serverJar, outputChannel);
     } else {
         const buildCmd = './gradlew :lang:vscode-extension:assemble -PincludeBuildLang=true -PincludeBuildAttachLang=true';
-        console.log('XTC Language Server JAR not found at:', serverJar);
+        console.log('Ecstasy Language Server JAR not found at:', serverJar);
         console.log(`Build with: ${buildCmd}`);
         void vscode.window.showErrorMessage(
-            'XTC Language Server JAR not found. Build lang:vscode-extension to enable LSP features.',
+            'Ecstasy Language Server JAR not found. Build lang:vscode-extension to enable LSP features.',
             'Show Build Command'
         ).then(choice => {
             if (choice === 'Show Build Command') {

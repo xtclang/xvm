@@ -66,7 +66,7 @@ class XtcLanguageServerFactory : LanguageServerFactory {
     override fun createConnectionProvider(project: Project) =
         XtcLspConnectionProvider(project).also {
             logger.info(
-                "Creating XTC LSP connection provider (out-of-process) - ${LspBuildProperties.buildInfo}"
+                "Creating Ecstasy LSP connection provider (out-of-process) - ${LspBuildProperties.buildInfo}"
             )
         }
 
@@ -206,13 +206,13 @@ class XtcLspConnectionProvider(private val project: Project) : OSProcessStreamCo
         setCommandLine(commandLine)
 
         logger.info(
-            "XTC LSP command configured (v${LspBuildProperties.version}, " +
+            "Ecstasy LSP command configured (v${LspBuildProperties.version}, " +
                 "adapter=${LspBuildProperties.adapter}, semanticTokens=$semanticTokens): ${commandLine.commandLineString}"
         )
     }
 
     override fun start() {
-        logger.info("Starting XTC LSP Server (out-of-process via JBR)")
+        logger.info("Starting Ecstasy LSP Server (out-of-process via JBR)")
         // TODO LSP4IJ: make OS process start/stop atomic and reject starts after stop/disposal.
         // LSP4IJ starts on a pooled thread: project disposal or cancellation can stop the
         // provider first. Its OS provider otherwise starts even after its stop flag is set.
@@ -220,7 +220,7 @@ class XtcLspConnectionProvider(private val project: Project) : OSProcessStreamCo
         lifetime.start()
 
         logger.info(
-            "XTC LSP Server process started (v${LspBuildProperties.version}, adapter=${LspBuildProperties.adapter}, pid=$pid)"
+            "Ecstasy LSP Server process started (v${LspBuildProperties.version}, adapter=${LspBuildProperties.adapter}, pid=$pid)"
         )
 
         if (startNotificationShown.compareAndSet(false, true)) {
@@ -234,9 +234,9 @@ class XtcLspConnectionProvider(private val project: Project) : OSProcessStreamCo
     }
 
     override fun stop() {
-        logger.info("Stopping XTC LSP Server")
+        logger.info("Stopping Ecstasy LSP Server")
         lifetime.stop()
-        logger.info("XTC LSP Server stopped")
+        logger.info("Ecstasy LSP Server stopped")
     }
 
     private fun findServerJar(): Path = PluginPaths.findServerJar(LSP_SERVER_JAR)

@@ -6912,3 +6912,8 @@ options, not compiler APIs. No additional AST or embedding changes were necessar
 preserves the existing formatter and compiler queue; save hooks never enqueue a compilation. Shared
 X132 and backend regression tests are written; execution is batched after the four implementation
 commits. Specification: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/ .
+
+Terminology/compatibility checkpoint (2026-09-30): visible server/command/status/template labels
+use Ecstasy; class names, setting IDs, environment variables and the existing notification preference
+ID remain stable. LSP4IJ workarounds carry searchable `// TODO LSP4IJ:` markers explaining the
+upstream gap and removal condition, including its bundled LSP4J diagnostic-union decoder.
