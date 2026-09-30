@@ -71,7 +71,7 @@ suite('LSP startup', function () {
             `LSP server did not respond to hover within ${STARTUP_TIMEOUT_MS} ms. ` +
                 'This usually means the LSP server JVM failed to start ' +
                 '(missing JAR, wrong Java version, tree-sitter native lib not loaded). ' +
-                'Check the "XTC Language Server" output channel from a manual run.',
+                'Check the "Ecstasy Language Server" output channel from a manual run.',
         );
     });
 });

@@ -150,7 +150,7 @@ object CompilerBuildModel {
     fun refresh(project: Project, prepare: Boolean, finished: (String?) -> Unit) {
         ProgressManager.getInstance()
             .run(
-                object : Task.Backgroundable(project, "Import XTC compiler paths", true) {
+                object : Task.Backgroundable(project, "Import Ecstasy compiler paths", true) {
                     override fun run(indicator: ProgressIndicator) {
                         val failure = runCatching {
                             val root = Path.of(requireNotNull(project.basePath))
@@ -180,7 +180,7 @@ object CompilerBuildModel {
                                     (result.stdout + result.stderr).takeLast(8000)
                             }
                             requireNotNull(read(project)) {
-                                "Gradle did not export an XTC compiler model"
+                                "Gradle did not export an Ecstasy compiler model"
                             }
                         }
                             .exceptionOrNull()

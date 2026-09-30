@@ -48,8 +48,8 @@ class XtcTextMateBundleProvider : TextMateBundleProvider {
         // List contents of textmate directory
         logger.warn("Contents of textmate: ${textmatePath.toFile().listFiles()?.map { it.name }}")
 
-        val bundle = TextMateBundleProvider.PluginBundle("XTC", textmatePath)
-        logger.warn("Registered TextMate bundle: XTC at $textmatePath")
+        val bundle = TextMateBundleProvider.PluginBundle("Ecstasy", textmatePath)
+        logger.warn("Registered TextMate bundle: Ecstasy at $textmatePath")
         return listOf(bundle)
     }
 }

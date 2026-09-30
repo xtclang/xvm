@@ -14,6 +14,9 @@ import org.eclipse.lsp4j.jsonrpc.messages.Either
  * relatedDocuments. Both alternatives are JSON objects; use their protocol kind instead of letting
  * the ambiguous default adapter terminate the connection's message reader.
  */
+// TODO LSP4IJ: remove this adapter when the bundled LSP4J correctly decodes relatedDocuments
+// unions by kind. The underlying defect is in LSP4J 1.0.0; keep full/unchanged transport
+// regressions.
 internal object DiagnosticReportJson : TypeAdapterFactory {
     private val report =
         object :

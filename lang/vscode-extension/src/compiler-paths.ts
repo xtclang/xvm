@@ -17,7 +17,7 @@ export function compilerBuildModels(): BuildModel[] {
         try {
             const model = readBuildModel(folder.uri.fsPath);
             if (model) lastGoodModels.set(key, model); else lastGoodModels.delete(key);
-        } catch (error) { console.warn(`Invalid XTC Gradle model; retaining previous import: ${error}`); }
+        } catch (error) { console.warn(`Invalid Ecstasy Gradle model; retaining previous import: ${error}`); }
         const model = lastGoodModels.get(key);
         return model ? [model] : [];
     });
@@ -37,7 +37,7 @@ export async function refreshCompilerBuild(prepare = false): Promise<void> {
     await vscode.workspace.fs.stat(wrapper);
     const operation = randomUUID();
     const task = new vscode.Task({ type: 'xtc-model', prepare, operation }, owner,
-        prepare ? 'Prepare compiler inputs' : 'Refresh compiler paths', 'XTC',
+        prepare ? 'Prepare compiler inputs' : 'Refresh compiler paths', 'Ecstasy',
         new vscode.ProcessExecution(wrapper.fsPath, [prepare ? 'prepareXtcLspModel' : 'exportXtcLspModel', '--console=plain'], { cwd: owner.uri.fsPath }));
     await new Promise<void>((resolve, reject) => {
         const ended = vscode.tasks.onDidEndTaskProcess(event => {
@@ -48,12 +48,12 @@ export async function refreshCompilerBuild(prepare = false): Promise<void> {
         });
         vscode.tasks.executeTask(task).then(undefined, error => { ended.dispose(); reject(error); });
     });
-    if (!readBuildModel(owner.uri.fsPath)) throw new Error('Gradle did not export an XTC compiler model.');
+    if (!readBuildModel(owner.uri.fsPath)) throw new Error('Gradle did not export an Ecstasy compiler model.');
     await updateCompilerConfiguration();
 }
 
 export function registerCompilerPaths(context: vscode.ExtensionContext): void {
-    const output = vscode.window.createOutputChannel('XTC Compiler Paths');
+    const output = vscode.window.createOutputChannel('Ecstasy Compiler Paths');
     const report = async () => {
         output.clear();
         output.appendLine(compilerSourceModules() === null ? 'Effective source origin: Gradle model where imported; workspace conventions otherwise.' : 'Effective source origin: explicit workspace override (preserved across Gradle refresh).');
