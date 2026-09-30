@@ -526,14 +526,15 @@ class XtcTextDocumentService(
             // deleted. Recompiling identical overlays here cancels otherwise current queries.
             // didChange already propagates edits; didClose re-reads disk and membership.
             if (closed || openDocuments.containsKey(uri)) return
+            val affected =
+                (adapter as? XdkAdapter)?.changedFileScopes(uri)
+                    ?: adapter.affectedAnalysisScopes(uri)
+            if (affected.isEmpty()) return
             diagnosticRevision++
             clearResolveReports()
             server.refreshDiagnostics()
             server.refreshSemanticTokens()
-            refreshScopes(
-                adapter.affectedAnalysisScopes(uri) +
-                    publishedByScope.filterValues { uri in it }.keys
-            )
+            refreshScopes(affected + publishedByScope.filterValues { uri in it }.keys)
         }
     }
 
@@ -541,9 +542,11 @@ class XtcTextDocumentService(
     internal fun refreshDependencies(replace: () -> Set<String>) {
         synchronized(lifecycle) {
             if (closed) return
+            val affected = replace()
+            if (affected.isEmpty()) return
             diagnosticRevision++
             clearResolveReports()
-            refreshScopes(replace())
+            refreshScopes(affected)
             server.refreshDiagnostics()
             server.refreshSemanticTokens()
         }
