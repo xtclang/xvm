@@ -466,4 +466,23 @@ export function platformCases(): void {
         }
     });
 
+    playbook('X142', async (workspace, data) => {
+        await workspace.write(data.file, data.source);
+        await workspace.configure([{ name: data.module, uri: workspace.uri(data.file).toString() }]);
+        const document = await workspace.open(data.file);
+        await noErrors(document.uri);
+        const at = document.positionAt(data.source.indexOf(data.anchor));
+        assert.ok((await hover(document, at)).includes(data.expected));
+        const definitions = await vscode.commands.executeCommand<vscode.Location[]>('vscode.executeDefinitionProvider', document.uri, at);
+        assert.ok(definitions?.some(value => value.range.start.character === data.source.indexOf(data.name)));
+        const references = await vscode.commands.executeCommand<vscode.Location[]>('vscode.executeReferenceProvider', document.uri, at);
+        assert.strictEqual(references?.length, data.references);
+        const edit = await vscode.commands.executeCommand<vscode.WorkspaceEdit>('vscode.executeDocumentRenameProvider', document.uri, at, data.newName);
+        assert.ok(edit && await vscode.workspace.applyEdit(edit));
+        assert.strictEqual(document.getText(), data.source.replaceAll(data.name, data.newName));
+        await noErrors(document.uri);
+        await vscode.commands.executeCommand('undo');
+        assert.strictEqual(document.getText(), data.source);
+    });
+
 }

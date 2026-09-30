@@ -2515,3 +2515,21 @@ The L63 follow-up adds an explicit declaration-only embedding query, with single
 ModuleInfo entry points. It shares normal compiler linkage/name resolution and stops before
 body validation/emission. Only a successfully resolved fresh attempt exposes queryable TypeInfo;
 failed normal compilation is never resumed for member generation. This adds no AST state.
+
+### L83 initializer ownership (2026-09-30)
+
+`PropertyDeclarationStatement` now passes an attempt-local invocation collector to its existing
+speculative initializer compilation. Only successful constant folding copies `InitializerBinding`
+facts before disposal. They contain immutable source spans/names, compiler constants/types and
+call provenance; no clone nodes, tokens, contexts or registers escape. Nonconstant and function-valued
+initializers continue to validate the source-owned method normally. No AST fields were added.
+
+The hook belongs in this AST node because it owns the fold-versus-method decision and temporary
+method lifetime. `InitializerBinding` is in `org.xvm.compiler`, alongside `InvocationBinding`:
+these are successful full-compilation facts, not partial syntax. The existing attempt collector
+publishes them only for surviving source properties and clears its scratch maps. The additive
+`Compilation.initializerBindings()` accessor retains all older construction overloads. LSP model
+conversion remains in Kotlin under `lang`; constants must still be copied on the compiler worker.
+
+Backend identity/navigation/rename regressions and shared X142 are added; validation is pending the
+combined run after this batch's remaining protocol changes.
