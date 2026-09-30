@@ -1,34 +1,135 @@
 package org.xvm.lsp.server
 
 import java.nio.file.Path
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.atomic.AtomicBoolean
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.CodeActionContext
 import org.eclipse.lsp4j.CodeActionParams
+import org.eclipse.lsp4j.DidChangeWatchedFilesParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DocumentSymbolParams
+import org.eclipse.lsp4j.FileChangeType
+import org.eclipse.lsp4j.FileEvent
+import org.eclipse.lsp4j.FileOperationsWorkspaceCapabilities
+import org.eclipse.lsp4j.FileRename
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.ReferenceContext
 import org.eclipse.lsp4j.ReferenceParams
 import org.eclipse.lsp4j.RenameFile
+import org.eclipse.lsp4j.RenameFilesParams
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import org.eclipse.lsp4j.WorkspaceEditCapabilities
 import org.eclipse.lsp4j.WorkspaceFolder
+import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito.mock
+import org.xvm.api.EmbeddingSupport
+import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 
 class XdkRenameServerTest {
     @TempDir lateinit var directory: Path
+
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `late watched creation preserves a rename proof only while its inputs are unchanged`(
+        changed: Boolean
+    ) {
+        CompilerTestSupport.configure()
+        directory = directory.toRealPath()
+        val root =
+            directory.resolve("App.x").toFile().apply {
+                writeText("module App { Box make() = new Box(); }")
+            }
+        val member =
+            directory.resolve("App/Box.x").toFile().apply {
+                parentFile.mkdirs()
+                writeText("class Box {}")
+            }
+        val hold = AtomicBoolean()
+        val entered = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val support = EmbeddingSupport.instance()
+        val adapter =
+            XdkAdapter(
+                { source, repository, errors -> support.compileModule(source, repository, errors) },
+                { sources, repository, errors ->
+                    if (hold.compareAndSet(true, false)) {
+                        entered.countDown()
+                        check(release.await(20, SECONDS))
+                    }
+                    support.compileModule(sources, repository, errors)
+                },
+                { source, _, cursor, repository, errors ->
+                    support.analyzeIncomplete(source, cursor, repository, errors)
+                },
+            )
+        val server = XtcLanguageServer(adapter)
+        server.connect(mock(LanguageClient::class.java))
+        try {
+            server
+                .initialize(
+                    parameters().apply {
+                        capabilities.workspace.workspaceEdit.resourceOperations = listOf("rename")
+                        capabilities.workspace.fileOperations =
+                            FileOperationsWorkspaceCapabilities().apply { willRename = true }
+                    }
+                )
+                .get(20, SECONDS)
+            val uri = root.toURI().toString()
+            server.replaceCompilerSourceModules(listOf(XdkSourceModule("App", uri)))
+            server.textDocumentService.didOpen(
+                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, root.readText()))
+            )
+            server.textDocumentService
+                .documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri)))
+                .get(30, SECONDS)
+            hold.set(true)
+            val proof =
+                server.willRenameFiles(
+                    RenameFilesParams(
+                        listOf(
+                            FileRename(
+                                member.toURI().toString(),
+                                directory.resolve("App/Crate.x").toUri().toString(),
+                            )
+                        )
+                    )
+                )
+            assertThat(entered.await(20, SECONDS)).isTrue()
+            if (changed) member.writeText("class Box { Int extra = 1; }")
+            server.workspaceService.didChangeWatchedFiles(
+                DidChangeWatchedFilesParams(
+                    listOf(root.parentFile, member).map {
+                        FileEvent(it.toURI().toString(), FileChangeType.Created)
+                    }
+                )
+            )
+            release.countDown()
+            if (changed)
+                assertThatThrownBy { proof.get(30, SECONDS) }
+                    .hasCauseInstanceOf(ResponseErrorException::class.java)
+            else assertThat(proof.get(30, SECONDS)?.documentChanges).isNotEmpty()
+            assertThat(root.readText()).contains("new Box()")
+        } finally {
+            release.countDown()
+            server.shutdown().get(20, SECONDS)
+        }
+    }
 
     @Test
     fun `host rename carries the expected graph and replacement without applying either`() {
