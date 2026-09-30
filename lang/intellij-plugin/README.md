@@ -137,13 +137,13 @@ uses JetBrains' `IdeaUltimate` artifact name, but the tested features require on
 Community feature set. No personal settings or license are copied into the test profile.
 See [JetBrains' unified distribution explanation](https://www.jetbrains.com/help/idea/intellij-idea-single-distribution.html).
 
-The suite reads all 146 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
+The suite reads all 148 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
 and source fixtures from the [manual playbook](../doc/manual-test-plan.md#xdkadapter-playbook).
-The latest protocol selection, `run-15914309414363009017`, passes START and X136/X137/X140/X141
+The earlier protocol selection, `run-15914309414363009017`, passes START and X136/X137/X140/X141
 with zero IDE errors: settings, restart, UTF-16 hover/rename ranges and runtime server tracing.
 The [coverage map](../doc/manual-test-plan.md#protocol-and-lifecycle-coverage-map)
 separates automated editor cases, controlled backend races and pending manual checks. This is not
-a full 146-case checkpoint. The preceding settings selection passes X118/X132/X135–X139.
+a full-catalog checkpoint. The preceding settings selection passes X118/X132/X135–X139.
 
 The earlier watcher selection `run-17174738471798629344` passes START and 18 of 19 cases with zero
 IDE errors. Automatic external watch creation/repair and settings replacement pass without fixture
@@ -198,7 +198,7 @@ LSP4IJ would display `<no parameters>`. X81/X82 inspect Property-kind metadata f
 completion request. X20/X81/X82 pass natively. Problems-row clicking and visual
 layout remain manual.
 
-Every report lists all 146 scenario IDs and distinguishes failed/unselected cases from passing
+Every report lists all 148 scenario IDs and distinguishes failed/unselected cases from passing
 ones. The [L60 checklist](../../docs/errs-integration-plan.md#intellij-parity-backlog-l60) keeps each
 new case open until it has a pass receipt and records client limitations found during validation.
 The new protocol checks use the installed language-client connection. Synthetic nonexistent-file
@@ -795,3 +795,10 @@ transport restarts the service and restores unsaved buffers. Inlay changes and C
 apply live. The read-only effective view includes PID, runtime, capabilities, bundled read-only XDK
 libraries and compiler queue names/count. Server save edits are unavailable in LSP4IJ 0.21.0; use
 native **Actions on Save → Reformat code**. Line wrapping is not implemented.
+
+The follow-up catalog now contains 148 scenarios. New X142 verifies constant-initializer semantic
+navigation and rename/undo; X143 compares partial workspace-symbol batches with the ordinary
+response. X124/X131/X134/X142/X143 pass in both editors across selected runs and a focused
+IntelliJ X142 correction; this does not establish a full 148-case checkpoint. See the
+[follow-up receipt](../../docs/errs-integration-plan.md#follow-up-validation-receipt-2026-09-30) for
+run IDs, failed attempts and the remaining L80/L81 acceptance limits.
