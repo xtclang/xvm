@@ -26,6 +26,7 @@ import org.eclipse.lsp4j.FileSystemWatcher
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializeResult
 import org.eclipse.lsp4j.InitializedParams
+import org.eclipse.lsp4j.InlayHintRegistrationOptions
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.PublishDiagnosticsParams
@@ -39,6 +40,7 @@ import org.eclipse.lsp4j.SemanticTokensServerFull
 import org.eclipse.lsp4j.SemanticTokensWithRegistrationOptions
 import org.eclipse.lsp4j.ServerCapabilities
 import org.eclipse.lsp4j.SignatureHelpOptions
+import org.eclipse.lsp4j.SymbolInformation
 import org.eclipse.lsp4j.TextDocumentSyncKind
 import org.eclipse.lsp4j.WatchKind
 import org.eclipse.lsp4j.WorkspaceDiagnosticParams
@@ -46,6 +48,9 @@ import org.eclipse.lsp4j.WorkspaceDiagnosticReport
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.WorkspaceFoldersOptions
 import org.eclipse.lsp4j.WorkspaceServerCapabilities
+import org.eclipse.lsp4j.WorkspaceSymbol
+import org.eclipse.lsp4j.WorkspaceSymbolOptions
+import org.eclipse.lsp4j.WorkspaceSymbolParams
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseError
@@ -161,6 +166,10 @@ class XtcLanguageServer(
     private data class ResolveCapabilities(
         val completionDocumentation: Boolean = false,
         val actionEdit: Boolean = false,
+        val lensCommand: Boolean = false,
+        val linkTarget: Boolean = false,
+        val hintTooltip: Boolean = false,
+        val symbolRange: Boolean = false,
     )
 
     private val resolveCapabilities = AtomicReference(ResolveCapabilities())
@@ -169,6 +178,27 @@ class XtcLanguageServer(
 
     internal val resolvesCodeActionEdit: Boolean
         get() = resolveCapabilities.get().actionEdit
+
+    internal val resolvesCodeLensCommand: Boolean
+        get() = resolveCapabilities.get().lensCommand
+
+    internal val resolvesDocumentLinkTarget: Boolean
+        get() = resolveCapabilities.get().linkTarget
+
+    internal val resolvesInlayHintTooltip: Boolean
+        get() = resolveCapabilities.get().hintTooltip
+
+    internal val resolvesWorkspaceSymbolRange: Boolean
+        get() = resolveCapabilities.get().symbolRange
+
+    internal fun workspaceSymbols(
+        params: WorkspaceSymbolParams
+    ): CompletableFuture<Either<List<SymbolInformation>, List<WorkspaceSymbol>>> =
+        textDocumentService.workspaceSymbols(params)
+
+    internal fun resolveWorkspaceSymbol(
+        symbol: WorkspaceSymbol
+    ): CompletableFuture<WorkspaceSymbol> = textDocumentService.resolveWorkspaceSymbol(symbol)
 
     private data class TokenCapabilities(
         val range: Boolean = false,
@@ -347,6 +377,18 @@ class XtcLanguageServer(
                 textCapabilities?.codeAction?.dataSupport == true &&
                     textCapabilities.codeAction.resolveSupport?.properties?.contains("edit") ==
                         true,
+                textCapabilities?.codeLens?.let {
+                    it.resolveSupport?.properties?.contains("command") != false
+                } == true,
+                textCapabilities?.documentLink != null,
+                textCapabilities?.inlayHint?.resolveSupport?.properties?.contains("tooltip") ==
+                    true,
+                params.capabilities
+                    ?.workspace
+                    ?.symbol
+                    ?.resolveSupport
+                    ?.properties
+                    ?.contains("location.range") == true,
             )
         )
         fileOperationCapabilities.set(params.capabilities?.workspace?.fileOperations)
@@ -721,11 +763,16 @@ class XtcLanguageServer(
                     moreTriggerCharacter = listOf("}", ";", ")")
                 }
             if (AdapterCapability.INLAY_HINT in adapter.capabilities)
-                inlayHintProvider = Either.forLeft(true)
+                inlayHintProvider =
+                    if (resolvesInlayHintTooltip)
+                        Either.forRight(
+                            InlayHintRegistrationOptions().apply { resolveProvider = true }
+                        )
+                    else Either.forLeft(true)
 
             // documentLinkProvider: URLs in comments / string literals.
             // See TreeSitterAdapter.getDocumentLinks for the matcher.
-            documentLinkProvider = DocumentLinkOptions()
+            documentLinkProvider = DocumentLinkOptions(resolvesDocumentLinkTarget)
 
             signatureHelpProvider =
                 SignatureHelpOptions(
@@ -776,7 +823,9 @@ class XtcLanguageServer(
             }
 
             // --- Workspace features ---
-            workspaceSymbolProvider = Either.forLeft(true)
+            workspaceSymbolProvider =
+                if (resolvesWorkspaceSymbolRange) Either.forRight(WorkspaceSymbolOptions(true))
+                else Either.forLeft(true)
             if (adapter is XdkAdapter) {
                 workspace =
                     WorkspaceServerCapabilities().apply {
@@ -815,7 +864,7 @@ class XtcLanguageServer(
             }
 
             // Code lenses: Run action on module declarations (TreeSitterAdapter)
-            codeLensProvider = CodeLensOptions(false)
+            codeLensProvider = CodeLensOptions(resolvesCodeLensCommand)
 
             // Linked editing: rename-on-type for same-name identifiers (same-file,
             // TreeSitterAdapter)

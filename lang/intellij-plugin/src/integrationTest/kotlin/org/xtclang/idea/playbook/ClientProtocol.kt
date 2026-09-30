@@ -107,6 +107,8 @@ class ClientProtocol(private val driver: Driver) {
         val listResults =
             setOf(
                 "textDocument/codeAction",
+                "textDocument/codeLens",
+                "textDocument/documentLink",
                 "textDocument/references",
                 "textDocument/documentSymbol",
                 "textDocument/documentHighlight",

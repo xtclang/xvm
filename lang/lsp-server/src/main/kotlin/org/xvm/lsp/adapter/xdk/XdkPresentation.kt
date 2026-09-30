@@ -134,6 +134,12 @@ internal object XdkPresentation {
                         occurrence.range.end.toPosition(),
                         ": ${type.displayName}",
                         InlayHint.InlayHintKind.TYPE,
+                        tooltip =
+                            hover(
+                                model,
+                                occurrence.range.start.line,
+                                occurrence.range.start.column,
+                            ),
                     )
                 }
         val parameters =
@@ -149,6 +155,11 @@ internal object XdkPresentation {
                             "$name:",
                             InlayHint.InlayHintKind.PARAMETER,
                             paddingRight = true,
+                            tooltip =
+                                model.symbol(call.method)?.let { symbol ->
+                                    "```xtc\n${XdkCursorQueries.signature(model, symbol.name, call.signature).label}\n```" +
+                                        symbol.documentation?.let { "\n\n$it" }.orEmpty()
+                                },
                         )
                     }
             }
