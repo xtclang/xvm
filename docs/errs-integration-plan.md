@@ -7040,3 +7040,41 @@ These are integrated-branch checkpoints and dependency guidance. Each extracted 
 own build, meaningful regressions and relevant selected editor acceptance; the passing integrated
 branch does not establish independent green commits. Broader L62/L64–L67, L73–L82 and R1–R8 remain
 separate scopes, and Tree-sitter remains the shipped default.
+
+## Editor settings implementation batch (UI1–UI7, 2026-09-30)
+
+Five local checkpoints implement the settings contract, IntelliJ page, VS Code controls,
+apply/restart wiring, and effective-state/shared acceptance in that order. Tests are written
+with each slice and run together after all five commits. This does not broaden the formatter,
+add compiler incrementality, switch the packaged adapter, or implement Run/DAP.
+
+### UI1/UI2 consumer and ownership audit
+
+| Existing setting / source | Consumer and scope | Change contract / finding |
+| --- | --- | --- |
+| `xtc.java.home` | VS Code `findJavaExecutable`, machine-overridable; IntelliJ uses its JBR/LSP4IJ runtime controls | Restart; never copy an absolute machine path into portable defaults. |
+| `xtc.trace.server` | VS Code language client tracing; IntelliJ already has LSP4IJ trace controls | Live client tracing; do not add another trace owner. |
+| `xtc.inlayHints.enabled` | VS Code previously sent an initialization field with no server consumer | Fix live presentation filtering; IntelliJ uses native inlay controls and the equivalent service preference. |
+| `xtc.formatting.indentSize`, `continuationIndentSize`, `insertSpaces` | VS Code configuration response / IntelliJ common Code Style; server `FormattingConfig` | Live validated settings; formatting notifications were missing in VS Code. |
+| `xtc.formatting.tabSize` | Serialized but not retained in `FormattingConfig` | Deprecate this ineffective legacy field; native editor tab width controls rendering and request fallback. |
+| `xtc.formatting.maxLineWidth` / Code Style right margin | Retained configuration, no line-wrapping implementation | Explicitly label as reserved/visual guidance, never promise wrapping. |
+| IntelliJ custom continuation field, SMART_TABS, KEEP_INDENTS_ON_EMPTY_LINES | Custom continuation field is unused; common continuation field is read | Expose only supported formatter controls; keep source-compatible serialized fields where needed. |
+| `xtc.compiler.sourceModules` / IntelliJ Compiler page | Existing graph owner and guarded rename/Undo; window/project scope | Live; null means discovery, empty means no source modules. Preserve the existing graph precedence. |
+| Gradle evaluated build model | Existing explicit import/prepare commands, then server graph inputs | Live; no build-script parsing or implicit build on typing. |
+| `xtc.sourceRoots`, `xtc.sourceRoots` JVM property, `XTC_SOURCE_ROOTS` | SourceRootResolver: initialization list, property, environment | Restart; source attachments are not module dependencies. Missing roots remain diagnosable inputs. |
+| `xtc.logLevel` / `XTC_LOG_LEVEL` | Server process startup logging | Restart; host log view reuses the same process. |
+| `xtc.lsp.semanticTokens` / `XTC_LSP_SEMANTIC_TOKENS` | Server advertised capabilities; IntelliJ launcher override | Restart, preserve current defaults; native highlighting preferences remain editor owned. |
+| `xtc.trace.directory`, `xtc.trace.level` | Existing execution trace output / harness launcher | Developer tracing, not a portable project preference. |
+| Packaged adapter / XDK | Build properties and bundled inputs | Read-only effective state, no selector for an implementation absent from the package. |
+| Pull/push, resolve, delta, save and resource edit capabilities | Negotiation with each client | Automatic compatibility decisions, not preferences that bypass safety checks. |
+
+The new language-service preferences are Full/Incremental **text transport**, editor/server save
+formatting ownership, and inlay visibility. Defaults remain Full, editor-owned saving and visible
+inlays. Native format-on-save takes precedence when enabled, suppressing the server save edit.
+IntelliJ uses `xtc.languageService` in the existing LSP4IJ settings store, with field-level global
+inheritance and project overrides. Its page compares only that section before merging into the
+latest content, so a concurrent compiler graph rename/Undo cannot be overwritten. Reset to
+inheritance removes that section. VS Code uses native user/workspace settings; connection options
+are window-scoped, never a misleading per-folder switch. Presentation can be resource scoped.
+Invalid values are rejected before persistence/start; a running valid connection is retained.
+Neither remote filesystem execution nor restricted-workspace build execution is newly enabled.
