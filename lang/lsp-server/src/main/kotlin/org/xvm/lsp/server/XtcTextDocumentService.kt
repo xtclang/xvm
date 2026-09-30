@@ -440,7 +440,7 @@ class XtcTextDocumentService(
                                         location = DiagnosticLocation(uri, 0, 0, 0, 0),
                                         severity = Diagnostic.Severity.ERROR,
                                         message =
-                                            "XTC analysis failed; see the language server log for details",
+                                            "Ecstasy analysis failed; see the language server log for details",
                                         code = "ANALYSIS-FAILED",
                                         source = "xtc",
                                     )

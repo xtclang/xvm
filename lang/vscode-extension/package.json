@@ -70,10 +70,10 @@
             }
         ],
         "commands": [
-            { "command": "xtc.configureCompilerPaths", "title": "XTC: Configure Compiler Paths" },
-            { "command": "xtc.showCompilerPaths", "title": "XTC: Show Effective Compiler Paths" },
-            { "command": "xtc.refreshCompilerBuild", "title": "XTC: Refresh Gradle Compiler Model" },
-            { "command": "xtc.prepareCompilerInputs", "title": "XTC: Prepare Generated Compiler Resources" },
+            { "command": "xtc.configureCompilerPaths", "title": "Ecstasy: Configure Compiler Paths" },
+            { "command": "xtc.showCompilerPaths", "title": "Ecstasy: Show Effective Compiler Paths" },
+            { "command": "xtc.refreshCompilerBuild", "title": "Ecstasy: Refresh Gradle Compiler Model" },
+            { "command": "xtc.prepareCompilerInputs", "title": "Ecstasy: Prepare Generated Compiler Resources" },
             {
                 "command": "xtc.createProject",
                 "title": "Ecstasy: Create New Project"
@@ -140,12 +140,12 @@
                         "verbose"
                     ],
                     "default": "off",
-                    "description": "Trace communication between VS Code and the XTC Language Server (for debugging)"
+                    "description": "Trace communication between VS Code and the Ecstasy Language Server (for debugging)"
                 },
                 "xtc.inlayHints.enabled": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Enable inlay hints from the XTC Language Server"
+                    "description": "Enable inlay hints from the Ecstasy Language Server"
                 },
                 "xtc.formatting.indentSize": {
                     "type": "integer",
@@ -195,7 +195,7 @@
                         "type": "string"
                     },
                     "default": [],
-                    "description": "Extra source root directories the XTC Language Server indexes (e.g. XDK standard-library sources). Accepts absolute paths to directories that contain .x source files outside the open workspace.",
+                    "description": "Extra source root directories the Ecstasy Language Server indexes (e.g. XDK standard-library sources). Accepts absolute paths to directories that contain .x source files outside the open workspace.",
                     "scope": "machine-overridable"
                 }
             }

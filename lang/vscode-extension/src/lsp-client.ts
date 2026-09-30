@@ -56,7 +56,7 @@ export async function startLanguageClient(context: vscode.ExtensionContext, serv
     const logLevel = process.env.XTC_LOG_LEVEL?.toUpperCase() ?? 'INFO';
     const jvmArgs = buildJvmArgs(serverJar, logLevel);
 
-    outputChannel.appendLine('Starting XTC Language Server...');
+    outputChannel.appendLine('Starting Ecstasy Language Server...');
     outputChannel.appendLine(`Java: ${javaExecutable}`);
     outputChannel.appendLine(`Args: ${jvmArgs.join(' ')}`);
     outputChannel.appendLine(`JAR: ${serverJar}`);
@@ -136,7 +136,7 @@ export async function startLanguageClient(context: vscode.ExtensionContext, serv
                 }
                 updateStatusBar('stopped');
                 void vscode.window.showErrorMessage(
-                    `XTC Language Server crashed ${crashCount} times and will not be restarted. Use "Ecstasy: Restart Language Server" to restart manually.`
+                    `Ecstasy Language Server crashed ${crashCount} times and will not be restarted. Use "Ecstasy: Restart Language Server" to restart manually.`
                 );
                 return { action: CloseAction.DoNotRestart };
             }
@@ -145,7 +145,7 @@ export async function startLanguageClient(context: vscode.ExtensionContext, serv
 
     client = new LanguageClient(
         'xtcLanguageServer',
-        'XTC Language Server',
+        'Ecstasy Language Server',
         serverOptions,
         clientOptions
     );
@@ -179,11 +179,11 @@ export async function startLanguageClient(context: vscode.ExtensionContext, serv
 
     void client.start().catch(err => {
         const message = err?.message ?? String(err);
-        console.warn('XTC Language Server failed to start:', message);
+        console.warn('Ecstasy Language Server failed to start:', message);
 
         if (message.includes('UnsupportedClassVersionError') || message.includes('class file version')) {
             void vscode.window.showErrorMessage(
-                'XTC Language Server requires Java 25+. Set the "xtc.java.home" setting to your Java 25 installation path.',
+                'Ecstasy Language Server requires Java 25+. Set the "xtc.java.home" setting to your Java 25 installation path.',
                 'Open Settings'
             ).then(choice => {
                 if (choice === 'Open Settings') {
