@@ -775,10 +775,13 @@ kinds and push diagnostic metadata to client capabilities. Long compiler queries
 work-done progress and request-owned cancellation. Refresh requests are coalesced for negotiated
 diagnostics, semantic tokens, inlays, lenses and folding. `$/setTrace` accepts `off`, `messages` and
 `verbose`; server `$/logTrace` messages include timing and correlation metadata without source
-buffers. Partial-result streaming remains unimplemented. Shared X140/X141 cover UTF-16 and runtime
-trace in both clients; see the manual playbook for execution receipts.
+buffers. Client-supplied partial-result tokens now stream bounded batches for references, workspace
+symbols/diagnostics, outlines, navigation and hierarchy relations. Ordinary requests retain full
+responses. Initial Tree-sitter scanning reports its actual future lifetime and progress.
 
-Known compiler fact gap: constant-folded property initializers can lose reference bindings when
-their temporary initializer is discarded. Their hover/navigation/reference coverage is incomplete;
-[L83](../../docs/errs-integration-plan.md#protocol-correctness-and-the-completion-gate) tracks the
-ownership fix and acceptance. This is separate from the passing UTF-16 method-body checks.
+L83 now copies successful constant-initializer facts before temporary-method disposal, preserving
+navigation and rename provenance without retaining clone ASTs. Shared X142/X143 exercise initializer
+semantics and partial symbols and pass in both editors. X140/X141 retain their earlier
+passing UTF-16/runtime-trace receipts. See the manual playbook for dated execution evidence.
+Completion kinds and code-action forms/preferred metadata follow negotiation; legacy action clients
+use one-use, revision-checked commands only if they support `workspace.applyEdit`.
