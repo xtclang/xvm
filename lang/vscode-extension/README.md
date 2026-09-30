@@ -403,3 +403,11 @@ See the [LSP server README](../lsp-server/README.md) for details.
 ## License
 
 Apache License 2.0 — see [LICENSE.md](LICENSE.md).
+
+### Quick server log access
+
+Press **Ctrl+Alt+X, then L** (**Control+Option+X, then L** on macOS) to show/hide the server log.
+The view retains its history while hidden. To remap the toggle, bind both Show and Hide Language
+Server Output to the same chord in Keyboard Shortcuts, preserving the Hide action's `when` clause.
+See the [manual playbook](../doc/manual-test-plan.md#server-log-shortcut-acceptance) for acceptance
+steps and the distinction between server logs and protocol tracing.
