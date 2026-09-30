@@ -1,6 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has 148 scenarios; new X142/X143 await this batch’s validation. X140/X141 add explicit UTF-16 navigation and runtime server
+The current catalog has 148 scenarios. X124/X131/X134/X142/X143 now pass in both editors across
+selected runs and a focused IntelliJ X142 correction; see the follow-up receipt below. X140/X141 add explicit UTF-16 navigation and runtime server
 trace switching; X136/X137/X140/X141 pass in both editors, plus IntelliJ startup with zero IDE errors.
 See the [protocol receipt and open limits](../../docs/errs-integration-plan.md#protocol-hardening-batch-l80l81-2026-09-30).
 X136–X139 previously added language-service settings, effective state, transport restarts, live
@@ -212,7 +213,7 @@ still have implementation gaps. Use the [absent-feature inventory](plans/plan-id
 to distinguish an unsupported feature from a failed playbook case.
 
 The earlier 113-scenario IntelliJ checkpoint passed, plus startup; that receipt does not cover
-the current 146-scenario catalog. That earlier complete native run
+the current 148-scenario catalog. That earlier complete native run
 includes the 50 newly added cases and X20/X81/X82 assertion additions, with zero IDE errors.
 The [L60 validation checklist](../../docs/errs-integration-plan.md#intellij-parity-backlog-l60)
 records receipts and actual client gaps. L60 is complete. L55 passes both its 24-root memory
@@ -2226,6 +2227,8 @@ module Advanced {
 | X139 | Enable native format-on-save and save an unindented source. In VS Code also select server save formatting with native formatting disabled. | Source is indented. VS Code suppresses the server hook when native formatting is enabled; IntelliJ explicitly uses native Actions on Save because LSP4IJ has no server save-edit hook. |
 | X140 | Open the shared source with an emoji before an `Int` reference on the same line. Hover and prepare rename on the final `value`. | UTF-16 is explicit; hover resolves `Int` and rename selects exactly `value`, without shifting after the surrogate pair. |
 | X141 | Switch runtime server trace between `messages` and `verbose`, then request hover. Restore the editor trace setting. | Both log the method and timing; only verbose adds correlation metadata. No source buffer or request payload appears in server trace notifications. |
+| X142 | Open configured `FoldedInitializer.x`; hover and navigate from `Int copy = value`, find references, rename `value` to `number`, then Undo. | The declaration, folded initializer and method body share one semantic identity; all three rename together, compile cleanly and restore on Undo. |
+| X143 | Configure `PartialSymbols.x` with 130 classes. Compare ordinary workspace symbols with a request carrying a partial-result token. | Ordered progress batches contain at most 64 symbols each; their combined names match the ordinary result exactly and the final response is empty. |
 
 
 For a project using the updated Gradle plugin, run `./gradlew exportXtcLspModel` in that project's
@@ -2611,12 +2614,12 @@ workspace build execution remain explicit boundaries, not assertions covered by 
 
 Protocol hardening acceptance (L80/L81): X136/X137/X140/X141 pass in VS Code `run-5eCFZV` and
 IntelliJ `run-15914309414363009017` (also START, zero IDE errors). X140 checks a method-body reference
-after an emoji; constant-folded property initializer facts remain a separate L83 gap.
+after an emoji; the subsequent L83 implementation is exercised separately by X142 below.
 For a large configured project, request workspace diagnostics or references
 and observe the work-done progress notification. Cancel the request: its progress must end, while
 another reader and document analysis remain usable. Check no stuck progress after restart/close.
 Unit tests control the queue and delayed creation acknowledgements deterministically; short editor
-fixtures do not guarantee a visible progress popup. Partial-result streaming is not implemented.
+fixtures do not guarantee a visible progress popup. Bounded partial-result streaming is covered by X143 below.
 Check dependency changes refresh supported inlays/lenses/folding without editing the consumer.
 Legacy/minimal-client capability shapes and pre-initialize/shutdown errors are protocol tests, not
 features exercised by changing the modern IDE's capability declaration.
@@ -2626,12 +2629,12 @@ features exercised by changing the modern IDE's capability declaration.
 This map covers the L80/L81 protocol batch and the accompanying state-ownership fixes. A shared
 scenario is automated in both editors only where named below. Controlled backend tests exercise
 interleavings that normal editor actions cannot reliably force. Manual rows remain acceptance
-work; they are not passing automated receipts. The current catalog has 146 cases, but this batch
-reran only X136/X137/X140/X141 plus IntelliJ START.
+work; they are not passing automated receipts. The current catalog has 148 cases. The earlier
+protocol checkpoint reran X136/X137/X140/X141 plus IntelliJ START; follow-up receipts are recorded below.
 
 | Change | Automated regression evidence | Editor/playbook coverage and limits |
 |---|---|---|
-| UTF-16 hover and rename ranges | `ClientPresentationTest`, `XdkPresentationTest` | X140 passes in both editors after an astral character; folded property initializers are the separate L83 gap. |
+| UTF-16 hover and rename ranges | `ClientPresentationTest`, `XdkPresentationTest` | X140 passes in both editors after an astral character; folded property initializers have the separate X142 regression. |
 | Legacy roots, minimal-client hover/outlines/symbol kinds and optional diagnostic metadata | `ClientPresentationTest`; negotiated clients in `XdkLanguageServerTest`, `XdkModuleServerTest`, `XdkProjectServerTest` and `XdkFeatureResolveProtocolTest` | Modern editors cannot exercise every legacy capability shape. X140 and existing outline/diagnostic cases cover modern clients; protocol tests cover the reduced shapes. |
 | Progress creation, token ownership, cancellation, late acknowledgements and one terminal event | `ConnectionProgressTest` controls replies and races completion/cancel/close | Manual P1/P2 below. Short compiler fixtures do not guarantee a visible progress popup. |
 | Pending readers canceled independently of shared analysis; immediate retirement on close | `RequestOwnershipTest` uses an analysis future that can ignore cancellation | X137 covers connection restart with an unsaved buffer; P2 covers pending UI work. The selected editor case does not force the backend race. |
@@ -2642,6 +2645,12 @@ reran only X136/X137/X140/X141 plus IntelliJ START.
 | Tree-sitter scan starvation and native parser/disposal ownership | `WorkspaceIndexerTest` concurrent scans/parser requests run without skips | This is the shipping Tree-sitter adapter, not an XdkAdapter feature. Compiler playbook passes do not validate its UI behavior. |
 | Retired VS Code connections and stale IntelliJ settings reports | X136/X137 pass in both editors | Normal settings/restart flows pass. Out-of-order old-client callbacks and native settings-report races are not deterministically forced by those scenarios; P4 is manual. |
 | Negotiated configuration requests and post-close formatting replies | `ClientPresentationTest`, `EditorFormattingStateTest`, `FormattingConfigRoundTripTest` | X136 covers effective settings; earlier X138/X139 cover live formatting and save ownership. |
+| Stalled watcher replies, late registration/removal and disconnect | `ResourceFileWatchersTest` controls acknowledgement deadlines and retry ownership | X124/X134 exercise ordinary external resource/source watching; they do not force client RPC stalls. |
+| Compiler path drafts invalidated by settings/model/new-dialog changes | VS Code `compiler-paths.test.ts` | Actual settings writes and disposal are tested inside the extension host; no automated picker-click race is claimed. |
+| Open buffers own index entries through scan/watch/close races | `WorkspaceIndexerTest` uses read barriers, including equivalent file URI spellings | Tree-sitter-specific; compiler playbook cases cannot establish this behavior. |
+| Action literals, preferred metadata, completion kinds and legacy command edits | `CapabilityNegotiationTest` | X131 covers negotiated modern-client actions. Legacy/minimal clients, stale handles and client refusal are protocol regressions. |
+| Partial batches and actual initial scan progress | `PartialResultsTest`, `IndexingProgressTest`, `ConnectionProgressTest`, packaged `XdkStdioTest` | X143 compares every streamed workspace symbol with the ordinary response. Visible long-operation cancellation remains P1. |
+| Detached constant-initializer facts | `SemanticModelTest`, `XdkInitializerTest` | X142 covers initializer hover/definition/references/rename/Undo in both drivers. |
 
 Pending manual acceptance in both editors:
 
@@ -2670,10 +2679,10 @@ Pending manual acceptance in both editors:
    not overwrite the current report or a disposed page. Record actual overlap; a fast normal run
    alone is not evidence of out-of-order completion handling.
 
-The remaining disk-index/open-buffer, long-lived path-picker and stalled watcher-registration
-investigations are explicit in the [state audit](../../docs/errs-audit.md#mutable-state-and-deprecated-api-audit-2026-09-30-checkpoint).
-Partial-result streaming and L83 initializer facts remain implementation work. None is marked
-implemented or covered by adding this table.
+The disk-index/open-buffer, long-lived path-picker and stalled watcher-registration fixes and
+their deterministic regressions are explicit in the [state audit](../../docs/errs-audit.md#mutable-state-and-deprecated-api-audit-2026-09-30-checkpoint).
+Partial-result streaming and L83 initializer facts are implemented; their acceptance and remaining
+limits are recorded below. Generic IntelliJ server-initiated edit version checking remains open.
 
 ### Constant-folded initializer acceptance (X142)
 
@@ -2681,7 +2690,7 @@ Open `X142/FoldedInitializer.x` with its module configured in the compiler sourc
 `Int copy = value`, hover `value`, go to its declaration, and find references: the declaration,
 initializer and method-body reference must all appear. Rename to `number`; all three occurrences
 must change and compilation must remain clean. Undo must restore the original source. Both editor
-drivers now perform these steps; results are pending the batched acceptance run. Backend tests
+drivers pass these steps, including native IntelliJ rename/Undo. Backend tests
 also cover expression types, semantic-token availability, nonconstant initializers and rejected probes.
 
 ### Partial-result acceptance (X143)
@@ -2690,5 +2699,14 @@ Both editor drivers create a configured module containing 130 classes, request i
 symbols normally and with a partial-result token, and compare every name in order. Progress batches
 must contain at most 64 items and the final response must be empty. Unit tests additionally cover
 cancellation between batches, stale publication, disconnect and backend failure. Acceptance results
-are pending the combined run. Initial Tree-sitter scanning now reports the actual scan lifetime;
+pass in both editors. Initial Tree-sitter scanning now reports the actual scan lifetime;
 its begin/report/end and cancellation ownership have controlled regressions.
+
+
+Follow-up receipt (2026-09-30): VS Code `run-4Vo2G3` passes X124/X131/X134/X142/X143. IntelliJ
+`run-6087249141816329018` passes START and X124/X131/X134/X143; corrected X142 passes with START
+in `run-1763480386953487411`, with zero IDE failures and Ultimate disabled. Both drivers use catalog
+hash `cbb3c633a3006b394cfffd86d3ec790783124b61562f128a8b97ab072deb47a8` (148 cases). This is selected
+acceptance, not a full-catalog rerun. The [validation record](../../docs/errs-integration-plan.md#follow-up-validation-receipt-2026-09-30)
+keeps initial failures, fixture/driver corrections and the unreproduced first native text mismatch.
+Generic native applyEdit version checking and P1–P4's timing-dependent UI evidence remain open.

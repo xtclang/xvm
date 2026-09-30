@@ -168,11 +168,11 @@ are not advertised; inherited adapter stubs or basic formatting helpers do not e
 **Done** below means implemented within the scope written in that row; it is not a claim of
 support for every XTC construct, optional LSP extension or native editor presentation.
 
-Known semantic boundary (L83): references inside a constant-folded property initializer can lose
-their resolved facts when the compiler discards its temporary initializer clone. Hover, navigation,
-references and semantic tokens for those occurrences are incomplete; rename must still pass the
-existing proof. Method-body references after UTF-16 surrogate pairs are covered separately by X140.
-See the [L83 task and reproducer](../../../docs/errs-integration-plan.md#protocol-correctness-and-the-completion-gate).
+L83 now retains detached successful constant-initializer facts before temporary-method disposal.
+Hover, navigation, references, token classification and rename use those facts through the Kotlin
+semantic model, with no new AST fields. Backend regressions and shared X142 pass in both editors,
+including native rename/Undo; X140 remains the separate UTF-16 method-body check.
+See the [L83 task and ownership record](../../../docs/errs-integration-plan.md#protocol-correctness-and-the-completion-gate).
 
 | Feature | Mock | Tree-sitter | Compiler (XdkAdapter) |
 |---------|------|-------------|----------|
@@ -241,8 +241,8 @@ local or import-alias declarations and inherited written member contracts, prese
 | Document colors and color presentations | Ordinary token coloring; no color-value provider | L77 |
 | Notebook synchronization | File/module document sessions | L78 |
 | Debug inline values | Compiler type/parameter inlay hints; no runtime values | L79 |
-| Application work-done progress, refresh, partial results and trace controls | Negotiated progress/create/cancel, lifecycle gating, coalesced refresh and runtime trace are implemented and tested. Partial results and visible long-operation/cancel acceptance remain open. | L81 / X141; [coverage map](../manual-test-plan.md#protocol-and-lifecycle-coverage-map) |
-| Constant-folded property initializer facts | Temporary initializer disposal can lose resolved reference facts; ordinary method-body Unicode navigation passes separately | L83 |
+| Application work-done progress, refresh, partial results and trace controls | Negotiated progress/create/cancel, lifecycle gating, coalesced refresh and runtime trace are implemented and tested. Bounded partial-result batches and actual Tree-sitter scan progress are now implemented; controlled regressions and shared X143 pass; visible long-operation/cancel acceptance remains open. | L81 / X141; [coverage map](../manual-test-plan.md#protocol-and-lifecycle-coverage-map) |
+| Constant-folded property initializer facts | Detached initializer facts survive constant folding; backend and shared X142 pass in both editors | L83 |
 
 Every absent feature above has an explicit task and a
 [next investigation step](../../../docs/errs-integration-plan.md#investigation-status-and-next-decisions-updated-2026-09-30).
@@ -890,3 +890,8 @@ characters and runtime server trace switching. X136/X137/X140/X141 pass in both 
 IntelliJ startup with zero IDE errors. See the [protocol validation record](../../../docs/errs-integration-plan.md#protocol-hardening-batch-l80l81-2026-09-30).
 Server progress, cancellation, lifecycle and refresh have controlled protocol
 regressions; partial results and visible long-operation/cancel acceptance remain separately tracked.
+
+Current follow-up catalog: 148 scenarios, including X142 initializer navigation/rename and X143
+partial workspace symbols. These implementations have separate commits, passing backend/transport
+checks and selected acceptance in both editors. See `errs-audit.md` for the negotiated action/completion audit and the remaining
+LSP4IJ generic server-initiated edit limitation; selected actions and Rename/Move use snapshot guards.
