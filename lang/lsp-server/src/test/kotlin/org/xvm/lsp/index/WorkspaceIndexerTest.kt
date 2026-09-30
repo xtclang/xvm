@@ -49,7 +49,8 @@ class WorkspaceIndexerTest {
         @TempDir directory: Path
     ) {
         val path = directory.resolve("Owner.x")
-        val uri = path.toUri().toString()
+        // Java File URIs use file:/ while LSP/Path URIs use file:///; ownership is identical.
+        val uri = path.toFile().toURI().toString()
         Files.writeString(path, "module Owner { class Disk {} }")
         val read = CompletableFuture<Void>()
         val release = CompletableFuture<Void>()
