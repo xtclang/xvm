@@ -928,8 +928,12 @@ Track that distinction instead of treating synthetic LSP notifications as editor
   delayed refresh, replacement, disposal and wire-pattern decoding. Batch validation pending.
 - [ ] L70: repair or upgrade LSP4IJ's lazy-action application path, then re-enable edit resolution
   only after native import/member generation and Undo/Redo pass together.
-- [ ] L71: extend native preflight beyond single file/package Rename to the remaining supported
-  moves; retain refusals where graph persistence or rewritten qualification is required.
+- [ ] L71 validation: Community Move now preflights multiple source files/module containers,
+  validates destination collisions before proof and application, and applies VFS parent moves in
+  the same global undo command as reference edits. LSP4IJ 0.21's RenameFile implementation ignores
+  destination parents, so this path explicitly performs them. Shared X130 covers discovered batch
+  containers, closed members/resources and one Undo/Redo. Explicit graph relocation and moves
+  needing qualification rewriting remain refused. Unit/native/VS Code validation is pending.
 
 The container-move proof needs a protected `ModuleInfo(File, String)` constructor for host-supplied
 logical source identities. It avoids filesystem discovery when replaying immutable text/membership

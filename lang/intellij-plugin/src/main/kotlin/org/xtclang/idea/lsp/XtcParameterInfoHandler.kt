@@ -19,7 +19,7 @@ class XtcParameterInfoHandler : LSPParameterInfoHandler() {
         signature: SignatureInformation,
         context: ParameterInfoUIContext,
     ) {
-        // LSP4IJ refreshes the owner's response on retrigger, but the popup keeps the original
+        // TODO LSP4IJ: refresh rendered overload metadata after retrigger; the popup keeps original
         // SignatureInformation objects. Read current metadata for this overload when rendering.
         val current =
             (context.parameterOwner as? LSPSignatureHelperPsiElement)
@@ -37,6 +37,8 @@ class XtcParameterInfoHandler : LSPParameterInfoHandler() {
                 context.defaultParameterColor,
             )
         } else {
+            // TODO LSP4IJ: honor per-overload activeParameter and omit highlighting without
+            // metadata.
             // LSP permits each overload to override the top-level active parameter. LSP4IJ's
             // renderer otherwise reads only the shared context, which defaults to slot zero.
             super.updateUI(
