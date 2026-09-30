@@ -162,6 +162,11 @@ jobs:
                         - 'gradlew'
                         - 'gradlew.bat'
                         - 'gradle/wrapper/**'
+                        # The version catalog pins the lang toolchain and dependencies (lang-*
+                        # entries, Node, the IntelliJ platform, the Jackson build-classpath
+                        # floor), so a catalog-only bump such as a grouped Dependabot update
+                        # must still build and test the plugins.
+                        - 'gradle/libs.versions.toml'
 
             - name: 🌳 Lang validation decision
               shell: bash
