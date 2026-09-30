@@ -1,16 +1,22 @@
 package org.xtclang.idea.lsp
 
 import com.intellij.application.options.CodeStyle
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiManager
+import com.intellij.psi.codeStyle.CodeStyleSettingsListener
 import com.intellij.util.concurrency.SequentialTaskExecutor
 import com.redhat.devtools.lsp4ij.LSPFileSupport
+import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
+import com.redhat.devtools.lsp4ij.settings.LanguageServerSettingsListener
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.RegistrationParams
 import org.eclipse.lsp4j.UnregistrationParams
@@ -23,20 +29,44 @@ import org.xtclang.idea.XtcIntelliJLanguage
  *
  * When the LSP server sends a `workspace/configuration` request for section `"xtc.formatting"`,
  * this client reads the current IntelliJ Code Style settings for the Ecstasy language and returns
- * them as a JSON-compatible map. This implements Phase 3 of the formatting plan: IntelliJ Code
- * Style settings flow to the LSP server as a fallback when no `xtc-format.toml` config file is
- * present.
- *
- * Resolution chain (highest priority first):
- * 1. `xtc-format.toml` in the project tree (not yet implemented)
- * 2. IntelliJ Code Style settings (this client provides them)
- * 3. LSP `FormattingOptions` from the editor (tabSize / insertSpaces)
- * 4. Ecstasy defaults (4-space indent, 8-space continuation, no tabs)
+ * them as a JSON-compatible map. Code Style changes refresh the server's immutable formatting
+ * snapshot. `xtc-format.toml` and line wrapping are not implemented.
  */
 class XtcLanguageClient(project: Project) : LanguageClientImpl(project) {
     private val compilerWatches = CompilerVfsWatches()
+    private val preferences = AtomicReference(LanguageServiceSettings.validated(project))
+    private val updateQueued = AtomicBoolean()
+    private val settingsStores = listOf(LanguageServiceSettings.store(null), LanguageServiceSettings.store(project))
+    private val settingsListener = LanguageServerSettingsListener { event ->
+        if (event.languageServerId() == CompilerSettings.SERVER_ID && event.configurationContentChanged()) {
+            if (updateQueued.compareAndSet(false, true)) {
+                ApplicationManager.getApplication().invokeLater {
+                    updateQueued.set(false)
+                    if (!isDisposed && !project.isDisposed) {
+                        val next = LanguageServiceSettings.validated(project)
+                        val before = preferences.getAndSet(next)
+                        if (before.textSynchronization != next.textSynchronization) {
+                            LanguageServiceAccessor.getInstance(project).startedServers
+                                .filter { it.serverDefinition.id == CompilerSettings.SERVER_ID }
+                                .forEach { it.restart() }
+                        } else if (before.inlayHints != next.inlayHints) {
+                            refreshInlayHints()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    init {
+        settingsStores.forEach { it.addSettingsListener(settingsListener) }
+        project.messageBus.connect(this).subscribe(CodeStyleSettingsListener.TOPIC, CodeStyleSettingsListener {
+            if (!isDisposed && !project.isDisposed) triggerChangeConfiguration()
+        })
+    }
 
     override fun dispose() {
+        settingsStores.forEach { it.removeSettingsListener(settingsListener) }
         compilerWatches.dispose()
         super.dispose()
     }

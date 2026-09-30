@@ -6,11 +6,13 @@ import com.intellij.notification.NotificationType
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.Balloon
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiFile
 import com.intellij.ui.BalloonImpl
 import com.redhat.devtools.lsp4ij.JSONUtils
 import com.redhat.devtools.lsp4ij.LanguageServerFactory
 import com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures
+import com.redhat.devtools.lsp4ij.client.features.LSPInlayHintFeature
 import com.redhat.devtools.lsp4ij.client.features.LSPRenameFeature
 import com.redhat.devtools.lsp4ij.server.DefaultLauncherBuilder
 import com.redhat.devtools.lsp4ij.server.JavaProcessCommandBuilder
@@ -75,6 +77,10 @@ class XtcLanguageServerFactory : LanguageServerFactory {
     override fun createClientFeatures() =
         object : LSPClientFeatures() {
             init {
+                setInlayHintFeature(object : LSPInlayHintFeature() {
+                    override fun isInlayHintSupported(file: PsiFile): Boolean =
+                        LanguageServiceSettings.validated(file.project).inlayHints && super.isInlayHintSupported(file)
+                })
                 // TODO LSP4IJ: remove this override when native symbol rename checks document
                 // epochs.
                 // XtcRenameHandler supplies the guarded native entry point until then.
@@ -212,6 +218,12 @@ class XtcLspConnectionProvider(private val project: Project) : OSProcessStreamCo
                 "adapter=${LspBuildProperties.adapter}, semanticTokens=$semanticTokens): ${commandLine.commandLineString}"
         )
     }
+
+    override fun getInitializationOptions(rootUri: VirtualFile?): Any =
+        LanguageServiceSettings.validated(project)
+            // TODO LSP4IJ: native willSaveWaitUntil is absent; keep server save edits disabled.
+            .copy(saveFormatting = "editor")
+            .initializationOptions()
 
     override fun start() {
         logger.info("Starting Ecstasy LSP Server (out-of-process via JBR)")
