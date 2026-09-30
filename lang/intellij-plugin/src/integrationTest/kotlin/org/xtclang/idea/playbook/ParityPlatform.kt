@@ -14,9 +14,9 @@ internal fun ParityScenarios.platformCases() {
     case("X124") { data ->
         val external = Files.createTempDirectory("xtc-playbook-resources-").toRealPath()
         try {
-            with(driver) { utility(FileTreeOperations::class).loadDirectory(external.toString()) }
             write(data.string("file"), data.string("text"))
-            val roots = listOf(external.toUri().toString())
+            val resourceRoot = external.resolve(data.string("resourceDirectory"))
+            val roots = listOf(resourceRoot.toUri().toString())
             configure(
                 listOf(
                     SharedScenarios.SourceModule(
@@ -35,15 +35,28 @@ internal fun ParityScenarios.platformCases() {
             }
             val document = open(data.string("file"))
             errors(document)
-            val resource = external.resolve(data.string("resource"))
+            Files.createDirectories(resourceRoot)
+            val resource = resourceRoot.resolve(data.string("resource"))
             Files.writeString(resource, data.string("contents"))
-            refresh(resource)
             clean(document)
             Files.delete(resource)
-            refresh(external)
             errors(document)
             Files.writeString(resource, data.string("contents"))
-            refresh(resource)
+            clean(document)
+            val replacement = external.resolve("replacement")
+            configure(
+                listOf(
+                    SharedScenarios.SourceModule(
+                        data.string("module"),
+                        uri(data.string("file")),
+                        emptyList(),
+                        listOf(replacement.toUri().toString()),
+                    )
+                )
+            )
+            errors(document)
+            Files.createDirectories(replacement)
+            Files.writeString(replacement.resolve(data.string("resource")), data.string("contents"))
             clean(document)
         } finally {
             with(driver) {
@@ -51,8 +64,9 @@ internal fun ParityScenarios.platformCases() {
                     utility(CompilerSettingsPage::class).clearProjectGraph(singleProject())
                 }
             }
-            Files.deleteIfExists(external.resolve(data.string("resource")))
-            Files.deleteIfExists(external)
+            Files.walk(external).use { paths ->
+                paths.sorted(Comparator.reverseOrder()).forEach(Files::deleteIfExists)
+            }
         }
     }
     case("X125") { data ->
