@@ -1266,6 +1266,16 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
   include prolonged editing/restart/process-leak workloads on supported platforms. Record
   packaging, source attachment and failure-recovery acceptance in both clients.
 
+- [ ] **L83 — Semantic facts for constant-folded property initializers.** The initial X140
+  fixture exposed missing hover/reference facts for `module Example { Int value = 1;
+  Int copy = value; }`, with or without a preceding emoji. `PropertyDeclarationStatement`
+  validates a temporary initializer clone to decide constant folding, then discards it; the
+  source initializer does not retain that resolved occurrence. Define how detached facts survive
+  this successful speculative compilation without retaining clone ASTs or publishing failed
+  attempts. Cover hover, definition, references, semantic tokens and rename completeness, with
+  constant and nonconstant controls. Add shared editor acceptance when implemented. X140 uses
+  a method-body reference to test UTF-16 independently and does not close this semantic gap.
+
 ### Editor configuration and feature controls (UI1–UI7)
 
 This is part of LSP product completeness, alongside L67/L72/L80–L82. The broader checklist remains
@@ -7165,7 +7175,7 @@ the combined validation runs after implementation.
    map after the batched run. Broader L80/L81/L82 remain open until their other audits are complete.
 
 
-Protocol batch extraction checkpoints (validation pending):
+Protocol batch extraction checkpoints:
 
 | Commit | Slice |
 | --- | --- |
@@ -7173,7 +7183,12 @@ Protocol batch extraction checkpoints (validation pending):
 | `47ebab51b` | L81 negotiated progress and query-owned cancellation |
 | `1e285d18e` | L81 pending readers and transport lifecycle |
 | `494b18c06` | L81 coalesced refresh and runtime trace |
-| Shared acceptance commit following these | X140 UTF-16 ranges; X141 runtime trace in both installed clients |
+| `5fd5fd74b` | X140 UTF-16 ranges; X141 runtime trace in both installed clients |
+| `fe54a9712` | Diagnostic cache retirement and native indexing/parser lifetime fixes |
+| `0d4a847e9` | Retired VS Code connection callbacks and late IntelliJ settings reports |
+| `ec7dcbf6d` | Negotiated configuration requests and formatting-settings retirement |
+| `6169886a9` | Rich-client fixtures, nested flat-symbol regression and packaged lifecycle errors |
+| `f3417dcbd` | Both catalog guards, focused Unicode regressions and corrected X140 fixture |
 
 Progress is wired to references, rename proposals, code actions and workspace diagnostics;
 client-provided initialization tokens cover synchronous compiler discovery. Server-created tokens
@@ -7183,4 +7198,32 @@ Refresh is negotiated for diagnostics, semantic tokens, inlays, lenses and foldi
 inline-value provider is claimed. Lifecycle gating is at the real transport, with direct server
 embedding retained for host/tests. L80 still needs the full code-action literal/kind, completion
 kind, diagnostic-tag and workspace-edit failure-handling audit; L81 partial results and L82 broader
-acceptance remain open. X140/X141 implementations are not passing receipts until run.
+acceptance remain open.
+
+Validation: the full backend run executed 1,476 tests: 1,472 passed, three existing placeholders
+were disabled, and the new flat-outline test failed because its regex mock never produced the
+expected nested child. Its corrected explicit nested-symbol fixture passes. The final focused
+`ClientPresentationTest` / `XdkPresentationTest` run passes all 13 tests, including two added
+ASCII/astral-character variants for hover and exact rename ranges. This is a full run followed by
+focused corrections, not a second full-suite receipt. The initial run stopped while old simulated
+clients waited for unnegotiated diagnostic versions is not a passing receipt.
+
+All 73 packaged tests pass, including requests before initialization, duplicate initialization,
+successful compilation afterward, and requests after shutdown. All 74 IntelliJ unit tests pass;
+integration-driver compilation and fresh nonincremental JVM compilation pass. Root and lang
+read-only formatting checks pass. TypeScript compilation passes; ESLint has zero errors and five
+existing unused-fixture-argument warnings. All 20 VS Code extension tests pass, including 40
+error/recovery cycles with measured end-to-end p50 610 ms and p95 615 ms on this local run.
+
+Both completeness guards now include X140/X141. The first VS Code launch was rejected by the old
+X139 catalog limit before opening an editor. VS Code `run-MgB6pD` then passed X136/X137/X141 but
+exposed the property-initializer gap recorded as L83. X140 now isolates encoding with a method-body
+reference. VS Code `run-5eCFZV` passes all four selected cases. IntelliJ
+`run-15914309414363009017` passes START plus X136/X137/X140/X141, with zero IDE failures and Ultimate
+disabled. X137 takes about 3.0 seconds in VS Code and 4.1 seconds in IntelliJ; X140/X141 each take
+about 1.3 seconds in IntelliJ. These are selected receipts, not a full 146-case catalog rerun.
+
+The mutable-state/deprecation audit and remaining deterministic race checks are recorded in
+[errs-audit.md](errs-audit.md#mutable-state-and-deprecated-api-audit-2026-09-30-checkpoint).
+No new AST fields or compiler hooks were required by this protocol batch. L83 requires separate
+compiler ownership work before constant-folded initializer occurrences can be claimed complete.

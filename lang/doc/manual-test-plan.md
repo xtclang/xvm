@@ -1,8 +1,11 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has 146 scenarios. X136–X139 add language-service settings, effective state,
-transport restarts, live formatting and save ownership; their new validation receipt is pending.
-The preceding accepted batch had 140 scenarios. This batch adds X130 batch Move/Undo/Redo, X131 lazy
+The current catalog has 146 scenarios. X140/X141 add explicit UTF-16 navigation and runtime server
+trace switching; X136/X137/X140/X141 pass in both editors, plus IntelliJ startup with zero IDE errors.
+See the [protocol receipt and open limits](../../docs/errs-integration-plan.md#protocol-hardening-batch-l80l81-2026-09-30).
+X136–X139 previously added language-service settings, effective state, transport restarts, live
+formatting and save ownership; X118/X132/X135–X139 already pass in both editors.
+The preceding watcher batch expanded the catalog to 140 scenarios with X130 batch Move/Undo/Redo, X131 lazy
 resolvers, X132 save/range formatting, X133 linked editing, X134 external source watching and X135
 server-log show/hide. X124 now exercises missing external roots without manual refresh.
 VS Code passes all 19 selected cases across `run-iGx1M2` (18) and `run-YMDUeW` (corrected X130).
@@ -2605,8 +2608,10 @@ and restart never saves a dirty source. Remote filesystems, alternate keymaps an
 workspace build execution remain explicit boundaries, not assertions covered by these local runs.
 
 
-Protocol hardening acceptance (L80/L81): X140/X141 are implemented in both drivers; execution is
-pending for this batch. For a large configured project, request workspace diagnostics or references
+Protocol hardening acceptance (L80/L81): X136/X137/X140/X141 pass in VS Code `run-5eCFZV` and
+IntelliJ `run-15914309414363009017` (also START, zero IDE errors). X140 checks a method-body reference
+after an emoji; constant-folded property initializer facts remain a separate L83 gap.
+For a large configured project, request workspace diagnostics or references
 and observe the work-done progress notification. Cancel the request: its progress must end, while
 another reader and document analysis remain usable. Check no stuck progress after restart/close.
 Unit tests control the queue and delayed creation acknowledgements deterministically; short editor
