@@ -1,5 +1,6 @@
 package org.xtclang.idea.manifest
 
+import com.intellij.refactoring.move.MoveHandlerDelegate
 import javax.xml.parsers.DocumentBuilderFactory
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
@@ -83,7 +84,7 @@ class PluginManifestTest {
                 "defaultLiveTemplates", // /liveTemplates/XTC snippets
                 "lang.commenter", // Ctrl+/ via XtcCommenter
                 "renameHandler", // guarded compiler rename via XtcRenameHandler
-                "moveHandler", // compiler preflight before native filesystem mutation
+                "refactoring.moveHandler", // compiler preflight before native filesystem mutation
                 "langCodeStyleSettingsProvider", // Settings -> Code Style -> Ecstasy
                 "enterHandlerDelegate", // auto-indent on Enter
                 "postStartupActivity", // XtcEditorStartupActivity
@@ -102,6 +103,19 @@ class PluginManifestTest {
                 missing,
             )
             .isEmpty()
+    }
+
+    @Test
+    fun fileMoveUsesThePlatformExtensionPoint() {
+        val elements = pluginXml.getElementsByTagName("*")
+        val registration =
+            (0 until elements.length)
+                .map { elements.item(it) as Element }
+                .single {
+                    it.getAttribute("implementation") == "org.xtclang.idea.lsp.XtcFileMoveHandler"
+                }
+        val namespace = (registration.parentNode as Element).getAttribute("defaultExtensionNs")
+        assertThat("$namespace.${registration.tagName}").isEqualTo(MoveHandlerDelegate.EP_NAME.name)
     }
 
     @Test
