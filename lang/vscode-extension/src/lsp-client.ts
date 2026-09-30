@@ -31,8 +31,6 @@ function connectionKey(): string {
 
 export function connectionSettingsChanged(): boolean { return connectionKey() !== activeConnectionKey; }
 
-let crashCount = 0;
-let hasEverReachedRunning = false;
 const MAX_CRASH_RESTARTS = 3;
 
 export function getClient(): LanguageClient | undefined {
@@ -76,6 +74,9 @@ export function startLanguageClient(context: vscode.ExtensionContext, serverJar:
 }
 
 async function startConnection(context: vscode.ExtensionContext, serverJar: string, outputChannel: vscode.LogOutputChannel): Promise<void> {
+    // These counters belong to this connection, including its automatic crash restarts.
+    let crashCount = 0;
+    let hasEverReachedRunning = false;
     const preferences = readServiceSettings();
     const requestedKey = connectionKey();
     let lastFormatting = formattingSettings();
@@ -124,9 +125,9 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
             // language/folder overrides changed after initialization.
             willSaveWaitUntil: (event, next) => nativeFormatOnSave(event.document) ? Promise.resolve([]) : next(event),
             provideRenameEdits: (document, position, name, token, next) => {
-                const current = client;
-                return current?.initializeResult?.capabilities.experimental?.xtcRenameProposal === 1
-                    ? renameWithConfiguration(current, document, position, name, token)
+                if (client !== connection) return null;
+                return connection.initializeResult?.capabilities.experimental?.xtcRenameProposal === 1
+                    ? renameWithConfiguration(connection, document, position, name, token)
                     : next(document, position, name, token);
             },
             workspace: {
@@ -153,6 +154,7 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
                 return { action: ErrorAction.Shutdown };
             },
             closed: () => {
+                if (client !== connection) return { action: CloseAction.DoNotRestart };
                 if (!hasEverReachedRunning) {
                     // Server died before reaching Running state (startup crash).
                     // Do not restart to avoid unhandled rejection issues in vscode-languageclient.
@@ -173,12 +175,14 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
         }
     };
 
-    client = new LanguageClient(
+    const connection = new LanguageClient(
         'xtcLanguageServer',
         'Ecstasy Language Server',
         serverOptions,
         clientOptions
     );
+
+    client = connection;
 
     // Patch stop() to suppress internal rejections from vscode-languageclient.
     // The library calls `void this.stop()` during initialization failures, creating
@@ -190,6 +194,7 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
     activeConnectionKey = requestedKey;
     const startingClient = client;
     client.onDidChangeState(({ newState }) => {
+        if (client !== connection) return;
         const stateMap = {
             [State.Starting]: 'starting' as const,
             [State.Running]: 'ready' as const,
@@ -210,6 +215,7 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
     updateStatusBar('starting');
 
     await startingClient.start().catch(err => {
+        if (client !== connection) throw err;
         const message = err?.message ?? String(err);
         console.warn('Ecstasy Language Server failed to start:', message);
 
@@ -242,8 +248,6 @@ export function restartLanguageClient(context: vscode.ExtensionContext, serverJa
         let applied: number;
         do {
             applied = restartRevision;
-            crashCount = 0;
-            hasEverReachedRunning = false;
             await starting?.catch(() => {});
             await safeStop();
             await startLanguageClient(context, serverJar, outputChannel);
