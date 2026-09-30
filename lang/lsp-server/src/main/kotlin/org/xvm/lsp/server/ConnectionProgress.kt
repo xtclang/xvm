@@ -13,6 +13,7 @@ import org.eclipse.lsp4j.WorkDoneProgressBegin
 import org.eclipse.lsp4j.WorkDoneProgressCreateParams
 import org.eclipse.lsp4j.WorkDoneProgressEnd
 import org.eclipse.lsp4j.WorkDoneProgressNotification
+import org.eclipse.lsp4j.WorkDoneProgressReport
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.LanguageClient
 import org.slf4j.LoggerFactory
@@ -100,6 +101,21 @@ internal class ConnectionProgress(
                         }
                 },
             )
+    }
+
+    fun report(result: CompletableFuture<*>, message: String, percent: Int) = dispatch {
+        if (closed.get() || result.isDone) return@dispatch
+        entries.entries
+            .firstOrNull { it.value.result === result && it.key in begun }
+            ?.let { (token, _) ->
+                send(
+                    token,
+                    WorkDoneProgressReport().apply {
+                        this.message = message
+                        percentage = percent.coerceIn(0, 100)
+                    },
+                )
+            }
     }
 
     fun cancel(token: Either<String, Int>) = dispatch { entries[token]?.result?.cancel(false) }
