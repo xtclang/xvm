@@ -10,6 +10,7 @@ import { memberActionCases } from './memberActions';
 import { moduleCases } from './modules';
 import { navigationCases } from './navigation';
 import { platformCases } from './platform';
+import { progressCases } from './progress';
 import { propertyCases } from './properties';
 import { renameCases } from './rename';
 import { renameFamilyCases } from './renameFamilies';
@@ -45,6 +46,7 @@ suite('XdkAdapter playbook', function () {
     memberActionCases();
     pullDiagnosticCases();
     platformCases();
+    progressCases();
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {
