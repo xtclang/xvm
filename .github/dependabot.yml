@@ -93,11 +93,14 @@ updates:
                 - "version-update:semver-major"
                 - "version-update:semver-minor"
                 - "version-update:semver-patch"
-          # Node typings must stay on the Node line used by the Gradle-pinned
-          # extension build runtime and esbuild target.
+          # Node typings must match the Node bundled with the minimum VS Code in
+          # engines.vscode (not the Node that builds the extension);
+          # scripts/bundle.cjs derives the esbuild target from them. Bump only
+          # alongside an intentional minimum VS Code version change.
           - dependency-name: "@types/node"
             update-types:
                 - "version-update:semver-major"
+                - "version-update:semver-minor"
       commit-message:
           prefix: "deps"
           include: "scope"

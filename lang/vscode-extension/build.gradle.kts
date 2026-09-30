@@ -115,17 +115,14 @@ val npmCompile = tasks.register<NpmTask>("npmCompile") {
 
 // Bundle separately from tsc's development output so packaging never rewrites npmCompile's files.
 val bundledExtension = layout.buildDirectory.file("bundle/extension.js")
-val npmBundle = tasks.register<NpmTask>("npmBundle") {
+val npmBundle = tasks.register<NodeTask>("npmBundle") {
     description = "Bundle extension runtime dependencies for packaging"
     dependsOn(npmInstall)
-    args.set(bundledExtension.map { output ->
-        listOf(
-            "exec", "--no", "--", "esbuild", "src/extension.ts", "--bundle",
-            "--outfile=${output.asFile.absolutePath}", "--external:vscode",
-            "--platform=node", "--target=node22", "--minify"
-        )
-    })
+    val scriptFile = layout.projectDirectory.file("scripts/bundle.cjs")
+    script.set(scriptFile.asFile)
+    args.set(bundledExtension.map { listOf(it.asFile.absolutePath) })
     inputs.dir(layout.projectDirectory.dir("src"))
+    inputs.file(scriptFile)
     inputs.files(layout.projectDirectory.file("package.json"), layout.projectDirectory.file("package-lock.json"))
     outputs.file(bundledExtension)
 }
