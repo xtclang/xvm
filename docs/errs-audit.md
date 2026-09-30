@@ -1,6 +1,10 @@
 # Failures with nowhere to go
 
-**Latest native audit:** X118's indefinite Rename was a lock cycle between the IDE write lock,
+**Watch follow-up:** compiler registrations now acquire/release native VFS leases and request
+asynchronous refresh while IntelliJ remains focused. Unknown directory contents are loaded on
+a shared worker, never the LSP transport thread. Strengthened X124 acceptance is pending.
+
+**Latest validated native audit:** X118's indefinite Rename was a lock cycle between the IDE write lock,
 LSP4IJ's synchronous file-operation listener and our diagnostic refresh acquiring a read lock on
 the transport worker. Ordered shared-pool cache updates fix it; native Rename/Undo/Redo passes
 repeatedly in about seven seconds. X128 now preflights at the host Rename action because VFS

@@ -7,8 +7,9 @@ IDE errors. VS Code's receipts are `run-KEzKf8` (six cases) and `run-AW9amt` (fo
 These are selected checks, not a new full 134-case run. See the
 [batch record](../../docs/errs-integration-plan.md#next-implementation-batch-l69l71--plat2c-2026-09-29)
 for the rename deadlock fix, native file Rename preflight and eager action-edit compatibility.
-X124 explicitly loads and refreshes IntelliJ's external VFS fixture; automatic watching of roots
-never opened in the IDE remains a tracked follow-up. The older receipts below cover the preceding
+Those X124 receipts used explicit VFS refresh. The strengthened X124 now creates a missing,
+unopened nested root, repairs/deletes its resource, then replaces the configured root, with no
+manual native refresh. Automatic watch ownership is implemented; the new acceptance run is pending. The older receipts below cover the preceding
 128-case catalog. The
 [2026-09-29 IntelliJ demo record](../../docs/errs-integration-plan.md#native-intellij-demo-continuation-2026-09-29)
 tracks the full selection, resumed cases, failures and focused corrections separately. Historical
