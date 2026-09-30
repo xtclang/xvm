@@ -3,7 +3,7 @@ import java.time.Instant
 plugins {
     alias(libs.plugins.xdk.build.properties)
     alias(libs.plugins.lang.kotlin.jvm)
-    alias(libs.plugins.lang.ktlint)
+    alias(libs.plugins.spotless)
     `java-library`
 }
 
@@ -189,18 +189,6 @@ tasks.withType<JavaCompile>().configureEach {
     options.compilerArgs.add("-Xlint:deprecation")
 }
 
-// =============================================================================
-// Ensure ktlint runs during normal development
-// =============================================================================
-// By default, ktlint only runs as part of 'check', not during compilation.
-// This means running 'runIde', 'jar', or 'assemble' skips ktlint entirely.
-// We fix this by making compileKotlin depend on ktlintCheck, so any build
-// that compiles code also verifies formatting.
-val ktlintCheck = tasks.named("ktlintCheck")
-val compileKotlin =
-    tasks.named("compileKotlin") {
-        dependsOn(ktlintCheck)
-    }
 val classes = tasks.named("classes")
 
 tasks.test {

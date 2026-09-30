@@ -27,7 +27,7 @@ buildscript {
 plugins {
     alias(libs.plugins.xdk.build.properties)
     alias(libs.plugins.lang.kotlin.jvm)
-    alias(libs.plugins.lang.ktlint)
+    alias(libs.plugins.spotless)
     alias(libs.plugins.lang.intellij.platform)
 }
 
@@ -258,13 +258,9 @@ val compileJava =
         dependsOn(syncXtcProjectCreator)
     }
 
-// Ensure ktlint runs during normal development (not just 'check')
-val ktlintCheck = tasks.named("ktlintCheck")
-
 val compileKotlin =
     tasks.named("compileKotlin") {
         dependsOn(syncXtcProjectCreator)
-        dependsOn(ktlintCheck)
     }
 
 // Copy LSP version properties to plugin resources so the plugin can display version info
@@ -286,11 +282,6 @@ val processResources =
         dependsOn(syncGradleWrapperResources)
         dependsOn(copyLspVersionProperties)
     }
-
-// ktlint checks synced Java sources, so it must run after sync
-tasks.matching { it.name.startsWith("runKtlint") }.configureEach {
-    dependsOn(syncXtcProjectCreator)
-}
 
 // =============================================================================
 // Consumer configurations for artifacts from sibling projects

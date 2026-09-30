@@ -1,4 +1,6 @@
-import org.jlleitschuh.gradle.ktlint.KtlintExtension
+import com.diffplug.gradle.spotless.SpotlessCheck
+import com.diffplug.gradle.spotless.SpotlessExtension
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 /**
  * Root project for XTC language tooling.
@@ -14,52 +16,48 @@ plugins {
     base
     alias(libs.plugins.lang.kotlin.jvm) apply false
     alias(libs.plugins.lang.kotlin.serialization) apply false
-    alias(libs.plugins.lang.ktlint) apply false
+    alias(libs.plugins.spotless)
 }
 
 // =============================================================================
-// ktlint configuration for all Kotlin subprojects
+// Kotlin formatting
 // =============================================================================
-// Centralized ktlint setup: pins the engine version and ensures auto-formatting
-// runs before checks, so developers never see formatting-only failures.
-// Rule configuration lives in lang/.editorconfig (picked up automatically).
+// Spotless runs ktlint with its default rules, as the ktlint Gradle plugin did. Each Kotlin
+// subproject checks its own sources, tests and build script; generated and synced build outputs
+// stay excluded. The lang root, tree-sitter and vscode-extension scripts were never under ktlint
+// and would need a one-off reformat to join.
+val ktlintVersion = libs.versions.lang.ktlint.get()
+val ci = providers.environmentVariable("CI").isPresent
 
-subprojects {
-    pluginManager.withPlugin("org.jlleitschuh.gradle.ktlint") {
-        configure<KtlintExtension> {
-            // Pin the ktlint engine version (from libs.versions.toml) to ensure
-            // consistent formatting across environments, independent of which
-            // Gradle plugin version is used.
-            version.set(libs.versions.lang.ktlint.engine)
-
-            // --- Uncomment to override defaults ---
-            // verbose.set(false)
-            // debug.set(false)
-            // android.set(false)
-            // outputToConsole.set(true)
-            // coloredOutput.set(true)
-            // outputColorName.set("")
-            // ignoreFailures.set(false)
-            // enableExperimentalRules.set(false)
-            // relative.set(false)
-            // baseline.set(file("config/ktlint/baseline.xml"))
-        }
-
-        // Auto-format before check: both lifecycle tasks (ktlint*Check) and their
-        // underlying worker tasks (runKtlintCheckOver*) must wait for formatting to
-        // complete. Without wiring the worker tasks, Gradle can schedule them before
-        // the format workers finish writing corrected files.
-        tasks.matching { it.name.startsWith("ktlint") && it.name.endsWith("Check") }.configureEach {
-            val formatTaskName = name.replace("Check", "Format")
-            dependsOn(tasks.named(formatTaskName))
-        }
-        tasks.matching { it.name.startsWith("runKtlintCheck") }.configureEach {
-            val formatTaskName = name.replace("runKtlintCheck", "runKtlintFormat")
-            dependsOn(tasks.named(formatTaskName))
+allprojects {
+    pluginManager.withPlugin("com.diffplug.spotless") {
+        if (!ci) {
+            val applyFormatting = tasks.named("spotlessApply")
+            tasks.named("check") { dependsOn(applyFormatting) }
+            tasks.withType<SpotlessCheck>().configureEach { mustRunAfter(applyFormatting) }
         }
     }
 }
 
+subprojects {
+    pluginManager.withPlugin("com.diffplug.spotless") {
+        configure<SpotlessExtension> {
+            kotlin {
+                target("src/**/*.kt", "src/**/*.kts")
+                ktlint(ktlintVersion)
+            }
+            kotlinGradle {
+                ktlint(ktlintVersion)
+            }
+        }
+        val applyFormatting = tasks.named("spotlessApply")
+        val checkFormatting = tasks.named("spotlessCheck")
+        val formatting = if (ci) checkFormatting else applyFormatting
+        tasks.withType<KotlinCompile>().configureEach { dependsOn(formatting) }
+        rootProject.tasks.named("spotlessApply") { dependsOn(applyFormatting) }
+        rootProject.tasks.named("spotlessCheck") { dependsOn(checkFormatting) }
+    }
+}
 
 // =============================================================================
 // Update generated-examples directory

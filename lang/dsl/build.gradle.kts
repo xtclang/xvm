@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.xdk.build.properties)
     alias(libs.plugins.lang.kotlin.jvm)
     alias(libs.plugins.lang.kotlin.serialization)
-    alias(libs.plugins.lang.ktlint)
+    alias(libs.plugins.spotless)
 }
 
 // JDK toolchain (and Kotlin's auto-inherited toolchain) is configured by the
@@ -24,13 +24,6 @@ dependencies {
 tasks.test {
     useJUnitPlatform()
 }
-
-// Ensure ktlint runs during normal development (not just 'check')
-val ktlintCheck = tasks.named("ktlintCheck")
-val compileKotlin =
-    tasks.named("compileKotlin") {
-        dependsOn(ktlintCheck)
-    }
 
 // =============================================================================
 // Editor Support Generation

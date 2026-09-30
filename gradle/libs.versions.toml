@@ -54,8 +54,7 @@ mockito = "5.23.0"
 # Everything below is only used when includeBuildLang=true.
 lang-kotlin = "2.4.20"
 lang-kotlinx-serialization = "1.11.0"
-lang-ktlint = "14.2.0"
-lang-ktlint-engine = "1.8.0"
+lang-ktlint = "1.8.0"
 
 # =============================================================================
 # Lang tooling - LSP, DAP & logging
@@ -127,7 +126,6 @@ lang-node-gradle = { id = "com.github.node-gradle.node", version.ref = "lang-nod
 lang-intellij-platform = { id = "org.jetbrains.intellij.platform", version.ref = "lang-intellij-platform-gradle-plugin" }
 lang-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "lang-kotlin" }
 lang-kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "lang-kotlin" }
-lang-ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "lang-ktlint" }
 
 [libraries]
 
