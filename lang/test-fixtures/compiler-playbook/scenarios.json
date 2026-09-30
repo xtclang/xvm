@@ -4369,7 +4369,7 @@
       "manual": [],
       "values": {
         "file": "ProtocolEncoding.x",
-        "source": "module ProtocolEncoding { String marker = \"\ud83d\ude00\"; Int value = 1; Int copy = value; }\n",
+        "source": "module ProtocolEncoding { Int run() { String marker = \"\ud83d\ude00\"; Int value = 1; return value; } }\n",
         "anchor": "value",
         "expected": "Int"
       },

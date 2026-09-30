@@ -2,10 +2,33 @@ package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.treesitter.SemanticTokenLegend
 
 class XdkPresentationTest {
+    @ParameterizedTest
+    @ValueSource(strings = ["plain", "😀"])
+    fun `hover retains reference positions after string literals`(marker: String) {
+        XdkAdapter().use { adapter ->
+            listOf(
+                    "module Presentation { Int run() { String marker = \"$marker\"; Int value = 1; return value; } }",
+                    "module Presentation { private Int run(Int value) { String marker = \"$marker\"; return value; } }",
+                )
+                .forEach { source ->
+                    assertThat(adapter.compile(URI, source).success).isTrue()
+                    val offset = source.lastIndexOf("value")
+                    assertThat(adapter.getHoverInfo(URI, 0, offset))
+                        .describedAs(source)
+                        .contains("Int")
+                    assertThat(adapter.prepareRename(URI, 0, offset)?.range)
+                        .describedAs(source)
+                        .isEqualTo(Range(Position(0, offset), Position(0, offset + "value".length)))
+                }
+        }
+    }
+
     @Test
     fun `anonymous construction tokens never overlap during recovery`() {
         val source =
