@@ -31,7 +31,7 @@ internal class ResolveReports<T>(
         return id
     }
 
-    fun resolve(data: Any?, revision: Long, label: String): T {
+    fun resolve(data: Any?, revision: Long, label: String, consume: Boolean = false): T {
         val id =
             when (data) {
                 is String -> data
@@ -47,6 +47,7 @@ internal class ResolveReports<T>(
                     null,
                 )
             )
+        if (consume) entries.remove(id)
         return entry.value
     }
 

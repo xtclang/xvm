@@ -5,7 +5,9 @@ import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CompletionException
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit.SECONDS
 import kotlin.time.Duration.Companion.nanoseconds
+import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.CallHierarchyIncomingCall
 import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
 import org.eclipse.lsp4j.CallHierarchyItem
@@ -39,6 +41,7 @@ import org.eclipse.lsp4j.DocumentRangeFormattingParams
 import org.eclipse.lsp4j.DocumentRangesFormattingParams
 import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.DocumentSymbolParams
+import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.FoldingRange
 import org.eclipse.lsp4j.FoldingRangeRequestParams
 import org.eclipse.lsp4j.Hover
@@ -46,6 +49,7 @@ import org.eclipse.lsp4j.HoverParams
 import org.eclipse.lsp4j.ImplementationParams
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.InlayHintParams
+import org.eclipse.lsp4j.InsertTextFormat
 import org.eclipse.lsp4j.LinkedEditingRangeParams
 import org.eclipse.lsp4j.LinkedEditingRanges
 import org.eclipse.lsp4j.Location
@@ -743,7 +747,8 @@ class XtcTextDocumentService(
         ) { completions ->
             val items = completions.map { c ->
                 CompletionItem(c.label).apply {
-                    kind = toCompletionItemKind(c.kind)
+                    kind = server.presentation.completionKind(toCompletionItemKind(c.kind))
+                    insertTextFormat = InsertTextFormat.PlainText
                     detail = c.detail
                     insertText = c.insertText
                     val handle =
@@ -1183,7 +1188,8 @@ class XtcTextDocumentService(
 
     private fun canConvertEdit(edit: AdapterWorkspaceEdit): Boolean =
         (!edit.versioned || server.supportsVersionedEdits) &&
-            (edit.renames.isEmpty() || server.supportsFileRenames)
+            (edit.renames.isEmpty() ||
+                (edit.versioned && server.supportsVersionedEdits && server.supportsFileRenames))
 
     /** Called while the document lifecycle is locked, after the query's version checks. */
     private fun protocolEdit(edit: AdapterWorkspaceEdit): WorkspaceEdit? {
@@ -1233,15 +1239,18 @@ class XtcTextDocumentService(
             workspace = true,
             progress = params,
         ) { actions ->
+            if (!server.presentation.codeActions) return@queryAsync emptyList()
             actions.mapNotNull { action ->
                 val kind = action.kind.toLsp()
-                if (params.context.only?.none { kind == it || kind.startsWith("$it.") } == true)
+                if (!ClientPresentation.matchesActionKind(kind, params.context.only))
                     return@mapNotNull null
                 val edit = action.edit
                 if (edit != null && !canConvertEdit(edit)) return@mapNotNull null
                 val handle =
                     edit
-                        ?.takeIf { server.resolvesCodeActionEdit }
+                        ?.takeIf {
+                            server.resolvesCodeActionEdit || !server.presentation.actionLiterals
+                        }
                         ?.let {
                             actionReports.remember(
                                 diagnosticRevision,
@@ -1252,17 +1261,76 @@ class XtcTextDocumentService(
                                 },
                             )
                         }
+                if (!server.presentation.actionLiterals) {
+                    // Legacy clients receive a bounded opaque handle, never an arbitrary edit to
+                    // execute.
+                    if (handle == null) return@mapNotNull null
+                    return@mapNotNull Either.forLeft<Command, CodeAction>(
+                        Command(
+                            action.title,
+                            ClientPresentation.APPLY_CODE_ACTION,
+                            listOf(handle, action.title),
+                        )
+                    )
+                }
                 val proposed = if (handle == null) edit?.let(::protocolEdit) else null
                 Either.forRight<Command, CodeAction>(
                     CodeAction().apply {
                         title = action.title
                         this.kind = action.kind.toLsp()
-                        isPreferred = action.isPreferred
+                        isPreferred =
+                            action.isPreferred.takeIf { server.presentation.preferredActions }
                         this.edit = proposed
                         data = handle
                     }
                 )
             }
+        }
+
+    internal fun executeCodeAction(params: ExecuteCommandParams): CompletableFuture<Any> =
+        queryAsync(
+            "workspace/executeCommand",
+            "",
+            sourceOnly = true,
+            request = {
+                requireResolve(
+                    server.presentation.applyEdit &&
+                        !server.presentation.actionLiterals &&
+                        params.command == ClientPresentation.APPLY_CODE_ACTION,
+                    "Code action command",
+                )
+                val arguments = params.arguments.orEmpty()
+                val title =
+                    when (val value = arguments.getOrNull(1)) {
+                        is String -> value
+                        is JsonPrimitive -> value.takeIf { it.isString }?.asString
+                        else -> null
+                    } ?: throw contentModified()
+                val edit =
+                    actionReports.resolve(
+                        arguments.firstOrNull(),
+                        diagnosticRevision,
+                        title,
+                        consume = true,
+                    )
+                val proposed = protocolEdit(edit) ?: throw contentModified()
+                // Do not hold the document lifecycle while entering the JSON-RPC transport.
+                CompletableFuture.supplyAsync {
+                        server.applyEdit(ApplyWorkspaceEditParams(proposed, title))
+                    }
+                    .thenCompose { it }
+                    .orTimeout(10, SECONDS)
+            },
+        ) { response ->
+            if (!response.isApplied)
+                throw ResponseErrorException(
+                    ResponseError(
+                        ResponseErrorCode.RequestFailed,
+                        response.failureReason ?: "Client refused the code action",
+                        null,
+                    )
+                )
+            response
         }
 
     override fun resolveCodeAction(action: CodeAction): CompletableFuture<CodeAction> =
