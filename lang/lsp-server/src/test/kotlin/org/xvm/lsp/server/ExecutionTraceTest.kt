@@ -48,6 +48,10 @@ class ExecutionTraceTest {
                     running.cancel(false)
                     val snapshot = trace.entries.last()
                     assertThat(snapshot["queueSize"].asInt).isEqualTo(2)
+                    val status = queue.snapshot()
+                    assertThat(status["queueSize"]).isEqualTo(2)
+                    assertThat(status["runningSize"]).isEqualTo(1)
+                    assertThat(status["queuedJobs"].toString()).contains("Gamma.x", "Beta.x")
                     assertThat(snapshot["queuedJobs"].asJsonArray.map { it.asString })
                         .satisfiesExactly(
                             { assertThat(it).contains("compile", "Gamma.x") },

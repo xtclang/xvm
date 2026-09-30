@@ -109,6 +109,10 @@
             {
                 "command": "xtc.openLanguageSettings",
                 "title": "Ecstasy: Open Language Service Settings"
+            },
+            {
+                "command": "xtc.showLanguageServiceStatus",
+                "title": "Ecstasy: Show Effective Language Service Configuration"
             }
         ],
         "keybindings": [
