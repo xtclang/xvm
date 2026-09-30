@@ -1,6 +1,10 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has 148 scenarios. X124/X131/X134/X142/X143 now pass in both editors across
+The current catalog has 150 scenarios, including X144 guarded client edits and X145 native
+progress/cancel/restart. The final IntelliJ run passes all 150 plus startup, with zero IDE errors.
+The final full VS Code run passes 149/150; X130 remains failed because of the host's post-Paste
+Explorer repaint exception. Current validation receipts are recorded at the end of this document.
+X124/X131/X134/X142/X143 previously passed in both editors across
 selected runs and a focused IntelliJ X142 correction; see the follow-up receipt below. X140/X141 add explicit UTF-16 navigation and runtime server
 trace switching; X136/X137/X140/X141 pass in both editors, plus IntelliJ startup with zero IDE errors.
 See the [protocol receipt and open limits](../../docs/errs-integration-plan.md#protocol-hardening-batch-l80l81-2026-09-30).
@@ -1252,11 +1256,15 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X121 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X145 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
-including failure counts. Focused selections use their own total rather than the full catalog.
+including failure and skip counts. Focused selections use their own total rather than the full
+catalog. The ordinary `testVscodeExtension` smoke suite shares this display, labelled **Ecstasy
+tests**; the catalog is labelled **Ecstasy playbook**. Both appear at the left of the status bar.
+Long test names are abbreviated there and shown in full in the tooltip. Smoke runs also use fresh
+workspaces/profiles and retain logs under `build/reports/extension-tests/run-*/`.
 To force fresh host results as well, add `:lang:lsp-server:test --rerun` and
 `:lang:lsp-server:compilerStdioTest --rerun` to the command.
 
@@ -2224,13 +2232,13 @@ module Advanced {
 | X136 | Open the language-service settings, change inlays, Reset/Cancel, then Apply; inspect effective configuration. | Live presentation changes preserve source and compiler graph ownership; report includes PID, adapter and queue names/count. IntelliJ drives the actual settings components; VS Code uses native configuration and the contributed report command. |
 | X137 | Leave a buffer unsaved; select Incremental text synchronization, then Full. | Each applied transport change restarts the existing connection and restores current unsaved text. This is text transport, not incremental compilation. |
 | X138 | Change indentation to 2, format, then supply an invalid indentation value. | Valid change applies without restarting; invalid settings retain the previous formatter. Effective status identifies native save-hook availability. |
-| X139 | Enable native format-on-save and save an unindented source. In VS Code also select server save formatting with native formatting disabled. | Source is indented. VS Code suppresses the server hook when native formatting is enabled; IntelliJ explicitly uses native Actions on Save because LSP4IJ has no server save-edit hook. |
+| X139 | Enable native format-on-save and save an unindented source. In IntelliJ also leave a second dirty document closed, then Save All. In VS Code also select server save formatting with native formatting disabled. | Open and closed IntelliJ documents are indented without formatting-error notifications or a file-cache conflict. VS Code suppresses the server hook when native formatting is enabled; IntelliJ uses native Actions on Save because LSP4IJ has no server save-edit hook. |
 | X140 | Open the shared source with an emoji before an `Int` reference on the same line. Hover and prepare rename on the final `value`. | UTF-16 is explicit; hover resolves `Int` and rename selects exactly `value`, without shifting after the surrogate pair. |
 | X141 | Switch runtime server trace between `messages` and `verbose`, then request hover. Restore the editor trace setting. | Both log the method and timing; only verbose adds correlation metadata. No source buffer or request payload appears in server trace notifications. |
 | X142 | Open configured `FoldedInitializer.x`; hover and navigate from `Int copy = value`, find references, rename `value` to `number`, then Undo. | The declaration, folded initializer and method body share one semantic identity; all three rename together, compile cleanly and restore on Undo. |
 | X143 | Configure `PartialSymbols.x` with 130 classes. Compare ordinary workspace symbols with a request carrying a partial-result token. | Ordered progress batches contain at most 64 symbols each; their combined names match the ordinary result exactly and the final response is empty. |
 | X144 | Apply a current versioned text edit through the installed client, Undo it, then send a two-document edit with one stale version. | Current edit and native Undo succeed. A stale target refuses the whole batch and preserves both current buffers. Drivers invoke the installed application handler; packaged tests separately exercise server-to-client transport. |
-| X145 | Replace ProgressWork with the shared 5,000-method workload and request references. Show native progress, cancel, verify hover still works; repeat and restart while pending. | Cancellation terminates only the request; progress disappears. Restart preserves unsaved text, retires the pending reader and exits the old PID. Both drivers use real compiler work and native progress; a request finishing too early fails as unexercised. New case; current-batch receipt pending. |
+| X145 | Replace ProgressWork with the shared 5,000-method workload and request references. Show native progress, cancel, verify hover still works; repeat and restart while pending. | Cancellation terminates only the request; progress disappears. Restart preserves unsaved text, retires the pending reader and exits the old PID. Both drivers use real compiler work and native progress; a request finishing too early fails as unexercised. Native acceptance passes in both clients; catalog receipts follow below. |
 
 
 For a project using the updated Gradle plugin, run `./gradlew exportXtcLspModel` in that project's
@@ -2685,7 +2693,7 @@ The disk-index/open-buffer, long-lived path-picker and stalled watcher-registrat
 their deterministic regressions are explicit in the [state audit](../../docs/errs-audit.md#mutable-state-and-deprecated-api-audit-2026-09-30-checkpoint).
 Partial-result streaming and L83 initializer facts are implemented; their acceptance and remaining
 limits are recorded below. Generic IntelliJ server-initiated text-edit checking is implemented;
-X144 acceptance is pending the current batched run. The current catalog contains 149 cases.
+X144 passes both editors. The current catalog contains 150 cases.
 
 ### Constant-folded initializer acceptance (X142)
 
@@ -2712,4 +2720,48 @@ in `run-1763480386953487411`, with zero IDE failures and Ultimate disabled. Both
 hash `cbb3c633a3006b394cfffd86d3ec790783124b61562f128a8b97ab072deb47a8` (148 cases). This is selected
 acceptance, not a full-catalog rerun. The [validation record](../../docs/errs-integration-plan.md#follow-up-validation-receipt-2026-09-30)
 keeps initial failures, fixture/driver corrections and the unreproduced first native text mismatch.
-Generic native applyEdit version checking and P1–P4's timing-dependent UI evidence remain open.
+Generic native applyEdit version checking is covered by X144 below. P1/P2 have X145's native
+progress-model coverage; physical Cancel-button selection and the broader P3/P4 checks remain manual.
+
+Current native ownership/progress acceptance: X144 and the 5,000-method X145 pass both clients
+after the lexical performance fix. Catalog receipts follow below. VS Code cancellation invokes
+the workbench-owned token; selecting and clicking that particular Cancel button remains manual.
+
+Current IntelliJ coverage spans all 150 catalog cases plus startup across the full run
+`run-11435582978373867143`, resumed `run-5480270557660243469`, and corrected selection
+`run-5152567950207711961`. The last run passes X57/X126/X127/X132/X138/X139/X143 plus START,
+zero IDE errors, and exits successfully. This is not a single clean full-catalog run: the original
+extra-character failure, shutdown conflict, formatter notifications and harness failures remain
+documented in the integration plan. X139 now proves closed-tab formatting; cleanup discards dirty
+fixtures only after their scenario finishes. X143 uses a scoped wire listener so console rollover
+cannot hide partial-result batches. VS Code `run-SAWG42` finishes with 126 passes and 24 failures,
+including spurious incomplete-query cancellation by delayed directory watches and an X130 Explorer
+focus failure before its move. X144 and the current 5,000-method X145 pass (X145: 15.7 seconds).
+The server watcher correction and Explorer focus correction are undergoing editor revalidation;
+the failed receipt remains in the integration plan.
+
+
+VS Code X130 host limitation: 1.140.0 can complete a native batch Paste and then throw
+`Data tree node not found` from Explorer's `itemsCopied` while clearing the old Cut highlighting.
+The driver verifies Move, Undo, Redo and resource contents without replaying Paste, then reports the
+original host error as a failure. A focused pass does not close this intermittent defect; the full
+`run-06Z6tq` reproduces it after successful semantic/resource assertions. Track separately from
+compiler move correctness and recheck with a future VS Code fix.
+
+
+Corrected full VS Code `run-06Z6tq` passes **149/150** with only the X130 host repaint failure
+above. All formerly failing completion/signature cases pass. X144/X145 pass with current workload;
+X145 takes 16.0 seconds. This is explicitly not a clean full-catalog receipt.
+
+Final IntelliJ receipt: `run-1843149430446112481` passes **all 150 scenarios plus START** in one
+uninterrupted run, with zero IDE errors and successful shutdown (IDE 2026.2.3, Ultimate disabled,
+LSP4IJ 0.21.0). It uses the same catalog hash as the full VS Code run above. X139's open and
+closed Save All checks pass, and completed-fixture cleanup no longer causes a shutdown conflict.
+Earlier aborted runs remain recorded for diagnosis, rather than being relabelled as passes.
+
+The ordinary VS Code suite passes **23/23** in `extension-tests/run-Ts46BQ`, using a fresh profile
+and workspace and restoring settings through the editor API. Its new shared status reporter shows
+`Ecstasy tests: completed/total, remaining` at bottom left; the compiler runner uses
+`Ecstasy playbook` with the same counter. X144/X145 pass in `run-aBMhCu` after sharing the reporter;
+this selected run does not replace the full catalog's X130 failure. Hover the counter for the full
+test title. Physical Cancel-button selection and the broader P3/P4 checks remain manual.
