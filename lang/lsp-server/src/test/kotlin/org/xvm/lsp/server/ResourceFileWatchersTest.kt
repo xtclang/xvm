@@ -4,6 +4,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
@@ -18,6 +19,91 @@ import org.mockito.Mockito.mock
 
 class ResourceFileWatchersTest {
     @TempDir lateinit var directory: Path
+
+    @Test
+    fun `stalled registration releases queue and late success removes only abandoned IDs`() {
+        val client = mock(LanguageClient::class.java)
+        val registered = LinkedBlockingQueue<RegistrationParams>()
+        val removed = LinkedBlockingQueue<UnregistrationParams>()
+        val replies = LinkedBlockingQueue<CompletableFuture<Void>>()
+        val deadlines = LinkedBlockingQueue<CompletableFuture<Void>>()
+        doAnswer {
+                registered.add(it.getArgument(0))
+                CompletableFuture<Void>().also(replies::add)
+            }
+            .`when`(client)
+            .registerCapability(any())
+        doAnswer {
+                removed.add(it.getArgument(0))
+                CompletableFuture.completedFuture<Void>(null)
+            }
+            .`when`(client)
+            .unregisterCapability(any())
+        ResourceFileWatchers { CompletableFuture<Void>().also(deadlines::add) }
+            .use { watchers ->
+                val first = watchers.update(client, setOf("file:///external/a/"))
+                val oldId = registered.poll(5, SECONDS).registrations.single().id
+                val lateReply = replies.poll(5, SECONDS)
+                deadlines.poll(5, SECONDS).complete(null)
+                assertThat(first.get(5, SECONDS)).isEmpty()
+                val second = watchers.update(client, setOf("file:///external/a/"))
+                val newId = registered.poll(5, SECONDS).registrations.single().id
+                replies.poll(5, SECONDS).complete(null)
+                assertThat(second.get(5, SECONDS).values).containsExactly(newId)
+                lateReply.complete(null)
+                assertThat(removed.poll(5, SECONDS).unregisterations.map { it.id })
+                    .containsExactly(oldId)
+                assertThat(newId).isNotEqualTo(oldId)
+                assertThat(
+                        watchers.update(client, setOf("file:///external/a/")).get(5, SECONDS).values
+                    )
+                    .containsExactly(newId)
+            }
+    }
+
+    @Test
+    fun `stalled removal never lets subsequent roots reuse an ID being removed`() {
+        val client = mock(LanguageClient::class.java)
+        val deadlines = LinkedBlockingQueue<CompletableFuture<Void>>()
+        val removal = CompletableFuture<Void>()
+        doAnswer { CompletableFuture.completedFuture<Void>(null) }
+            .`when`(client)
+            .registerCapability(any())
+        doAnswer { removal }.`when`(client).unregisterCapability(any())
+        ResourceFileWatchers { CompletableFuture<Void>().also(deadlines::add) }
+            .use { watchers ->
+                val root = setOf("file:///external/a/")
+                val first = watchers.update(client, root).get(5, SECONDS)
+                deadlines.poll(5, SECONDS) // completed registration's cancelled timer
+                val empty = watchers.update(client, emptySet())
+                deadlines.poll(5, SECONDS).complete(null)
+                assertThat(empty.get(5, SECONDS)).isEmpty()
+                val second = watchers.update(client, root).get(5, SECONDS)
+                assertThat(second.values).doesNotContainAnyElementsOf(first.values)
+                removal.complete(null)
+                assertThat(watchers.update(client, root).get(5, SECONDS)).isEqualTo(second)
+            }
+    }
+
+    @Test
+    fun `disconnect releases outstanding and queued watcher updates`() {
+        val client = mock(LanguageClient::class.java)
+        val started = CompletableFuture<Void>()
+        doAnswer {
+                started.complete(null)
+                CompletableFuture<Void>()
+            }
+            .`when`(client)
+            .registerCapability(any())
+        val watchers = ResourceFileWatchers()
+        val first = watchers.update(client, setOf("file:///external/a/"))
+        val second = watchers.update(client, setOf("file:///external/b/"))
+        started.get(5, SECONDS)
+        watchers.close()
+        assertThat(first.get(5, SECONDS)).isEmpty()
+        assertThat(second.get(5, SECONDS)).isEmpty()
+        assertThat(watchers.update(client, setOf("file:///external/c/")).join()).isEmpty()
+    }
 
     @Test
     fun `missing roots watch only their next child and replace plans as directories appear`() {
