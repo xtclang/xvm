@@ -1,5 +1,11 @@
 # Threading `errs` through the compiler
 
+Current settings checkpoint: UI1–UI7's bounded editor integration is written in five slices, with
+shared X136–X139 (144 scenarios total). Combined validation is pending. Both editors expose
+transport/presentation preferences and effective state; IntelliJ retains native save formatting
+because LSP4IJ has no `willSaveWaitUntil` implementation. See the current editor-settings section
+in [the integration plan](errs-integration-plan.md#editor-settings-implementation-batch-ui1ui7-2026-09-30).
+
 **Current L70–L72/watch batch:** all six lazy resolve endpoints, IntelliJ's selected-action
 Undo/Redo bridge, native batch Move, external source/resource watch ownership, negotiated save
 hooks, opt-in incremental synchronization and multiple-range formatting are implemented. The
