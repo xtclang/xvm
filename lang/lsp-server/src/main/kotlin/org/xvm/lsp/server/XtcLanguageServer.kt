@@ -114,6 +114,7 @@ class XtcLanguageServer(
 
     private val refresh = ClientRefresh { client }
     internal val clientTrace = ClientTrace { client }
+    internal val partialResults = PartialResults(client = { client })
 
     override fun setTrace(params: SetTraceParams) = clientTrace.configure(params.value)
 
@@ -133,6 +134,8 @@ class XtcLanguageServer(
     private val resourceFileWatchers = ResourceFileWatchers()
     private val progress = ConnectionProgress(client = { client })
     private val supportsProgress = AtomicBoolean()
+    private val clientReady = CompletableFuture<Void>()
+    private val indexing = CompletableFuture<Unit>()
 
     internal fun <T> observeQuery(
         method: String,
@@ -515,17 +518,27 @@ class XtcLanguageServer(
             val folders = (workspaceFolders + extraRoots).distinct()
 
             if (folders.isNotEmpty()) {
-                val indexing =
-                    progress.track(
-                        "Ecstasy: indexing workspace",
-                        params.workDoneToken,
-                        CompletableFuture<Void>(),
-                    )
-                try {
-                    adapter.initializeWorkspace(folders) { message, percent ->
-                        logger.info("initialize: workspace indexing: {} ({}%)", message, percent)
+                if (params.workDoneToken != null)
+                    progress.track("Ecstasy: indexing workspace", params.workDoneToken, indexing)
+                else
+                    clientReady.thenRun {
+                        progress.track("Ecstasy: indexing workspace", null, indexing)
                     }
-                    indexing.complete(null)
+                try {
+                    val scan =
+                        adapter.initializeWorkspaceAsync(folders) { message, percent ->
+                            logger.info(
+                                "initialize: workspace indexing: {} ({}%)",
+                                message,
+                                percent,
+                            )
+                            progress.report(indexing, message, percent)
+                        }
+                    indexing.whenComplete { _, failure -> if (failure != null) scan.cancel(false) }
+                    scan.whenComplete { _, failure ->
+                        if (failure == null) indexing.complete(Unit)
+                        else indexing.completeExceptionally(failure)
+                    }
                 } catch (failure: Throwable) {
                     indexing.completeExceptionally(failure)
                     throw failure
@@ -545,6 +558,7 @@ class XtcLanguageServer(
      */
     override fun initialized(params: InitializedParams?) {
         progress.initialized(supportsProgress.get())
+        clientReady.complete(null)
         refresh.initialized()
         logger.info("initialized: handshake complete, requesting editor configuration")
         if (
@@ -1030,11 +1044,14 @@ class XtcLanguageServer(
                 compilerSettings.getAndUpdate { it.copy(closed = true) }.closed
             }
         if (alreadyClosed) return
+        clientReady.cancel(false)
+        indexing.cancel(false)
         formattingState.close()
         resourceFileWatchers.close()
         refresh.close()
         clientTrace.close()
         progress.close()
+        partialResults.close()
         editCapabilities.set(EditCapabilities())
         try {
             textDocumentService.close()
