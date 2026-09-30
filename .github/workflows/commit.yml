@@ -1206,6 +1206,9 @@ jobs:
                   else
                       echo "⏭️ IntelliJ plugin publish lane: DISABLED (effective-publish-intellij=false from build-and-test)"
                   fi
+                  # The VS Code extension follows the same lang plugin lane: whenever that lane is
+                  # effective, lang validation ran and uploaded the vscode-extension-<sha> VSIX.
+                  PUBLISH_VSCODE_EXTENSION=$PUBLISH_INTELLIJ_PLUGIN
 
                   if [ "$PUBLISH_XDK_SNAPSHOTS" != "true" ] && [ "$PUBLISH_INTELLIJ_PLUGIN" != "true" ]; then
                       echo "⏭️ No effective snapshot publication lanes remain after gating; skipping publish-snapshot.yml dispatch"
@@ -1219,6 +1222,7 @@ jobs:
                     --field ci-run-id=${{ github.run_id }} \
                     --field publish-xdk-snapshots=$PUBLISH_XDK_SNAPSHOTS \
                     --field publish-intellij-plugin=$PUBLISH_INTELLIJ_PLUGIN \
+                    --field publish-vscode-extension=$PUBLISH_VSCODE_EXTENSION \
                     --field extra-gradle-options=${{ github.event.inputs.extra-gradle-options }}
                   echo "✅ Snapshot publishing triggered"
 
