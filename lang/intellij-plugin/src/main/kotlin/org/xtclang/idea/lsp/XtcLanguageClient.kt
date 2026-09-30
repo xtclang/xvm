@@ -17,6 +17,8 @@ import com.redhat.devtools.lsp4ij.settings.LanguageServerSettingsListener
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
+import org.eclipse.lsp4j.ApplyWorkspaceEditParams
+import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.RegistrationParams
 import org.eclipse.lsp4j.UnregistrationParams
@@ -32,10 +34,6 @@ import org.xtclang.idea.XtcIntelliJLanguage
  * them as a JSON-compatible map. Code Style changes refresh the server's immutable formatting
  * snapshot. `xtc-format.toml` and line wrapping are not implemented.
  */
-// TODO LSP4IJ: expose protocol document versions and validate them in workspace/applyEdit.
-// Generic server-initiated edits still use the upstream application path. Ecstasy's current
-// IntelliJ actions/file operations use XtcRenameEdit snapshots instead; the server's legacy
-// command fallback is negotiated only for clients without code-action literal support.
 class XtcLanguageClient(project: Project) : LanguageClientImpl(project) {
     private val compilerWatches = CompilerVfsWatches()
     private val preferences = AtomicReference(LanguageServiceSettings.validated(project))
@@ -84,6 +82,13 @@ class XtcLanguageClient(project: Project) : LanguageClientImpl(project) {
         compilerWatches.dispose()
         super.dispose()
     }
+
+    override fun applyEdit(
+        params: ApplyWorkspaceEditParams
+    ): CompletableFuture<ApplyWorkspaceEditResponse> =
+        if (isDisposed || project.isDisposed)
+            CompletableFuture.completedFuture(ServerWorkspaceEdit.refused("Connection is closed"))
+        else (clientFeatures as XtcClientFeatures).applyEdit(params)
 
     override fun registerCapability(params: RegistrationParams): CompletableFuture<Void> =
         super.registerCapability(params).thenRunAsync {

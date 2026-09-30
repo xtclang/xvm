@@ -1,11 +1,14 @@
+Current work: L80 generic IntelliJ server text edits now have version/incarnation checks and
+native Undo. Shared X144 and regressions are added (149 catalog cases); validation is pending the
+batched L81 progress/cancellation work. No compiler/AST API changes are needed for this slice.
+
 Current implementation checkpoint: three concurrency fixes, L83 detached initializer facts, and
 L80/L81 capability/partial-result/indexing follow-ups are committed separately. The shared catalog
 now contains 148 scenarios (new X142/X143); backend/transport validation and selected acceptance
 in both editors pass, with focused corrections documented in the receipt. The earlier
 X136/X137/X140/X141 receipt remains valid for that earlier scope, not this new batch. See the
 [follow-up extraction and validation record](errs-integration-plan.md#concurrency-and-initializer-follow-up-batch-2026-09-30)
-and [wire-format audit](errs-audit.md#l80-wire-format-and-edit-application-audit). Generic IntelliJ
-server-initiated edit version validation remains an explicit LSP4IJ boundary.
+and [wire-format audit](errs-audit.md#l80-wire-format-and-edit-application-audit). The new generic edit guard is recorded above; the prior receipt does not validate it.
 
 # Threading `errs` through the compiler
 

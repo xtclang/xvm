@@ -7,24 +7,14 @@ import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.psi.PsiFile
 import com.intellij.ui.BalloonImpl
-import com.redhat.devtools.lsp4ij.JSONUtils
 import com.redhat.devtools.lsp4ij.LanguageServerFactory
 import com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures
-import com.redhat.devtools.lsp4ij.client.features.LSPInlayHintFeature
-import com.redhat.devtools.lsp4ij.client.features.LSPRenameFeature
-import com.redhat.devtools.lsp4ij.server.DefaultLauncherBuilder
 import com.redhat.devtools.lsp4ij.server.JavaProcessCommandBuilder
 import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
-import java.net.URI
 import java.nio.file.Path
 import java.util.Properties
 import java.util.concurrent.atomic.AtomicBoolean
-import org.eclipse.lsp4j.InitializeParams
-import org.eclipse.lsp4j.jsonrpc.Launcher
-import org.eclipse.lsp4j.jsonrpc.MessageConsumer
-import org.eclipse.lsp4j.jsonrpc.RemoteEndpoint
 import org.eclipse.lsp4j.services.LanguageServer
 import org.xtclang.idea.PluginPaths
 
@@ -75,75 +65,7 @@ class XtcLanguageServerFactory : LanguageServerFactory {
 
     override fun createLanguageClient(project: Project) = XtcLanguageClient(project)
 
-    override fun createClientFeatures() =
-        object : LSPClientFeatures() {
-            override fun initializeParams(params: InitializeParams) {
-                super.initializeParams(params)
-                // TODO LSP4IJ: advertise save hooks only when DocumentContentSynchronizer
-                // actually dispatches them. Native Actions on Save owns formatting here.
-                params.capabilities?.textDocument?.synchronization?.apply {
-                    willSave = false
-                    willSaveWaitUntil = false
-                }
-            }
-
-            init {
-                setInlayHintFeature(
-                    object : LSPInlayHintFeature() {
-                        override fun isInlayHintSupported(file: PsiFile): Boolean =
-                            LanguageServiceSettings.validated(file.project).inlayHints &&
-                                super.isInlayHintSupported(file)
-                    }
-                )
-                // TODO LSP4IJ: remove this override when native symbol rename checks document
-                // epochs.
-                // XtcRenameHandler supplies the guarded native entry point until then.
-                // Keep LSP4IJ's independent file-operation support enabled.
-                setRenameFeature(
-                    object : LSPRenameFeature() {
-                        override fun isRenameSupported(file: PsiFile): Boolean = false
-                    }
-                )
-            }
-
-            override fun <S : LanguageServer> createLauncherBuilder(): Launcher.Builder<S> =
-                object : DefaultLauncherBuilder<S>(this) {
-                        private fun snapshot(uri: String): DocumentStartupMessages.Snapshot? {
-                            if (project.isDisposed || serverWrapper.isDisposed) return null
-                            val opened = serverWrapper.getOpenedDocument(URI(uri)) ?: return null
-                            val document = opened.synchronizer?.document ?: return null
-                            // File rename waits for didOpen while holding the IDE write lock.
-                            // Transport hooks must use the document's lock-free immutable text;
-                            // acquiring a read action here deadlocks that rename on the EDT.
-                            return DocumentStartupMessages.Snapshot(
-                                opened,
-                                document.modificationStamp,
-                                document.immutableCharSequence.toString(),
-                            )
-                        }
-
-                        private val documents = DocumentStartupMessages(::snapshot)
-                        private val diagnostics = DiagnosticResultMessages(::snapshot)
-
-                        override fun wrapMessageConsumer(
-                            consumer: MessageConsumer
-                        ): MessageConsumer {
-                            val wrapped = super.wrapMessageConsumer(consumer)
-                            return if (consumer is RemoteEndpoint)
-                                documents.incoming(
-                                    diagnostics.incoming(CodeActionMessages.incoming(wrapped))
-                                )
-                            else documents.outgoing(diagnostics.outgoing(wrapped))
-                        }
-                    }
-                    .configureGson {
-                        // configureGson replaces the base callback; retain LSP4IJ's compatibility
-                        // adapters.
-                        JSONUtils.configureCompatibilityAdapters(it)
-                        it.registerTypeAdapterFactory(ConfigurationJson)
-                        it.registerTypeAdapterFactory(DiagnosticReportJson)
-                    }
-        }
+    override fun createClientFeatures(): LSPClientFeatures = XtcClientFeatures()
 
     override fun getServerInterface(): Class<out LanguageServer> = XtcLanguageServer::class.java
 }

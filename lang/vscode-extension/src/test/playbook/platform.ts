@@ -3,7 +3,7 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { CodeAction, ProgressType } from 'vscode-languageclient/node';
+import { ApplyWorkspaceEditParams, ApplyWorkspaceEditResponse, CodeAction, ProgressType } from 'vscode-languageclient/node';
 import { discovered } from './liveWorkspace';
 import { modelPath } from '../../build-model';
 import { getClient, updateCompilerConfiguration } from '../../lsp-client';
@@ -502,6 +502,44 @@ export function platformCases(): void {
             assert.strictEqual(normal.length, data.declarations);
             assert.deepStrictEqual(batches.flat().map(value => value.name), normal.map(value => value.name));
         } finally { observer.dispose(); }
+    });
+
+    playbook('X144', async (workspace, data) => {
+        await workspace.write(data.file, data.source);
+        await workspace.write(data.otherFile, data.otherSource);
+        await workspace.configure([
+            { name: data.module, uri: workspace.uri(data.file).toString() },
+            { name: data.otherModule, uri: workspace.uri(data.otherFile).toString() }
+        ]);
+        const other = await workspace.open(data.otherFile);
+        const document = await workspace.open(data.file);
+        await symbols(document);
+        // Test-only SDK entry point: run the real incoming handler, including its version check.
+        // A renamed SDK method must fail this case, never silently fall back to workspace.applyEdit.
+        const apply = Reflect.get(client(), 'handleApplyWorkspaceEdit') as (params: ApplyWorkspaceEditParams) => Promise<ApplyWorkspaceEditResponse>;
+        assert.strictEqual(typeof apply, 'function');
+        const change = (target: vscode.TextDocument, version: number, newText: string) => ({
+            textDocument: { uri: target.uri.toString(), version },
+            edits: [{ range: { start: { line: 0, character: 0 }, end: target.positionAt(target.getText().length) }, newText }]
+        });
+        const accepted = await apply.call(client(), { label: 'Ecstasy guarded edit', edit: {
+            documentChanges: [change(document, document.version, data.changed)]
+        } });
+        assert.ok(accepted.applied);
+        assert.strictEqual(document.getText(), data.changed);
+        await vscode.commands.executeCommand('undo');
+        assert.strictEqual(document.getText(), data.source);
+        const oldVersion = other.version;
+        await workspace.replace(other, data.otherChanged);
+        const refused = await apply.call(client(), { edit: { documentChanges: [
+            change(document, document.version, data.changed),
+            change(other, oldVersion, data.otherSource)
+        ] } });
+        assert.strictEqual(refused.applied, false);
+        assert.strictEqual(document.getText(), data.source);
+        assert.strictEqual(other.getText(), data.otherChanged);
+        await noErrors(document.uri);
+        await noErrors(other.uri);
     });
 
 }
