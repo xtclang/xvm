@@ -4195,6 +4195,56 @@
         "limitations": []
       }
     },
+    "X132": {
+      "title": "multiple-range formatting and negotiated save hooks",
+      "manual": [],
+      "values": {
+        "file": "SaveRanges.x",
+        "module": "SaveRanges",
+        "source": "module SaveRanges {\nInt value = 1;\nString text = \"\ud83d\ude00\";\n}\n",
+        "ranges": [
+          {
+            "start": {
+              "line": 2,
+              "character": 0
+            },
+            "end": {
+              "line": 3,
+              "character": 0
+            }
+          },
+          {
+            "start": {
+              "line": 1,
+              "character": 0
+            },
+            "end": {
+              "line": 2,
+              "character": 0
+            }
+          },
+          {
+            "start": {
+              "line": 1,
+              "character": 0
+            },
+            "end": {
+              "line": 3,
+              "character": 0
+            }
+          }
+        ],
+        "lines": [
+          1,
+          2
+        ],
+        "indent": "    "
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
