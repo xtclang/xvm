@@ -21,6 +21,35 @@ class ResourceFileWatchersTest {
     @TempDir lateinit var directory: Path
 
     @Test
+    fun `failed removals are retried without reusing the retired registration`() {
+        val client = mock(LanguageClient::class.java)
+        val removals = CopyOnWriteArrayList<UnregistrationParams>()
+        doAnswer { CompletableFuture.completedFuture<Void>(null) }
+            .`when`(client)
+            .registerCapability(any())
+        doAnswer {
+                removals += it.getArgument<UnregistrationParams>(0)
+                if (removals.size == 1)
+                    CompletableFuture.failedFuture<Void>(IllegalStateException("not removed"))
+                else CompletableFuture.completedFuture<Void>(null)
+            }
+            .`when`(client)
+            .unregisterCapability(any())
+        ResourceFileWatchers().use { watchers ->
+            val root = setOf("file:///external/a/")
+            val first = watchers.update(client, root).get(5, SECONDS)
+            assertThat(watchers.update(client, emptySet()).get(5, SECONDS)).isEmpty()
+            val next = watchers.update(client, root).get(5, SECONDS)
+            assertThat(next.values).doesNotContainAnyElementsOf(first.values)
+            assertThat(removals).hasSize(2)
+            assertThat(removals.last().unregisterations.map { it.id })
+                .containsExactlyElementsOf(first.values)
+            watchers.update(client, root).get(5, SECONDS)
+            assertThat(removals).hasSize(2)
+        }
+    }
+
+    @Test
     fun `stalled registration releases queue and late success removes only abandoned IDs`() {
         val client = mock(LanguageClient::class.java)
         val registered = LinkedBlockingQueue<RegistrationParams>()
@@ -78,7 +107,10 @@ class ResourceFileWatchersTest {
                 val empty = watchers.update(client, emptySet())
                 deadlines.poll(5, SECONDS).complete(null)
                 assertThat(empty.get(5, SECONDS)).isEmpty()
-                val second = watchers.update(client, root).get(5, SECONDS)
+                val replacing = watchers.update(client, root)
+                deadlines.poll(5, SECONDS) // replacement registration's cancelled timer
+                deadlines.poll(5, SECONDS).complete(null) // retire the unanswered removal retry
+                val second = replacing.get(5, SECONDS)
                 assertThat(second.values).doesNotContainAnyElementsOf(first.values)
                 removal.complete(null)
                 assertThat(watchers.update(client, root).get(5, SECONDS)).isEqualTo(second)
