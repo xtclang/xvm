@@ -16,7 +16,6 @@ import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.FoldingRangeRequestParams
 import org.eclipse.lsp4j.FormattingOptions
 import org.eclipse.lsp4j.HoverParams
-import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InlayHintParams
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.PrepareRenameParams
@@ -129,7 +128,7 @@ class LspIntegrationTest {
         server = XtcLanguageServer(adapter)
         mockClient = mock(LanguageClient::class.java)
         server.connect(mockClient)
-        server.initialize(InitializeParams()).get()
+        server.initialize(editorInitializeParams()).get()
     }
 
     // ========================================================================

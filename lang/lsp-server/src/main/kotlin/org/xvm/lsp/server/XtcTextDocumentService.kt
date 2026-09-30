@@ -710,13 +710,7 @@ class XtcTextDocumentService(
                 )
                 ?.let {
                     Hover().apply {
-                        contents =
-                            Either.forRight(
-                                MarkupContent().apply {
-                                    kind = MarkupKind.MARKDOWN
-                                    value = it
-                                }
-                            )
+                        contents = Either.forRight(server.presentation.hover(it))
                     }
                 }
         }
@@ -870,15 +864,29 @@ class XtcTextDocumentService(
             val uri = params.textDocument.uri
             val result = adapter.getCachedResult(uri) ?: return@supplyAsync emptyList()
 
-            result.symbols.map { symbol ->
-                Either.forRight(toDocumentSymbol(symbol))
-            }
+            if (server.presentation.hierarchicalSymbols)
+                result.symbols.map { Either.forRight(toDocumentSymbol(it)) }
+            else flatSymbols(result.symbols).map { Either.forLeft(it) }
         }
+
+    private fun flatSymbols(
+        symbols: List<SymbolInfo>,
+        container: String? = null,
+    ): List<SymbolInformation> = symbols.flatMap { symbol ->
+        listOf(
+            SymbolInformation(
+                symbol.name,
+                server.presentation.symbolKind(symbol.kind.toLsp()),
+                symbol.location.toLsp(),
+                container,
+            )
+        ) + flatSymbols(symbol.children, symbol.name)
+    }
 
     private fun toDocumentSymbol(symbol: SymbolInfo): DocumentSymbol =
         DocumentSymbol().apply {
             name = symbol.name
-            kind = symbol.kind.toLsp()
+            kind = server.presentation.symbolKind(symbol.kind.toLsp())
             range = symbol.location.toRange()
             selectionRange = symbol.location.toRange()
             if (symbol.typeSignature != null) {
@@ -1711,11 +1719,22 @@ class XtcTextDocumentService(
         params: WorkspaceSymbolParams
     ): CompletableFuture<Either<List<SymbolInformation>, List<WorkspaceSymbol>>> =
         supplyAsync("workspace/symbol", params.query) {
+            val symbols = adapter.findWorkspaceSymbols(params.query)
+            if (!server.resolvesWorkspaceSymbolRange)
+                return@supplyAsync Either.forLeft(
+                    symbols.map {
+                        SymbolInformation(
+                            it.name,
+                            server.presentation.symbolKind(it.kind.toLsp(), workspace = true),
+                            it.location.toLsp(),
+                        )
+                    }
+                )
             Either.forRight(
-                adapter.findWorkspaceSymbols(params.query).map { symbol ->
+                symbols.map { symbol ->
                     WorkspaceSymbol().apply {
                         name = symbol.name
-                        kind = symbol.kind.toLsp()
+                        kind = server.presentation.symbolKind(symbol.kind.toLsp(), workspace = true)
                         val handle =
                             if (server.resolvesWorkspaceSymbolRange)
                                 symbolReports.remember(

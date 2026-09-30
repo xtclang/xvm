@@ -335,6 +335,7 @@ class CompilerConfigurationTest {
                             mapOf(CompilerConfiguration.INITIALIZATION_KEY to CONFIG)
                         capabilities =
                             ClientCapabilities().apply {
+                                textDocument = editorInitializeParams().capabilities.textDocument
                                 workspace =
                                     WorkspaceClientCapabilities().apply { configuration = pull }
                             }

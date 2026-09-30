@@ -148,6 +148,7 @@ class XdkLanguageServerTest {
                 .`when`(client)
                 .publishDiagnostics(org.mockito.ArgumentMatchers.any())
             server.connect(client)
+            server.initialize(editorInitializeParams()).get()
         }
 
         fun open(

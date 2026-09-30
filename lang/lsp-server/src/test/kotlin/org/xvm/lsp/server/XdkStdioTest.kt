@@ -31,6 +31,7 @@ import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DocumentDiagnosticParams
 import org.eclipse.lsp4j.DocumentHighlightParams
 import org.eclipse.lsp4j.DocumentRangesFormattingParams
+import org.eclipse.lsp4j.DocumentSymbolCapabilities
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.FoldingRangeRequestParams
 import org.eclipse.lsp4j.FormattingOptions
@@ -42,6 +43,7 @@ import org.eclipse.lsp4j.InlayHintParams
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.PublishDiagnosticsCapabilities
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.ReferenceContext
@@ -1512,6 +1514,15 @@ class XdkStdioTest {
                                 ClientCapabilities().apply {
                                     textDocument =
                                         TextDocumentClientCapabilities().apply {
+                                            documentSymbol =
+                                                DocumentSymbolCapabilities().apply {
+                                                    hierarchicalDocumentSymbolSupport = true
+                                                }
+                                            publishDiagnostics =
+                                                PublishDiagnosticsCapabilities().apply {
+                                                    versionSupport = true
+                                                    relatedInformation = true
+                                                }
                                             if (documentSync.isNotEmpty())
                                                 synchronization =
                                                     SynchronizationCapabilities(true, true, true)
