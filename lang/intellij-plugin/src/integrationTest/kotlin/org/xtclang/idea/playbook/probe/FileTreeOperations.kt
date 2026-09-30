@@ -5,6 +5,7 @@ import com.intellij.openapi.actionSystem.impl.SimpleDataContext
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
 import com.intellij.openapi.application.WriteIntentReadAction
+import com.intellij.openapi.command.undo.UndoManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.psi.PsiManager
@@ -16,6 +17,12 @@ import org.xtclang.idea.lsp.XtcFileRenameHandler
 
 /** Invoke the registered file-tree Rename handler, including its real dialog and preflight. */
 object FileTreeOperations {
+    @JvmStatic
+    fun globalHistoryAvailable(project: Project, redo: Boolean): Boolean =
+        UndoManager.getInstance(project).let {
+            if (redo) it.isRedoAvailable(null) else it.isUndoAvailable(null)
+        }
+
     @JvmStatic
     fun move(project: Project, paths: List<String>, destination: String) {
         val files = paths.map {
@@ -39,11 +46,16 @@ object FileTreeOperations {
                     .add(CommonDataKeys.PROJECT, project)
                     .add(CommonDataKeys.VIRTUAL_FILE_ARRAY, files.toTypedArray())
                     .build()
-            check(
-                MoveHandlerDelegate.EP_NAME.extensionList.first {
-                    it.canMove(elements, directory, null)
-                } is XtcFileMoveHandler
-            )
+            val handlers = MoveHandlerDelegate.EP_NAME.extensionList
+            val selected = handlers.firstOrNull { it.canMove(elements, directory, null) }
+            check(selected is XtcFileMoveHandler) {
+                "Unexpected Move handler: ${selected?.javaClass?.name}; candidates=" +
+                    handlers.joinToString {
+                        "${it.javaClass.name}=${it.canMove(elements, directory, null)}"
+                    } +
+                    "; sources=" +
+                    files.joinToString { "${it.path}: ${it.children?.map { child -> child.name }}" }
+            }
             ApplicationManager.getApplication().invokeLater {
                 WriteIntentReadAction.run {
                     MoveHandler.doMove(project, elements, directory, context, null)
