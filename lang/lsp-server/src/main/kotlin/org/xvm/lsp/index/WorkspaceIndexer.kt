@@ -85,46 +85,52 @@ class WorkspaceIndexer(
     fun scanWorkspace(
         folders: List<String>,
         progressReporter: ((String, Int) -> Unit)? = null,
-    ): CompletableFuture<Unit> =
-        CompletableFuture.supplyAsync(
-            {
-                logger.info("starting workspace scan: {} folders: {}", folders.size, folders)
-                val (_, elapsed) =
-                    measureTimedValue {
-                        val files = collectXtcFiles(folders)
-                        logger.info("found {} .x files to index", files.size)
+    ): CompletableFuture<Unit> {
+        val canceled = AtomicBoolean()
+        return CompletableFuture.supplyAsync(
+                {
+                    logger.info("starting workspace scan: {} folders: {}", folders.size, folders)
+                    val (_, elapsed) =
+                        measureTimedValue {
+                            val files = collectXtcFiles(folders)
+                            logger.info("found {} .x files to index", files.size)
 
-                        if (files.isEmpty()) {
-                            progressReporter?.invoke("No .x files found", 100)
-                            return@supplyAsync
+                            if (files.isEmpty()) {
+                                progressReporter?.invoke("No .x files found", 100)
+                                return@supplyAsync
+                            }
+
+                            // Parsing is serialized by parseLock. Do not enqueue children and join
+                            // them on this same bounded pool: concurrent scans can starve all
+                            // workers,
+                            // and shutdownNow leaves queued CompletableFutures uncompleted.
+                            files.forEachIndexed { index, file ->
+                                if (closed.get() || canceled.get())
+                                    throw CancellationException("Workspace indexing retired")
+                                indexFile(file)
+                                val done = index + 1
+                                if (done % 50 == 0 || done == files.size)
+                                    progressReporter?.invoke(
+                                        "Indexing: $done/${files.size} files",
+                                        done * 100 / files.size,
+                                    )
+                            }
+                            progressReporter?.invoke("Indexing complete", 100)
                         }
 
-                        // Parsing is serialized by parseLock. Do not enqueue children and join
-                        // them on this same bounded pool: concurrent scans can starve all workers,
-                        // and shutdownNow leaves queued CompletableFutures uncompleted.
-                        files.forEachIndexed { index, file ->
-                            if (closed.get())
-                                throw CancellationException("Workspace indexer closed")
-                            indexFile(file)
-                            val done = index + 1
-                            if (done % 50 == 0 || done == files.size)
-                                progressReporter?.invoke(
-                                    "Indexing: $done/${files.size} files",
-                                    done * 100 / files.size,
-                                )
-                        }
-                        progressReporter?.invoke("Indexing complete", 100)
-                    }
-
-                logger.info(
-                    "workspace scan complete: {} symbols in {} files ({})",
-                    index.symbolCount,
-                    index.fileCount,
-                    elapsed,
-                )
-            },
-            threadPool,
-        )
+                    logger.info(
+                        "workspace scan complete: {} symbols in {} files ({})",
+                        index.symbolCount,
+                        index.fileCount,
+                        elapsed,
+                    )
+                },
+                threadPool,
+            )
+            .also { result ->
+                result.whenComplete { _, _ -> if (result.isCancelled) canceled.set(true) }
+            }
+    }
 
     /**
      * Re-index a single file. Called after compile() updates a file. Removes old symbols and
