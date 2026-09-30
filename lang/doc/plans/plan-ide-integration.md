@@ -834,3 +834,10 @@ LSP4IJ 0.21 only applies the new basename. References and paths share a global u
 Shared X130 covers two discovered module containers and embedded resources with Undo/Redo;
 validation is pending. Explicit-graph relocation and cross-package qualification rewriting remain
 refusals. Search `// TODO LSP4IJ:` in the plugin for removable upstream compatibility bridges.
+
+L70 follow-up (2026-09-30, validation pending): codeLens/documentLink/inlayHint/workspaceSymbol
+resolve endpoints now preserve stable identities and reject obsolete detached handles. Inlay
+tooltips expose compiler-derived declaration/call signatures. IntelliJ now resolves the selected
+code action through a client command and version-checks its edit in a normal undo command,
+working around LSP4IJ's undo-transparent application. X105/X122/X127 and new shared X131 are
+the acceptance gates; earlier eager-action receipts do not validate this change.

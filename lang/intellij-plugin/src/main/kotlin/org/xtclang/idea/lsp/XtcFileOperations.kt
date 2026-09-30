@@ -49,7 +49,7 @@ internal object XtcFileOperations {
                     when {
                         error != null -> "$title failed: ${error.cause?.message ?: error.message}"
                         edit == null ->
-                            "The compiler cannot safely update references for this operation. No files were moved."
+                            "The compiler cannot safely apply this operation. No changes were made."
                         !edit.apply() -> "Sources or paths changed; invoke the operation again."
                         else -> null
                     }
