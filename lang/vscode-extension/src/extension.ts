@@ -118,15 +118,18 @@ export function activate(context: vscode.ExtensionContext): void {
     const effectiveOutput = vscode.window.createOutputChannel('Ecstasy Effective Configuration');
     context.subscriptions.push(effectiveOutput,
         vscode.commands.registerCommand('xtc.showLanguageServiceStatus', async () => {
-            const settings = vscode.workspace.getConfiguration('xtc');
-            const keys = ['languageService.textSynchronization', 'languageService.saveFormatting', 'inlayHints.enabled'];
+            const resource = vscode.window.activeTextEditor?.document.uri;
+            const settings = vscode.workspace.getConfiguration('xtc', resource);
+            const keys = Object.keys(context.extension.packageJSON.contributes.configuration.properties).map(key => key.slice('xtc.'.length));
             const configured = Object.fromEntries(keys.map(key => {
                 const value = settings.inspect(key);
-                return [key, { value: settings.get(key), origin: value?.workspaceValue !== undefined ? 'workspace' : value?.globalValue !== undefined ? 'user' : 'default' }];
+                return [key, { value: settings.get(key), origin: value?.workspaceFolderValue !== undefined ? 'folder' : value?.workspaceValue !== undefined ? 'workspace' : value?.globalValue !== undefined ? 'user' : 'default' }];
             }));
             const running = getClient();
-            const effective = running ? await running.sendRequest('xtc/languageServiceStatus') : { status: 'not running' };
-            const report = { configured, effective, sourceRoots: settings.get('sourceRoots', []), compilerPaths: 'Ecstasy: Show Effective Compiler Paths', log: 'Ecstasy: Show Language Server Output' };
+            const effective = running?.isRunning()
+                ? await running.sendRequest('xtc/languageServiceStatus').catch(error => ({ status: 'unavailable', reason: String(error) }))
+                : { status: 'not running; open an Ecstasy file or check the server log' };
+            const report = { configured, effective, activeDocument: resource?.toString(), nativeFormatOnSave: vscode.workspace.getConfiguration('editor', { uri: resource, languageId: 'xtc' }).get('formatOnSave', false), sourceRoots: settings.get('sourceRoots', []), compilerPaths: 'Ecstasy: Show Effective Compiler Paths', log: 'Ecstasy: Show Language Server Output' };
             effectiveOutput.clear();
             effectiveOutput.appendLine(JSON.stringify(report, null, 2));
             effectiveOutput.show(true);

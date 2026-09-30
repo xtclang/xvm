@@ -21,6 +21,7 @@ import java.net.URI
 import java.nio.file.Path
 import java.util.Properties
 import java.util.concurrent.atomic.AtomicBoolean
+import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.RemoteEndpoint
@@ -76,11 +77,24 @@ class XtcLanguageServerFactory : LanguageServerFactory {
 
     override fun createClientFeatures() =
         object : LSPClientFeatures() {
+            override fun initializeParams(params: InitializeParams) {
+                super.initializeParams(params)
+                // TODO LSP4IJ: advertise save hooks only when DocumentContentSynchronizer
+                // actually dispatches them. Native Actions on Save owns formatting here.
+                params.capabilities?.textDocument?.synchronization?.apply {
+                    willSave = false
+                    willSaveWaitUntil = false
+                }
+            }
+
             init {
-                setInlayHintFeature(object : LSPInlayHintFeature() {
-                    override fun isInlayHintSupported(file: PsiFile): Boolean =
-                        LanguageServiceSettings.validated(file.project).inlayHints && super.isInlayHintSupported(file)
-                })
+                setInlayHintFeature(
+                    object : LSPInlayHintFeature() {
+                        override fun isInlayHintSupported(file: PsiFile): Boolean =
+                            LanguageServiceSettings.validated(file.project).inlayHints &&
+                                super.isInlayHintSupported(file)
+                    }
+                )
                 // TODO LSP4IJ: remove this override when native symbol rename checks document
                 // epochs.
                 // XtcRenameHandler supplies the guarded native entry point until then.
