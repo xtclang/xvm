@@ -182,12 +182,16 @@ fun launchStdio(
     // executor survives EOF, and adapter workers can keep the JVM alive indefinitely.
     val executor = Executors.newVirtualThreadPerTaskExecutor()
     val trace = ProtocolTrace()
+    val lifecycle = ProtocolLifecycle()
     try {
         val launcher: Launcher<LanguageClient> =
             object : Launcher.Builder<LanguageClient>() {
                     override fun wrapMessageConsumer(consumer: MessageConsumer): MessageConsumer =
-                        trace.wrap(
-                            super.wrapMessageConsumer(consumer),
+                        lifecycle.wrap(
+                            trace.wrap(
+                                super.wrapMessageConsumer(consumer),
+                                received = consumer is RemoteEndpoint,
+                            ),
                             received = consumer is RemoteEndpoint,
                         )
                 }
