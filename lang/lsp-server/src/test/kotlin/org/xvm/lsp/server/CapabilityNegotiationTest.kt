@@ -75,7 +75,7 @@ class CapabilityNegotiationTest {
             server.initialize(params).join()
             open(server)
             val action = server.textDocumentService.codeAction(actions()).join().single().right
-            assertThat(action.isPreferred).isNull()
+            assertThat<Any?>(action.isPreferred).isNull()
             assertThat(action.data).isNull()
             assertThat(action.edit.documentChanges.single().left.textDocument.version).isEqualTo(1)
             assertThat(action.kind).isEqualTo("quickfix")

@@ -479,7 +479,7 @@ export function platformCases(): void {
         assert.strictEqual(references?.length, data.references);
         const edit = await vscode.commands.executeCommand<vscode.WorkspaceEdit>('vscode.executeDocumentRenameProvider', document.uri, at, data.newName);
         assert.ok(edit && await vscode.workspace.applyEdit(edit));
-        assert.strictEqual(document.getText(), data.source.replaceAll(data.name, data.newName));
+        assert.strictEqual(document.getText(), data.source.split(data.name).join(data.newName));
         await noErrors(document.uri);
         await vscode.commands.executeCommand('undo');
         assert.strictEqual(document.getText(), data.source);
