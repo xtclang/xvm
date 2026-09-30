@@ -926,8 +926,15 @@ Track that distinction instead of treating synthetic LSP notifications as editor
   X124 in both drivers now creates an unopened nested root and replaces it through settings;
   IntelliJ no longer primes or refreshes the fixture manually. Unit tests cover shared leases,
   delayed refresh, replacement, disposal and wire-pattern decoding. Batch validation pending.
-- [ ] L70: repair or upgrade LSP4IJ's lazy-action application path, then re-enable edit resolution
-  only after native import/member generation and Undo/Redo pass together.
+- [ ] L70 validation: all remaining standard resolve endpoints now use bounded detached handles:
+  code-lens commands (including arguments), document-link targets/tooltips, inlay tooltips and
+  workspace-symbol ranges. Client property negotiation keeps eager fallbacks. Handles expire on
+  edits, dependency/configuration changes, close/reopen and connection disposal. Shared X131
+  exercises the installed connections; backend tests cover deferred payloads and stale handles.
+  LSP4IJ 0.21.0 remains the latest release (upstream API checked 2026-09-30). A supported client
+  command now resolves only the selected action and applies it through the existing document-epoch
+  guard and global undo command. The native resolve capability is restored; X105/X122/X127 must
+  pass before this is considered validated. No edits occur while listing or explicitly resolving.
 - [ ] L71 validation: Community Move now preflights multiple source files/module containers,
   validates destination collisions before proof and application, and applies VFS parent moves in
   the same global undo command as reference edits. LSP4IJ 0.21's RenameFile implementation ignores

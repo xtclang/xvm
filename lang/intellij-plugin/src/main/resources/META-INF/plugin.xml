@@ -31,6 +31,10 @@
     <!-- LSP4IJ provides LSP support for Community Edition -->
     <depends>com.redhat.devtools.lsp4ij</depends>
 
+    <actions>
+        <action id="xtc.resolveCodeAction" class="org.xtclang.idea.lsp.XtcResolveCodeAction"/>
+    </actions>
+
     <extensions defaultExtensionNs="com.intellij">
         <projectConfigurable id="xtc.compiler" parentId="language" displayName="Ecstasy Compiler"
                              instance="org.xtclang.idea.lsp.CompilerProjectConfigurable"/>

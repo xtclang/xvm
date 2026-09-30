@@ -85,6 +85,9 @@ import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WorkspaceDiagnosticParams
 import org.eclipse.lsp4j.WorkspaceDiagnosticReport
 import org.eclipse.lsp4j.WorkspaceEdit
+import org.eclipse.lsp4j.WorkspaceSymbol
+import org.eclipse.lsp4j.WorkspaceSymbolLocation
+import org.eclipse.lsp4j.WorkspaceSymbolParams
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.jsonrpc.messages.Either3
@@ -94,7 +97,9 @@ import org.eclipse.lsp4j.services.TextDocumentService
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.CallHierarchyItem as AdapterCallHierarchyItem
+import org.xvm.lsp.adapter.CodeLensCommand
 import org.xvm.lsp.adapter.CompletionItem as AdapterCompletionItem
+import org.xvm.lsp.adapter.DocumentLink as AdapterDocumentLink
 import org.xvm.lsp.adapter.FormattingOptions as AdapterFormattingOptions
 import org.xvm.lsp.adapter.Position as AdapterPosition
 import org.xvm.lsp.adapter.Range as AdapterRange
@@ -104,6 +109,7 @@ import org.xvm.lsp.adapter.WorkspaceEdit as AdapterWorkspaceEdit
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
+import org.xvm.lsp.model.Location as AdapterLocation
 import org.xvm.lsp.model.Location as DiagnosticLocation
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.fmt
@@ -139,6 +145,33 @@ class XtcTextDocumentService(
     private val semanticTokenReports = SemanticTokenReports()
     private val completionReports = ResolveReports<String>()
     private val actionReports = ResolveReports<AdapterWorkspaceEdit>()
+    private val lensReports = ResolveReports<CodeLensCommand>()
+    private val linkReports = ResolveReports<AdapterDocumentLink>()
+    private val hintReports = ResolveReports<String>()
+    private val symbolReports = ResolveReports<AdapterLocation>()
+
+    private fun clearResolveReports() =
+        listOf(
+                completionReports,
+                actionReports,
+                lensReports,
+                linkReports,
+                hintReports,
+                symbolReports,
+            )
+            .forEach { it.clear() }
+
+    private fun requireResolve(enabled: Boolean, feature: String) {
+        if (!enabled)
+            throw ResponseErrorException(
+                ResponseError(
+                    ResponseErrorCode.MethodNotFound,
+                    "$feature resolution was not negotiated",
+                    null,
+                )
+            )
+    }
+
     private var diagnosticRevision = 0L
     private val publishedByScope = mutableMapOf<String, Set<String>>()
     private val pendingQueries = mutableMapOf<CompletableFuture<*>, String>()
@@ -327,8 +360,7 @@ class XtcTextDocumentService(
         version: Int,
     ) {
         diagnosticRevision++
-        completionReports.clear()
-        actionReports.clear()
+        clearResolveReports()
         val compiler = adapter as? XdkAdapter
         val changedGraph = compiler?.updateDocument(uri, content).orEmpty()
         analyseOne(uri, content, version)
@@ -453,8 +485,7 @@ class XtcTextDocumentService(
             val uri = params.textDocument.uri
             logger.info("textDocument/didClose: {}", uri)
             diagnosticRevision++
-            completionReports.clear()
-            actionReports.clear()
+            clearResolveReports()
             val affected = adapter.affectedAnalysisScopes(uri)
             semanticTokenReports.retire(uri)
             val document = openDocuments.remove(uri)
@@ -487,8 +518,7 @@ class XtcTextDocumentService(
             // didChange already propagates edits; didClose re-reads disk and membership.
             if (closed || openDocuments.containsKey(uri)) return
             diagnosticRevision++
-            completionReports.clear()
-            actionReports.clear()
+            clearResolveReports()
             server.refreshDiagnostics()
             server.refreshSemanticTokens()
             refreshScopes(
@@ -503,8 +533,7 @@ class XtcTextDocumentService(
         synchronized(lifecycle) {
             if (closed) return
             diagnosticRevision++
-            completionReports.clear()
-            actionReports.clear()
+            clearResolveReports()
             refreshScopes(replace())
             server.refreshDiagnostics()
             server.refreshSemanticTokens()
@@ -520,8 +549,7 @@ class XtcTextDocumentService(
             publishedByScope.clear()
             diagnosticReports.clear()
             semanticTokenReports.clear()
-            completionReports.clear()
-            actionReports.clear()
+            clearResolveReports()
             documents.forEach { (uri, document) ->
                 document.analysis.cancel(false)
                 adapter.closeDocument(uri)
@@ -916,8 +944,19 @@ class XtcTextDocumentService(
             adapter.getDocumentLinks(uri, content).map { l ->
                 DocumentLink().apply {
                     range = l.range.toLsp()
-                    target = l.target
-                    tooltip = l.tooltip
+                    val handle =
+                        if (server.resolvesDocumentLinkTarget)
+                            linkReports.remember(
+                                diagnosticRevision,
+                                range.fmt(),
+                                l,
+                                (l.target?.length ?: 0) + (l.tooltip?.length ?: 0),
+                            )
+                        else null
+                    if (handle == null) {
+                        target = l.target
+                        tooltip = l.tooltip
+                    } else data = handle
                 }
             }
         }
@@ -1256,6 +1295,23 @@ class XtcTextDocumentService(
                     kind = h.kind.toLsp()
                     paddingLeft = h.paddingLeft
                     paddingRight = h.paddingRight
+                    val handle =
+                        h.tooltip
+                            ?.takeIf { server.resolvesInlayHintTooltip }
+                            ?.let {
+                                hintReports.remember(
+                                    diagnosticRevision,
+                                    hintKey(this),
+                                    it,
+                                    it.length,
+                                )
+                            }
+                    if (handle == null)
+                        tooltip =
+                            h.tooltip?.let {
+                                Either.forRight(MarkupContent(MarkupKind.MARKDOWN, it))
+                            }
+                    else data = handle
                 }
             }
         }
@@ -1525,10 +1581,107 @@ class XtcTextDocumentService(
                 CodeLens().apply {
                     range = l.range.toLsp()
                     l.command?.let { cmd ->
-                        command = Command(cmd.title, cmd.command)
+                        val handle =
+                            if (server.resolvesCodeLensCommand)
+                                lensReports.remember(
+                                    diagnosticRevision,
+                                    range.fmt(),
+                                    cmd.copy(arguments = cmd.arguments.toList()),
+                                    cmd.title.length +
+                                        cmd.command.length +
+                                        cmd.arguments.sumOf { it.toString().length },
+                                )
+                            else null
+                        if (handle == null)
+                            command = Command(cmd.title, cmd.command, cmd.arguments.toList())
+                        else data = handle
                     }
                 }
             }
+        }
+
+    override fun resolveCodeLens(lens: CodeLens): CompletableFuture<CodeLens> =
+        supplyAsync("codeLens/resolve", lens.range.fmt()) {
+            requireResolve(server.resolvesCodeLensCommand, "Code lens")
+            if (lens.data != null) {
+                val command = lensReports.resolve(lens.data, diagnosticRevision, lens.range.fmt())
+                lens.command = Command(command.title, command.command, command.arguments.toList())
+            }
+            lens
+        }
+
+    override fun documentLinkResolve(link: DocumentLink): CompletableFuture<DocumentLink> =
+        supplyAsync("documentLink/resolve", link.range.fmt()) {
+            requireResolve(server.resolvesDocumentLinkTarget, "Document link")
+            if (link.data != null) {
+                val resolved = linkReports.resolve(link.data, diagnosticRevision, link.range.fmt())
+                link.target = resolved.target
+                link.tooltip = resolved.tooltip
+            }
+            link
+        }
+
+    private fun hintKey(hint: InlayHint) = "${hint.position.fmt()}:${hint.label}"
+
+    override fun resolveInlayHint(hint: InlayHint): CompletableFuture<InlayHint> =
+        supplyAsync("inlayHint/resolve", hint.position.fmt()) {
+            requireResolve(server.resolvesInlayHintTooltip, "Inlay hint")
+            if (hint.data != null)
+                hint.tooltip =
+                    Either.forRight(
+                        MarkupContent(
+                            MarkupKind.MARKDOWN,
+                            hintReports.resolve(hint.data, diagnosticRevision, hintKey(hint)),
+                        )
+                    )
+            hint
+        }
+
+    internal fun workspaceSymbols(
+        params: WorkspaceSymbolParams
+    ): CompletableFuture<Either<List<SymbolInformation>, List<WorkspaceSymbol>>> =
+        supplyAsync("workspace/symbol", params.query) {
+            Either.forRight(
+                adapter.findWorkspaceSymbols(params.query).map { symbol ->
+                    WorkspaceSymbol().apply {
+                        name = symbol.name
+                        kind = symbol.kind.toLsp()
+                        val handle =
+                            if (server.resolvesWorkspaceSymbolRange)
+                                symbolReports.remember(
+                                    diagnosticRevision,
+                                    "$name:$kind",
+                                    symbol.location,
+                                    symbol.location.uri.length + 64,
+                                )
+                            else null
+                        if (handle == null) location = Either.forLeft(symbol.location.toLsp())
+                        else {
+                            location = Either.forRight(WorkspaceSymbolLocation(symbol.location.uri))
+                            data = handle
+                        }
+                    }
+                }
+            )
+        }
+
+    internal fun resolveWorkspaceSymbol(
+        symbol: WorkspaceSymbol
+    ): CompletableFuture<WorkspaceSymbol> =
+        supplyAsync("workspaceSymbol/resolve", symbol.name) {
+            requireResolve(server.resolvesWorkspaceSymbolRange, "Workspace symbol")
+            if (symbol.data != null)
+                symbol.location =
+                    Either.forLeft(
+                        symbolReports
+                            .resolve(
+                                symbol.data,
+                                diagnosticRevision,
+                                "${symbol.name}:${symbol.kind}",
+                            )
+                            .toLsp()
+                    )
+            symbol
         }
 
     /**

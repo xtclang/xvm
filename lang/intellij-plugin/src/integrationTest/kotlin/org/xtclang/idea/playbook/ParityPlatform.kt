@@ -402,6 +402,73 @@ internal fun ParityScenarios.platformCases() {
             with(driver) { changeWorkspaceFolders(directory, root) }
         }
     }
+    case("X131") { data ->
+        write(data.string("file"), data.string("source"))
+        configure(
+            listOf(
+                SharedScenarios.SourceModule(
+                    data.string("module"),
+                    uri(data.string("file")),
+                    emptyList(),
+                )
+            )
+        )
+        val document = open(data.string("file"))
+        clean(document)
+        val lens = query("textDocument/codeLens", document).rows().single()
+        val resolvedLens =
+            if (lens.has("data")) protocol.query("codeLens/resolve", lens).asJsonObject else lens
+        check(resolvedLens["range"] == lens["range"])
+        check(resolvedLens["command"].asJsonObject["arguments"].asJsonArray.size() == 2)
+        val link = query("textDocument/documentLink", document).rows().single()
+        val resolvedLink =
+            if (link.has("data")) protocol.query("documentLink/resolve", link).asJsonObject
+            else link
+        check(resolvedLink.string("target") == data.string("link"))
+        val hints =
+            query(
+                    "textDocument/inlayHint",
+                    document,
+                    extra =
+                        mapOf(
+                            "range" to
+                                mapOf(
+                                    "start" to mapOf("line" to 0, "character" to 0),
+                                    "end" to mapOf("line" to 6, "character" to 0),
+                                )
+                        ),
+                )
+                .rows()
+        val hint = hints.first { it.has("data") || it.has("tooltip") }
+        val resolvedHint =
+            if (hint.has("data")) protocol.query("inlayHint/resolve", hint).asJsonObject else hint
+        check(resolvedHint["label"] == hint["label"] && resolvedHint.has("tooltip"))
+        val symbol =
+            protocol
+                .query("workspace/symbol", mapOf("query" to data.string("module")))
+                .rows()
+                .first()
+        val resolvedSymbol =
+            if (symbol.has("data")) protocol.query("workspaceSymbol/resolve", symbol).asJsonObject
+            else symbol
+        check(resolvedSymbol["location"].asJsonObject.has("range"))
+        replace(document, "\n" + data.string("source"))
+        listOf(
+                "codeLens/resolve" to lens,
+                "documentLink/resolve" to link,
+                "inlayHint/resolve" to hint,
+                "workspaceSymbol/resolve" to symbol,
+            )
+            .filter { it.second.has("data") }
+            .forEach { (method, item) ->
+                check(
+                    runCatching { protocol.query(method, item) }
+                        .exceptionOrNull()
+                        ?.message
+                        ?.contains("expired or changed") == true
+                )
+            }
+    }
 }
 
 @Remote("org.xtclang.idea.playbook.probe.FileTreeOperations", plugin = "org.xtclang.playbook.probe")
