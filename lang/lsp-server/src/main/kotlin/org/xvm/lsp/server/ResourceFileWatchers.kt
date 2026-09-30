@@ -1,10 +1,16 @@
 package org.xvm.lsp.server
 
+import java.io.Closeable
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.UUID
+import java.util.concurrent.CancellationException
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.TimeoutException
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
 import org.eclipse.lsp4j.FileSystemWatcher
@@ -19,7 +25,13 @@ import org.eclipse.lsp4j.services.LanguageClient
 import org.slf4j.LoggerFactory
 
 /** Serialize registration changes so a delayed removal cannot retire a newer root subscription. */
-internal class ResourceFileWatchers {
+internal class ResourceFileWatchers(
+    private val deadline: () -> CompletableFuture<Void> = {
+        CompletableFuture<Void>().completeOnTimeout(null, 10, SECONDS)
+    }
+) : Closeable {
+    private val closed = AtomicBoolean()
+    private val pending = ConcurrentHashMap.newKeySet<CompletableFuture<Void>>()
     private val queue =
         AtomicReference(CompletableFuture.completedFuture(emptyMap<Watch, String>()))
 
@@ -28,10 +40,13 @@ internal class ResourceFileWatchers {
         roots: Set<String>,
         relativePatterns: Boolean = true,
     ): CompletableFuture<Map<String, String>> {
+        if (closed.get()) return CompletableFuture.completedFuture(emptyMap())
         val result = CompletableFuture<Map<Watch, String>>()
         val previous = queue.getAndSet(result)
         previous
             .thenComposeAsync { active ->
+                if (closed.get())
+                    return@thenComposeAsync CompletableFuture.completedFuture(emptyMap())
                 val next =
                     roots
                         .map { Watch.forRoot(it, relativePatterns) }
@@ -43,7 +58,7 @@ internal class ResourceFileWatchers {
                 val register =
                     if (added.isEmpty()) CompletableFuture.completedFuture(null)
                     else {
-                        attempt {
+                        awaitReply(onLateSuccess = { unregister(client, added.values) }) {
                             client.registerCapability(
                                 RegistrationParams(
                                     added.map { (watch, id) ->
@@ -69,26 +84,17 @@ internal class ResourceFileWatchers {
                             CompletableFuture.completedFuture(active)
                         } else if (removed.isEmpty()) CompletableFuture.completedFuture(next)
                         else
-                            attempt {
-                                client.unregisterCapability(
-                                    UnregistrationParams(
-                                        removed.values.map {
-                                            Unregistration(
-                                                it,
-                                                "workspace/didChangeWatchedFiles",
-                                            )
-                                        }
-                                    )
-                                )
-                            }
+                            awaitReply { unregister(client, removed.values) }
                                 .handle { _, removalFailure ->
                                     if (removalFailure == null) next
                                     else {
                                         logger.warn(
-                                            "Resource watcher removal failed; retry on the next update",
+                                            "Resource watcher removal was not acknowledged; retiring its registration IDs",
                                             removalFailure,
                                         )
-                                        active + added
+                                        // An eventual successful removal must never remove an ID
+                                        // reused by a later update, even for the same root.
+                                        next
                                     }
                                 }
                     }
@@ -103,6 +109,48 @@ internal class ResourceFileWatchers {
                 }
             }
         return result.thenApply { active -> active.entries.associate { it.key.root to it.value } }
+    }
+
+    /** Bound each reply without cancelling the original RPC: it can still succeed on the client. */
+    private fun awaitReply(
+        onLateSuccess: () -> Unit = {},
+        action: () -> CompletableFuture<Void>,
+    ): CompletableFuture<Void> {
+        val result = CompletableFuture<Void>()
+        pending.add(result)
+        result.whenComplete { _, _ -> pending.remove(result) }
+        if (closed.get()) {
+            result.completeExceptionally(CancellationException("Resource watchers closed"))
+            return result
+        }
+        val timer = deadline()
+        timer.thenRun {
+            result.completeExceptionally(TimeoutException("Resource watcher reply timed out"))
+        }
+        result.whenComplete { _, _ -> timer.cancel(false) }
+        attempt(action).whenComplete { _, failure ->
+            if (failure != null) result.completeExceptionally(failure)
+            else if (!result.complete(null)) onLateSuccess()
+        }
+        return result
+    }
+
+    private fun unregister(client: LanguageClient, ids: Collection<String>) = attempt {
+        client.unregisterCapability(
+            UnregistrationParams(
+                ids.map {
+                    Unregistration(it, "workspace/didChangeWatchedFiles")
+                }
+            )
+        )
+    }
+
+    override fun close() {
+        if (closed.compareAndSet(false, true)) {
+            pending.forEach {
+                it.completeExceptionally(CancellationException("Resource watchers closed"))
+            }
+        }
     }
 
     /** Keep the recursive root plus a flat watch that survives root removal and creation. */
