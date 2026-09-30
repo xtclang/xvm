@@ -146,18 +146,29 @@ class CapabilityNegotiationTest {
                 val client = mock(LanguageClient::class.java)
                 val sent = CompletableFuture<Void>()
                 doAnswer {
-                    sent.complete(null)
-                    if (stalled) CompletableFuture<ApplyWorkspaceEditResponse>()
-                    else CompletableFuture.completedFuture(ApplyWorkspaceEditResponse(false).apply { failureReason = "Read-only document" })
-                }.`when`(client).applyEdit(any())
+                        sent.complete(null)
+                        if (stalled) CompletableFuture<ApplyWorkspaceEditResponse>()
+                        else
+                            CompletableFuture.completedFuture(
+                                ApplyWorkspaceEditResponse(false).apply {
+                                    failureReason = "Read-only document"
+                                }
+                            )
+                    }
+                    .`when`(client)
+                    .applyEdit(any())
                 server.connect(client)
                 server.initialize(legacy()).join()
                 open(server)
                 val command = server.textDocumentService.codeAction(actions()).join().single().left
-                val applying = server.workspaceService.executeCommand(ExecuteCommandParams(command.command, command.arguments))
+                val applying =
+                    server.workspaceService.executeCommand(
+                        ExecuteCommandParams(command.command, command.arguments)
+                    )
                 sent.get(5, SECONDS)
                 if (stalled) server.close()
-                assertThatThrownBy { applying.get(5, SECONDS) }.hasMessageContaining(if (stalled) "changed" else "Read-only document")
+                assertThatThrownBy { applying.get(5, SECONDS) }
+                    .hasMessageContaining(if (stalled) "changed" else "Read-only document")
             }
         }
     }
