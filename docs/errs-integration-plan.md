@@ -920,27 +920,29 @@ X124 establishes external-resource reactions after native VFS refresh, with the 
 loaded first; it does not establish autonomous OS watching of arbitrary roots unknown to VFS.
 Track that distinction instead of treating synthetic LSP notifications as editor coverage:
 
-- [ ] PLAT2/L67 validation: implementation now owns external source/resource VFS watch leases per
+- [x] PLAT2/L67 bounded watch validation: implementation now owns external source/resource VFS watch leases per
   connection, coalesces asynchronous refreshes on the shared scheduler, observes missing roots
   through their nearest existing parent, and releases subscriptions on replacement/disposal.
   X124 in both drivers now creates an unopened nested root and replaces it through settings;
   IntelliJ no longer primes or refreshes the fixture manually. Unit tests cover shared leases,
-  delayed refresh, replacement, disposal and wire-pattern decoding. Batch validation pending.
-- [ ] L70 validation: all remaining standard resolve endpoints now use bounded detached handles:
+  delayed refresh, replacement, disposal and wire-pattern decoding. X124/X134 pass in both editors;
+  see the [watcher receipts](#watcher-move-and-log-view-acceptance-follow-up-2026-09-30).
+- [x] L70 bounded validation: all remaining standard resolve endpoints now use bounded detached handles:
   code-lens commands (including arguments), document-link targets/tooltips, inlay tooltips and
   workspace-symbol ranges. Client property negotiation keeps eager fallbacks. Handles expire on
   edits, dependency/configuration changes, close/reopen and connection disposal. Shared X131
   exercises the installed connections; backend tests cover deferred payloads and stale handles.
   LSP4IJ 0.21.0 remains the latest release (upstream API checked 2026-09-30). A supported client
   command now resolves only the selected action and applies it through the existing document-epoch
-  guard and global undo command. The native resolve capability is restored; X105/X122/X127 must
-  pass before this is considered validated. No edits occur while listing or explicitly resolving.
-- [ ] L71 validation: Community Move now preflights multiple source files/module containers,
+  guard and global undo command. The native resolve capability is restored; X105/X122/X127/X131
+  pass in the watcher acceptance batch. No edits occur while listing or explicitly resolving.
+- [x] L71 bounded validation: Community Move now preflights multiple source files/module containers,
   validates destination collisions before proof and application, and applies VFS parent moves in
   the same global undo command as reference edits. LSP4IJ 0.21's RenameFile implementation ignores
   destination parents, so this path explicitly performs them. Shared X130 covers discovered batch
   containers, closed members/resources and one Undo/Redo. Explicit graph relocation and moves
-  needing qualification rewriting remain refused. Unit/native/VS Code validation is pending.
+  needing qualification rewriting remain refused. Unit tests and selected X128/X130 pass in both
+  editors; the watcher receipts retain the initial failures and final corrections.
 
 The container-move proof needs a protected `ModuleInfo(File, String)` constructor for host-supplied
 logical source identities. It avoids filesystem discovery when replaying immutable text/membership
@@ -1138,7 +1140,7 @@ scale extensions are tracked under L62–L67; they are not evidence of universal
 These are absent operations or optional extensions to working base features. They are not
 evidence that existing push diagnostics, full tokens or eagerly populated responses are broken.
 
-#### Investigation status and next decisions (2026-09-29)
+#### Investigation status and next decisions (updated 2026-09-30)
 
 Every missing feature in the capability matrix has an open task below or in L63. The inventory
 audit established the current implementation boundary; it is **not** a completed design for
@@ -1150,11 +1152,11 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 | Scope | Investigation already recorded | Next investigation before implementation |
 |---|---|---|
 | L63 semantic fixes/refactorings | Import fixes and bounded implement/override use full compilation and binding/dispatch proof. Extract, inline, safe delete and missing-declaration fixes have no implementation. | Define each transformation separately; identify the compiler facts needed for side effects, evaluation order, captures and caller closure; add supported and refused fixtures before enabling it. |
-| L68 pull diagnostics | Negotiated pull/push, result IDs, related/closed documents and invalidation pass backend, stdio and selected acceptance in both editors. | Fix the real-platform source-location crash below; retain broader workload coverage rather than treating the selected fixtures as universal proof. |
+| L68 pull diagnostics | Negotiated pull/push, result IDs, related/closed documents and invalidation pass backend, stdio and selected acceptance in both editors. PLAT1's source-location crash is fixed. | Retain broader workload coverage rather than treating the selected fixtures as universal proof. |
 | L69 token range/delta | Negotiated range/delta and bounded result history pass backend/protocol and X126 in both hosts. | Measure representative workspace payload/cache costs under L82. |
-| L70 lazy resolve | All six resolve endpoints now have detached revision guards; backend checks pass. IntelliJ has a selected-action bridge preserving normal Undo/Redo. | Native X105/X122/X127/X131 validation is pending; preserve eager fallback for clients without the relevant capabilities. |
-| L71 file operations | Six negotiated pre/post hooks and compiler-proven file/package/container operations; native batch Move preflight now implemented, backend checks pass. | Native X128/X130 validation is pending; cross-package qualification rewrites and explicit graph relocation remain unsupported. |
-| L72 save/sync/formatting | Negotiated save hooks, opt-in incremental patches and multiple-range formatting implemented; Full remains default. | Batch tests and shared X132 pending. Save edits are opt-in, version guarded and independent of compilation. |
+| L70 lazy resolve | All six resolve endpoints have detached revision guards; backend and X105/X122/X127/X131 checks pass. IntelliJ has a selected-action bridge preserving normal Undo/Redo. | Preserve eager fallback for clients without the relevant capabilities; broaden stale-application acceptance under L80/L82. |
+| L71 file operations | Six negotiated pre/post hooks and compiler-proven file/package/container operations; backend and selected X128/X130 checks pass in both editors. | Cross-package qualification rewrites and explicit graph relocation remain unsupported. Retain the VS Code file-operation refusal limitation. |
+| L72 save/sync/formatting | Negotiated save hooks, opt-in incremental patches and multiple-range formatting pass backend and selected X132/X137–X139 checks; Full remains default. | Broaden workspace/save ownership coverage; IntelliJ uses native save formatting because LSP4IJ lacks `willSaveWaitUntil`. Save edits remain version guarded and independent of compilation. |
 | L73 server commands | Run lenses invoke client commands; no server command registry exists. | Define typed commands, edit failure handling and cancellation. Embedded execution depends on the accepted R2–R5 service design, not another command-line assembly path. |
 | L74 monikers | Compiler/graph identities exist but are not cross-project identifiers. | Define module/artifact-version identity, import/export relationships and matches across source and binary consumers. |
 | L75 document content | Matching indexed sources open as read-only files. | Establish client support and URI/revision ownership for virtual or archived sources; define refresh and stale-content behavior. |
@@ -1162,8 +1164,9 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 | L77 colors | No color-value provider exists. | Decide which XTC values have unambiguous color meaning and reversible source edits. Implement that scope or record why it is inapplicable. |
 | L78 notebooks | Current ownership is file/module based; there are no notebook sessions. | Decide whether XTC notebooks are a product requirement, then define cell/module identity and execution order before synchronization. Record an explicit exclusion if out of scope. |
 | L79 debug inline values | Compiler inlay hints are not runtime values; DAP remains a stub. | Depend on R6–R7 real sessions, stack/source mapping and stop-state ownership; define evaluation safety before exposing values. |
-| L80 negotiation | The protocol audit identified capability/lifecycle gaps; initialized watcher ordering is already fixed. | Audit each remaining capability and client entry point against actual server behavior; do not mistake inherited LSP4J defaults for support. |
-| L81 progress/trace/refresh | Queue contents, compile/API duration and request timing logs exist. Application progress, partial results and negotiated controls are incomplete. | Define operation/token ownership, cancellation and refresh triggers for long graph requests; verify transport/compiler lock ordering and client behavior. |
+| L80 negotiation | UTF-16, workspace-root fallback, hover/outline/symbol kinds and diagnostic metadata have passing regressions; shared X140 passes in both editors. | Complete code-action literal/kind, completion-kind, diagnostic-tag and workspace-edit failure-handling audits; broaden stale application checks. |
+| L81 progress/trace/refresh | Owned progress/cancellation, lifecycle gating, coalesced refresh and runtime trace have passing controlled/transport regressions; X141 passes in both editors. | Partial results, Tree-sitter initial-scan progress and visible long-operation/cancel acceptance remain open; see the playbook coverage map. |
+| L83 initializer facts | The X140 investigation reproduced missing facts in constant-folded property initializers, also with ASCII source. | Preserve successful detached semantic facts across temporary initializer disposal without retaining clones or failed attempts; cover all affected navigation and rename paths. |
 
 L76–L79 require explicit scope decisions; their presence in this inventory does not make notebooks,
 color editing or every optional protocol extension mandatory for the compiler-only release.
@@ -7227,3 +7230,16 @@ The mutable-state/deprecation audit and remaining deterministic race checks are 
 [errs-audit.md](errs-audit.md#mutable-state-and-deprecated-api-audit-2026-09-30-checkpoint).
 No new AST fields or compiler hooks were required by this protocol batch. L83 requires separate
 compiler ownership work before constant-folded initializer occurrences can be claimed complete.
+
+Pre-push documentation audit: the [protocol/lifecycle coverage map](../lang/doc/manual-test-plan.md#protocol-and-lifecycle-coverage-map)
+now names each regression class, shared editor case and pending manual P1–P4 check. Both plugin
+READMEs describe the current 146-case catalog. Stale L68–L72 validation rows are reconciled with
+their recorded passing receipts; L80/L81 and L83 retain their actual open work. The listener and
+process-lifecycle writeups distinguish optional wire metadata and query cancellation from compiler
+analysis ownership. Historical catalog/test counts remain attached to their original runs.
+
+Recommended next order: close the three explicit state-audit follow-ups (stalled watcher replies,
+stale path-editor drafts, disk-index/open-buffer ownership) in separate commits; preserve detached
+facts for L83; then complete the remaining L80 capability audit and L81 partial-result work. Add
+controlled regressions and shared editor cases where observable, batch validation, and reserve a
+full catalog/long-workload run for the L82 submission gate.

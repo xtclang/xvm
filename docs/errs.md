@@ -122,7 +122,7 @@ startup/cancellation race. Both have isolated fixes and process regressions; see
 [the diagnosis and master extraction notes](errs-lsp-process-lifecycle.md). These defects are
 independent of the compiler error-listener/AST changes.
 
-The active [full compiler LSP completion checklist (L55–L82)](errs-integration-plan.md#full-compiler-lsp-completion-checklist)
+The active [full compiler LSP completion checklist (L55–L83)](errs-integration-plan.md#full-compiler-lsp-completion-checklist)
 now distinguishes remaining semantic coverage, reliability investigations, unimplemented LSP
 operations and native validation. The compiler now implements 25 adapter capability categories, including declaration lookup;
 that is not full protocol or language coverage. See the
