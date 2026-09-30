@@ -408,3 +408,13 @@ The view retains its history while hidden. To remap the toggle, bind both Show a
 Server Output to the same chord in Keyboard Shortcuts, preserving the Hide action's `when` clause.
 See the [manual playbook](../doc/manual-test-plan.md#server-log-shortcut-acceptance) for acceptance
 steps and the distinction between server logs and protocol tracing.
+
+
+Use **Ecstasy: Open Language Service Settings** for the native Settings editor. The window-scoped
+`xtc.languageService.textSynchronization` selects `full` (default) or `incremental` text transport;
+this is separate from incremental compilation. `xtc.languageService.saveFormatting` selects
+`editor` (default) or `server`; native `editor.formatOnSave` takes precedence for each document.
+Connection changes restart the service without saving buffers. Formatting and inlay settings apply
+live. **Ecstasy: Show Effective Language Service Configuration** shows configured values/origins,
+the running PID/adapter, negotiated features and compiler queue. Legacy formatting tab width and
+maximum line width are deprecated because they do not affect the implemented formatter.
