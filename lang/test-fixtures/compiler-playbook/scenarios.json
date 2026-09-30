@@ -4357,7 +4357,10 @@
       "values": {
         "file": "ServiceSave.x",
         "source": "module ServiceSave {\nInt value = 1;\n}\n",
-        "formatted": "module ServiceSave {\n    Int value = 1;\n}\n"
+        "formatted": "module ServiceSave {\n    Int value = 1;\n}\n",
+        "closedFile": "ClosedServiceSave.x",
+        "closedSource": "module ClosedServiceSave {\nInt value = 1;\n}\n",
+        "closedFormatted": "module ClosedServiceSave {\n    Int value = 1;\n}\n"
       },
       "intellij": {
         "coverage": "full",
