@@ -1154,7 +1154,7 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 | L69 token range/delta | Negotiated range/delta and bounded result history pass backend/protocol and X126 in both hosts. | Measure representative workspace payload/cache costs under L82. |
 | L70 lazy resolve | Completion documentation and action edits pass backend/protocol and negotiated X127. IntelliJ keeps action edits eager for reliable Undo/Redo. | Fix/upgrade the native lazy-edit application path; lens/link/inlay/workspace-symbol resolvers remain follow-ups. |
 | L71 file operations | Six negotiated pre/post hooks and proven file/package/container operations pass backend/protocol checks; native file/package Rename passes X128. | Extend native preflight to other move actions; cross-package qualification rewrites and explicit graph persistence remain unsupported. |
-| L72 save/sync/formatting | Full sync, didSave and single-range formatting work. | Separate save hooks, incremental patches and multiple-range formatting; define edit ordering, overlapping ranges and UTF-16/CRLF behavior without changing the existing Full-sync contract prematurely. |
+| L72 save/sync/formatting | Negotiated save hooks, opt-in incremental patches and multiple-range formatting implemented; Full remains default. | Batch tests and shared X132 pending. Save edits are opt-in, version guarded and independent of compilation. |
 | L73 server commands | Run lenses invoke client commands; no server command registry exists. | Define typed commands, edit failure handling and cancellation. Embedded execution depends on the accepted R2–R5 service design, not another command-line assembly path. |
 | L74 monikers | Compiler/graph identities exist but are not cross-project identifiers. | Define module/artifact-version identity, import/export relationships and matches across source and binary consumers. |
 | L75 document content | Matching indexed sources open as read-only files. | Establish client support and URI/revision ownership for virtual or archived sources; define refresh and stale-content behavior. |
@@ -1182,26 +1182,26 @@ and debugging. Neither feature counts nor a selected passing playbook establish 
   one million integers), full fallback after eviction/foreign IDs/close/restart, and negotiated
   refresh on semantic changes. Range reports preserve UTF-16 coordinates. Unit, compiler-service,
   packaged transport and shared X126 pass; representative workload measurements remain in L82.
-- [ ] **L70 — Lazy resolve operations (initial implementation validated).** Negotiated
-  completion documentation and action edit resolution use bounded detached handles and reject
-  stale versions, dependencies and connections. Shared X127 passes with each host's negotiated
-  behavior. IntelliJ omits action-edit resolution until its native application path preserves
-  Undo/Redo; completion documentation remains lazy. `codeLens/resolve`,
-  `documentLink/resolve`, `inlayHint/resolve` and `workspaceSymbol/resolve` remain follow-ups.
-- [ ] **L71 — File-operation participation (bounded implementation validated).**
-  All six pre/post operations negotiate independently. Proven file/package and safe container moves
-  return pre-operation edits; create/delete hooks return no speculative edits and refresh membership
-  afterwards. Shared X128 drives VS Code's native file action and IntelliJ's registered XTC Rename
-  handler/chooser/dialog. IntelliJ's VFS before-event is too late for compiler proof; its handler
-  preflights before disk mutation. Add corresponding native preflight for cross-directory and
-  arbitrary-container actions before advertising those host paths. Cross-package qualification
-  rewrites and moves requiring explicit source-graph persistence remain unsupported; ordinary
-  LSP null replies cannot veto moves.
-- [ ] **L72 — Save hooks, incremental sync and multiple-range formatting.** Add negotiated
-  `willSave`/`willSaveWaitUntil`, optional incremental `didChange` support and
-  `textDocument/rangesFormatting`. Full document synchronization, didSave handling and
-  single-range formatting already exist. Test sequential patches, CRLF and surrogate pairs;
-  an advertised Full-sync server must continue rejecting incremental patches safely.
+- [ ] **L70 — Lazy resolve operations (implementation complete, batch validation pending).**
+  Completion/action/lens/link/inlay/workspace-symbol resolve now use bounded revision-guarded
+  handles and negotiated eager fallbacks. IntelliJ's selected-action bridge restores lazy action
+  edits with document epochs and normal Undo/Redo. Validate X105/X122/X127/X131.
+- [ ] **L71 — File-operation participation (implementation complete within safety boundaries).**
+  All six hooks negotiate independently. Native IntelliJ Rename and batch Move preflight before
+  mutation, then apply references and VFS moves in one undo command. Validate X118/X128/X130.
+  Cross-package qualification rewriting and explicit source-graph relocation remain refused;
+  ordinary LSP null replies cannot veto moves.
+- [ ] **L72 — Save hooks, incremental sync and multiple-range formatting (validation pending).**
+  Negotiated `willSave`/`willSaveWaitUntil` and `textDocument/rangesFormatting` are implemented.
+  Initialization options `xtcDocumentSync: {incremental: true, formatOnSave: true}` opt into those
+  behaviors independently; both flags default to false. Full synchronization remains the shipping
+  contract, and malformed incremental batches cannot replace content or advance its version.
+  Sequential patches use UTF-16 and CRLF/bare-CR aware positions. Save formatting uses the existing
+  formatter and editor configuration without waiting for compiler analysis or applying edits itself.
+  Multiple ranges use one snapshot, deduplicate identical expanded edits and refuse conflicts.
+  Backend tests cover these contracts; shared X132 exercises installed-client multi-range requests
+  and negotiated default save hooks. Editor settings for the opt-in options and a native multi-range
+  UI are not introduced: hosts can already invoke standard formatting/save preferences.
 - [ ] **L73 — Server commands and edit application.** Implement an explicit
   `workspace/executeCommand` registry if server-run actions are required, with negotiated
   `workspace/applyEdit` and failure handling. Current module Run lenses use a client command;
@@ -6840,3 +6840,9 @@ Validation after both implementation slices:
   warning; this migration does not claim to eliminate unrelated warnings.
 
 Current formatting commands and behavior are documented in [lang/README.md](../lang/README.md#kotlin-formatting).
+
+L72 implementation checkpoint (2026-09-30): source synchronization and save hooks are connection
+options, not compiler APIs. No additional AST or embedding changes were necessary. The implementation
+preserves the existing formatter and compiler queue; save hooks never enqueue a compilation. Shared
+X132 and backend regression tests are written; execution is batched after the four implementation
+commits. Specification: https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/ .

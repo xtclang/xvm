@@ -36,6 +36,7 @@ import org.eclipse.lsp4j.DocumentLink
 import org.eclipse.lsp4j.DocumentLinkParams
 import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
 import org.eclipse.lsp4j.DocumentRangeFormattingParams
+import org.eclipse.lsp4j.DocumentRangesFormattingParams
 import org.eclipse.lsp4j.DocumentSymbol
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.FoldingRange
@@ -82,6 +83,7 @@ import org.eclipse.lsp4j.TypeHierarchyPrepareParams
 import org.eclipse.lsp4j.TypeHierarchySubtypesParams
 import org.eclipse.lsp4j.TypeHierarchySupertypesParams
 import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
+import org.eclipse.lsp4j.WillSaveTextDocumentParams
 import org.eclipse.lsp4j.WorkspaceDiagnosticParams
 import org.eclipse.lsp4j.WorkspaceDiagnosticReport
 import org.eclipse.lsp4j.WorkspaceEdit
@@ -100,6 +102,7 @@ import org.xvm.lsp.adapter.CallHierarchyItem as AdapterCallHierarchyItem
 import org.xvm.lsp.adapter.CodeLensCommand
 import org.xvm.lsp.adapter.CompletionItem as AdapterCompletionItem
 import org.xvm.lsp.adapter.DocumentLink as AdapterDocumentLink
+import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.FormattingOptions as AdapterFormattingOptions
 import org.xvm.lsp.adapter.Position as AdapterPosition
 import org.xvm.lsp.adapter.Range as AdapterRange
@@ -181,11 +184,14 @@ class XtcTextDocumentService(
         logParams: String,
         logResult: (R) -> String = { "completed" },
         uri: String? = null,
+        sourceOnly: Boolean = false,
         block: () -> R,
     ): CompletableFuture<R> {
         val trace = ExecutionTrace.current()
         val document = uri?.let { openDocuments[it] }
-        val ready = document?.analysis ?: CompletableFuture.completedFuture(null)
+        val ready =
+            if (sourceOnly) CompletableFuture.completedFuture(null)
+            else document?.analysis ?: CompletableFuture.completedFuture(null)
         return ready
             .handle { _, _ -> null }
             .thenCompose {
@@ -340,16 +346,19 @@ class XtcTextDocumentService(
             if (version <= previous.version) return
             val changes = params.contentChanges
             if (changes.isNullOrEmpty()) return
-            // The server advertises full synchronization. Do not mistake an incremental patch
-            // for a complete file if a client violates that contract.
-            if (changes.any { it.range != null }) {
-                logger.warn(
-                    "textDocument/didChange: ignoring incremental changes for full-sync document {}",
-                    uri,
-                )
-                return
-            }
-            analyse(uri, changes.last().text, version)
+            val content =
+                try {
+                    DocumentText(previous.content)
+                        .change(changes, server.synchronization.incremental)
+                } catch (e: IllegalArgumentException) {
+                    logger.warn(
+                        "textDocument/didChange: ignoring invalid changes for {}: {}",
+                        uri,
+                        e.message,
+                    )
+                    return
+                }
+            analyse(uri, content, version)
         }
     }
 
@@ -557,11 +566,40 @@ class XtcTextDocumentService(
         }
     }
 
-    /**
-     * LSP: textDocument/didSave
-     *
-     * @see org.eclipse.lsp4j.services.TextDocumentService.didSave
-     */
+    /** The pre-save notification is observational; only didSave refreshes filesystem inputs. */
+    override fun willSave(params: WillSaveTextDocumentParams) {
+        logger.info("textDocument/willSave: {} reason={}", params.textDocument.uri, params.reason)
+    }
+
+    // Saving does not wait for compilation. The formatter uses the captured source and the same
+    // version guard as formatting requests; returned edits are applied only by the client.
+    override fun willSaveWaitUntil(
+        params: WillSaveTextDocumentParams
+    ): CompletableFuture<List<TextEdit>> =
+        supplyAsync(
+            "textDocument/willSaveWaitUntil",
+            params.textDocument.uri,
+            { "${it.size} edits" },
+            uri = params.textDocument.uri,
+            sourceOnly = true,
+        ) {
+            requireResolve(server.synchronization.waitUntil, "Save edits")
+            if (!server.synchronization.formatOnSave) return@supplyAsync emptyList()
+            val uri = params.textDocument.uri
+            val content = openDocuments[uri]?.content ?: return@supplyAsync emptyList()
+            val config = server.editorFormattingConfig ?: FormattingConfig.DEFAULT
+            adapter
+                .formatDocument(
+                    uri,
+                    content,
+                    AdapterFormattingOptions(
+                        tabSize = config.indentSize,
+                        insertSpaces = config.insertSpaces,
+                    ),
+                )
+                .map { TextEdit(it.range.toLsp(), it.newText) }
+        }
+
     override fun didSave(params: DidSaveTextDocumentParams) {
         logger.info("textDocument/didSave: {}", params.textDocument.uri)
         refreshForFile(params.textDocument.uri)
@@ -1361,6 +1399,35 @@ class XtcTextDocumentService(
                     this.range = e.range.toLsp()
                     newText = e.newText
                 }
+            }
+        }
+
+    override fun rangesFormatting(
+        params: DocumentRangesFormattingParams
+    ): CompletableFuture<List<TextEdit>> =
+        supplyAsync(
+            "textDocument/rangesFormatting",
+            params.textDocument.uri,
+            { "${it.size} edits" },
+            uri = params.textDocument.uri,
+        ) {
+            val uri = params.textDocument.uri
+            val content = openDocuments[uri]?.content ?: return@supplyAsync emptyList()
+            val text = DocumentText(content)
+            try {
+                params.ranges.forEach { text.bounds(it) }
+                val options = toAdapterFormattingOptions(params.options)
+                text.nonOverlapping(
+                    params.ranges.flatMap { range ->
+                        adapter.formatRange(uri, content, toAdapterRange(range), options).map {
+                            TextEdit(it.range.toLsp(), it.newText)
+                        }
+                    }
+                )
+            } catch (e: IllegalArgumentException) {
+                throw ResponseErrorException(
+                    ResponseError(ResponseErrorCode.InvalidParams, e.message, null)
+                )
             }
         }
 
