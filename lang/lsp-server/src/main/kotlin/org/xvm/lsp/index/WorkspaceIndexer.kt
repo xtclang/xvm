@@ -66,7 +66,7 @@ class WorkspaceIndexer(
         }
 
     /**
-     * Scan all `*.x` files in the given workspace folders in parallel.
+     * Scan all `*.x` files in the given workspace folders on a background worker.
      *
      * @param folders list of workspace folder paths (file system paths, not URIs)
      * @param progressReporter optional callback for progress reporting: (message, percentComplete)

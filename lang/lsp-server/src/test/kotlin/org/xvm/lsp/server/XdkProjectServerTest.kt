@@ -15,7 +15,6 @@ import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.FileChangeType
 import org.eclipse.lsp4j.FileEvent
-import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
@@ -366,7 +365,7 @@ class XdkProjectServerTest {
             if (automatic) {
                 server
                     .initialize(
-                        InitializeParams().apply {
+                        editorInitializeParams().apply {
                             workspaceFolders =
                                 listOf(
                                     WorkspaceFolder(
@@ -378,6 +377,7 @@ class XdkProjectServerTest {
                     )
                     .get(30, SECONDS)
             } else {
+                server.initialize(editorInitializeParams()).get()
                 server.replaceCompilerSourceModules(
                     buildList {
                         add(XdkSourceModule("Library", library.toURI().toString()))
