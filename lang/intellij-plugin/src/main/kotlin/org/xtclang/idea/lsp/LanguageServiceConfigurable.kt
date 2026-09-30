@@ -1,0 +1,84 @@
+package org.xtclang.idea.lsp
+
+import com.google.gson.JsonObject
+import com.intellij.openapi.options.Configurable
+import com.intellij.openapi.options.ConfigurationException
+import com.intellij.openapi.project.Project
+import com.intellij.ui.components.JBCheckBox
+import com.intellij.ui.components.JBLabel
+import java.awt.BorderLayout
+import java.awt.GridLayout
+import javax.swing.JComboBox
+import javax.swing.JComponent
+import javax.swing.JPanel
+
+class LanguageServiceApplicationConfigurable : LanguageServiceConfigurable(null)
+class LanguageServiceProjectConfigurable(project: Project) : LanguageServiceConfigurable(project)
+
+/** Only the dialog draft is mutable; applying publishes a validated immutable value. */
+open class LanguageServiceConfigurable(private val project: Project?) : Configurable {
+    private val inherit = JBCheckBox("Use application language-service defaults").apply { name = "xtc.service.inherit" }
+    private val synchronization = JComboBox(arrayOf("full", "incremental")).apply { name = "xtc.service.sync" }
+    private val saving = JComboBox(arrayOf("editor", "server")).apply { name = "xtc.service.save" }
+    private val hints = JBCheckBox("Show Ecstasy inlay hints").apply { name = "xtc.service.hints" }
+    private var original: JsonObject? = null
+    private var initial = LanguageServiceConfiguration()
+
+    override fun getDisplayName(): String =
+        if (project == null) "Ecstasy Language Service Defaults" else "Ecstasy Language Service"
+
+    override fun createComponent(): JComponent {
+        inherit.addItemListener { updateEnabled() }
+        reset()
+        return JPanel(BorderLayout(0, 12)).apply {
+            add(JPanel(GridLayout(0, 2, 8, 8)).apply {
+                if (project != null) { add(inherit); add(JBLabel("Project overrides are stored with LSP4IJ.")) }
+                add(JBLabel("Text synchronization (restart required)")); add(synchronization)
+                add(JBLabel("Save formatting owner (restart required)")); add(saving)
+                add(hints); add(JBLabel("Native IDE inlay controls still apply."))
+            }, BorderLayout.NORTH)
+            add(JBLabel("<html>Full is the default. Incremental sends changed text; it does not enable incremental compilation.<br>" +
+                "Native format-on-save takes precedence over server save formatting.<br>" +
+                "Indentation is configured under Editor → Code Style → Ecstasy. Line wrapping is not implemented.<br>" +
+                "Compiler paths remain under Ecstasy Compiler. Trace and runtime controls remain in Language Servers.</html>"), BorderLayout.CENTER)
+        }
+    }
+
+    private fun updateEnabled() {
+        val editable = project == null || !inherit.isSelected
+        synchronization.isEnabled = editable
+        saving.isEnabled = editable
+        hints.isEnabled = editable
+    }
+
+    private fun draft() = LanguageServiceConfiguration(
+        synchronization.selectedItem as String, saving.selectedItem as String, hints.isSelected,
+    )
+
+    override fun isModified(): Boolean =
+        (project != null && inherit.isSelected != (original == null)) ||
+            ((project == null || !inherit.isSelected) && draft() != initial)
+
+    override fun reset() {
+        original = LanguageServiceConfiguration.section(LanguageServiceSettings.content(project))
+        initial = LanguageServiceSettings.effective(project)
+        inherit.isSelected = original == null
+        synchronization.selectedItem = initial.textSynchronization
+        saving.selectedItem = initial.saveFormatting
+        hints.isSelected = initial.inlayHints
+        updateEnabled()
+    }
+
+    override fun apply() {
+        try {
+            val replacement = draft().takeUnless { project != null && inherit.isSelected }
+            val content = LanguageServiceConfiguration.replace(
+                LanguageServiceSettings.content(project), original, replacement,
+            )
+            LanguageServiceSettings.install(project, content)
+            reset()
+        } catch (failure: IllegalArgumentException) {
+            throw ConfigurationException(failure.message ?: "Invalid Ecstasy language-service settings")
+        }
+    }
+}
