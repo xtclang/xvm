@@ -32,6 +32,8 @@ internal class ResourceFileWatchers(
 ) : Closeable {
     private val closed = AtomicBoolean()
     private val pending = ConcurrentHashMap.newKeySet<CompletableFuture<Void>>()
+    // Unacknowledged removals remain retryable, but their IDs are never reusable as active watches.
+    private val retired = ConcurrentHashMap<String, LanguageClient>()
     private val queue =
         AtomicReference(CompletableFuture.completedFuture(emptyMap<Watch, String>()))
 
@@ -54,7 +56,10 @@ internal class ResourceFileWatchers(
                             active[it] ?: "xtc-resources-${UUID.randomUUID()}"
                         }
                 val added = next.filterKeys { it !in active }
-                val removed = active.filterKeys { it !in next }
+                val removed =
+                    (active.filterKeys { it !in next }.values +
+                            retired.entries.filter { it.value === client }.map { it.key })
+                        .distinct()
                 val register =
                     if (added.isEmpty()) CompletableFuture.completedFuture(null)
                     else {
@@ -84,7 +89,7 @@ internal class ResourceFileWatchers(
                             CompletableFuture.completedFuture(active)
                         } else if (removed.isEmpty()) CompletableFuture.completedFuture(next)
                         else
-                            awaitReply { unregister(client, removed.values) }
+                            awaitReply { unregister(client, removed) }
                                 .handle { _, removalFailure ->
                                     if (removalFailure == null) next
                                     else {
@@ -135,18 +140,29 @@ internal class ResourceFileWatchers(
         return result
     }
 
-    private fun unregister(client: LanguageClient, ids: Collection<String>) = attempt {
-        client.unregisterCapability(
-            UnregistrationParams(
-                ids.map {
-                    Unregistration(it, "workspace/didChangeWatchedFiles")
-                }
+    private fun unregister(
+        client: LanguageClient,
+        ids: Collection<String>,
+    ): CompletableFuture<Void> {
+        ids.forEach { retired[it] = client }
+        val reply = attempt {
+            client.unregisterCapability(
+                UnregistrationParams(
+                    ids.map {
+                        Unregistration(it, "workspace/didChangeWatchedFiles")
+                    }
+                )
             )
-        )
+        }
+        reply.whenComplete { _, failure ->
+            if (failure == null) ids.forEach { retired.remove(it, client) }
+        }
+        return reply
     }
 
     override fun close() {
         if (closed.compareAndSet(false, true)) {
+            retired.clear()
             pending.forEach {
                 it.completeExceptionally(CancellationException("Resource watchers closed"))
             }

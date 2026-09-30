@@ -155,8 +155,9 @@ export function registerCompilerPaths(context: vscode.ExtensionContext): void {
         watchers.set(owner.uri.toString(), vscode.Disposable.from(watcher, watcher.onDidCreate(changed), watcher.onDidChange(changed), watcher.onDidDelete(changed)));
     };
     (vscode.workspace.workspaceFolders ?? []).forEach(watch);
-    context.subscriptions.push(output, draftsChanged, { dispose: () => {
+    context.subscriptions.push(output, { dispose: () => {
         draftsChanged.fire();
+        draftsChanged.dispose();
         watchers.forEach(watcher => watcher.dispose());
     } },
         vscode.workspace.onDidChangeWorkspaceFolders(event => {
