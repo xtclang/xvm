@@ -33,6 +33,29 @@ import org.mockito.Mockito.mock
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 
 class CompilerConfigurationTest {
+    @Test
+    fun `presentation updates preserve pending graph configuration and cached compilation`() {
+        Session(pull = true).use { session ->
+            session.open()
+            session.expect(false)
+            val before = session.adapter.getCachedResult(session.uri)
+            session.server.initialized(InitializedParams())
+            val pending = requireNotNull(session.requests.poll(10, SECONDS))
+            val submitted = session.adapter.compilerQueueSnapshot()["submittedTotal"]
+            session.server.workspaceService.didChangeConfiguration(
+                DidChangeConfigurationParams(
+                    mapOf("xtc" to mapOf("presentation" to emptyMap<String, Any>()))
+                )
+            )
+            assertThat(session.requests).isEmpty()
+            assertThat(session.adapter.getCachedResult(session.uri)).isEqualTo(before)
+            assertThat(session.adapter.compilerQueueSnapshot()["submittedTotal"])
+                .isEqualTo(submitted)
+            pending.complete(listOf(mapOf("sourceModules" to emptyList<Any>())))
+            session.expect(true)
+        }
+    }
+
     @TempDir lateinit var directory: Path
 
     @Test

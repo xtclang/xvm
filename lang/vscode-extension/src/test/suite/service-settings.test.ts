@@ -8,7 +8,7 @@ suite('Language service settings contract', () => {
         assert.ok(Object.isFrozen(settings));
     });
     test('invalid values never become a connection configuration', () => {
-        for (const raw of [{ textSynchronization: 'patch' }, { saveFormatting: true }, { inlayHints: 'false' }]) {
+        for (const raw of [{ textSynchronization: 'patch' }, { saveFormatting: true }, { inlayHints: 'false' }, { textSynchronization: null }]) {
             assert.throws(() => parseServiceSettings(raw));
         }
     });

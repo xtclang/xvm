@@ -8,6 +8,36 @@ import org.xvm.lsp.adapter.xdk.XdkRename
 
 class XdkEditingTest {
     @Test
+    fun `live editor settings reach every formatter and reset to request options`() {
+        val text = "module Editing {\nInt value = 1;\n}\n"
+        XdkAdapter().use { adapter ->
+            assertThat(adapter.compile(URI, text).diagnostics).isEmpty()
+            listOf(FormattingConfig(indentSize = 2), FormattingConfig(indentSize = 6), null)
+                .forEach { config ->
+                    adapter.editorFormattingConfig = config
+                    val indent = " ".repeat(config?.indentSize ?: OPTIONS.tabSize)
+                    val expected = text.replace("\nInt", "\n${indent}Int")
+                    assertThat(apply(text, adapter.formatDocument(URI, text, OPTIONS)))
+                        .isEqualTo(expected)
+                    assertThat(
+                            apply(
+                                text,
+                                adapter.formatRange(
+                                    URI,
+                                    text,
+                                    Range(Position(1, 0), Position(2, 0)),
+                                    OPTIONS,
+                                ),
+                            )
+                        )
+                        .isEqualTo(expected)
+                    assertThat(apply(text, adapter.onTypeFormatting(URI, 1, 0, "\n", OPTIONS)))
+                        .isEqualTo(expected)
+                }
+        }
+    }
+
+    @Test
     fun `formatting preserves CRLF literal contents and comments and is stable after application`() {
         val text =
             "module Editing {\r\nInt run() {\r\nString text = \"two  spaces\";   \r\n" +
