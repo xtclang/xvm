@@ -9,7 +9,6 @@
 // load takes a few seconds even on a warm machine; we poll up to 30s.
 
 import * as assert from 'node:assert';
-import * as path from 'node:path';
 import * as vscode from 'vscode';
 
 const PUBLISHER_AND_NAME = 'xtclang.xtc-language';
@@ -52,8 +51,8 @@ suite('LSP startup', function () {
     });
 
     test('LSP server responds to a hover request on hello.x', async () => {
-        const fixture = path.resolve(__dirname, '..', '..', '..', 'src', 'test', 'fixtures', 'hello.x');
-        const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(fixture));
+        const fixture = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, 'hello.x');
+        const doc = await vscode.workspace.openTextDocument(fixture);
         await vscode.window.showTextDocument(doc);
 
         // Aim the hover at the `console` identifier in `console.print(...)`.
