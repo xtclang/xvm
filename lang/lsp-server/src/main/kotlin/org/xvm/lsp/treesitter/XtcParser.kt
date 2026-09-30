@@ -27,7 +27,8 @@ private constructor(
 ) : Closeable {
     private val parser: Parser = Parser()
 
-    @Volatile private var closed = false
+    // All native parser access and disposal share this instance's monitor.
+    private var closed = false
 
     init {
         parser.setLanguage(language)
@@ -101,6 +102,7 @@ private constructor(
      * @throws IllegalStateException if the parser has been closed
      */
     @Suppress("UNUSED_PARAMETER")
+    @Synchronized
     fun parse(
         source: String,
         oldTree: XtcTree?,
@@ -115,6 +117,7 @@ private constructor(
     /** Get the language used by this parser. */
     fun getLanguage(): Language = language
 
+    @Synchronized
     override fun close() {
         if (!closed) {
             closed = true
