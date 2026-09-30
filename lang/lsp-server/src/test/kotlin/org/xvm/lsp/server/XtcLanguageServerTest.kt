@@ -88,7 +88,7 @@ class XtcLanguageServerTest {
 
             val params = DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, content))
 
-            server.initialize(InitializeParams()).get()
+            server.initialize(editorInitializeParams()).get()
             server.textDocumentService.didOpen(params)
 
             val captor = ArgumentCaptor.forClass(PublishDiagnosticsParams::class.java)
@@ -116,7 +116,7 @@ class XtcLanguageServerTest {
 
             val params = DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, content))
 
-            server.initialize(InitializeParams()).get()
+            server.initialize(editorInitializeParams()).get()
             server.textDocumentService.didOpen(params)
 
             val captor = ArgumentCaptor.forClass(PublishDiagnosticsParams::class.java)
@@ -138,7 +138,7 @@ class XtcLanguageServerTest {
                 """
                     .trimIndent()
 
-            server.initialize(InitializeParams()).get()
+            server.initialize(editorInitializeParams()).get()
             server.textDocumentService.didOpen(
                 DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, content))
             )
@@ -163,7 +163,7 @@ class XtcLanguageServerTest {
                 """
                     .trimIndent()
 
-            server.initialize(InitializeParams()).get()
+            server.initialize(editorInitializeParams()).get()
             server.textDocumentService.didOpen(
                 DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, content))
             )
@@ -189,7 +189,7 @@ class XtcLanguageServerTest {
 
         @BeforeEach
         fun initServer() {
-            val result = server.initialize(InitializeParams()).get()
+            val result = server.initialize(editorInitializeParams()).get()
             caps = result.capabilities
         }
 
@@ -317,7 +317,7 @@ class XtcLanguageServerTest {
             """
                 .trimIndent()
 
-        server.initialize(InitializeParams()).get()
+        server.initialize(editorInitializeParams()).get()
         server.textDocumentService.didOpen(
             DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, content))
         )
@@ -329,7 +329,7 @@ class XtcLanguageServerTest {
         val uri = "file:///dirty.x"
         val content = "module myapp {   \n    class Person {  \n    }\n}"
 
-        server.initialize(InitializeParams()).get()
+        server.initialize(editorInitializeParams()).get()
         server.textDocumentService.didOpen(
             DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, content))
         )
@@ -458,7 +458,7 @@ class XtcLanguageServerTest {
             val uri = "file:///dirty2.x"
             val content = "module myapp {   \n    class Person {  \n    }\n}"
 
-            server.initialize(InitializeParams()).get()
+            server.initialize(editorInitializeParams()).get()
             server.textDocumentService.didOpen(
                 DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, content))
             )
@@ -584,7 +584,7 @@ class XtcLanguageServerTest {
         @Test
         @DisplayName("should complete without error")
         fun shouldCompleteWithoutError() {
-            server.initialize(InitializeParams()).get()
+            server.initialize(editorInitializeParams()).get()
 
             val future = server.shutdown()
 
