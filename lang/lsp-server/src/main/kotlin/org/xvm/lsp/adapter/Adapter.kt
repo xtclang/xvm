@@ -683,9 +683,8 @@ interface Adapter : Closeable {
      *
      * **Adapter implementations:**
      * - *Mock:* Removes trailing whitespace from all lines and inserts final newline if missing.
-     * - *TreeSitter:* Same as Mock (basic formatting; AST-aware indentation is possible but not yet
-     *   implemented).
-     * - *Compiler:* Full code formatting with XTC style rules, indentation, and alignment.
+     * - *TreeSitter:* Syntax-tree indentation and whitespace cleanup; base cleanup without a tree.
+     * - *Compiler:* Token-preserving brace/parenthesis/bracket indentation and whitespace cleanup.
      *
      * **Compiler upgrade path:** AST-aware formatting with configurable style rules (brace
      * placement, indentation, blank lines between declarations).
@@ -713,8 +712,8 @@ interface Adapter : Closeable {
      * **Adapter implementations:**
      * - *Mock:* Removes trailing whitespace only on lines within the specified range. Does not
      *   insert final newline (that's a whole-document concern).
-     * - *TreeSitter:* Same as Mock (range-scoped trailing whitespace removal).
-     * - *Compiler:* Full formatting within the range, re-indenting and aligning.
+     * - *TreeSitter:* Syntax-tree indentation and whitespace cleanup on selected lines.
+     * - *Compiler:* The same token-preserving indentation and whitespace cleanup on selected lines.
      *
      * **Compiler upgrade path:** AST-aware range formatting that adjusts indentation relative to
      * the surrounding context.
@@ -997,8 +996,8 @@ interface Adapter : Closeable {
      *
      * **Adapter implementations:**
      * - *Mock:* Not implemented.
-     * - *TreeSitter:* Could determine indentation level from AST context.
-     * - *Compiler:* Full context-aware formatting.
+     * - *TreeSitter:* Syntax-tree indentation on supported trigger characters.
+     * - *Compiler:* Current-line token-preserving indentation and whitespace cleanup.
      *
      * @param uri the document URI
      * @param line 0-based line number where the character was typed
