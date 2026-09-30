@@ -41,11 +41,6 @@ suite('Compiler editor acceptance', function () {
         const consumer = vscode.Uri.file(path.join(directory, 'Consumer.x'));
         const config = vscode.workspace.getConfiguration('xtc.compiler');
         const previous = config.inspect('sourceModules')?.workspaceValue;
-        const settingsFile = path.join(workspace, '.vscode', 'settings.json');
-        const previousSettings = await fs.readFile(settingsFile).catch((error: NodeJS.ErrnoException) => {
-            if (error.code === 'ENOENT') { return undefined; }
-            throw error;
-        });
         try {
             await fs.writeFile(library.fsPath, LIBRARY);
             await fs.writeFile(consumer.fsPath, CONSUMER);
@@ -125,11 +120,6 @@ suite('Compiler editor acceptance', function () {
             await config.update('sourceModules', previous, vscode.ConfigurationTarget.Workspace);
             await vscode.commands.executeCommand('workbench.action.closeAllEditors');
             await fs.rm(directory, { recursive: true, force: true });
-            if (previousSettings) {
-                await fs.writeFile(settingsFile, previousSettings);
-            } else {
-                await fs.rm(settingsFile, { force: true });
-            }
         }
     });
 });
