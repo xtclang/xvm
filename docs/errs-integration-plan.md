@@ -1264,6 +1264,72 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
   include prolonged editing/restart/process-leak workloads on supported platforms. Record
   packaging, source attachment and failure-recovery acceptance in both clients.
 
+### Editor configuration and feature controls (UI1–UI7)
+
+This is part of LSP product completeness, alongside L67/L72/L80–L82. It is a plan, not a claim
+that initialization options already have plugin controls. Audited 2026-09-30 against the VS Code
+manifest/client and IntelliJ `CompilerProjectConfigurable`, `CompilerSettings`, code style and
+connection provider. Use **Ecstasy** in visible labels; preserve stable `xtc.*` setting/command IDs.
+
+VS Code supports graphical extension settings through `contributes.configuration`, plus JSON
+editing and user/workspace/folder scopes. Use its Settings editor first, and commands with pickers
+for graph/import workflows; a custom webview is justified only if a graph editor actually needs
+one. IntelliJ should extend its Community-compatible Ecstasy settings pages, with application
+and project scope. See [VS Code configuration contributions](https://code.visualstudio.com/api/references/contribution-points#contributes.configuration)
+and [IntelliJ settings](https://plugins.jetbrains.com/docs/intellij/settings-guide.html).
+
+| Area | Current implementation | Planned user control and ownership |
+| --- | --- | --- |
+| Backend and feature availability | Adapter selected by packaged build/runtime configuration; Tree-sitter ships by default. | Show active adapter/version and a feature matrix with unavailable reasons. Assess a restart-required backend selector only for packages containing the required implementations; never silently fall back or imply an unavailable backend can be enabled. |
+| Source graph, resources and discovery | VS Code `xtc.compiler.sourceModules` plus configure/show/refresh/prepare commands; IntelliJ Ecstasy Compiler table, discovery switch and effective-input display. | Improve path pickers and ordered resource lists; preserve omitted/null versus empty semantics. Show origin (Gradle model, discovery, explicit override), dependencies, validation errors and reset-to-model. Work without Gradle and support multiple roots without ambiguous relative paths. |
+| Build import and generated inputs | Both plugins have explicit Gradle model refresh/preparation. | Expose import state, last refresh, pending generated inputs, cancellation and actionable failure. Use evaluated Gradle inputs; never infer paths by reading build-script text or run builds on every keystroke. |
+| Libraries, XDK and external sources | Bundled XDK is implicit/read-only; build models provide inputs; VS Code `xtc.sourceRoots` is machine-overridable. | Show effective read-only libraries and source attachments; add ordered host library/source overrides only where the backend has a supported contract. Distinguish source indexing from compiler module dependencies. Keep the bundled XDK usable without any external installation. |
+| JVM, startup and lifecycle | VS Code `xtc.java.home`; IntelliJ uses JBR. Restart/status/log actions exist. | Display the effective runtime, server PID/version and restart reason. Add advanced JVM options only with validation and a clear restart boundary. Machine paths must not leak into shared project settings; preserve one server per project/connection owner. |
+| Incremental text synchronization | L72 accepts `initializationOptions.xtcDocumentSync.incremental`; no plugin control exists. | Advanced Full/Incremental selector mapped to the same option in both clients, restart required. Label this as text transport, not incremental compilation. Default Full until both native client paths have acceptance evidence. |
+| Formatting and save behavior | Whole/range/on-type formatting; VS Code five `xtc.formatting.*` fields; IntelliJ Ecstasy Code Style. L72 save formatting is initialization-only. | Prefer each editor's existing format-on-save/on-type and language-specific formatting controls. Define a single owner so editor formatting and `willSaveWaitUntil` never format twice. Audit which existing fields actually affect output: a visible max-line-width value must not promise line wrapping the formatter does not implement. Server-side save formatting stays optional. |
+| Presentation features | VS Code `xtc.inlayHints.enabled`; IDE/LSP4IJ controls and an environment/system-property semantic-token switch. | Use native completion, parameter info, inlay, semantic highlighting, lens, hover, folding and navigation preferences where available. Add Ecstasy-specific options only for missing useful controls, with supported-adapter gating and live refresh. Do not add a toggle for every LSP method. |
+| Diagnostics and analysis | Compiler diagnostics, push/pull negotiation and automatic reanalysis work; editor Problems filtering is available. | Prefer native severity/filter controls; expose analysis/status and refresh/rebuild commands. Any future debounce, excludes or on-save analysis option must define stale-diagnostic behavior and graph coverage. No switch may bypass rename/type proof or silently suppress internal failures. |
+| Refactoring, imports and file operations | Guarded rename/move/action paths and graph settings persistence exist. | Explain refusal reasons and relevant configuration; respect native preview/confirmation/Undo. Source-graph proposals need explicit persisted edits. Do not make unsafe operations available through a preference. |
+| Tracing, timing and notifications | VS Code `xtc.trace.server`; LSP4IJ logs; compile/API/queue timing and transient startup notifications. | Add discoverable log/queue/status views, trace level and bounded log retention/export, including human-readable queued jobs. Keep source content out of routine logs. Prefer IDE notification controls; advanced startup-notification preference only if needed. |
+| Run/debug and future providers | Run configuration scaffolding exists; persistent runtime/DAP and several LSP providers remain separate work. | R5 owns target/arguments/working directory/environment/Stop/Rerun UI; R6–R8 own debugger controls. Notebook, color and inline completion settings follow implemented capabilities, not placeholders advertised as working. |
+
+- [ ] **UI1 — Settings contract and inventory.** Map every manifest option, settings page, startup
+  property/environment option and client capability to its consumer, default, owner, scope,
+  availability and live/restart behavior. Identify inert/duplicate fields and migration needs.
+  Treat negotiated protocol properties (pull/push, lazy resolve, token delta) as automatic
+  compatibility decisions unless a diagnostic override has a concrete use.
+- [ ] **UI2 — Scope and persistence.** Define shared semantics for application/user defaults,
+  project/workspace overrides and per-folder/resource values. Retain existing source-graph
+  precedence. Publish immutable validated settings, keep the last valid configuration on errors,
+  and avoid overwriting concurrent rename/Undo changes. Add multi-root, missing-path, relative-URI,
+  remote filesystem and restricted/untrusted-workspace cases before offering those paths.
+- [ ] **UI3 — IntelliJ Community UI.** Extend existing Compiler and Code Style settings; add a
+  small language-service section for relevant advanced settings and status. Use path choosers,
+  actionable validation, Apply/Reset/Cancel and inheritance indicators. Reuse LSP4IJ controls where
+  they already work. No Ultimate-only APIs, duplicate settings owner or second compiler process.
+- [ ] **UI4 — VS Code settings and commands.** Group settings in the native Settings UI with
+  descriptions, constraints and appropriate scopes. Use language-overridable formatting controls
+  and machine-local runtime paths. Improve existing graph/path commands with pickers and effective
+  settings output; keep JSON editing as the advanced escape hatch. Audit actual client behavior
+  before claiming per-folder support from schema scope alone.
+- [ ] **UI5 — Apply and restart behavior.** Wire L72 transport options into both clients, live
+  presentation/formatting changes into refresh, and compiler-input changes into graph replacement.
+  Restart once when a connection-time option changes, preserving buffers and pending user edits;
+  ensure save hooks cannot double-format or wait for compilation. Separate incremental transport
+  from the future compiler-incrementality workstream in labels and help.
+- [ ] **UI6 — Effective configuration and support view.** Show configured versus effective values,
+  source of each value, active adapter, read-only XDK, capability availability, current compilation
+  and queue. Link failures to the relevant setting/log. No modal UI for normal background activity.
+- [ ] **UI7 — Acceptance and documentation.** Add shared scenarios for change/apply/cancel/reset,
+  live updates, restart-required settings, persistence across restart, both adapters, multi-root
+  precedence, invalid configuration retention and no duplicate save formatting. Cover Community
+  IntelliJ and VS Code Settings/commands, not merely direct protocol injection. Update the feature
+  matrix and manual playbook with exact locations; mark backend-only options explicitly.
+
+Sequence: UI1/UI2 first, then UI3/UI4 as separate client commits, UI5/UI6, and shared UI7
+acceptance. UI5's incremental transport depends on L72 validation; Run/debug controls depend on
+R5–R8. This does not add every prospective preference to the current four-code-commit batch.
+
 ### Embedded Run and debugging track (R1–R8)
 
 The [execution plan](../lang/doc/plans/plan-embedded-execution.md) records the source audit,
