@@ -173,7 +173,10 @@ class XdkRetentionTest {
     }
 
     private companion object {
-        const val CYCLES = 120
+        val CYCLES =
+            System.getProperty("xtc.lsp.retentionCycles", "120").toInt().also {
+                require(it >= 2) { "Retention workload requires at least two cycles" }
+            }
         const val CONSUMER =
             "module Consumer { package lib import Library; " +
                 "String textValue = \"x\"; Int sizeValue = 2; void textTake(String value) {} " +
