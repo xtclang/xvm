@@ -4,6 +4,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.atomic.AtomicBoolean
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assumptions
@@ -41,6 +42,100 @@ class WorkspaceIndexerTest {
     @AfterAll
     fun tearDown() {
         parser?.close()
+    }
+
+    @Test
+    fun `an open buffer wins over an in flight disk read and survives disk deletion`(
+        @TempDir directory: Path
+    ) {
+        val path = directory.resolve("Owner.x")
+        val uri = path.toUri().toString()
+        Files.writeString(path, "module Owner { class Disk {} }")
+        val read = CompletableFuture<Void>()
+        val release = CompletableFuture<Void>()
+        val index = WorkspaceIndex()
+        WorkspaceIndexer(index, requireNotNull(parser).getLanguage()) { file ->
+                (if (Files.isRegularFile(file)) Files.readString(file) else null).also {
+                    read.complete(null)
+                    release.get(5, SECONDS)
+                }
+            }
+            .use { indexer ->
+                val scan = indexer.scanWorkspace(listOf(directory.toString()))
+                try {
+                    read.get(5, SECONDS)
+                    indexer.reindexFile(uri, "module Owner { class Buffer {} }")
+                } finally {
+                    release.complete(null)
+                }
+                scan.get(5, SECONDS)
+                assertThat(index.findByName("Disk")).isEmpty()
+                assertThat(index.findByName("Buffer")).hasSize(1)
+                Files.delete(path)
+                indexer.refreshFile(uri)
+                assertThat(index.findByName("Buffer")).hasSize(1)
+                indexer.closeDocument(uri)
+                assertThat(index.findByName("Buffer")).isEmpty()
+            }
+    }
+
+    @Test
+    fun `closing restores disk and reopening invalidates an older close read`(
+        @TempDir directory: Path
+    ) {
+        val path = directory.resolve("Owner.x")
+        val uri = path.toUri().toString()
+        Files.writeString(path, "module Owner { class Disk {} }")
+        val block = AtomicBoolean(false)
+        val read = CompletableFuture<Void>()
+        val release = CompletableFuture<Void>()
+        val index = WorkspaceIndex()
+        WorkspaceIndexer(index, requireNotNull(parser).getLanguage()) { file ->
+                Files.readString(file).also {
+                    if (block.get()) {
+                        read.complete(null)
+                        release.get(5, SECONDS)
+                    }
+                }
+            }
+            .use { indexer ->
+                indexer.reindexFile(uri, "module Owner { class FirstBuffer {} }")
+                indexer.closeDocument(uri)
+                assertThat(index.findByName("Disk")).hasSize(1)
+                assertThat(index.findByName("FirstBuffer")).isEmpty()
+                indexer.reindexFile(uri, "module Owner { class FirstBuffer {} }")
+                block.set(true)
+                val closing = CompletableFuture.runAsync { indexer.closeDocument(uri) }
+                try {
+                    read.get(5, SECONDS)
+                    indexer.reindexFile(uri, "module Owner { class Reopened {} }")
+                } finally {
+                    release.complete(null)
+                }
+                closing.get(5, SECONDS)
+                assertThat(index.findByName("Disk")).isEmpty()
+                assertThat(index.findByName("Reopened")).hasSize(1)
+            }
+    }
+
+    @Test
+    fun `buffers opened before the initial scan are indexed and closing observes disk deletion`(
+        @TempDir directory: Path
+    ) {
+        val path = directory.resolve("Owner.x")
+        val uri = path.toUri().toString()
+        Files.writeString(path, "module Owner { class Disk {} }")
+        val index = WorkspaceIndex()
+        WorkspaceIndexer(index, requireNotNull(parser).getLanguage()).use { indexer ->
+            indexer.reindexFile(uri, "module Owner { class Buffer {} }")
+            indexer.scanWorkspace(listOf(directory.toString())).get(5, SECONDS)
+            assertThat(index.findByName("Buffer")).hasSize(1)
+            assertThat(index.findByName("Disk")).isEmpty()
+            indexer.closeDocument(uri)
+            Files.delete(path)
+            indexer.refreshFile(uri)
+            assertThat(index.symbolCount).isZero()
+        }
     }
 
     @Test

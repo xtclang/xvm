@@ -1,12 +1,10 @@
 package org.xvm.lsp.adapter.treesitter
 
 import java.net.URI
-import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.io.path.extension
-import kotlin.io.path.readText
 import kotlin.time.measureTimedValue
 import org.xvm.lsp.adapter.AbstractAdapter
 import org.xvm.lsp.adapter.AdapterCodeActions
@@ -246,26 +244,18 @@ class TreeSitterAdapter : AbstractAdapter() {
         uri: String,
         changeType: Int,
     ) {
-        if (!indexReady.get()) {
-            logger.info(
-                "didChangeWatchedFile: index not ready, ignoring {}",
-                uri.substringAfterLast('/'),
-            )
-            return
-        }
-
         runCatching {
             when {
                 isFileCreatedOrChanged(changeType) -> {
                     val path = Path.of(URI(uri))
-                    if (path.extension == "x" && Files.exists(path)) {
-                        indexer.reindexFile(uri, path.readText())
+                    if (path.extension == "x") {
+                        indexer.refreshFile(uri)
                         logger.info("re-indexed watched file: {}", uri.substringAfterLast('/'))
                     }
                 }
 
                 isFileDeleted(changeType) -> {
-                    indexer.removeFile(uri)
+                    indexer.refreshFile(uri)
                     logger.info("removed deleted file from index: {}", uri.substringAfterLast('/'))
                 }
             }
@@ -331,15 +321,8 @@ class TreeSitterAdapter : AbstractAdapter() {
         val result = CompilationResult.withDiagnostics(uri, diagnostics, symbols)
         compilationResults[uri] = result
 
-        // Update workspace index with fresh symbols from this file
-        if (indexReady.get()) {
-            indexer.reindexFile(uri, content)
-        } else {
-            logger.info(
-                "workspace index not ready, skipping reindex for {}",
-                uri.substringAfterLast('/'),
-            )
-        }
+        // Preserve editor ownership even while the initial disk scan is still running.
+        indexer.reindexFile(uri, content)
 
         logger.info(
             "parsed in {}, {} errors, {} symbols (query: {})",
@@ -1652,6 +1635,7 @@ class TreeSitterAdapter : AbstractAdapter() {
         logger.info("closeDocument: uri={}", uri)
         parsedTrees.remove(uri)?.close()
         compilationResults.remove(uri)
+        indexer.closeDocument(uri)
     }
 
     override fun close() {
