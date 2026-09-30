@@ -110,7 +110,7 @@ public class NewC_0
 
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
-        return buildNewC(bctx, code, m_nParentValue, NO_ARGS);
+        return buildNew(bctx, code, m_nParentValue, NO_ARGS);
     }
 
     // ----- fields --------------------------------------------------------------------------------

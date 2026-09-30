@@ -51,7 +51,6 @@ import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_Class;
 import static org.xvm.javajit.Builder.CD_Ctx;
-import static org.xvm.javajit.Builder.CD_Exception;
 import static org.xvm.javajit.Builder.CD_nFunction;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.md;
@@ -932,21 +931,28 @@ public abstract class OpCallable extends Op {
     }
 
     /**
-     * Support for NEW_ ops.
+     * Support for NEW_ and NEW_C ops.
+     *
+     * @param nParentArg  the parent argument, or {@link #A_IGNORE} for a non-child
      */
-    protected int buildNew(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
+    protected int buildNew(BuildContext bctx, CodeBuilder code, int nParentArg, int[] anArgValue) {
         MethodConstant idCtor     = bctx.getConstant(m_nFunctionId, MethodConstant.class);
-        TypeConstant   typeTarget = idCtor.getNamespace().getType();
+        TypeConstant   typeTarget = nParentArg == A_IGNORE
+                ? idCtor.getNamespace().getType()
+                : bctx.getReturnType(m_nRetValue);
 
-        JitMethodDesc jmdNew = bctx.buildNew(code, typeTarget, idCtor, anArgValue);
+        JitMethodDesc jmdNew = bctx.buildNew(code, typeTarget, idCtor, nParentArg, anArgValue);
         bctx.assignReturns(code, jmdNew, 1, new int[] {m_nRetValue});
         return -1;
     }
 
     /**
-     * Support for NEW_G ops.
+     * Support for NEW_G and NEW_CG ops.
+     *
+     * @param nParentArg  the parent argument, or {@link #A_IGNORE} for a non-child
      */
-    protected int buildNewG(BuildContext bctx, CodeBuilder code, int nTypeArg, int[] anArgValue) {
+    protected int buildNewG(BuildContext bctx, CodeBuilder code, int nParentArg, int nTypeArg,
+                            int[] anArgValue) {
         TypeConstant typeTarget;
         if (nTypeArg <= CONSTANT_OFFSET) {
             typeTarget = bctx.getTypeConstant(nTypeArg);
@@ -958,17 +964,8 @@ public abstract class OpCallable extends Op {
         }
 
         MethodConstant idCtor = (MethodConstant) bctx.getConstant(m_nFunctionId);
-        JitMethodDesc  jmdNew = bctx.buildNew(code, typeTarget, idCtor, anArgValue);
+        JitMethodDesc  jmdNew = bctx.buildNew(code, typeTarget, idCtor, nParentArg, anArgValue);
         bctx.assignReturns(code, jmdNew, 1, new int[] {m_nRetValue});
-        return -1;
-    }
-
-    /**
-     * Support for NEW_C ops.
-     */
-    protected int buildNewC(BuildContext bctx, CodeBuilder code, int nParentArg, int[] anArgValue) {
-        Builder.throwException(code, CD_Exception, "Not implemented: " + toName(getOpCode()),
-                bctx.ctxSlot(code));
         return -1;
     }
 

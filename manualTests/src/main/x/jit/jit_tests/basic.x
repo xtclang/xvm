@@ -19,6 +19,7 @@ package basic {
                 passed &= runTest(() -> enumTests.run());
                 passed &= runTest(() -> equalTests.run());
                 passed &= runTest(() -> genericTests.run());
+                passed &= runTest(() -> innerOuterTests.run());
                 passed &= runTest(() -> invocationTests.run());
                 passed &= runTest(() -> lambdaTests.run());
                 passed &= runTest(() -> mixinTests.run());

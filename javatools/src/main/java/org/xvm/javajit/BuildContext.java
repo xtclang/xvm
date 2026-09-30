@@ -3081,14 +3081,16 @@ public class BuildContext {
     }
 
     /**
-     * Call the "new$" [static] method.
+     * Call the "new$" [static] method, optionally supplying the enclosing object.
      *
-     * @param argIds  the ids for the argument values
+     * @param outerId  the outer object's register id, or {@link Op#A_IGNORE} for a non-child
+     * @param argIds   the ids for the argument values
      */
     public JitMethodDesc buildNew(CodeBuilder code, TypeConstant typeTarget,
-                                  MethodConstant idCtor, int[] argIds) {
-        return buildNew(code, typeTarget, idCtor, jmdNew ->
-            loadCallArguments(code, jmdNew, argIds, typeTarget));
+                                  MethodConstant idCtor, int outerId, int[] argIds) {
+        RegisterInfo outer = outerId == Op.A_IGNORE ? null : ensureRegister(code, outerId);
+        return builder.buildNew(this, code, typeTarget, idCtor, outer,
+                jmdNew -> loadCallArguments(code, jmdNew, argIds, typeTarget), ctxSlot(code));
     }
 
     /**

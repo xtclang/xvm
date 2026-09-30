@@ -132,7 +132,7 @@ public class New_1
 
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
-        return buildNew(bctx, code, new int[] {m_nArgValue});
+        return buildNew(bctx, code, A_IGNORE, new int[] {m_nArgValue});
     }
 
     // ----- fields --------------------------------------------------------------------------------
