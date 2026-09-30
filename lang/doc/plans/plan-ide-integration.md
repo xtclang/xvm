@@ -217,7 +217,7 @@ are entirely absent. L61 adds the 25th capability, explicit declaration lookup, 
 protocol and selected editor validation. The enum does not include all of LSP; substantial
 semantic and protocol work remains.
 
-The active [full completion checklist, L55–L82](../../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist)
+The active [full completion checklist, L55–L83](../../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist)
 is the task source of truth. It distinguishes implementation work, confirmed reliability gaps,
 investigations and optional features requiring a scope decision. The protocol inventory uses
 LSP 3.18 and the installed LSP4J 1.0.0 interfaces. Unadvertised optional features do not by
@@ -241,10 +241,11 @@ local or import-alias declarations and inherited written member contracts, prese
 | Document colors and color presentations | Ordinary token coloring; no color-value provider | L77 |
 | Notebook synchronization | File/module document sessions | L78 |
 | Debug inline values | Compiler type/parameter inlay hints; no runtime values | L79 |
-| Application work-done progress/partial-result streaming and trace controls | Logging plus request cancellation; no complete progress/trace implementation | L81 |
+| Application work-done progress, refresh, partial results and trace controls | Negotiated progress/create/cancel, lifecycle gating, coalesced refresh and runtime trace are implemented and tested. Partial results and visible long-operation/cancel acceptance remain open. | L81 / X141; [coverage map](../manual-test-plan.md#protocol-and-lifecycle-coverage-map) |
+| Constant-folded property initializer facts | Temporary initializer disposal can lose resolved reference facts; ordinary method-body Unicode navigation passes separately | L83 |
 
 Every absent feature above has an explicit task and a
-[next investigation step](../../../docs/errs-integration-plan.md#investigation-status-and-next-decisions-2026-09-29).
+[next investigation step](../../../docs/errs-integration-plan.md#investigation-status-and-next-decisions-updated-2026-09-30).
 The inventory is complete for this list; detailed implementation designs are still pending for
 several operations. Optional language/product features require an explicit implementation or
 exclusion decision, not an assumption that every protocol extension is mandatory.

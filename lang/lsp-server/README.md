@@ -127,7 +127,7 @@ plus push/pull diagnostics and document/workspace synchronization. Several imple
 bounded; the interface does not cover every LSP feature. Monikers,
 inline completion/values, colors, notebooks and broader refactorings are
 among the missing features. See the [explicit absent-feature inventory](../doc/plans/plan-ide-integration.md#compiler-completeness-snapshot)
-and [active L55–L82 completion checklist](../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist).
+and [active L55–L83 completion checklist](../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist).
 Capability coverage, semantic completeness and native test coverage are tracked separately.
 Explicit declaration lookup returns local/import-alias declarations or the inherited written
 contracts of an overriding method/property, including multiple source targets. Definition and
