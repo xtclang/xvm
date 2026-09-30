@@ -22,6 +22,7 @@ import java.awt.BorderLayout
 import java.awt.FlowLayout
 import java.net.URI
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicLong
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
@@ -45,6 +46,7 @@ class CompilerProjectConfigurable(private val project: Project) : Configurable {
     private val table = JBTable(rows)
     // Settings dialogs have an explicit reset/apply lifecycle. This snapshot prevents a stale
     // dialog from overwriting a graph changed by rename or another settings editor.
+    private val reportRevision = AtomicLong()
     private var original: List<SourceModuleConfiguration>? = null
 
     override fun getDisplayName(): String = "Ecstasy Compiler"
@@ -200,13 +202,21 @@ class CompilerProjectConfigurable(private val project: Project) : Configurable {
     }
 
     private fun refreshBuild(prepare: Boolean) {
+        val revision = reportRevision.incrementAndGet()
         effective.text = "Reading evaluated Gradle inputs…"
         CompilerBuildModel.refresh(project, prepare) { failure ->
-            if (failure != null) effective.text = failure else refreshEffectivePaths()
+            if (!project.isDisposed && reportRevision.get() == revision) {
+                if (failure != null) effective.text = failure else refreshEffectivePaths()
+            }
         }
     }
 
+    override fun disposeUIResources() {
+        reportRevision.incrementAndGet()
+    }
+
     private fun refreshEffectivePaths() {
+        val revision = reportRevision.incrementAndGet()
         val description = runCatching {
             CompilerBuildModel.describe(project)
         }
@@ -219,7 +229,7 @@ class CompilerProjectConfigurable(private val project: Project) : Configurable {
                 wrapper.initializedServer.thenAccept { server ->
                     (server as? XtcLanguageServer)?.compilerSourceModules()?.thenAccept { modules ->
                         ApplicationManager.getApplication().invokeLater {
-                            if (!project.isDisposed)
+                            if (!project.isDisposed && reportRevision.get() == revision)
                                 effective.text =
                                     description +
                                         "\n\nEffective compiler modules:\n" +
