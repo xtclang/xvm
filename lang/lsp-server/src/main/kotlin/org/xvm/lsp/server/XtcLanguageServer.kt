@@ -31,6 +31,7 @@ import org.eclipse.lsp4j.InlayHintRegistrationOptions
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.PublishDiagnosticsParams
+import org.eclipse.lsp4j.ReferencesOptions
 import org.eclipse.lsp4j.Registration
 import org.eclipse.lsp4j.RegistrationParams
 import org.eclipse.lsp4j.RenameFilesParams
@@ -43,6 +44,8 @@ import org.eclipse.lsp4j.ServerCapabilities
 import org.eclipse.lsp4j.SignatureHelpOptions
 import org.eclipse.lsp4j.SymbolInformation
 import org.eclipse.lsp4j.WatchKind
+import org.eclipse.lsp4j.WorkDoneProgressCancelParams
+import org.eclipse.lsp4j.WorkDoneProgressParams
 import org.eclipse.lsp4j.WorkspaceDiagnosticParams
 import org.eclipse.lsp4j.WorkspaceDiagnosticReport
 import org.eclipse.lsp4j.WorkspaceEdit
@@ -118,6 +121,32 @@ class XtcLanguageServer(
 
     private val editCapabilities = AtomicReference(EditCapabilities())
     private val resourceFileWatchers = ResourceFileWatchers()
+    private val progress = ConnectionProgress(client = { client })
+    private val supportsProgress = AtomicBoolean()
+
+    internal fun <T> observeQuery(
+        method: String,
+        params: WorkDoneProgressParams?,
+        result: CompletableFuture<T>,
+    ): CompletableFuture<T> {
+        val title =
+            when (method) {
+                "textDocument/references" -> "Ecstasy: finding references"
+                "textDocument/rename",
+                "xtc/renameProposal",
+                "workspace/willRenameFiles" -> "Ecstasy: checking rename"
+                "textDocument/codeAction" -> "Ecstasy: checking code actions"
+                "workspace/diagnostic" -> "Ecstasy: checking workspace"
+                else -> null
+            }
+        return if (title != null || params?.workDoneToken != null)
+            progress.track(title ?: "Ecstasy: $method", params?.workDoneToken, result)
+        else result
+    }
+
+    override fun cancelProgress(params: WorkDoneProgressCancelParams) =
+        progress.cancel(params.token)
+
     internal val supportsVersionedEdits: Boolean
         get() = editCapabilities.get().versioned
 
@@ -330,6 +359,7 @@ class XtcLanguageServer(
     }
 
     override fun initialize(params: InitializeParams): CompletableFuture<InitializeResult> {
+        supportsProgress.set(params.capabilities?.window?.workDoneProgress == true)
         clientPresentation.set(ClientPresentation.read(params))
         canRefreshInlays.set(params.capabilities?.workspace?.inlayHint?.refreshSupport == true)
         logServerBanner()
@@ -459,8 +489,20 @@ class XtcLanguageServer(
             val folders = (workspaceFolders + extraRoots).distinct()
 
             if (folders.isNotEmpty()) {
-                adapter.initializeWorkspace(folders) { message, percent ->
-                    logger.info("initialize: workspace indexing: {} ({}%)", message, percent)
+                val indexing =
+                    progress.track(
+                        "Ecstasy: indexing workspace",
+                        params.workDoneToken,
+                        CompletableFuture<Void>(),
+                    )
+                try {
+                    adapter.initializeWorkspace(folders) { message, percent ->
+                        logger.info("initialize: workspace indexing: {} ({}%)", message, percent)
+                    }
+                    indexing.complete(null)
+                } catch (failure: Throwable) {
+                    indexing.completeExceptionally(failure)
+                    throw failure
                 }
             }
         }
@@ -476,6 +518,7 @@ class XtcLanguageServer(
      * configuration from the client via `workspace/configuration`.
      */
     override fun initialized(params: InitializedParams?) {
+        progress.initialized(supportsProgress.get())
         logger.info("initialized: handshake complete, requesting editor configuration")
         if (
             editCapabilities
@@ -735,7 +778,10 @@ class XtcLanguageServer(
             experimental = mapOf("xtcRenameProposal" to 1)
             if (usesPullDiagnostics)
                 diagnosticProvider =
-                    DiagnosticRegistrationOptions(true, true).apply { identifier = "xtc" }
+                    DiagnosticRegistrationOptions(true, true).apply {
+                        identifier = "xtc"
+                        workDoneProgress = true
+                    }
             textDocumentSync = Either.forRight(synchronization.capabilities())
 
             // --- Core navigation (treesitter) ---
@@ -746,7 +792,10 @@ class XtcLanguageServer(
                     resolveProvider = resolvesCompletionDocumentation
                 }
             definitionProvider = Either.forLeft(true)
-            referencesProvider = Either.forLeft(true)
+            referencesProvider =
+                if (adapter is XdkAdapter)
+                    Either.forRight(ReferencesOptions().apply { workDoneProgress = true })
+                else Either.forLeft(true)
             documentSymbolProvider = Either.forLeft(true)
 
             // --- Structural features (treesitter) ---
@@ -755,7 +804,13 @@ class XtcLanguageServer(
             foldingRangeProvider = Either.forLeft(true)
 
             // --- Editing features (treesitter) ---
-            renameProvider = Either.forRight(RenameOptions().apply { prepareProvider = true })
+            renameProvider =
+                Either.forRight(
+                    RenameOptions().apply {
+                        prepareProvider = true
+                        workDoneProgress = true
+                    }
+                )
             codeActionProvider =
                 if (resolvesCodeActionEdit)
                     Either.forRight(CodeActionOptions().apply { resolveProvider = true })
@@ -940,6 +995,7 @@ class XtcLanguageServer(
             }
         if (alreadyClosed) return
         initialized = false
+        progress.close()
         editCapabilities.set(EditCapabilities())
         try {
             textDocumentService.close()
