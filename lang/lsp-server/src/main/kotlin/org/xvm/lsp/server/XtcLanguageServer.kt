@@ -5,6 +5,7 @@ import java.net.URI
 import java.nio.file.Path
 import java.util.Properties
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.measureTimedValue
 import org.eclipse.lsp4j.CodeActionOptions
@@ -280,9 +281,16 @@ class XtcLanguageServer(
      *
      * @see FormattingConfig.resolve
      */
-    @Volatile
-    var editorFormattingConfig: FormattingConfig? = null
-        private set
+    private val formattingState = EditorFormattingState()
+    val editorFormattingConfig: FormattingConfig? get() = formattingState.config
+    private val canRefreshInlays = AtomicBoolean()
+
+    fun refreshPresentation() {
+        if (canRefreshInlays.get()) client?.refreshInlayHints()?.exceptionally {
+            logger.warn("Unable to refresh Ecstasy inlay hints: {}", it.message)
+            null
+        }
+    }
 
     /**
      * Helper to handle LSP requests with consistent logging and async execution.
@@ -313,6 +321,7 @@ class XtcLanguageServer(
     }
 
     override fun initialize(params: InitializeParams): CompletableFuture<InitializeResult> {
+        canRefreshInlays.set(params.capabilities?.workspace?.inlayHint?.refreshSupport == true)
         logServerBanner()
         logWorkspaceFolders(params)
         logClientCapabilities(params)
@@ -559,56 +568,18 @@ class XtcLanguageServer(
      */
     fun requestFormattingConfig() {
         val c = client ?: return
+        val revision = formattingState.request()
         val item = ConfigurationItem().apply { section = "xtc.formatting" }
-        logger.info("workspace/configuration: requesting section='{}'", item.section)
         c.configuration(ConfigurationParams(listOf(item)))
             .thenAccept { results ->
-                logger.info("workspace/configuration: raw response={}", results)
-                val config = results?.firstOrNull()
-                val formattingConfig = parseFormattingConfig(config)
-                if (formattingConfig != null) {
-                    editorFormattingConfig = formattingConfig
-                    adapter.editorFormattingConfig = formattingConfig
-                    logger.info(
-                        "workspace/configuration: effective formatting config from client -> {} (fallback if absent would be request LSP FormattingOptions, then defaults)",
-                        formattingConfig,
-                    )
-                } else {
-                    logger.info(
-                        "workspace/configuration: no usable formatting config from client (type={}); effective config will come from per-request LSP FormattingOptions or Ecstasy defaults",
-                        config?.javaClass?.name ?: "null",
-                    )
+                if (formattingState.accept(revision, results?.firstOrNull()) { adapter.editorFormattingConfig = it }) {
+                    logger.info("workspace/configuration: effective formatting config={}", editorFormattingConfig)
                 }
             }
-            .exceptionally { ex ->
-                logger.warn("initialized: failed to get formatting config: {}", ex.message)
+            .exceptionally { failure ->
+                logger.warn("Invalid or unavailable formatting configuration; previous values retained: {}", failure.message)
                 null
             }
-    }
-
-    private fun parseFormattingConfig(raw: Any?): FormattingConfig? {
-        if (!LspJsonOptions.isObject(raw)) return null
-
-        val indentSize = LspJsonOptions.int(raw, "indentSize") ?: 4
-        val continuationIndentSize = LspJsonOptions.int(raw, "continuationIndentSize") ?: 8
-        val insertSpaces = LspJsonOptions.boolean(raw, "insertSpaces") ?: true
-        val maxLineWidth = LspJsonOptions.int(raw, "maxLineWidth") ?: 120
-        val tabSize = LspJsonOptions.int(raw, "tabSize")
-        logger.info(
-            "workspace/configuration: parsed config type={} indentSize={} continuationIndentSize={} tabSize={} insertSpaces={} maxLineWidth={}",
-            raw?.javaClass?.name,
-            indentSize,
-            continuationIndentSize,
-            tabSize,
-            insertSpaces,
-            maxLineWidth,
-        )
-        return FormattingConfig(
-            indentSize = indentSize,
-            continuationIndentSize = continuationIndentSize,
-            insertSpaces = insertSpaces,
-            maxLineWidth = maxLineWidth,
-        )
     }
 
     private fun logServerBanner() {
