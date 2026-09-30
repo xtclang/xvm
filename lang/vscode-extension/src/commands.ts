@@ -73,7 +73,7 @@ export function registerCommands(context: vscode.ExtensionContext, outputChannel
             }
 
             const parentPath = folderUri[0].fsPath;
-            const terminal = vscode.window.createTerminal('XTC');
+            const terminal = vscode.window.createTerminal('Ecstasy');
             terminal.show();
             terminal.sendText(`xtc init "${projectName}" --type ${projectType.toLowerCase()} --dir "${parentPath}"`);
 

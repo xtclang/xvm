@@ -28,7 +28,7 @@ export function readBuildModel(folder: string): BuildModel | undefined {
 
 export function parseBuildModel(text: string): BuildModel {
     const model = JSON.parse(text) as BuildModel;
-    if (model.schemaVersion !== 1 || !Array.isArray(model.sourceSets)) throw new Error('Unsupported XTC Gradle model; refresh build configuration.');
+    if (model.schemaVersion !== 1 || !Array.isArray(model.sourceSets)) throw new Error('Unsupported Ecstasy Gradle model; refresh build configuration.');
     const owners = new Set<string>();
     for (const entry of model.sourceSets) {
         for (const field of ['projectId', 'projectPath', 'projectDirectory', 'buildFile', 'sourceSet', 'resourceTask'] as const) {

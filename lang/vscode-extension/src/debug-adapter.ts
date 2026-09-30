@@ -14,7 +14,7 @@ export class XtcDebugAdapterDescriptorFactory implements vscode.DebugAdapterDesc
         const serverJar = this.context.asAbsolutePath(path.join('server', 'dap-server.jar'));
         if (!fs.existsSync(serverJar)) {
             void vscode.window.showErrorMessage(
-                'XTC DAP server JAR not found. Build lang:vscode-extension to enable debugging.',
+                'Ecstasy DAP server JAR not found. Build lang:vscode-extension to enable debugging.',
                 'Show Build Command'
             ).then(choice => {
                 if (choice === 'Show Build Command') {

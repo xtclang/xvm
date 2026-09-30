@@ -54,7 +54,7 @@ internal object XtcFileOperations {
                         else -> null
                     }
                 if (failure == null) completed()
-                else Messages.showErrorDialog(project, failure, "Ecstasy $title")
+                else Messages.showErrorDialog(project, failure, "Ecstasy Refactoring")
             }
         }
     }
