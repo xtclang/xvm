@@ -6,6 +6,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Properties
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
 import java.util.concurrent.LinkedBlockingQueue
@@ -74,11 +75,14 @@ import org.eclipse.lsp4j.WillSaveTextDocumentParams
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import org.eclipse.lsp4j.WorkspaceEditCapabilities
 import org.eclipse.lsp4j.jsonrpc.Launcher
+import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.lsp4j.services.LanguageServer
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -94,6 +98,37 @@ class XdkStdioTest {
     }
 
     @TempDir lateinit var directory: Path
+
+    @Test
+    fun `packaged transport rejects requests outside the initialized lifecycle`() {
+        Session(packagedJar(), directory).use { session ->
+            fun rejected(result: CompletableFuture<*>, code: ResponseErrorCode) {
+                val failure = assertThrows<ExecutionException> { session.await(result) }
+                val error = failure.cause as ResponseErrorException
+                assertThat(error.responseError.code).isEqualTo(code.value)
+            }
+
+            val hover = HoverParams(TextDocumentIdentifier(URI), Position(0, 0))
+            rejected(
+                session.server.textDocumentService.hover(hover),
+                ResponseErrorCode.ServerNotInitialized,
+            )
+            session.initialize()
+            rejected(
+                session.server.initialize(InitializeParams()),
+                ResponseErrorCode.InvalidRequest,
+            )
+            session.open(VALID)
+            assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+            session.await(session.server.shutdown())
+            rejected(
+                session.server.textDocumentService.hover(hover),
+                ResponseErrorCode.InvalidRequest,
+            )
+            session.server.exit()
+            session.expectExit(0)
+        }
+    }
 
     @Test
     fun `incremental patches save hooks and formatting ranges round trip the packaged transport`() {
