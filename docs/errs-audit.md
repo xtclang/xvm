@@ -1094,3 +1094,37 @@ Final selected acceptance passes X118/X132/X135–X139 in both editors and Intel
 errors. The final correction checks pass 27 backend tests and 73 IntelliJ unit tests, alongside
 the earlier full backend/packaged/VS Code extension results. Exact receipts and remaining manual
 boundaries are in the integration plan's editor-settings checkpoint.
+
+
+### Mutable-state and deprecated-API audit (2026-09-30, in progress)
+
+Reviewed the LSP server's document/publication lock, detached resolve/diagnostic/token stores,
+compiler queue snapshots and configuration revisions; IntelliJ connection ownership, root leases,
+startup/diagnostic transport bridges and settings callbacks; VS Code startup/restart state, build
+model/watch maps and configuration/rename flows; Tree-sitter parser/index lifetimes. Function-local
+builders are not shared state. A concurrent map alone does not protect compound lifecycle changes.
+
+Concrete fixes in this batch:
+
+- Pending ordinary readers now share semantic-query ownership: cancellation does not cancel shared
+  analysis, and close retires the public request even if analysis ignores cancellation.
+- IntelliJ diagnostic replies recheck request ownership after the unlocked editor snapshot lookup.
+  Close/cancel can no longer reinsert a retired result/owner into the cache.
+- Tree-sitter scan coordinators no longer join child jobs submitted to the same bounded executor.
+  Parsing was already serialized, so the nested scheduling added a starvation/shutdown hazard.
+  Native parsing and disposal now share ownership locks; post-close reindexing is ignored.
+
+The protocol progress collections are confined to a single dispatcher. Refresh uses one atomic
+running/dirty pair per provider, sends outside compiler locks, and coalesces changes while awaiting
+a reply. These ownership rules require regression testing; they are not a claim that every
+possible interleaving is proven safe. Remaining concerns to investigate: background disk indexing
+versus an open overlay, VS Code retired-connection callbacks and long-lived configuration pickers,
+and stalled watcher registration replies.
+
+Deprecated API inventory: no Kotlin suppression remains for legacy LSP roots. `rootUri`/`rootPath`
+are protocol-deprecated compatibility inputs only; current clients should send `workspaceFolders`.
+The TypeScript compiler API found no selected deprecated call signatures: OutputChannel.show and
+assert.fail have deprecated overloads, but our calls select supported overloads. Hover's inherited
+MarkedString union is still accepted as input by VS Code. Deprecated formatter configuration keys
+are compatibility aliases explicitly marked in the manifest, not deprecated implementation calls.
+Fresh JVM compilation and the combined tests are still pending for the final batch.
