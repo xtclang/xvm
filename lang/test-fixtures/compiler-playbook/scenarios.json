@@ -4489,6 +4489,24 @@
         "coverage": "full",
         "limitations": []
       }
+    },
+    "X142": {
+      "title": "constant property initializer retains semantic navigation and rename",
+      "manual": [],
+      "values": {
+        "file": "X142/FoldedInitializer.x",
+        "module": "FoldedInitializer",
+        "source": "module FoldedInitializer { Int value = 1; Int copy = value; Int run() = value; }\n",
+        "anchor": "value; Int run",
+        "name": "value",
+        "newName": "number",
+        "references": 3,
+        "expected": "Int"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
     }
   }
 }
