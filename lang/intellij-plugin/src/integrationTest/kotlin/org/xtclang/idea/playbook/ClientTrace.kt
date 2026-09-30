@@ -5,8 +5,10 @@ import com.google.gson.JsonParser
 import com.google.gson.JsonSyntaxException
 import com.intellij.driver.client.Driver
 import com.intellij.driver.client.Remote
+import com.intellij.driver.client.service
 import com.intellij.driver.model.LockSemantics
 import com.intellij.driver.model.OnDispatcher
+import com.intellij.driver.sdk.singleProject
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -28,9 +30,12 @@ class ClientTrace(private val driver: Driver) {
                 }
             val protocol = ClientProtocol(driver)
             val queued =
-                protocol.server().getTraces().joinToString("\n") {
-                    protocol.copy(it.message()).toString()
-                }
+                // Failure cleanup may already have closed every document and stopped the server.
+                // Read available traces immediately; waiting for startup hides the original error.
+                service<LanguageClients>(singleProject())
+                    .getStartedServers()
+                    .flatMap { it.getTraces().toList() }
+                    .joinToString("\n") { protocol.copy(it.message()).toString() }
             Files.writeString(path, "$printed\n$queued\n")
         }
 
