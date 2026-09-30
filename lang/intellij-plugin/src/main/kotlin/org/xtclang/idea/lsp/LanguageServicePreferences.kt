@@ -10,11 +10,13 @@ import java.util.concurrent.atomic.AtomicReference
 internal class LanguageServicePreferences(private val project: Project) {
     private val current = AtomicReference(LanguageServiceConfiguration())
 
-    fun read(): LanguageServiceConfiguration =
-        runCatching { LanguageServiceSettings.effective(project) }
-            .onSuccess(current::set)
-            .getOrElse {
-                logger<LanguageServicePreferences>().warn("Invalid Ecstasy service settings; retaining previous values", it)
-                current.get()
-            }
+    fun read(): LanguageServiceConfiguration = runCatching {
+        LanguageServiceSettings.effective(project)
+    }
+        .onSuccess(current::set)
+        .getOrElse {
+            logger<LanguageServicePreferences>()
+                .warn("Invalid Ecstasy service settings; retaining previous values", it)
+            current.get()
+        }
 }

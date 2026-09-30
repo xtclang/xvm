@@ -7,7 +7,7 @@ import { CodeAction } from 'vscode-languageclient/node';
 import { discovered } from './liveWorkspace';
 import { modelPath } from '../../build-model';
 import { getClient, updateCompilerConfiguration } from '../../lsp-client';
-import { client, diagnostics, eventually, hover, label, noErrors, playbook, targets } from './support';
+import { client, diagnostics, eventually, hover, label, noErrors, playbook, symbols, targets } from './support';
 
 export function platformCases(): void {
     playbook('X124', async (workspace, data) => {
@@ -343,23 +343,30 @@ export function platformCases(): void {
         const original = config.inspect('textSynchronization')?.workspaceValue;
         const status = async () => {
             const current = getClient();
-            if (!current?.initializeResult) return undefined;
+            if (!current?.isRunning()) return undefined;
             try { return await current.sendRequest<{ pid: number; textSynchronization: string }>('xtc/languageServiceStatus'); }
             catch { return undefined; }
         };
         let previous = (await status())!.pid;
         try {
             for (const transport of ['incremental', 'full']) {
+                const started = Date.now();
                 await config.update('textSynchronization', transport, vscode.ConfigurationTarget.Workspace);
                 const after = await eventually(status, value => value?.textSynchronization === transport && value.pid !== previous, `Restart into ${transport}`);
+                console.log(`[X137] ${transport} connection ready in ${Date.now() - started}ms; PID ${previous} -> ${after!.pid}`);
                 previous = after!.pid;
                 assert.strictEqual(document.getText(), data.edited);
                 assert.ok(document.isDirty, 'Restart must not save the buffer');
                 await noErrors(document.uri);
-                const symbols = await vscode.commands.executeCommand<vscode.DocumentSymbol[]>('vscode.executeDocumentSymbolProvider', document.uri);
-                assert.ok(symbols?.length);
+                await eventually(
+                    () => symbols(document),
+                    values => values.length > 0, 'Document symbols registered after restart');
+                console.log(`[X137] ${transport} unsaved document ready in ${Date.now() - started}ms`);
             }
-        } finally { await config.update('textSynchronization', original, vscode.ConfigurationTarget.Workspace); }
+        } finally {
+            await config.update('textSynchronization', original, vscode.ConfigurationTarget.Workspace);
+            await eventually(status, value => value?.textSynchronization === config.get('textSynchronization'), 'Original transport restored');
+        }
     });
 
     playbook('X138', async (workspace, data) => {
@@ -370,11 +377,17 @@ export function platformCases(): void {
         try {
             await config.update('indentSize', data.indent, vscode.ConfigurationTarget.Workspace);
             await eventually(async () => client().sendRequest<{ formatting: { indentSize: number } }>('xtc/languageServiceStatus'), value => value.formatting?.indentSize === data.indent, 'Live formatter configuration');
-            const format = () => vscode.commands.executeCommand<vscode.TextEdit[]>('vscode.executeFormatDocumentProvider', document.uri, { tabSize: 4, insertSpaces: true });
-            assert.ok((await format())?.some(edit => edit.newText === data.expectedIndent));
+            const formatted = async () => {
+                const edits = await vscode.commands.executeCommand<vscode.TextEdit[]>('vscode.executeFormatDocumentProvider', document.uri, { tabSize: 4, insertSpaces: true });
+                assert.ok(edits, 'Formatting provider returns edits');
+                return edits.sort((left, right) => document.offsetAt(right.range.start) - document.offsetAt(left.range.start))
+                    .reduce((text, edit) => text.slice(0, document.offsetAt(edit.range.start)) + edit.newText + text.slice(document.offsetAt(edit.range.end)), document.getText());
+            };
+            const expected = data.source.replace('\nInt', `\n${data.expectedIndent}Int`);
+            assert.strictEqual(await formatted(), expected);
             await config.update('indentSize', 0, vscode.ConfigurationTarget.Workspace);
             await client().sendNotification('workspace/didChangeConfiguration', { settings: {} });
-            assert.ok((await format())?.some(edit => edit.newText === data.expectedIndent));
+            assert.strictEqual(await formatted(), expected);
             const after = await client().sendRequest<{ pid: number; serverSaveFormatting: boolean }>('xtc/languageServiceStatus');
             assert.strictEqual(after.pid, before.pid);
             assert.strictEqual(after.serverSaveFormatting, false);
@@ -390,7 +403,7 @@ export function platformCases(): void {
         const previousNative = editor.inspect('formatOnSave')?.workspaceValue;
         const running = async () => {
             const current = getClient();
-            if (!current?.initializeResult) return undefined;
+            if (!current?.isRunning()) return undefined;
             try { return await current.sendRequest<{ serverSaveFormatting: boolean }>('xtc/languageServiceStatus'); }
             catch { return undefined; }
         };
@@ -398,8 +411,7 @@ export function platformCases(): void {
             await editor.update('formatOnSave', false, vscode.ConfigurationTarget.Workspace);
             await config.update('saveFormatting', 'server', vscode.ConfigurationTarget.Workspace);
             await eventually(running, value => value?.serverSaveFormatting === true, 'Server save edits enabled');
-            await workspace.replace(document, data.source + '
-');
+            await workspace.replace(document, data.source + '\n');
             await document.save();
             assert.ok(document.getText().includes('    Int value = 1;'));
             await editor.update('formatOnSave', true, vscode.ConfigurationTarget.Workspace);
