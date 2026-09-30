@@ -307,7 +307,7 @@ public class AssertV
     }
 
     private void appendNullablePrimitive(CodeBuilder code, RegisterInfo reg) {
-        // stack: ctx, buffer, ctx, buffer, primitive value, isNull
+        // stack: (ctx, buffer, ctx, buffer, primitive value, isNull)
         Label ifNull = code.newLabel();
         Label endIf  = code.newLabel();
         code.ifne(ifNull);
@@ -318,7 +318,7 @@ public class AssertV
         code.goto_(endIf)
             .labelBinding(ifNull);
 
-        // stack: ctx, buffer, ctx, buffer, primitive value
+        // stack: (ctx, buffer, ctx, buffer, primitive value)
         Builder.pop(code, reg.cd());
         Builder.loadNull(code);
         appendLoadedValue(code);
@@ -326,7 +326,7 @@ public class AssertV
     }
 
     private void appendNullableXvmPrimitive(CodeBuilder code, RegisterInfo reg) {
-        // stack: ctx, buffer, ctx, buffer, xvm primitive slot values, isNull
+        // stack: (ctx, buffer, ctx, buffer, xvm primitive slot values, isNull)
         Label ifNull = code.newLabel();
         Label endIf  = code.newLabel();
         code.ifne(ifNull);
@@ -337,7 +337,7 @@ public class AssertV
         code.goto_(endIf)
             .labelBinding(ifNull);
 
-        // stack: ctx, buffer, ctx, buffer, xvm primitive slot values
+        // stack: (ctx, buffer, ctx, buffer, xvm primitive slot values)
         ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(type);
         for (int i = cds.length - 1; i >= 0; --i) {
             Builder.pop(code, cds[i]);
@@ -348,7 +348,7 @@ public class AssertV
     }
 
     private void appendLoadedValue(CodeBuilder code) {
-        // stack: ctx, buffer, value
+        // stack: (ctx, buffer, value)
         code.invokestatic(CD_nUtil, "appendValue", MD_AppendValue);
     }
 

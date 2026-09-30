@@ -609,7 +609,7 @@ public class CommonBuilder
         boolean            isInstanceChild = !isInterface && classStruct.isInstanceChild();
 
         if (isInstanceChild) {
-            classBuilder.withField("$outer", CD_nObject, ClassFile.ACC_PUBLIC | ClassFile.ACC_FINAL);
+            classBuilder.withField(Outer, CD_nObject, ClassFile.ACC_PUBLIC | ClassFile.ACC_FINAL);
         }
 
         for (PropertyInfo prop : structInfo.getProperties().values()) {
@@ -1042,11 +1042,11 @@ public class CommonBuilder
                 Label startScope = code.newLabel();
                 Label endScope   = code.newLabel();
                 code.labelBinding(startScope);
+
                 if (isDebugInfo()) {
                     code.localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, startScope, endScope);
                     if (hasOuter) {
-                        code.localVariable(code.parameterSlot(1), "outer", CD_nObject,
-                                startScope, endScope);
+                        code.localVariable(code.parameterSlot(1), "outer", CD_nObject, startScope, endScope);
                     }
                 }
 
@@ -1054,7 +1054,7 @@ public class CommonBuilder
                 if (hasOuter) {
                     code.aload(0)
                         .aload(code.parameterSlot(1))
-                        .putfield(art.CD(), "$outer", CD_nObject);
+                        .putfield(art.CD(), Outer, CD_nObject);
                 }
                 initializeFields(code, props);
 
@@ -1259,7 +1259,7 @@ public class CommonBuilder
         classBuilder.withMethodBody(prop.ensureGetterJitMethodName(typeSystem), md,
                 ClassFile.ACC_PUBLIC, code -> {
             code.aload(0)
-                .getfield(art.CD(), "$outer", CD_nObject)
+                .getfield(art.CD(), Outer, CD_nObject)
                 .checkcast(md.returnType())
                 .areturn();
         });

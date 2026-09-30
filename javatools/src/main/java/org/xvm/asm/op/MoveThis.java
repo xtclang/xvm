@@ -22,6 +22,7 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 
 import static org.xvm.javajit.Builder.CD_nObject;
+import static org.xvm.javajit.Builder.Outer;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -184,7 +185,7 @@ public class MoveThis
 
         code.aload(0);
         for (int i = 0; i < m_cSteps; i++) {
-            code.getfield(cd, "$outer", CD_nObject);
+            code.getfield(cd, Outer, CD_nObject);
 
             type = type.getParentType();
             cd   = bctx.builder.ensureClassDesc(type);
