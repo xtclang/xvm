@@ -4,6 +4,8 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.MethodStructure;
@@ -11,6 +13,8 @@ import org.xvm.asm.OpCallable;
 
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
 
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
@@ -109,6 +113,20 @@ public class NewCG_0
         m_argParent = registerArgument(m_argParent, registry);
         m_argType   = registerArgument(m_argType, registry);
     }
+
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void computeTypes(BuildContext bctx) {
+        bctx.typeMatrix.assign(getAddress(), m_nRetValue, bctx.getTypeConstant(m_nTypeValue));
+    }
+
+    @Override
+    public int build(BuildContext bctx, CodeBuilder code) {
+        return buildNewG(bctx, code, m_nParentValue, m_nTypeValue, NO_ARGS);
+    }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     private int m_nParentValue;
     private int m_nTypeValue;

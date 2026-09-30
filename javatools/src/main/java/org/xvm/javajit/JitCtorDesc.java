@@ -5,6 +5,7 @@ import org.xvm.asm.constants.TypeConstant;
 
 import static org.xvm.javajit.Builder.CD_CtorCtx;
 import static org.xvm.javajit.Builder.CD_TypeConstant;
+import static org.xvm.javajit.Builder.CD_nObject;
 
 /**
  * JIT specific information for a constructor.
@@ -13,7 +14,8 @@ import static org.xvm.javajit.Builder.CD_TypeConstant;
  * is:
  *  {@code construct$17(ctx, cctx, thi$, x, y, z)}, where "cctx" arg is optional,
  *
- * We also use this to create the MethodTypeDesc for {@code new$17(ctx, type, x, y, z)} function.
+ * We also use this to create the MethodTypeDesc for {@code new$17(ctx, type, outer, x, y, z)}
+ * function, where "type" and "outer" are optional.
  */
 public class JitCtorDesc
         extends JitMethodDesc {
@@ -22,18 +24,21 @@ public class JitCtorDesc
      * @param targetCD    pass a non-null ClassDesc to add the target type as an implicit param
      * @param addCtorCtx  pass true to remember to add the cctx as an implicit param
      * @param addType     pass true to remember to add a TypeConstant as an implicit param
+     * @param addOuter    pass true to add the parent object as an implicit param
      */
     public JitCtorDesc(
             TypeConstant   typeTarget,
             ClassDesc      targetCD,
             boolean        addCtorCtx,
             boolean        addType,
+            boolean        addOuter,
             JitParamDesc[] standardReturns,
             JitParamDesc[] standardParams,
             JitParamDesc[] optimizedReturns,
             JitParamDesc[] optimizedParams) {
         this.addCtorCtx = addCtorCtx;
         this.addType    = addType;
+        this.addOuter   = addOuter;
         this.targetCD   = targetCD;
         super(typeTarget, standardReturns, standardParams, optimizedReturns, optimizedParams, true);
     }
@@ -41,12 +46,14 @@ public class JitCtorDesc
     protected final ClassDesc targetCD;
     protected final boolean   addCtorCtx;
     protected final boolean   addType;
+    protected final boolean   addOuter;
 
     @Override
     public int getImplicitParamCount() {
         return super.getImplicitParamCount()
             + (addCtorCtx       ? 1 : 0)
             + (addType          ? 1 : 0)
+            + (addOuter         ? 1 : 0)
             + (targetCD == null ? 0 : 1);
     }
 
@@ -58,6 +65,9 @@ public class JitCtorDesc
         }
         if (addType) {
             paramCDs[ix++] = CD_TypeConstant;
+        }
+        if (addOuter) {
+            paramCDs[ix++] = CD_nObject;
         }
         if (targetCD != null) {
             paramCDs[ix++] = targetCD;

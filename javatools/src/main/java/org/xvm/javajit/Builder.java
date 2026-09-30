@@ -1324,25 +1324,26 @@ public abstract class Builder {
     }
 
     /**
-     * Call the default constructor for the target class.
+     * Call the default constructor for the target class using the Ctx in the specified slot,
+     * optionally supplying an instance child's outer object.
      *
-     * @param cd the target ClassDesc
+     * @param cd         the target ClassDesc
+     * @param ctxSlot    the slot containing the Ctx
+     * @param outerSlot  the slot containing the outer object, or -1 for a non-child
      */
-    public static CodeBuilder invokeDefaultConstructor(CodeBuilder code, ClassDesc cd) {
-        invokeDefaultConstructor(code, cd, code.parameterSlot(0));
-        return code;
-    }
-
-    /**
-     * Call the default constructor for the target class using the Ctx in the specified slot.
-     */
-    public static CodeBuilder invokeDefaultConstructor(CodeBuilder code, ClassDesc cd, int ctxSlot) {
+    public static CodeBuilder invokeDefaultConstructor(CodeBuilder code, ClassDesc cd,
+                                                       int ctxSlot, int outerSlot) {
         code.new_(cd)
             .dup()
-            .aload(ctxSlot)
-            .invokespecial(cd, INIT_NAME, MD_xvmVoid);
+            .aload(ctxSlot);
+        if (outerSlot >= 0) {
+            code.aload(outerSlot);
+            code.invokespecial(cd, INIT_NAME, MD_xvmOuterVoid);
+        } else {
+            code.invokespecial(cd, INIT_NAME, MD_xvmVoid);
+        }
         return code;
-   }
+    }
 
     /**
      * Generate a "pop()" opcode for a type, assuming the corresponding value is already on the Java
@@ -1848,7 +1849,7 @@ public abstract class Builder {
      * Add the code to throw an Ecstasy exception using the Ctx in the specified slot.
      */
     public static CodeBuilder throwException(CodeBuilder code, ClassDesc exCD, String text, int ctxSlot) {
-        invokeDefaultConstructor(code, exCD, ctxSlot);
+        invokeDefaultConstructor(code, exCD, ctxSlot, -1);
         code.aload(ctxSlot);
         code.loadConstant(text)
             .aconst_null()
@@ -1900,9 +1901,11 @@ public abstract class Builder {
 
         JitParamDesc[] standardReturns  = new JitParamDesc[] {retDesc};
         JitParamDesc[] optimizedReturns = jmdCtor.isOptimized ? standardReturns : null;
-        return typeInfo.hasGenericTypes()
+        boolean        hasType          = typeInfo.hasGenericTypes();
+        boolean        hasOuter         = typeInfo.getClassStructure().isInstanceChild();
+        return hasType || hasOuter
             ? new JitCtorDesc(typeInfo.getType(),
-                    /*targetCD*/ null, /*addCtorCtx*/ false, /*addType*/ true,
+                    /*targetCD*/ null, /*addCtorCtx*/ false, hasType, hasOuter,
                     standardReturns,  jmdCtor.standardParams,
                     optimizedReturns, jmdCtor.optimizedParams)
             : new JitMethodDesc(typeInfo.getType(),
@@ -1919,11 +1922,22 @@ public abstract class Builder {
     public JitMethodDesc buildNew(BuildContext bctx, CodeBuilder code, TypeConstant typeTarget,
                                   MethodConstant idCtor, Consumer<JitMethodDesc> argsLoader,
                                   int ctxSlot) {
-        TypeInfo   infoTarget = typeTarget.ensureTypeInfo();
+        return buildNew(bctx, code, typeTarget, idCtor, null, argsLoader, ctxSlot);
+    }
+
+    /**
+     * Call the "new$" [static] method, optionally supplying the enclosing object.
+     */
+    public JitMethodDesc buildNew(BuildContext bctx, CodeBuilder code, TypeConstant typeTarget,
+                                  MethodConstant idCtor, RegisterInfo outer,
+                                  Consumer<JitMethodDesc> argsLoader, int ctxSlot) {
+        // a narrowed return type can be a cast; its callable class owns the constructor
+        TypeConstant typeCallable = typeTarget.getCallableJitType();
+        TypeInfo     infoTarget   = typeCallable.ensureTypeInfo();
         MethodInfo infoCtor   = infoTarget.getMethodById(idCtor);
 
         if (infoCtor == null) {
-            infoTarget = typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo();
+            infoTarget = typeCallable.ensureAccess(Access.PRIVATE).ensureTypeInfo();
             infoCtor   = infoTarget.getMethodById(idCtor);
         }
 
@@ -1950,6 +1964,12 @@ public abstract class Builder {
         code.aload(ctxSlot);
         if (infoTarget.hasGenericTypes()) {
             loadTypeConstant(bctx, code, typeTarget); // TODO Chet - is "bctx" required here?
+        }
+        if (outer != null) {
+            outer.load(code);
+            if (!outer.cd().equals(CD_nObject)) {
+                code.checkcast(CD_nObject);
+            }
         }
         argsLoader.accept(jmdNew);
 
@@ -2148,6 +2168,7 @@ public abstract class Builder {
     public static final String N_Int128       = "org.xtclang.ecstasy.numbers.Int128";
     public static final String N_IntN         = "org.xtclang.ecstasy.numbers.IntN";
     public static final String N_IllegalState = "org.xtclang.ecstasy.IllegalState";
+    public static final String N_Inner        = "org.xtclang.ecstasy.reflect.Outer.Inner";
     public static final String N_IterableChar = "org.xtclang.ecstasy.IterableᐸCharᐳ";
     public static final String N_IteratorChar = "org.xtclang.ecstasy.IteratorᐸCharᐳ";
     public static final String N_Nibble       = "org.xtclang.ecstasy.numbers.Nibble";
@@ -2155,6 +2176,7 @@ public abstract class Builder {
     public static final String N_Object       = "org.xtclang.ecstasy.Object";
     public static final String N_Orderable    = "org.xtclang.ecstasy.Orderable";
     public static final String N_Ordered      = "org.xtclang.ecstasy.Ordered";
+    public static final String N_Outer        = "org.xtclang.ecstasy.reflect.Outer";
     public static final String N_OutOfBounds  = "org.xtclang.ecstasy.OutOfBounds";
     public static final String N_ReadOnly     = "org.xtclang.ecstasy.ReadOnly";
     public static final String N_String       = "org.xtclang.ecstasy.text.String";
@@ -2289,6 +2311,7 @@ public abstract class Builder {
     public static final ClassDesc CD_Float32             = ClassDesc.of(N_Float32);
     public static final ClassDesc CD_Float64             = ClassDesc.of(N_Float64);
     public static final ClassDesc CD_FPLiteral           = ClassDesc.of(N_FPLiteral);
+    public static final ClassDesc CD_Inner               = ClassDesc.of(N_Inner);
     public static final ClassDesc CD_Int8                = ClassDesc.of(N_Int8);
     public static final ClassDesc CD_Int16               = ClassDesc.of(N_Int16);
     public static final ClassDesc CD_Int32               = ClassDesc.of(N_Int32);
@@ -2301,6 +2324,7 @@ public abstract class Builder {
     public static final ClassDesc CD_Object              = ClassDesc.of(N_Object);
     public static final ClassDesc CD_Orderable           = ClassDesc.of(N_Orderable);
     public static final ClassDesc CD_Ordered             = ClassDesc.of(N_Ordered);
+    public static final ClassDesc CD_Outer               = ClassDesc.of(N_Outer);
     public static final ClassDesc CD_String              = ClassDesc.of(N_String);
     public static final ClassDesc CD_UInt8               = ClassDesc.of(N_UInt8);
     public static final ClassDesc CD_UInt16              = ClassDesc.of(N_UInt16);
@@ -2394,5 +2418,6 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_I2F          = md(CD_float, CD_int);
     public static final MethodTypeDesc MD_xvmType      = md(CD_TypeConstant, CD_Ctx);
     public static final MethodTypeDesc MD_xvmVoid      = md(CD_void, CD_Ctx);
+    public static final MethodTypeDesc MD_xvmOuterVoid = md(CD_void, CD_Ctx, CD_nObject);
     public static final MethodTypeDesc MD_xvmInitType  = md(CD_void, CD_Ctx, CD_TypeConstant);
 }

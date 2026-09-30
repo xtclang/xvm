@@ -135,7 +135,7 @@ public class NewC_1
 
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
-        return buildNewC(bctx, code, m_nParentValue, new int[] {m_nArgValue});
+        return buildNew(bctx, code, m_nParentValue, new int[] {m_nArgValue});
     }
 
     // ----- fields --------------------------------------------------------------------------------

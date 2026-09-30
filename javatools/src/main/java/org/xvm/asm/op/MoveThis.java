@@ -4,15 +4,24 @@ import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 
+import java.lang.classfile.CodeBuilder;
+import java.lang.constant.ClassDesc;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.Op;
 import org.xvm.asm.Scope;
 
+import org.xvm.asm.constants.TypeConstant;
+
+import org.xvm.javajit.BuildContext;
+
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
+
+import static org.xvm.javajit.Builder.CD_nObject;
 
 import static org.xvm.util.Handy.readPackedInt;
 import static org.xvm.util.Handy.writePackedLong;
@@ -149,6 +158,43 @@ public class MoveThis
         }
     }
 
+    // ----- JIT support ---------------------------------------------------------------------------
+
+    @Override
+    public void computeTypes(BuildContext bctx) {
+        TypeConstant type = bctx.thisType;
+        for (int i = 0; i < m_cSteps; i++) {
+            type = type.getParentType();
+        }
+
+        type = switch (m_nAccess) {
+            case A_PUBLIC    -> type.removeAccess();
+            case A_PROTECTED -> type.ensureAccess(Access.PROTECTED);
+            case A_PRIVATE   -> type.ensureAccess(Access.PRIVATE);
+            case A_STRUCT    -> type.ensureAccess(Access.STRUCT);
+            default          -> type;
+        };
+        bctx.typeMatrix.assign(getAddress(), m_nToValue, type);
+    }
+
+    @Override
+    public int build(BuildContext bctx, CodeBuilder code) {
+        TypeConstant type = bctx.thisType;
+        ClassDesc    cd   = bctx.builder.art.CD();
+
+        code.aload(0);
+        for (int i = 0; i < m_cSteps; i++) {
+            code.getfield(cd, "$outer", CD_nObject);
+
+            type = type.getParentType();
+            cd   = bctx.builder.ensureClassDesc(type);
+            code.checkcast(cd);
+        }
+
+        bctx.storeValue(code, m_nToValue, bctx.getReturnType(m_nToValue));
+        return -1;
+    }
+
     @Override
     public String toString() {
         return super.toString()
@@ -163,6 +209,8 @@ public class MoveThis
                 })
                 + " -> " + Argument.toIdString(m_argTo, m_nToValue);
     }
+
+    // ----- fields --------------------------------------------------------------------------------
 
     protected int m_cSteps;
     protected int m_nToValue;

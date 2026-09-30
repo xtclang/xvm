@@ -472,7 +472,12 @@ public class CommonBuilder
      * should override this method augmenting the memory requirement accordingly.
      */
     protected int computeInstanceSize() {
-        int size = 0;
+        if (isInterface) {
+            return 0;
+        }
+        int size = classStruct.isInstanceChild()
+                ? ShallowSizeOf.fieldOf(Object.class)
+                : 0;
         for (Map.Entry<PropertyConstant, PropertyInfo> entry :
                     structInfo.getProperties().entrySet()) {
             PropertyInfo infoProp = entry.getValue();
@@ -600,7 +605,12 @@ public class CommonBuilder
      * Assemble properties for the "Impl" shape.
      */
     protected void assembleProperties(ClassBuilder classBuilder) {
-        List<PropertyInfo> initProps = null;
+        List<PropertyInfo> initProps       = null;
+        boolean            isInstanceChild = !isInterface && classStruct.isInstanceChild();
+
+        if (isInstanceChild) {
+            classBuilder.withField("$outer", CD_nObject, ClassFile.ACC_PUBLIC | ClassFile.ACC_FINAL);
+        }
 
         for (PropertyInfo prop : structInfo.getProperties().values()) {
             MethodConstant initializer = prop.getInitializer();
@@ -657,7 +667,9 @@ public class CommonBuilder
                 continue;
             }
 
-            if (shouldGenerate(prop.getIdentity())) {
+            if (isInstanceChild && prop.getName().equals("outer")) {
+                assembleOuterGetter(classBuilder, prop);
+            } else if (shouldGenerate(prop.getIdentity())) {
                 assembleProperty(classBuilder, prop);
             }
         }
@@ -942,7 +954,7 @@ public class CommonBuilder
                     // $INSTANCE = new Singleton($ctx);
                     // $ctx.allocated(implSize);
                     // $INSTANCE.$init($ctx);
-                    invokeDefaultConstructor(code, CD_this, ctxSlot);
+                    invokeDefaultConstructor(code, CD_this, ctxSlot, -1);
                     code.dup()
                         .putstatic(CD_this, Instance, CD_this);
                     initializeSingleton(code, CD_this, ctxSlot);
@@ -975,7 +987,7 @@ public class CommonBuilder
                 ClassFile.ACC_PRIVATE | ClassFile.ACC_STATIC, code -> {
             int ctxSlot = code.parameterSlot(0);
 
-            invokeDefaultConstructor(code, CD_this, ctxSlot);
+            invokeDefaultConstructor(code, CD_this, ctxSlot, -1);
             initializeSingleton(code, CD_this, ctxSlot);
             code.areturn();
         });
@@ -1017,11 +1029,14 @@ public class CommonBuilder
     protected void appendCLInit(CodeBuilder code, int ctxSlot) {}
 
     /**
-     * Add fields initialization to the Java constructor {@code void <init>(Ctx ctx)}.
+     * Add fields initialization to the Java constructor {@code void <init>(Ctx ctx)} or, for an
+     * instance child, {@code void <init>(Ctx ctx, nObject outer)}.
      */
     protected void assembleInit(ClassBuilder classBuilder, List<PropertyInfo> props) {
+        boolean hasOuter = classStruct.isInstanceChild();
+
         classBuilder.withMethodBody(INIT_NAME,
-            MD_xvmVoid,
+            hasOuter ? MD_xvmOuterVoid : MD_xvmVoid,
             ClassFile.ACC_PUBLIC,
             code -> {
                 Label startScope = code.newLabel();
@@ -1029,9 +1044,18 @@ public class CommonBuilder
                 code.labelBinding(startScope);
                 if (isDebugInfo()) {
                     code.localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, startScope, endScope);
+                    if (hasOuter) {
+                        code.localVariable(code.parameterSlot(1), "outer", CD_nObject,
+                                startScope, endScope);
+                    }
                 }
 
                 callSuperInitializer(code);
+                if (hasOuter) {
+                    code.aload(0)
+                        .aload(code.parameterSlot(1))
+                        .putfield(art.CD(), "$outer", CD_nObject);
+                }
                 initializeFields(code, props);
 
                 code.labelBinding(endScope)
@@ -1145,8 +1169,17 @@ public class CommonBuilder
     protected void callSuperInitializer(CodeBuilder code) {
         // super($ctx);
         code.aload(0)
-            .aload(code.parameterSlot(0))
-            .invokespecial(getSuperCD(), INIT_NAME, MD_xvmVoid);
+            .aload(code.parameterSlot(0));
+
+        TypeConstant superType = typeInfo.getExtends();
+        boolean superHasOuter = superType != null &&
+                superType.getSingleUnderlyingClass(true).getComponent()
+                        instanceof ClassStructure superClass && superClass.isInstanceChild();
+        if (superHasOuter) {
+            code.aload(code.parameterSlot(1));
+        }
+        code.invokespecial(getSuperCD(), INIT_NAME,
+                superHasOuter ? MD_xvmOuterVoid : MD_xvmVoid);
     }
 
     /**
@@ -1216,6 +1249,20 @@ public class CommonBuilder
             jitName += OPT;
         }
         assemblePropertyAccessor(classBuilder, prop, jitName, jmDesc, false);
+    }
+
+    private void assembleOuterGetter(ClassBuilder classBuilder, PropertyInfo prop) {
+        JitMethodDesc jmd = prop.getGetterJitDesc(this, thisType);
+        assert !jmd.isOptimized && !jmd.isStandardStatic;
+
+        MethodTypeDesc md = jmd.standardMD;
+        classBuilder.withMethodBody(prop.ensureGetterJitMethodName(typeSystem), md,
+                ClassFile.ACC_PUBLIC, code -> {
+            code.aload(0)
+                .getfield(art.CD(), "$outer", CD_nObject)
+                .checkcast(md.returnType())
+                .areturn();
+        });
     }
 
     protected void generateTrivialGetter(ClassBuilder classBuilder, PropertyInfo prop) {
@@ -3776,6 +3823,11 @@ public class CommonBuilder
      *      C o = C.$new$17($ctx, $type, x, y, z);
      * where TC is a TypeConstant for the actual type C&lt;A&gt;.
      *
+     * For a non-generic instance child:
+     *      C o = C.$new$17($ctx, outer, x, y, z);
+     * For a generic instance child, the enclosing object is passed after the type:
+     *      C o = C.$new$17($ctx, $type, outer, x, y, z);
+     *
      * For singletons, referencing the instance of the singleton for the first time causes it to be
      * created using the well-known "Java singleton pattern" that leverages the Java ClassLoader
      * and memory model guarantees to ensure that only one instance is created, and that accessing
@@ -3785,9 +3837,14 @@ public class CommonBuilder
      * singletons have a non-static "$init()" method that is signature-wise identical to the
      * "$new()" method and performs everything in the following list of steps starting with step 4.
      *
-     * public static C $new$17(Ctx $ctx, X x, Y y, Z z)
-     * or
-     * public static C $new$17(Ctx $ctx, TC $type, X x, Y y, Z z)
+     *      public static C $new$17(Ctx $ctx, X x, Y y, Z z)
+     * or, for a generic class:
+     *      public static C $new$17(Ctx $ctx, TC $type, X x, Y y, Z z)
+     * or, for a non-generic instance child:
+     *      public static C $new$17(Ctx $ctx, nObject outer, X x, Y y, Z z)
+     * or, for a generic instance child:
+     *      public static C $new$17(Ctx $ctx, TC $type, nObject outer, X x, Y y, Z z)
+     *
      *    // note: singletons use this signature instead:
      *    public C $init$17(Ctx ctx)
      *
@@ -3803,7 +3860,8 @@ public class CommonBuilder
      *    // - this inits any fields that are not supposed to be null (reference
      *    //   types) or not supposed to be 0 etc. (primitive types)
      *    // note: singletons move this step to the Java static initializer
-     *    C thi$ = new C(ctx);
+     *    C thi$ = new C(ctx);        // ordinary class
+     *    C thi$ = new C(ctx, outer); // instance child
      *
      *    // step 3a (optional) if the type is specified, assign the "$sc0" field
      *    thi$.$sc0 = $type;
@@ -3886,6 +3944,7 @@ public class CommonBuilder
             JitMethodDesc jmd) {
         boolean   isSingleton = typeInfo.isSingleton();
         boolean   hasType     = typeInfo.hasGenericTypes();
+        boolean   hasOuter    = classStruct.isInstanceChild();
         ClassDesc CD_this     = art.CD();
 
         // Note: the "$init" is a virtual method for singletons and "$new" is static otherwise;
@@ -3927,6 +3986,7 @@ public class CommonBuilder
             int ctxSlot    = code.parameterSlot(0);
             int extraSlots = 1;
             int typeSlot   = -1;
+            int outerSlot  = -1;
 
             if (debugInfo) {
                 code.localVariable(ctxSlot, "$ctx", CD_Ctx, startScope, endScope);
@@ -3935,6 +3995,9 @@ public class CommonBuilder
             if (hasType) {
                 typeSlot = code.parameterSlot(1);
                 extraSlots++;
+            }
+            if (hasOuter) {
+                outerSlot = code.parameterSlot(extraSlots++);
             }
 
             // for singleton classes the steps 0-2 are performed by the static initializer;
@@ -3955,7 +4018,7 @@ public class CommonBuilder
                 if (debugInfo) {
                     code.localVariable(thisSlot, "thi$", CD_this, startScope, endScope);
                 }
-                invokeDefaultConstructor(code, CD_this);
+                invokeDefaultConstructor(code, CD_this, ctxSlot, outerSlot);
                 code.astore(thisSlot);
 
                 if (hasType) {
