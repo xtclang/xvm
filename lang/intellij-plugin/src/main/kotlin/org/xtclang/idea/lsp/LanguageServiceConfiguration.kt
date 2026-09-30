@@ -21,10 +21,11 @@ internal data class LanguageServiceConfiguration(
 
     fun initializationOptions(nativeFormatOnSave: Boolean = false): Map<String, Any> =
         mapOf(
-            "xtcDocumentSync" to mapOf(
-                "incremental" to (textSynchronization == "incremental"),
-                "formatOnSave" to (saveFormatting == "server" && !nativeFormatOnSave),
-            )
+            "xtcDocumentSync" to
+                mapOf(
+                    "incremental" to (textSynchronization == "incremental"),
+                    "formatOnSave" to (saveFormatting == "server" && !nativeFormatOnSave),
+                )
         )
 
     companion object {
@@ -32,43 +33,72 @@ internal data class LanguageServiceConfiguration(
 
         private fun objectValue(content: String?): JsonObject =
             if (content.isNullOrBlank()) JsonObject()
-            else runCatching { JsonParser.parseString(content).asJsonObject }.getOrElse {
-                throw IllegalArgumentException("Language-service settings must contain a JSON object", it)
-            }
+            else
+                runCatching { JsonParser.parseString(content).asJsonObject }
+                    .getOrElse {
+                        throw IllegalArgumentException(
+                            "Language-service settings must contain a JSON object",
+                            it,
+                        )
+                    }
 
         fun section(content: String?): JsonObject? =
-            objectValue(content).get("xtc")?.takeUnless { it.isJsonNull }?.let { xtc ->
-                require(xtc.isJsonObject) { "Ecstasy settings must be an object" }
-                xtc.asJsonObject.get("languageService")?.takeUnless { it.isJsonNull }?.let {
-                    require(it.isJsonObject) { "Language-service settings must be an object" }
-                    it.asJsonObject.deepCopy()
+            objectValue(content)
+                .get("xtc")
+                ?.takeUnless { it.isJsonNull }
+                ?.let { xtc ->
+                    require(xtc.isJsonObject) { "Ecstasy settings must be an object" }
+                    xtc.asJsonObject
+                        .get("languageService")
+                        ?.takeUnless { it.isJsonNull }
+                        ?.let {
+                            require(it.isJsonObject) {
+                                "Language-service settings must be an object"
+                            }
+                            it.asJsonObject.deepCopy()
+                        }
                 }
-            }
 
         fun read(global: String?, project: String? = null): LanguageServiceConfiguration {
             val defaults = section(global)
             val override = section(project)
             fun value(name: String) = override?.get(name) ?: defaults?.get(name)
-            fun string(name: String, fallback: String): String = value(name)?.let {
-                require(it.isJsonPrimitive && it.asJsonPrimitive.isString) { "$name must be a string" }
-                it.asString
-            } ?: fallback
-            val hints = value("inlayHints")?.let {
-                require(it.isJsonPrimitive && it.asJsonPrimitive.isBoolean) { "inlayHints must be a boolean" }
-                it.asBoolean
-            } ?: true
+            fun string(name: String, fallback: String): String =
+                value(name)?.let {
+                    require(it.isJsonPrimitive && it.asJsonPrimitive.isString) {
+                        "$name must be a string"
+                    }
+                    it.asString
+                } ?: fallback
+            val hints =
+                value("inlayHints")?.let {
+                    require(it.isJsonPrimitive && it.asJsonPrimitive.isBoolean) {
+                        "inlayHints must be a boolean"
+                    }
+                    it.asBoolean
+                } ?: true
             return LanguageServiceConfiguration(
-                string("textSynchronization", "full"), string("saveFormatting", "editor"), hints,
+                string("textSynchronization", "full"),
+                string("saveFormatting", "editor"),
+                hints,
             )
         }
 
-        /** Compare only our section, then merge into current content to preserve graph/Undo edits. */
-        fun replace(content: String?, expected: JsonObject?, replacement: LanguageServiceConfiguration?): String {
+        /**
+         * Compare only our section, then merge into current content to preserve graph/Undo edits.
+         */
+        fun replace(
+            content: String?,
+            expected: JsonObject?,
+            replacement: LanguageServiceConfiguration?,
+        ): String {
             require(section(content) == expected) {
                 "Language-service settings changed while this page was open. Reset before applying."
             }
             val settings = objectValue(content)
-            val xtc = settings.getAsJsonObject("xtc") ?: JsonObject().also { settings.add("xtc", it) }
+            val xtc =
+                settings["xtc"]?.takeUnless { it.isJsonNull }?.asJsonObject
+                    ?: JsonObject().also { settings.add("xtc", it) }
             if (replacement == null) xtc.remove("languageService")
             else xtc.add("languageService", gson.toJsonTree(replacement))
             return gson.toJson(settings)

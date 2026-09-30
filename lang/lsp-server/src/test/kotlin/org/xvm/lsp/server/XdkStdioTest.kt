@@ -1,7 +1,6 @@
 package org.xvm.lsp.server
 
 import com.google.gson.Gson
-
 import com.google.gson.JsonParser
 import java.nio.file.Files
 import java.nio.file.Path
@@ -72,8 +71,10 @@ import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.WillSaveTextDocumentParams
 import org.eclipse.lsp4j.WorkspaceClientCapabilities
 import org.eclipse.lsp4j.WorkspaceEditCapabilities
-import org.eclipse.lsp4j.launch.LSPLauncher
+import org.eclipse.lsp4j.jsonrpc.Launcher
+import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.lsp4j.services.LanguageClient
+import org.eclipse.lsp4j.services.LanguageServer
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -85,6 +86,11 @@ import org.junit.jupiter.params.provider.ValueSource
  */
 @Tag("compiler-stdio")
 class XdkStdioTest {
+    interface ServiceStatusServer : LanguageServer {
+        @JsonRequest("xtc/languageServiceStatus")
+        fun languageServiceStatus(): CompletableFuture<Map<String, Any?>>
+    }
+
     @TempDir lateinit var directory: Path
 
     @Test
@@ -1468,14 +1474,13 @@ class XdkStdioTest {
             }
         private val launcher =
             try {
-                LSPLauncher.createClientLauncher(
-                    client,
-                    process.inputStream,
-                    process.outputStream,
-                    executor,
-                ) {
-                    it
-                }
+                Launcher.Builder<ServiceStatusServer>()
+                    .setLocalService(client)
+                    .setRemoteInterface(ServiceStatusServer::class.java)
+                    .setInput(process.inputStream)
+                    .setOutput(process.outputStream)
+                    .setExecutorService(executor)
+                    .create()
             } catch (e: Exception) {
                 process.destroyForcibly()
                 process.waitFor(10, SECONDS)
@@ -1485,7 +1490,7 @@ class XdkStdioTest {
         private val listening = launcher.startListening()
         val server = launcher.remoteProxy
 
-        fun status() = Gson().toJsonTree(await(launcher.remoteEndpoint.request("xtc/languageServiceStatus", null))).asJsonObject
+        fun status() = Gson().toJsonTree(await(server.languageServiceStatus())).asJsonObject
 
         fun initialize(
             versionedEdits: Boolean = false,

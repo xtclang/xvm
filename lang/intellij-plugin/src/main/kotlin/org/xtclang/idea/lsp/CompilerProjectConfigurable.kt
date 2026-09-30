@@ -90,29 +90,63 @@ class CompilerProjectConfigurable(private val project: Project) : Configurable {
                 JPanel(FlowLayout(FlowLayout.LEADING)).apply {
                     add(add)
                     add(remove)
-                    add(JButton("Choose module root").apply {
-                        addActionListener {
-                            val row = table.selectedRow
-                            if (row >= 0 && !discovery.isSelected) {
-                                FileChooser.chooseFile(FileChooserDescriptorFactory.createSingleFileDescriptor("x"), project, null)?.let {
-                                    rows.setValueAt(Path.of(it.path).toUri().toString(), row, 1)
+                    add(
+                        JButton("Choose module root").apply {
+                            addActionListener {
+                                val row = table.selectedRow
+                                if (row >= 0 && !discovery.isSelected) {
+                                    FileChooser.chooseFile(
+                                            FileChooserDescriptorFactory.createSingleFileDescriptor(
+                                                "x"
+                                            ),
+                                            project,
+                                            null,
+                                        )
+                                        ?.let {
+                                            rows.setValueAt(
+                                                Path.of(it.path).toUri().toString(),
+                                                row,
+                                                1,
+                                            )
+                                        }
                                 }
                             }
                         }
-                    })
-                    add(JButton("Add resource directory").apply {
-                        addActionListener {
-                            val row = table.selectedRow
-                            if (row >= 0 && !discovery.isSelected) {
-                                FileChooser.chooseFile(FileChooserDescriptorFactory.createSingleFolderDescriptor(), project, null)?.let { directory ->
-                                    val current = runCatching { modules()?.get(row)?.resourceRoots.orEmpty() }.getOrNull()
-                                    if (current != null) rows.setValueAt(
-                                        Gson().toJson((current + Path.of(directory.path).toUri().toString()).distinct()), row, 3,
-                                    )
+                    )
+                    add(
+                        JButton("Add resource directory").apply {
+                            addActionListener {
+                                val row = table.selectedRow
+                                if (row >= 0 && !discovery.isSelected) {
+                                    FileChooser.chooseFile(
+                                            FileChooserDescriptorFactory
+                                                .createSingleFolderDescriptor(),
+                                            project,
+                                            null,
+                                        )
+                                        ?.let { directory ->
+                                            val current = runCatching {
+                                                modules()?.get(row)?.resourceRoots.orEmpty()
+                                            }
+                                                .getOrNull()
+                                            if (current != null)
+                                                rows.setValueAt(
+                                                    Gson()
+                                                        .toJson(
+                                                            (current +
+                                                                    Path.of(directory.path)
+                                                                        .toUri()
+                                                                        .toString())
+                                                                .distinct()
+                                                        ),
+                                                    row,
+                                                    3,
+                                                )
+                                        }
                                 }
                             }
                         }
-                    })
+                    )
                     add(
                         JButton("Refresh Gradle model").apply {
                             addActionListener { refreshBuild(false) }
@@ -269,7 +303,8 @@ class CompilerProjectConfigurable(private val project: Project) : Configurable {
             val settings =
                 ProjectLanguageServerSettings.getInstance(project)
                     .getLanguageServerSettings(CompilerSettings.SERVER_ID)
-                    ?: CompilerSettings.store(project).getLanguageServerSettings(CompilerSettings.SERVER_ID)
+                    ?: CompilerSettings.store(project)
+                        .getLanguageServerSettings(CompilerSettings.SERVER_ID)
             val copy =
                 settings?.let(XmlSerializerUtil::createCopy) ?: LanguageServerDefinitionSettings()
             copy.configurationContent = replacement
