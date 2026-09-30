@@ -303,6 +303,10 @@ internal constructor(
     internal fun changedFileScopes(uri: String): Set<String> =
         synchronized(lifecycle) {
             val file = XdkSources.file(uri)
+            val openSources =
+                overlays
+                    .mapNotNull { (uri, text) -> XdkSources.file(uri)?.let { it to text } }
+                    .toMap()
             val changed =
                 inputScopes(uri).filter { scope ->
                     val module = project.modules.values.firstOrNull { it.uri == scope }
@@ -312,10 +316,12 @@ internal constructor(
                         root == null ||
                         inputs == null ||
                         requests[scope]?.result?.isDone == false ||
-                        // Failed analyses can retain an older reusable build. Recreated inputs
-                        // must repair the current failure even when they match that older build.
-                        project.affected(scope).any { completed[it]?.succeeded == false } ||
-                        !XdkFileChanges.unchanged(file, root, inputs)
+                        // A failed current analysis still owns its captured source inputs.
+                        // Only fallback builds can predate a failure (e.g. a missing dependency);
+                        // matching that old build must not suppress recovery after recreation.
+                        (completed[scope]?.sourceInputs == null &&
+                            project.affected(scope).any { completed[it]?.succeeded == false }) ||
+                        !XdkFileChanges.unchanged(file, root, inputs, openSources)
                 }
             project.orderedScopes(changed.flatMapTo(linkedSetOf(), project::affected))
         }
