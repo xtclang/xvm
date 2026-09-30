@@ -332,22 +332,22 @@ public interface NumberSupportInt128 {
         int slotH2 = regArg.slots()[1];
 
         // 1. Calculate low long result (l1 * l2)
-        code.lload(slotL1) // Load l1
-            .lload(slotL2) // Load l2
-            .lmul();       // low long result (stack: [low, low_2])
+        code.lload(slotL1) // load l1
+            .lload(slotL2) // load l2
+            .lmul();       // low long result; stack: (low, low_2)
 
         // 2. Calculate high long result
-        code.lload(slotL1) // Load l1
-            .lload(slotL2) // Load l2
+        code.lload(slotL1) // load l1
+            .lload(slotL2) // load l2
             .invokestatic(CD_Math, Math_UnsignedMultiplyHigh, MD_UnsignedMultiplyHigh) // High bits of l1*l2
-            .lload(slotL1) // Load l1
-            .lload(slotH2) // Load h2
-            .lmul()        // Low bits of l1*h2
+            .lload(slotL1) // load l1
+            .lload(slotH2) // load h2
+            .lmul()        // low bits of l1*h2
             .ladd()        // accumulate
-            .lload(slotH1) // Load h1
-            .lload(slotL2) // Load l2
+            .lload(slotH1) // load h1
+            .lload(slotL2) // load l2
             .lmul()        // low bits of h1*l2
-            .ladd();       // high long result (stack: [low, low_2, high, high_2])
+            .ladd();       // high long result; stack: low, low_2, high, high_2)
     }
 
     /**
@@ -368,12 +368,12 @@ public interface NumberSupportInt128 {
 
         // 1. Calculate resLow
         code.lload(slotLow) // load the low long value
-            .lneg();        //  low result is -low (stack: [low, low_2])
+            .lneg();        // low result is -low; stack: (low, low_2)
 
         // 2. Prepare for high calculation
-        code.lload(slotLow)      // Load low again for comparison
+        code.lload(slotLow)      // load low again for comparison
             .lconst_0()
-            .lcmp()              // Compare low to 0
+            .lcmp()              // compare low to 0
             .ifne(labelNotZero); // If low != 0, jump to high bit inversion
 
         // 3. Case: low == 0
@@ -383,12 +383,12 @@ public interface NumberSupportInt128 {
 
         // 4. Case: low != 0
         code.labelBinding(labelNotZero)
-            .lload(slotHigh)          // Load high
-            .loadConstant(-1L)  // Load -1 (all ones)
-            .lxor();                  // high result = ~high
+            .lload(slotHigh)    // load high
+            .loadConstant(-1L)  // load -1 (all ones)
+            .lxor();            // high result = ~high
 
         // Done
-        code.labelBinding(labelDone); // the stack is [low, low_2, high, high_2]
+        code.labelBinding(labelDone); // stack: (low, low_2, high, high_2)
     }
 
     /**
@@ -464,12 +464,12 @@ public interface NumberSupportInt128 {
         code.if_icmplt(labelLt64);
 
         // Case: arg >= 64, we shift the low which becomes the high, the new low will be zero
-        code.lconst_0()           // the new low long will be zero, so load zero to the stack
-            .lload(slotLow)       // load the low long value
-            .iload(slotArg)       // load the arg
+        code.lconst_0()        // the new low long will be zero, so load zero to the stack
+            .lload(slotLow)    // load the low long value
+            .iload(slotArg)    // load the arg
             .bipush(64).isub() // arg - 64
-            .lshl()               // low << (n - 64)
-            .goto_(labelEnd);     // done, stack is [new_low, new_low2, new_high, new_high2]
+            .lshl()            // low << (n - 64)
+            .goto_(labelEnd);  // done, stack is (new_low, new_low2, new_high, new_high2)
 
         // Case: 0 < n < 64
         code.labelBinding(labelLt64)
@@ -480,12 +480,12 @@ public interface NumberSupportInt128 {
             .iload(slotArg)
             .lshl()           // left shift the high long value
             .lload(slotLow)   // Load low
-            .bipush(64)    // load int 64
+            .bipush(64)       // load int 64
             .iload(slotArg)   // load the arg
             .isub()           // top of stack is (64 - arg)
             .lushr()          // low unsigned right shift by (64 - arg)
             .lor()            // new shifted high value OR'ed by right shifted low value
-            .goto_(labelEnd); // the stack is [new_low, new_low2, new_high, new_high2]
+            .goto_(labelEnd); // the stack is (new_low, new_low2, new_high, new_high2)
 
         // Case n == 0 (effectively a no-op shift)
         code.labelBinding(labelZero)
@@ -542,20 +542,20 @@ public interface NumberSupportInt128 {
             // Case: arg >= 64, we shift the high which becomes the low, the new high will be zero
             code.lload(slotHigh)      // load the high long value
                 .iload(slotArg)       // load the arg
-                .bipush(64).isub() // arg - 64
-                .lushr()              // high >>> (n - 64) - stack now has [new_low, new_low2]
+                .bipush(64).isub()    // arg - 64
+                .lushr()              // high >>> (n - 64) - stack now has (new_low, new_low2)
                 .lconst_0()           // the new high is zero for an unsigned shift
-                .goto_(labelEnd);     // done, stack is [new_low, new_low2, new_high, new_high2]
+                .goto_(labelEnd);     // done, stack is (new_low, new_low2, new_high, new_high2)
         } else {
             // Case: arg >= 64, we shift the high which becomes the low,
             // the new high will be sign extended
             code.lload(slotHigh)      // load the high long value
                 .iload(slotArg)       // load the arg
-                .bipush(64).isub() // arg - 64
-                .lshr()               // high >> (n - 64) - stack now has [new_low, new_low2]
+                .bipush(64).isub()    // arg - 64
+                .lshr()               // high >> (n - 64) - stack now has (new_low, new_low2)
                 .lload(slotHigh)      // load the high long value
-                .bipush(63).lshr() // high >> 63 results in all 0s or all 1s depending on sign bit
-                .goto_(labelEnd);     // done, stack is [new_low, new_low2, new_high, new_high2]
+                .bipush(63).lshr()    // high >> 63 results in all 0s or all 1s depending on sign bit
+                .goto_(labelEnd);     // done, stack is (new_low, new_low2, new_high, new_high2)
         }
 
         // Case: 0 < n < 64
@@ -564,11 +564,11 @@ public interface NumberSupportInt128 {
             .iload(slotArg)
             .lushr()          // shift the low long value by the arg
             .lload(slotHigh)  // load the high long value
-            .bipush(64)    // load 64
+            .bipush(64)       // load 64
             .iload(slotArg)   // load the argument
             .isub()           // top of stack is (64 - arg)
             .lshl().lor()     // or the shifted low by the shifted high
-            // the new low is on the stack [new_low, new_low2]
+            // the new low is on the stack (new_low, new_low2)
             .lload(slotHigh)  // High part calculation
             .iload(slotArg);
 
@@ -578,7 +578,7 @@ public interface NumberSupportInt128 {
             code.lshr();      // signed right shift of the high part
         }
 
-        code.goto_(labelEnd); // the stack is [new_low, new_low2, new_high, new_high2]
+        code.goto_(labelEnd); // the stack is (new_low, new_low2, new_high, new_high2)
 
         // Case n == 0 (effectively a no-op shift)
         code.labelBinding(labelZero)

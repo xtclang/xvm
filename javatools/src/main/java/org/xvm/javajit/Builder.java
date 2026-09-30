@@ -1180,31 +1180,6 @@ public abstract class Builder {
     }
 
     /**
-     * Build the byte codes to convert a primitive value on the stack into a Java {@code long}
-     * value on the stack.
-     *
-     * @param cd    the type of the primitive to convert
-     * @param code  the code builder to which the byte codes should be appended
-     */
-    public static void buildPrimitiveToLong(ClassDesc cd, CodeBuilder code) {
-        switch (cd.descriptorString()) {
-            case "Z", "B", "S", "I":
-                code.i2l();
-                break;
-            case "J":
-                // already long
-                break;
-            case "F":
-                code.invokestatic(CD_JavaFloat, "floatToRawIntBits", md(CD_int, CD_float));
-                code.i2l();
-                break;
-            case "D":
-                code.invokestatic(CD_JavaDouble, "doubleToRawLongBits", md(CD_long, CD_double));
-                break;
-        }
-    }
-
-    /**
      * Generate a "Null" check for the specified register.
      *
      * @param code     the {@link CodeBuilder} to use
@@ -1479,13 +1454,13 @@ public abstract class Builder {
             case "Dec128"  -> {
                 // stack is Dec128
                 code.dup();
-                // stack is Dec128 Dec128
+                // stack is (Dec128, Dec128)
                 code.getfield(CD_Dec128, "$lowBits", CD_long);
-                // stack is Dec128 long long_2
+                // stack is (Dec128, long, long_2)
                 code.dup2_x1().pop2();
-                // stack is long long_2 Dec128
+                // stack is (long, long_2, Dec128)
                 code.getfield(CD_Dec128, "$highBits", CD_long);
-                // stack is long long_2 long long_2
+                // stack is (long, long_2, long, long_2)
             }
             case "Float8e4" -> code.getfield(CD_Float8e4, "$value", CD_byte).ldc(0xFF).iand();
             case "Float8e5" -> code.getfield(CD_Float8e5, "$value", CD_byte).ldc(0xFF).iand();
@@ -1500,13 +1475,13 @@ public abstract class Builder {
             case "Int128"  -> {
                 // stack is Int128
                 code.dup();
-                // stack is Int128 Int128
+                // stack is (Int128, Int128)
                 code.getfield(CD_Int128, "$lowValue", CD_long);
-                // stack is Int128 long
+                // stack is (Int128, long)
                 code.dup2_x1().pop2();
-                // stack is long Int128
+                // stack is (long, Int128)
                 code.getfield(CD_Int128, "$highValue", CD_long);
-                // stack is long long_2
+                // stack is (long, long_2)
             }
             case "Nibble"  -> code.getfield(CD_Nibble, "$value", CD_int);
             case "UInt8"   -> code.getfield(CD_UInt8,  "$value", CD_int);
@@ -1516,25 +1491,25 @@ public abstract class Builder {
             case "UInt128" -> {
                 // stack is UInt128
                 code.dup();
-                // stack is UInt128, UInt128
+                // stack is (UInt128, UInt128)
                 code.getfield(CD_UInt128, "$lowValue", CD_long);
-                // stack is UInt128, long
+                // stack is (UInt128, long)
                 code.dup2_x1().pop2();
-                // stack is long, UInt128
+                // stack is (long, UInt128)
                 code.getfield(CD_UInt128, "$highValue", CD_long);
-                // stack is long, long_2
+                // stack is (long, long_2)
             }
             case "Date"     -> code.getfield(CD_Date,   "epochDay", CD_int);
             case "Duration" -> {
                 // stack is Duration
                 code.dup();
-                // stack is Duration Duration
+                // stack is (Duration, Duration)
                 code.getfield(CD_Duration, "picoseconds$0", CD_long);
-                // stack is Duration long
+                // stack is (Duration, long)
                 code.dup2_x1().pop2();
-                // stack is long Duration
+                // stack is (long, Duration)
                 code.getfield(CD_Duration, "picoseconds$1", CD_long);
-                // stack is long long_2
+                // stack is (long, long_2)
             }
             default -> throw new UnsupportedOperationException("Cannot unbox " + name);
         }
@@ -2139,8 +2114,7 @@ public abstract class Builder {
     public static final String N_ArrayUInt64  = "org.xtclang.ecstasy.collections.ArrayᐸUInt64ᐳ";
     public static final String N_ArrayUInt128 = "org.xtclang.ecstasy.collections.ArrayᐸUInt128ᐳ";
     public static final String N_ArrayDate    = "org.xtclang.ecstasy.collections.ArrayᐸDateᐳ";
-    public static final String N_ArrayDuration =
-            "org.xtclang.ecstasy.collections.ArrayᐸDurationᐳ";
+    public static final String N_ArrayDuration = "org.xtclang.ecstasy.collections.ArrayᐸDurationᐳ";
     public static final String N_ArrayObj     = "org.xtclang.ecstasy.collections.ArrayᐸObjectᐳ";
     public static final String N_Bit          = "org.xtclang.ecstasy.numbers.Bit";
     public static final String N_Boolean      = "org.xtclang.ecstasy.Boolean";
@@ -2166,17 +2140,12 @@ public abstract class Builder {
     public static final String N_Int32        = "org.xtclang.ecstasy.numbers.Int32";
     public static final String N_Int64        = "org.xtclang.ecstasy.numbers.Int64";
     public static final String N_Int128       = "org.xtclang.ecstasy.numbers.Int128";
-    public static final String N_IntN         = "org.xtclang.ecstasy.numbers.IntN";
     public static final String N_IllegalState = "org.xtclang.ecstasy.IllegalState";
-    public static final String N_Inner        = "org.xtclang.ecstasy.reflect.Outer.Inner";
     public static final String N_IterableChar = "org.xtclang.ecstasy.IterableᐸCharᐳ";
-    public static final String N_IteratorChar = "org.xtclang.ecstasy.IteratorᐸCharᐳ";
     public static final String N_Nibble       = "org.xtclang.ecstasy.numbers.Nibble";
     public static final String N_Nullable     = "org.xtclang.ecstasy.Nullable";
     public static final String N_Object       = "org.xtclang.ecstasy.Object";
-    public static final String N_Orderable    = "org.xtclang.ecstasy.Orderable";
     public static final String N_Ordered      = "org.xtclang.ecstasy.Ordered";
-    public static final String N_Outer        = "org.xtclang.ecstasy.reflect.Outer";
     public static final String N_OutOfBounds  = "org.xtclang.ecstasy.OutOfBounds";
     public static final String N_ReadOnly     = "org.xtclang.ecstasy.ReadOnly";
     public static final String N_String       = "org.xtclang.ecstasy.text.String";
@@ -2186,7 +2155,6 @@ public abstract class Builder {
     public static final String N_UInt32       = "org.xtclang.ecstasy.numbers.UInt32";
     public static final String N_UInt64       = "org.xtclang.ecstasy.numbers.UInt64";
     public static final String N_UInt128      = "org.xtclang.ecstasy.numbers.UInt128";
-    public static final String N_UIntN        = "org.xtclang.ecstasy.numbers.UIntN";
     public static final String N_Date         = "org.xtclang.ecstasy.temporal.Date";
     public static final String N_Duration     = "org.xtclang.ecstasy.temporal.Duration";
     public static final String N_AppenderChar = "org.xtclang.ecstasy.AppenderᐸCharᐳ";
@@ -2310,28 +2278,22 @@ public abstract class Builder {
     public static final ClassDesc CD_Float16             = ClassDesc.of(N_Float16);
     public static final ClassDesc CD_Float32             = ClassDesc.of(N_Float32);
     public static final ClassDesc CD_Float64             = ClassDesc.of(N_Float64);
-    public static final ClassDesc CD_FPLiteral           = ClassDesc.of(N_FPLiteral);
-    public static final ClassDesc CD_Inner               = ClassDesc.of(N_Inner);
     public static final ClassDesc CD_Int8                = ClassDesc.of(N_Int8);
     public static final ClassDesc CD_Int16               = ClassDesc.of(N_Int16);
     public static final ClassDesc CD_Int32               = ClassDesc.of(N_Int32);
     public static final ClassDesc CD_Int64               = ClassDesc.of(N_Int64);
     public static final ClassDesc CD_Int128              = ClassDesc.of(N_Int128);
-    public static final ClassDesc CD_IntN                = ClassDesc.of(N_IntN);
     public static final ClassDesc CD_IntLiteral          = ClassDesc.of(N_IntLiteral);
     public static final ClassDesc CD_Nibble              = ClassDesc.of(N_Nibble);
     public static final ClassDesc CD_Nullable            = ClassDesc.of(N_Nullable);
     public static final ClassDesc CD_Object              = ClassDesc.of(N_Object);
-    public static final ClassDesc CD_Orderable           = ClassDesc.of(N_Orderable);
     public static final ClassDesc CD_Ordered             = ClassDesc.of(N_Ordered);
-    public static final ClassDesc CD_Outer               = ClassDesc.of(N_Outer);
     public static final ClassDesc CD_String              = ClassDesc.of(N_String);
     public static final ClassDesc CD_UInt8               = ClassDesc.of(N_UInt8);
     public static final ClassDesc CD_UInt16              = ClassDesc.of(N_UInt16);
     public static final ClassDesc CD_UInt32              = ClassDesc.of(N_UInt32);
     public static final ClassDesc CD_UInt64              = ClassDesc.of(N_UInt64);
     public static final ClassDesc CD_UInt128             = ClassDesc.of(N_UInt128);
-    public static final ClassDesc CD_UIntN               = ClassDesc.of(N_UIntN);
     public static final ClassDesc CD_Date                = ClassDesc.of(N_Date);
     public static final ClassDesc CD_Duration            = ClassDesc.of(N_Duration);
     public static final ClassDesc CD_AppenderChar        = ClassDesc.of(N_AppenderChar);
@@ -2342,7 +2304,6 @@ public abstract class Builder {
     public static final ClassDesc CD_CtorCtx             = ClassDesc.of(Ctx.CtorCtx.class.getName());
     public static final ClassDesc CD_GenericTypeResolver = ClassDesc.of(GenericTypeResolver.class.getName());
     public static final ClassDesc CD_TypeConstant        = ClassDesc.of(TypeConstant.class.getName());
-    public static final ClassDesc CD_TypeSystem          = ClassDesc.of(TypeSystem.class.getName());
 
     public static final ClassDesc CD_JavaSystem          = ClassDesc.of(java.lang.System.class.getName());
     public static final ClassDesc CD_JavaByte            = ClassDesc.of(java.lang.Byte.class.getName());
@@ -2374,6 +2335,11 @@ public abstract class Builder {
      * The name of the field on nType object holding the underlying TypeConstant.
      */
     public static final String DataType = "$dataType";
+
+    /**
+     * The name of the field holding an instance child's enclosing object.
+     */
+    public static final String Outer = "$outer";
 
     // various commonly used MethodDesc constants
     public static final MethodTypeDesc MD_Bit_box      = md(CD_Bit, CD_int);
