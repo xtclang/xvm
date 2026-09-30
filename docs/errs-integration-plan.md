@@ -1164,9 +1164,9 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 | L77 colors | No color-value provider exists. | Decide which XTC values have unambiguous color meaning and reversible source edits. Implement that scope or record why it is inapplicable. |
 | L78 notebooks | Current ownership is file/module based; there are no notebook sessions. | Decide whether XTC notebooks are a product requirement, then define cell/module identity and execution order before synchronization. Record an explicit exclusion if out of scope. |
 | L79 debug inline values | Compiler inlay hints are not runtime values; DAP remains a stub. | Depend on R6–R7 real sessions, stack/source mapping and stop-state ownership; define evaluation safety before exposing values. |
-| L80 negotiation | UTF-16, workspace-root fallback, hover/outline/symbol kinds and diagnostic metadata have passing regressions; shared X140 passes in both editors. | Complete code-action literal/kind, completion-kind, diagnostic-tag and workspace-edit failure-handling audits; broaden stale application checks. |
-| L81 progress/trace/refresh | Owned progress/cancellation, lifecycle gating, coalesced refresh and runtime trace have passing controlled/transport regressions; X141 passes in both editors. | Partial results, Tree-sitter initial-scan progress and visible long-operation/cancel acceptance remain open; see the playbook coverage map. |
-| L83 initializer facts | The X140 investigation reproduced missing facts in constant-folded property initializers, also with ASCII source. | Preserve successful detached semantic facts across temporary initializer disposal without retaining clones or failed attempts; cover all affected navigation and rename paths. |
+| L80 negotiation | Presentation, action forms/preferred metadata, completion kinds and edit-format audits pass focused backend, packaged transport and selected editor checks. | Generic IntelliJ server-initiated edit version checking remains the recorded LSP4IJ boundary; broaden native stale-application acceptance. |
+| L81 progress/trace/refresh | Partial batches and actual Tree-sitter scan progress now join the previous owned progress/cancellation, refresh and trace implementation. | X143 and controlled regressions pass; visible long-operation/cancel acceptance remains a distinct check. |
+| L83 initializer facts | Detached successful initializer facts are implemented with no new AST fields; backend regressions and shared X142 are added. | Backend and shared X142 pass; preserve the explicit eight-component record-pattern migration note. |
 
 L76–L79 require explicit scope decisions; their presence in this inventory does not make notebooks,
 color editing or every optional protocol extension mandatory for the compiler-only release.
@@ -1269,15 +1269,21 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
   include prolonged editing/restart/process-leak workloads on supported platforms. Record
   packaging, source attachment and failure-recovery acceptance in both clients.
 
-- [ ] **L83 — Semantic facts for constant-folded property initializers.** The initial X140
-  fixture exposed missing hover/reference facts for `module Example { Int value = 1;
-  Int copy = value; }`, with or without a preceding emoji. `PropertyDeclarationStatement`
-  validates a temporary initializer clone to decide constant folding, then discards it; the
-  source initializer does not retain that resolved occurrence. Define how detached facts survive
-  this successful speculative compilation without retaining clone ASTs or publishing failed
-  attempts. Cover hover, definition, references, semantic tokens and rename completeness, with
-  constant and nonconstant controls. Add shared editor acceptance when implemented. X140 uses
-  a method-body reference to test UTF-16 independently and does not close this semantic gap.
+- [x] **L83 — Semantic facts for constant-folded property initializers.** Successful temporary
+  initializer probes now export detached constant targets, source spans, types and invocation
+  provenance before disposal. Failed probes publish nothing; no clone AST or new mutable AST field
+  is retained. Backend tests cover hover, definition, references, exact semantic token classification,
+  rename and rejected/nonconstant controls. Shared X142 passes in both editors, including native
+  rename/Undo. X140 remains the independent UTF-16 method-body check. The additive accessor and
+  retained constructors do not preserve old Java record-pattern arity: consumers must include the
+  eighth `initializerBindings` component under the explicit unreleased-API migration policy.
+
+L80/L81 follow-up status: negotiated action/command forms, completion kinds, file-operation formats,
+partial batches and actual asynchronous scan progress now pass their regressions. L80 remains open
+for generic IntelliJ server-initiated edit version checks and native stale-application acceptance.
+L81 retains visible long-operation/cancel acceptance (P1/P2), and L82 retains the full catalog,
+representative-workspace performance and prolonged lifecycle gates. Their unchecked headings do not
+mean the implemented protocol paths above are absent.
 
 ### Editor configuration and feature controls (UI1–UI7)
 
@@ -4887,7 +4893,7 @@ against each extracted slice's own prerequisites; the integrated result cannot e
 | `boolean log(ErrorInfo)` to `void log(ErrorInfo)` | Deliberate source/binary break. Recompile listener implementations and clients; report first, then ask `isAbortDesired()`. No return-type-only Java compatibility overload is possible |
 | Null/ambient listeners | Supply an explicit non-null listener at reporting boundaries. Use `ErrorListener.collecting(...)` or `ErrorList` for stateful host reporting; derived `silence(PROBE)` for intentional speculation. Removed ambient setters/lookups have no compatibility shim |
 | Runtime pool name | Deprecated `getConstantPool()` still delegates to `ensureRuntimePool()` and retains its runtime-initialization behavior. Compiler clients use `Compilation.pool()` |
-| `Compilation` record | Three-, four-, five- and six-argument constructors remain. Current seven-component pattern includes module, file, ast, sourceTrees, callBindings, functionBindings and constructorBindings. Prefer accessors/`forFile(...)` for clients not needing deconstruction |
+| `Compilation` record | Three- through seven-argument constructors remain. Current eight-component pattern includes module, file, ast, sourceTrees, callBindings, functionBindings, constructorBindings and initializerBindings. Prefer accessors/`forFile(...)` for clients not needing deconstruction |
 | `PartialAnalysis` record | Three-, four- and five-argument constructors remain; current six-component pattern adds callBindings, cursorBindings and functionBindings to sourceTrees, sites, pool |
 | `CursorBinding` record | Three-, six-, seven- and eight-argument constructors remain; the nine-component pattern adds argumentProperties after argumentValues. Function candidates expose types/positional mappings; argumentValues contains accepted locals/parameters and argumentProperties contains accepted property/constant identities and validated types. |
 | `InvocationBinding.Argument` record | Three- and four-argument constructors remain. Current five-component pattern includes `label`; positional and legacy construction has a null label. A legacy `named=true` is not proof that a label span was supplied |
@@ -7249,7 +7255,7 @@ full catalog/long-workload run for the L82 submission gate.
 - `966b19c89`: bounded watcher acknowledgements, late registration cleanup and disconnect retirement.
 - `239c39f72`: VS Code compiler path draft invalidation before settings writes.
 - `6601c7689`: Tree-sitter disk/overlay ownership, including initial scan and close/reopen.
-- L83 implementation: detached successful constant-initializer facts, additive embedding accessor,
+- `4cffd28ae`: detached successful constant-initializer facts, additive embedding accessor,
   Kotlin semantic copying and shared X142. See the AST ownership record in `errs.md`.
 
 Each slice includes regressions; execution is deliberately batched after L80/L81 implementation.
@@ -7260,7 +7266,7 @@ inventory, not a new passing acceptance receipt.
 
 - `5c088321a`: negotiated completion/action presentation and one-use legacy action commands, plus
   the explicit edit-application audit in `errs-audit.md`.
-- L81: client-supplied partial-result tokens now stream bounded batches for references, workspace
+- `94b1347bc`: client-supplied partial-result tokens now stream bounded batches for references, workspace
   symbols/diagnostics, document symbols, definition/declaration/type/implementation locations and
   type/call hierarchy relations. Responses contain only the remainder, so delivered items are not
   duplicated. No token keeps the existing full-result response. Batches come from one validated
@@ -7276,3 +7282,67 @@ inventory, not a new passing acceptance receipt.
   catalog to 148. Full combined backend/transport validation and selected native acceptance follow
   these implementation commits. Generic IntelliJ server-initiated edit version validation remains
   the documented upstream boundary; do not mark all of L80 complete from this batch alone.
+
+L83 compatibility correction: the accessor/constructor API is additive, but Java record
+patterns must add the eighth `initializerBindings` component. `EmbeddingApiCompatibilityTest`
+now checks every retained three- through seven-argument constructor and the current pattern.
+This uses the existing unreleased-record migration policy; it is not source-compatible for old
+record deconstruction. `InvocationBinding.Facts` likewise adds its initializer map while retaining
+its prior constructors. The first combined run caught this stale migration test and an ES2020
+fixture using `replaceAll`; both are corrected before rerunning.
+
+
+### Follow-up validation receipt (2026-09-30)
+
+The full compiler run passes 512 tests; 40 skips are the 36 explicitly disabled tests and four
+opt-in project-creator integration tests. None is skipped for missing compiled XDK modules.
+The full backend run executed 1,500 tests: 1,494 passed, three existing placeholders were disabled,
+and three new fixture assertions failed. Those assertions are corrected (a static initializer
+control, nullable preferred metadata, and the explicit watcher retry deadline). The focused rerun
+passes all 51 tests without skips. This is a full run followed by focused corrections, not a second
+full-suite receipt. All 74 packaged stdio tests and 74 IntelliJ unit tests pass without skips.
+The stdio suite includes actual partial-reference and workspace-diagnostic notifications with
+empty final responses, in addition to controlled publication/cancellation regressions.
+
+The retention workload completes 120 edit cycles / 960 requests, releasing all 2,470 tracked
+compiler objects. Rebuild latency on this local run is p50 220 ms / p95 235 ms including debounce.
+VS Code extension acceptance passes all 23 tests, including the three draft-ownership tests and
+40 error/recovery cycles (p50 609 ms / p95 617 ms). An earlier run timed out waiting for corrected
+consumer diagnostics; its trace contains an unexpected Consumer edit before the dependency test.
+The input's contents were not captured, so that failed run is not attributed to a particular cause.
+The successful rerun adds exact fixture-ownership assertions and diagnostic details on timeout.
+
+VS Code `run-4Vo2G3` (1.140.0) passes X124/X131/X134/X142/X143. Initial launch guards caught misplaced
+shared catalog entries and missing X142/X143 manual-table rows; both are corrected. The catalog
+contains 148 cases, hash `cbb3c633a3006b394cfffd86d3ec790783124b61562f128a8b97ab072deb47a8`.
+This is selected acceptance, not a new full-catalog receipt. IntelliJ acceptance follows below.
+Root and lang read-only formatting checks pass; TypeScript compiles. ESLint has zero errors and
+five pre-existing unused-fixture-argument warnings in unchanged playbook files.
+
+IntelliJ 2026.2.3 / LSP4IJ 0.21.0, with Ultimate disabled, passes START and X124/X131/X134/X143
+in `run-6087249141816329018`. X142 first failed an exact post-rename text assertion; the isolated
+rerun, with actual text added to failures, passed that assertion and exposed an incorrect `Undo`
+action ID. The driver now uses `$Undo`, waits for exact restoration and checks diagnostics. Final
+`run-1763480386953487411` passes START and X142 (4.4 seconds), with zero IDE failures. The first text
+mismatch was not reproduced and its actual buffer was not retained; it is not attributed to a
+compiler defect or external input. Preserve this caveat for the full L82 catalog run.
+Failure trace capture also reads available wrapper traces without waiting 45 seconds for a server
+that per-case cleanup has already stopped. No production edit semantics were changed for this fix.
+These selected/focused receipts establish all five selected cases, not a new full 148-case run.
+
+Remaining order: generic native applyEdit version ownership under L80; visible long-operation and
+cancellation acceptance under L81; then L82's full catalog and representative performance/lifecycle
+workload. Broader unimplemented LSP/runtime/editor-configuration tasks remain in their numbered lists.
+
+
+Follow-up correction commits for later extraction:
+
+| Commit | Keep with |
+| --- | --- |
+| `f9b7f81f7` | Concurrency slices `966b19c89` / `239c39f72` / `6601c7689`: removal retry ownership, equivalent file URI keys, and draft disposal order, with controlled regressions |
+| `e1b069075` | L83 `4cffd28ae`: retained-constructor/current-pattern compatibility tests, valid nonconstant control and exact initializer semantic token assertions |
+| `188445074` | Shared validation for L83/L80/L81: X142 native Undo and fixture checks, X142/X143 catalog ordering, nullable capability assertion and actual packaged partial-result messages |
+
+When extracting independent PRs, split the shared validation commit by its owning feature and retain
+both the scenario catalog and manual-table entries with each editor case. The integration receipts
+above validate this combined branch; each extracted PR still requires its own build and tests.

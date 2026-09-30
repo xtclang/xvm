@@ -427,3 +427,10 @@ Connection changes restart the service without saving buffers. Formatting and in
 live. **Ecstasy: Show Effective Language Service Configuration** shows configured values/origins,
 the running PID/adapter, negotiated features and compiler queue. Legacy formatting tab width and
 maximum line width are deprecated because they do not affect the implemented formatter.
+
+The follow-up catalog now contains 148 scenarios. New X142 verifies constant-initializer semantic
+navigation and rename/undo; X143 compares partial workspace-symbol batches with the ordinary
+response. X124/X131/X134/X142/X143 pass in both editors across selected runs and a focused
+IntelliJ X142 correction; this does not establish a full 148-case checkpoint. See the
+[follow-up receipt](../../docs/errs-integration-plan.md#follow-up-validation-receipt-2026-09-30) for
+run IDs, failed attempts and the remaining L80/L81 acceptance limits.
