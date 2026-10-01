@@ -3133,8 +3133,8 @@
       "values": {
         "file": "AutoImports.x",
         "completions": [
-          {"source": "module AutoImports { Doc§ument value; }", "label": "Document", "importText": "import xml.Document;"},
-          {"source": "module AutoImports { Wid§get value; }", "label": "Widget", "importText": "import importLibrary.Widget;"}
+          {"source": "module AutoImports { Doc§ument value; }", "label": "Document", "importText": "import xml.Document;", "expected": "module AutoImports {\npackage xml import xml.xtclang.org;\nimport xml.Document;\n Document value; }"},
+          {"source": "module AutoImports { Wid§get value; }", "label": "Widget", "importText": "import importLibrary.Widget;", "expected": "module AutoImports {\npackage importLibrary import ImportLibrary;\nimport importLibrary.Widget;\n Widget value; }"}
         ],
         "variants": [
           {
@@ -4503,6 +4503,21 @@
         "limitations": []
       }
     },
+    "X148": {
+      "title": "extract a literal return value with native undo and redo",
+      "manual": [],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    Int read() {\n        return 42;\n    }\n}",
+        "selected": "42",
+        "title": "Extract literal to local variable",
+        "expected": "module Extract {\n    Int read() {\n        val extractedValue = 42;\n        return extractedValue;\n    }\n}"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
@@ -4538,21 +4553,6 @@
             ]
           }
         ]
-      },
-      "intellij": {
-        "coverage": "full",
-        "limitations": []
-      }
-    },
-    "X148": {
-      "title": "extract a literal return value with native undo and redo",
-      "manual": [],
-      "values": {
-        "file": "Extract.x",
-        "source": "module Extract {\n    Int read() {\n        return 42;\n    }\n}",
-        "selected": "42",
-        "title": "Extract literal to local variable",
-        "expected": "module Extract {\n    Int read() {\n        val extractedValue = 42;\n        return extractedValue;\n    }\n}"
       },
       "intellij": {
         "coverage": "full",
