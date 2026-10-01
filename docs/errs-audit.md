@@ -1348,3 +1348,61 @@ Separately, six Undo failures in the initial preceding-case run disappear after 
 window focus before dispatch. The harness uses the host Focus Window command without moving the
 pointer, waits only when focus was absent, and never retries completed edits. X118–X129 then pass;
 X130's remaining failure is the independently reproduced host repaint defect.
+
+
+### L80 final capability contract audit (2026-10-01)
+
+This audit maps the current response producers to their advertised providers and client gates.
+It does not add optional protocol features merely to make the capability set larger. The compiler
+adapter remains opt-in; Tree-sitter remains the shipping default. No compiler, AST or embedding
+API change is needed for these wire-format corrections.
+
+Three missing response-field gates were fixed:
+
+- Document-link tooltips now require `textDocument.documentLink.tooltipSupport`, both eagerly
+  and after `documentLink/resolve`. Targets and bounded resolve handles retain their existing
+  behavior. See the [document-link contract](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#documentLinkClientCapabilities).
+- Per-signature active parameters now require
+  `textDocument.signatureHelp.signatureInformation.activeParameterSupport`. The legacy top-level
+  active parameter uses the selected overload's mapping, so named-argument highlighting survives
+  for clients without the newer field. String parameter labels remain valid without offset support;
+  the server does not produce the 3.18 explicit-null/no-active-parameter form. See the
+  [signature-help contract](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#signatureHelpClientCapabilities).
+- Pull reports now gate `Diagnostic.relatedInformation` independently of push diagnostic support
+  and `relatedDocumentSupport`. The choice covers document items, related-document items on full
+  and unchanged reports, and workspace items before partial-result batching. Suppression retains
+  the error message and its external source URI. See the
+  [pull-diagnostic contract](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.18/specification/#diagnosticClientCapabilities).
+
+The compiler-only `xtcRenameProposal` experimental advertisement is also absent from other
+adapters now. A stale source-comment matrix naming implemented features as missing was removed;
+client capability logging and the maintained feature matrix describe the current implementation.
+
+| Methods / producers | Capability contract and current limits | Regression evidence |
+|---|---|---|
+| Initialization and provider inventory | Each of the 25 adapter flags controls its corresponding provider. A featureless adapter exposes only synchronization and UTF-16. Compiler-only proposals, pull diagnostics and workspace file operations have separate gates. Unimplemented providers, including notebooks, remain absent. | `CapabilityContractTest` exercises every flag individually, no flags, and the real compiler inventory; `ProtocolLifecycleTest` covers lifecycle order. |
+| Document synchronization and workspace roots | Full text by default; incremental transport is an initialization option. Save hooks require client support. Explicit workspace folders, including empty folders, precede legacy URI/path roots. Positions remain UTF-16, which clients must support; no UTF-8/UTF-32 encoding is advertised. | `DocumentSynchronizationTest`, `ClientPresentationTest`, packaged `XdkStdioTest`, X137/X140. |
+| Push and pull diagnostics | Push versions and related information are independently gated. Pull mode, related documents and related information are independently negotiated; workspace report versions are part of that protocol. Messages are strings; no tags, code descriptions, markup messages or diagnostic data are emitted. | `DiagnosticPresentationTest`, `XdkPullDiagnosticsTest`, packaged pull/partial-report tests, X123. |
+| Hover and completion | Hover follows the first supported client markup preference, with plain-text fallback. Completion kinds fall back to the client's set or legacy kinds. Completion documentation is a string; insertion is plain text and ordinary `TextEdit`, without snippets, insert/replace edits, item defaults, tags or label details. Documentation-only resolve requires that property. | `ClientPresentationTest`, `CapabilityNegotiationTest`, `XdkResolveProtocolTest`, completion stdio cases, X131/X140. |
+| Signature help | Global active parameter remains available; per-signature mapping is gated. Parameter labels and documentation are strings. No offset labels or explicit-null parameter values are produced. | `CapabilityNegotiationTest`, `XdkCursorServerTest`, rich/minimal packaged stdio cases. |
+| Definitions, declarations, type definitions, implementations and references | Producers return ordinary locations, not location links. Link support does not need negotiation until a link producer is added. Partial results preserve the negotiated request's result shape. | `XdkLanguageServerTest`, `PartialResultsTest`, navigation stdio and shared navigation cases. |
+| Document/workspace symbols and type/call hierarchies | Document symbols flatten unless hierarchy support is present. Document/workspace kinds use their respective supported sets; no symbol tags or outline labels are emitted. Hierarchy items use their protocol's standard kinds and opaque detached identity. | `ClientPresentationTest`, `XdkFeatureResolveProtocolTest`, hierarchy stdio cases. |
+| Semantic tokens | Full relative UTF-16 tokens use the advertised legend. Range and delta require the corresponding request capabilities; refresh is separately gated. Producers use single-line tokens and remove lexical overlaps with semantic spans. No capability-dependent multiline representation is emitted. | `XdkSemanticTokenProtocolTest`, `XdkPresentationTest` overlap/recovery checks, packaged delta/range cases, X126. |
+| Selection, highlighting, folding and linked editing | Standard ranges/kinds only; no collapsed-text payload. Folding's range limit is advisory and currently ignored; line-only clients ignore character offsets as specified. Selection nesting and linked ranges have no optional wire variant in use. | Structural adapter/server tests and existing shared editor cases. |
+| Formatting and save edits | Ordinary text edits for whole-file, range/ranges, on-type and negotiated save hooks; no annotated or snippet edits. Multi-range support is explicitly advertised. | `DocumentSynchronizationTest`, formatting stdio cases, X132/X138/X139. |
+| Actions, commands and workspace edits | Literals and preferred metadata are independently gated; `context.only` includes descendants. Legacy actions require `workspace.applyEdit` and one-use handles. Versioned/resource renames require their edit capabilities; client failure-handling policy is not a server rollback promise. No disabled/action-tag/annotation producer exists. | `CapabilityNegotiationTest`, `XdkResolveProtocolTest`, file-operation protocol tests, X127/X128/X144. |
+| Links, lenses and hints | Link tooltip support is now enforced. Traditional link/lens resolve and newer property lists retain eager fallback. Inlay `MarkupContent` is part of the base inlay protocol, with no separate markup capability; tooltip deferral requires resolve support. Run commands are editor commands, not advertised server execute commands. | `CapabilityNegotiationTest`, `XdkFeatureResolveProtocolTest`, packaged link checks, X131. |
+| Watchers, configuration, progress and refresh | Watchers wait for `initialized` and dynamic-registration support; relative patterns are gated. Failed/late registration and removal retain correct retry/retirement ownership. Configuration and refresh requests require support. Work-done creation waits for readiness; partial results require request tokens. | `ResourceFileWatchersTest`, `ClientPresentationTest`, `ClientNotificationsTest`, `ConnectionProgressTest`, `PartialResultsTest`, X141/X143/X145. |
+| Native edit application | IntelliJ versioned text edits check all target ownership before one Undo command. Generic resource/snippet/confirmation edits remain explicitly refused; native Rename/Move owns its supported resources. | Existing `XtcRenameEdit`/client ownership regressions and X144; no new native handler in this batch. |
+
+The capability tests exercise absent, false and true flags, eager/resolved links, selected-overload
+legacy fallback, independent push/pull metadata and cached related-document reports. Real packaged
+sessions cover both rich and reduced presentation capabilities. The installed editor drivers cannot
+change their client's initialize capabilities midway through a session, so these reduced-client
+checks belong to protocol tests rather than a new shared UI scenario. X131's existing drivers check
+link targets, not an unconditional tooltip field.
+
+Validation receipt and extraction checkpoint are recorded in
+[the integration plan](errs-integration-plan.md#l80-final-capability-contract-audit-2026-10-01).
+The audit closes the current producer/capability review; future producers must extend this inventory.
+L81 manual acceptance, L82 release evidence and the independent upstream X130 failure remain open.
