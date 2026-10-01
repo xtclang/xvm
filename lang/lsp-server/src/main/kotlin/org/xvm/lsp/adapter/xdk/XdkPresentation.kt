@@ -23,6 +23,15 @@ internal object XdkPresentation {
         val signature =
             model.calls.firstOrNull { it.method == symbol?.id && position in it.callee }?.signature
                 ?: symbol?.signature
+        return hover(model, symbol, type, signature)
+    }
+
+    private fun hover(
+        model: SemanticModel,
+        symbol: SemanticModel.Symbol?,
+        type: String?,
+        signature: SemanticModel.Signature?,
+    ): String? {
         val label =
             when {
                 symbol != null && signature != null -> {
@@ -115,14 +124,8 @@ internal object XdkPresentation {
                         SemanticTokenLegend.modifierBitmask(*modifiers.toTypedArray()),
                     )
                 }.let { semantic ->
-                    semantic +
-                        lexical.filter { token ->
-                            semantic.none { name ->
-                                name[0] == token[0] &&
-                                    name[1] < token[1] + token[2] &&
-                                    token[1] < name[1] + name[2]
-                            }
-                        }
+                    val coverage = TokenCoverage(semantic)
+                    semantic + lexical.filterNot(coverage::overlaps)
                 }.sortedWith(compareBy({ it[0] }, { it[1] }))
         return SemanticTokens(
             tokens.flatMapIndexed { index, token ->
@@ -138,10 +141,17 @@ internal object XdkPresentation {
         model: SemanticModel,
         range: Range,
     ): List<InlayHint> {
+        val requested =
+            SemanticModel.Range(
+                SemanticModel.Position(range.start.line, range.start.column),
+                SemanticModel.Position(range.end.line, range.end.column),
+            )
         val types =
             model.occurrences
+                .asSequence()
                 .filter {
-                    model.status == SemanticModel.Status.COMPLETE && it.role == Role.DECLARATION
+                    model.status == SemanticModel.Status.COMPLETE &&
+                        it.role == Role.DECLARATION && it.range.end in requested
                 }.mapNotNull { occurrence ->
                     val symbol =
                         occurrence.symbol?.let(model::symbol)?.takeIf { it.inferred }
@@ -154,15 +164,17 @@ internal object XdkPresentation {
                         tooltip =
                             hover(
                                 model,
-                                occurrence.range.start.line,
-                                occurrence.range.start.column,
+                                symbol,
+                                occurrence.type?.let(model::type)?.displayName,
+                                symbol.signature,
                             ),
                     )
-                }
+                }.toList()
         val parameters =
             model.calls.flatMap { call ->
                 call.arguments
-                    .filterNot { it.named }
+                    .asSequence()
+                    .filter { !it.named && it.range.start in requested }
                     .mapNotNull { argument ->
                         val name =
                             call.signature.parameters
@@ -180,10 +192,10 @@ internal object XdkPresentation {
                                         symbol.documentation?.let { "\n\n$it" }.orEmpty()
                                 },
                         )
-                    }
+                    }.toList()
             }
         val returns =
-            model.lambdas.map { lambda ->
+            model.lambdas.filter { it.arrow.start in requested }.map { lambda ->
                 val types = lambda.signature.returns.mapNotNull { model.type(it)?.displayName }
                 val label =
                     when (types.size) {
@@ -198,15 +210,34 @@ internal object XdkPresentation {
                     paddingRight = true,
                 )
             }
-        val start = SemanticModel.Position(range.start.line, range.start.column)
-        val end = SemanticModel.Position(range.end.line, range.end.column)
         return (types + parameters + returns)
-            .filter {
-                SemanticModel.Position(it.position.line, it.position.column).let { at ->
-                    at >= start && at < end
-                }
-            }.distinct()
+            .distinct()
             .sortedWith(compareBy({ it.position.line }, { it.position.column }))
+    }
+
+    /** Prefix maxima handle nested/duplicate ranges, including a file written on one line. */
+    private class TokenCoverage(
+        tokens: List<List<Int>>,
+    ) {
+        private val ordered = tokens.sortedWith(compareBy({ it[0] }, { it[1] }))
+        private val ends =
+            ordered
+                .runningFold(SemanticModel.Position(0, 0)) { previous, token ->
+                    maxOf(previous, SemanticModel.Position(token[0], token[1] + token[2]))
+                }.drop(1)
+
+        fun overlaps(token: List<Int>): Boolean {
+            val end = SemanticModel.Position(token[0], token[1] + token[2])
+            var low = 0
+            var high = ordered.size
+            // First semantic start at or after the lexical end. Only the preceding prefix can overlap.
+            while (low < high) {
+                val middle = (low + high) ushr 1
+                val candidate = ordered[middle]
+                if (SemanticModel.Position(candidate[0], candidate[1]) < end) low = middle + 1 else high = middle
+            }
+            return low > 0 && ends[low - 1] > SemanticModel.Position(token[0], token[1])
+        }
     }
 
     private fun SemanticModel.Position.toPosition(): Position = Position(line, column)
