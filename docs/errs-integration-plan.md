@@ -8600,3 +8600,14 @@ spellings and proposal construction. `CursorBinding.enclosingExpressions` is an 
 separate from whole-call argument facts; existing constructors remain and record patterns add the
 new component. No mutable AST state is introduced. X152 gains two native ordinary-expression
 variants. Regression and editor execution are deferred to the combined closure-batch gate.
+
+
+### L64 closure batch: local declaration names
+
+Existing named local declarations now derive name suggestions from literal or construction
+initializer syntax for `val`/`var`. Missing inferred names before `=` retain their real initializer
+in `partial.IncompleteLocalDeclaration`, with final syntax children and independent cloning.
+The node cannot declare a register, infer a semantic type or emit code. The Kotlin naming policy
+uses written clues (text/number/flag or the constructor type); arbitrary calls and Null provide
+no useful clue. Bare assignments remain assignments, and ambiguous empty typed locals remain
+refused. X151 adds literal and constructor initializer cases; combined validation follows.
