@@ -2613,3 +2613,13 @@ module, with provenance. Tests compile it, request completion inside its anonymo
 complete an array dimension and inspect its real formatter signature. They need no sibling
 checkout, credentials or platform services. See the integration plan for validation and the
 explicit remaining L64 boundaries; this does not imply arbitrary damaged-source recovery.
+
+
+L64 closure adds `partial.IncompleteLocalDeclaration`: final cursor/initializer children retain an
+unnamed inferred local without a register, fabricated name or semantic type. Independent cloning
+re-adopts both children; validation and emission cannot complete the declaration. This belongs
+in `partial`, while literal/construction naming policy stays in Kotlin. The compiler's existing
+partial-query helpers own disposable enclosing-instance and lambda validation because those
+operations require package-level Context/inference access. `CursorBinding` adds immutable
+ordinary-expression and argument-template lists with previous constructors preserved; record
+patterns migrate. No new mutable fields are added to ordinary AST nodes.

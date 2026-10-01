@@ -1511,3 +1511,10 @@ context lifetime under try/finally. The new proposal-only token fixes empty-span
 all accepted argument spellings are checked by ordinary compilation. Shared X97/X108/X150/X151
 are extended and X152 is registered in both drivers. See the latest integration-plan receipt for
 completed validation and the explicit conservative boundaries; no full editor catalog run is implied.
+
+
+The L64 closure inventory covers all original completion/signature topics with explicit supported
+forms and refusal boundaries. New tests exercise immutable fact updates, ordinary enclosing values,
+missing inferred-local syntax/cloning, compiler-fitted lambda arities, real platform callbacks and
+minimal/rich-client snippets. X150/X151/X152 are extended in the common catalog and both drivers.
+Execution remains pending the combined gate; see errs-integration-plan.md for checkpoint hashes.
