@@ -17,6 +17,7 @@ import { renameCases } from './rename';
 import { renameFamilyCases } from './renameFamilies';
 import { editScenario, scenarioOffset, scenarioText, shared } from './shared';
 import { semanticCases } from './semantics';
+import { syntaxCompletionCases } from './syntaxCompletion';
 import { client, diagnosticCode, diagnostics, eventually, fixture, loadFixtures, nextProblem, noErrors, playbook } from './support';
 
 suite('XdkAdapter playbook', function () {
@@ -50,6 +51,7 @@ suite('XdkAdapter playbook', function () {
     progressCases();
     reliabilityCases();
     literalExtractionCases();
+    syntaxCompletionCases();
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {

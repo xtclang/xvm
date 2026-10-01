@@ -1591,6 +1591,14 @@ class CompilerPlaybook(
                 }
             }
         }
+        listOf("X149", "X150").forEach { id ->
+            scenario(id) {
+                discovered(id) { data ->
+                    val editor = open(data.text("file"))
+                    syntaxCompletions(data, editor) { editor.awaitDiagnostics(emptyList()) }
+                }
+            }
+        }
         scenario("X122") {
             discovered("X122") { data ->
                 memberActions(data, open(data.text("file"))) { editor, broken ->
