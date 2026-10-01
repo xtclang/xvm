@@ -1,9 +1,19 @@
-Current follow-up: four reliability checkpoints isolate X130 without Ecstasy, add shared
-X146/X147 for untouched-consumer refresh and late-report ownership, add an opt-in packaged platform
-workload with queue/heap sampling, and reconcile the remaining scopes. The catalog now has 152
-cases; validation follows the four commits. The 150-case receipts below do not validate the new
-cases. The VS Code status-report audit found a real late-reply overwrite, now guarded by request,
-settings and connection ownership. No compiler AST or embedding API changes are introduced.
+Current reliability follow-up: four separate checkpoints add the extension-free X130 probe,
+shared X146/X147 provider-refresh and late-report regressions, a packaged platform workload, and
+an evidence-based remaining-scope checklist. The 152-case catalog's new cases pass both editors:
+VS Code passes all eight selected cases; IntelliJ passes the same selection across its initial run
+and focused settings correction. Both report zero IDE/host errors in their final selected receipts.
+The native test exposed a service-settings ownership gap, now fixed along with the reply-to-EDT
+publication window. No compiler AST or embedding API changes were needed.
+
+All 74 packaged stdio and 80 IntelliJ unit tests pass. The platform workload passes thirty overlay
+cycles and cancellations across three self-terminating server processes, with unchanged sources;
+cold eleven-module diagnostics take about 4.9 seconds and edit-to-outline p95 is 352–366 ms here.
+These are local baselines, not release budgets or a prolonged soak. The extension-free X130 probe
+did not reproduce the intermittent failure, and X130 passes the selected attempt; the earlier
+failed full-catalog receipt is not erased or declared fixed. See the
+[current validation receipt](errs-integration-plan.md#reliability-validation-receipt-2026-10-01)
+for commit boundaries, measurements, failures and remaining acceptance.
 
 Previous batch: native server text-edit ownership (L80, `992b47f26`) and real editor progress,
 cancellation and pending-work restart acceptance (L81, `7a312dd9d`). X144 passes both clients;
