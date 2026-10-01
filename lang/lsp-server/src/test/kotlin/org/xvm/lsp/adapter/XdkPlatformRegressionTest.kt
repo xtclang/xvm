@@ -75,6 +75,20 @@ class XdkPlatformRegressionTest {
     }
 
     @Test
+    fun `real platform buffer callback accepts an expected type lambda template`() {
+        val fixture = javaClass.getResource("/platform/CircularBuffer.x")!!.readText()
+        val line = "    void inspect() { val buffer = new CircularBuffer<Int>(4); buffer.toString(render = ); }"
+        val source = fixture.replace("module PlatformBuffer {", "module PlatformBuffer {\n$line")
+        val row = source.lines().indexOf(line)
+        XdkAdapter().use { adapter ->
+            val cached = adapter.compile(URI, source)
+            val item = adapter.getCompletions(URI, row, line.indexOf("render = ") + 9).single { it.label == "(arg1) -> TODO()" }
+            assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
+            assertThat(adapter.compile(URI, source.replace("render = )", "render = ${item.insertText})")).diagnostics).isEmpty()
+        }
+    }
+
+    @Test
     fun `hover names the selected generic callee rather than its enclosing method`() {
         CompilerTestSupport.configure()
         val source = "module Demo { <T> T echo(T value) = value; String run() = echo(\"value\"); }"
