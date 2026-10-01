@@ -8246,3 +8246,14 @@ The drivers do not kill servers to make lifecycle assertions pass and do not mov
 
 Both drivers compile. Native validation, including the still-open VS Code visible Cancel-button
 receipt, follows this implementation checkpoint; these are not yet passing acceptance claims.
+
+### L82 memory-workload instrumentation (2026-10-01)
+
+The existing real-project workload adds opt-in `--sample-rss` (macOS/Linux `ps`, at most once per
+second) and `--gc-every N` (owned-server `jcmd GC.run` between edit cycles). It records post-GC heap
+checkpoints separately from request latency, sampled RSS/heap peaks, and periodic cycle progress.
+Post-GC heap includes intended live caches; `XdkRetentionTest` remains the object-reachability gate.
+The two-cycle `platform-workload/memory-smoke-authorized` control passes, records approximately
+85.2 MB used heap at both GC checkpoints and a 1.05 GB sampled RSS peak, preserves source hashes
+and observes normal child exit. The first sandboxed sampling attempt failed on `ps` access and is
+retained as a failed receipt. Longer workloads and combined validation follow this tooling commit.
