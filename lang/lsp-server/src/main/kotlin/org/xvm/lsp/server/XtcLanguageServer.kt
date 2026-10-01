@@ -95,7 +95,7 @@ import org.xvm.lsp.util.ExecutionTrace
  * - **MockAdapter**: Basic regex-based parsing, most features log "not implemented"
  * - **TreeSitterAdapter**: Syntax-aware features (hover, completion, definition, references,
  *   symbols, folding, highlights)
- * - **XdkAdapter**: (future) Full semantic features via XDK compiler
+ * - **XdkAdapter**: Compiler diagnostics and semantic features via the embedding API
  *
  * ## Backend Selection
  *
@@ -708,99 +708,41 @@ class XtcLanguageServer(
     }
 
     /**
-     * Log which LSP capabilities the client advertises.
-     *
-     * NOTE: The chained ?. calls look verbose but are necessary -- LSP4J is a Java library where
-     * all these capability fields are nullable. This is idiomatic for Java interop.
-     *
-     * ## LSP Capabilities Reference
-     *
-     * Each capability is annotated with:
-     * - What it does for the end user
-     * - What adapter level is needed to implement it properly:
-     *     - **mock**: regex-based, no parse tree needed
-     *     - **treesitter**: requires syntax tree (structural parsing)
-     *     - **compiler**: requires Ecstasy compiler integration (type resolution, semantic
-     *       analysis)
-     *
-     * ### Currently implemented (server advertises these):
-     * | Capability        | Description                                           | Adapter    |
-     * |-------------------|-------------------------------------------------------|------------|
-     * | hover             | Tooltip with type/doc info on mouse-over              | treesitter |
-     * | completion        | Code completion suggestions (., :, < triggers)        | treesitter |
-     * | definition        | Go-to-definition (jump to where a symbol is declared) | treesitter |
-     * | references        | Find all references to a symbol in the current file   | treesitter |
-     * | documentSymbol    | Outline view / breadcrumbs (classes, methods, fields) | treesitter |
-     * | formatting        | Whole-document code formatting                        | treesitter |
-     * | rangeFormatting   | Format a selected range of code                       | treesitter |
-     * | rename            | Rename a symbol across the file                       | treesitter |
-     * | codeAction        | Quick fixes and refactorings (lightbulb menu)         | treesitter |
-     * | documentHighlight | Highlight other occurrences of symbol under cursor    | treesitter |
-     * | selectionRange    | Smart expand/shrink selection based on syntax         | treesitter |
-     * | foldingRange      | Code folding regions (classes, methods, blocks)       | treesitter |
-     * | inlayHint         | Inline hints (parameter names, inferred types)        | compiler   |
-     *
-     * ### Not yet implemented:
-     * |Capability        |Description                                            |Adapter needed  |
-     * |------------------|-------------------------------------------------------|----------------|
-     * |signatureHelp     |Parameter hints while typing a method call             |treesitter      |
-     * |documentLink      |Clickable links in code (import paths, URLs)           |treesitter      |
-     * |declaration       |Go-to-declaration (vs definition, for interfaces)      |compiler        |
-     * |typeDefinition    |Jump to the type definition of a variable              |compiler (types)|
-     * |implementation    |Find implementations of an interface/abstract method   |compiler (types)|
-     * |codeLens          |Inline actionable info above functions (run, #refs)    |compiler        |
-     * |colorProvider     |Color swatches in editor for color literals            |mock            |
-     * |onTypeFormatting  |Auto-format as you type (e.g., indent after {)         |treesitter      |
-     * |typeHierarchy     |Show super/subtypes of a class (hierarchy tree)        |compiler (full) |
-     * |callHierarchy     |Show callers/callees of a function (call tree)         |compiler (full) |
-     * |semanticTokens    |Token-level semantic highlighting (types vs vars)      |treesitter      |
-     * |moniker           |Cross-project symbol identity for indexing             |compiler (full) |
-     * |linkedEditingRange|Edit matching tags/names simultaneously                |treesitter      |
-     * |inlineValue       |Show variable values inline during debugging           |compiler (full) |
-     * |diagnostic        |Pull-based diagnostics (vs push via publishDiagnostics)|compiler        |
-     * |workspaceSymbol   |Search symbols across all files in workspace           |compiler (sym)  |
+     * Log client feature declarations, independently of the selected adapter. Provider availability
+     * is defined by [AdapterCapability] and [buildServerCapabilities]; detailed implementation
+     * limits live in lang/doc/plans/plan-ide-integration.md.
      */
     private fun logClientCapabilities(params: InitializeParams) {
         val td = params.capabilities?.textDocument
         val supportedFeatures =
             listOfNotNull(
-                // Implemented (server advertises these)
-                td?.hover?.let { "hover" }, // treesitter: tooltip info
-                td?.completion?.let { "completion" }, // treesitter: code completions
-                td?.definition?.let { "definition" }, // treesitter: go-to-definition
-                td?.references?.let { "references" }, // treesitter: find references
-                td?.documentSymbol?.let { "documentSymbol" }, // treesitter: outline/breadcrumbs
-                td?.formatting?.let { "formatting" }, // treesitter: format document
-                td?.rename?.let { "rename" }, // treesitter: rename symbol
-                td?.codeAction?.let { "codeAction" }, // treesitter: quick fixes
-                td?.semanticTokens?.let {
-                    "semanticTokens"
-                }, // compiler(sym): semantic highlighting
-                td?.documentHighlight?.let {
-                    "documentHighlight"
-                }, // treesitter: highlight occurrences
-                td?.selectionRange?.let { "selectionRange" }, // treesitter: smart selection
-                td?.foldingRange?.let { "foldingRange" }, // treesitter: code folding
-                td?.signatureHelp?.let { "signatureHelp" }, // treesitter: parameter hints
-                td?.inlayHint?.let { "inlayHint" }, // compiler: inline hints
-                td?.documentLink?.let { "documentLink" }, // treesitter: clickable links
-                td?.onTypeFormatting?.let { "onTypeFormatting" }, // treesitter: auto-indent
-                // Not yet implemented (uncomment as we add support)
-                // td?.synchronization?.let { "synchronization" }, // built-in: doc sync events
-                // td?.rangeFormatting?.let { "rangeFormatting" }, // treesitter: format selection
-                // td?.declaration?.let { "declaration" }, // compiler: go-to-declaration
+                td?.hover?.let { "hover" },
+                td?.completion?.let { "completion" },
+                td?.definition?.let { "definition" },
+                td?.declaration?.let { "declaration" },
                 td?.typeDefinition?.let { "typeDefinition" },
                 td?.implementation?.let { "implementation" },
-                td?.codeLens?.let { "codeLens" }, // treesitter: run/compile actions on modules
-                // td?.colorProvider?.let { "colorProvider" }, // mock: color swatches
-                // td?.publishDiagnostics?.let { "publishDiagnostics" }, // compiler: error
-                // reporting
-                // td?.typeHierarchy?.let { "typeHierarchy" }, // compiler(full): type tree
-                // td?.callHierarchy?.let { "callHierarchy" }, // compiler(full): call tree
-                // td?.moniker?.let { "moniker" }, // compiler(full): cross-project IDs
-                td?.linkedEditingRange?.let { "linkedEditingRange" }, // treesitter: linked edits
-                // td?.inlineValue?.let { "inlineValue" }, // compiler(full): debug values
-                // td?.diagnostic?.let { "diagnostic" }, // compiler: pull diagnostics
+                td?.references?.let { "references" },
+                td?.documentSymbol?.let { "documentSymbol" },
+                td?.formatting?.let { "formatting" },
+                td?.rangeFormatting?.let { "rangeFormatting" },
+                td?.onTypeFormatting?.let { "onTypeFormatting" },
+                td?.rename?.let { "rename" },
+                td?.codeAction?.let { "codeAction" },
+                td?.semanticTokens?.let { "semanticTokens" },
+                td?.documentHighlight?.let { "documentHighlight" },
+                td?.selectionRange?.let { "selectionRange" },
+                td?.foldingRange?.let { "foldingRange" },
+                td?.signatureHelp?.let { "signatureHelp" },
+                td?.inlayHint?.let { "inlayHint" },
+                td?.documentLink?.let { "documentLink" },
+                td?.codeLens?.let { "codeLens" },
+                td?.typeHierarchy?.let { "typeHierarchy" },
+                td?.callHierarchy?.let { "callHierarchy" },
+                td?.linkedEditingRange?.let { "linkedEditingRange" },
+                td?.synchronization?.let { "synchronization" },
+                td?.publishDiagnostics?.let { "publishDiagnostics" },
+                td?.diagnostic?.let { "diagnostic" },
             )
         if (supportedFeatures.isNotEmpty()) {
             logger.info("initialize: client capabilities: {}", supportedFeatures.joinToString(", "))
@@ -810,14 +752,13 @@ class XtcLanguageServer(
     /**
      * Build the server capabilities that we advertise to the client.
      *
-     * Each capability here corresponds to an LSP method that the server handles. See
-     * [logClientCapabilities] for a full reference table of all LSP capabilities, what they do, and
-     * what adapter level is required.
+     * Each provider corresponds to a method handled by the selected adapter. Optional response
+     * fields are negotiated separately through [ClientPresentation] and the resolve options.
      */
     private fun buildServerCapabilities(): ServerCapabilities =
         ServerCapabilities().apply {
             positionEncoding = "utf-16"
-            experimental = mapOf("xtcRenameProposal" to 1)
+            if (adapter is XdkAdapter) experimental = mapOf("xtcRenameProposal" to 1)
             if (usesPullDiagnostics)
                 diagnosticProvider =
                     DiagnosticRegistrationOptions(true, true).apply {
@@ -1016,8 +957,7 @@ class XtcLanguageServer(
             if (AdapterCapability.LINKED_EDITING !in adapter.capabilities)
                 linkedEditingRangeProvider = null
 
-            // Compiler semantic navigation; go-to-declaration remains unavailable.
-            // declarationProvider = Either.forLeft(true) // compiler: go-to-declaration
+            // Compiler semantic navigation.
             if (AdapterCapability.TYPE_DEFINITION in adapter.capabilities)
                 typeDefinitionProvider = Either.forLeft(true)
             if (AdapterCapability.DECLARATION in adapter.capabilities)
