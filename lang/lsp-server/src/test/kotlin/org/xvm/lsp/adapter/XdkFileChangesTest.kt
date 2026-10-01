@@ -1,7 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.nio.file.Files
-import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -11,6 +9,8 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkFileChanges
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.XdkSources
+import java.nio.file.Files
+import java.nio.file.Path
 
 class XdkFileChangesTest {
     @TempDir lateinit var directory: Path
@@ -49,9 +49,7 @@ class XdkFileChangesTest {
 
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
-    fun `incomplete overlay owns no-op proofs while real closed source and resource changes retire them`(
-        resourceChange: Boolean
-    ) {
+    fun `incomplete overlay owns no-op proofs while real closed source and resource changes retire them`(resourceChange: Boolean) {
         CompilerTestSupport.configure()
         directory = directory.toRealPath()
         val root =
@@ -74,8 +72,11 @@ class XdkFileChangesTest {
                     .describedAs(it.path)
                     .isEmpty()
             }
-            if (resourceChange) resource.writeText("second")
-            else member.writeText("class Box { Int changed = 1; }")
+            if (resourceChange) {
+                resource.writeText("second")
+            } else {
+                member.writeText("class Box { Int changed = 1; }")
+            }
             assertThat(adapter.changedFileScopes(root.parentFile.toURI().toString())).contains(uri)
         }
     }
@@ -89,7 +90,7 @@ class XdkFileChangesTest {
         val consumer =
             directory.resolve("Consumer.x").toFile().apply {
                 writeText(
-                    "module Consumer { package lib import Library; lib.Box create() = new lib.Box(); }"
+                    "module Consumer { package lib import Library; lib.Box create() = new lib.Box(); }",
                 )
             }
         val modules =
@@ -113,9 +114,8 @@ class XdkFileChangesTest {
             assertThat(adapter.compile(consumer.toURI().toString(), consumer.readText()).success)
                 .isTrue()
             assertThat(
-                    adapter.changedFileScopes(directory.resolve("settings.json").toUri().toString())
-                )
-                .isEmpty()
+                adapter.changedFileScopes(directory.resolve("settings.json").toUri().toString()),
+            ).isEmpty()
             val members = Files.createDirectory(directory.resolve("Library"))
             Files.writeString(members.resolve("New.x"), "class New {}")
             assertThat(adapter.changedFileScopes(members.toUri().toString()))

@@ -1,7 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.util.concurrent.atomic.AtomicInteger
-import kotlin.time.measureTimedValue
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assumptions
@@ -12,6 +10,8 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.xvm.lsp.adapter.treesitter.TreeSitterAdapter
+import java.util.concurrent.atomic.AtomicInteger
+import kotlin.time.measureTimedValue
 
 /**
  * Unit tests for AST-aware document formatting (`textDocument/formatting`) in [TreeSitterAdapter].
@@ -121,7 +121,7 @@ class DocumentFormattingTest {
         val sorted =
             edits.sortedWith(
                 compareByDescending<TextEdit> { it.range.start.line }
-                    .thenByDescending { it.range.start.column }
+                    .thenByDescending { it.range.start.column },
             )
 
         for (edit in sorted) {
@@ -168,16 +168,14 @@ class DocumentFormattingTest {
                 module myapp {
                 class Foo {}
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val expected =
                 """
                 module myapp {
                     class Foo {}
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             assertFormatsTo(input, expected)
         }
@@ -192,8 +190,7 @@ class DocumentFormattingTest {
                 class Inner {}
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val expected =
                 """
@@ -202,8 +199,7 @@ class DocumentFormattingTest {
                         class Inner {}
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             assertFormatsTo(input, expected)
         }
@@ -220,8 +216,7 @@ class DocumentFormattingTest {
                 }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val expected =
                 """
@@ -232,8 +227,7 @@ class DocumentFormattingTest {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             assertFormatsTo(input, expected)
         }
@@ -260,8 +254,7 @@ class DocumentFormattingTest {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val expected =
                 """
@@ -274,8 +267,7 @@ class DocumentFormattingTest {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             assertFormatsTo(input, expected)
         }
@@ -298,8 +290,7 @@ class DocumentFormattingTest {
                 extends Bar {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val expected =
                 """
@@ -308,8 +299,7 @@ class DocumentFormattingTest {
                             extends Bar {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             assertFormatsTo(input, expected)
         }
@@ -336,8 +326,7 @@ class DocumentFormattingTest {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = formatWhole(input)
             val lines = result.trimEnd('\n').split("\n")
@@ -369,8 +358,7 @@ class DocumentFormattingTest {
                     class Foo {
                             }
                         }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val expected =
                 """
@@ -378,8 +366,7 @@ class DocumentFormattingTest {
                     class Foo {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             assertFormatsTo(input, expected)
         }
@@ -403,8 +390,7 @@ class DocumentFormattingTest {
                     */
                     class Foo {}
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = formatWhole(input)
             val lines = result.split("\n")
@@ -430,8 +416,7 @@ class DocumentFormattingTest {
                     */
                     class Foo {}
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = formatWhole(input)
             val lines = result.split("\n")
@@ -450,8 +435,7 @@ class DocumentFormattingTest {
                 // A comment
                     class Foo {}
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = formatWhole(input)
             val lines = result.split("\n")
@@ -483,8 +467,7 @@ class DocumentFormattingTest {
                 ${"\"\"\""}
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             // After formatting, the lines inside the multiline string should not change
             val result = formatWhole(input)
@@ -585,8 +568,7 @@ class DocumentFormattingTest {
                         }
                     }
                 }
-                """
-                    .trimIndent() + "\n"
+                """.trimIndent() + "\n"
 
             assertNoEdits(input)
         }
@@ -603,8 +585,7 @@ class DocumentFormattingTest {
                 }
                 }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val firstPass = formatWhole(input)
 
@@ -635,8 +616,7 @@ class DocumentFormattingTest {
                 }
                 }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             // Format only lines 2-4 (the method and its body)
             val result = formatRange(input, startLine = 2, endLine = 4)
@@ -671,8 +651,7 @@ class DocumentFormattingTest {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = formatWhole(input)
             val lines = result.split("\n")
@@ -704,8 +683,7 @@ class DocumentFormattingTest {
                         }
                 }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = formatWhole(input)
             val lines = result.split("\n")
@@ -738,8 +716,7 @@ class DocumentFormattingTest {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             // Parameters indent = countIndentDepth(parenAncestor) * 4 + 4
             // parenAncestor is inside class_body + module_body = depth 2 -> 2*4+4 = 12
@@ -754,8 +731,7 @@ class DocumentFormattingTest {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             assertFormatsTo(input, expected)
         }
@@ -775,8 +751,7 @@ class DocumentFormattingTest {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             // Arguments indent = countIndentDepth(parenAncestor) * 4 + 4
             // parenAncestor is inside block + class_body + module_body = depth 3 -> 3*4+4 = 16
@@ -792,8 +767,7 @@ class DocumentFormattingTest {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             assertFormatsTo(input, expected)
         }
@@ -809,8 +783,7 @@ class DocumentFormattingTest {
                         }
                     }
                 }
-                """
-                    .trimIndent() + "\n"
+                """.trimIndent() + "\n"
 
             assertNoEdits(input)
         }

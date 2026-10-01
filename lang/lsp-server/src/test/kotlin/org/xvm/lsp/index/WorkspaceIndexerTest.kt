@@ -1,10 +1,5 @@
 package org.xvm.lsp.index
 
-import java.nio.file.Files
-import java.nio.file.Path
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit.SECONDS
-import java.util.concurrent.atomic.AtomicBoolean
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assumptions
@@ -17,6 +12,11 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.model.SymbolInfo.SymbolKind
 import org.xvm.lsp.treesitter.XtcParser
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Integration tests for [WorkspaceIndexer].
@@ -46,7 +46,7 @@ class WorkspaceIndexerTest {
 
     @Test
     fun `an open buffer wins over an in flight disk read and survives disk deletion`(
-        @TempDir directory: Path
+        @TempDir directory: Path,
     ) {
         val path = directory.resolve("Owner.x")
         // Java File URIs use file:/ while LSP/Path URIs use file:///; ownership is identical.
@@ -56,33 +56,32 @@ class WorkspaceIndexerTest {
         val release = CompletableFuture<Void>()
         val index = WorkspaceIndex()
         WorkspaceIndexer(index, requireNotNull(parser).getLanguage()) { file ->
-                (if (Files.isRegularFile(file)) Files.readString(file) else null).also {
-                    read.complete(null)
-                    release.get(5, SECONDS)
-                }
+            (if (Files.isRegularFile(file)) Files.readString(file) else null).also {
+                read.complete(null)
+                release.get(5, SECONDS)
             }
-            .use { indexer ->
-                val scan = indexer.scanWorkspace(listOf(directory.toString()))
-                try {
-                    read.get(5, SECONDS)
-                    indexer.reindexFile(uri, "module Owner { class Buffer {} }")
-                } finally {
-                    release.complete(null)
-                }
-                scan.get(5, SECONDS)
-                assertThat(index.findByName("Disk")).isEmpty()
-                assertThat(index.findByName("Buffer")).hasSize(1)
-                Files.delete(path)
-                indexer.refreshFile(uri)
-                assertThat(index.findByName("Buffer")).hasSize(1)
-                indexer.closeDocument(uri)
-                assertThat(index.findByName("Buffer")).isEmpty()
+        }.use { indexer ->
+            val scan = indexer.scanWorkspace(listOf(directory.toString()))
+            try {
+                read.get(5, SECONDS)
+                indexer.reindexFile(uri, "module Owner { class Buffer {} }")
+            } finally {
+                release.complete(null)
             }
+            scan.get(5, SECONDS)
+            assertThat(index.findByName("Disk")).isEmpty()
+            assertThat(index.findByName("Buffer")).hasSize(1)
+            Files.delete(path)
+            indexer.refreshFile(uri)
+            assertThat(index.findByName("Buffer")).hasSize(1)
+            indexer.closeDocument(uri)
+            assertThat(index.findByName("Buffer")).isEmpty()
+        }
     }
 
     @Test
     fun `closing restores disk and reopening invalidates an older close read`(
-        @TempDir directory: Path
+        @TempDir directory: Path,
     ) {
         val path = directory.resolve("Owner.x")
         val uri = path.toUri().toString()
@@ -92,36 +91,35 @@ class WorkspaceIndexerTest {
         val release = CompletableFuture<Void>()
         val index = WorkspaceIndex()
         WorkspaceIndexer(index, requireNotNull(parser).getLanguage()) { file ->
-                Files.readString(file).also {
-                    if (block.get()) {
-                        read.complete(null)
-                        release.get(5, SECONDS)
-                    }
+            Files.readString(file).also {
+                if (block.get()) {
+                    read.complete(null)
+                    release.get(5, SECONDS)
                 }
             }
-            .use { indexer ->
-                indexer.reindexFile(uri, "module Owner { class FirstBuffer {} }")
-                indexer.closeDocument(uri)
-                assertThat(index.findByName("Disk")).hasSize(1)
-                assertThat(index.findByName("FirstBuffer")).isEmpty()
-                indexer.reindexFile(uri, "module Owner { class FirstBuffer {} }")
-                block.set(true)
-                val closing = CompletableFuture.runAsync { indexer.closeDocument(uri) }
-                try {
-                    read.get(5, SECONDS)
-                    indexer.reindexFile(uri, "module Owner { class Reopened {} }")
-                } finally {
-                    release.complete(null)
-                }
-                closing.get(5, SECONDS)
-                assertThat(index.findByName("Disk")).isEmpty()
-                assertThat(index.findByName("Reopened")).hasSize(1)
+        }.use { indexer ->
+            indexer.reindexFile(uri, "module Owner { class FirstBuffer {} }")
+            indexer.closeDocument(uri)
+            assertThat(index.findByName("Disk")).hasSize(1)
+            assertThat(index.findByName("FirstBuffer")).isEmpty()
+            indexer.reindexFile(uri, "module Owner { class FirstBuffer {} }")
+            block.set(true)
+            val closing = CompletableFuture.runAsync { indexer.closeDocument(uri) }
+            try {
+                read.get(5, SECONDS)
+                indexer.reindexFile(uri, "module Owner { class Reopened {} }")
+            } finally {
+                release.complete(null)
             }
+            closing.get(5, SECONDS)
+            assertThat(index.findByName("Disk")).isEmpty()
+            assertThat(index.findByName("Reopened")).hasSize(1)
+        }
     }
 
     @Test
     fun `buffers opened before the initial scan are indexed and closing observes disk deletion`(
-        @TempDir directory: Path
+        @TempDir directory: Path,
     ) {
         val path = directory.resolve("Owner.x")
         val uri = path.toUri().toString()
@@ -141,7 +139,7 @@ class WorkspaceIndexerTest {
 
     @Test
     fun `concurrent workspace scans do not starve their own bounded executor`(
-        @TempDir directory: Path
+        @TempDir directory: Path,
     ) {
         Files.writeString(directory.resolve("Concurrent.x"), "module Concurrent { class Value {} }")
         val index = WorkspaceIndex()
@@ -184,7 +182,9 @@ class WorkspaceIndexerTest {
     inner class ScanTests {
         @Test
         @DisplayName("should index all .x files in workspace")
-        fun shouldIndexXtcFiles(@TempDir tempDir: Path) {
+        fun shouldIndexXtcFiles(
+            @TempDir tempDir: Path,
+        ) {
             // Create test .x files
             Files.writeString(
                 tempDir.resolve("Foo.x"),
@@ -193,8 +193,7 @@ class WorkspaceIndexerTest {
                     class Foo {
                     }
                 }
-                """
-                    .trimIndent(),
+                """.trimIndent(),
             )
             Files.writeString(
                 tempDir.resolve("Bar.x"),
@@ -206,8 +205,7 @@ class WorkspaceIndexerTest {
                         }
                     }
                 }
-                """
-                    .trimIndent(),
+                """.trimIndent(),
             )
 
             // Create non-.x file that should be ignored
@@ -234,7 +232,9 @@ class WorkspaceIndexerTest {
          */
         @Test
         @DisplayName("should index typedefs and shorthand constructor properties")
-        fun shouldIndexTypedefsAndShorthandProperties(@TempDir tempDir: Path) {
+        fun shouldIndexTypedefsAndShorthandProperties(
+            @TempDir tempDir: Path,
+        ) {
             Files.writeString(
                 tempDir.resolve("json.x"),
                 """
@@ -242,8 +242,7 @@ class WorkspaceIndexerTest {
                     typedef Doc as JsonArray;
                     const Point(Int x, Int y);
                 }
-                """
-                    .trimIndent(),
+                """.trimIndent(),
             )
 
             val index = WorkspaceIndex()
@@ -262,7 +261,9 @@ class WorkspaceIndexerTest {
 
         @Test
         @DisplayName("should index nested directories")
-        fun shouldIndexNestedDirs(@TempDir tempDir: Path) {
+        fun shouldIndexNestedDirs(
+            @TempDir tempDir: Path,
+        ) {
             val subDir = tempDir.resolve("src/main")
             Files.createDirectories(subDir)
             Files.writeString(
@@ -272,8 +273,7 @@ class WorkspaceIndexerTest {
                     class Nested {
                     }
                 }
-                """
-                    .trimIndent(),
+                """.trimIndent(),
             )
 
             val index = WorkspaceIndex()
@@ -288,7 +288,9 @@ class WorkspaceIndexerTest {
 
         @Test
         @DisplayName("should handle empty workspace")
-        fun shouldHandleEmptyWorkspace(@TempDir tempDir: Path) {
+        fun shouldHandleEmptyWorkspace(
+            @TempDir tempDir: Path,
+        ) {
             val index = WorkspaceIndex()
             val indexer = WorkspaceIndexer(index, parser!!.getLanguage())
 
@@ -323,8 +325,7 @@ class WorkspaceIndexerTest {
                     class OldName {
                     }
                 }
-                """
-                    .trimIndent(),
+                """.trimIndent(),
             )
             assertThat(index.findByName("OldName")).isNotEmpty
 
@@ -336,8 +337,7 @@ class WorkspaceIndexerTest {
                     class NewName {
                     }
                 }
-                """
-                    .trimIndent(),
+                """.trimIndent(),
             )
             assertThat(index.findByName("OldName")).isEmpty()
             assertThat(index.findByName("NewName")).isNotEmpty
@@ -359,8 +359,7 @@ class WorkspaceIndexerTest {
                     class ToBeDeleted {
                     }
                 }
-                """
-                    .trimIndent(),
+                """.trimIndent(),
             )
             assertThat(index.findByName("ToBeDeleted")).isNotEmpty
 
@@ -398,8 +397,7 @@ class WorkspaceIndexerTest {
                     interface Runnable {
                     }
                 }
-                """
-                    .trimIndent(),
+                """.trimIndent(),
             )
 
             assertThat(index.findByName("myapp")).isNotEmpty

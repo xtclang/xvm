@@ -1,10 +1,10 @@
 package org.xvm.lsp.adapter
 
-import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import java.nio.file.Path
 
 class XdkParameterRenameTest {
     @TempDir lateinit var directory: Path
@@ -18,8 +18,7 @@ class XdkParameterRenameTest {
             "module Consumer { package lib import Library; Int run(lib.Box box) = box.pick(count = 2, input = 1); }"
         val other =
             "module Other { package lib import Library; String run(lib.Box box) = box.pick(input = \"text\"); }"
-        workspace(mapOf("Library" to library, "Consumer" to consumer, "Other" to other)) { adapter
-            ->
+        workspace(mapOf("Library" to library, "Consumer" to consumer, "Other" to other)) { adapter ->
             assertThat(adapter.compile(uri("Library"), library).diagnostics).isEmpty()
             val edit =
                 requireNotNull(adapter.rename(uri("Library"), 0, library.indexOf("input"), "value"))
@@ -42,7 +41,7 @@ class XdkParameterRenameTest {
             assertThat(adapter.compile(uri("Consumer"), consumer).diagnostics).isEmpty()
             val edit =
                 requireNotNull(
-                    adapter.rename(uri("Consumer"), 0, consumer.indexOf("argument"), "value")
+                    adapter.rename(uri("Consumer"), 0, consumer.indexOf("argument"), "value"),
                 )
             assertThat(apply(library, edit, "Library")).contains("T map(T value)")
             assertThat(apply(consumer, edit, "Consumer"))
@@ -139,7 +138,7 @@ class XdkParameterRenameTest {
             assertThat(adapter.compile(uri("Library"), library).diagnostics).isEmpty()
             val edit =
                 requireNotNull(
-                    adapter.rename(uri("Library"), 0, library.indexOf("input"), "number")
+                    adapter.rename(uri("Library"), 0, library.indexOf("input"), "number"),
                 )
             assertThat(apply(library, edit, "Library"))
                 .isEqualTo(library.replace("input", "number"))
@@ -179,5 +178,10 @@ class XdkParameterRenameTest {
             }
 
     private fun uri(module: String): String =
-        directory.resolve("$module.x").toFile().canonicalFile.toURI().toString()
+        directory
+            .resolve("$module.x")
+            .toFile()
+            .canonicalFile
+            .toURI()
+            .toString()
 }

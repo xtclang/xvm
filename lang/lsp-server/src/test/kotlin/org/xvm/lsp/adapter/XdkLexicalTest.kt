@@ -10,9 +10,7 @@ class XdkLexicalTest {
     @ParameterizedTest
     @ValueSource(strings = ["\n", "\r\n", "\r"])
     @Timeout(10)
-    fun `large lexical projections preserve UTF-16 spans without rescanning per token`(
-        newline: String
-    ) {
+    fun `large lexical projections preserve UTF-16 spans without rescanning per token`(newline: String) {
         val lines = (0 until 2000).map { "String text$it = \"😀\"; // line $it" }
         val source = lines.joinToString(newline, postfix = newline)
         assertThat(XdkLexical.mayUseResources(source)).isFalse()

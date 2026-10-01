@@ -18,16 +18,24 @@ import org.xtclang.idea.lsp.XtcFileRenameHandler
 /** Invoke the registered file-tree Rename handler, including its real dialog and preflight. */
 object FileTreeOperations {
     @JvmStatic
-    fun globalHistoryAvailable(project: Project, redo: Boolean): Boolean =
+    fun globalHistoryAvailable(
+        project: Project,
+        redo: Boolean,
+    ): Boolean =
         UndoManager.getInstance(project).let {
             if (redo) it.isRedoAvailable(null) else it.isUndoAvailable(null)
         }
 
     @JvmStatic
-    fun move(project: Project, paths: List<String>, destination: String) {
-        val files = paths.map {
-            requireNotNull(LocalFileSystem.getInstance().refreshAndFindFileByPath(it))
-        }
+    fun move(
+        project: Project,
+        paths: List<String>,
+        destination: String,
+    ) {
+        val files =
+            paths.map {
+                requireNotNull(LocalFileSystem.getInstance().refreshAndFindFileByPath(it))
+            }
         val target =
             requireNotNull(LocalFileSystem.getInstance().refreshAndFindFileByPath(destination))
         ReadAction.runBlocking<RuntimeException> {
@@ -36,13 +44,13 @@ object FileTreeOperations {
                 files
                     .map {
                         requireNotNull(
-                            if (it.isDirectory) manager.findDirectory(it) else manager.findFile(it)
+                            if (it.isDirectory) manager.findDirectory(it) else manager.findFile(it),
                         )
-                    }
-                    .toTypedArray()
+                    }.toTypedArray()
             val directory = requireNotNull(manager.findDirectory(target))
             val context =
-                SimpleDataContext.builder()
+                SimpleDataContext
+                    .builder()
                     .add(CommonDataKeys.PROJECT, project)
                     .add(CommonDataKeys.VIRTUAL_FILE_ARRAY, files.toTypedArray())
                     .build()
@@ -72,16 +80,23 @@ object FileTreeOperations {
     }
 
     @JvmStatic
-    fun rename(project: Project, path: String) {
+    fun rename(
+        project: Project,
+        path: String,
+    ) {
         val file = requireNotNull(LocalFileSystem.getInstance().refreshAndFindFileByPath(path))
         ReadAction.runBlocking<RuntimeException> {
             val psi =
                 requireNotNull(
-                    if (file.isDirectory) PsiManager.getInstance(project).findDirectory(file)
-                    else PsiManager.getInstance(project).findFile(file)
+                    if (file.isDirectory) {
+                        PsiManager.getInstance(project).findDirectory(file)
+                    } else {
+                        PsiManager.getInstance(project).findFile(file)
+                    },
                 )
             val context =
-                SimpleDataContext.builder()
+                SimpleDataContext
+                    .builder()
                     .add(CommonDataKeys.PROJECT, project)
                     .add(CommonDataKeys.VIRTUAL_FILE, file)
                     .add(CommonDataKeys.VIRTUAL_FILE_ARRAY, arrayOf(file))

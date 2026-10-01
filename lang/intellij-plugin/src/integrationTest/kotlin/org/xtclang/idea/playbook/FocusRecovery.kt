@@ -19,15 +19,13 @@ fun Driver.focusRecovery(
                 void pair(Int number, String text) {}
                 void inspect() { pair(1, "x"); }
             }
-            """
-                .trimIndent() + "\n",
+            """.trimIndent() + "\n",
         )
         val document = workspace.open("Focus.x")
         val editor = document.editor
         val at = document.at("word.si") + "word.si".length
 
-        fun completion() =
-            lookup(editor, at) { items -> items.any { it.getLookupString() == "size" } }
+        fun completion() = lookup(editor, at) { items -> items.any { it.getLookupString() == "size" } }
         val inspection = PopupInspection(this, editor, ::completion)
         completion()
         interruptFocus(editor) { inspection.recover() }
@@ -39,7 +37,7 @@ fun Driver.focusRecovery(
             val failure = runCatching { inspection.recover() }.exceptionOrNull()
             check(
                 failure is IllegalStateException &&
-                    failure.message.orEmpty().startsWith("Source changed")
+                    failure.message.orEmpty().startsWith("Source changed"),
             ) {
                 "A completed insertion was allowed into the replay path: $failure"
             }
@@ -54,6 +52,7 @@ fun Driver.focusRecovery(
             )
         workspace.errors(document)
         val argumentAt = editor.text.indexOf("pair(1, te)") + "pair(1, te".length
+
         fun argumentCompletion() =
             lookup(editor, argumentAt) { items ->
                 items.map { it.getLookupString() } == listOf("text")
@@ -89,7 +88,7 @@ fun Driver.focusRecovery(
             val failure = runCatching { renameInspection.recover() }.exceptionOrNull()
             check(
                 failure is IllegalStateException &&
-                    failure.message.orEmpty().startsWith("Source changed")
+                    failure.message.orEmpty().startsWith("Source changed"),
             ) {
                 "A completed rename was allowed into the replay path: $failure"
             }
@@ -113,7 +112,7 @@ private fun Driver.interruptFocus(
         }
         action()
         check(
-            withContext(OnDispatcher.EDT) { utility(NativeEditorUi::class).hasFocus(nativeEditor) }
+            withContext(OnDispatcher.EDT) { utility(NativeEditorUi::class).hasFocus(nativeEditor) },
         )
     } finally {
         withContext(OnDispatcher.EDT) { other.dispose() }

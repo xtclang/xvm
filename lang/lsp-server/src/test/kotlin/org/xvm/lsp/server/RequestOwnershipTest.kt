@@ -1,8 +1,5 @@
 package org.xvm.lsp.server
 
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit.SECONDS
-import java.util.concurrent.atomic.AtomicInteger
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.HoverParams
@@ -13,6 +10,9 @@ import org.junit.jupiter.api.Test
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.model.CompilationResult
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.atomic.AtomicInteger
 
 class RequestOwnershipTest {
     @Test
@@ -21,9 +21,16 @@ class RequestOwnershipTest {
         val queries = AtomicInteger()
         val adapter =
             object : Adapter by MockAdapter() {
-                override fun compileAsync(uri: String, content: String) = analysis
+                override fun compileAsync(
+                    uri: String,
+                    content: String,
+                ) = analysis
 
-                override fun getHoverInfo(uri: String, line: Int, column: Int): String {
+                override fun getHoverInfo(
+                    uri: String,
+                    line: Int,
+                    column: Int,
+                ): String {
                     queries.incrementAndGet()
                     return "Int"
                 }
@@ -31,7 +38,7 @@ class RequestOwnershipTest {
         XtcLanguageServer(adapter).use { server ->
             val uri = "file:///Owned.x"
             server.textDocumentService.didOpen(
-                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, "module Owned {}"))
+                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, "module Owned {}")),
             )
             val params = HoverParams(TextDocumentIdentifier(uri), Position(0, 0))
             val canceled = server.textDocumentService.hover(params)
@@ -39,7 +46,11 @@ class RequestOwnershipTest {
             canceled.cancel(false)
             assertThat(analysis.isDone).isFalse()
             analysis.complete(MockAdapter().compile(uri, "module Owned {}"))
-            assertThat(surviving.get(5, SECONDS).contents.right.value).isEqualTo("Int")
+            assertThat(
+                surviving
+                    .get(5, SECONDS)
+                    .contents.right.value,
+            ).isEqualTo("Int")
             assertThat(queries.get()).isEqualTo(1)
             assertThat(canceled.isCancelled).isTrue()
         }
@@ -53,16 +64,19 @@ class RequestOwnershipTest {
             }
         val adapter =
             object : Adapter by MockAdapter() {
-                override fun compileAsync(uri: String, content: String) = analysis
+                override fun compileAsync(
+                    uri: String,
+                    content: String,
+                ) = analysis
             }
         XtcLanguageServer(adapter).use { server ->
             val uri = "file:///Owned.x"
             server.textDocumentService.didOpen(
-                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, "module Owned {}"))
+                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, "module Owned {}")),
             )
             val reader =
                 server.textDocumentService.hover(
-                    HoverParams(TextDocumentIdentifier(uri), Position(0, 0))
+                    HoverParams(TextDocumentIdentifier(uri), Position(0, 0)),
                 )
             server.close()
             assertThat(reader.isCompletedExceptionally).isTrue()

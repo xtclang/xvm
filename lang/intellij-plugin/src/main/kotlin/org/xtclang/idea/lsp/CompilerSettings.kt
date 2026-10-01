@@ -10,7 +10,10 @@ import com.redhat.devtools.lsp4ij.settings.ProjectLanguageServerSettings
 internal object CompilerSettings {
     const val SERVER_ID = "xtcLanguageServer"
 
-    fun store(project: Project, serverId: String = SERVER_ID): LanguageServerSettings =
+    fun store(
+        project: Project,
+        serverId: String = SERVER_ID,
+    ): LanguageServerSettings =
         ProjectLanguageServerSettings.getInstance(project).takeIf {
             ownsGraph(it.getLanguageServerSettings(serverId)?.configurationContent)
         } ?: GlobalLanguageServerSettings.getInstance()
@@ -19,14 +22,12 @@ internal object CompilerSettings {
     internal fun ownsGraph(content: String?): Boolean =
         content != null &&
             !runCatching {
-                    val settings = JsonParser.parseString(content).asJsonObject
-                    val xtc = settings.getAsJsonObject("xtc")
-                    settings.keySet() == setOf("xtc") &&
-                        xtc != null &&
-                        xtc.keySet().all { it == "languageService" }
-                }
-                .getOrDefault(false)
+                val settings = JsonParser.parseString(content).asJsonObject
+                val xtc = settings.getAsJsonObject("xtc")
+                settings.keySet() == setOf("xtc") &&
+                    xtc != null &&
+                    xtc.keySet().all { it == "languageService" }
+            }.getOrDefault(false)
 
-    fun content(project: Project): String? =
-        store(project).getLanguageServerSettings(SERVER_ID)?.configurationContent
+    fun content(project: Project): String? = store(project).getLanguageServerSettings(SERVER_ID)?.configurationContent
 }

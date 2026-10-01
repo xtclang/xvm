@@ -10,7 +10,9 @@ import org.xvm.lsp.model.SymbolInfo.SymbolKind
 /**
  * Static selected calls in one successful module snapshot. No runtime dispatch or name matching.
  */
-internal class XdkCalls(views: Map<String, SemanticModel>) {
+internal class XdkCalls(
+    views: Map<String, SemanticModel>,
+) {
     private val views = views.filterValues { it.status == SemanticModel.Status.COMPLETE }
     private val model = this.views.values.firstOrNull()
     private val callables = model?.callables.orEmpty()
@@ -33,8 +35,7 @@ internal class XdkCalls(views: Map<String, SemanticModel>) {
             callables.values
                 .filter {
                     it.location.sourceName == view.sourceName && position in it.location.range
-                }
-                .maxByOrNull { it.location.range.start }
+                }.maxByOrNull { it.location.range.start }
         return listOfNotNull(enclosing?.let { item(it.symbol) })
     }
 
@@ -83,6 +84,5 @@ internal class XdkCalls(views: Map<String, SemanticModel>) {
 
     private fun token(id: SemanticModel.SymbolId): String = "${id.snapshot}:${id.index}"
 
-    private fun SemanticModel.Range.toRange(): Range =
-        Range(Position(start.line, start.column), Position(end.line, end.column))
+    private fun SemanticModel.Range.toRange(): Range = Range(Position(start.line, start.column), Position(end.line, end.column))
 }

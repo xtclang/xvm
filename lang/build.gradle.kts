@@ -2,7 +2,7 @@ import com.diffplug.gradle.spotless.SpotlessCheck
 import com.diffplug.gradle.spotless.SpotlessExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-/**
+/*
  * Root project for XTC language tooling.
  *
  * Subprojects:
@@ -22,12 +22,20 @@ plugins {
 // =============================================================================
 // Kotlin formatting
 // =============================================================================
-// Spotless runs ktlint with its default rules, as the ktlint Gradle plugin did. Each Kotlin
-// subproject checks its own sources, tests and build script; generated and synced build outputs
-// stay excluded. The lang root, tree-sitter and vscode-extension scripts were never under ktlint
-// and would need a one-off reformat to join.
-val ktlintVersion = libs.versions.lang.ktlint.get()
+// Build scripts are owned by the lang root; each Kotlin subproject owns its sources,
+// including tests and integration tests. Generated and synced build outputs stay excluded.
+// Match master's Spotless integration; do not restore the separate ktlint Gradle plugin.
+val ktlintVersion =
+    libs.versions.lang.ktlint
+        .get()
 val ci = providers.environmentVariable("CI").isPresent
+
+spotless {
+    kotlinGradle {
+        target("*.gradle.kts", "*/build.gradle.kts")
+        ktlint(ktlintVersion)
+    }
+}
 
 allprojects {
     pluginManager.withPlugin("com.diffplug.spotless") {
@@ -44,9 +52,6 @@ subprojects {
         configure<SpotlessExtension> {
             kotlin {
                 target("src/**/*.kt", "src/**/*.kts")
-                ktlint(ktlintVersion)
-            }
-            kotlinGradle {
                 ktlint(ktlintVersion)
             }
         }
@@ -111,9 +116,17 @@ val updateGeneratedExamples = tasks.register<Copy>("updateGeneratedExamples") {
 // Turn one on with -PincludeBuildAttachIntellijPlugin=true or -PincludeBuildAttachVsCodeExtension=true,
 // or build it directly: ./gradlew :lang:intellij-plugin:buildPlugin
 val attachIntellijPlugin =
-    providers.gradleProperty("includeBuildAttachIntellijPlugin").orElse("false").get().toBoolean()
+    providers
+        .gradleProperty("includeBuildAttachIntellijPlugin")
+        .orElse("false")
+        .get()
+        .toBoolean()
 val attachVsCodeExtension =
-    providers.gradleProperty("includeBuildAttachVsCodeExtension").orElse("false").get().toBoolean()
+    providers
+        .gradleProperty("includeBuildAttachVsCodeExtension")
+        .orElse("false")
+        .get()
+        .toBoolean()
 
 // Projects to aggregate standard lifecycle tasks from
 val coreProjects =

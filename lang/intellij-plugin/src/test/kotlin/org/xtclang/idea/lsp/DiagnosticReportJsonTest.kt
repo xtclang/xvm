@@ -45,24 +45,24 @@ class DiagnosticReportJsonTest {
         val report = read(json, unchanged)
         assertThat(report.relatedUnchangedDocumentDiagnosticReport.relatedDocuments).hasSize(2)
         assertThatThrownBy {
-                read(
-                    json,
-                    wire.replace("\"kind\":\"unchanged\"", "\"kind\":\"unknown\""),
-                )
-            }
-            .isInstanceOf(JsonParseException::class.java)
+            read(
+                json,
+                wire.replace("\"kind\":\"unchanged\"", "\"kind\":\"unknown\""),
+            )
+        }.isInstanceOf(JsonParseException::class.java)
     }
 
     private fun handler(compatible: Boolean) =
         MessageJsonHandler(ServiceEndpoints.getSupportedMethods(TextDocumentService::class.java)) {
-                JSONUtils.configureCompatibilityAdapters(it)
-                if (compatible) it.registerTypeAdapterFactory(DiagnosticReportJson)
-            }
-            .apply { setMethodProvider { "textDocument/diagnostic" } }
+            JSONUtils.configureCompatibilityAdapters(it)
+            if (compatible) it.registerTypeAdapterFactory(DiagnosticReportJson)
+        }.apply { setMethodProvider { "textDocument/diagnostic" } }
 
-    private fun read(handler: MessageJsonHandler, body: String) =
-        (handler.parseMessage("""{"jsonrpc":"2.0","id":"1","result":$body}""") as ResponseMessage)
-            .result as DocumentDiagnosticReport
+    private fun read(
+        handler: MessageJsonHandler,
+        body: String,
+    ) = (handler.parseMessage("""{"jsonrpc":"2.0","id":"1","result":$body}""") as ResponseMessage)
+        .result as DocumentDiagnosticReport
 
     private val json = handler(true)
 
@@ -75,6 +75,5 @@ class DiagnosticReportJsonTest {
           }]},
           "file:///Other.x":{"kind":"unchanged","resultId":"other-1"}
         }}
-        """
-            .trimIndent()
+        """.trimIndent()
 }

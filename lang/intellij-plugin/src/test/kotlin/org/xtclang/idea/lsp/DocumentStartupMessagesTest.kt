@@ -1,6 +1,5 @@
 package org.xtclang.idea.lsp
 
-import java.net.URI
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
@@ -20,6 +19,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.RequestMessage
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 import org.junit.jupiter.api.Test
+import java.net.URI
 
 class DocumentStartupMessagesTest {
     private val uri = "file:///Startup.x"
@@ -27,9 +27,10 @@ class DocumentStartupMessagesTest {
         mutableMapOf(uri to DocumentStartupMessages.Snapshot(Any(), 1, "module Startup {}"))
     private val sent = mutableListOf<Message>()
     private val received = mutableListOf<Message>()
-    private val guard = DocumentStartupMessages { requested ->
-        buffers.entries.singleOrNull { URI(it.key) == URI(requested) }?.value
-    }
+    private val guard =
+        DocumentStartupMessages { requested ->
+            buffers.entries.singleOrNull { URI(it.key) == URI(requested) }?.value
+        }
     private val outgoing = guard.outgoing(MessageConsumer { sent.add(it) })
     private val incoming = guard.incoming(MessageConsumer { received.add(it) })
 
@@ -58,7 +59,7 @@ class DocumentStartupMessagesTest {
             notification(
                 "textDocument/didClose",
                 DidCloseTextDocumentParams(TextDocumentIdentifier(uri)),
-            )
+            ),
         )
         assertThat(guard.editSnapshot(uri, 4)).isNull()
         buffers[uri] = DocumentStartupMessages.Snapshot(Any(), 1, "module Reopened {}")
@@ -93,7 +94,7 @@ class DocumentStartupMessagesTest {
                         },
                     ),
                 ),
-            )
+            ),
         )
         assertThat(guard.editSnapshot("file:/Startup.x", 7)).isEqualTo(buffers[uri])
         assertThat(guard.editSnapshot(uri, 7)).isEqualTo(buffers[uri])
@@ -127,11 +128,10 @@ class DocumentStartupMessagesTest {
     fun `edits before listener attachment replace the old initial snapshot`() {
         open("old text captured before server initialized")
         assertThat(
-                ((sent.single() as NotificationMessage).params as DidOpenTextDocumentParams)
-                    .textDocument
-                    .text
-            )
-            .isEqualTo(buffers.getValue(uri).text)
+            ((sent.single() as NotificationMessage).params as DidOpenTextDocumentParams)
+                .textDocument
+                .text,
+        ).isEqualTo(buffers.getValue(uri).text)
     }
 
     @Test
@@ -142,7 +142,7 @@ class DocumentStartupMessagesTest {
             notification(
                 "textDocument/didClose",
                 DidCloseTextDocumentParams(TextDocumentIdentifier(uri)),
-            )
+            ),
         )
         open("late initial text")
         assertThat(sent).isEmpty()
@@ -157,7 +157,7 @@ class DocumentStartupMessagesTest {
             notification(
                 "textDocument/didClose",
                 DidCloseTextDocumentParams(TextDocumentIdentifier(uri)),
-            )
+            ),
         )
         assertThat(sent.map { (it as NotificationMessage).method })
             .containsExactly(
@@ -166,11 +166,10 @@ class DocumentStartupMessagesTest {
                 "textDocument/didOpen",
             )
         assertThat(
-                ((sent.last() as NotificationMessage).params as DidOpenTextDocumentParams)
-                    .textDocument
-                    .text
-            )
-            .isEqualTo("module Reopened {}")
+            ((sent.last() as NotificationMessage).params as DidOpenTextDocumentParams)
+                .textDocument
+                .text,
+        ).isEqualTo("module Reopened {}")
     }
 
     @Test
@@ -183,7 +182,7 @@ class DocumentStartupMessagesTest {
             notification(
                 "textDocument/didClose",
                 DidCloseTextDocumentParams(TextDocumentIdentifier(uri)),
-            )
+            ),
         )
         open("reopened snapshot before edit")
         val params = (sent.last() as NotificationMessage).params as DidOpenTextDocumentParams
@@ -232,7 +231,7 @@ class DocumentStartupMessagesTest {
                 id = "fold"
                 method = "textDocument/foldingRange"
                 params = FoldingRangeRequestParams(TextDocumentIdentifier(uri))
-            }
+            },
         )
 
     private fun respondFolds(): ResponseMessage =
@@ -240,37 +239,34 @@ class DocumentStartupMessagesTest {
             .apply {
                 id = "fold"
                 result = listOf(FoldingRange(0, 10))
-            }
-            .also(incoming::consume)
+            }.also(incoming::consume)
 
     private fun open(text: String) =
         outgoing.consume(
             notification(
                 "textDocument/didOpen",
                 DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, text)),
-            )
+            ),
         )
 
     private fun change(
         version: Int,
         text: String,
-    ) =
-        outgoing.consume(
-            notification(
-                "textDocument/didChange",
-                DidChangeTextDocumentParams(
-                    VersionedTextDocumentIdentifier(uri, version),
-                    listOf(TextDocumentContentChangeEvent(text)),
-                ),
-            )
-        )
+    ) = outgoing.consume(
+        notification(
+            "textDocument/didChange",
+            DidChangeTextDocumentParams(
+                VersionedTextDocumentIdentifier(uri, version),
+                listOf(TextDocumentContentChangeEvent(text)),
+            ),
+        ),
+    )
 
     private fun notification(
         method: String,
         params: Any,
-    ) =
-        NotificationMessage().apply {
-            this.method = method
-            this.params = params
-        }
+    ) = NotificationMessage().apply {
+        this.method = method
+        this.params = params
+    }
 }

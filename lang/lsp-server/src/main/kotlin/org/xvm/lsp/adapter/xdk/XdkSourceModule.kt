@@ -22,8 +22,7 @@ class XdkSourceModule(
         resourceRoots
             ?.map {
                 requireNotNull(XdkSources.file(it)) { "A resource root requires a file URI: $it" }
-            }
-            ?.let(::immutableList)
+            }?.let(::immutableList)
     val resourceRoots: List<String>? =
         resourceFiles?.map { it.toURI().toString().trimEnd('/') + "/" }?.let(::immutableList)
 
@@ -46,7 +45,9 @@ class XdkSourceModule(
 /**
  * Immutable graph. Ordering and reverse edges are established before installing a configuration.
  */
-internal class XdkProject(modules: List<XdkSourceModule>) {
+internal class XdkProject(
+    modules: List<XdkSourceModule>,
+) {
     val modules = immutableMap(modules.associateBy { it.name })
 
     private data class Configuration(
@@ -80,7 +81,10 @@ internal class XdkProject(modules: List<XdkSourceModule>) {
             require(visiting.add(module.name)) {
                 "Cyclic source dependencies: ${visiting.joinToString(" -> ")} -> ${module.name}"
             }
-            module.dependencies.sorted().mapNotNull(this.modules::get).forEach(::visit)
+            module.dependencies
+                .sorted()
+                .mapNotNull(this.modules::get)
+                .forEach(::visit)
             visiting.remove(module.name)
             visited += module.name
             result += module
@@ -97,8 +101,7 @@ internal class XdkProject(modules: List<XdkSourceModule>) {
                     file
                         .toPath()
                         .startsWith(File(it.root.parentFile, it.root.nameWithoutExtension).toPath())
-            }
-            .maxByOrNull { it.root.path.length }
+            }.maxByOrNull { it.root.path.length }
             ?.uri
     }
 
@@ -109,16 +112,14 @@ internal class XdkProject(modules: List<XdkSourceModule>) {
                 XdkResources.roots(module.root, module.resourceFiles).any {
                     file.startsWith(it.toPath()) || it.toPath().startsWith(file)
                 }
-            }
-            .mapTo(linkedSetOf()) { it.uri }
+            }.mapTo(linkedSetOf()) { it.uri }
     }
 
     fun inputWatchRoots(): Set<File> =
         modules.values
             .flatMap {
                 XdkResources.roots(it.root, it.resourceFiles) + it.root.parentFile
-            }
-            .toSet()
+            }.toSet()
 
     fun sameConfiguration(other: XdkProject): Boolean = configuration == other.configuration
 
@@ -130,8 +131,9 @@ internal class XdkProject(modules: List<XdkSourceModule>) {
         val names = mutableSetOf<String>()
 
         fun include(module: XdkSourceModule) {
-            if (names.add(module.name))
+            if (names.add(module.name)) {
                 module.dependencies.mapNotNull(modules::get).forEach(::include)
+            }
         }
         include(target)
         return ordered.filter { it.name in names }

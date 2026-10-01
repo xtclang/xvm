@@ -1,7 +1,7 @@
 package org.xvm.lsp.adapter.xdk
 
-import java.util.List.copyOf as immutableList
 import org.xvm.lsp.adapter.WorkspaceEdit
+import java.util.List.copyOf as immutableList
 
 /**
  * A proven edit plus any replacement for a host-owned source graph. A host must persist the graph
@@ -10,15 +10,15 @@ import org.xvm.lsp.adapter.WorkspaceEdit
  * arbitrary client settings, so it declines proposals requiring this additional host operation.
  */
 class XdkRenameProposal
-internal constructor(
-    val edit: WorkspaceEdit,
-    sourceModules: List<XdkSourceModule>? = null,
-    previousSourceModules: List<XdkSourceModule>? = null,
-    val scope: XdkRenameScope? = null,
-) {
-    val sourceModules: List<XdkSourceModule>? = sourceModules?.let(::immutableList)
-    val previousSourceModules: List<XdkSourceModule>? = previousSourceModules?.let(::immutableList)
-}
+    internal constructor(
+        val edit: WorkspaceEdit,
+        sourceModules: List<XdkSourceModule>? = null,
+        previousSourceModules: List<XdkSourceModule>? = null,
+        val scope: XdkRenameScope? = null,
+    ) {
+        val sourceModules: List<XdkSourceModule>? = sourceModules?.let(::immutableList)
+        val previousSourceModules: List<XdkSourceModule>? = previousSourceModules?.let(::immutableList)
+    }
 
 /**
  * The source boundary actually checked by a project rename. Absolute roots may be outside IDE
@@ -28,17 +28,17 @@ internal constructor(
  * snapshot; it is not authorization to apply an edit after its document versions become stale.
  */
 class XdkRenameScope
-internal constructor(
-    val boundary: Boundary,
-    modules: List<XdkSourceModule>,
-    sourceUris: List<String>,
-    val revision: String,
-) {
-    enum class Boundary {
-        CONFIGURED_GRAPH,
-        DISCOVERED_GRAPH,
-    }
+    internal constructor(
+        val boundary: Boundary,
+        modules: List<XdkSourceModule>,
+        sourceUris: List<String>,
+        val revision: String,
+    ) {
+        enum class Boundary {
+            CONFIGURED_GRAPH,
+            DISCOVERED_GRAPH,
+        }
 
-    val modules: List<XdkSourceModule> = immutableList(modules)
-    val sourceUris: List<String> = immutableList(sourceUris)
-}
+        val modules: List<XdkSourceModule> = immutableList(modules)
+        val sourceUris: List<String> = immutableList(sourceUris)
+    }

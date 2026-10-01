@@ -117,9 +117,9 @@ The test outputs parse timing sorted by slowest files, helping identify grammar 
 
 ## Kotlin Formatting
 
-Spotless runs ktfmt's four-space Kotlin style over Kotlin sources, tests, IntelliJ integration tests
-and the `lang` Gradle scripts. Versions are pinned in the shared version catalog. Generated build
-outputs are excluded. From the repository root:
+Spotless runs ktlint's default rules over Kotlin sources, tests, IntelliJ integration tests
+and the `lang` Gradle scripts, using the same formatter versions as master. Versions are pinned in
+the shared version catalog. Generated build outputs are excluded. From the repository root:
 
 ```bash
 # Format all lang Kotlin sources and Gradle scripts
@@ -132,8 +132,8 @@ outputs are excluded. From the repository root:
 For one module, use a task such as `:lang:lsp-server:spotlessCheck`. Local Kotlin compilation
 formats that module's sources before compiling, and local `check` also applies formatting first.
 When `CI` is set, compilation and checks only verify formatting. Explicit `spotlessCheck` is always
-read-only. ktfmt replaces ktlint's formatting rules; it does not enforce ktlint-specific naming or
-other lint rules. A formatter change can produce a substantial one-time formatting diff.
+read-only. Spotless invokes the ktlint engine directly; the separate ktlint Gradle plugin is not
+used. Formatting and ktlint's non-formatting rules (such as naming) are both checked.
 
 ## Native Library Build (Tree-sitter)
 

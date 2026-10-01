@@ -12,7 +12,8 @@ data class Diagnostic(
         ERROR,
         WARNING,
         INFORMATION,
-        HINT;
+        HINT,
+        ;
 
         companion object
     }

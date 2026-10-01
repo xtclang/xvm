@@ -1,6 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -10,6 +9,7 @@ import org.xvm.asm.FileStructure
 import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.model.Location
+import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkDiagnosticTest {
     @Test
@@ -22,11 +22,15 @@ class XdkDiagnosticTest {
                 "identifier",
             )
             Compilation.forFile(binary)
+        }.use { adapter ->
+            assertThat(
+                adapter
+                    .compile(URI, "module Current {}")
+                    .diagnostics
+                    .single()
+                    .location,
+            ).isEqualTo(Location(URI, 0, 0, 0, 0))
         }
-            .use { adapter ->
-                assertThat(adapter.compile(URI, "module Current {}").diagnostics.single().location)
-                    .isEqualTo(Location(URI, 0, 0, 0, 0))
-            }
     }
 
     @Test
@@ -35,11 +39,10 @@ class XdkDiagnosticTest {
             XdkAdapter { _, errs ->
                 val foreign = Source("\n  broken", name)
                 reportAtEnd(foreign, errs)
+            }.use { adapter ->
+                val diagnostic = adapter.compile(URI, "module Current {}").diagnostics.single()
+                assertThat(diagnostic.location).isEqualTo(Location(name, 1, 8, 1, 8))
             }
-                .use { adapter ->
-                    val diagnostic = adapter.compile(URI, "module Current {}").diagnostics.single()
-                    assertThat(diagnostic.location).isEqualTo(Location(name, 1, 8, 1, 8))
-                }
         }
     }
 
@@ -51,13 +54,12 @@ class XdkDiagnosticTest {
                     if (name == null) Source("\n  broken") else Source("\n  broken", name),
                     errs,
                 )
+            }.use { adapter ->
+                val diagnostic = adapter.compile(URI, "module Current {}").diagnostics.single()
+                assertThat(diagnostic.location).isEqualTo(Location(URI, 0, 0, 0, 0))
+                assertThat(diagnostic.message)
+                    .startsWith("In ${name ?: "an unidentified source"}:")
             }
-                .use { adapter ->
-                    val diagnostic = adapter.compile(URI, "module Current {}").diagnostics.single()
-                    assertThat(diagnostic.location).isEqualTo(Location(URI, 0, 0, 0, 0))
-                    assertThat(diagnostic.message)
-                        .startsWith("In ${name ?: "an unidentified source"}:")
-                }
         }
     }
 
@@ -78,9 +80,8 @@ class XdkDiagnosticTest {
         XdkAdapter { _, _ -> throw IllegalStateException("unexpected compiler failure") }
             .use { adapter ->
                 assertThatThrownBy {
-                        adapter.compileAsync(URI, "module Current {}").get(10, SECONDS)
-                    }
-                    .hasCauseInstanceOf(IllegalStateException::class.java)
+                    adapter.compileAsync(URI, "module Current {}").get(10, SECONDS)
+                }.hasCauseInstanceOf(IllegalStateException::class.java)
                     .hasRootCauseMessage("unexpected compiler failure")
                 assertThat(adapter.getCachedResult(URI)).isNull()
             }
@@ -107,13 +108,15 @@ class XdkDiagnosticTest {
         CompilerTestSupport.configure()
         XdkAdapter().use { adapter ->
             val valid = "module Editing { Int oldMethod() { return 1; } }"
-            for (incomplete in
-                listOf(
-                    "",
-                    "module Editing {",
-                    "module Editing { void run() { console.",
-                    "module Editing { String s = \"",
-                )) {
+            for (
+            incomplete in
+            listOf(
+                "",
+                "module Editing {",
+                "module Editing { void run() { console.",
+                "module Editing { String s = \"",
+            )
+            ) {
                 assertThat(adapter.compile(URI, valid).success).isTrue()
                 val broken = adapter.compile(URI, incomplete)
                 assertThat(broken.success).isFalse()

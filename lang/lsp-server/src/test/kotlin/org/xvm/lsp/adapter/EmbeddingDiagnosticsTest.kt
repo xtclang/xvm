@@ -1,6 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -11,15 +10,14 @@ import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.compiler.Source
 import org.xvm.tool.ModuleInfo
+import java.nio.file.Path
 
 class EmbeddingDiagnosticsTest {
     @TempDir lateinit var directory: Path
 
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
-    fun `a non-module root reports its source diagnostic instead of an internal failure`(
-        fileInput: Boolean
-    ) {
+    fun `a non-module root reports its source diagnostic instead of an internal failure`(fileInput: Boolean) {
         CompilerTestSupport.configure()
         val text = "class NotModule {}"
         val file = directory.resolve("NotModule.x").toFile().canonicalFile
@@ -42,9 +40,7 @@ class EmbeddingDiagnosticsTest {
 
     @ParameterizedTest
     @ValueSource(strings = ["module FileAudit {}", "module FileAudit { void broken( { }"])
-    fun `discovery with an unreadable adjacent binary preserves source compilation diagnostics`(
-        text: String
-    ) {
+    fun `discovery with an unreadable adjacent binary preserves source compilation diagnostics`(text: String) {
         CompilerTestSupport.configure()
         val file = directory.resolve("FileAudit.x").toFile().canonicalFile
         file.writeText(text)
@@ -79,7 +75,8 @@ class EmbeddingDiagnosticsTest {
                 }
             }
         val result =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .compileModule(source, null, ErrorListener.cancellable(errors) { reads >= 80 })
         assertThat(result.succeeded()).isFalse()
         assertThat(result.parsed()).isNull()
@@ -133,7 +130,8 @@ class EmbeddingDiagnosticsTest {
                 override fun next(): Char = error("cancelled compilation must not read source")
             }
         val result =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .compileModule(source, null, ErrorListener.cancellable(errors) { true })
         assertThat(result.succeeded()).isFalse()
         assertThat(result.parsed()).isNull()
@@ -146,7 +144,8 @@ class EmbeddingDiagnosticsTest {
         for (text in listOf("", "// no module yet")) {
             val errors = ErrorList()
             val result =
-                EmbeddingSupport.instance()
+                EmbeddingSupport
+                    .instance()
                     .compileModule(Source(text, "file:///Empty.x"), null, errors)
             assertThat(result.succeeded()).isFalse()
             assertThat(errors.hasSeriousErrors()).isTrue()

@@ -14,15 +14,15 @@ import com.intellij.ide.starter.project.LocalProjectInfo
 import com.intellij.ide.starter.runner.Starter
 import com.intellij.platform.testFramework.teamCity.TeamCityReporter.SyntheticTestKind
 import com.intellij.tools.ide.starter.product.idea.ultimate.IdeaUltimate
+import org.junit.jupiter.api.Test
+import org.kodein.di.DI
+import org.kodein.di.bindSingleton
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption.APPEND
 import java.nio.file.StandardOpenOption.CREATE
 import java.util.concurrent.CopyOnWriteArrayList
 import kotlin.time.Duration.Companion.minutes
-import org.junit.jupiter.api.Test
-import org.kodein.di.DI
-import org.kodein.di.bindSingleton
 
 /** Opt-in acceptance tests against the packaged plugin, a real IDE and the bundled compiler. */
 class CompilerPlaybookTest {
@@ -46,9 +46,10 @@ class CompilerPlaybookTest {
         val shared = SharedScenarios.read(scenarioPath)
         val fixtures =
             shared.common.fixtures.associate { fixture ->
-                val matches = blocks.filter {
-                    Regex(fixture.pattern, RegexOption.MULTILINE).containsMatchIn(it)
-                }
+                val matches =
+                    blocks.filter {
+                        Regex(fixture.pattern, RegexOption.MULTILINE).containsMatchIn(it)
+                    }
                 require(matches.size == 1) {
                     "Expected one ${fixture.file} fixture in manual-test-plan.md"
                 }
@@ -117,7 +118,8 @@ class CompilerPlaybookTest {
         val lsp4ijVersion = System.getProperty("xtc.playbook.lsp4ijVersion")
         val ideFailures = CopyOnWriteArrayList<String>()
         val selection =
-            System.getProperty("xtc.playbook.cases", "")
+            System
+                .getProperty("xtc.playbook.cases", "")
                 .split(',')
                 .map(String::trim)
                 .filter(String::isNotEmpty)
@@ -141,24 +143,25 @@ class CompilerPlaybookTest {
                 )
             }
         val previousDi = di
-        di = DI {
-            extend(previousDi)
-            bindSingleton<GlobalPaths>(overrides = true) { object : GlobalPaths(reports) {} }
-            bindSingleton<CIServer>(overrides = true) {
-                object : CIServer by NoCIServer {
-                    override fun reportTestFailure(
-                        testName: String,
-                        message: String,
-                        details: String,
-                        linkToLogs: String?,
-                        kind: SyntheticTestKind,
-                        generifyTestName: Boolean,
-                    ) {
-                        ideFailures += "$testName: $message\n$details\n$linkToLogs"
+        di =
+            DI {
+                extend(previousDi)
+                bindSingleton<GlobalPaths>(overrides = true) { object : GlobalPaths(reports) {} }
+                bindSingleton<CIServer>(overrides = true) {
+                    object : CIServer by NoCIServer {
+                        override fun reportTestFailure(
+                            testName: String,
+                            message: String,
+                            details: String,
+                            linkToLogs: String?,
+                            kind: SyntheticTestKind,
+                            generifyTestName: Boolean,
+                        ) {
+                            ideFailures += "$testName: $message\n$details\n$linkToLogs"
+                        }
                     }
                 }
             }
-        }
         try {
             val context =
                 Starter.newContext(
@@ -176,7 +179,8 @@ class CompilerPlaybookTest {
             // Keep even a sole candidate visible until the driver inspects and accepts it.
             // This affects only the disposable test IDE, not the packaged plugin's defaults.
             Files.writeString(
-                Files.createDirectories(context.paths.configDir.resolve("options"))
+                Files
+                    .createDirectories(context.paths.configDir.resolve("options"))
                     .resolve("editor.xml"),
                 """
                 <application>
@@ -186,8 +190,7 @@ class CompilerPlaybookTest {
                     <option name="AUTO_POPUP_COMPLETION_LOOKUP" value="false" />
                   </component>
                 </application>
-                """
-                    .trimIndent(),
+                """.trimIndent(),
             )
             // Unsaved-overlay scenarios must not be silently saved by an application focus change.
             Files.writeString(
@@ -199,8 +202,7 @@ class CompilerPlaybookTest {
                     <option name="autoSaveIfInactive" value="false" />
                   </component>
                 </application>
-                """
-                    .trimIndent(),
+                """.trimIndent(),
             )
             // The full playbook exceeds Starter's ten-minute default; individual waits
             // remain bounded so an unresponsive editor still fails promptly.
@@ -213,8 +215,7 @@ class CompilerPlaybookTest {
                     addSystemProperty("xtc.lsp.semanticTokens", true)
                     addSystemProperty("xtc.trace.directory", run.resolve("server-trace").toString())
                     addSystemProperty("idea.auto.reload.plugins", false)
-                }
-                .runIdeWithDriver(runTimeout = 30.minutes)
+                }.runIdeWithDriver(runTimeout = 30.minutes)
                 .useDriverAndCloseIde {
                     cases.run(this)
                 }

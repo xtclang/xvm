@@ -26,8 +26,8 @@ internal fun TypeInfo.dispatch(
     val key = type to method
     if (
         errors.isAbortDesired ||
-            visited.any { it.first == type && it.second === method } ||
-            visited.size >= 64
+        visited.any { it.first == type && it.second === method } ||
+        visited.size >= 64
     ) {
         return CompilerDispatch(listOf(method.identity), supported = false)
     }
@@ -38,7 +38,8 @@ internal fun TypeInfo.dispatch(
                 Implementation.Explicit,
                 Implementation.Default,
                 Implementation.Declared,
-                Implementation.Abstract -> {
+                Implementation.Abstract,
+                -> {
                     val declaration = body.methodStructure
                     CompilerDispatch(
                         listOf(declaration?.identityConstant ?: body.identity),
@@ -59,11 +60,12 @@ internal fun TypeInfo.dispatch(
                 Implementation.Delegating -> {
                     val receiver = body.propertyConstant
                     val receiverType = receiver?.let { findProperty(it)?.type }
-                    val delegate = receiverType?.let {
-                        ExecutionTrace.api("TypeConstant.ensureTypeInfo(rename-delegate)") {
-                            it.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors)
+                    val delegate =
+                        receiverType?.let {
+                            ExecutionTrace.api("TypeConstant.ensureTypeInfo(rename-delegate)") {
+                                it.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors)
+                            }
                         }
-                    }
                     val selected = delegate?.getMethodBySignature(body.signature)
                     if (selected == null) {
                         CompilerDispatch(listOf(body.identity), supported = false)
@@ -77,7 +79,8 @@ internal fun TypeInfo.dispatch(
                 Implementation.Union,
                 Implementation.SansCode,
                 Implementation.Field,
-                Implementation.Native -> {
+                Implementation.Native,
+                -> {
                     // These bodies do not independently identify a written callable contract:
                     // assumed/multi-target dispatch, generated accessors or runtime
                     // implementations.

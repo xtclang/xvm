@@ -33,14 +33,18 @@ internal object SourceGraphConfiguration {
     }
 
     /** Preserve unrelated LSP4IJ settings, including artifact and formatting configuration. */
-    fun configure(content: String?, modules: List<SourceModuleConfiguration>?, base: URI): String {
+    fun configure(
+        content: String?,
+        modules: List<SourceModuleConfiguration>?,
+        base: URI,
+    ): String {
         modules?.let {
             it.forEach { module ->
                 require(
                     module.name.isNotBlank() &&
                         module.uri.isNotBlank() &&
                         module.dependencies.all(String::isNotBlank) &&
-                        module.resourceRoots.orEmpty().all(String::isNotBlank)
+                        module.resourceRoots.orEmpty().all(String::isNotBlank),
                 ) {
                     "Source module names, roots and dependencies must be non-blank strings"
                 }
@@ -54,13 +58,18 @@ internal object SourceGraphConfiguration {
         return gson.toJson(settings)
     }
 
-    private fun child(parent: JsonObject, name: String): JsonObject? =
-        parent[name]?.takeUnless { it.isJsonNull }?.let(::objectValue)
+    private fun child(
+        parent: JsonObject,
+        name: String,
+    ): JsonObject? = parent[name]?.takeUnless { it.isJsonNull }?.let(::objectValue)
 
     private fun parse(content: String?): JsonObject =
         try {
-            if (content.isNullOrBlank()) JsonObject()
-            else objectValue(JsonParser.parseString(content))
+            if (content.isNullOrBlank()) {
+                JsonObject()
+            } else {
+                objectValue(JsonParser.parseString(content))
+            }
         } catch (failure: JsonParseException) {
             throw IllegalArgumentException("Invalid compiler settings JSON", failure)
         }
@@ -90,8 +99,7 @@ internal object SourceGraphConfiguration {
                         ?.let {
                             require(it.isJsonArray) { "Source dependencies must be an array" }
                             it.asJsonArray.map(::stringValue)
-                        }
-                        .orEmpty()
+                        }.orEmpty()
                 SourceModuleConfiguration(
                     stringValue(entry["name"]),
                     stringValue(entry["uri"]),
@@ -115,7 +123,7 @@ internal object SourceGraphConfiguration {
         require(
             value?.isJsonPrimitive == true &&
                 value.asJsonPrimitive.isString &&
-                value.asString.isNotBlank()
+                value.asString.isNotBlank(),
         ) {
             "Source module names, roots and dependencies must be non-blank strings"
         }
@@ -144,24 +152,31 @@ internal object SourceGraphConfiguration {
         require(modules.map { it.name }.distinct().size == modules.size) {
             "Duplicate source module names"
         }
-        val result = modules.map {
-            val resources =
-                it.resourceRoots?.map { path ->
-                    URI.create(base.resolve(path).normalize().toString().trimEnd('/') + "/")
+        val result =
+            modules.map {
+                val resources =
+                    it.resourceRoots?.map { path ->
+                        URI.create(
+                            base
+                                .resolve(path)
+                                .normalize()
+                                .toString()
+                                .trimEnd('/') + "/",
+                        )
+                    }
+                require(resources == null || resources.distinct().size == resources.size) {
+                    "Duplicate resource roots"
                 }
-            require(resources == null || resources.distinct().size == resources.size) {
-                "Duplicate resource roots"
+                require(resources.orEmpty().all { uri -> uri.scheme == "file" }) {
+                    "Resource roots must use file URIs"
+                }
+                CanonicalModule(
+                    it.name,
+                    base.resolve(it.uri).normalize(),
+                    it.dependencies.orEmpty().toSet(),
+                    resources,
+                )
             }
-            require(resources.orEmpty().all { uri -> uri.scheme == "file" }) {
-                "Resource roots must use file URIs"
-            }
-            CanonicalModule(
-                it.name,
-                base.resolve(it.uri).normalize(),
-                it.dependencies.orEmpty().toSet(),
-                resources,
-            )
-        }
         require(result.map { it.uri }.distinct().size == modules.size) {
             "Duplicate source module roots"
         }

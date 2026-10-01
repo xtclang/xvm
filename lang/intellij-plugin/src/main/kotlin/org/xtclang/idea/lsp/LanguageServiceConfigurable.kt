@@ -21,10 +21,14 @@ import javax.swing.JTextArea
 
 class LanguageServiceApplicationConfigurable : LanguageServiceConfigurable(null)
 
-class LanguageServiceProjectConfigurable(project: Project) : LanguageServiceConfigurable(project)
+class LanguageServiceProjectConfigurable(
+    project: Project,
+) : LanguageServiceConfigurable(project)
 
 /** Only the dialog draft is mutable; applying publishes a validated immutable value. */
-open class LanguageServiceConfigurable(private val project: Project?) : Configurable {
+open class LanguageServiceConfigurable(
+    private val project: Project?,
+) : Configurable {
     private val inherit =
         JBCheckBox("Use application language-service defaults").apply {
             name = "xtc.service.inherit"
@@ -42,8 +46,7 @@ open class LanguageServiceConfigurable(private val project: Project?) : Configur
     private var original: JsonObject? = null
     private var initial = LanguageServiceConfiguration()
 
-    override fun getDisplayName(): String =
-        if (project == null) "Ecstasy Language Service Defaults" else "Ecstasy Language Service"
+    override fun getDisplayName(): String = if (project == null) "Ecstasy Language Service Defaults" else "Ecstasy Language Service"
 
     override fun createComponent(): JComponent {
         inherit.addItemListener { updateEnabled() }
@@ -70,7 +73,7 @@ open class LanguageServiceConfigurable(private val project: Project?) : Configur
                     "<html>Full is the default. Incremental sends changed text; it does not enable incremental compilation.<br>" +
                         "Server save edits are unavailable in LSP4IJ. Use Tools → Actions on Save → Reformat code.<br>" +
                         "Indentation is configured under Editor → Code Style → Ecstasy. Line wrapping is not implemented.<br>" +
-                        "Compiler paths remain under Ecstasy Compiler. Trace and runtime controls remain in Language Servers.</html>"
+                        "Compiler paths remain under Ecstasy Compiler. Trace and runtime controls remain in Language Servers.</html>",
                 ),
                 BorderLayout.CENTER,
             )
@@ -94,9 +97,15 @@ open class LanguageServiceConfigurable(private val project: Project?) : Configur
         val gson = GsonBuilder().setPrettyPrinting().serializeNulls().create()
         val prefix =
             "Configured preferences (" +
-                (if (project == null) "application"
-                else if (original == null) "inherited application defaults"
-                else "project overrides with application defaults") +
+                (
+                    if (project == null) {
+                        "application"
+                    } else if (original == null) {
+                        "inherited application defaults"
+                    } else {
+                        "project overrides with application defaults"
+                    }
+                ) +
                 "):\n" +
                 gson.toJson(LanguageServiceSettings.effective(project)) +
                 "\n\n"
@@ -113,10 +122,11 @@ open class LanguageServiceConfigurable(private val project: Project?) : Configur
                     if (!owner.isDisposed && reportRevision.get() == revision) {
                         report.text =
                             prefix +
-                                if (failure == null)
-                                    "Effective running service:\n" + gson.toJson(status)
-                                else
-                                    "Service status unavailable: ${failure.message}. See the Language Servers log."
+                            if (failure == null) {
+                                "Effective running service:\n" + gson.toJson(status)
+                            } else {
+                                "Service status unavailable: ${failure.message}. See the Language Servers log."
+                            }
                     }
                 }
             }
@@ -171,7 +181,7 @@ open class LanguageServiceConfigurable(private val project: Project?) : Configur
             refreshReport()
         } catch (failure: IllegalArgumentException) {
             throw ConfigurationException(
-                failure.message ?: "Invalid Ecstasy language-service settings"
+                failure.message ?: "Invalid Ecstasy language-service settings",
             )
         }
     }
