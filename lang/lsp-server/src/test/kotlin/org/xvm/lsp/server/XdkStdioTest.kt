@@ -32,6 +32,8 @@ import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DocumentDiagnosticParams
 import org.eclipse.lsp4j.DocumentHighlightParams
+import org.eclipse.lsp4j.DocumentLinkCapabilities
+import org.eclipse.lsp4j.DocumentLinkParams
 import org.eclipse.lsp4j.DocumentRangesFormattingParams
 import org.eclipse.lsp4j.DocumentSymbolCapabilities
 import org.eclipse.lsp4j.DocumentSymbolParams
@@ -60,7 +62,9 @@ import org.eclipse.lsp4j.SemanticTokensDeltaParams
 import org.eclipse.lsp4j.SemanticTokensParams
 import org.eclipse.lsp4j.SemanticTokensRangeParams
 import org.eclipse.lsp4j.ShowMessageRequestParams
+import org.eclipse.lsp4j.SignatureHelpCapabilities
 import org.eclipse.lsp4j.SignatureHelpParams
+import org.eclipse.lsp4j.SignatureInformationCapabilities
 import org.eclipse.lsp4j.SynchronizationCapabilities
 import org.eclipse.lsp4j.TextDocumentClientCapabilities
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
@@ -102,6 +106,47 @@ class XdkStdioTest {
     }
 
     @TempDir lateinit var directory: Path
+
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `optional signature and link fields follow negotiated capabilities over stdio`(
+        richPresentation: Boolean
+    ) {
+        Session(packagedJar(), directory).use { session ->
+            session.initialize(richPresentation = richPresentation)
+            val source =
+                """
+                module Stdio {
+                    Int read(Int first, Int second) = first + second;
+                    void run() { Int result = read(1, 2); }
+                    // https://xtclang.org/
+                }
+                """
+                    .trimIndent()
+            session.open(source)
+            val documents = session.server.textDocumentService
+            val id = TextDocumentIdentifier(URI)
+            val help =
+                session.await(
+                    documents.signatureHelp(
+                        SignatureHelpParams(id, Position(2, source.lines()[2].indexOf("2)")))
+                    )
+                )!!
+            assertThat(help.activeParameter).isEqualTo(1)
+            assertThat<Int?>(help.signatures.single().activeParameter)
+                .isEqualTo(1.takeIf { richPresentation })
+            val link = session.await(documents.documentLink(DocumentLinkParams(id))).single()
+            val resolved =
+                if (richPresentation) {
+                    assertThat(link.target).isNull()
+                    session.await(documents.documentLinkResolve(link)).also {
+                        assertThat(it.tooltip).isNotBlank()
+                    }
+                } else link.also { assertThat(it.tooltip).isNull() }
+            assertThat(resolved.target).isEqualTo("https://xtclang.org/")
+            session.shutdownAndExit()
+        }
+    }
 
     @Test
     fun `partial references and workspace diagnostics cross the packaged transport without duplicate final items`(
@@ -1588,6 +1633,7 @@ class XdkStdioTest {
             pullDiagnostics: Boolean = false,
             sourceModules: List<Map<String, Any>>? = null,
             documentSync: Map<String, Boolean> = emptyMap(),
+            richPresentation: Boolean = true,
         ) {
             val initialized =
                 await(
@@ -1603,6 +1649,20 @@ class XdkStdioTest {
                                 ClientCapabilities().apply {
                                     textDocument =
                                         TextDocumentClientCapabilities().apply {
+                                            if (richPresentation) {
+                                                signatureHelp =
+                                                    SignatureHelpCapabilities().apply {
+                                                        signatureInformation =
+                                                            SignatureInformationCapabilities()
+                                                                .apply {
+                                                                    activeParameterSupport = true
+                                                                }
+                                                    }
+                                                documentLink =
+                                                    DocumentLinkCapabilities().apply {
+                                                        tooltipSupport = true
+                                                    }
+                                            }
                                             documentSymbol =
                                                 DocumentSymbolCapabilities().apply {
                                                     hierarchicalDocumentSymbolSupport = true
