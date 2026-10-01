@@ -28,6 +28,7 @@ import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.*;
 import org.xvm.compiler.ast.partial.IncompleteDeclarationStatement;
 import org.xvm.compiler.ast.partial.IncompleteExpression;
+import org.xvm.compiler.ast.partial.IncompleteLocalDeclaration;
 import org.xvm.compiler.ast.partial.IncompleteStatement;
 import org.xvm.compiler.ast.partial.IncompleteTypeCompositionStatement;
 import org.xvm.compiler.ast.partial.PartialSyntax;
@@ -999,6 +1000,14 @@ public class Parser {
                     throw new CompilerException("var or val keyword outside of method");
                 }
 
+                var missingName = declarationNameSlot(new VariableTypeExpression(tokType));
+                if (missingName.isPresent() && peek(Id.ASN)) {
+                    current();
+                    Expression initializer = parseExpression();
+                    expect(Id.SEMICOLON);
+                    log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
+                    return new IncompleteLocalDeclaration(missingName.orElseThrow(), initializer, prev().getEndPosition());
+                }
                 Token tokName = matchNameOrAny();
                 if (tokName == null) {
                     // var and val are not reserved keywords; they are context sensitive types
