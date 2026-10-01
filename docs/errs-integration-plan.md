@@ -1281,7 +1281,10 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
   - [ ] Investigate IntelliJ bulk replacement of heavily decorated large files: the 20,000-method
     X145 attempt recorded a 21.3-second EDT freeze in `RangeMarkerTree.documentChanged` /
     `IntervalTreeImpl.maxEndOf` during `DocumentImpl.setText`. Preserve the failed receipt below;
-    a passing bounded progress test does not establish large-file responsiveness.
+    a passing bounded progress test does not establish large-file responsiveness. The focused
+    [L82 investigation](#l82-large-file-intellij-freeze-investigation-2026-10-01) reproduces the
+    platform cost without an LSP client (UP17). Diagnosis is complete for the interval-tree
+    bottleneck; its repair and decorated-editor acceptance remain open.
 
 - [x] **L83 — Semantic facts for constant-folded property initializers.** Successful temporary
   initializer probes now export detached constant targets, source spans, types and invocation
@@ -8056,3 +8059,110 @@ The accompanying upstream-tracking/documentation checkpoint adds UP01–UP16 and
 records the validation above, and preserves the open acceptance and large-file findings. These three
 L81 checkpoints are one tested integrated slice; each future extracted PR still needs its own
 independent validation. No remote publication is part of this local checkpoint.
+
+## L82 large-file IntelliJ freeze investigation (2026-10-01)
+
+Remote verification before this investigation: the fetched `origin/lagergren/errs` and local HEAD
+both point to `7765ba4c10d534216dcc7d83817ab181aad92d14`; the checkpoint was already pushed and the
+tree was clean. This investigation adds an opt-in native probe, not a full playbook rerun or a
+compiler/AST change. The issue is tracked as **UP17 — IntelliJ Platform**.
+
+The original X145 failure (`run-704976644057533068`) has four EDT dumps in
+`RangeMarkerTree.documentChanged` → `updateAffectedNodes` → `IntervalTreeImpl.removeNode` →
+`correctMaxUp` → `maxEndOf`, called by the harness's `DocumentImpl.setText`. The UI thread is
+RUNNABLE, not waiting for a compiler lock or reply. Server tracing puts module compilation at
+7.9 seconds and the complete compile job at 9.3 seconds, before the later 21.3-second UI freeze.
+Some large semantic replies are also slow; that is a separate L82 server-response investigation.
+
+Inspection of the pinned IDE 262.10968.63 bytecode explains the hot path: the range-tree update
+first marks affected nodes invalid, then removes them individually. Each removal recalculates
+ancestor maxima. `maxEndOf` recursively visits children when a node is temporarily invalid, so
+many removals repeatedly traverse large invalid subtrees. The measured scaling below is roughly
+quadratic over this range. `DocumentImpl.replaceString` already trims unchanged prefixes/suffixes;
+adding that logic to our driver would duplicate the IDE's existing optimization.
+
+The retained `LargeFileProbe.plain` control creates an unattached `DocumentImpl` containing
+880,000 characters and strongly retains evenly spaced ordinary range markers. It replaces the
+last three quarters of the text and checks that exactly the unaffected quarter of markers remains
+valid. There is no editor, PSI file, language client or compiler attached to that document.
+
+| Ordinary markers | First run | Final run |
+| --- | ---: | ---: |
+| 0 | 40 ms | 40 ms |
+| 20,000 | 326 ms | 355 ms |
+| 40,000 | 1,177 ms | 1,286 ms |
+| 80,000 | 5,558 ms | 6,097 ms |
+| 80,000, `DocumentUtil.executeInBulk` | Not measured | 5,064 ms |
+
+Bulk-update mode still incurs seconds of tree work; it is not a repair. These are local diagnostic
+measurements, not portable response-time thresholds or a claim about all IntelliJ releases.
+
+Native receipts under `lang/intellij-plugin/build/reports/compiler-playbook`:
+
+- `run-14369876559296903585`: the decorated 20,000-to-5,000-method replacement takes **24,262 ms**.
+  `large-file.jfr` records 1,986 of 2,143 sampled EDT execution stacks (92.7%) at `maxEndOf`;
+  `thread-sample.txt` and the IDE freeze dumps show the same path. The run fails. Its initial
+  inventory helper also logged a missing read action; that probe defect was corrected separately.
+- `run-5865295688126037148`: native replacement takes 59 ms, but its inventory contains **zero
+  semantic highlighters**. The Gradle run passes; it does **not** validate decorated-editor
+  responsiveness. A new readiness guard requires native highlighting before replacement.
+- `run-12466134132242302471`: with that guard, the file has **80,005 highlighters** with LSP
+  keyword/property/namespace/type/number/method attributes. Replacement leaves 20,005 and takes
+  **14,591 ms**. Assertions complete, but the run **fails overall on the IDE freeze gate**, with
+  no probe read-action error. Ordinary document markers are counted separately from markup-model
+  highlighters; the latter own the large tree. Receipts are in `large-file-editing.jsonl` and
+  `results.json`, with the original freeze detection enabled.
+
+No production workaround discards highlighting, changes text-edit semantics, or suppresses freezes.
+The fix belongs in the platform's bulk range-tree update; its marker-validity and performance
+regressions should accompany an upstream repair. Prepare an upstream report from this independent
+control before considering a local compatibility workaround. Separate follow-ups remain: large
+semantic response time, decoration installation cost, representative project workloads and memory.
+The bounded 5,000-method X145 remains the progress/cancellation test, not a large-file acceptance gate.
+
+Run only this diagnostic, explicitly opting into a possible UI freeze:
+
+```bash
+./gradlew :lang:intellij-plugin:testCompilerPlaybook \
+  --tests '*CompilerPlaybookTest.largeFileEditing' -PintellijLargeFileProbe=true \
+  -Plsp.adapter=compiler -PincludeBuildLang=true -PincludeBuildAttachLang=true \
+  --rerun-tasks --no-build-cache
+```
+
+It writes each control result before proceeding, requests native editor focus without moving the
+pointer for highlighting readiness, and preserves the IDE-error gate. The ordinary playbook does
+not run it unless explicitly enabled. The probe and its Gradle flag belong together in the future
+IntelliJ acceptance PR; they introduce no production dependency or embedding API requirement.
+
+Startup notification presentation follow-up: the original three-line table exceeded the native
+collapsed-content height and ellipsized the PID. The two-row layout fit but implied inconsistent
+grouping. The final design keeps the native title and puts **Version · Adapter · PID** on one
+compact metadata line, with equal-weight values, theme-aware dimmed labels and escaped dynamic
+text. The standard width and eight-second fade remain unchanged. Keep this small production
+presentation change separate from UP17's diagnostic probe when extracting commits/PRs.
+
+Final presentation validation: `run-4384519003946621793` passes START and STARTUP, including the
+untouched-balloon fade assertion, edits during initialization, bulk replacement, restart and
+close/reopen. STARTUP takes 23.5 seconds; `results.json` reports zero IDE failures. This receipt
+uses the final single-line metadata layout. It does not repair or override UP17's failed diagnostic.
+
+Checkpoint separation: `aeff9562f` contains only the startup notification presentation change.
+The following **Isolate IntelliJ large-file range-marker freezes** commit contains the opt-in
+probe, its Gradle/mode wiring, UP17 evidence and these documentation updates. Extract the first
+with plugin presentation work and the second with IntelliJ acceptance/performance diagnostics;
+neither requires a compiler or AST change.
+
+Next work after this checkpoint, in priority order:
+
+1. Profile the large-file semantic requests that remain slow after compilation completes.
+   Separate waiting, semantic computation and response serialization for hover, inlay hints and
+   semantic tokens before selecting a fix. Retain measurements and targeted regressions for any
+   change; UP17's UI freeze is independent of this server-side investigation.
+2. Complete L81 native acceptance: actual VS Code Cancel-button activation, then overlapping
+   project close/reopen and multiple windows, with unsaved-state and process-retirement checks.
+3. Complete the L82 retention/peak-memory and prolonged editing/restart workloads, then a combined
+   backend/protocol/editor checkpoint. Keep failed upstream gates explicit rather than treating
+   partial acceptance as a fully green release.
+
+UP17 remains a separate platform repair/report task. The minimal reproduction and CPU profile
+are retained; no upstream issue has been submitted and no production workaround is claimed.
