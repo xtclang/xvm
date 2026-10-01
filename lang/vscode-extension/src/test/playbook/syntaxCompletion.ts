@@ -13,7 +13,7 @@ export function syntaxCompletionCases(): void {
                 for (const variant of data.variants) {
                     await workspace.replace(document, variant.source);
                     const at = document.positionAt(variant.source.indexOf(variant.anchor) +
-                        ('prefix' in variant ? variant.prefix.length : variant.anchor.length));
+                        ('prefix' in variant ? (variant.prefix?.length ?? variant.anchor.length) : variant.anchor.length));
                     const item = await eventually(async () => (await workspace.completion(document, at))
                         .find(item => label(item) === variant.label), item => !!item, variant.label);
                     assert.ok(item);
@@ -26,7 +26,7 @@ export function syntaxCompletionCases(): void {
                         await vscode.commands.executeCommand('jumpToNextSnippetPlaceholder');
                         assert.ok(editor.selection.isEmpty, 'Final snippet tab stop leaves no selected placeholder');
                         assert.strictEqual(document.getText(), variant.expected);
-                        const finalOffset = 'finalAnchor' in variant
+                        const finalOffset = 'finalAnchor' in variant && variant.finalAnchor !== undefined
                             ? variant.expected.indexOf(variant.finalAnchor) + variant.finalAnchor.length
                             : (() => {
                                 const body = variant.expected.split('\n').find(line => line.length > 0 && !line.trim())!;
