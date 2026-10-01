@@ -94,9 +94,12 @@ internal object XdkCursorQueries {
             site.argumentExpressions.map { text ->
                 CompletionItem(text, CompletionKind.VALUE, "Enclosing instance fitting this argument", text, TextEdit(range, text))
             }
+        val enclosing = site.enclosingExpressions.map { text ->
+            CompletionItem(text, CompletionKind.VALUE, "Accessible enclosing instance", text, TextEdit(range, text))
+        }
         return (
-            ordinary.filterNot { it.label in site.argumentLiterals || it.label in site.argumentExpressions } +
-                formals + literals + instances + model.syntaxCompletions
+            ordinary.filterNot { it.label in site.argumentLiterals || it.label in site.argumentExpressions || it.label in site.enclosingExpressions } +
+                formals + literals + instances + enclosing + model.syntaxCompletions
         ).map { item -> item.copy(sortText = completionOrder(item)) }
             .sortedBy { it.sortText }
     }
