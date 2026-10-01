@@ -22,13 +22,14 @@ internal fun ParityScenarios.reliabilityCases() {
                     uri(data.string("consumer")),
                     listOf(data.string("libraryModule")),
                 ),
-            )
+            ),
         )
         val library = open(data.string("library"))
         val consumer = open(data.string("consumer"))
         val version = version(consumer)
         val support = with(driver) { semanticSupport(consumer.editor).getInlayHintsSupport() }
         val events = with(driver) { utility(RefreshRequests::class).listen(singleProject()) }
+
         fun verify(expected: String) {
             // Read the native provider's automatically refreshed future, without manually
             // requesting inlays or editing the consumer to trigger another analysis.
@@ -66,7 +67,7 @@ internal fun ParityScenarios.reliabilityCases() {
                                 listOf(
                                     "workspace/inlayHint/refresh",
                                     "workspace/semanticTokens/refresh",
-                                )
+                                ),
                             )
                     }
                 }
@@ -86,8 +87,13 @@ internal fun ParityScenarios.reliabilityCases() {
                 withContext(OnDispatcher.EDT) {
                     utility(CompilerReportPage::class).open(singleProject())
                 }
+
             fun text() = withContext(OnDispatcher.EDT) { page.text() }
-            fun complete(index: Int, name: String) {
+
+            fun complete(
+                index: Int,
+                name: String,
+            ) {
                 val barrier = withContext(OnDispatcher.EDT) { page.complete(index, name) }
                 awaitUi("settings callback and EDT publication complete", 15.seconds) {
                     barrier.isDone()
@@ -163,9 +169,15 @@ interface CompilerReportPage {
 
     fun text(): String
 
-    fun complete(index: Int, name: String): ClientFuture
+    fun complete(
+        index: Int,
+        name: String,
+    ): ClientFuture
 
-    fun completeAndRestart(index: Int, name: String): ClientFuture
+    fun completeAndRestart(
+        index: Int,
+        name: String,
+    ): ClientFuture
 
     fun dispose()
 }

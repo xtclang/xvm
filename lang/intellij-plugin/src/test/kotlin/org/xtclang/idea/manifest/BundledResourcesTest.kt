@@ -24,9 +24,8 @@ class BundledResourcesTest {
     fun pluginXmlPresent() {
         assertThat(classLoader.getResource("META-INF/plugin.xml"))
             .withFailMessage(
-                "META-INF/plugin.xml not on test classpath — the IntelliJ Platform won't see the plugin at all."
-            )
-            .isNotNull
+                "META-INF/plugin.xml not on test classpath — the IntelliJ Platform won't see the plugin at all.",
+            ).isNotNull
     }
 
     @Test
@@ -38,9 +37,8 @@ class BundledResourcesTest {
         assertThat(classLoader.getResource("liveTemplates/XTC.xml"))
             .withFailMessage(
                 "liveTemplates/XTC.xml not on classpath. plugin.xml's <defaultLiveTemplates> " +
-                    "tag still points there — either restore the file or update the manifest."
-            )
-            .isNotNull
+                    "tag still points there — either restore the file or update the manifest.",
+            ).isNotNull
     }
 
     @Test
@@ -52,8 +50,7 @@ class BundledResourcesTest {
         // the generic file glyph instead of our chrome-X.
         assertThat(classLoader.getResource("icons/xtc.svg"))
             .withFailMessage(
-                "icons/xtc.svg not on classpath — wizard, run-config, and file icons fall back to defaults."
-            )
-            .isNotNull
+                "icons/xtc.svg not on classpath — wizard, run-config, and file icons fall back to defaults.",
+            ).isNotNull
     }
 }

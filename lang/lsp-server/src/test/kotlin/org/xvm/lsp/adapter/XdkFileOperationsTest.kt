@@ -1,14 +1,14 @@
 package org.xvm.lsp.adapter
 
-import java.net.URI
-import java.nio.file.Files
-import java.nio.file.Path
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import java.net.URI
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkFileOperationsTest {
     @TempDir lateinit var directory: Path
@@ -132,33 +132,28 @@ class XdkFileOperationsTest {
         write("App/Occupied.x", "class Occupied {}")
         session { adapter ->
             assertThat(
-                    adapter
-                        .renameFilesAsync(mapOf(uri("App/Box.x") to uri("App/Occupied.x")))
-                        .get(30, SECONDS)
-                )
-                .isNull()
+                adapter
+                    .renameFilesAsync(mapOf(uri("App/Box.x") to uri("App/Occupied.x")))
+                    .get(30, SECONDS),
+            ).isNull()
             assertThat(
-                    adapter
-                        .renameFilesAsync(
-                            mapOf(uri("App") to uri("Other"), uri("App/Box.x") to uri("App/New.x"))
-                        )
-                        .get(30, SECONDS)
-                )
-                .isNull()
+                adapter
+                    .renameFilesAsync(
+                        mapOf(uri("App") to uri("Other"), uri("App/Box.x") to uri("App/New.x")),
+                    ).get(30, SECONDS),
+            ).isNull()
             adapter.replaceSourceModules(listOf(XdkSourceModule("App", uri("App.x"))))
             assertThat(
-                    adapter
-                        .renameFilesAsync(mapOf(uri("App.x") to uri("Renamed.x")))
-                        .get(30, SECONDS)
-                )
-                .isNull()
+                adapter
+                    .renameFilesAsync(mapOf(uri("App.x") to uri("Renamed.x")))
+                    .get(30, SECONDS),
+            ).isNull()
             Files.createSymbolicLink(directory.resolve("alias.x"), directory.resolve("App/Box.x"))
             assertThat(
-                    adapter
-                        .renameFilesAsync(mapOf(uri("alias.x") to uri("renamed.x")))
-                        .get(30, SECONDS)
-                )
-                .isNull()
+                adapter
+                    .renameFilesAsync(mapOf(uri("alias.x") to uri("renamed.x")))
+                    .get(30, SECONDS),
+            ).isNull()
             assertThat(Files.readString(directory.resolve("App.x"))).contains("new Box()")
         }
     }
@@ -172,7 +167,10 @@ class XdkFileOperationsTest {
         }
     }
 
-    private fun write(file: String, source: String) {
+    private fun write(
+        file: String,
+        source: String,
+    ) {
         directory.resolve(file).toFile().apply {
             parentFile.mkdirs()
             writeText(source)
@@ -180,14 +178,22 @@ class XdkFileOperationsTest {
     }
 
     private fun uri(file: String) =
-        directory.resolve(file).toFile().toURI().toString().removeSuffix("/")
+        directory
+            .resolve(file)
+            .toFile()
+            .toURI()
+            .toString()
+            .removeSuffix("/")
 
-    private fun apply(edit: WorkspaceEdit, requested: Map<String, String>) {
+    private fun apply(
+        edit: WorkspaceEdit,
+        requested: Map<String, String>,
+    ) {
         edit.changes.forEach { (uri, changes) ->
             val path = Path.of(URI(uri))
             val text = Files.readString(path)
-            fun offset(position: Position): Int =
-                text.lineSequence().take(position.line).sumOf { it.length + 1 } + position.column
+
+            fun offset(position: Position): Int = text.lineSequence().take(position.line).sumOf { it.length + 1 } + position.column
             Files.writeString(
                 path,
                 changes

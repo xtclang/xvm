@@ -31,10 +31,10 @@ class ParityWorkspace(
     val protocol = ClientProtocol(driver)
     val trace = ClientTrace(driver)
     val common =
-        JsonParser.parseString(
-                Files.readString(Path.of(System.getProperty("xtc.playbook.scenarios")))
-            )
-            .asJsonObject["common"]
+        JsonParser
+            .parseString(
+                Files.readString(Path.of(System.getProperty("xtc.playbook.scenarios"))),
+            ).asJsonObject["common"]
             .asJsonObject
     private val projectRoot = with(driver) { Path.of(singleProject().getBasePath()) }
     val directory: Path = projectRoot.resolve("parity/$id")
@@ -67,7 +67,7 @@ class ParityWorkspace(
                         val manager = service<FileEditorManager>(singleProject())
                         if (
                             manager.getSelectedTextEditor()?.getVirtualFile()?.getPath() !=
-                                source.getPath()
+                            source.getPath()
                         ) {
                             manager.openFile(source, false, false)
                         }
@@ -145,8 +145,9 @@ class ParityWorkspace(
         text: String? = null,
     ): Document =
         with(driver) {
-            if (text != null || !Files.exists(directory.resolve(file)))
+            if (text != null || !Files.exists(directory.resolve(file))) {
                 write(file, text ?: fixture(file))
+            }
             val target = requireNotNull(refresh(directory.resolve(file)))
             withContext(OnDispatcher.EDT) {
                 service<FileEditorManager>(singleProject()).openFile(target, false, false)
@@ -184,9 +185,8 @@ class ParityWorkspace(
     fun flush(document: Document) {
         val pending =
             requireNotNull(clientDocument(document)?.getSynchronizer()) {
-                    "Document synchronizer is not ready for $id/${document.file}"
-                }
-                .flushPendingChanges()
+                "Document synchronizer is not ready for $id/${document.file}"
+            }.flushPendingChanges()
         with(driver) {
             awaitUi("client sends current $id/${document.file}", 45.seconds) { pending.isDone() }
         }
@@ -298,7 +298,7 @@ class ParityWorkspace(
                         module["resourceRoots"]?.asJsonArray?.map { uri(it.asString) },
                     )
                 }
-            }
+            },
         )
 
     fun linked(consumer: Document) {
@@ -342,7 +342,7 @@ class ParityWorkspace(
                         "languageId" to "xtc",
                         "version" to version,
                         "text" to text,
-                    )
+                    ),
             ),
         )
         try {
@@ -389,8 +389,7 @@ class ParityWorkspace(
                     .getAllEditors()
                     .map {
                         it.getFile()
-                    }
-                    .filter { it.getPath().startsWith(directory.toString() + "/") }
+                    }.filter { it.getPath().startsWith(directory.toString() + "/") }
                     .distinctBy { it.getPath() }
             withContext(OnDispatcher.EDT) { files.forEach(manager::closeFile) }
             withContext(OnDispatcher.EDT) {
@@ -402,14 +401,13 @@ class ParityWorkspace(
                     .filter {
                         documents.getFile(it)?.getPath()?.startsWith(directory.toString() + "/") ==
                             true
-                    }
-                    .forEach(documents::reloadFromDisk)
+                    }.forEach(documents::reloadFromDisk)
             }
         }
         configure(
             shared.common.sourceModules.map {
                 it.copy(uri = projectRoot.resolve(it.uri).toUri().toString())
-            }
+            },
         )
     }
 
@@ -447,11 +445,9 @@ internal fun JsonObject.string(name: String): String =
 
 internal fun JsonObject.int(name: String): Int = get(name).asInt
 
-internal fun JsonObject.strings(name: String): List<String> =
-    getAsJsonArray(name).map { it.asString }
+internal fun JsonObject.strings(name: String): List<String> = getAsJsonArray(name).map { it.asString }
 
-internal fun JsonElement.rows(): List<JsonObject> =
-    if (isJsonNull) emptyList() else asJsonArray.map { it.asJsonObject }
+internal fun JsonElement.rows(): List<JsonObject> = if (isJsonNull) emptyList() else asJsonArray.map { it.asJsonObject }
 
 internal fun JsonObject.pattern(name: String): Regex =
     getAsJsonObject(name).let {

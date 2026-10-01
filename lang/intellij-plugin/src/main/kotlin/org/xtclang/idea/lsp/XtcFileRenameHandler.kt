@@ -19,7 +19,9 @@ import javax.swing.JComponent
  * Request compiler proof before changing a file's physical path. IntelliJ's VFS before-event for
  * rename runs after the filesystem mutation, too late for LSP4IJ's willRenameFiles listener.
  */
-class XtcFileRenameHandler : RenameHandler, TitledHandler {
+class XtcFileRenameHandler :
+    RenameHandler,
+    TitledHandler {
     // TODO LSP4IJ: move willRenameFiles preflight before the physical mutation; its current VFS
     // before-event is already too late. Then this host-specific preflight can be removed.
     override fun getActionTitle(): String = "Rename Ecstasy file and references"
@@ -31,8 +33,12 @@ class XtcFileRenameHandler : RenameHandler, TitledHandler {
         return XtcFileOperations.isSourcePath(file) && XtcFileOperations.server(project) != null
     }
 
-    override fun invoke(project: Project, editor: Editor, file: PsiFile, dataContext: DataContext) =
-        invoke(project, arrayOf(file), dataContext)
+    override fun invoke(
+        project: Project,
+        editor: Editor,
+        file: PsiFile,
+        dataContext: DataContext,
+    ) = invoke(project, arrayOf(file), dataContext)
 
     override fun invoke(
         project: Project,
@@ -46,8 +52,11 @@ class XtcFileRenameHandler : RenameHandler, TitledHandler {
 
     private fun selectedFile(context: DataContext): VirtualFile? {
         val files = CommonDataKeys.VIRTUAL_FILE_ARRAY.getData(context)
-        return if (files == null) CommonDataKeys.VIRTUAL_FILE.getData(context)
-        else files.singleOrNull()
+        return if (files == null) {
+            CommonDataKeys.VIRTUAL_FILE.getData(context)
+        } else {
+            files.singleOrNull()
+        }
     }
 
     private class RenameDialog(

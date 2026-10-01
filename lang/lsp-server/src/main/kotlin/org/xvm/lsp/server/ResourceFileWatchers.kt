@@ -1,5 +1,16 @@
 package org.xvm.lsp.server
 
+import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
+import org.eclipse.lsp4j.FileSystemWatcher
+import org.eclipse.lsp4j.Registration
+import org.eclipse.lsp4j.RegistrationParams
+import org.eclipse.lsp4j.RelativePattern
+import org.eclipse.lsp4j.Unregistration
+import org.eclipse.lsp4j.UnregistrationParams
+import org.eclipse.lsp4j.WatchKind
+import org.eclipse.lsp4j.jsonrpc.messages.Either
+import org.eclipse.lsp4j.services.LanguageClient
+import org.slf4j.LoggerFactory
 import java.io.Closeable
 import java.net.URI
 import java.nio.file.Files
@@ -12,26 +23,16 @@ import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
-import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
-import org.eclipse.lsp4j.FileSystemWatcher
-import org.eclipse.lsp4j.Registration
-import org.eclipse.lsp4j.RegistrationParams
-import org.eclipse.lsp4j.RelativePattern
-import org.eclipse.lsp4j.Unregistration
-import org.eclipse.lsp4j.UnregistrationParams
-import org.eclipse.lsp4j.WatchKind
-import org.eclipse.lsp4j.jsonrpc.messages.Either
-import org.eclipse.lsp4j.services.LanguageClient
-import org.slf4j.LoggerFactory
 
 /** Serialize registration changes so a delayed removal cannot retire a newer root subscription. */
 internal class ResourceFileWatchers(
     private val deadline: () -> CompletableFuture<Void> = {
         CompletableFuture<Void>().completeOnTimeout(null, 10, SECONDS)
-    }
+    },
 ) : Closeable {
     private val closed = AtomicBoolean()
     private val pending = ConcurrentHashMap.newKeySet<CompletableFuture<Void>>()
+
     // Unacknowledged removals remain retryable, but their IDs are never reusable as active watches.
     private val retired = ConcurrentHashMap<String, LanguageClient>()
     private val queue =
@@ -47,8 +48,9 @@ internal class ResourceFileWatchers(
         val previous = queue.getAndSet(result)
         previous
             .thenComposeAsync { active ->
-                if (closed.get())
+                if (closed.get()) {
                     return@thenComposeAsync CompletableFuture.completedFuture(emptyMap())
+                }
                 val next =
                     roots
                         .map { Watch.forRoot(it, relativePatterns) }
@@ -57,12 +59,14 @@ internal class ResourceFileWatchers(
                         }
                 val added = next.filterKeys { it !in active }
                 val removed =
-                    (active.filterKeys { it !in next }.values +
-                            retired.entries.filter { it.value === client }.map { it.key })
-                        .distinct()
+                    (
+                        active.filterKeys { it !in next }.values +
+                            retired.entries.filter { it.value === client }.map { it.key }
+                    ).distinct()
                 val register =
-                    if (added.isEmpty()) CompletableFuture.completedFuture(null)
-                    else {
+                    if (added.isEmpty()) {
+                        CompletableFuture.completedFuture(null)
+                    } else {
                         awaitReply(onLateSuccess = { unregister(client, added.values) }) {
                             client.registerCapability(
                                 RegistrationParams(
@@ -71,11 +75,11 @@ internal class ResourceFileWatchers(
                                             id,
                                             "workspace/didChangeWatchedFiles",
                                             DidChangeWatchedFilesRegistrationOptions(
-                                                watch.patterns()
+                                                watch.patterns(),
                                             ),
                                         )
-                                    }
-                                )
+                                    },
+                                ),
                             )
                         }
                     }
@@ -87,12 +91,14 @@ internal class ResourceFileWatchers(
                                 failure,
                             )
                             CompletableFuture.completedFuture(active)
-                        } else if (removed.isEmpty()) CompletableFuture.completedFuture(next)
-                        else
+                        } else if (removed.isEmpty()) {
+                            CompletableFuture.completedFuture(next)
+                        } else {
                             awaitReply { unregister(client, removed) }
                                 .handle { _, removalFailure ->
-                                    if (removalFailure == null) next
-                                    else {
+                                    if (removalFailure == null) {
+                                        next
+                                    } else {
                                         logger.warn(
                                             "Resource watcher removal was not acknowledged; retiring its registration IDs",
                                             removalFailure,
@@ -102,12 +108,12 @@ internal class ResourceFileWatchers(
                                         next
                                     }
                                 }
-                    }
-                    .thenCompose { it }
-            }
-            .whenComplete { current, failure ->
-                if (failure == null) result.complete(current)
-                else {
+                        }
+                    }.thenCompose { it }
+            }.whenComplete { current, failure ->
+                if (failure == null) {
+                    result.complete(current)
+                } else {
                     logger.warn("Resource watcher update failed", failure)
                     // Keep the queue usable even if a client implementation throws synchronously.
                     result.complete(previous.getNow(emptyMap()))
@@ -134,8 +140,11 @@ internal class ResourceFileWatchers(
         }
         result.whenComplete { _, _ -> timer.cancel(false) }
         attempt(action).whenComplete { _, failure ->
-            if (failure != null) result.completeExceptionally(failure)
-            else if (!result.complete(null)) onLateSuccess()
+            if (failure != null) {
+                result.completeExceptionally(failure)
+            } else if (!result.complete(null)) {
+                onLateSuccess()
+            }
         }
         return result
     }
@@ -145,15 +154,16 @@ internal class ResourceFileWatchers(
         ids: Collection<String>,
     ): CompletableFuture<Void> {
         ids.forEach { retired[it] = client }
-        val reply = attempt {
-            client.unregisterCapability(
-                UnregistrationParams(
-                    ids.map {
-                        Unregistration(it, "workspace/didChangeWatchedFiles")
-                    }
+        val reply =
+            attempt {
+                client.unregisterCapability(
+                    UnregistrationParams(
+                        ids.map {
+                            Unregistration(it, "workspace/didChangeWatchedFiles")
+                        },
+                    ),
                 )
-            )
-        }
+            }
         reply.whenComplete { _, failure ->
             if (failure == null) ids.forEach { retired.remove(it, client) }
         }
@@ -176,20 +186,29 @@ internal class ResourceFileWatchers(
         val ancestor: String?,
         val child: String?,
     ) {
-        fun patterns(): List<FileSystemWatcher> = buildList {
-            add(pattern(root, "**/*"))
-            if (ancestor != null && child != null) add(pattern(ancestor, child))
-        }
+        fun patterns(): List<FileSystemWatcher> =
+            buildList {
+                add(pattern(root, "**/*"))
+                if (ancestor != null && child != null) add(pattern(ancestor, child))
+            }
 
-        private fun pattern(base: String, glob: String) =
-            FileSystemWatcher(
-                if (relative) Either.forRight(RelativePattern(Either.forRight(base), glob))
-                else Either.forLeft(URI.create(base).path.trimEnd('/') + "/" + glob),
-                WatchKind.Create + WatchKind.Change + WatchKind.Delete,
-            )
+        private fun pattern(
+            base: String,
+            glob: String,
+        ) = FileSystemWatcher(
+            if (relative) {
+                Either.forRight(RelativePattern(Either.forRight(base), glob))
+            } else {
+                Either.forLeft(URI.create(base).path.trimEnd('/') + "/" + glob)
+            },
+            WatchKind.Create + WatchKind.Change + WatchKind.Delete,
+        )
 
         companion object {
-            fun forRoot(root: String, relative: Boolean): Watch {
+            fun forRoot(
+                root: String,
+                relative: Boolean,
+            ): Watch {
                 val path = Path.of(URI.create(root))
                 val ancestor =
                     generateSequence(path.parent) { it.parent }.firstOrNull(Files::isDirectory)
@@ -207,11 +226,12 @@ internal class ResourceFileWatchers(
                                 '[',
                                 ']',
                                 '{',
-                                '}' -> "[$character]"
+                                '}',
+                                -> "[$character]"
+
                                 else -> character.toString()
                             }
-                        }
-                        ?.joinToString("")
+                        }?.joinToString("")
                 return Watch(root, relative, ancestor?.toUri()?.toString(), child)
             }
         }

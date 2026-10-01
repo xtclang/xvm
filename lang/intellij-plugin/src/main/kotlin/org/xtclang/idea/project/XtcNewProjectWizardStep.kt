@@ -13,17 +13,19 @@ import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.ui.dsl.builder.Panel
 import com.intellij.ui.dsl.builder.bindItem
 import com.intellij.ui.dsl.builder.bindSelected
-import kotlin.io.path.Path
 import org.xtclang.idea.PluginPaths
 import org.xtclang.idea.run.XtcRunConfiguration
 import org.xtclang.idea.run.XtcRunConfigurationType
 import org.xvm.tool.XtcProjectCreator
+import kotlin.io.path.Path
 
 /**
  * XTC-specific wizard step for the New Project wizard. Uses XtcProjectCreator (synced from
  * javatools, compiled for Java 21).
  */
-class XtcNewProjectWizardStep(parent: NewProjectWizardStep) : AbstractNewProjectWizardStep(parent) {
+class XtcNewProjectWizardStep(
+    parent: NewProjectWizardStep,
+) : AbstractNewProjectWizardStep(parent) {
     private val logger = logger<XtcNewProjectWizardStep>()
 
     private val projectTypeProperty =
@@ -52,7 +54,7 @@ class XtcNewProjectWizardStep(parent: NewProjectWizardStep) : AbstractNewProject
             PluginPaths.selfDescriptor()?.version ?: XtcProjectCreator.DEFAULT_XTC_VERSION
 
         logger.info(
-            "Creating Ecstasy project: path=$projectPath, type=$projectType, multiModule=$multiModule, xtcVersion=$xtcVersion"
+            "Creating Ecstasy project: path=$projectPath, type=$projectType, multiModule=$multiModule, xtcVersion=$xtcVersion",
         )
 
         val creator = XtcProjectCreator(projectPath, projectType, multiModule, xtcVersion, null)
@@ -80,8 +82,7 @@ class XtcNewProjectWizardStep(parent: NewProjectWizardStep) : AbstractNewProject
         // Both refreshAndFindFileByNioFile and markDirty do VFS I/O that triggers
         // SlowOperations assertions when called on the EDT.
         ApplicationManager.getApplication().executeOnPooledThread {
-            LocalFileSystem.getInstance().refreshAndFindFileByNioFile(projectPath)?.let { projectDir
-                ->
+            LocalFileSystem.getInstance().refreshAndFindFileByNioFile(projectPath)?.let { projectDir ->
                 VfsUtil.markDirtyAndRefresh(true, true, true, projectDir)
                 logger.info("Refreshed VFS for project directory: $projectPath")
             } ?: logger.warn("Could not find project directory in VFS: $projectPath")
@@ -106,9 +107,8 @@ class XtcNewProjectWizardStep(parent: NewProjectWizardStep) : AbstractNewProject
             runManager.addConfiguration(settings)
             runManager.selectedConfiguration = settings
             logger.info("Created default run configuration for module: $moduleName")
+        }.onFailure { e ->
+            logger.warn("Failed to create default run configuration: ${e.message}")
         }
-            .onFailure { e ->
-                logger.warn("Failed to create default run configuration: ${e.message}")
-            }
     }
 }

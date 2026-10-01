@@ -1,6 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -8,6 +7,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import java.nio.file.Path
 
 /** Explicit refusal and scope boundaries; compiling a fixture alone is not evidence for rename. */
 class XdkRenameBoundaryTest {
@@ -20,7 +20,7 @@ class XdkRenameBoundaryTest {
                 "Int use() { function Int(Int) f = &pick; return f(1); }",
                 "function Int(Int) saved() = &pick;",
                 "Int consume(function Int(Int) f) = f(1); Int use() = consume(&pick);",
-            ]
+            ],
     )
     fun `stored returned and passed method values retain positional invocation`(use: String) {
         val text = "module App { Int pick(Int input) = input; $use }"
@@ -72,15 +72,14 @@ class XdkRenameBoundaryTest {
                 listOf(
                     XdkSourceModule("App", uri),
                     XdkSourceModule("Consumer", outside.toURI().toString(), setOf("App")),
-                )
+                ),
             )
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
             assertThat(
-                    requireNotNull(adapter.rename(uri, 0, text.indexOf("pick"), "choose"))
-                        .changes
-                        .keys
-                )
-                .containsExactlyInAnyOrder(uri, outside.toURI().toString())
+                requireNotNull(adapter.rename(uri, 0, text.indexOf("pick"), "choose"))
+                    .changes
+                    .keys,
+            ).containsExactlyInAnyOrder(uri, outside.toURI().toString())
         }
     }
 

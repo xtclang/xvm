@@ -1,11 +1,5 @@
 package org.xvm.lsp.server
 
-import java.nio.file.Files
-import java.nio.file.Path
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
 import org.eclipse.lsp4j.RegistrationParams
@@ -16,6 +10,12 @@ import org.junit.jupiter.api.io.TempDir
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit.SECONDS
 
 class ResourceFileWatchersTest {
     @TempDir lateinit var directory: Path
@@ -28,12 +28,13 @@ class ResourceFileWatchersTest {
             .`when`(client)
             .registerCapability(any())
         doAnswer {
-                removals += it.getArgument<UnregistrationParams>(0)
-                if (removals.size == 1)
-                    CompletableFuture.failedFuture<Void>(IllegalStateException("not removed"))
-                else CompletableFuture.completedFuture<Void>(null)
+            removals += it.getArgument<UnregistrationParams>(0)
+            if (removals.size == 1) {
+                CompletableFuture.failedFuture<Void>(IllegalStateException("not removed"))
+            } else {
+                CompletableFuture.completedFuture<Void>(null)
             }
-            .`when`(client)
+        }.`when`(client)
             .unregisterCapability(any())
         ResourceFileWatchers().use { watchers ->
             val root = setOf("file:///external/a/")
@@ -57,26 +58,34 @@ class ResourceFileWatchersTest {
         val replies = LinkedBlockingQueue<CompletableFuture<Void>>()
         val deadlines = LinkedBlockingQueue<CompletableFuture<Void>>()
         doAnswer {
-                registered.add(it.getArgument(0))
-                CompletableFuture<Void>().also(replies::add)
-            }
-            .`when`(client)
+            registered.add(it.getArgument(0))
+            CompletableFuture<Void>().also(replies::add)
+        }.`when`(client)
             .registerCapability(any())
         doAnswer {
-                removed.add(it.getArgument(0))
-                CompletableFuture.completedFuture<Void>(null)
-            }
-            .`when`(client)
+            removed.add(it.getArgument(0))
+            CompletableFuture.completedFuture<Void>(null)
+        }.`when`(client)
             .unregisterCapability(any())
         ResourceFileWatchers { CompletableFuture<Void>().also(deadlines::add) }
             .use { watchers ->
                 val first = watchers.update(client, setOf("file:///external/a/"))
-                val oldId = registered.poll(5, SECONDS).registrations.single().id
+                val oldId =
+                    registered
+                        .poll(5, SECONDS)
+                        .registrations
+                        .single()
+                        .id
                 val lateReply = replies.poll(5, SECONDS)
                 deadlines.poll(5, SECONDS).complete(null)
                 assertThat(first.get(5, SECONDS)).isEmpty()
                 val second = watchers.update(client, setOf("file:///external/a/"))
-                val newId = registered.poll(5, SECONDS).registrations.single().id
+                val newId =
+                    registered
+                        .poll(5, SECONDS)
+                        .registrations
+                        .single()
+                        .id
                 replies.poll(5, SECONDS).complete(null)
                 assertThat(second.get(5, SECONDS).values).containsExactly(newId)
                 lateReply.complete(null)
@@ -84,9 +93,8 @@ class ResourceFileWatchersTest {
                     .containsExactly(oldId)
                 assertThat(newId).isNotEqualTo(oldId)
                 assertThat(
-                        watchers.update(client, setOf("file:///external/a/")).get(5, SECONDS).values
-                    )
-                    .containsExactly(newId)
+                    watchers.update(client, setOf("file:///external/a/")).get(5, SECONDS).values,
+                ).containsExactly(newId)
             }
     }
 
@@ -122,10 +130,9 @@ class ResourceFileWatchersTest {
         val client = mock(LanguageClient::class.java)
         val started = CompletableFuture<Void>()
         doAnswer {
-                started.complete(null)
-                CompletableFuture<Void>()
-            }
-            .`when`(client)
+            started.complete(null)
+            CompletableFuture<Void>()
+        }.`when`(client)
             .registerCapability(any())
         val watchers = ResourceFileWatchers()
         val first = watchers.update(client, setOf("file:///external/a/"))
@@ -143,25 +150,29 @@ class ResourceFileWatchersTest {
         val registrations = CopyOnWriteArrayList<RegistrationParams>()
         val removals = CopyOnWriteArrayList<UnregistrationParams>()
         doAnswer {
-                registrations += it.getArgument<RegistrationParams>(0)
-                CompletableFuture.completedFuture<Void>(null)
-            }
-            .`when`(client)
+            registrations += it.getArgument<RegistrationParams>(0)
+            CompletableFuture.completedFuture<Void>(null)
+        }.`when`(client)
             .registerCapability(any())
         doAnswer {
-                removals += it.getArgument<UnregistrationParams>(0)
-                CompletableFuture.completedFuture<Void>(null)
-            }
-            .`when`(client)
+            removals += it.getArgument<UnregistrationParams>(0)
+            CompletableFuture.completedFuture<Void>(null)
+        }.`when`(client)
             .unregisterCapability(any())
         val watchers = ResourceFileWatchers()
         val root = directory.resolve("generated/assets")
         val uri = root.toUri().toString()
         watchers.update(client, setOf(uri)).get(10, SECONDS)
+
         fun patterns() =
-            (registrations.last().registrations.single().registerOptions
-                    as DidChangeWatchedFilesRegistrationOptions)
-                .watchers
+            (
+                registrations
+                    .last()
+                    .registrations
+                    .single()
+                    .registerOptions
+                    as DidChangeWatchedFilesRegistrationOptions
+            ).watchers
                 .map { it.globPattern.right }
         assertThat(patterns().map { it.baseUri.right to it.pattern })
             .containsExactly(
@@ -189,17 +200,18 @@ class ResourceFileWatchersTest {
         val removals = CopyOnWriteArrayList<UnregistrationParams>()
         val first = CompletableFuture<Void>()
         doAnswer {
-                registrations += it.getArgument<RegistrationParams>(0)
-                if (registrations.size == 1) first
-                else CompletableFuture.completedFuture<Void>(null)
-            }
-            .`when`(client)
-            .registerCapability(any())
-        doAnswer {
-                removals += it.getArgument<UnregistrationParams>(0)
+            registrations += it.getArgument<RegistrationParams>(0)
+            if (registrations.size == 1) {
+                first
+            } else {
                 CompletableFuture.completedFuture<Void>(null)
             }
-            .`when`(client)
+        }.`when`(client)
+            .registerCapability(any())
+        doAnswer {
+            removals += it.getArgument<UnregistrationParams>(0)
+            CompletableFuture.completedFuture<Void>(null)
+        }.`when`(client)
             .unregisterCapability(any())
         val watchers = ResourceFileWatchers()
         val a = watchers.update(client, setOf("file:///external/a/"))

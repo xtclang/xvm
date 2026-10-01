@@ -4,7 +4,9 @@ package org.xvm.lsp.lexer
 sealed interface ScanState {
     val pos: Int
 
-    data class Normal(override val pos: Int) : ScanState
+    data class Normal(
+        override val pos: Int,
+    ) : ScanState
 
     data class Template(
         override val pos: Int,
@@ -37,21 +39,22 @@ private data class Step(
  * - Substring slices instead of StringBuilder
  */
 class TemplateScanner {
-    fun tokenize(source: CharSequence): List<TemplateScannerToken> = buildList {
-        var state: ScanState = ScanState.Normal(0)
+    fun tokenize(source: CharSequence): List<TemplateScannerToken> =
+        buildList {
+            var state: ScanState = ScanState.Normal(0)
 
-        while (state.pos <= source.length) {
-            val step = step(source, state)
-            step.token?.let { add(it) }
+            while (state.pos <= source.length) {
+                val step = step(source, state)
+                step.token?.let { add(it) }
 
-            // Prevent infinite loop
-            if (step.next == state) break
-            state = step.next
+                // Prevent infinite loop
+                if (step.next == state) break
+                state = step.next
 
-            // Done when back to Normal at or past end
-            if (state is ScanState.Normal && state.pos >= source.length) break
+                // Done when back to Normal at or past end
+                if (state is ScanState.Normal && state.pos >= source.length) break
+            }
         }
-    }
 
     private fun step(
         source: CharSequence,
@@ -255,7 +258,8 @@ class TemplateScanner {
             }
 
             '\n',
-            '\r' -> {
+            '\r',
+            -> {
                 if (!state.multiline) {
                     Step(
                         TemplateScannerToken.error(pos, pos, "Newline in template expression"),
@@ -263,8 +267,11 @@ class TemplateScanner {
                     )
                 } else {
                     val skip =
-                        if (ch == '\r' && pos + 1 < source.length && source[pos + 1] == '\n') 2
-                        else 1
+                        if (ch == '\r' && pos + 1 < source.length && source[pos + 1] == '\n') {
+                            2
+                        } else {
+                            1
+                        }
                     Step(null, state.copy(pos = pos + skip))
                 }
             }
@@ -373,7 +380,6 @@ class TemplateScanner {
     companion object {
         /** Convenience factory method for one-off scanning */
         @Suppress("unused") // Public API for external callers
-        fun scan(source: CharSequence): List<TemplateScannerToken> =
-            TemplateScanner().tokenize(source)
+        fun scan(source: CharSequence): List<TemplateScannerToken> = TemplateScanner().tokenize(source)
     }
 }

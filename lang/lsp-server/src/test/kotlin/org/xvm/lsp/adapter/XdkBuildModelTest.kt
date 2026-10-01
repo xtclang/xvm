@@ -2,9 +2,6 @@ package org.xvm.lsp.adapter
 
 import com.google.gson.Gson
 import com.google.gson.JsonObject
-import java.net.URI
-import java.nio.file.Path
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
@@ -17,6 +14,9 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkBuildModel
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
+import java.net.URI
+import java.nio.file.Path
+import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkBuildModelTest {
     @TempDir lateinit var directory: Path
@@ -31,7 +31,8 @@ class XdkBuildModelTest {
         CompilerTestSupport.configure()
         val errors = ErrorList()
         val compilation =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .compileModule(
                     Source("module BinaryLibrary { static Int value() = 7; }", "BinaryLibrary.x"),
                     null,
@@ -56,9 +57,8 @@ class XdkBuildModelTest {
             assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
             adapter.replaceSourceModules(listOf(XdkSourceModule("Consumer", consumer)))
             assertThat(
-                    adapter.compile(consumer, Path.of(URI(consumer)).toFile().readText()).success
-                )
-                .isFalse()
+                adapter.compile(consumer, Path.of(URI(consumer)).toFile().readText()).success,
+            ).isFalse()
         }
     }
 
@@ -76,30 +76,33 @@ class XdkBuildModelTest {
         processed.resolve("data.txt").writeText("filtered resource")
         val inputs =
             model(
-                    entry(
-                        "library",
-                        "main",
-                        listOf(library),
-                        resources = listOf(processed.toURI().toString()),
-                    ),
-                    entry("app", "main", listOf(consumer), dependencies = listOf("library")),
-                )
-                .resolve()
+                entry(
+                    "library",
+                    "main",
+                    listOf(library),
+                    resources = listOf(processed.toURI().toString()),
+                ),
+                entry("app", "main", listOf(consumer), dependencies = listOf("library")),
+            ).resolve()
         assertThat(inputs.modules.single { it.name == "App" }.dependencies)
             .containsExactly("Assets")
         XdkAdapter().use { adapter ->
             adapter.replaceBuildInputs(inputs)
             assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
             assertThat(
-                    adapter.effectiveSourceModules().single { it.name == "Assets" }.resourceRoots
-                )
-                .containsExactly(processed.toURI().toString())
+                adapter.effectiveSourceModules().single { it.name == "Assets" }.resourceRoots,
+            ).containsExactly(processed.toURI().toString())
             adapter.replaceBuildInputs(
-                model(entry("library", "main", listOf(library), resources = emptyList())).resolve()
+                model(entry("library", "main", listOf(library), resources = emptyList())).resolve(),
             )
             assertThat(adapter.effectiveSourceModules().map { it.name }).containsExactly("Assets")
-            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS).single().success)
-                .isFalse()
+            assertThat(
+                adapter
+                    .workspaceDiagnosticsAsync()
+                    .get(30, SECONDS)
+                    .single()
+                    .success,
+            ).isFalse()
             adapter.replaceBuildInputs(inputs)
             assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
         }
@@ -112,11 +115,10 @@ class XdkBuildModelTest {
         val unrelated = source("unrelated/Other.x", "module Other { package main import Main; }")
         val inputs =
             model(
-                    entry("one", "main", listOf(main)),
-                    entry("one", "test", listOf(tests)),
-                    entry("two", "main", listOf(unrelated)),
-                )
-                .resolve()
+                entry("one", "main", listOf(main)),
+                entry("one", "test", listOf(tests)),
+                entry("two", "main", listOf(unrelated)),
+            ).resolve()
         assertThat(inputs.modules.single { it.name == "Tests" }.dependencies)
             .containsExactly("Main")
         assertThat(inputs.modules.single { it.name == "Other" }.dependencies).isEmpty()
@@ -145,44 +147,43 @@ class XdkBuildModelTest {
         XdkAdapter().use { adapter ->
             adapter.replaceSourceModules(listOf(XdkSourceModule("Good", root)))
             listOf(
-                    valid.deepCopy().apply { addProperty("sourceFiles", "not an array") },
-                    valid.deepCopy().apply {
-                        add("sourceFiles", Gson().toJsonTree(listOf("https://example.org/Bad.x")))
-                    },
-                    valid.deepCopy().apply { addProperty("projectId", 1) },
-                )
-                .forEach { bad ->
-                    assertThatThrownBy { adapter.replaceBuildInputs(model(bad).resolve()) }
-                        .isInstanceOf(IllegalArgumentException::class.java)
-                }
+                valid.deepCopy().apply { addProperty("sourceFiles", "not an array") },
+                valid.deepCopy().apply {
+                    add("sourceFiles", Gson().toJsonTree(listOf("https://example.org/Bad.x")))
+                },
+                valid.deepCopy().apply { addProperty("projectId", 1) },
+            ).forEach { bad ->
+                assertThatThrownBy { adapter.replaceBuildInputs(model(bad).resolve()) }
+                    .isInstanceOf(IllegalArgumentException::class.java)
+            }
             assertThatThrownBy { model(valid, valid).resolve() }.hasMessageContaining("Duplicate")
             assertThatThrownBy {
-                    model(valid, valid.deepCopy().apply { addProperty("projectId", "other") })
-                        .resolve()
-                }
-                .hasMessageContaining("Overlapping")
+                model(valid, valid.deepCopy().apply { addProperty("projectId", "other") })
+                    .resolve()
+            }.hasMessageContaining("Overlapping")
             val first = source("First.x", "module First { package second import Second; }")
             val second = source("Second.x", "module Second { package first import First; }")
             assertThatThrownBy {
-                    adapter.replaceBuildInputs(
-                        model(entry("app", "main", listOf(first, second))).resolve()
-                    )
-                }
-                .hasMessageContaining("Cyclic")
+                adapter.replaceBuildInputs(
+                    model(entry("app", "main", listOf(first, second))).resolve(),
+                )
+            }.hasMessageContaining("Cyclic")
             assertThat(adapter.effectiveSourceModules().map { it.name }).containsExactly("Good")
             assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
         }
     }
 
-    private fun source(path: String, text: String): String =
+    private fun source(
+        path: String,
+        text: String,
+    ): String =
         directory
             .resolve(path)
             .toFile()
             .apply {
                 parentFile.mkdirs()
                 writeText(text)
-            }
-            .toURI()
+            }.toURI()
             .toString()
 
     private fun entry(
@@ -202,9 +203,8 @@ class XdkBuildModelTest {
                     "resourceRoots" to resources,
                     "projectDependencies" to dependencies,
                     "modulePath" to emptyList<String>(),
-                )
-            )
-            .asJsonObject
+                ),
+            ).asJsonObject
 
     private fun model(vararg entries: JsonObject): XdkBuildModel =
         XdkBuildModel.read(
@@ -212,7 +212,7 @@ class XdkBuildModelTest {
                 JsonObject().apply {
                     addProperty("schemaVersion", 1)
                     add("sourceSets", Gson().toJsonTree(entries.toList()))
-                }
-            )
+                },
+            ),
         )
 }

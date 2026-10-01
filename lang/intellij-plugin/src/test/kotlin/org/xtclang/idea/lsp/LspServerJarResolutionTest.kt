@@ -1,13 +1,13 @@
 package org.xtclang.idea.lsp
 
-import java.nio.file.Files
-import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xtclang.idea.PluginPaths
+import java.nio.file.Files
+import java.nio.file.Path
 
 /**
  * Tests for JAR resolution logic used by both the LSP and DAP servers.

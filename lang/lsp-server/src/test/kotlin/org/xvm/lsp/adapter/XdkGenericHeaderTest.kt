@@ -21,7 +21,7 @@ class XdkGenericHeaderTest {
                 "interface Damaged extends Li§st<String> {}",
                 "void damaged(Map<Int, Li§st<String>> value) {}",
                 "Li§st<String> damaged() = [\"x\"];",
-            ]
+            ],
     )
     fun `generic base completion preserves all written type arguments`(declaration: String) {
         completion(
@@ -44,7 +44,7 @@ class XdkGenericHeaderTest {
                 "List<§> property;",
                 "List<§> damaged() = [\"x\"];",
                 "interface Damaged extends List<§> {}",
-            ]
+            ],
     )
     fun `empty generic slots insert visible types at the cursor`(declaration: String) {
         completion("module Headers { $declaration }", "String", 0, 0)
@@ -59,7 +59,7 @@ class XdkGenericHeaderTest {
                 "void damaged(Map<Int, ecstasy.text.Str§ingBuffer> value) {}",
                 "void damaged((Int | Str§ing) value) {}",
                 "interface Damaged extends List<Str§ing> {}",
-            ]
+            ],
     )
     fun `mid token queries replace the entire final identifier`(declaration: String) {
         val qualified = declaration.contains("ecstasy.text")
@@ -80,11 +80,9 @@ class XdkGenericHeaderTest {
                 "void damaged(List<§> value) {}",
                 "Ele§ property;",
                 "class Nested { void damaged(Ele§ value) {} }",
-            ]
+            ],
     )
-    fun `registered class formals are type candidates in their real enclosing scope`(
-        declaration: String
-    ) {
+    fun `registered class formals are type candidates in their real enclosing scope`(declaration: String) {
         completion(
             "module Headers { class Container<Element> { $declaration } }",
             "Element",
@@ -102,7 +100,7 @@ class XdkGenericHeaderTest {
                 "Owner<List<String>>.Ite§",
                 "Owner<String>.Nested.Ite§",
                 "Owner<String>.Ali§",
-            ]
+            ],
     )
     fun `parameterized qualifiers preserve compiler type substitution`(type: String) {
         val alias = type.contains("Ali")
@@ -123,11 +121,9 @@ class XdkGenericHeaderTest {
                 "Owner<Missing>.Ite§",
                 "Value<String>.Ite§",
                 "Owner<String>.Hid§",
-            ]
+            ],
     )
-    fun `invalid or inaccessible parameterized qualifiers never fall back to local names`(
-        type: String
-    ) {
+    fun `invalid or inaccessible parameterized qualifiers never fall back to local names`(type: String) {
         val marked =
             "module Headers { class ItemOutside {} class HiddenOutside {} String Value = \"x\"; " +
                 "class Owner<Element> { class Item {} private class Hidden {} } void damaged($type value) {} }"
@@ -197,16 +193,17 @@ class XdkGenericHeaderTest {
         assertThat(candidate.type().valueString).isEqualTo("String")
         assertThat(source.toRawString()).isEqualTo(text)
         val stopped =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .analyzeIncomplete(source.clone(), cursor, null, ErrorList(1))
         assertThat(stopped.cursorBindings()).isEmpty()
         val cancelled = ErrorListener.cancellable(ErrorList()) { true }
         assertThat(
-                EmbeddingSupport.instance()
-                    .analyzeIncomplete(source.clone(), cursor, null, cancelled)
-                    .cursorBindings()
-            )
-            .isEmpty()
+            EmbeddingSupport
+                .instance()
+                .analyzeIncomplete(source.clone(), cursor, null, cancelled)
+                .cursorBindings(),
+        ).isEmpty()
     }
 
     private fun completion(
@@ -223,19 +220,17 @@ class XdkGenericHeaderTest {
             assertThat(item.kind).isEqualTo(CompletionItem.CompletionKind.CLASS)
             assertThat(item.textEdit)
                 .isEqualTo(
-                    TextEdit(Range(Position(0, at - before), Position(0, at + after)), selected)
+                    TextEdit(Range(Position(0, at - before), Position(0, at + after)), selected),
                 )
             assertThat(adapter.getSignatureHelp(URI, 0, at)).isNull()
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
             assertThat(
-                    adapter
-                        .compile(
-                            URI,
-                            text.take(at - before) + selected + text.substring(at + after),
-                        )
-                        .diagnostics
-                )
-                .describedAs(marked)
+                adapter
+                    .compile(
+                        URI,
+                        text.take(at - before) + selected + text.substring(at + after),
+                    ).diagnostics,
+            ).describedAs(marked)
                 .isEmpty()
         }
     }

@@ -3,13 +3,13 @@ package org.xtclang.idea.lsp
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.redhat.devtools.lsp4ij.server.CannotStartProcessException
 import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
-import java.nio.file.Files
-import java.nio.file.Path
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.concurrent.TimeUnit.SECONDS
 
 class ConnectionProcessTest {
     @TempDir lateinit var directory: Path
@@ -40,9 +40,7 @@ class ConnectionProcessTest {
         }
     }
 
-    private fun withProvider(
-        check: (OSProcessStreamConnectionProvider, ConnectionLifetime) -> Unit
-    ) {
+    private fun withProvider(check: (OSProcessStreamConnectionProvider, ConnectionLifetime) -> Unit) {
         val source =
             Files.writeString(
                 directory.resolve("Probe.java"),
@@ -52,9 +50,13 @@ class ConnectionProcessTest {
             object :
                 OSProcessStreamConnectionProvider(
                     GeneralCommandLine(
-                        ProcessHandle.current().info().command().orElseThrow(),
+                        ProcessHandle
+                            .current()
+                            .info()
+                            .command()
+                            .orElseThrow(),
                         source.toString(),
-                    )
+                    ),
                 ) {
                 fun child(): Process? = processHandler?.process
             }

@@ -1,6 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -8,15 +7,14 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import java.nio.file.Path
 
 class XdkWorkspaceRefactoringTest {
     @TempDir lateinit var directory: Path
 
     @ParameterizedTest
     @ValueSource(strings = ["Box", "answer", "number"])
-    fun `inline types static functions and constants rename through unopened consumers`(
-        name: String
-    ) {
+    fun `inline types static functions and constants rename through unopened consumers`(name: String) {
         val libraryText =
             "module Library { class Box {} static Int answer() = number; static Int number = 42; }"
         val library = source("Library", libraryText)
@@ -33,7 +31,11 @@ class XdkWorkspaceRefactoringTest {
             val edit = requireNotNull(adapter.rename(library, 0, position, "renamed"))
             assertThat(edit.versioned).isTrue()
             assertThat(edit.changes.keys).containsExactlyInAnyOrder(library, consumer)
-            assertThat(edit.changes.values.flatten().map { it.newText }).containsOnly("renamed")
+            assertThat(
+                edit.changes.values
+                    .flatten()
+                    .map { it.newText },
+            ).containsOnly("renamed")
             assertThat(directory.resolve("Library.x").toFile().readText()).isEqualTo(libraryText)
         }
     }
@@ -63,9 +65,8 @@ class XdkWorkspaceRefactoringTest {
                         .getValue(uri)
                         .sortedWith(
                             compareByDescending<TextEdit> { it.range.start.line }
-                                .thenByDescending { it.range.start.column }
-                        )
-                        .fold(text) { value, replacement ->
+                                .thenByDescending { it.range.start.column },
+                        ).fold(text) { value, replacement ->
                             fun offset(position: Position): Int =
                                 value.splitToSequence("\n").take(position.line).sumOf {
                                     it.length + 1
@@ -94,13 +95,12 @@ class XdkWorkspaceRefactoringTest {
             source("Broken", "module Broken { Missing value; }")
             adapter.refreshDiscoveredSources()
             assertThat(
-                    adapter.getCodeActions(
-                        uri,
-                        Range(Position(0, 0), Position(0, text.length)),
-                        emptyList(),
-                    )
-                )
-                .isEmpty()
+                adapter.getCodeActions(
+                    uri,
+                    Range(Position(0, 0), Position(0, text.length)),
+                    emptyList(),
+                ),
+            ).isEmpty()
         }
     }
 
@@ -127,17 +127,15 @@ class XdkWorkspaceRefactoringTest {
                 .contains("Int get() = 1", "void set(Int value)", "Other { Int value = 3")
             assertThat(adapter.compile(library, changed).diagnostics).isEmpty()
             assertThat(
-                    adapter
-                        .compile(
-                            consumer,
-                            apply(
-                                directory.resolve("Consumer.x").toFile().readText(),
-                                edit.changes.getValue(consumer),
-                            ),
-                        )
-                        .diagnostics
-                )
-                .isEmpty()
+                adapter
+                    .compile(
+                        consumer,
+                        apply(
+                            directory.resolve("Consumer.x").toFile().readText(),
+                            edit.changes.getValue(consumer),
+                        ),
+                    ).diagnostics,
+            ).isEmpty()
         }
     }
 
@@ -170,8 +168,12 @@ class XdkWorkspaceRefactoringTest {
                 .containsExactlyEntriesOf(
                     mapOf(
                         member.canonicalFile.toURI().toString() to
-                            member.parentFile.resolve("Renamed.x").canonicalFile.toURI().toString()
-                    )
+                            member.parentFile
+                                .resolve("Renamed.x")
+                                .canonicalFile
+                                .toURI()
+                                .toString(),
+                    ),
                 )
             assertThat(edit.changes).hasSize(2)
             assertThat(member.readText()).isEqualTo("class Item {}")
@@ -253,13 +255,12 @@ class XdkWorkspaceRefactoringTest {
             val hidden = text.replace("Widget", "Hidden")
             assertThat(adapter.compile(uri, hidden).diagnostics).isNotEmpty()
             assertThat(
-                    adapter.getCodeActions(
-                        uri,
-                        Range(Position(0, 0), Position(0, hidden.length)),
-                        emptyList(),
-                    )
-                )
-                .isEmpty()
+                adapter.getCodeActions(
+                    uri,
+                    Range(Position(0, 0), Position(0, hidden.length)),
+                    emptyList(),
+                ),
+            ).isEmpty()
         }
     }
 
@@ -271,13 +272,12 @@ class XdkWorkspaceRefactoringTest {
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, text).diagnostics).isNotEmpty()
             assertThat(
-                    adapter.getCodeActions(
-                        uri,
-                        Range(Position(0, 0), Position(0, text.length)),
-                        emptyList(),
-                    )
-                )
-                .isEmpty()
+                adapter.getCodeActions(
+                    uri,
+                    Range(Position(0, 0), Position(0, text.length)),
+                    emptyList(),
+                ),
+            ).isEmpty()
         }
     }
 
@@ -294,7 +294,7 @@ class XdkWorkspaceRefactoringTest {
             assertThat(adapter.getCodeActions(uri, range, emptyList()).map { it.title })
                 .containsExactly("Import 'Widget' from First", "Import 'Widget' from Second")
             adapter.replaceSourceModules(
-                listOf(XdkSourceModule("App", uri), XdkSourceModule("First", first))
+                listOf(XdkSourceModule("App", uri), XdkSourceModule("First", first)),
             )
             assertThat(adapter.compile(uri, text).diagnostics).isNotEmpty()
             assertThat(adapter.getCodeActions(uri, range, emptyList())).isEmpty()
@@ -316,7 +316,7 @@ class XdkWorkspaceRefactoringTest {
             val changed = apply(text, edit.changes.getValue(uri))
             assertThat(changed)
                 .endsWith(
-                    "class Nested { import ecstasy.text.StringBuffer as Buffer; Buffer make() = new Buffer(); } }"
+                    "class Nested { import ecstasy.text.StringBuffer as Buffer; Buffer make() = new Buffer(); } }",
                 )
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
         }

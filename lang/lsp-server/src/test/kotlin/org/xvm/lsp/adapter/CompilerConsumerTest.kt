@@ -14,7 +14,8 @@ class CompilerConsumerTest {
         CompilerTestSupport.configure()
         val errors = ErrorList(100)
         val module =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .compile("module Consumer { Int answer() = 42; }", null, errors)
 
         assertThat(errors.errors).isEmpty()

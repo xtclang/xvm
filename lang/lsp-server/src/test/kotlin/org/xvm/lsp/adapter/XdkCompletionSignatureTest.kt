@@ -1,9 +1,9 @@
 package org.xvm.lsp.adapter
 
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkCompletionSignatureTest {
     @Test
@@ -41,9 +41,10 @@ class XdkCompletionSignatureTest {
                     assertThat(it.documentation).contains("overload not selected")
                     assertThat(it.activeParameter).isZero()
                 }
-                if (name == "echo")
+                if (name == "echo") {
                     assertThat(help.signatures.single().label)
                         .isEqualTo("String echo(String value)")
+                }
             }
         }
     }
@@ -153,7 +154,7 @@ class XdkCompletionSignatureTest {
                         )
                     assertThat(applied)
                         .isEqualTo(
-                            prefix.dropLast(typed.length) + item.label + "; } Int later() = 42; }"
+                            prefix.dropLast(typed.length) + item.label + "; } Int later() = 42; }",
                         )
                 }
                 assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)

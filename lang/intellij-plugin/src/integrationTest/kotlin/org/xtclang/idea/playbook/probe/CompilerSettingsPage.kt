@@ -8,14 +8,14 @@ import com.intellij.openapi.project.Project
 import com.intellij.util.xmlb.XmlSerializerUtil
 import com.redhat.devtools.lsp4ij.settings.GlobalLanguageServerSettings
 import com.redhat.devtools.lsp4ij.settings.ProjectLanguageServerSettings
+import org.xtclang.idea.lsp.CompilerBuildModel
+import org.xtclang.idea.lsp.CompilerProjectConfigurable
 import java.awt.Component
 import java.awt.Container
 import java.net.URI
 import java.nio.file.Path
 import javax.swing.JCheckBox
 import javax.swing.JTable
-import org.xtclang.idea.lsp.CompilerBuildModel
-import org.xtclang.idea.lsp.CompilerProjectConfigurable
 
 /** Exercise the real project settings component and its Apply/Reset contract on the EDT. */
 object CompilerSettingsPage {
@@ -24,10 +24,12 @@ object CompilerSettingsPage {
     @JvmStatic
     fun useBuildModel(project: Project): String {
         val page = CompilerProjectConfigurable(project)
-        fun descendants(component: Component): Sequence<Component> = sequence {
-            yield(component)
-            if (component is Container) component.components.forEach { yieldAll(descendants(it)) }
-        }
+
+        fun descendants(component: Component): Sequence<Component> =
+            sequence {
+                yield(component)
+                if (component is Container) component.components.forEach { yieldAll(descendants(it)) }
+            }
         descendants(page.createComponent()).filterIsInstance<JCheckBox>().single().isSelected = true
         if (page.isModified()) page.apply()
         CompilerBuildModel.publish(project)
@@ -37,14 +39,16 @@ object CompilerSettingsPage {
     @JvmStatic
     fun refreshBuildModel(project: Project) {
         val before =
-            ProjectLanguageServerSettings.getInstance(project)
+            ProjectLanguageServerSettings
+                .getInstance(project)
                 .getLanguageServerSettings(SERVER)
                 ?.configurationContent
         CompilerBuildModel.publish(project)
         check(
-            ProjectLanguageServerSettings.getInstance(project)
+            ProjectLanguageServerSettings
+                .getInstance(project)
                 .getLanguageServerSettings(SERVER)
-                ?.configurationContent == before
+                ?.configurationContent == before,
         )
     }
 
@@ -54,10 +58,12 @@ object CompilerSettingsPage {
         val page = CompilerProjectConfigurable(project)
         val component = page.createComponent()
         check(!page.isModified())
-        fun descendants(component: Component): Sequence<Component> = sequence {
-            yield(component)
-            if (component is Container) component.components.forEach { yieldAll(descendants(it)) }
-        }
+
+        fun descendants(component: Component): Sequence<Component> =
+            sequence {
+                yield(component)
+                if (component is Container) component.components.forEach { yieldAll(descendants(it)) }
+            }
         val discovery = descendants(component).filterIsInstance<JCheckBox>().single()
         check(!discovery.isSelected)
         discovery.doClick()
@@ -66,15 +72,17 @@ object CompilerSettingsPage {
         check(!page.isModified() && !discovery.isSelected)
         val table = descendants(component).filterIsInstance<JTable>().single()
         val before =
-            GlobalLanguageServerSettings.getInstance()
+            GlobalLanguageServerSettings
+                .getInstance()
                 .getLanguageServerSettings(SERVER)
                 ?.configurationContent
         table.model.setValueAt("", 0, 0)
         check(runCatching { page.apply() }.exceptionOrNull() is ConfigurationException)
         check(
-            GlobalLanguageServerSettings.getInstance()
+            GlobalLanguageServerSettings
+                .getInstance()
                 .getLanguageServerSettings(SERVER)
-                ?.configurationContent == before
+                ?.configurationContent == before,
         )
         page.reset()
         // Edit actual table cells, preserving the graph's meaning while exercising relative roots.
@@ -87,33 +95,41 @@ object CompilerSettingsPage {
         page.apply()
         check(!page.isModified())
         check(
-            GlobalLanguageServerSettings.getInstance()
+            GlobalLanguageServerSettings
+                .getInstance()
                 .getLanguageServerSettings(SERVER)
-                ?.configurationContent == before
+                ?.configurationContent == before,
         )
         check(
-            ProjectLanguageServerSettings.getInstance(project)
+            ProjectLanguageServerSettings
+                .getInstance(project)
                 .getLanguageServerSettings(SERVER)
-                ?.configurationContent != null
+                ?.configurationContent != null,
         )
     }
 
     @JvmStatic
     fun dismissExpectedConfigurationError(project: Project) {
-        NotificationsManager.getNotificationsManager()
+        NotificationsManager
+            .getNotificationsManager()
             .getNotificationsOfType(Notification::class.java, project)
             .filter { it.content.contains("Cyclic source dependencies:") }
             .forEach(Notification::expire)
     }
 
     @JvmStatic
-    fun resourceRootsRoundTrip(project: Project, roots: String) {
+    fun resourceRootsRoundTrip(
+        project: Project,
+        roots: String,
+    ) {
         ApplicationManager.getApplication().assertIsDispatchThread()
         val page = CompilerProjectConfigurable(project)
-        fun descendants(component: Component): Sequence<Component> = sequence {
-            yield(component)
-            if (component is Container) component.components.forEach { yieldAll(descendants(it)) }
-        }
+
+        fun descendants(component: Component): Sequence<Component> =
+            sequence {
+                yield(component)
+                if (component is Container) component.components.forEach { yieldAll(descendants(it)) }
+            }
         val table = descendants(page.createComponent()).filterIsInstance<JTable>().single()
         val original = table.model.getValueAt(0, 3)
         table.model.setValueAt("[]", 0, 3)
@@ -127,10 +143,12 @@ object CompilerSettingsPage {
 
     @JvmStatic
     fun content(project: Project): String? =
-        ProjectLanguageServerSettings.getInstance(project)
+        ProjectLanguageServerSettings
+            .getInstance(project)
             .getLanguageServerSettings(SERVER)
             ?.configurationContent
-            ?: GlobalLanguageServerSettings.getInstance()
+            ?: GlobalLanguageServerSettings
+                .getInstance()
                 .getLanguageServerSettings(SERVER)
                 ?.configurationContent
 

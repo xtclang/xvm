@@ -1,7 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.nio.file.Path
-import java.util.concurrent.Executors
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -15,6 +13,8 @@ import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.semanticSnapshot
+import java.nio.file.Path
+import java.util.concurrent.Executors
 
 class XdkPropertyArgumentCompletionTest {
     @TempDir lateinit var directory: Path
@@ -52,7 +52,7 @@ class XdkPropertyArgumentCompletionTest {
             assertThat(items.map { it.label })
                 .describedAs(call)
                 .containsExactlyElementsOf(
-                    listOf(expected) + if (typed.isEmpty()) listOf("0") else emptyList()
+                    listOf(expected) + if (typed.isEmpty()) listOf("0") else emptyList(),
                 )
             val item = items.single { it.label == expected }
             assertThat(item.kind).isEqualTo(CompletionItem.CompletionKind.PROPERTY)
@@ -64,22 +64,20 @@ class XdkPropertyArgumentCompletionTest {
                             Position(0, prefix.length),
                         ),
                         expected,
-                    )
+                    ),
                 )
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
             assertThat(
-                    adapter
-                        .compile(
-                            URI,
-                            original.replaceRange(
-                                prefix.length - typed.length,
-                                prefix.length,
-                                expected,
-                            ),
-                        )
-                        .diagnostics
-                )
-                .isEmpty()
+                adapter
+                    .compile(
+                        URI,
+                        original.replaceRange(
+                            prefix.length - typed.length,
+                            prefix.length,
+                            expected,
+                        ),
+                    ).diagnostics,
+            ).isEmpty()
         }
     }
 
@@ -95,19 +93,20 @@ class XdkPropertyArgumentCompletionTest {
             adapter.compile(URI, text)
             val items = adapter.getCompletions(URI, 0, prefix.length)
             val expected =
-                if (modifier.isEmpty()) listOf("valueConstant", "valueOwn", "valueProtected")
-                else listOf("valueConstant")
+                if (modifier.isEmpty()) {
+                    listOf("valueConstant", "valueOwn", "valueProtected")
+                } else {
+                    listOf("valueConstant")
+                }
             assertThat(items.map { it.label }).containsExactlyInAnyOrderElementsOf(expected)
             for (item in items) {
                 assertThat(
-                        adapter
-                            .compile(
-                                URI,
-                                text.replaceRange(prefix.length - 2, prefix.length, item.label),
-                            )
-                            .diagnostics
-                    )
-                    .isEmpty()
+                    adapter
+                        .compile(
+                            URI,
+                            text.replaceRange(prefix.length - 2, prefix.length, item.label),
+                        ).diagnostics,
+                ).isEmpty()
             }
         }
     }
@@ -137,11 +136,10 @@ class XdkPropertyArgumentCompletionTest {
         val suffix = if (guard.isEmpty()) "); } }" else "); } } }"
         XdkAdapter().use { adapter ->
             assertThat(
-                    adapter.compile(URI, "${prefix.dropLast(2)}value$suffix").diagnostics.map {
-                        it.code
-                    }
-                )
-                .contains("COMPILER-150")
+                adapter.compile(URI, "${prefix.dropLast(2)}value$suffix").diagnostics.map {
+                    it.code
+                },
+            ).contains("COMPILER-150")
             adapter.compile(URI, "$prefix$suffix")
             assertThat(adapter.getCompletions(URI, 0, prefix.length)).isEmpty()
         }
@@ -239,14 +237,13 @@ class XdkPropertyArgumentCompletionTest {
         assertThatThrownBy { (binding.argumentProperties() as MutableList).clear() }
             .isInstanceOf(UnsupportedOperationException::class.java)
         assertThat(
-                binding
-                    .withTypes(emptyList())
-                    .withCandidates(emptyList())
-                    .withFunctions(emptyList())
-                    .withArgumentValues(emptyList())
-                    .argumentProperties()
-            )
-            .isEqualTo(binding.argumentProperties())
+            binding
+                .withTypes(emptyList())
+                .withCandidates(emptyList())
+                .withFunctions(emptyList())
+                .withArgumentValues(emptyList())
+                .argumentProperties(),
+        ).isEqualTo(binding.argumentProperties())
         assertThat(site.arguments).isEmpty()
         assertThat(source.toRawString()).isEqualTo(text)
         val snapshot = analysis.semanticSnapshot(errors)
@@ -255,13 +252,14 @@ class XdkPropertyArgumentCompletionTest {
         XdkAdapter().use { adapter -> adapter.compile("untitled:Other.x", "module Other {}") }
         Executors.newSingleThreadExecutor().use { executor ->
             assertThat(
-                    executor
-                        .submit<List<String>> {
-                            snapshot.sites.single().argumentValues.map { it.name }
-                        }
-                        .get()
-                )
-                .containsExactly("value")
+                executor
+                    .submit<List<String>> {
+                        snapshot.sites
+                            .single()
+                            .argumentValues
+                            .map { it.name }
+                    }.get(),
+            ).containsExactly("value")
         }
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
     }

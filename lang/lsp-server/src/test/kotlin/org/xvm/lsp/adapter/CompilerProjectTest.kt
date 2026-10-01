@@ -1,8 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.io.File
-import java.io.IOException
-import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -25,6 +22,9 @@ import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.semanticSnapshot
 import org.xvm.lsp.adapter.xdk.semanticSnapshots
 import org.xvm.tool.ModuleInfo
+import java.io.File
+import java.io.IOException
+import java.nio.file.Path
 
 /** API feasibility probes. These do not enable project features in the shipped adapter. */
 class CompilerProjectTest {
@@ -32,15 +32,14 @@ class CompilerProjectTest {
 
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
-    fun `file and directory convenience entry points use the same module assembly`(
-        useDirectory: Boolean
-    ) {
+    fun `file and directory convenience entry points use the same module assembly`(useDirectory: Boolean) {
         val root = fixture()
         CompilerTestSupport.configure()
         val errors = ErrorList()
         val output = BuildRepository()
         val succeeded =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .compile(if (useDirectory) root.parentFile else root, null, output, errors)
         assertThat(succeeded).describedAs(errors.errors.toString()).isTrue()
         assertThat(output.loadModule("Project").getChild("Child")).isNotNull()
@@ -55,8 +54,7 @@ class CompilerProjectTest {
         val listener = ErrorListener.cancellable(errors) { true }
         val sources =
             object : ModuleInfo(root, false) {
-                override fun readSource(file: File): CharArray =
-                    error("Cancelled source must not be read")
+                override fun readSource(file: File): CharArray = error("Cancelled source must not be read")
             }
         val support = EmbeddingSupport.instance()
         val result = support.compileModule(sources, null, listener)
@@ -96,9 +94,10 @@ class CompilerProjectTest {
         assertThat(compilation.succeeded()).isTrue()
         val views = compilation.semanticSnapshots()
         val main = views.single { it.sourceName == root.path }
-        val member = views.single {
-            it.sourceName == directory.resolve("Project/Child.x").toString()
-        }
+        val member =
+            views.single {
+                it.sourceName == directory.resolve("Project/Child.x").toString()
+            }
         val declaration =
             member.occurrences.single {
                 it.name == "answer" && it.role == SemanticModel.Role.DECLARATION
@@ -113,9 +112,10 @@ class CompilerProjectTest {
             main.occurrences.single {
                 it.name == "echo" && it.role == SemanticModel.Role.DECLARATION
             }
-        val references = views.flatMap { view ->
-            view.occurrences.filter { it.symbol == echo.symbol }.map { view.sourceName to it }
-        }
+        val references =
+            views.flatMap { view ->
+                view.occurrences.filter { it.symbol == echo.symbol }.map { view.sourceName to it }
+            }
         assertThat(references).hasSize(3)
         assertThat(references.map { it.first }.toSet())
             .containsExactlyInAnyOrder(main.sourceName, member.sourceName)
@@ -127,9 +127,8 @@ class CompilerProjectTest {
         val next = compile(root).semanticSnapshots()
         assertThat(next.map { it.id }.toSet()).doesNotContain(main.id)
         assertThat(
-                main.definitionLocationAt(use.range.start.line, use.range.start.column)?.sourceName
-            )
-            .isEqualTo(member.sourceName)
+            main.definitionLocationAt(use.range.start.line, use.range.start.column)?.sourceName,
+        ).isEqualTo(member.sourceName)
     }
 
     @Test
@@ -144,9 +143,10 @@ class CompilerProjectTest {
         val compilation = compile(root)
         assertThat(compilation.succeeded()).isTrue()
         val views = compilation.semanticSnapshots()
-        val declarations = members.map { file ->
-            views.single { it.sourceName == file.path }.occurrences.single { it.name == "shared" }
-        }
+        val declarations =
+            members.map { file ->
+                views.single { it.sourceName == file.path }.occurrences.single { it.name == "shared" }
+            }
         assertThat(declarations[0].range).isEqualTo(declarations[1].range)
         assertThat(declarations[0].symbol).isNotEqualTo(declarations[1].symbol)
     }
@@ -166,17 +166,28 @@ class CompilerProjectTest {
         assertThat(calls.map { it.symbol })
             .containsExactlyInAnyOrderElementsOf(declarations.map { it.symbol })
         assertThat(
-                calls.map { call ->
-                    main
-                        .type(main.symbol(call.symbol!!)!!.signature!!.returns.single())!!
-                        .displayName
-                }
-            )
-            .containsExactly("String", "Int")
+            calls.map { call ->
+                main
+                    .type(
+                        main
+                            .symbol(call.symbol!!)!!
+                            .signature!!
+                            .returns
+                            .single(),
+                    )!!
+                    .displayName
+            },
+        ).containsExactly("String", "Int")
         val mainParameters =
-            main.occurrences.filter { it.name == "value" }.map { it.symbol }.toSet()
+            main.occurrences
+                .filter { it.name == "value" }
+                .map { it.symbol }
+                .toSet()
         val memberParameters =
-            member.occurrences.filter { it.name == "value" }.map { it.symbol }.toSet()
+            member.occurrences
+                .filter { it.name == "value" }
+                .map { it.symbol }
+                .toSet()
         assertThat(mainParameters).isNotEmpty().doesNotContainAnyElementsOf(memberParameters)
     }
 
@@ -282,8 +293,7 @@ class CompilerProjectTest {
         val root = fixture()
         val sources =
             object : ModuleInfo(root, false) {
-                override fun readSource(file: File): CharArray =
-                    throw IOException("probe read failure")
+                override fun readSource(file: File): CharArray = throw IOException("probe read failure")
             }
         CompilerTestSupport.configure()
         val errors = ErrorList()
@@ -296,12 +306,11 @@ class CompilerProjectTest {
     fun `new files outside disk discovery are an explicit prototype boundary`() {
         val root = fixture()
         assertThatThrownBy {
-                OverlaySources(
-                    root,
-                    mapOf(directory.resolve("Project/New.x").toFile() to "class New {}"),
-                )
-            }
-            .isInstanceOf(UnsupportedOperationException::class.java)
+            OverlaySources(
+                root,
+                mapOf(directory.resolve("Project/New.x").toFile() to "class New {}"),
+            )
+        }.isInstanceOf(UnsupportedOperationException::class.java)
             .hasMessageContaining("Overlay-only source discovery")
     }
 
@@ -315,8 +324,7 @@ class CompilerProjectTest {
                 String run() { Child child = new Child(); return child.answer() + child.echo("root") + child.choose("text"); }
                 Int number() { Child child = new Child(); return child.choose(1); }
             }
-            """
-                .trimIndent()
+            """.trimIndent(),
         )
         val member = directory.resolve("Project/Child.x").toFile()
         member.parentFile.mkdirs()
@@ -328,8 +336,7 @@ class CompilerProjectTest {
                 Int choose(Int value) = value;
                 private Int secret() = 42;
             }
-            """
-                .trimIndent()
+            """.trimIndent(),
         )
         return root
     }
@@ -340,7 +347,8 @@ class CompilerProjectTest {
         errors: ErrorList = ErrorList(),
     ): EmbeddingSupport.Compilation {
         CompilerTestSupport.configure()
-        return EmbeddingSupport.instance()
+        return EmbeddingSupport
+            .instance()
             .compileModule(OverlaySources(root, overlays), null, errors)
     }
 
@@ -354,21 +362,22 @@ class CompilerProjectTest {
         private val text = overlays.mapKeys { it.key.canonicalFile }
 
         init {
-            if (text.keys.any { !it.isFile })
+            if (text.keys.any { !it.isFile }) {
                 throw UnsupportedOperationException(
-                    "Overlay-only source discovery is not implemented"
+                    "Overlay-only source discovery is not implemented",
                 )
+            }
         }
 
-        override fun readSource(file: File): CharArray =
-            text[file]?.toCharArray() ?: super.readSource(file)
+        override fun readSource(file: File): CharArray = text[file]?.toCharArray() ?: super.readSource(file)
     }
 
-    private fun nodes(root: AstNode): List<AstNode> = buildList {
-        fun visit(node: AstNode) {
-            add(node)
-            node.children().forEachRemaining { visit(it) }
+    private fun nodes(root: AstNode): List<AstNode> =
+        buildList {
+            fun visit(node: AstNode) {
+                add(node)
+                node.children().forEachRemaining { visit(it) }
+            }
+            visit(root)
         }
-        visit(root)
-    }
 }
