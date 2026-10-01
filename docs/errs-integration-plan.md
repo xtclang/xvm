@@ -1126,11 +1126,11 @@ These historical records must not disappear behind the newer L62–L82 feature s
 - [x] **L16/L27 IntelliJ configuration UI acceptance:** a project source-graph page is implemented,
   sharing LSP4IJ storage with configuration requests and rename history. Reset/Apply, validation and
   native graph Undo/Redo pass in X118. Global JSON remains a fallback.
-- [ ] **L60 current-catalog acceptance:** the historical clean full pass covered 113 cases. The
-  current 128-case IntelliJ demo has passing receipts for every case across resumed runs, including
-  the corrected native X105 quick-fix lifecycle. Repeat the complete IntelliJ playbook at a release
-  checkpoint; do not relabel resumed coverage as one uninterrupted pass. The current complete
-  VS Code catalog passes in `run-b59XBq`.
+- [x] **L60 150-case native checkpoint:** `run-1843149430446112481` passes all 150 cases plus
+  startup in one uninterrupted IntelliJ run, with zero IDE errors and successful shutdown. This
+  supersedes the historical 113-case pass and resumed 128-case coverage. Newly added X146/X147
+  need their own receipts; the latest full VS Code catalog remains 149/150 because of X130.
+  The cross-editor gate and future expanded-catalog checkpoints belong to L82.
 
 Earlier feature milestones remain complete only within their recorded scope. Their language and
 scale extensions are tracked under L62–L67; they are not evidence of universally complete support.
@@ -1165,7 +1165,7 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 | L78 notebooks | Current ownership is file/module based; there are no notebook sessions. | Decide whether XTC notebooks are a product requirement, then define cell/module identity and execution order before synchronization. Record an explicit exclusion if out of scope. |
 | L79 debug inline values | Compiler inlay hints are not runtime values; DAP remains a stub. | Depend on R6–R7 real sessions, stack/source mapping and stop-state ownership; define evaluation safety before exposing values. |
 | L80 negotiation | Presentation, action forms/preferred metadata, completion kinds and edit-format audits pass backend, packaged transport and editor checks. Generic IntelliJ text-edit guarding and shared X144 pass both hosts. | Generic resource/snippet/confirmation edits are refused; native Rename/Move owns resource edits. The comprehensive capability audit remains separate from this bounded acceptance. |
-| L81 progress/trace/refresh | Partial batches and actual Tree-sitter scan progress join owned progress/cancellation, refresh and trace. X143 and X145 pass both hosts, including cancellation and restart during pending work. | Physical Cancel-button selection and broader P3/P4 refresh/late-callback acceptance remain manual checks; full-catalog limits are recorded under L82. |
+| L81 progress/trace/refresh | Partial batches and actual Tree-sitter scan progress join owned progress/cancellation, refresh and trace. X143 and X145 pass both hosts, including cancellation and restart during pending work. | X146/X147 now automate bounded P3/P4 refresh and late reports; acceptance follows this batch. Physical button selection and broader multi-window/settings interaction remain manual. |
 | L83 initializer facts | Detached successful initializer facts are implemented with no new AST fields; backend regressions and shared X142 are added. | Backend and shared X142 pass; preserve the explicit eight-component record-pattern migration note. |
 
 L76–L79 require explicit scope decisions; their presence in this inventory does not make notebooks,
@@ -7672,3 +7672,26 @@ reproducible, and reconcile completed versus remaining scope. Validation is batc
    bounds, not latency targets. A failing workload retains its report, stderr and samples. Run it
    without competing compiler/editor tests; validation and measured baselines follow the fourth
    checkpoint, before deciding useful response-time or memory budgets.
+
+4. **Checklist reconciliation (2026-10-01).** The 150-case L60 checkpoint is now checked off
+   against the uninterrupted native receipt; the 152-case catalog has two newly written scenarios,
+   not two additional passes yet. L68–L72 and L83 retain their established bounded completion.
+   The remaining implementation work is distinguished from acceptance below; adding tests does
+   not silently expand the API's proven language scope.
+
+   | Scope | Implemented and proven | Concrete remaining work |
+   | --- | --- | --- |
+   | L62 rename | Recorded source families, primary/ordinary parameter slots, lambdas, escaped method values, packages/modules/companions and guarded graph replacement | Cross-package qualification rewrites and explicit graph relocation; characterize additional refused composition routes with reproductions before extending proof. External consumers omitted from the configured graph remain an explicit unknown boundary. |
+   | L63 semantic actions | Import fixes and compiler-proven implement/override, including bundled contracts | Missing-declaration fixes, extract local, extract method, inline and safe delete are distinct unimplemented transformations. Each needs its own side-effect/capture/caller-closure design and positive/refusal tests. |
+   | L64 completion/signatures | Recorded cursor recovery, generic/formal constraints, bounded literal values, documentation and ranking | Declaration-name and keyword/snippet contexts; import-producing completion edits; arbitrary enclosing-instance enumeration; additional literal/callable/damaged-bound forms. Earlier claims that all literal synthesis or documentation were absent are superseded by the L64 receipt. |
+   | L65 navigation/classification | Source/bundled navigation, recorded hierarchy/composition relations and resolved tokens | Conditional/synthetic/native/redirect routes and ambiguous binary source metadata need individual fixtures. Runtime function targets cannot be invented by a static hierarchy. |
+   | L66 editing/structure | Token-preserving indentation, URL links, local linked editing, recorded damaged-source structure | Expression wrapping and comment/string layout, import/source links, broader proven linked scopes and remaining damaged constructs. A full pretty-printer is not implemented. |
+   | L67 scale | Live graph discovery/overlays, dependencies and detached per-root caches | Use the platform workload to establish budgets and locate bottlenecks before choosing incremental or persistent indexing; neither exists merely because incremental text transport does. |
+   | L80 capability contract | Tested emitted kinds/markup, UTF-16, watcher lifecycle, action forms, versioned text/resource edits and X144 native ownership | Retain the final method/producer-to-capability audit as an explicit submission review. No new snippet/location-link/tag producer is needed solely for optional protocol completeness; revisit negotiation when one is added. Generic native resource/snippet/confirmation edits remain deliberately refused. |
+   | L81 lifecycle | Trace, owned progress/cancel, partial results, refresh, shutdown and X145 pending restart | Run new X146/X147; retain physical Cancel-button and broader multiple-window interactions as manual acceptance rather than absent server implementations. |
+   | L82 release evidence | Previous backend/stdio/unit suite, full native 150-case checkpoint and 360-cycle retention receipt | X130 host failure; new batch regression receipts; measured response-time/heap targets, prolonged editing/restart/process-leak runs and supported-platform/packaging acceptance. Later extracted PRs still need independent validation. |
+
+   L73–L79 remain explicit missing/optional scopes with their existing investigation tasks. R1–R8
+   still own reusable execution and DAP. This reconciliation closes no unimplemented feature by
+   renaming it a test task. Validation is the next action; no broad editor suite ran between these
+   four implementation checkpoints.
