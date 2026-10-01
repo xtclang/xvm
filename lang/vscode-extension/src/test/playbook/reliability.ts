@@ -17,9 +17,15 @@ export function reliabilityCases(): void {
         const connection = client();
         const hints = connection.getFeature('textDocument/inlayHint').getProvider(consumer)!;
         const tokens = connection.getFeature('textDocument/semanticTokens').getProvider(consumer)!;
+        const lenses = connection.getFeature('textDocument/codeLens').getProvider(consumer)!;
+        const folding = connection.getFeature('textDocument/foldingRange').getProvider(consumer)!;
+        const diagnostics = connection.getFeature('textDocument/diagnostic').getProvider(consumer)!;
         const events: string[] = [];
         const subscriptions = [hints.onDidChangeInlayHints.event(() => events.push('hints')),
-            tokens.onDidChangeSemanticTokensEmitter.event(() => events.push('tokens'))];
+            tokens.onDidChangeSemanticTokensEmitter.event(() => events.push('tokens')),
+            lenses.onDidChangeCodeLensEmitter.event(() => events.push('lenses')),
+            folding.onDidChangeFoldingRange.event(() => events.push('folding')),
+            diagnostics.onDidChangeDiagnosticsEmitter.event(() => events.push('diagnostics'))];
         const cancellation = new vscode.CancellationTokenSource();
         async function verify(expected: string) {
             await eventually(async () => {
@@ -34,8 +40,12 @@ export function reliabilityCases(): void {
             for (const [source, expected] of [[data.changed, data.after], [data.original, data.before]]) {
                 events.length = 0;
                 await workspace.replace(library, source);
-                await eventually(async () => [...events], values => values.includes('hints') && values.includes('tokens'), 'Native providers receive dependency refresh');
+                await eventually(async () => [...events], values =>
+                    ['hints', 'tokens', 'lenses', 'folding', 'diagnostics'].every(feature => values.includes(feature)),
+                    'All five negotiated native providers receive dependency refresh');
                 await verify(expected);
+                assert.ok((await lenses.provider!.provideCodeLenses(consumer, cancellation.token))!.length > 0);
+                assert.ok((await folding.provider.provideFoldingRanges(consumer, {}, cancellation.token))!.length > 0);
                 await noErrors(consumer.uri);
             }
         } finally { subscriptions.forEach(subscription => subscription.dispose()); cancellation.dispose(); }

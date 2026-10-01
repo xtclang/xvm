@@ -3,6 +3,7 @@ package org.xtclang.idea.playbook
 import com.intellij.driver.client.Driver
 import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import java.nio.file.Path
 import kotlin.time.Duration.Companion.seconds
 
@@ -45,7 +46,11 @@ fun Driver.memberActions(
                     try {
                         actions()
                     } catch (failure: ClientRequestFailure) {
-                        if (failure.code !in setOf(-32800, -32801)) throw failure
+                        if (failure.code !in
+                            setOf(ResponseErrorCode.RequestCancelled.value, ResponseErrorCode.ContentModified.value)
+                        ) {
+                            throw failure
+                        }
                         null
                     }
                 }

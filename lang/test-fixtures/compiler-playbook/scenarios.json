@@ -4459,7 +4459,8 @@
         "file": "ProgressWork.x",
         "module": "ProgressWork",
         "source": "module ProgressWork { static Int value = 1; }\n",
-        "methods": 5000
+        "methods": 5000,
+        "uiMethods": 20000
       },
       "intellij": {
         "coverage": "full",

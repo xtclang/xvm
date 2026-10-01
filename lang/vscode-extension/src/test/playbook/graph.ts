@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
-import { TextDocumentEdit, WorkspaceEdit } from 'vscode-languageclient/node';
+import { LSPErrorCodes, TextDocumentEdit, WorkspaceEdit } from 'vscode-languageclient/node';
 import { catalog, scenarioRegex, scenarioText } from './shared';
 import { client, diagnostics, eventually, fixture, hover, noErrors, playbook, position, symbols, Workspace } from './support';
 
@@ -24,7 +24,7 @@ async function rename(document: vscode.TextDocument, anchor: string, name: strin
             });
             return { value };
         } catch (error) {
-            if ([-32800, -32801].includes((error as { code: number }).code)) { return undefined; }
+            if ([LSPErrorCodes.RequestCancelled, LSPErrorCodes.ContentModified].includes((error as { code: number }).code)) { return undefined; }
             throw error;
         }
     }, value => value !== undefined, 'Graph rename completes for current inputs');

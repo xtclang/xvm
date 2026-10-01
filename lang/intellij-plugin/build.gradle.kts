@@ -350,6 +350,8 @@ dependencies {
     add(integrationTestSourceSet.runtimeOnlyConfigurationName, kotlin("stdlib"))
     // Starter 262 reports run metadata through this API even for local, non-TeamCity runs.
     add(integrationTestSourceSet.runtimeOnlyConfigurationName, libs.lang.intellij.service.messages)
+    // Driver-side protocol assertions use named error codes outside the IDE/plugin classloader.
+    add(integrationTestSourceSet.runtimeOnlyConfigurationName, libs.lang.lsp4j.jsonrpc)
 
     // LSP server fat JAR for out-of-process execution
     lspServerJar(project(path = ":lsp-server", configuration = "lspServerElements"))
