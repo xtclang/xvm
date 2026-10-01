@@ -94,16 +94,27 @@ internal object XdkCursorQueries {
             site.argumentExpressions.map { text ->
                 CompletionItem(text, CompletionKind.VALUE, "Enclosing instance fitting this argument", text, TextEdit(range, text))
             }
-        val enclosing = site.enclosingExpressions.map { text ->
-            CompletionItem(text, CompletionKind.VALUE, "Accessible enclosing instance", text, TextEdit(range, text))
-        }
-        val templates = site.argumentTemplates.map { text ->
-            CompletionItem(text, CompletionKind.SNIPPET, "Lambda fitting this argument", text, TextEdit(range, text),
-                "Compiler-validated arity; replace the TODO() body before executing this code.",
-                snippet = text.replace("TODO()", "${'$'}{1:TODO()}${'$'}0"))
-        }
+        val enclosing =
+            site.enclosingExpressions.map { text ->
+                CompletionItem(text, CompletionKind.VALUE, "Accessible enclosing instance", text, TextEdit(range, text))
+            }
+        val templates =
+            site.argumentTemplates.map { text ->
+                CompletionItem(
+                    text,
+                    CompletionKind.SNIPPET,
+                    "Lambda fitting this argument",
+                    text,
+                    TextEdit(range, text),
+                    "Compiler-validated arity; replace the TODO() body before executing this code.",
+                    snippet = text.replace("TODO()", "${'$'}{1:TODO()}${'$'}0"),
+                )
+            }
         return (
-            ordinary.filterNot { it.label in site.argumentLiterals || it.label in site.argumentExpressions || it.label in site.enclosingExpressions } +
+            ordinary.filterNot {
+                it.label in site.argumentLiterals || it.label in site.argumentExpressions ||
+                    it.label in site.enclosingExpressions
+            } +
                 formals + literals + instances + enclosing + templates + model.syntaxCompletions
         ).map { item -> item.copy(sortText = completionOrder(item)) }
             .sortedBy { it.sortText }
