@@ -83,127 +83,127 @@ internal fun ParityScenarios.semanticCases() {
         check(calls(doc, doc.at(data.string("dynamicCall"))).isEmpty())
     }
     listOf("X41", "X154").forEach { id ->
-    case(id) { data ->
-        data["source"]?.asString?.let { write(data.string("file"), it) }
-        val doc = open(data.string("file"))
-        clean(doc)
-        val legend =
-            protocol
-                .capabilities()
-                .asJsonObject["semanticTokensProvider"]
-                .asJsonObject["legend"]
-                .asJsonObject
-        val support = with(driver) { semanticSupport(doc.editor).getSemanticTokensSupport() }
-        val tokens =
-            with(driver) {
-                awaitUi(
-                    "native editor receives semantic token classifications",
-                    45.seconds,
-                    getter = {
-                        support
-                            .getValidLSPFuture()
-                            ?.takeIf { it.isDone() && !it.isCompletedExceptionally() }
-                            ?.get()
-                            ?.let {
-                                protocol
-                                    .copy(it.getSemanticTokens())
-                                    .asJsonObject["data"]
-                                    .asJsonArray
-                                    .map { value -> value.asInt }
-                            }
-                    },
-                    checker = { it != null },
-                )
-            }!!
+        case(id) { data ->
+            data["source"]?.asString?.let { write(data.string("file"), it) }
+            val doc = open(data.string("file"))
+            clean(doc)
+            val legend =
+                protocol
+                    .capabilities()
+                    .asJsonObject["semanticTokensProvider"]
+                    .asJsonObject["legend"]
+                    .asJsonObject
+            val support = with(driver) { semanticSupport(doc.editor).getSemanticTokensSupport() }
+            val tokens =
+                with(driver) {
+                    awaitUi(
+                        "native editor receives semantic token classifications",
+                        45.seconds,
+                        getter = {
+                            support
+                                .getValidLSPFuture()
+                                ?.takeIf { it.isDone() && !it.isCompletedExceptionally() }
+                                ?.get()
+                                ?.let {
+                                    protocol
+                                        .copy(it.getSemanticTokens())
+                                        .asJsonObject["data"]
+                                        .asJsonArray
+                                        .map { value -> value.asInt }
+                                }
+                        },
+                        checker = { it != null },
+                    )
+                }!!
 
-        data class Token(
-            val line: Int,
-            val character: Int,
-            val text: String,
-            val type: String,
-            val modifiers: Set<String>,
-        )
-        val decoded =
-            tokens.chunked(5).fold(emptyList<Token>()) { previous, tuple ->
-                val line = (previous.lastOrNull()?.line ?: 0) + tuple[0]
-                val column =
-                    (if (tuple[0] == 0) previous.lastOrNull()?.character ?: 0 else 0) + tuple[1]
-                previous +
-                    Token(
-                        line,
-                        column,
-                        doc.text.lines()[line].substring(column, column + tuple[2]),
-                        legend["tokenTypes"].asJsonArray[tuple[3]].asString,
-                        legend["tokenModifiers"]
-                            .asJsonArray
-                            .mapIndexedNotNull { bit, name ->
-                                name.asString.takeIf { tuple[4] and (1 shl bit) != 0 }
-                            }.toSet(),
-                    )
-            }
-        data["tokenKinds"].rows().forEach { kind ->
-            check(decoded.any { it.text == kind.string("name") && it.type == kind.string("type") })
-        }
-        check(
-            decoded.any {
-                it.text == data.string("methodName") &&
-                    it.modifiers.containsAll(
-                        listOf(data.string("staticModifier"), data.string("declarationModifier")),
-                    )
-            },
-        )
-        data["accesses"]?.rows()?.forEach { access ->
-            val at = ParityWorkspace.position(doc.text, doc.at(access.string("anchor"), access.int("offset")))
-            val token = decoded.single { it.line == at["line"] && it.character == at["character"] }
-            check(("modification" in token.modifiers) == access["write"].asBoolean) { "Wrong access classification: $access; $token" }
-        }
-        val write = doc.at(data.string("anchor2"))
-        check(
-            decoded.any {
-                it.line == ParityWorkspace.position(doc.text, write)["line"] &&
-                    it.text == data.string("variableName") &&
-                    data.string("writeModifier") in it.modifiers
-            },
-        )
-        with(driver) {
-            focusEditor(doc.editor)
-            withContext(OnDispatcher.EDT) {
-                doc.editor.editor
-                    .getCaretModel()
-                    .moveToOffset(write)
-            }
-            invokeAction("HighlightUsagesInFile", component = doc.editor.component)
-            val highlights =
-                withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
-                    val psi =
-                        requireNotNull(
-                            service<PsiManager>(singleProject())
-                                .findFile(doc.editor.editor.getVirtualFile()),
+            data class Token(
+                val line: Int,
+                val character: Int,
+                val text: String,
+                val type: String,
+                val modifiers: Set<String>,
+            )
+            val decoded =
+                tokens.chunked(5).fold(emptyList<Token>()) { previous, tuple ->
+                    val line = (previous.lastOrNull()?.line ?: 0) + tuple[0]
+                    val column =
+                        (if (tuple[0] == 0) previous.lastOrNull()?.character ?: 0 else 0) + tuple[1]
+                    previous +
+                        Token(
+                            line,
+                            column,
+                            doc.text.lines()[line].substring(column, column + tuple[2]),
+                            legend["tokenTypes"].asJsonArray[tuple[3]].asString,
+                            legend["tokenModifiers"]
+                                .asJsonArray
+                                .mapIndexedNotNull { bit, name ->
+                                    name.asString.takeIf { tuple[4] and (1 shl bit) != 0 }
+                                }.toSet(),
                         )
-                    utility(LspFileSupport::class).getSupport(psi).getHighlightSupport()
                 }
-            awaitUi("native read/write occurrence highlights", 45.seconds) {
-                val future = highlights.getValidLSPFuture()
-                future != null &&
-                    future.isDone() &&
-                    !future.isCompletedExceptionally() &&
-                    future.get().let { values ->
-                        fun contains(
-                            at: Int,
-                            kind: String,
-                        ) = values.any { item ->
-                            val p = ParityWorkspace.position(doc.text, at)
-                            item.getRange().getStart().let {
-                                it.getLine() == p["line"] && it.getCharacter() == p["character"]
-                            } && item.getKind()?.name() == kind
-                        }
-                        contains(write, "Write") &&
-                            contains(doc.at(data.string("anchor"), data.int("offset")), "Read")
-                    }
+            data["tokenKinds"].rows().forEach { kind ->
+                check(decoded.any { it.text == kind.string("name") && it.type == kind.string("type") })
             }
-            invokeAction("EditorEscape", component = doc.editor.component)
+            check(
+                decoded.any {
+                    it.text == data.string("methodName") &&
+                        it.modifiers.containsAll(
+                            listOf(data.string("staticModifier"), data.string("declarationModifier")),
+                        )
+                },
+            )
+            data["accesses"]?.rows()?.forEach { access ->
+                val at = ParityWorkspace.position(doc.text, doc.at(access.string("anchor"), access.int("offset")))
+                val token = decoded.single { it.line == at["line"] && it.character == at["character"] }
+                check(("modification" in token.modifiers) == access["write"].asBoolean) { "Wrong access classification: $access; $token" }
+            }
+            val write = doc.at(data.string("anchor2"))
+            check(
+                decoded.any {
+                    it.line == ParityWorkspace.position(doc.text, write)["line"] &&
+                        it.text == data.string("variableName") &&
+                        data.string("writeModifier") in it.modifiers
+                },
+            )
+            with(driver) {
+                focusEditor(doc.editor)
+                withContext(OnDispatcher.EDT) {
+                    doc.editor.editor
+                        .getCaretModel()
+                        .moveToOffset(write)
+                }
+                invokeAction("HighlightUsagesInFile", component = doc.editor.component)
+                val highlights =
+                    withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
+                        val psi =
+                            requireNotNull(
+                                service<PsiManager>(singleProject())
+                                    .findFile(doc.editor.editor.getVirtualFile()),
+                            )
+                        utility(LspFileSupport::class).getSupport(psi).getHighlightSupport()
+                    }
+                awaitUi("native read/write occurrence highlights", 45.seconds) {
+                    val future = highlights.getValidLSPFuture()
+                    future != null &&
+                        future.isDone() &&
+                        !future.isCompletedExceptionally() &&
+                        future.get().let { values ->
+                            fun contains(
+                                at: Int,
+                                kind: String,
+                            ) = values.any { item ->
+                                val p = ParityWorkspace.position(doc.text, at)
+                                item.getRange().getStart().let {
+                                    it.getLine() == p["line"] && it.getCharacter() == p["character"]
+                                } && item.getKind()?.name() == kind
+                            }
+                            contains(write, "Write") &&
+                                contains(doc.at(data.string("anchor"), data.int("offset")), "Read")
+                        }
+                }
+                invokeAction("EditorEscape", component = doc.editor.component)
+            }
         }
-    }
     }
     case("X42") { data ->
         val doc = open(data.string("file"))

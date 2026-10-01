@@ -361,13 +361,14 @@ class XdkSemanticLookupTest {
 
     @Test
     fun `covariant property accessors navigate through written narrowing implementations`() {
-        val source = """
+        val source =
+            """
             module Lookups {
                 interface Api { @RO Object /*api*/value; }
                 class Box implements Api { @Override String value. /*getter*/get() = "text"; }
                 Object read(Api box) = box. /*use*/value;
             }
-        """.trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             listOf("api", "use").forEach { marker ->
                 assertThat(implementations(adapter, source, marker)).containsExactly(location(source, "getter", "get"))
@@ -377,13 +378,14 @@ class XdkSemanticLookupTest {
 
     @Test
     fun `conditional mixin invocation navigates to its selected written body`() {
-        val source = """
+        val source =
+            """
             module Lookups {
                 class Box<T>(T value) incorporates conditional Textual<T extends String> {}
                 static mixin Textual<T extends String> into Box<T> { Int /*body*/size() = value.size; }
                 Int run(Box<String> text) = text. /*call*/size();
             }
-        """.trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             assertThat(implementations(adapter, source, "call")).containsExactly(location(source, "body", "size"))
         }

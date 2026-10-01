@@ -119,38 +119,38 @@ export function semanticCases(): void {
     });
 
     for (const id of ['X41', 'X154'] as const) {
-    playbook(id, async (workspace, data) => {
-        if ('source' in data) await workspace.write(data.file, data.source);
-        const document = await workspace.open(data.file);
-        const legend = (client().initializeResult!.capabilities.semanticTokensProvider as SemanticTokensOptions).legend;
-        const result = await client().sendRequest<SemanticTokens>('textDocument/semanticTokens/full', { textDocument: { uri: document.uri.toString() } });
-        let line = 0;
-        let character = 0;
-        const tokens = [];
-        for (let offset = 0; offset < result.data.length; offset += 5) {
-            const [deltaLine, deltaCharacter, length, type, mask] = result.data.slice(offset, offset + 5);
-            line += deltaLine;
-            character = deltaLine ? deltaCharacter : character + deltaCharacter;
-            tokens.push({ line, character, text: document.getText(new vscode.Range(line, character, line, character + length)),
-                type: legend.tokenTypes[type], modifiers: legend.tokenModifiers.filter((_, bit) => mask & (1 << bit)) });
-        }
-        for (const { name, type } of data.tokenKinds) {
-            assert.ok(tokens.some(token => token.text === name && token.type === type), JSON.stringify(tokens));
-        }
-        assert.ok(tokens.some(token => token.text === data.methodName && token.modifiers.includes(data.staticModifier) && token.modifiers.includes(data.declarationModifier)));
-        if ('accesses' in data) for (const access of data.accesses) {
-            const at = position(document, access.anchor, access.offset);
-            const token = tokens.find(item => item.line === at.line && item.character === at.character);
-            assert.ok(token, access.anchor);
-            assert.strictEqual(token.modifiers.includes('modification'), access.write, access.anchor);
-        }
-        const write = position(document, data.anchor2);
-        assert.ok(tokens.some(token => token.line === write.line && token.text === data.variableName && token.modifiers.includes(data.writeModifier)));
-        const highlights = await vscode.commands.executeCommand<vscode.DocumentHighlight[]>('vscode.executeDocumentHighlights', document.uri, write);
-        assert.ok(highlights?.some(item => item.range.contains(write) && item.kind === vscode.DocumentHighlightKind.Write));
-        const read = position(document, data.anchor, data.offset);
-        assert.ok(highlights?.some(item => item.range.contains(read) && item.kind === vscode.DocumentHighlightKind.Read));
-    });
+        playbook(id, async (workspace, data) => {
+            if ('source' in data) await workspace.write(data.file, data.source);
+            const document = await workspace.open(data.file);
+            const legend = (client().initializeResult!.capabilities.semanticTokensProvider as SemanticTokensOptions).legend;
+            const result = await client().sendRequest<SemanticTokens>('textDocument/semanticTokens/full', { textDocument: { uri: document.uri.toString() } });
+            let line = 0;
+            let character = 0;
+            const tokens: { line: number; character: number; text: string; type: string; modifiers: string[] }[] = [];
+            for (let offset = 0; offset < result.data.length; offset += 5) {
+                const [deltaLine, deltaCharacter, length, type, mask] = result.data.slice(offset, offset + 5);
+                line += deltaLine;
+                character = deltaLine ? deltaCharacter : character + deltaCharacter;
+                tokens.push({ line, character, text: document.getText(new vscode.Range(line, character, line, character + length)),
+                    type: legend.tokenTypes[type], modifiers: legend.tokenModifiers.filter((_, bit) => mask & (1 << bit)) });
+            }
+            for (const { name, type } of data.tokenKinds) {
+                assert.ok(tokens.some(token => token.text === name && token.type === type), JSON.stringify(tokens));
+            }
+            assert.ok(tokens.some(token => token.text === data.methodName && token.modifiers.includes(data.staticModifier) && token.modifiers.includes(data.declarationModifier)));
+            if ('accesses' in data) for (const access of data.accesses) {
+                const at = position(document, access.anchor, access.offset);
+                const token = tokens.find(item => item.line === at.line && item.character === at.character);
+                assert.ok(token, access.anchor);
+                assert.strictEqual(token.modifiers.includes('modification'), access.write, access.anchor);
+            }
+            const write = position(document, data.anchor2);
+            assert.ok(tokens.some(token => token.line === write.line && token.text === data.variableName && token.modifiers.includes(data.writeModifier)));
+            const highlights = await vscode.commands.executeCommand<vscode.DocumentHighlight[]>('vscode.executeDocumentHighlights', document.uri, write);
+            assert.ok(highlights?.some(item => item.range.contains(write) && item.kind === vscode.DocumentHighlightKind.Write));
+            const read = position(document, data.anchor, data.offset);
+            assert.ok(highlights?.some(item => item.range.contains(read) && item.kind === vscode.DocumentHighlightKind.Read));
+        });
 
     }
 

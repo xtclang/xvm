@@ -1024,4 +1024,6 @@ pending. Ambiguous local syntax and arbitrary nested value/body synthesis remain
 L65 adds property-accessor redirect traversal and explicit non-written implementation refusals.
 Shared X153 covers covariant/conditional targets and runtime-only delegation; X154 covers more
 read/write classification. Binary-source overload selection refuses absent or ambiguous metadata.
-Backend and full native validation are pending; no runtime target enumeration is claimed.
+The L65 backend gate passes 78 tests without failures or skips. Concrete validated source types
+now contribute conditional-mixin implementations. Full native acceptance remains pending; no
+runtime target enumeration is claimed.
