@@ -514,3 +514,15 @@ is an empty edit. No compiler or production client change is warranted by that d
 window-focus guard fixes separate harness Undo failures. The upstream repair remains open and
 X130 is not relabeled as passing. See the
 [diagnosis and reproduction](../../../docs/errs-integration-plan.md#x130-isolated-host-defect-and-harness-focus-correction-2026-10-01).
+
+
+L80 final audit (2026-10-01): all current provider/response families have a recorded capability
+contract. Link tooltips and per-signature active parameters now honor client support; legacy
+signature highlighting uses the selected overload. Pull diagnostic related information is gated
+independently of push and related-document support. Compiler-only rename proposals are no longer
+advertised by other adapters. No language feature, embedding API or AST node is added. Exhaustive
+provider inventory and rich/reduced protocol tests cover the changes; the shared catalog remains
+152 and no new native receipt is claimed. See the
+[audit and validation](../../../docs/errs-integration-plan.md#l80-final-capability-contract-audit-2026-10-01).
+L80 is complete for current producers; L81/L82 acceptance and X130's upstream Explorer failure remain
+open. Future optional response fields require new negotiation checks.
