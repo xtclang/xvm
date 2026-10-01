@@ -21,6 +21,7 @@ class ParityScenarios(
         graphCases()
         platformCases()
         progressCases()
+        reliabilityCases()
     }
 
     internal fun case(
