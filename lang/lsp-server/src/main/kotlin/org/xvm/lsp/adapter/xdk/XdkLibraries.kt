@@ -1,13 +1,13 @@
 package org.xvm.lsp.adapter.xdk
 
-import java.security.MessageDigest
-import java.util.HexFormat
-import java.util.Properties
-import java.util.Set.copyOf as immutableSet
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.FileStructure
 import org.xvm.compiler.BuildRepository
 import org.xvm.lsp.util.ExecutionTrace
+import java.security.MessageDigest
+import java.util.HexFormat
+import java.util.Properties
+import java.util.Set.copyOf as immutableSet
 
 /** The compiler and its matching libraries travel together in the language server. */
 internal object XdkLibraries {

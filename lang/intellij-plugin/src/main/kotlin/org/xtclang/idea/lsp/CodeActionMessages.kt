@@ -13,15 +13,16 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 internal object CodeActionMessages {
     const val COMMAND = "xtc.resolveCodeAction"
 
-    fun incoming(next: MessageConsumer): MessageConsumer = MessageConsumer { message ->
-        val results = (message as? ResponseMessage)?.result as? List<*>
-        results.orEmpty().forEach { item ->
-            val action = (item as? Either<*, *>)?.right as? CodeAction
-            if (action?.data != null && action.edit == null && action.command == null) {
-                val original = JSONUtils.getLsp4jGson().toJsonTree(action)
-                action.command = Command(action.title, COMMAND, listOf(original))
+    fun incoming(next: MessageConsumer): MessageConsumer =
+        MessageConsumer { message ->
+            val results = (message as? ResponseMessage)?.result as? List<*>
+            results.orEmpty().forEach { item ->
+                val action = (item as? Either<*, *>)?.right as? CodeAction
+                if (action?.data != null && action.edit == null && action.command == null) {
+                    val original = JSONUtils.getLsp4jGson().toJsonTree(action)
+                    action.command = Command(action.title, COMMAND, listOf(original))
+                }
             }
+            next.consume(message)
         }
-        next.consume(message)
-    }
 }

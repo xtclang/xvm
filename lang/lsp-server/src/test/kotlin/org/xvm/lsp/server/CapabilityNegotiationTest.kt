@@ -1,7 +1,5 @@
 package org.xvm.lsp.server
 
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
@@ -37,17 +35,19 @@ import org.mockito.Mockito.mock
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.xvm.lsp.adapter.Adapter
+import org.xvm.lsp.adapter.ParameterInfo
+import org.xvm.lsp.adapter.SignatureInfo
+import org.xvm.lsp.adapter.mock.MockAdapter
+import org.xvm.lsp.model.Diagnostic
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit.SECONDS
 import org.xvm.lsp.adapter.CodeAction as Action
 import org.xvm.lsp.adapter.DocumentLink as AdapterLink
-import org.xvm.lsp.adapter.ParameterInfo
 import org.xvm.lsp.adapter.Position as AdapterPosition
 import org.xvm.lsp.adapter.Range as AdapterRange
 import org.xvm.lsp.adapter.SignatureHelp as AdapterSignatureHelp
-import org.xvm.lsp.adapter.SignatureInfo
 import org.xvm.lsp.adapter.TextEdit as AdapterEdit
 import org.xvm.lsp.adapter.WorkspaceEdit as AdapterWorkspaceEdit
-import org.xvm.lsp.adapter.mock.MockAdapter
-import org.xvm.lsp.model.Diagnostic
 
 class CapabilityNegotiationTest {
     @Test
@@ -55,14 +55,16 @@ class CapabilityNegotiationTest {
         listOf(null, false, true).forEach { support ->
             val adapter =
                 object : Adapter by MockAdapter() {
-                    override fun getDocumentLinks(uri: String, content: String) =
-                        listOf(
-                            AdapterLink(
-                                AdapterRange(AdapterPosition(0, 0), AdapterPosition(0, 6)),
-                                URI,
-                                "Open source",
-                            )
-                        )
+                    override fun getDocumentLinks(
+                        uri: String,
+                        content: String,
+                    ) = listOf(
+                        AdapterLink(
+                            AdapterRange(AdapterPosition(0, 0), AdapterPosition(0, 6)),
+                            URI,
+                            "Open source",
+                        ),
+                    )
                 }
             XtcLanguageServer(adapter).use { server ->
                 val params =
@@ -71,15 +73,20 @@ class CapabilityNegotiationTest {
                             ClientCapabilities().apply {
                                 textDocument =
                                     TextDocumentClientCapabilities().apply {
-                                        if (support != null)
+                                        if (support != null) {
                                             documentLink =
                                                 DocumentLinkCapabilities().apply {
                                                     tooltipSupport = support
                                                 }
+                                        }
                                     }
                             }
                     }
-                val options = server.initialize(params).join().capabilities.documentLinkProvider
+                val options =
+                    server
+                        .initialize(params)
+                        .join()
+                        .capabilities.documentLinkProvider
                 assertThat(options.resolveProvider).isEqualTo(support != null)
                 open(server)
                 val documents = server.textDocumentService
@@ -104,29 +111,32 @@ class CapabilityNegotiationTest {
         listOf(null, false, true).forEach { support ->
             val adapter =
                 object : Adapter by MockAdapter() {
-                    override fun getSignatureHelpAsync(uri: String, line: Int, column: Int) =
-                        CompletableFuture.completedFuture(
-                            AdapterSignatureHelp(
-                                listOf(
-                                    SignatureInfo(
-                                        "read(Int first)",
-                                        parameters = listOf(ParameterInfo("Int first")),
-                                        activeParameter = 0,
-                                    ),
-                                    SignatureInfo(
-                                        "read(Int first, Int second)",
-                                        parameters =
-                                            listOf(
-                                                ParameterInfo("Int first"),
-                                                ParameterInfo("Int second"),
-                                            ),
-                                        activeParameter = 1,
-                                    ),
+                    override fun getSignatureHelpAsync(
+                        uri: String,
+                        line: Int,
+                        column: Int,
+                    ) = CompletableFuture.completedFuture(
+                        AdapterSignatureHelp(
+                            listOf(
+                                SignatureInfo(
+                                    "read(Int first)",
+                                    parameters = listOf(ParameterInfo("Int first")),
+                                    activeParameter = 0,
                                 ),
-                                activeSignature = 1,
-                                activeParameter = 0,
-                            )
-                        )
+                                SignatureInfo(
+                                    "read(Int first, Int second)",
+                                    parameters =
+                                        listOf(
+                                            ParameterInfo("Int first"),
+                                            ParameterInfo("Int second"),
+                                        ),
+                                    activeParameter = 1,
+                                ),
+                            ),
+                            activeSignature = 1,
+                            activeParameter = 0,
+                        ),
+                    )
                 }
             XtcLanguageServer(adapter).use { server ->
                 val params =
@@ -135,7 +145,7 @@ class CapabilityNegotiationTest {
                             ClientCapabilities().apply {
                                 textDocument =
                                     TextDocumentClientCapabilities().apply {
-                                        if (support != null)
+                                        if (support != null) {
                                             signatureHelp =
                                                 SignatureHelpCapabilities().apply {
                                                     signatureInformation =
@@ -143,6 +153,7 @@ class CapabilityNegotiationTest {
                                                             activeParameterSupport = support
                                                         }
                                                 }
+                                        }
                                     }
                             }
                     }
@@ -151,17 +162,20 @@ class CapabilityNegotiationTest {
                 val help =
                     server.textDocumentService
                         .signatureHelp(
-                            SignatureHelpParams(TextDocumentIdentifier(URI), Position(0, 0))
-                        )
-                        .join()!!
+                            SignatureHelpParams(TextDocumentIdentifier(URI), Position(0, 0)),
+                        ).join()!!
                 assertThat(help.activeSignature).isEqualTo(1)
                 assertThat(help.activeParameter).isEqualTo(1)
                 assertThat(help.signatures.map { it.activeParameter })
                     .containsExactlyElementsOf(
-                        if (support == true) listOf(0, 1) else listOf(null, null)
+                        if (support == true) listOf(0, 1) else listOf(null, null),
                     )
-                assertThat(help.signatures.last().parameters.map { it.label.left })
-                    .containsExactly("Int first", "Int second")
+                assertThat(
+                    help.signatures
+                        .last()
+                        .parameters
+                        .map { it.label.left },
+                ).containsExactly("Int first", "Int second")
             }
         }
     }
@@ -184,9 +198,8 @@ class CapabilityNegotiationTest {
         assertThat(ClientPresentation.matchesActionKind("source.organizeImports", emptyList()))
             .isFalse()
         assertThat(
-                ClientPresentation.matchesActionKind("source.organizeImports", listOf("quickfix"))
-            )
-            .isFalse()
+            ClientPresentation.matchesActionKind("source.organizeImports", listOf("quickfix")),
+        ).isFalse()
     }
 
     @Test
@@ -200,10 +213,19 @@ class CapabilityNegotiationTest {
                 }
             server.initialize(params).join()
             open(server)
-            val action = server.textDocumentService.codeAction(actions()).join().single().right
+            val action =
+                server.textDocumentService
+                    .codeAction(actions())
+                    .join()
+                    .single()
+                    .right
             assertThat<Any?>(action.isPreferred).isNull()
             assertThat(action.data).isNull()
-            assertThat(action.edit.documentChanges.single().left.textDocument.version).isEqualTo(1)
+            assertThat(
+                action.edit.documentChanges
+                    .single()
+                    .left.textDocument.version,
+            ).isEqualTo(1)
             assertThat(action.kind).isEqualTo("quickfix")
         }
     }
@@ -217,12 +239,16 @@ class CapabilityNegotiationTest {
             assertThat(capabilities.executeCommandProvider.commands)
                 .containsExactly(ClientPresentation.APPLY_CODE_ACTION)
             open(server)
-            val action = server.textDocumentService.codeAction(actions()).join().single().left
+            val action =
+                server.textDocumentService
+                    .codeAction(actions())
+                    .join()
+                    .single()
+                    .left
             doAnswer {
-                    change(server)
-                    CompletableFuture.completedFuture(ApplyWorkspaceEditResponse(true))
-                }
-                .`when`(client)
+                change(server)
+                CompletableFuture.completedFuture(ApplyWorkspaceEditResponse(true))
+            }.`when`(client)
                 .applyEdit(any())
             val command = ExecuteCommandParams(action.command, action.arguments)
             assertThat(server.workspaceService.executeCommand(command).join())
@@ -240,26 +266,29 @@ class CapabilityNegotiationTest {
             server.connect(client)
             server.initialize(legacy()).join()
             open(server)
-            val action = server.textDocumentService.codeAction(actions()).join().single().left
+            val action =
+                server.textDocumentService
+                    .codeAction(actions())
+                    .join()
+                    .single()
+                    .left
             change(server)
             assertThatThrownBy {
-                    server.workspaceService
-                        .executeCommand(ExecuteCommandParams(action.command, action.arguments))
-                        .join()
-                }
-                .hasMessageContaining("expired or changed")
+                server.workspaceService
+                    .executeCommand(ExecuteCommandParams(action.command, action.arguments))
+                    .join()
+            }.hasMessageContaining("expired or changed")
             verify(client, times(0)).applyEdit(any())
         }
         XtcLanguageServer(adapter()).use { server ->
             assertThat(
-                    server
-                        .initialize(InitializeParams())
-                        .join()
-                        .capabilities
-                        .codeActionProvider
-                        .left
-                )
-                .isFalse()
+                server
+                    .initialize(InitializeParams())
+                    .join()
+                    .capabilities
+                    .codeActionProvider
+                    .left,
+            ).isFalse()
             open(server)
             assertThat(server.textDocumentService.codeAction(actions()).join()).isEmpty()
         }
@@ -272,24 +301,30 @@ class CapabilityNegotiationTest {
                 val client = mock(LanguageClient::class.java)
                 val sent = CompletableFuture<Void>()
                 doAnswer {
-                        sent.complete(null)
-                        if (stalled) CompletableFuture<ApplyWorkspaceEditResponse>()
-                        else
-                            CompletableFuture.completedFuture(
-                                ApplyWorkspaceEditResponse(false).apply {
-                                    failureReason = "Read-only document"
-                                }
-                            )
+                    sent.complete(null)
+                    if (stalled) {
+                        CompletableFuture<ApplyWorkspaceEditResponse>()
+                    } else {
+                        CompletableFuture.completedFuture(
+                            ApplyWorkspaceEditResponse(false).apply {
+                                failureReason = "Read-only document"
+                            },
+                        )
                     }
-                    .`when`(client)
+                }.`when`(client)
                     .applyEdit(any())
                 server.connect(client)
                 server.initialize(legacy()).join()
                 open(server)
-                val command = server.textDocumentService.codeAction(actions()).join().single().left
+                val command =
+                    server.textDocumentService
+                        .codeAction(actions())
+                        .join()
+                        .single()
+                        .left
                 val applying =
                     server.workspaceService.executeCommand(
-                        ExecuteCommandParams(command.command, command.arguments)
+                        ExecuteCommandParams(command.command, command.arguments),
                     )
                 sent.get(5, SECONDS)
                 if (stalled) server.close()
@@ -314,7 +349,7 @@ class CapabilityNegotiationTest {
 
     private fun open(server: XtcLanguageServer) =
         server.textDocumentService.didOpen(
-            DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", 1, "module Action {}"))
+            DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", 1, "module Action {}")),
         )
 
     private fun change(server: XtcLanguageServer) =
@@ -322,7 +357,7 @@ class CapabilityNegotiationTest {
             DidChangeTextDocumentParams(
                 VersionedTextDocumentIdentifier(URI, 2),
                 listOf(TextDocumentContentChangeEvent("// fixed\nmodule Action {}")),
-            )
+            ),
         )
 
     private fun actions() =
@@ -338,32 +373,31 @@ class CapabilityNegotiationTest {
                 uri: String,
                 range: AdapterRange,
                 diagnostics: List<Diagnostic>,
-            ) =
-                CompletableFuture.completedFuture(
-                    listOf(
-                        Action(
-                            "Fix",
-                            Action.CodeActionKind.QUICKFIX,
-                            edit =
-                                AdapterWorkspaceEdit(
-                                    mapOf(
-                                        uri to
-                                            listOf(
-                                                AdapterEdit(
-                                                    AdapterRange(
-                                                        AdapterPosition(0, 0),
-                                                        AdapterPosition(0, 0),
-                                                    ),
-                                                    "// fixed\n",
-                                                )
-                                            )
-                                    ),
-                                    versioned = true,
+            ) = CompletableFuture.completedFuture(
+                listOf(
+                    Action(
+                        "Fix",
+                        Action.CodeActionKind.QUICKFIX,
+                        edit =
+                            AdapterWorkspaceEdit(
+                                mapOf(
+                                    uri to
+                                        listOf(
+                                            AdapterEdit(
+                                                AdapterRange(
+                                                    AdapterPosition(0, 0),
+                                                    AdapterPosition(0, 0),
+                                                ),
+                                                "// fixed\n",
+                                            ),
+                                        ),
                                 ),
-                            isPreferred = true,
-                        )
-                    )
-                )
+                                versioned = true,
+                            ),
+                        isPreferred = true,
+                    ),
+                ),
+            )
         }
 
     private companion object {

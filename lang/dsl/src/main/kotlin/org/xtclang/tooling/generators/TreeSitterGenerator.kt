@@ -48,27 +48,28 @@ class TreeSitterGenerator(
      * grammar metadata including name, file types, and version.
      */
     fun generateConfig(): String {
-        val config = buildJsonObject {
-            putJsonArray("grammars") {
-                addJsonObject {
-                    put("name", model.name.lowercase())
-                    put("camelcase", model.name)
-                    put("scope", "source.${model.name.lowercase()}")
-                    put("path", ".")
-                    putJsonArray("file-types") {
-                        model.fileExtensions.forEach { add(JsonPrimitive(it)) }
+        val config =
+            buildJsonObject {
+                putJsonArray("grammars") {
+                    addJsonObject {
+                        put("name", model.name.lowercase())
+                        put("camelcase", model.name)
+                        put("scope", "source.${model.name.lowercase()}")
+                        put("path", ".")
+                        putJsonArray("file-types") {
+                            model.fileExtensions.forEach { add(JsonPrimitive(it)) }
+                        }
+                    }
+                }
+                putJsonObject("metadata") {
+                    put("version", version)
+                    put("license", "Apache-2.0")
+                    put("description", "${model.name} grammar for tree-sitter")
+                    putJsonObject("links") {
+                        put("repository", "https://github.com/xtclang/xvm")
                     }
                 }
             }
-            putJsonObject("metadata") {
-                put("version", version)
-                put("license", "Apache-2.0")
-                put("description", "${model.name} grammar for tree-sitter")
-                putJsonObject("links") {
-                    put("repository", "https://github.com/xtclang/xvm")
-                }
-            }
-        }
         return json.encodeToString(JsonObject.serializer(), config)
     }
 
@@ -128,8 +129,7 @@ class TreeSitterGenerator(
                 |    // Dual visibility: public/private, protected/private, etc.
                 |    seq(choice($mods), '/', choice($mods)),
                 |),
-                """
-                    .trimMargin()
+                """.trimMargin()
                     .prependIndent(i2)
             } else {
                 "${i2}visibility_modifier: $d => choice('public', 'private', 'protected'),"
@@ -273,40 +273,40 @@ class TreeSitterGenerator(
      * Generates binary expression rules from model operators, grouped by precedence. Operators at
      * the same precedence level are combined into a choice().
      */
-    private fun generateBinaryExpressionRules(): String = buildString {
-        val binaryOps =
-            model.operators.filter { op ->
-                op.category !in
-                    listOf(OperatorCategory.ASSIGNMENT, OperatorCategory.MEMBER_ACCESS) &&
-                    op.symbol !in listOf("!", "~", "++", "--")
+    private fun generateBinaryExpressionRules(): String =
+        buildString {
+            val binaryOps =
+                model.operators.filter { op ->
+                    op.category !in
+                        listOf(OperatorCategory.ASSIGNMENT, OperatorCategory.MEMBER_ACCESS) &&
+                        op.symbol !in listOf("!", "~", "++", "--")
+                }
+
+            val byPrecedence = binaryOps.groupBy { it.precedence }.toSortedMap()
+            val i3 = indent(3)
+            val d = '$' // JavaScript's $ for tree-sitter DSL
+
+            byPrecedence.entries.forEachIndexed { index, (precedence, ops) ->
+                val precFn =
+                    when {
+                        ops.all { it.associativity == Associativity.RIGHT } -> "prec.right"
+                        else -> "prec.left"
+                    }
+
+                val parts = ops.map { emitOperatorLiteral(it.symbol) }
+                val choiceExpr =
+                    if (parts.size == 1) {
+                        parts.first()
+                    } else {
+                        "choice(${parts.joinToString(", ")})"
+                    }
+
+                val comma = if (index < byPrecedence.size - 1) "," else ""
+                appendLine(
+                    "$i3$precFn($precedence, seq($d._expression, $choiceExpr, $d._expression))$comma",
+                )
             }
-
-        val byPrecedence = binaryOps.groupBy { it.precedence }.toSortedMap()
-        val i3 = indent(3)
-        val d = '$' // JavaScript's $ for tree-sitter DSL
-
-        byPrecedence.entries.forEachIndexed { index, (precedence, ops) ->
-            val precFn =
-                when {
-                    ops.all { it.associativity == Associativity.RIGHT } -> "prec.right"
-                    else -> "prec.left"
-                }
-
-            val parts = ops.map { emitOperatorLiteral(it.symbol) }
-            val choiceExpr =
-                if (parts.size == 1) {
-                    parts.first()
-                } else {
-                    "choice(${parts.joinToString(", ")})"
-                }
-
-            val comma = if (index < byPrecedence.size - 1) "," else ""
-            appendLine(
-                "$i3$precFn($precedence, seq($d._expression, $choiceExpr, $d._expression))$comma"
-            )
-        }
-    }
-        .trimEnd()
+        }.trimEnd()
 
     // The binary shift operators `<<`, `>>`, `>>>` are emitted as
     // character-level sequences using `token.immediate(...)` so the

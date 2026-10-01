@@ -13,16 +13,17 @@ internal object LanguageServiceSettings {
         project?.let(ProjectLanguageServerSettings::getInstance)
             ?: GlobalLanguageServerSettings.getInstance()
 
-    fun content(project: Project?): String? =
-        store(project).getLanguageServerSettings(CompilerSettings.SERVER_ID)?.configurationContent
+    fun content(project: Project?): String? = store(project).getLanguageServerSettings(CompilerSettings.SERVER_ID)?.configurationContent
 
     fun effective(project: Project?): LanguageServiceConfiguration =
         LanguageServiceConfiguration.read(content(null), project?.let(::content))
 
-    fun validated(project: Project): LanguageServiceConfiguration =
-        project.getService(LanguageServicePreferences::class.java).read()
+    fun validated(project: Project): LanguageServiceConfiguration = project.getService(LanguageServicePreferences::class.java).read()
 
-    fun install(project: Project?, content: String) {
+    fun install(
+        project: Project?,
+        content: String,
+    ) {
         val store = store(project)
         val current = store.getLanguageServerSettings(CompilerSettings.SERVER_ID)
         val copy = current?.let(XmlSerializerUtil::createCopy) ?: LanguageServerDefinitionSettings()

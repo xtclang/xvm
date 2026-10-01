@@ -17,7 +17,7 @@ class CompilerDispatchRoutesTest {
     @Test
     fun `written interface default and class override retain their actual source contracts`() {
         inspect(
-            "interface Api { Int read() = 1; } class Box implements Api { @Override Int read() = 2; }"
+            "interface Api { Int read() = 1; } class Box implements Api { @Override Int read() = 2; }",
         ) { module, errors ->
             val owner = type(module, "Box", errors)
             val method = owner.methods.values.single { it.identity.name == "read" }
@@ -34,7 +34,7 @@ class CompilerDispatchRoutesTest {
     fun `delegate provenance retains receiver and written interface and implementation`() {
         inspect(
             "interface Api { Int read(); } class Actual implements Api { @Override Int read() = 1; } " +
-                "class Box(Actual target) delegates Api(target) {}"
+                "class Box(Actual target) delegates Api(target) {}",
         ) { module, errors ->
             val owner = type(module, "Box", errors)
             val method = owner.methods.values.single { it.identity.name == "read" }
@@ -48,8 +48,7 @@ class CompilerDispatchRoutesTest {
 
     @Test
     fun `union type has multiple callable contracts and remains unsupported for rename`() {
-        inspect("class First { Int read() = 1; } class Second { Int read() = 2; }") { module, errors
-            ->
+        inspect("class First { Int read() = 1; } class Second { Int read() = 2; }") { module, errors ->
             val first = (module.getChild("First") as ClassStructure).formalType
             val second = (module.getChild("Second") as ClassStructure).formalType
             val owner =
@@ -77,7 +76,8 @@ class CompilerDispatchRoutesTest {
         CompilerTestSupport.configure()
         val errors = ErrorList()
         val compilation =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .compileModule(Source("module Routes { $body }", "Routes.x"), null, errors)
         assertThat(compilation.succeeded()).describedAs(errors.errors.toString()).isTrue()
         ConstantPool.withPool(compilation.pool()).use {

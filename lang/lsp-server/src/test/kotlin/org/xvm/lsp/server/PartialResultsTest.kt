@@ -1,10 +1,5 @@
 package org.xvm.lsp.server
 
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit.SECONDS
-import java.util.concurrent.atomic.AtomicBoolean
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.eclipse.lsp4j.ProgressParams
@@ -19,6 +14,11 @@ import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.atomic.AtomicBoolean
 
 class PartialResultsTest {
     @Test
@@ -26,10 +26,9 @@ class PartialResultsTest {
         val client = mock(LanguageClient::class.java)
         val events = CopyOnWriteArrayList<ProgressParams>()
         doAnswer {
-                events.add(it.getArgument(0))
-                null
-            }
-            .`when`(client)
+            events.add(it.getArgument(0))
+            null
+        }.`when`(client)
             .notifyProgress(any())
         PartialResults({ client }).use { publisher ->
             val values = (0..129).toList()
@@ -44,14 +43,13 @@ class PartialResultsTest {
                 .containsExactlyElementsOf(values)
             val normal = CompletableFuture.completedFuture(values)
             assertThat(
-                    publisher.publish(
-                        null,
-                        normal,
-                        { error("No partial publication") },
-                        PartialResults::list,
-                    )
-                )
-                .isSameAs(normal)
+                publisher.publish(
+                    null,
+                    normal,
+                    { error("No partial publication") },
+                    PartialResults::list,
+                ),
+            ).isSameAs(normal)
         }
     }
 
@@ -65,12 +63,11 @@ class PartialResultsTest {
             val current = AtomicBoolean(true)
             val dispatcher = Executors.newSingleThreadExecutor()
             doAnswer {
-                    events.add(it.getArgument(0))
-                    entered.complete(null)
-                    release.get(5, SECONDS)
-                    null
-                }
-                .`when`(client)
+                events.add(it.getArgument(0))
+                entered.complete(null)
+                release.get(5, SECONDS)
+                null
+            }.`when`(client)
                 .notifyProgress(any())
             PartialResults({ client }, dispatcher).use { publisher ->
                 val result =
@@ -91,8 +88,11 @@ class PartialResultsTest {
                     release.complete(null)
                 }
                 assertThatThrownBy { result.get(5, SECONDS) }.isInstanceOf(Exception::class.java)
-                if (mode != "close") dispatcher.submit {}.get(5, SECONDS)
-                else assertThat(dispatcher.awaitTermination(5, SECONDS)).isTrue()
+                if (mode != "close") {
+                    dispatcher.submit {}.get(5, SECONDS)
+                } else {
+                    assertThat(dispatcher.awaitTermination(5, SECONDS)).isTrue()
+                }
                 assertThat(events).hasSize(1)
             }
         }
@@ -103,10 +103,9 @@ class PartialResultsTest {
         val client = mock(LanguageClient::class.java)
         val events = CopyOnWriteArrayList<ProgressParams>()
         doAnswer {
-                events.add(it.getArgument(0))
-                null
-            }
-            .`when`(client)
+            events.add(it.getArgument(0))
+            null
+        }.`when`(client)
             .notifyProgress(any())
         PartialResults({ client }).use { publisher ->
             val result =
@@ -138,10 +137,9 @@ class PartialResultsTest {
         val client = mock(LanguageClient::class.java)
         val events = CopyOnWriteArrayList<ProgressParams>()
         doAnswer {
-                events.add(it.getArgument(0))
-                null
-            }
-            .`when`(client)
+            events.add(it.getArgument(0))
+            null
+        }.`when`(client)
             .notifyProgress(any())
         XtcLanguageServer(adapter).use { server ->
             server.connect(client)
@@ -150,10 +148,20 @@ class PartialResultsTest {
                 WorkspaceSymbolParams("Value").apply {
                     partialResultToken = Either.forLeft("symbols")
                 }
-            assertThat(server.workspaceService.symbol(query).get(5, SECONDS).left).isEmpty()
+            assertThat(
+                server.workspaceService
+                    .symbol(query)
+                    .get(5, SECONDS)
+                    .left,
+            ).isEmpty()
             assertThat(events.flatMap { it.value.right as List<*> }).hasSize(130)
             query.partialResultToken = null
-            assertThat(server.workspaceService.symbol(query).get(5, SECONDS).left).hasSize(130)
+            assertThat(
+                server.workspaceService
+                    .symbol(query)
+                    .get(5, SECONDS)
+                    .left,
+            ).hasSize(130)
             assertThat(events).hasSize(3)
         }
     }

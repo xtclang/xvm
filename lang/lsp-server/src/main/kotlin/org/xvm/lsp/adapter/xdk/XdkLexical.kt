@@ -77,7 +77,8 @@ internal object XdkLexical {
                         open: Token.Id,
                         close: Token.Id,
                     ): Int =
-                        (before.count { it.id == open } -
+                        (
+                            before.count { it.id == open } -
                                 before.count { it.id == close } -
                                 onLine
                                     .takeWhile {
@@ -87,14 +88,13 @@ internal object XdkLexical {
                                                 Token.Id.R_PAREN,
                                                 Token.Id.R_SQUARE,
                                             )
-                                    }
-                                    .count { it.id == close })
-                            .coerceAtLeast(0)
+                                    }.count { it.id == close }
+                        ).coerceAtLeast(0)
                     val indent =
                         depth(Token.Id.L_CURLY, Token.Id.R_CURLY) * config.indentSize +
                             if (
                                 depth(Token.Id.L_PAREN, Token.Id.R_PAREN) +
-                                    depth(Token.Id.L_SQUARE, Token.Id.R_SQUARE) > 0
+                                depth(Token.Id.L_SQUARE, Token.Id.R_SQUARE) > 0
                             ) {
                                 config.continuationIndentSize
                             } else {
@@ -114,31 +114,30 @@ internal object XdkLexical {
                                 TextEdit(
                                     Range(Position(line, 0), Position(line, leading)),
                                     whitespace,
-                                )
+                                ),
                             )
                         }
                         val trimmed = value.trimEnd(' ', '\t').length
                         if (
                             options.trimTrailingWhitespace &&
-                                trimmed < value.length &&
-                                onLine.none { it.range.end.column > trimmed }
+                            trimmed < value.length &&
+                            onLine.none { it.range.end.column > trimmed }
                         ) {
                             add(
                                 TextEdit(
                                     Range(Position(line, trimmed), Position(line, value.length)),
                                     "",
-                                )
+                                ),
                             )
                         }
                     }
-                }
-                .toMutableList()
+                }.toMutableList()
         if (
             range == null &&
-                options.insertFinalNewline &&
-                text.isNotEmpty() &&
-                !text.endsWith('\n') &&
-                !text.endsWith('\r')
+            options.insertFinalNewline &&
+            text.isNotEmpty() &&
+            !text.endsWith('\n') &&
+            !text.endsWith('\r')
         ) {
             val at = Position(lines.lastIndex, lines.last().length)
             edits += TextEdit(Range(at, at), newlines.find(text)?.value ?: "\n")
@@ -147,9 +146,8 @@ internal object XdkLexical {
             edits
                 .sortedWith(
                     compareByDescending<TextEdit> { it.range.start.line }
-                        .thenByDescending { it.range.start.column }
-                )
-                .fold(text) { result, edit ->
+                        .thenByDescending { it.range.start.column },
+                ).fold(text) { result, edit ->
                     result.replaceRange(
                         offset(text, edit.range.start),
                         offset(text, edit.range.end),
@@ -158,8 +156,11 @@ internal object XdkLexical {
                 }
         // Whitespace around a token can be language-significant. Reject any changed spelling or
         // tokenization.
-        return if (lex(proposed)?.map { it.id to it.text } == tokens.map { it.id to it.text }) edits
-        else emptyList()
+        return if (lex(proposed)?.map { it.id to it.text } == tokens.map { it.id to it.text }) {
+            edits
+        } else {
+            emptyList()
+        }
     }
 
     fun links(text: String): List<DocumentLink> =
@@ -180,8 +181,7 @@ internal object XdkLexical {
                             target,
                             target,
                         )
-                    }
-                    .toList()
+                    }.toList()
             }
 
     /**
@@ -199,7 +199,9 @@ internal object XdkLexical {
                     token.id.name.startsWith("LIT_") -> "number"
 
                     token.id != Token.Id.IDENTIFIER &&
-                        token.id.TEXT?.firstOrNull()?.isLetter() == true -> "keyword"
+                        token.id.TEXT
+                            ?.firstOrNull()
+                            ?.isLetter() == true -> "keyword"
 
                     else -> return@flatMap emptyList()
                 }
@@ -207,8 +209,9 @@ internal object XdkLexical {
                 val start = if (line == token.range.start.line) token.range.start.column else 0
                 val end =
                     if (line == token.range.end.line) token.range.end.column else lines[line].length
-                if (end == start) null
-                else
+                if (end == start) {
+                    null
+                } else {
                     listOf(
                         line,
                         start,
@@ -216,6 +219,7 @@ internal object XdkLexical {
                         SemanticTokenLegend.typeIndex.getValue(kind),
                         0,
                     )
+                }
             }
         }
     }
@@ -235,8 +239,7 @@ internal object XdkLexical {
         // resource detection quadratic in file size, before compilation has started.
         val lineStarts = listOf(0) + newlines.findAll(text).map { it.range.last + 1 }.toList()
         return tokens.map { token ->
-            fun position(value: Long) =
-                Position(Source.calculateLine(value), Source.calculateOffset(value))
+            fun position(value: Long) = Position(Source.calculateLine(value), Source.calculateOffset(value))
             val range = Range(position(token.startPosition), position(token.endPosition))
             val start = lineStarts[range.start.line] + range.start.column
             val end = lineStarts[range.end.line] + range.end.column

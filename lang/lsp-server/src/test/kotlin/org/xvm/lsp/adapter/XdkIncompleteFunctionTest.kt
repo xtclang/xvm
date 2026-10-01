@@ -1,13 +1,13 @@
 package org.xvm.lsp.adapter
 
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkIncompleteFunctionTest {
     @ParameterizedTest
@@ -28,15 +28,13 @@ class XdkIncompleteFunctionTest {
             assertThat(site.parameterAt(candidate, cursor)).isEqualTo(parameter)
             Executors.newSingleThreadExecutor().use { executor ->
                 assertThat(
-                        executor
-                            .submit<String> {
-                                model.semantics
-                                    .type(site.expectedTypeAt(candidate, cursor)!!)!!
-                                    .displayName
-                            }
-                            .get()
-                    )
-                    .isEqualTo(if (parameter == 0) "Int" else "String")
+                    executor
+                        .submit<String> {
+                            model.semantics
+                                .type(site.expectedTypeAt(candidate, cursor)!!)!!
+                                .displayName
+                        }.get(),
+                ).isEqualTo(if (parameter == 0) "Int" else "String")
             }
             val help = adapter.getSignatureHelp(URI, 0, prefix.length)!!
             assertThat(help.signatures.single().label).isEqualTo("Int fn(Int, String)")
@@ -50,13 +48,15 @@ class XdkIncompleteFunctionTest {
 
     @Test
     fun `function properties and narrowed nullable locals use the current compiler type`() {
-        for ((prefix, suffix) in
-            listOf(
-                "module Editing { class Holder<T>(function T(T, String) fn) {} void run(Holder<Int> holder) { holder.fn(1, " to
-                    "); } }",
-                "module Editing { void run(function Int(Int, String)? fn) { if (fn != Null) { fn(1, " to
-                    "); } } }",
-            )) {
+        for (
+        (prefix, suffix) in
+        listOf(
+            "module Editing { class Holder<T>(function T(T, String) fn) {} void run(Holder<Int> holder) { holder.fn(1, " to
+                "); } }",
+            "module Editing { void run(function Int(Int, String)? fn) { if (fn != Null) { fn(1, " to
+                "); } } }",
+        )
+        ) {
             XdkAdapter().use { adapter ->
                 adapter.compile(URI, prefix + suffix)
                 val help = adapter.getSignatureHelp(URI, 0, prefix.length)
@@ -105,12 +105,14 @@ class XdkIncompleteFunctionTest {
 
     @Test
     fun `unreadable nullable and shadowing nonfunctions do not acquire signatures`() {
-        for (prefix in
-            listOf(
-                "module Editing { void run() { function Int(Int) fn; fn(",
-                "module Editing { void run(function Int(Int)? fn) { fn(",
-                "module Editing { Int fn(Int n) = n; void run() { Int fn = 1; fn(",
-            )) {
+        for (
+        prefix in
+        listOf(
+            "module Editing { void run() { function Int(Int) fn; fn(",
+            "module Editing { void run(function Int(Int)? fn) { fn(",
+            "module Editing { Int fn(Int n) = n; void run() { Int fn = 1; fn(",
+        )
+        ) {
             XdkAdapter().use { adapter ->
                 adapter.compile(URI, "$prefix); } }")
                 assertThat(adapter.getSignatureHelp(URI, 0, prefix.length))

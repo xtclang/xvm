@@ -3,11 +3,11 @@ package org.xvm.lsp.treesitter
 import io.github.treesitter.jtreesitter.Language
 import io.github.treesitter.jtreesitter.Query
 import io.github.treesitter.jtreesitter.QueryCursor
-import java.io.Closeable
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.SymbolInfo.SymbolKind
+import java.io.Closeable
 
 /**
  * Query engine for extracting information from XTC syntax trees.
@@ -16,7 +16,9 @@ import org.xvm.lsp.model.SymbolInfo.SymbolKind
  * parsed source code.
  */
 @Suppress("LoggingSimilarMessage")
-class XtcQueryEngine(language: Language) : Closeable {
+class XtcQueryEngine(
+    language: Language,
+) : Closeable {
     private val logger = LoggerFactory.getLogger(XtcQueryEngine::class.java)
 
     private val allDeclarationsQuery: Query = Query(language, XtcQueries.allDeclarations)
@@ -42,22 +44,21 @@ class XtcQueryEngine(language: Language) : Closeable {
                     captures.keys.firstNotNullOfOrNull { captureKind[it] } ?: return@executeQuery
                 add(nameNode.toSymbolInfo(nameNode.text, kind, uri))
             }
-        }
-            .also { symbols ->
-                logger.info("findAllDeclarations -> {} symbols", symbols.size)
-                if (logger.isDebugEnabled && symbols.isNotEmpty()) {
-                    symbols.forEach { s ->
-                        logger.debug(
-                            "  {} '{}' at {}:{}:{}",
-                            s.kind,
-                            s.name,
-                            s.location.uri.substringAfterLast('/'),
-                            s.location.startLine + 1,
-                            s.location.startColumn + 1,
-                        )
-                    }
+        }.also { symbols ->
+            logger.info("findAllDeclarations -> {} symbols", symbols.size)
+            if (logger.isDebugEnabled && symbols.isNotEmpty()) {
+                symbols.forEach { s ->
+                    logger.debug(
+                        "  {} '{}' at {}:{}:{}",
+                        s.kind,
+                        s.name,
+                        s.location.uri.substringAfterLast('/'),
+                        s.location.startLine + 1,
+                        s.location.startColumn + 1,
+                    )
                 }
             }
+        }
     }
 
     /** Find all method declarations. */
@@ -71,21 +72,20 @@ class XtcQueryEngine(language: Language) : Closeable {
                 val nameNode = captures["name"] ?: return@executeQuery
                 add(nameNode.toSymbolInfo(nameNode.text, SymbolKind.METHOD, uri))
             }
-        }
-            .also { methods ->
-                logger.info("findMethodDeclarations -> {} methods", methods.size)
-                if (methods.isNotEmpty()) {
-                    methods.forEach { m ->
-                        logger.info(
-                            "  '{}' at {}:{}:{}",
-                            m.name,
-                            m.location.uri.substringAfterLast('/'),
-                            m.location.startLine + 1,
-                            m.location.startColumn + 1,
-                        )
-                    }
+        }.also { methods ->
+            logger.info("findMethodDeclarations -> {} methods", methods.size)
+            if (methods.isNotEmpty()) {
+                methods.forEach { m ->
+                    logger.info(
+                        "  '{}' at {}:{}:{}",
+                        m.name,
+                        m.location.uri.substringAfterLast('/'),
+                        m.location.startLine + 1,
+                        m.location.startColumn + 1,
+                    )
                 }
             }
+        }
     }
 
     /** Find all identifiers with a given name (for find references). */
@@ -102,20 +102,19 @@ class XtcQueryEngine(language: Language) : Closeable {
                     add(id.toLocation(uri))
                 }
             }
-        }
-            .also { matches ->
-                logger.info("findAllIdentifiers '{}' -> {} match(es)", name, matches.size)
-                if (matches.isNotEmpty()) {
-                    matches.forEach { loc ->
-                        logger.info(
-                            "  {}:{}:{}",
-                            loc.uri.substringAfterLast('/'),
-                            loc.startLine + 1,
-                            loc.startColumn + 1,
-                        )
-                    }
+        }.also { matches ->
+            logger.info("findAllIdentifiers '{}' -> {} match(es)", name, matches.size)
+            if (matches.isNotEmpty()) {
+                matches.forEach { loc ->
+                    logger.info(
+                        "  {}:{}:{}",
+                        loc.uri.substringAfterLast('/'),
+                        loc.startLine + 1,
+                        loc.startColumn + 1,
+                    )
                 }
             }
+        }
     }
 
     private fun XtcNode.toLocation(uri: String) =
@@ -165,7 +164,8 @@ class XtcQueryEngine(language: Language) : Closeable {
 
                     "method_declaration",
                     "function_declaration",
-                    "constructor_declaration" -> {
+                    "constructor_declaration",
+                    -> {
                         findParameterInMethod(current, name)
                     }
 
@@ -176,7 +176,8 @@ class XtcQueryEngine(language: Language) : Closeable {
                     "enum_body",
                     "mixin_body",
                     "service_body",
-                    "const_body" -> {
+                    "const_body",
+                    -> {
                         findMemberInBody(current, name)
                     }
 
@@ -185,7 +186,8 @@ class XtcQueryEngine(language: Language) : Closeable {
                     "service_declaration",
                     "mixin_declaration",
                     "enum_declaration",
-                    "annotation_declaration" -> {
+                    "annotation_declaration",
+                    -> {
                         // Shorthand constructor parameters (`const Point(Int x, Int y)`)
                         // declare properties, visible throughout the class body.
                         findShorthandProperty(current, name)
@@ -240,7 +242,8 @@ class XtcQueryEngine(language: Language) : Closeable {
 
                     "method_declaration",
                     "function_declaration",
-                    "constructor_declaration" -> {
+                    "constructor_declaration",
+                    -> {
                         enumerateParameters(current, uri)
                     }
 
@@ -251,7 +254,8 @@ class XtcQueryEngine(language: Language) : Closeable {
                     "enum_body",
                     "mixin_body",
                     "service_body",
-                    "const_body" -> {
+                    "const_body",
+                    -> {
                         enumerateMembers(current, uri)
                     }
 
@@ -260,7 +264,8 @@ class XtcQueryEngine(language: Language) : Closeable {
                     "service_declaration",
                     "mixin_declaration",
                     "enum_declaration",
-                    "annotation_declaration" -> {
+                    "annotation_declaration",
+                    -> {
                         enumerateShorthandProperties(current, uri)
                     }
 
@@ -411,8 +416,7 @@ class XtcQueryEngine(language: Language) : Closeable {
                 val kind = memberNodeKinds[decl.type] ?: return@mapNotNull null
                 val nameNode = decl.childByFieldName("name") ?: return@mapNotNull null
                 nameNode.toSymbolInfo(nameNode.text, kind, uri)
-            }
-            .toList()
+            }.toList()
 
     private companion object {
         // Used by findScopeMembers to recognise declarations inside a body.
@@ -508,14 +512,13 @@ class XtcQueryEngine(language: Language) : Closeable {
         kind: SymbolKind,
         uri: String,
         typeSignature: String? = null,
-    ) =
-        SymbolInfo(
-            name = name,
-            qualifiedName = name,
-            kind = kind,
-            location = toLocation(uri),
-            typeSignature = typeSignature,
-        )
+    ) = SymbolInfo(
+        name = name,
+        qualifiedName = name,
+        kind = kind,
+        location = toLocation(uri),
+        typeSignature = typeSignature,
+    )
 
     /** Find imports in the tree (text only). */
     fun findImports(tree: XtcTree): List<String> {
@@ -525,13 +528,12 @@ class XtcQueryEngine(language: Language) : Closeable {
                 val importNode = captures["import"] ?: return@executeQuery
                 add(importNode.text)
             }
-        }
-            .also { imports ->
-                logger.info("findImports -> {} imports", imports.size)
-                if (imports.isNotEmpty()) {
-                    imports.forEach { logger.info("  '{}'", it) }
-                }
+        }.also { imports ->
+            logger.info("findImports -> {} imports", imports.size)
+            if (imports.isNotEmpty()) {
+                imports.forEach { logger.info("  '{}'", it) }
             }
+        }
     }
 
     /** Find imports in the tree with their source locations. */
@@ -545,21 +547,20 @@ class XtcQueryEngine(language: Language) : Closeable {
                 val importNode = captures["import"] ?: return@executeQuery
                 add(importNode.text to importNode.toLocation(uri))
             }
-        }
-            .also { imports ->
-                logger.info("findImportLocations -> {} imports", imports.size)
-                if (imports.isNotEmpty()) {
-                    imports.forEach { (path, loc) ->
-                        logger.info(
-                            "  '{}' at {}:{}:{}",
-                            path,
-                            loc.uri.substringAfterLast('/'),
-                            loc.startLine + 1,
-                            loc.startColumn + 1,
-                        )
-                    }
+        }.also { imports ->
+            logger.info("findImportLocations -> {} imports", imports.size)
+            if (imports.isNotEmpty()) {
+                imports.forEach { (path, loc) ->
+                    logger.info(
+                        "  '{}' at {}:{}:{}",
+                        path,
+                        loc.uri.substringAfterLast('/'),
+                        loc.startLine + 1,
+                        loc.startColumn + 1,
+                    )
                 }
             }
+        }
     }
 
     /**
@@ -578,10 +579,9 @@ class XtcQueryEngine(language: Language) : Closeable {
                 val node = captures["text"] ?: return@executeQuery
                 add(node.text to node.toLocation(uri))
             }
+        }.also { nodes ->
+            logger.info("findCommentAndStringNodes -> {} nodes", nodes.size)
         }
-            .also { nodes ->
-                logger.info("findCommentAndStringNodes -> {} nodes", nodes.size)
-            }
     }
 
     private fun executeQuery(

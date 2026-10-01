@@ -30,8 +30,7 @@ internal object XdkAutoImports {
                 XdkLibraries.module(module).constantPool.constants.mapNotNull(::target).filter {
                     it.module == module
                 }
-            }
-            .distinct()
+            }.distinct()
             .groupBy { it.name }
     }
 
@@ -48,10 +47,12 @@ internal object XdkAutoImports {
         val identity = constant as IdentityConstant
         if (
             identity.path.any {
-                (it !is ModuleConstant &&
-                    it !is PackageConstant &&
-                    it !is ClassConstant &&
-                    it !is TypedefConstant) || it.component?.access != Access.PUBLIC
+                (
+                    it !is ModuleConstant &&
+                        it !is PackageConstant &&
+                        it !is ClassConstant &&
+                        it !is TypedefConstant
+                ) || it.component?.access != Access.PUBLIC
             }
         ) {
             return null

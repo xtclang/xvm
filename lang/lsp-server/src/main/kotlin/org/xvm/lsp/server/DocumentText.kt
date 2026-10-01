@@ -6,7 +6,9 @@ import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextEdit
 
 /** UTF-16 coordinates against one immutable document, including CRLF and bare CR line endings. */
-internal class DocumentText(private val text: String) {
+internal class DocumentText(
+    private val text: String,
+) {
     private val breaks = Regex("\r\n|\r|\n").findAll(text).toList()
     private val starts = listOf(0) + breaks.map { it.range.last + 1 }
     private val ends = breaks.map { it.range.first } + text.length
@@ -20,7 +22,7 @@ internal class DocumentText(private val text: String) {
         require(
             offset == 0 ||
                 offset == text.length ||
-                !Character.isSurrogatePair(text[offset - 1], text[offset])
+                !Character.isSurrogatePair(text[offset - 1], text[offset]),
         ) {
             "Text position splits a surrogate pair"
         }
@@ -35,11 +37,15 @@ internal class DocumentText(private val text: String) {
     }
 
     /** Validate the complete batch before publishing any of its intermediate versions. */
-    fun change(changes: List<TextDocumentContentChangeEvent>, incremental: Boolean): String =
+    fun change(
+        changes: List<TextDocumentContentChangeEvent>,
+        incremental: Boolean,
+    ): String =
         changes.fold(text) { current, change ->
             val range = change.range
-            if (range == null) change.text
-            else {
+            if (range == null) {
+                change.text
+            } else {
                 require(incremental) { "Incremental changes were not negotiated" }
                 val (start, end) = DocumentText(current).bounds(range)
                 current.replaceRange(start, end, change.text)
@@ -58,7 +64,7 @@ internal class DocumentText(private val text: String) {
         require(
             ordered.zipWithNext().all { (a, b) ->
                 a.second.second <= b.second.first && a.second.first != b.second.first
-            }
+            },
         ) {
             "Formatter returned overlapping edits"
         }

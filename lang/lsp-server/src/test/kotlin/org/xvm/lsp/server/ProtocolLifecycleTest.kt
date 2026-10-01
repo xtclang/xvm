@@ -17,15 +17,18 @@ class ProtocolLifecycleTest {
         val lifecycle = ProtocolLifecycle()
         val outgoing = lifecycle.wrap(MessageConsumer { written.add(it) }, false)
         val incoming = lifecycle.wrap(MessageConsumer { delivered.add(it) }, true)
-        fun request(id: Int, method: String) =
-            incoming.consume(
-                RequestMessage().apply {
-                    setId(id)
-                    this.method = method
-                }
-            )
-        fun notify(method: String) =
-            incoming.consume(NotificationMessage().apply { this.method = method })
+
+        fun request(
+            id: Int,
+            method: String,
+        ) = incoming.consume(
+            RequestMessage().apply {
+                setId(id)
+                this.method = method
+            },
+        )
+
+        fun notify(method: String) = incoming.consume(NotificationMessage().apply { this.method = method })
 
         notify("textDocument/didOpen")
         request(1, "textDocument/hover")
@@ -39,7 +42,7 @@ class ProtocolLifecycleTest {
             ResponseMessage().apply {
                 setId(2)
                 result = emptyMap<String, Any>()
-            }
+            },
         )
         notify("initialized")
         notify("initialized")
@@ -52,14 +55,13 @@ class ProtocolLifecycleTest {
         notify("textDocument/didChange")
         notify("exit")
         assertThat(
-                delivered.map {
-                    when (it) {
-                        is RequestMessage -> it.method
-                        is NotificationMessage -> it.method
-                        else -> "response"
-                    }
+            delivered.map {
+                when (it) {
+                    is RequestMessage -> it.method
+                    is NotificationMessage -> it.method
+                    else -> "response"
                 }
-            )
-            .containsExactly("initialize", "initialized", "textDocument/hover", "shutdown", "exit")
+            },
+        ).containsExactly("initialize", "initialized", "textDocument/hover", "shutdown", "exit")
     }
 }

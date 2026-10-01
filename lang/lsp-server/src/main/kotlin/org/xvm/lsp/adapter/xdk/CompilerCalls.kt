@@ -9,18 +9,15 @@ import org.xvm.tool.ModuleInfo
 
 /** All normal, dependency and refactoring-proof compilations cross this timed boundary. */
 internal class CompilerCalls(
-    private val sourceCompiler:
-        (Source, ModuleRepository?, ErrorListener) -> EmbeddingSupport.Compilation,
-    private val treeCompiler:
-        (ModuleInfo, ModuleRepository?, ErrorListener) -> EmbeddingSupport.Compilation,
-    private val cursorCompiler:
-        (
-            Source,
-            ModuleInfo?,
-            Long,
-            ModuleRepository?,
-            ErrorListener,
-        ) -> EmbeddingSupport.PartialAnalysis,
+    private val sourceCompiler: (Source, ModuleRepository?, ErrorListener) -> EmbeddingSupport.Compilation,
+    private val treeCompiler: (ModuleInfo, ModuleRepository?, ErrorListener) -> EmbeddingSupport.Compilation,
+    private val cursorCompiler: (
+        Source,
+        ModuleInfo?,
+        Long,
+        ModuleRepository?,
+        ErrorListener,
+    ) -> EmbeddingSupport.PartialAnalysis,
 ) {
     fun compileSource(
         source: Source,

@@ -42,8 +42,7 @@ class SelectionRangeTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             val selections = ts.getSelectionRanges(uri, listOf(Position(3, 15)))
@@ -70,16 +69,15 @@ class SelectionRangeTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             val selection =
-                ts.getSelectionRanges(
+                ts
+                    .getSelectionRanges(
                         uri,
                         listOf(Position(2, 15)),
-                    )
-                    .single()
+                    ).single()
 
             generateSequence(selection) { it.parent }
                 .zipWithNext()
@@ -105,16 +103,15 @@ class SelectionRangeTest : TreeSitterTestBase() {
                     class Person {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             val selection =
-                ts.getSelectionRanges(
+                ts
+                    .getSelectionRanges(
                         uri,
                         listOf(Position(1, 10)),
-                    )
-                    .single()
+                    ).single()
 
             val hasNonPointRange =
                 generateSequence(selection) { it.parent }
@@ -124,8 +121,7 @@ class SelectionRangeTest : TreeSitterTestBase() {
             assertThat(hasNonPointRange).isTrue()
         }
 
-        private fun selectionDepth(sel: SelectionRange): Int =
-            generateSequence(sel) { it.parent }.count()
+        private fun selectionDepth(sel: SelectionRange): Int = generateSequence(sel) { it.parent }.count()
     }
 
     // ========================================================================
@@ -156,8 +152,7 @@ class SelectionRangeTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // cursor on '1' in `add(1, 2)` at line 6, col 16
@@ -193,8 +188,7 @@ class SelectionRangeTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // cursor on '1' in `negate(1)` at line 9, col 23
@@ -227,8 +221,7 @@ class SelectionRangeTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             val positions =
@@ -249,8 +242,7 @@ class SelectionRangeTest : TreeSitterTestBase() {
             selections.forEach { assertWideningChain(it) }
         }
 
-        private fun selectionDepth(sel: SelectionRange): Int =
-            generateSequence(sel) { it.parent }.count()
+        private fun selectionDepth(sel: SelectionRange): Int = generateSequence(sel) { it.parent }.count()
 
         private fun assertWideningChain(selection: SelectionRange) {
             generateSequence(selection) { it.parent }

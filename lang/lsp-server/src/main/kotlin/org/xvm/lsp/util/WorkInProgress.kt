@@ -15,4 +15,6 @@ package org.xvm.lsp.util
 )
 @Retention(AnnotationRetention.SOURCE)
 @MustBeDocumented
-annotation class WorkInProgress(val reason: String = "")
+annotation class WorkInProgress(
+    val reason: String = "",
+)

@@ -1,6 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -9,6 +8,7 @@ import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.compiler.Source
 import org.xvm.tool.ModuleInfo
+import java.nio.file.Path
 
 class CompilerDeclarationAnalysisTest {
     @TempDir lateinit var directory: Path
@@ -24,11 +24,11 @@ class CompilerDeclarationAnalysisTest {
         assertThat(errors.hasSeriousErrors()).isFalse()
         val normal = ErrorList()
         assertThat(
-                EmbeddingSupport.instance()
-                    .compileModule(Source(text, "Headers.x"), null, normal)
-                    .succeeded()
-            )
-            .isFalse()
+            EmbeddingSupport
+                .instance()
+                .compileModule(Source(text, "Headers.x"), null, normal)
+                .succeeded(),
+        ).isFalse()
         assertThat(normal.hasSeriousErrors()).isTrue()
     }
 
@@ -38,10 +38,10 @@ class CompilerDeclarationAnalysisTest {
         listOf("module Headers { Missing field; }", "module Headers {").forEach { text ->
             val errors = ErrorList()
             assertThat(
-                    EmbeddingSupport.instance()
-                        .analyzeDeclarations(Source(text, "Headers.x"), null, errors)
-                )
-                .isEmpty()
+                EmbeddingSupport
+                    .instance()
+                    .analyzeDeclarations(Source(text, "Headers.x"), null, errors),
+            ).isEmpty()
             assertThat(errors.hasSeriousErrors()).isTrue()
         }
     }
@@ -52,10 +52,10 @@ class CompilerDeclarationAnalysisTest {
         val errors = ErrorList()
         val cancelled = ErrorListener.cancellable(errors) { true }
         assertThat(
-                EmbeddingSupport.instance()
-                    .analyzeDeclarations(Source("broken", "Headers.x"), null, cancelled)
-            )
-            .isEmpty()
+            EmbeddingSupport
+                .instance()
+                .analyzeDeclarations(Source("broken", "Headers.x"), null, cancelled),
+        ).isEmpty()
         assertThat(errors.errors).isEmpty()
     }
 
@@ -70,7 +70,8 @@ class CompilerDeclarationAnalysisTest {
             }
         val errors = ErrorList()
         val headers =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .analyzeDeclarations(ModuleInfo(root, false), null, errors)
                 .orElseThrow()
         assertThat(errors.hasSeriousErrors()).isFalse()

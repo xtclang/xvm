@@ -18,15 +18,13 @@ internal object XtcQueries {
             name: (identifier) @name
             parameters: (parameters) @params
         ) @declaration
-        """
-            .trimIndent()
+        """.trimIndent()
 
     /** Find all identifiers (for reference finding). */
     val identifiers =
         """
         (identifier) @id
-        """
-            .trimIndent()
+        """.trimIndent()
 
     /** Find import statements. */
     val imports =
@@ -34,8 +32,7 @@ internal object XtcQueries {
         (import_statement
             path: (qualified_name) @import
         )
-        """
-            .trimIndent()
+        """.trimIndent()
 
     /**
      * Find comment and string-literal nodes -- the host nodes for free-text content (URLs, file
@@ -48,8 +45,7 @@ internal object XtcQueries {
         (doc_comment) @text
         (string_literal) @text
         (template_string_literal) @text
-        """
-            .trimIndent()
+        """.trimIndent()
 
     /**
      * Combined query for all declarations (for document symbols). Uses field-based matching for
@@ -83,6 +79,5 @@ internal object XtcQueries {
         (const_declaration (constructor_parameters (parameters (parameter name: (identifier) @name)))) @property
         (enum_declaration (constructor_parameters (parameters (parameter name: (identifier) @name)))) @property
         (annotation_declaration (constructor_parameters (parameters (parameter name: (identifier) @name)))) @property
-        """
-            .trimIndent()
+        """.trimIndent()
 }

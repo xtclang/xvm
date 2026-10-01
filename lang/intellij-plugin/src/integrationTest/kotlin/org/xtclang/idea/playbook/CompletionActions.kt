@@ -56,7 +56,7 @@ fun Driver.hasType(
                 .containsMatchIn(
                     presentation.getTypeText().orEmpty() +
                         " " +
-                        presentation.getTailText().orEmpty()
+                        presentation.getTailText().orEmpty(),
                 )
         } == true
 

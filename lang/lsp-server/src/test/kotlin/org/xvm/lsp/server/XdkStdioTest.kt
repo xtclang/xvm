@@ -2,21 +2,6 @@ package org.xvm.lsp.server
 
 import com.google.gson.Gson
 import com.google.gson.JsonParser
-import java.nio.file.Files
-import java.nio.file.Path
-import java.util.Properties
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.ExecutionException
-import java.util.concurrent.Executors
-import java.util.concurrent.Future
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit.NANOSECONDS
-import java.util.concurrent.TimeUnit.SECONDS
-import java.util.concurrent.TimeoutException
-import java.util.jar.JarEntry
-import java.util.jar.JarFile
-import java.util.jar.JarOutputStream
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
 import org.eclipse.lsp4j.CallHierarchyOutgoingCallsParams
@@ -94,6 +79,21 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.Properties
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit.NANOSECONDS
+import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.TimeoutException
+import java.util.jar.JarEntry
+import java.util.jar.JarFile
+import java.util.jar.JarOutputStream
 
 /**
  * Process tests consume the actual fat JAR, including its manifest, resources and logging setup.
@@ -109,9 +109,7 @@ class XdkStdioTest {
 
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
-    fun `optional signature and link fields follow negotiated capabilities over stdio`(
-        richPresentation: Boolean
-    ) {
+    fun `optional signature and link fields follow negotiated capabilities over stdio`(richPresentation: Boolean) {
         Session(packagedJar(), directory).use { session ->
             session.initialize(richPresentation = richPresentation)
             val source =
@@ -121,16 +119,15 @@ class XdkStdioTest {
                     void run() { Int result = read(1, 2); }
                     // https://xtclang.org/
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
             session.open(source)
             val documents = session.server.textDocumentService
             val id = TextDocumentIdentifier(URI)
             val help =
                 session.await(
                     documents.signatureHelp(
-                        SignatureHelpParams(id, Position(2, source.lines()[2].indexOf("2)")))
-                    )
+                        SignatureHelpParams(id, Position(2, source.lines()[2].indexOf("2)"))),
+                    ),
                 )!!
             assertThat(help.activeParameter).isEqualTo(1)
             assertThat<Int?>(help.signatures.single().activeParameter)
@@ -142,7 +139,9 @@ class XdkStdioTest {
                     session.await(documents.documentLinkResolve(link)).also {
                         assertThat(it.tooltip).isNotBlank()
                     }
-                } else link.also { assertThat(it.tooltip).isNull() }
+                } else {
+                    link.also { assertThat(it.tooltip).isNull() }
+                }
             assertThat(resolved.target).isEqualTo("https://xtclang.org/")
             session.shutdownAndExit()
         }
@@ -150,7 +149,7 @@ class XdkStdioTest {
 
     @Test
     fun `partial references and workspace diagnostics cross the packaged transport without duplicate final items`(
-        @TempDir directory: Path
+        @TempDir directory: Path,
     ) {
         Session(packagedJar(), directory).use { session ->
             session.initialize(pullDiagnostics = true)
@@ -158,11 +157,10 @@ class XdkStdioTest {
             session.open(source)
             val params =
                 ReferenceParams(
-                        TextDocumentIdentifier(URI),
-                        Position(0, source.lastIndexOf("value")),
-                        ReferenceContext(true),
-                    )
-                    .apply { partialResultToken = Either.forLeft("references") }
+                    TextDocumentIdentifier(URI),
+                    Position(0, source.lastIndexOf("value")),
+                    ReferenceContext(true),
+                ).apply { partialResultToken = Either.forLeft("references") }
             assertThat(session.await(session.server.textDocumentService.references(params)))
                 .isEmpty()
             val references =
@@ -179,7 +177,11 @@ class XdkStdioTest {
                 session.progress
                     .filter { it.token.isRight && it.token.right == 17 }
                     .flatMap {
-                        Gson().toJsonTree(it.value.right).asJsonObject["items"].asJsonArray.toList()
+                        Gson()
+                            .toJsonTree(it.value.right)
+                            .asJsonObject["items"]
+                            .asJsonArray
+                            .toList()
                     }
             assertThat(reports).hasSize(1)
             assertThat(reports.single().asJsonObject["uri"].asString).isEqualTo(URI)
@@ -191,7 +193,10 @@ class XdkStdioTest {
     @Test
     fun `packaged transport rejects requests outside the initialized lifecycle`() {
         Session(packagedJar(), directory).use { session ->
-            fun rejected(result: CompletableFuture<*>, code: ResponseErrorCode) {
+            fun rejected(
+                result: CompletableFuture<*>,
+                code: ResponseErrorCode,
+            ) {
                 val failure = assertThrows<ExecutionException> { session.await(result) }
                 val error = failure.cause as ResponseErrorException
                 assertThat(error.responseError.code).isEqualTo(code.value)
@@ -251,7 +256,7 @@ class XdkStdioTest {
                             text = "\"text\""
                         },
                     ),
-                )
+                ),
             )
             assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
             val save = WillSaveTextDocumentParams(id, TextDocumentSaveReason.Manual)
@@ -263,8 +268,8 @@ class XdkStdioTest {
             val edits =
                 session.await(
                     documents.rangesFormatting(
-                        DocumentRangesFormattingParams(id, FormattingOptions(4, true), ranges)
-                    )
+                        DocumentRangesFormattingParams(id, FormattingOptions(4, true), ranges),
+                    ),
                 )
             assertThat(edits).hasSize(1)
             assertThat(edits.single().newText).isEqualTo("    ")
@@ -289,10 +294,9 @@ class XdkStdioTest {
                 session
                     .await(
                         documents.semanticTokensFullDelta(
-                            SemanticTokensDeltaParams(id, full.resultId)
-                        )
-                    )
-                    .right
+                            SemanticTokensDeltaParams(id, full.resultId),
+                        ),
+                    ).right
             val patched = full.data.toMutableList()
             delta.edits
                 .sortedByDescending { it.start }
@@ -302,30 +306,26 @@ class XdkStdioTest {
                 }
             assertThat(patched)
                 .isEqualTo(
-                    session.await(documents.semanticTokensFull(SemanticTokensParams(id))).data
+                    session.await(documents.semanticTokensFull(SemanticTokensParams(id))).data,
                 )
             assertThat(
-                    session
-                        .await(
-                            documents.semanticTokensRange(
-                                SemanticTokensRangeParams(id, Range(Position(1, 0), Position(2, 0)))
-                            )
-                        )
-                        .data
-                )
-                .isEqualTo(patched)
+                session
+                    .await(
+                        documents.semanticTokensRange(
+                            SemanticTokensRangeParams(id, Range(Position(1, 0), Position(2, 0))),
+                        ),
+                    ).data,
+            ).isEqualTo(patched)
             documents.didClose(DidCloseTextDocumentParams(id))
             session.open(source)
             assertThat(
-                    session
-                        .await(
-                            documents.semanticTokensFullDelta(
-                                SemanticTokensDeltaParams(id, full.resultId)
-                            )
-                        )
-                        .isLeft
-                )
-                .isTrue()
+                session
+                    .await(
+                        documents.semanticTokensFullDelta(
+                            SemanticTokensDeltaParams(id, full.resultId),
+                        ),
+                    ).isLeft,
+            ).isTrue()
         }
     }
 
@@ -346,10 +346,11 @@ class XdkStdioTest {
                             "name" to "Assets",
                             "uri" to source.toURI().toString(),
                             "resourceRoots" to listOf(root.toURI().toString()),
-                        )
+                        ),
                     ),
             )
             val params = DocumentDiagnosticParams(TextDocumentIdentifier(source.toURI().toString()))
+
             fun pull() = session.await(session.server.textDocumentService.diagnostic(params)).left
             assertThat(pull().items).isEmpty()
             Files.delete(resource.toPath())
@@ -368,8 +369,8 @@ class XdkStdioTest {
                 assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
                 session.await(
                     session.server.textDocumentService.documentSymbol(
-                        DocumentSymbolParams(TextDocumentIdentifier(URI))
-                    )
+                        DocumentSymbolParams(TextDocumentIdentifier(URI)),
+                    ),
                 )
                 session.traceDirectory
             }
@@ -461,9 +462,9 @@ class XdkStdioTest {
                                 document,
                                 Position(0, source.lastIndexOf("input")),
                                 "value",
-                            )
-                        )
-                    )
+                            ),
+                        ),
+                    ),
                 )
             // LSP4J reconstructs its default empty map when the wire omits the changes member.
             assertThat(result.changes).isNullOrEmpty()
@@ -490,13 +491,12 @@ class XdkStdioTest {
             session.change(capture, 3)
             assertThat(session.diagnosticsAt(3).diagnostics).isEmpty()
             assertThat(
-                    session.await(
-                        documents.rename(
-                            RenameParams(document, Position(0, capture.indexOf("local")), "value")
-                        )
-                    )
-                )
-                .isNull()
+                session.await(
+                    documents.rename(
+                        RenameParams(document, Position(0, capture.indexOf("local")), "value"),
+                    ),
+                ),
+            ).isNull()
         }
     }
 
@@ -517,16 +517,14 @@ class XdkStdioTest {
                             CallHierarchyPrepareParams(
                                 document,
                                 Position(0, source.indexOf("leaf")),
-                            )
-                        )
-                    )
-                    .single()
+                            ),
+                        ),
+                    ).single()
             val incoming =
                 session
                     .await(
-                        documents.callHierarchyIncomingCalls(CallHierarchyIncomingCallsParams(leaf))
-                    )
-                    .single()
+                        documents.callHierarchyIncomingCalls(CallHierarchyIncomingCallsParams(leaf)),
+                    ).single()
             assertThat(incoming.from.name).isEqualTo("run")
             assertThat(incoming.fromRanges)
                 .containsExactly(
@@ -536,52 +534,46 @@ class XdkStdioTest {
                             0,
                             source.lastIndexOf("leaf") + 4,
                         ),
-                    )
+                    ),
                 )
             val outgoing =
                 session
                     .await(
                         documents.callHierarchyOutgoingCalls(
-                            CallHierarchyOutgoingCallsParams(incoming.from)
-                        )
-                    )
-                    .single()
+                            CallHierarchyOutgoingCallsParams(incoming.from),
+                        ),
+                    ).single()
             assertThat(outgoing.to).isEqualTo(leaf)
             val hints =
                 session.await(
                     documents.inlayHint(
-                        InlayHintParams(document, Range(Position(0, 0), Position(1, 0)))
-                    )
+                        InlayHintParams(document, Range(Position(0, 0), Position(1, 0))),
+                    ),
                 )
             assertThat(hints.map { it.label.left }).containsExactly(": Int", "input:")
             assertThat(
-                    session.await(documents.semanticTokensFull(SemanticTokensParams(document))).data
-                )
-                .isNotEmpty()
+                session.await(documents.semanticTokensFull(SemanticTokensParams(document))).data,
+            ).isNotEmpty()
             session.change("\n$source", 2)
             assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
             assertThat(
-                    session.await(
-                        documents.callHierarchyIncomingCalls(CallHierarchyIncomingCallsParams(leaf))
-                    )
-                )
-                .isEmpty()
+                session.await(
+                    documents.callHierarchyIncomingCalls(CallHierarchyIncomingCallsParams(leaf)),
+                ),
+            ).isEmpty()
             assertThat(
-                    session.await(
-                        documents.callHierarchyOutgoingCalls(
-                            CallHierarchyOutgoingCallsParams(incoming.from)
-                        )
-                    )
-                )
-                .isEmpty()
+                session.await(
+                    documents.callHierarchyOutgoingCalls(
+                        CallHierarchyOutgoingCallsParams(incoming.from),
+                    ),
+                ),
+            ).isEmpty()
         }
     }
 
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
-    fun `bundled compiler handles edits and shutdown without an external XDK`(
-        invalidXdkHome: Boolean
-    ) {
+    fun `bundled compiler handles edits and shutdown without an external XDK`(invalidXdkHome: Boolean) {
         Session(packagedJar(), directory, invalidXdkHome).use { session ->
             session.initialize()
             session.open(BROKEN)
@@ -598,14 +590,14 @@ class XdkStdioTest {
             val symbols =
                 session.await(
                     session.server.textDocumentService.documentSymbol(
-                        DocumentSymbolParams(TextDocumentIdentifier(URI))
-                    )
+                        DocumentSymbolParams(TextDocumentIdentifier(URI)),
+                    ),
                 )
             assertThat(symbols).isNotEmpty()
             session.verifySemantics(VALID, "value", "Int")
 
             session.server.textDocumentService.didClose(
-                DidCloseTextDocumentParams(TextDocumentIdentifier(URI))
+                DidCloseTextDocumentParams(TextDocumentIdentifier(URI)),
             )
             assertThat(session.diagnosticsAt(101).diagnostics).isEmpty()
             session.open(REOPENED)
@@ -634,27 +626,25 @@ class XdkStdioTest {
             val memberId = TextDocumentIdentifier(member.toURI().toString())
             val documents = session.server.textDocumentService
             documents.didOpen(
-                DidOpenTextDocumentParams(TextDocumentItem(rootId.uri, "xtc", 1, source))
+                DidOpenTextDocumentParams(TextDocumentItem(rootId.uri, "xtc", 1, source)),
             )
             assertThat(session.diagnosticsFor(memberId.uri, null).diagnostics).isEmpty()
             val definition =
                 session
                     .await(
                         documents.definition(
-                            DefinitionParams(rootId, Position(0, source.indexOf("Child")))
-                        )
-                    )
-                    .left
+                            DefinitionParams(rootId, Position(0, source.indexOf("Child"))),
+                        ),
+                    ).left
                     .single()
             assertThat(definition.uri).isEqualTo(memberId.uri)
             val typeDefinition =
                 session
                     .await(
                         documents.typeDefinition(
-                            TypeDefinitionParams(rootId, Position(0, source.indexOf("make")))
-                        )
-                    )
-                    .left
+                            TypeDefinitionParams(rootId, Position(0, source.indexOf("make"))),
+                        ),
+                    ).left
                     .single()
             assertThat(typeDefinition.uri).isEqualTo(memberId.uri)
             assertThat(typeDefinition.range).isEqualTo(Range(Position(0, 6), Position(0, 11)))
@@ -663,10 +653,9 @@ class XdkStdioTest {
                     session
                         .await(
                             documents.implementation(
-                                ImplementationParams(rootId, Position(0, source.indexOf(name)))
-                            )
-                        )
-                        .left
+                                ImplementationParams(rootId, Position(0, source.indexOf(name))),
+                            ),
+                        ).left
                 assertThat(implementations.map { it.uri })
                     .containsExactlyInAnyOrder(rootId.uri, memberId.uri)
             }
@@ -674,24 +663,21 @@ class XdkStdioTest {
                 session
                     .await(
                         documents.prepareTypeHierarchy(
-                            TypeHierarchyPrepareParams(rootId, Position(0, source.indexOf("Base")))
-                        )
-                    )
-                    .single()
+                            TypeHierarchyPrepareParams(rootId, Position(0, source.indexOf("Base"))),
+                        ),
+                    ).single()
             val child =
                 session
                     .await(documents.typeHierarchySubtypes(TypeHierarchySubtypesParams(base)))
                     .single()
             assertThat(child.uri).isEqualTo(memberId.uri)
             assertThat(
-                    session
-                        .await(
-                            documents.typeHierarchySupertypes(TypeHierarchySupertypesParams(child))
-                        )
-                        .single()
-                        .uri
-                )
-                .isEqualTo(rootId.uri)
+                session
+                    .await(
+                        documents.typeHierarchySupertypes(TypeHierarchySupertypesParams(child)),
+                    ).single()
+                    .uri,
+            ).isEqualTo(rootId.uri)
             documents.didOpen(
                 DidOpenTextDocumentParams(
                     TextDocumentItem(
@@ -699,8 +685,8 @@ class XdkStdioTest {
                         "xtc",
                         7,
                         "class Child extends Base { MissingType absent; }",
-                    )
-                )
+                    ),
+                ),
             )
             assertThat(session.diagnosticsFor(memberId.uri, 7).diagnostics).anyMatch {
                 it.code.left == "COMPILER-38"
@@ -709,15 +695,14 @@ class XdkStdioTest {
                 DidChangeTextDocumentParams(
                     VersionedTextDocumentIdentifier(memberId.uri, 8),
                     listOf(TextDocumentContentChangeEvent(member.readText())),
-                )
+                ),
             )
             assertThat(session.diagnosticsFor(memberId.uri, 8).diagnostics).isEmpty()
             assertThat(
-                    session.await(
-                        documents.typeHierarchySubtypes(TypeHierarchySubtypesParams(base))
-                    )
-                )
-                .isEmpty()
+                session.await(
+                    documents.typeHierarchySubtypes(TypeHierarchySubtypesParams(base)),
+                ),
+            ).isEmpty()
             session.shutdownAndExit()
         }
     }
@@ -734,8 +719,7 @@ class XdkStdioTest {
                     if (value.is(First)) { value.toString(); }
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         Session(packagedJar(), directory).use { session ->
             session.initialize()
             session.open(source)
@@ -772,7 +756,12 @@ class XdkStdioTest {
             val document = TextDocumentIdentifier(URI)
             val service = session.server.textDocumentService
             val symbols = session.await(service.documentSymbol(DocumentSymbolParams(document)))
-            assertThat(symbols.single().right.children.map { it.name }).containsExactly("editing")
+            assertThat(
+                symbols
+                    .single()
+                    .right.children
+                    .map { it.name },
+            ).containsExactly("editing")
             val folds = session.await(service.foldingRange(FoldingRangeRequestParams(document)))
             assertThat(folds).anySatisfy {
                 assertThat(it.startLine).isEqualTo(1)
@@ -787,11 +776,10 @@ class XdkStdioTest {
             assertThat(selected.range.end).isEqualTo(cursor)
             assertThat(selected.range.start.line).isLessThan(2)
             assertThat(
-                    session
-                        .await(service.definition(DefinitionParams(document, Position(1, 10))))
-                        .left
-                )
-                .isEmpty()
+                session
+                    .await(service.definition(DefinitionParams(document, Position(1, 10))))
+                    .left,
+            ).isEmpty()
             session.change(REOPENED, 3)
             assertThat(session.diagnosticsAt(3).diagnostics).isEmpty()
             session.verifySemantics(REOPENED, "label", "String")
@@ -811,20 +799,19 @@ class XdkStdioTest {
                 val closingLine = " /* 😀 */ } Int later = 1; }"
                 val text =
                     listOf(
-                            "module Stdio {",
-                            " void damaged(Int) {",
-                            " Int hidden = 1;",
-                            closingLine,
-                        )
-                        .joinToString(newline)
+                        "module Stdio {",
+                        " void damaged(Int) {",
+                        " Int hidden = 1;",
+                        closingLine,
+                    ).joinToString(newline)
                 val version = index + 2
                 session.change(text, version)
                 assertThat(session.diagnosticsAt(version).diagnostics).isNotEmpty()
                 val folds =
                     session.await(
                         session.server.textDocumentService.foldingRange(
-                            FoldingRangeRequestParams(TextDocumentIdentifier(URI))
-                        )
+                            FoldingRangeRequestParams(TextDocumentIdentifier(URI)),
+                        ),
                     )
                 val method = folds.single { it.startLine == 1 }
                 assertThat(method.endLine).isEqualTo(3)
@@ -851,9 +838,8 @@ class XdkStdioTest {
             val items =
                 session
                     .await(
-                        service.completion(CompletionParams(document, Position(0, prefix.length)))
-                    )
-                    .left
+                        service.completion(CompletionParams(document, Position(0, prefix.length))),
+                    ).left
             assertThat(items.map { it.label })
                 .contains("echo", "choose", "label")
                 .doesNotContain("secret")
@@ -866,26 +852,27 @@ class XdkStdioTest {
             assertThat(session.diagnosticsAt(2).diagnostics).isNotEmpty()
             val help =
                 session.await(
-                    service.signatureHelp(SignatureHelpParams(document, Position(0, call.length)))
+                    service.signatureHelp(SignatureHelpParams(document, Position(0, call.length))),
                 )
             assertThat(help.signatures.single().label).isEqualTo("String echo(String value)")
             assertThat(help.signatures.single().activeParameter).isZero()
-            assertThat(help.signatures.single().documentation.left)
-                .contains("overload not selected")
+            assertThat(
+                help.signatures
+                    .single()
+                    .documentation.left,
+            ).contains("overload not selected")
 
             val overloaded = "${prefix}choose("
             session.change("$overloaded } }", 3)
             assertThat(session.diagnosticsAt(3).diagnostics).isNotEmpty()
             assertThat(
-                    session
-                        .await(
-                            service.signatureHelp(
-                                SignatureHelpParams(document, Position(0, overloaded.length))
-                            )
-                        )
-                        .signatures
-                )
-                .hasSize(2)
+                session
+                    .await(
+                        service.signatureHelp(
+                            SignatureHelpParams(document, Position(0, overloaded.length)),
+                        ),
+                    ).signatures,
+            ).hasSize(2)
 
             val complete =
                 "module Stdio { <T> T echo(T value, T backup) { return value; } " +
@@ -901,8 +888,8 @@ class XdkStdioTest {
                                 0,
                                 complete.indexOf("backup = \"b\"") + "backup = \"b\"".length,
                             ),
-                        )
-                    )
+                        ),
+                    ),
                 )
             assertThat(selected.signatures.single().label)
                 .isEqualTo("String echo(String value, String backup)")
@@ -919,9 +906,8 @@ class XdkStdioTest {
             val latest =
                 session
                     .await(
-                        service.completion(CompletionParams(document, Position(0, prefix.length)))
-                    )
-                    .left
+                        service.completion(CompletionParams(document, Position(0, prefix.length))),
+                    ).left
             assertThat(latest.map { it.label }).contains("echo")
             session.shutdownAndExit()
         }
@@ -943,9 +929,8 @@ class XdkStdioTest {
             val items =
                 session
                     .await(
-                        service.completion(CompletionParams(document, Position(0, prefix.length)))
-                    )
-                    .left
+                        service.completion(CompletionParams(document, Position(0, prefix.length))),
+                    ).left
             val item = items.single { it.label == "choose" }
             assertThat(item.documentation.left).contains("Keeps the selected text.")
             assertThat(item.sortText).isNotBlank()
@@ -996,7 +981,7 @@ class XdkStdioTest {
             assertThat(session.diagnosticsAt(3).diagnostics).isNotEmpty()
             val help =
                 session.await(
-                    service.signatureHelp(SignatureHelpParams(document, Position(0, call.length)))
+                    service.signatureHelp(SignatureHelpParams(document, Position(0, call.length))),
                 )
             assertThat(help.signatures).hasSize(2).allSatisfy {
                 assertThat(it.label).startsWith("conditional Int indexOf(")
@@ -1009,8 +994,8 @@ class XdkStdioTest {
             val selected =
                 session.await(
                     service.signatureHelp(
-                        SignatureHelpParams(document, Position(0, completed.length))
-                    )
+                        SignatureHelpParams(document, Position(0, completed.length)),
+                    ),
                 )
             assertThat(selected.signatures).hasSize(1)
             assertThat(selected.signatures.single().documentation).isNull()
@@ -1022,11 +1007,9 @@ class XdkStdioTest {
     @ParameterizedTest
     @ValueSource(
         strings =
-            ["(values[value.si", "(1, value.si", "[1 = value.si", "Tuple<Int,Int>:(1, value.si"]
+            ["(values[value.si", "(1, value.si", "[1 = value.si", "Tuple<Int,Int>:(1, value.si"],
     )
-    fun `missing enclosing delimiters preserve cursor queries and ordinary diagnostics over stdio`(
-        expression: String
-    ) {
+    fun `missing enclosing delimiters preserve cursor queries and ordinary diagnostics over stdio`(expression: String) {
         val header =
             "module Stdio { Int pair(Int first, Int second) = first; Object run(String value, Int[] values) { return "
         Session(packagedJar(), directory).use { session ->
@@ -1047,12 +1030,15 @@ class XdkStdioTest {
             assertThat(session.diagnosticsAt(2).diagnostics).isNotEmpty()
             val help =
                 session.await(
-                    service.signatureHelp(SignatureHelpParams(document, Position(0, call.length)))
+                    service.signatureHelp(SignatureHelpParams(document, Position(0, call.length))),
                 )
             assertThat(help.signatures.single().label).isEqualTo("Int pair(Int first, Int second)")
             assertThat(help.signatures.single().activeParameter).isEqualTo(1)
-            assertThat(help.signatures.single().documentation.left)
-                .contains("overload not selected")
+            assertThat(
+                help.signatures
+                    .single()
+                    .documentation.left,
+            ).contains("overload not selected")
             session.change("${call}2)]); } }", 3)
             assertThat(session.diagnosticsAt(3).diagnostics).isEmpty()
             session.shutdownAndExit()
@@ -1075,7 +1061,7 @@ class XdkStdioTest {
                 "new String[2](supply = te",
                 "Box<String> box = new Box(te",
                 "new @Tagged Box<String>(te",
-            ]
+            ],
     )
     fun `argument value edits round trip and clear diagnostics after acceptance`(call: String) {
         val prefix =
@@ -1093,20 +1079,30 @@ class XdkStdioTest {
             val items = session.await(service.completion(CompletionParams(document, cursor))).left
             assertThat(items.map { it.label })
                 .containsExactlyInAnyOrderElementsOf(
-                    if (typed == 0) listOf("text", "qualifiedName", "simpleName", "\"\"")
-                    else listOf("text")
+                    if (typed == 0) {
+                        listOf("text", "qualifiedName", "simpleName", "\"\"")
+                    } else {
+                        listOf("text")
+                    },
                 )
             val edit = items.single { it.label == "text" }.textEdit.left
             assertThat(edit.range).isEqualTo(Range(Position(0, prefix.length - typed), cursor))
             assertThat(edit.newText).isEqualTo("text")
             val help = session.await(service.signatureHelp(SignatureHelpParams(document, cursor)))
-            assertThat(help.signatures.single().documentation.left)
-                .contains(
-                    if (call.startsWith("fn(")) "runtime target unknown"
-                    else "overload not selected"
-                )
-            if (call.startsWith("new String[2]"))
+            assertThat(
+                help.signatures
+                    .single()
+                    .documentation.left,
+            ).contains(
+                if (call.startsWith("fn(")) {
+                    "runtime target unknown"
+                } else {
+                    "overload not selected"
+                },
+            )
+            if (call.startsWith("new String[2]")) {
                 assertThat(help.signatures.single().activeParameter).isEqualTo(1)
+            }
             session.change("${prefix.dropLast(typed)}${edit.newText}); } }", 2)
             assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
             session.shutdownAndExit()
@@ -1125,11 +1121,9 @@ class XdkStdioTest {
                 "List<ecstasy.text.Str§> property;",
                 "void damaged((Int | Str§) value) {}",
                 "interface Damaged extends List<Str§> {}",
-            ]
+            ],
     )
-    fun `declaration type edits preserve UTF16 positions and clear diagnostics over stdio`(
-        declaration: String
-    ) {
+    fun `declaration type edits preserve UTF16 positions and clear diagnostics over stdio`(declaration: String) {
         val prefix = "module Stdio {\r\n /* 😀 */ " + declaration.substringBefore('§')
         val suffix = declaration.substringAfter('§') + "\r\n Int later = 1; }"
         val selected = if (declaration.contains("ecstasy.text.")) "StringBuffer" else "String"
@@ -1146,12 +1140,11 @@ class XdkStdioTest {
             assertThat(edit.range).isEqualTo(Range(Position(1, column - 3), cursor))
             assertThat(edit.newText).isEqualTo(selected)
             assertThat(
-                    session
-                        .await(service.signatureHelp(SignatureHelpParams(document, cursor)))
-                        ?.signatures
-                        .orEmpty()
-                )
-                .isEmpty()
+                session
+                    .await(service.signatureHelp(SignatureHelpParams(document, cursor)))
+                    ?.signatures
+                    .orEmpty(),
+            ).isEmpty()
             session.change(prefix.dropLast(3) + edit.newText + suffix, 2)
             assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
             session.shutdownAndExit()
@@ -1178,8 +1171,11 @@ class XdkStdioTest {
                         marked.substringBefore('§')
                 val suffix = marked.substringAfter('§') + " value) {} } }"
                 val version = index * 2 + 1
-                if (index == 0) session.open(prefix + suffix)
-                else session.change(prefix + suffix, version)
+                if (index == 0) {
+                    session.open(prefix + suffix)
+                } else {
+                    session.change(prefix + suffix, version)
+                }
                 session.diagnosticsAt(version)
                 val column = prefix.substringAfterLast('\n').length
                 val before = prefix.takeLastWhile { it.isLetterOrDigit() || it == '_' }.length
@@ -1194,12 +1190,11 @@ class XdkStdioTest {
                     .isEqualTo(Range(Position(1, column - before), Position(1, column + after)))
                 assertThat(edit.newText).isEqualTo(selected)
                 assertThat(
-                        session
-                            .await(service.signatureHelp(SignatureHelpParams(document, cursor)))
-                            ?.signatures
-                            .orEmpty()
-                    )
-                    .isEmpty()
+                    session
+                        .await(service.signatureHelp(SignatureHelpParams(document, cursor)))
+                        ?.signatures
+                        .orEmpty(),
+                ).isEmpty()
                 session.change(
                     prefix.dropLast(before) + edit.newText + suffix.drop(after),
                     version + 1,
@@ -1230,7 +1225,13 @@ class XdkStdioTest {
             assertThat(edit.range).isEqualTo(Range(Position(0, prefix.length - 2), cursor))
             assertThat(edit.newText).isEqualTo("number")
             val help = session.await(service.signatureHelp(SignatureHelpParams(document, cursor)))
-            assertThat(help.signatures.single().parameters.first().label.left).isEqualTo("Int size")
+            assertThat(
+                help.signatures
+                    .single()
+                    .parameters
+                    .first()
+                    .label.left,
+            ).isEqualTo("Int size")
             assertThat(help.signatures.single().activeParameter).isZero()
             val completedSuffix = if (']' in suffix) suffix else "]$suffix"
             session.change(prefix.dropLast(2) + edit.newText + completedSuffix, 2)
@@ -1245,11 +1246,9 @@ class XdkStdioTest {
             [
                 "new Box<String>(\"x\", te|) { String read() = text; }",
                 "new Reader(\"x\", te|) { construct(String first, String second) {} @Override String read() = text; }",
-            ]
+            ],
     )
-    fun `anonymous constructor edits and signatures round trip through the packaged server`(
-        expression: String
-    ) {
+    fun `anonymous constructor edits and signatures round trip through the packaged server`(expression: String) {
         val prefix =
             "module Stdio { class Box<T> { construct(T first, T second) {} } interface Reader { String read(); } " +
                 "void run(String text, Int textNumber) { /* 😀 */ " +
@@ -1279,9 +1278,7 @@ class XdkStdioTest {
 
     @ParameterizedTest
     @ValueSource(strings = ["", "static "])
-    fun `property and constant argument edits preserve receiver rules over stdio`(
-        modifier: String
-    ) {
+    fun `property and constant argument edits preserve receiver rules over stdio`(modifier: String) {
         val prefix =
             "module Stdio { class Values { String textProperty = \"x\"; static String textConstant = \"c\"; " +
                 "Int textNumber = 1; static void take(String value) {} ${modifier}void run() { take(value = te"
@@ -1294,18 +1291,21 @@ class XdkStdioTest {
                 session
                     .await(
                         session.server.textDocumentService.completion(
-                            CompletionParams(TextDocumentIdentifier(URI), cursor)
-                        )
-                    )
-                    .left
+                            CompletionParams(TextDocumentIdentifier(URI), cursor),
+                        ),
+                    ).left
             assertThat(items.map { it.label })
                 .containsExactlyInAnyOrderElementsOf(
-                    if (modifier.isEmpty()) listOf("textProperty", "textConstant")
-                    else listOf("textConstant")
+                    if (modifier.isEmpty()) {
+                        listOf("textProperty", "textConstant")
+                    } else {
+                        listOf("textConstant")
+                    },
                 )
-            val selected = items.single {
-                it.label == if (modifier.isEmpty()) "textProperty" else "textConstant"
-            }
+            val selected =
+                items.single {
+                    it.label == if (modifier.isEmpty()) "textProperty" else "textConstant"
+                }
             assertThat(selected.detail).contains("String")
             val edit = selected.textEdit.left
             assertThat(edit.range).isEqualTo(Range(Position(0, prefix.length - 2), cursor))
@@ -1327,9 +1327,8 @@ class XdkStdioTest {
             val items =
                 session
                     .await(
-                        service.completion(CompletionParams(document, Position(0, prefix.length)))
-                    )
-                    .left
+                        service.completion(CompletionParams(document, Position(0, prefix.length))),
+                    ).left
             val item = items.single { it.label == "item" }
             assertThat(item.detail).isEqualTo("Int item")
             assertThat(item.textEdit.left.range)
@@ -1344,14 +1343,17 @@ class XdkStdioTest {
             assertThat(session.diagnosticsAt(3).diagnostics).isNotEmpty()
             val help =
                 session.await(
-                    service.signatureHelp(SignatureHelpParams(document, Position(0, call.length)))
+                    service.signatureHelp(SignatureHelpParams(document, Position(0, call.length))),
                 )
             assertThat(help.signatures).hasSize(1)
             assertThat(help.signatures.single().label)
                 .isEqualTo("String pair(String first, String second)")
             assertThat(help.signatures.single().activeParameter).isZero()
-            assertThat(help.signatures.single().documentation.left)
-                .contains("overload not selected")
+            assertThat(
+                help.signatures
+                    .single()
+                    .documentation.left,
+            ).contains("overload not selected")
             session.change("$call\"y\"); } }", 4)
             assertThat(session.diagnosticsAt(4).diagnostics).isEmpty()
             session.shutdownAndExit()
@@ -1374,13 +1376,16 @@ class XdkStdioTest {
             val help =
                 session.await(
                     session.server.textDocumentService.signatureHelp(
-                        SignatureHelpParams(TextDocumentIdentifier(URI), Position(0, prefix.length))
-                    )
+                        SignatureHelpParams(TextDocumentIdentifier(URI), Position(0, prefix.length)),
+                    ),
                 )
             assertThat(help.signatures.single().label)
                 .isEqualTo(
-                    if (kind == "function") "Int fn(Int, String)"
-                    else "new Box(Int first, String second)"
+                    if (kind == "function") {
+                        "Int fn(Int, String)"
+                    } else {
+                        "new Box(Int first, String second)"
+                    },
                 )
             assertThat(help.signatures.single().activeParameter).isEqualTo(1)
             session.change("$prefix\"x\"); } }", 2)
@@ -1391,9 +1396,7 @@ class XdkStdioTest {
 
     @ParameterizedTest
     @ValueSource(strings = ["", "in"])
-    fun `module overlays feed completion and root edits invalidate member requests over stdio`(
-        memberPrefix: String
-    ) {
+    fun `module overlays feed completion and root edits invalidate member requests over stdio`(memberPrefix: String) {
         directory = directory.toRealPath()
         val root = directory.resolve("Multi.x").toFile()
         val member = directory.resolve("Multi/Child.x").toFile()
@@ -1413,33 +1416,31 @@ class XdkStdioTest {
                         "xtc",
                         1,
                         "module Multi { class Base { String value = \"overlay\"; } }",
-                    )
-                )
+                    ),
+                ),
             )
             service.didOpen(
                 DidOpenTextDocumentParams(
-                    TextDocumentItem(memberId.uri, "xtc", 1, member.readText())
-                )
+                    TextDocumentItem(memberId.uri, "xtc", 1, member.readText()),
+                ),
             )
             val before =
                 session
                     .await(
-                        service.completion(CompletionParams(memberId, Position(0, prefix.length)))
-                    )
-                    .left
+                        service.completion(CompletionParams(memberId, Position(0, prefix.length))),
+                    ).left
             assertThat(before.map { it.label }).contains("indexOf")
             service.didChange(
                 DidChangeTextDocumentParams(
                     VersionedTextDocumentIdentifier(rootId.uri, 2),
                     listOf(TextDocumentContentChangeEvent(root.readText())),
-                )
+                ),
             )
             val after =
                 session
                     .await(
-                        service.completion(CompletionParams(memberId, Position(0, prefix.length)))
-                    )
-                    .left
+                        service.completion(CompletionParams(memberId, Position(0, prefix.length))),
+                    ).left
             if (memberPrefix.isEmpty()) assertThat(after).isNotEmpty()
             assertThat(after.map { it.label }).doesNotContain("indexOf")
             assertThat(root.readText()).contains("Int value")
@@ -1513,7 +1514,7 @@ class XdkStdioTest {
             Path.of(
                 requireNotNull(System.getProperty("xtc.lsp.jar")) {
                     "Run the compilerStdioTest Gradle task"
-                }
+                },
             )
         JarFile(jar.toFile()).use { archive ->
             val properties = Properties()
@@ -1537,12 +1538,11 @@ class XdkStdioTest {
             assertThat(first.items).isNotEmpty()
             params.previousResultId = first.resultId
             assertThat(
-                    session
-                        .await(session.server.textDocumentService.diagnostic(params))
-                        .right
-                        .resultId
-                )
-                .isEqualTo(first.resultId)
+                session
+                    .await(session.server.textDocumentService.diagnostic(params))
+                    .right
+                    .resultId,
+            ).isEqualTo(first.resultId)
             session.change(VALID, 2)
             val fixed = session.await(session.server.textDocumentService.diagnostic(params)).left
             assertThat(fixed.items).isEmpty()
@@ -1567,22 +1567,25 @@ class XdkStdioTest {
         private val executor = Executors.newVirtualThreadPerTaskExecutor()
         private val process =
             ProcessBuilder(
-                    ProcessHandle.current().info().command().orElseThrow(),
-                    "-ea",
-                    "-Duser.home=$directory",
-                    "-Dxtc.trace.directory=$traceDirectory",
-                    "-Dxtc.trace.level=INFO",
-                    "-jar",
-                    jar.toString(),
-                )
-                .apply {
-                    directory(directory.toFile())
-                    environment().remove("XDK_HOME")
-                    if (invalidXdkHome)
-                        environment()["XDK_HOME"] = directory.resolve("absent-xdk").toString()
-                    redirectError(stderr.toFile())
+                ProcessHandle
+                    .current()
+                    .info()
+                    .command()
+                    .orElseThrow(),
+                "-ea",
+                "-Duser.home=$directory",
+                "-Dxtc.trace.directory=$traceDirectory",
+                "-Dxtc.trace.level=INFO",
+                "-jar",
+                jar.toString(),
+            ).apply {
+                directory(directory.toFile())
+                environment().remove("XDK_HOME")
+                if (invalidXdkHome) {
+                    environment()["XDK_HOME"] = directory.resolve("absent-xdk").toString()
                 }
-                .start()
+                redirectError(stderr.toFile())
+            }.start()
         private val client =
             object : LanguageClient {
                 override fun publishDiagnostics(params: PublishDiagnosticsParams) {
@@ -1597,20 +1600,18 @@ class XdkStdioTest {
 
                 override fun showMessage(params: MessageParams) = Unit
 
-                override fun showMessageRequest(
-                    params: ShowMessageRequestParams
-                ): CompletableFuture<MessageActionItem> = CompletableFuture.completedFuture(null)
+                override fun showMessageRequest(params: ShowMessageRequestParams): CompletableFuture<MessageActionItem> =
+                    CompletableFuture.completedFuture(null)
 
                 override fun logMessage(params: MessageParams) = Unit
 
-                override fun configuration(
-                    params: ConfigurationParams
-                ): CompletableFuture<List<Any>> =
+                override fun configuration(params: ConfigurationParams): CompletableFuture<List<Any>> =
                     CompletableFuture.completedFuture(params.items.map { emptyMap<String, Any>() })
             }
         private val launcher =
             try {
-                Launcher.Builder<ServiceStatusServer>()
+                Launcher
+                    .Builder<ServiceStatusServer>()
                     .setLocalService(client)
                     .setRemoteInterface(ServiceStatusServer::class.java)
                     .setInput(process.inputStream)
@@ -1639,12 +1640,13 @@ class XdkStdioTest {
                 await(
                     server.initialize(
                         InitializeParams().apply {
-                            initializationOptions = buildMap {
-                                sourceModules?.let {
-                                    put("xtcCompiler", mapOf("sourceModules" to it))
+                            initializationOptions =
+                                buildMap {
+                                    sourceModules?.let {
+                                        put("xtcCompiler", mapOf("sourceModules" to it))
+                                    }
+                                    put("xtcDocumentSync", documentSync)
                                 }
-                                put("xtcDocumentSync", documentSync)
-                            }
                             capabilities =
                                 ClientCapabilities().apply {
                                     textDocument =
@@ -1672,17 +1674,19 @@ class XdkStdioTest {
                                                     versionSupport = true
                                                     relatedInformation = true
                                                 }
-                                            if (documentSync.isNotEmpty())
+                                            if (documentSync.isNotEmpty()) {
                                                 synchronization =
                                                     SynchronizationCapabilities(true, true, true)
-                                            if (pullDiagnostics)
+                                            }
+                                            if (pullDiagnostics) {
                                                 diagnostic = DiagnosticCapabilities()
+                                            }
                                             semanticTokens =
                                                 SemanticTokensCapabilities().apply {
                                                     requests =
                                                         SemanticTokensClientCapabilitiesRequests(
                                                             SemanticTokensClientCapabilitiesRequestsFull(
-                                                                true
+                                                                true,
                                                             ),
                                                             true,
                                                         )
@@ -1696,13 +1700,16 @@ class XdkStdioTest {
                                                 }
                                         }
                                 }
-                        }
-                    )
+                        },
+                    ),
                 )
             assertThat(initialized.capabilities.textDocumentSync.right.change)
                 .isEqualTo(
-                    if (documentSync["incremental"] == true) TextDocumentSyncKind.Incremental
-                    else TextDocumentSyncKind.Full
+                    if (documentSync["incremental"] == true) {
+                        TextDocumentSyncKind.Incremental
+                    } else {
+                        TextDocumentSyncKind.Full
+                    },
                 )
             assertThat(initialized.capabilities.definitionProvider.left).isTrue()
             assertThat(initialized.capabilities.typeDefinitionProvider.left).isTrue()
@@ -1754,19 +1761,18 @@ class XdkStdioTest {
 
         fun open(content: String) =
             server.textDocumentService.didOpen(
-                DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", 1, content))
+                DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", 1, content)),
             )
 
         fun change(
             content: String,
             version: Int,
-        ) =
-            server.textDocumentService.didChange(
-                DidChangeTextDocumentParams(
-                    VersionedTextDocumentIdentifier(URI, version),
-                    listOf(TextDocumentContentChangeEvent(content)),
-                )
-            )
+        ) = server.textDocumentService.didChange(
+            DidChangeTextDocumentParams(
+                VersionedTextDocumentIdentifier(URI, version),
+                listOf(TextDocumentContentChangeEvent(content)),
+            ),
+        )
 
         fun diagnosticsAt(version: Int): PublishDiagnosticsParams {
             val deadline = System.nanoTime() + SECONDS.toNanos(30)

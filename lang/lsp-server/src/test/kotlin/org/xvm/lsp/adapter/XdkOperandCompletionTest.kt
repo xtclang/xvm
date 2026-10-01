@@ -14,11 +14,9 @@ class XdkOperandCompletionTest {
                     "void pair(Int count) {} void run() { pair(nu§); } } }",
                 "module Operands { class Values { static Int number = 1; static String numberText = \"x\"; } " +
                     "import Values.number; import Values.numberText; void pair(Int count) {} void run() { pair(nu§); } }",
-            ]
+            ],
     )
-    fun `enclosing and imported values still require ordinary read and argument validation`(
-        marked: String
-    ) {
+    fun `enclosing and imported values still require ordinary read and argument validation`(marked: String) {
         val at = marked.indexOf('§')
         XdkAdapter().use { adapter ->
             val source = marked.replace("§", "")
@@ -43,7 +41,7 @@ class XdkOperandCompletionTest {
                 "pair(1 + box.nu§, \"x\")",
                 "fn(1 + nu§, \"x\")",
                 "new Pair(1 + nu§, \"x\")",
-            ]
+            ],
     )
     fun `candidate insertion must fit the whole compound argument and later slots`(call: String) {
         val marked = XdkArgumentContextFixture.HEADER + call + "; } }"
@@ -61,15 +59,14 @@ class XdkOperandCompletionTest {
                 .isEqualTo(TextEdit(Range(Position(0, at - prefix), Position(0, at)), "number"))
             assertThat(adapter.getCachedResult(URI)).isEqualTo(normal)
             assertThat(
-                    adapter.compile(URI, source.replaceRange(at - prefix, at, "number")).diagnostics
-                )
-                .isEmpty()
+                adapter.compile(URI, source.replaceRange(at - prefix, at, "number")).diagnostics,
+            ).isEmpty()
         }
     }
 
     @ParameterizedTest
     @ValueSource(
-        strings = ["pair(1 + nu§, True)", "pair(-nu§, True)", "pair(number = 1 + nu§, unknown = 1)"]
+        strings = ["pair(1 + nu§, True)", "pair(-nu§, True)", "pair(number = 1 + nu§, unknown = 1)"],
     )
     fun `incompatible later arguments reject compound suggestions`(call: String) {
         val marked = XdkArgumentContextFixture.HEADER + call + "; } }"
@@ -81,9 +78,7 @@ class XdkOperandCompletionTest {
 
     @ParameterizedTest
     @ValueSource(strings = ["type.accept(nu§)", "box.acceptReceiver(nu§)"])
-    fun `type value and receiver rewritten functions retain visible parameter mapping`(
-        call: String
-    ) {
+    fun `type value and receiver rewritten functions retain visible parameter mapping`(call: String) {
         val marked =
             "module Operands { class Box { static void accept(Int count) {} " +
                 "static void acceptReceiver(Box receiver, Int count) {} } " +
@@ -96,8 +91,13 @@ class XdkOperandCompletionTest {
                 .contains("number")
                 .doesNotContain("numberText")
             val help = adapter.getSignatureHelp(URI, 0, at)
-            assertThat(help?.signatures?.single()?.parameters?.map { it.label })
-                .containsExactly("Int count")
+            assertThat(
+                help
+                    ?.signatures
+                    ?.single()
+                    ?.parameters
+                    ?.map { it.label },
+            ).containsExactly("Int count")
             assertThat(adapter.compile(URI, source.replaceRange(at - 2, at, "number")).diagnostics)
                 .isEmpty()
         }

@@ -1,6 +1,5 @@
 package org.xvm.lsp.server
 
-import java.util.concurrent.CompletableFuture
 import org.eclipse.lsp4j.CreateFilesParams
 import org.eclipse.lsp4j.DeleteFilesParams
 import org.eclipse.lsp4j.DidChangeConfigurationParams
@@ -20,6 +19,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.WorkspaceService
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.Adapter
+import java.util.concurrent.CompletableFuture
 
 /**
  * Workspace service for Ecstasy Language Server. Handles workspace-wide features like symbol search
@@ -35,9 +35,8 @@ class XtcWorkspaceService(
 
     private val fileChanges = FileChangeSnapshots()
 
-    override fun diagnostic(
-        params: WorkspaceDiagnosticParams
-    ): CompletableFuture<WorkspaceDiagnosticReport> = server.workspaceDiagnostics(params)
+    override fun diagnostic(params: WorkspaceDiagnosticParams): CompletableFuture<WorkspaceDiagnosticReport> =
+        server.workspaceDiagnostics(params)
 
     /**
      * LSP: workspace/didChangeConfiguration
@@ -61,22 +60,17 @@ class XtcWorkspaceService(
         refreshFiles(params.changes)
     }
 
-    override fun willRenameFiles(params: RenameFilesParams): CompletableFuture<WorkspaceEdit?> =
-        server.willRenameFiles(params)
+    override fun willRenameFiles(params: RenameFilesParams): CompletableFuture<WorkspaceEdit?> = server.willRenameFiles(params)
 
     // Creation/deletion do not justify rewriting references. Post-operation diagnostics reflect
     // the new membership; a pre-operation hook must never modify files speculatively.
-    override fun willCreateFiles(params: CreateFilesParams): CompletableFuture<WorkspaceEdit?> =
-        CompletableFuture.completedFuture(null)
+    override fun willCreateFiles(params: CreateFilesParams): CompletableFuture<WorkspaceEdit?> = CompletableFuture.completedFuture(null)
 
-    override fun willDeleteFiles(params: DeleteFilesParams): CompletableFuture<WorkspaceEdit?> =
-        CompletableFuture.completedFuture(null)
+    override fun willDeleteFiles(params: DeleteFilesParams): CompletableFuture<WorkspaceEdit?> = CompletableFuture.completedFuture(null)
 
-    override fun didCreateFiles(params: CreateFilesParams) =
-        refreshFiles(params.files.map { FileEvent(it.uri, FileChangeType.Created) })
+    override fun didCreateFiles(params: CreateFilesParams) = refreshFiles(params.files.map { FileEvent(it.uri, FileChangeType.Created) })
 
-    override fun didDeleteFiles(params: DeleteFilesParams) =
-        refreshFiles(params.files.map { FileEvent(it.uri, FileChangeType.Deleted) })
+    override fun didDeleteFiles(params: DeleteFilesParams) = refreshFiles(params.files.map { FileEvent(it.uri, FileChangeType.Deleted) })
 
     /** File operations can arrive without watcher notifications, especially after a client edit. */
     override fun didRenameFiles(params: RenameFilesParams) {
@@ -87,7 +81,7 @@ class XtcWorkspaceService(
                     FileEvent(it.oldUri, FileChangeType.Deleted),
                     FileEvent(it.newUri, FileChangeType.Created),
                 )
-            }
+            },
         )
     }
 
@@ -96,8 +90,9 @@ class XtcWorkspaceService(
         if (changes.isEmpty()) return
         // Resource content changes cannot add/remove source modules. Membership events still
         // rediscover, including directory events that can contain several source files.
-        if (changes.any { it.type != FileChangeType.Changed || it.uri.endsWith(".x") })
+        if (changes.any { it.type != FileChangeType.Changed || it.uri.endsWith(".x") }) {
             server.refreshCompilerDiscovery()
+        }
         changes
             .distinctBy { it.uri to it.type }
             .forEach { change ->
@@ -118,15 +113,10 @@ class XtcWorkspaceService(
      *
      * @see org.eclipse.lsp4j.services.WorkspaceService.symbol
      */
-    override fun symbol(
-        params: WorkspaceSymbolParams
-    ): CompletableFuture<Either<List<SymbolInformation>, List<WorkspaceSymbol>>> =
+    override fun symbol(params: WorkspaceSymbolParams): CompletableFuture<Either<List<SymbolInformation>, List<WorkspaceSymbol>>> =
         server.workspaceSymbols(params)
 
-    override fun executeCommand(params: ExecuteCommandParams): CompletableFuture<Any> =
-        server.executeCodeAction(params)
+    override fun executeCommand(params: ExecuteCommandParams): CompletableFuture<Any> = server.executeCodeAction(params)
 
-    override fun resolveWorkspaceSymbol(
-        symbol: WorkspaceSymbol
-    ): CompletableFuture<WorkspaceSymbol> = server.resolveWorkspaceSymbol(symbol)
+    override fun resolveWorkspaceSymbol(symbol: WorkspaceSymbol): CompletableFuture<WorkspaceSymbol> = server.resolveWorkspaceSymbol(symbol)
 }

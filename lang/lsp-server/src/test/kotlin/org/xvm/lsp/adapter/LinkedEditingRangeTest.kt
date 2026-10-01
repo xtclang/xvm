@@ -35,8 +35,7 @@ class LinkedEditingRangeTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // cursor on 'name' at declaration (line 3, col 19)
@@ -60,8 +59,7 @@ class LinkedEditingRangeTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             val result = ts.getLinkedEditingRanges(uri, 3, 19)
@@ -83,8 +81,7 @@ class LinkedEditingRangeTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // cursor on 'return' keyword
@@ -106,8 +103,7 @@ class LinkedEditingRangeTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // cursor on 'value' parameter (line 2, col 27)
@@ -133,8 +129,7 @@ class LinkedEditingRangeTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // cursor on 'x' at declaration (line 3)

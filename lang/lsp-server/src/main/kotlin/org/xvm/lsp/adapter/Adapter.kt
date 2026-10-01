@@ -1,11 +1,11 @@
 package org.xvm.lsp.adapter
 
-import java.io.Closeable
-import java.util.concurrent.CompletableFuture
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
+import java.io.Closeable
+import java.util.concurrent.CompletableFuture
 
 /**
  * Interface for adapting XTC compiler operations into clean, immutable results.
@@ -44,8 +44,7 @@ interface Adapter : Closeable {
                             AdapterCapability.CALL_HIERARCHY,
                             AdapterCapability.INLAY_HINT,
                         )
-                }
-                .toSet()
+                }.toSet()
 
     /**
      * Human-readable name of this adapter for display in logs and UI. Examples: "Mock",
@@ -71,7 +70,9 @@ interface Adapter : Closeable {
      */
     var editorFormattingConfig: FormattingConfig?
         get() = null
-        set(@Suppress("UNUSED_PARAMETER") value) {}
+        set(
+            @Suppress("UNUSED_PARAMETER") value,
+        ) {}
 
     // ========================================================================
     // Core LSP Features (implemented by all adapters)
@@ -628,8 +629,7 @@ interface Adapter : Closeable {
         uri: String,
         range: Range,
         diagnostics: List<Diagnostic>,
-    ): CompletableFuture<List<CodeAction>> =
-        CompletableFuture.completedFuture(getCodeActions(uri, range, diagnostics))
+    ): CompletableFuture<List<CodeAction>> = CompletableFuture.completedFuture(getCodeActions(uri, range, diagnostics))
 
     /**
      * Get semantic tokens for enhanced syntax highlighting.

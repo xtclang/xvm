@@ -38,13 +38,15 @@ internal object XdkMemberActions {
                 owner.range.end >= SemanticModel.Position(range.start.line, range.start.column)
     }
 
-    data class Action(val members: List<Candidate>) {
+    data class Action(
+        val members: List<Candidate>,
+    ) {
         init {
             require(members.isNotEmpty())
             require(members.map { it.owner to it.insertion }.distinct().size == 1)
             require(
                 members.size == 1 ||
-                    members.all { it.implementation && it.requiredCount == members.size }
+                    members.all { it.implementation && it.requiredCount == members.size },
             )
         }
 
@@ -106,8 +108,9 @@ internal object XdkMemberActions {
         // A combined repair must contain all available required members, even when individual
         // actions exceed the query limit. The compiler can accept implicitly abstract classes, so
         // successful compilation alone does not establish that all required members were generated.
-        return (combined +
-                selected.sortedByDescending { it.implementation }.map { Action(listOf(it)) })
-            .take(32)
+        return (
+            combined +
+                selected.sortedByDescending { it.implementation }.map { Action(listOf(it)) }
+        ).take(32)
     }
 }

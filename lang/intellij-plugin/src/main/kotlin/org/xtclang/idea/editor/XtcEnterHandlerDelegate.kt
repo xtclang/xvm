@@ -34,7 +34,7 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
         if (isXtcFile(file)) {
             logger.warn(
                 "preprocessEnter: file=${file.virtualFile?.path} " +
-                    "caretOffset=${caretOffset.get()} caretAdvance=${caretAdvance.get()}"
+                    "caretOffset=${caretOffset.get()} caretAdvance=${caretAdvance.get()}",
             )
             scheduleRepairAfterEnter(file, editor)
         }
@@ -58,7 +58,7 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
             "postProcessEnter: file=${file.virtualFile?.path} caretOffset=$caretOffset line=$currentLine " +
                 "prev='${safeLine(document, currentLine - 1)}' " +
                 "current='${safeLine(document, currentLine)}' " +
-                "next='${safeLine(document, currentLine + 1)}'"
+                "next='${safeLine(document, currentLine + 1)}'",
         )
 
         val fix =
@@ -95,7 +95,7 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
         logger.info(
             "postProcessEnter: repaired empty-block split " +
                 "declarationLine=$declarationLine bodyLine=$bodyLine closingLine=$closingLine " +
-                "declarationIndent='${visualizeIndent(declarationIndent)}' bodyIndent='${visualizeIndent(bodyIndent)}'"
+                "declarationIndent='${visualizeIndent(declarationIndent)}' bodyIndent='${visualizeIndent(bodyIndent)}'",
         )
 
         return EnterHandlerDelegate.Result.Stop
@@ -157,7 +157,10 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
     ): String {
         val start = document.getLineStartOffset(line)
         val end = document.getLineEndOffset(line)
-        return document.getText(com.intellij.openapi.util.TextRange(start, end))
+        return document.getText(
+            com.intellij.openapi.util
+                .TextRange(start, end),
+        )
     }
 
     private fun lineIndent(
@@ -234,7 +237,7 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
                         "deferredRepair: no fix at line=$currentLine " +
                             "prev='${safeLine(document, currentLine - 1)}' " +
                             "current='${safeLine(document, currentLine)}' " +
-                            "next='${safeLine(document, currentLine + 1)}'"
+                            "next='${safeLine(document, currentLine + 1)}'",
                     )
                     return@runWriteCommandAction
                 }
@@ -255,7 +258,7 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
                     "deferredRepair: repaired empty-block split " +
                         "declarationLine=$declarationLine bodyLine=$bodyLine closingLine=$closingLine " +
                         "declarationIndent='${visualizeIndent(declarationIndent)}' " +
-                        "bodyIndent='${visualizeIndent(bodyIndent)}'"
+                        "bodyIndent='${visualizeIndent(bodyIndent)}'",
                 )
             }
         }
@@ -271,6 +274,5 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
             lineText(document, line)
         }
 
-    private fun visualizeIndent(indent: String): String =
-        indent.replace("\t", "\\t").replace(" ", "·")
+    private fun visualizeIndent(indent: String): String = indent.replace("\t", "\\t").replace(" ", "·")
 }

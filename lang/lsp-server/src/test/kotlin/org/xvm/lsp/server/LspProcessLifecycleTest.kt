@@ -1,14 +1,5 @@
 package org.xvm.lsp.server
 
-import java.io.File
-import java.nio.file.Files
-import java.nio.file.Path
-import java.util.Properties
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Executors
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit.SECONDS
-import java.util.jar.JarFile
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.ConfigurationParams
@@ -28,6 +19,15 @@ import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import java.io.File
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.Properties
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executors
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit.SECONDS
+import java.util.jar.JarFile
 
 /** Runs the production launcher in child JVMs; fallback cleanup must not hide a failure to exit. */
 @Tag("compiler-stdio")
@@ -71,14 +71,17 @@ class LspProcessLifecycleTest {
         val stderr = directory.resolve("stderr.log")
         val process =
             ProcessBuilder(
-                    ProcessHandle.current().info().command().orElseThrow(),
-                    "--enable-native-access=ALL-UNNAMED",
-                    "-Duser.home=$directory",
-                    "-cp",
-                    "$resources${File.pathSeparator}$jar",
-                    "org.xvm.lsp.server.XtcLanguageServerLauncherKt",
-                )
-                .redirectError(stderr.toFile())
+                ProcessHandle
+                    .current()
+                    .info()
+                    .command()
+                    .orElseThrow(),
+                "--enable-native-access=ALL-UNNAMED",
+                "-Duser.home=$directory",
+                "-cp",
+                "$resources${File.pathSeparator}$jar",
+                "org.xvm.lsp.server.XtcLanguageServerLauncherKt",
+            ).redirectError(stderr.toFile())
                 .start()
         val executor = Executors.newVirtualThreadPerTaskExecutor()
         val diagnostics = LinkedBlockingQueue<PublishDiagnosticsParams>()
@@ -92,15 +95,12 @@ class LspProcessLifecycleTest {
 
                 override fun showMessage(params: MessageParams) = Unit
 
-                override fun showMessageRequest(
-                    params: ShowMessageRequestParams
-                ): CompletableFuture<MessageActionItem> = CompletableFuture.completedFuture(null)
+                override fun showMessageRequest(params: ShowMessageRequestParams): CompletableFuture<MessageActionItem> =
+                    CompletableFuture.completedFuture(null)
 
                 override fun logMessage(params: MessageParams) = Unit
 
-                override fun configuration(
-                    params: ConfigurationParams
-                ): CompletableFuture<List<Any>> =
+                override fun configuration(params: ConfigurationParams): CompletableFuture<List<Any>> =
                     CompletableFuture.completedFuture(params.items.map { emptyMap<String, Any>() })
             }
         try {
@@ -122,14 +122,13 @@ class LspProcessLifecycleTest {
                             capabilities = ClientCapabilities()
                             workspaceFolders =
                                 listOf(WorkspaceFolder(workspace.toUri().toString(), "Lifecycle"))
-                        }
-                    )
-                    .get(20, SECONDS)
+                        },
+                    ).get(20, SECONDS)
                 server.initialized(InitializedParams())
                 server.textDocumentService.didOpen(
                     DidOpenTextDocumentParams(
-                        TextDocumentItem(file.toUri().toString(), "xtc", 1, source)
-                    )
+                        TextDocumentItem(file.toUri().toString(), "xtc", 1, source),
+                    ),
                 )
                 assertThat(diagnostics.poll(20, SECONDS))
                     .describedAs("Server must have processed the document")
@@ -140,14 +139,15 @@ class LspProcessLifecycleTest {
             if (shutdown) server.shutdown().get(20, SECONDS)
             when (termination) {
                 Termination.EXIT_WITHOUT_SHUTDOWN,
-                Termination.SHUTDOWN_AND_EXIT -> server.exit()
+                Termination.SHUTDOWN_AND_EXIT,
+                -> server.exit()
+
                 else -> process.outputStream.close()
             }
             assertThat(process.waitFor(10, SECONDS))
                 .describedAs(
-                    "$backend survived $termination; pid=${process.pid()}\n${Files.readString(stderr)}"
-                )
-                .isTrue()
+                    "$backend survived $termination; pid=${process.pid()}\n${Files.readString(stderr)}",
+                ).isTrue()
             assertThat(process.exitValue()).isEqualTo(if (shutdown) 0 else 1)
             assertThat(Files.readString(stderr)).doesNotContain("falling back to mock")
         } finally {

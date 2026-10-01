@@ -1,6 +1,5 @@
 package org.xvm.lsp.adapter.xdk
 
-import java.util.IdentityHashMap
 import org.xvm.asm.XvmStructure
 import org.xvm.compiler.Source
 import org.xvm.compiler.ast.AstNode
@@ -14,6 +13,7 @@ import org.xvm.lsp.adapter.FoldingRange
 import org.xvm.lsp.adapter.Position
 import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.model.Location
+import java.util.IdentityHashMap
 
 /**
  * Reading a compiled document's AST for the questions an editor asks about a position.
@@ -63,13 +63,14 @@ internal object XdkAst {
     }
 
     /** Each source keeps its own structural root even when module assembly nests the trees. */
-    fun rootsBySource(root: AstNode?): Map<String, AstNode> = buildMap {
-        fun visit(node: AstNode) {
-            node.source?.fileName?.let { putIfAbsent(it, node) }
-            node.childNodes().forEach(::visit)
+    fun rootsBySource(root: AstNode?): Map<String, AstNode> =
+        buildMap {
+            fun visit(node: AstNode) {
+                node.source?.fileName?.let { putIfAbsent(it, node) }
+                node.childNodes().forEach(::visit)
+            }
+            root?.let(::visit)
         }
-        root?.let(::visit)
-    }
 
     /**
      * The chain of nodes containing a position, outermost first, innermost last.
@@ -103,14 +104,19 @@ internal object XdkAst {
      */
     fun foldingRegions(root: AstNode?): List<FoldingRange> {
         val found = linkedMapOf<Pair<Int, Int>, FoldingRange>()
-        val lines = root?.source?.toRawString()?.lines().orEmpty()
+        val lines =
+            root
+                ?.source
+                ?.toRawString()
+                ?.lines()
+                .orEmpty()
 
         fun walk(node: AstNode) {
             if (root != null && !node.belongsTo(root)) return
             if (
                 node is StatementBlock ||
-                    node is TypeCompositionStatement ||
-                    node is IncompleteDeclarationStatement
+                node is TypeCompositionStatement ||
+                node is IncompleteDeclarationStatement
             ) {
                 val start = lineOf(node.startPosition)
                 val end = lineOf(node.endPosition)
@@ -119,8 +125,11 @@ internal object XdkAst {
                     // Keep the heading line and a real closing brace visible. An unfinished
                     // region ends at its actual source boundary; never invent a delimiter.
                     val endCharacter =
-                        if (lines.getOrNull(end)?.getOrNull(column - 1) == '}') column - 1
-                        else column
+                        if (lines.getOrNull(end)?.getOrNull(column - 1) == '}') {
+                            column - 1
+                        } else {
+                            column
+                        }
                     found.putIfAbsent(
                         start to end,
                         FoldingRange(start, end, endCharacter = endCharacter),

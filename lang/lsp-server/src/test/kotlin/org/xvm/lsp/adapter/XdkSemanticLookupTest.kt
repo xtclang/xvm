@@ -1,9 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.net.URI as SourceUri
-import java.nio.file.Path
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -14,6 +10,10 @@ import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.semanticSnapshots
 import org.xvm.lsp.model.Location
+import java.nio.file.Path
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit.SECONDS
+import java.net.URI as SourceUri
 
 class XdkSemanticLookupTest {
     @TempDir lateinit var directory: Path
@@ -37,8 +37,7 @@ class XdkSemanticLookupTest {
                 <T> T identity(T value) = value;
                 void run(Item value) { /*call*/identity(value); }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             assertThat(types(adapter, source, "call"))
                 .containsExactly(location(source, "item", "Item"))
@@ -56,8 +55,7 @@ class XdkSemanticLookupTest {
                 class Child extends Base { @Override Detail /*child*/make() = new Detail(); }
                 class Unrelated { Detail make() = new Detail(); }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             assertThat(implementations(adapter, source, "base"))
                 .containsExactly(
@@ -97,8 +95,7 @@ class XdkSemanticLookupTest {
                     /*aliasUse*/alias.toString();
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             for (use in listOf("boxUse", "nullableUse", "aliasUse")) {
                 assertThat(types(adapter, source, use))
@@ -123,8 +120,7 @@ class XdkSemanticLookupTest {
                     /*call*/make();
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             assertThat(types(adapter, source, "union"))
                 .containsExactly(
@@ -148,8 +144,7 @@ class XdkSemanticLookupTest {
                 }
                 </*methodFormal*/U> U echo(U value) = /*methodUse*/value;
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             assertThat(types(adapter, source, "use"))
                 .containsExactly(location(source, "formal", "T"))
@@ -191,8 +186,7 @@ class XdkSemanticLookupTest {
                 class /*child*/Child extends Base {}
                 class Unrelated { String name() = "other"; }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             assertThat(implementations(adapter, source, "api"))
                 .containsExactly(
@@ -217,8 +211,7 @@ class XdkSemanticLookupTest {
                 class Unrelated { String map(String value) = value; }
                 void run(Mapper<String> mapper) { mapper. /*call*/map("value"); }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             for (use in listOf("api", "call", "base")) {
                 assertThat(implementations(adapter, source, use))
@@ -249,8 +242,7 @@ class XdkSemanticLookupTest {
                 class Unrelated { String map(String value) = value; String name.get() = "unrelated"; }
                 String read(Outer forward) = forward. /*call*/map(forward. /*use*/name);
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             for (marker in listOf("api", "call")) {
                 assertThat(implementations(adapter, source, marker))
@@ -275,8 +267,7 @@ class XdkSemanticLookupTest {
                 class Cyclic(Cyclic target) delegates Api(target) {}
                 class Unrelated { Int read() = 1; Int value = 1; }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             assertThat(implementations(adapter, source, "api")).isEmpty()
             assertThat(implementations(adapter, source, "property")).isEmpty()
@@ -295,8 +286,7 @@ class XdkSemanticLookupTest {
                 class Unrelated { String name = "other"; }
                 String read(Named<String> value) = value. /*use*/name;
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             for (use in listOf("api", "use")) {
                 assertThat(implementations(adapter, source, use))
@@ -325,8 +315,7 @@ class XdkSemanticLookupTest {
                 }
                 class Unrelated { Int value { Int get() = 3; void set(Int value) {} } }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             assertThat(implementations(adapter, source, "property"))
                 .containsExactlyInAnyOrder(
@@ -356,8 +345,7 @@ class XdkSemanticLookupTest {
                 interface Missing { @RO String /*missing*/name; }
                 Int size(String value) = value. /*binary*/size;
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             for (use in listOf("api", "default")) {
                 assertThat(implementations(adapter, source, use))
@@ -381,8 +369,7 @@ class XdkSemanticLookupTest {
                 mixin Unused into Base { @Override Int value.get() = 3; }
                 class Host extends Base incorporates Loud {}
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             assertThat(adapter.getCachedResult(URI)!!.diagnostics).isEmpty()
             assertThat(implementations(adapter, source, "field"))
@@ -410,8 +397,7 @@ class XdkSemanticLookupTest {
                 class Child extends Holder {}
                 Int read(Holder holder) = holder. /*use*/value;
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             assertThat(adapter.getCachedResult(URI)!!.diagnostics).isEmpty()
             for (marker in listOf("api", "property", "use")) {
@@ -447,16 +433,17 @@ class XdkSemanticLookupTest {
                     }
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             assertThat(adapter.getCachedResult(URI)!!.diagnostics).isEmpty()
-            for ((property, getter, setter) in
-                listOf(
-                    Triple("forward", "firstGet", "firstSet"),
-                    Triple("reverse", "secondGet", "secondSet"),
-                    Triple("custom", "explicitGet", "explicitSet"),
-                )) {
+            for (
+            (property, getter, setter) in
+            listOf(
+                Triple("forward", "firstGet", "firstSet"),
+                Triple("reverse", "secondGet", "secondSet"),
+                Triple("custom", "explicitGet", "explicitSet"),
+            )
+            ) {
                 assertThat(implementations(adapter, source, property))
                     .describedAs(property)
                     .containsExactlyInAnyOrder(
@@ -482,8 +469,7 @@ class XdkSemanticLookupTest {
                 class Forward(Holder target) delegates Named(target) {}
                 String read(Forward forward) = forward. /*use*/name;
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             assertThat(adapter.getCachedResult(URI)!!.diagnostics).isEmpty()
             for (marker in listOf("api", "property", "use")) {
@@ -504,8 +490,7 @@ class XdkSemanticLookupTest {
                 @Abstract class Missing { @Abstract Int /*abstract*/value; }
                 class Delayed { @Lazy Int /*lazy*/value.calc() = 1; }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             for (use in listOf("api", "abstract", "lazy")) {
                 assertThat(implementations(adapter, source, use)).describedAs(use).isEmpty()
@@ -553,8 +538,7 @@ class XdkSemanticLookupTest {
                 class Second extends First {}
                 class Other implements Named { @Override String /*override*/name() = "other"; }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             assertThat(implementations(adapter, source, "default"))
                 .containsExactly(
@@ -574,8 +558,7 @@ class XdkSemanticLookupTest {
                 mixin Unused into Base { @Override String name() = "unused"; }
                 class Host extends Base incorporates Loud {}
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             assertThat(adapter.getCachedResult(URI)!!.diagnostics).isEmpty()
             assertThat(implementations(adapter, source, "base"))
@@ -599,8 +582,7 @@ class XdkSemanticLookupTest {
                     };
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             assertThat(types(adapter, source, "capture"))
                 .containsExactly(location(source, "item", "Item"))
@@ -681,8 +663,7 @@ class XdkSemanticLookupTest {
                     assertThat(passive.typeDefinitionLocationsAt(use.line, use.column)).hasSize(1)
                     assertThat(passive.implementationLocationsAt(api.line, api.column)).isEmpty()
                     assertThat(inspected.implementationLocationsAt(api.line, api.column)).hasSize(1)
-                }
-                .get(10, SECONDS)
+                }.get(10, SECONDS)
         }
     }
 

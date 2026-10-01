@@ -13,12 +13,12 @@ import com.intellij.openapi.wm.ToolWindowManager
 import com.intellij.psi.PsiDocumentManager
 import com.intellij.ui.AppIcon
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
+import org.xtclang.idea.lsp.XtcRenameHandler
 import java.awt.KeyboardFocusManager
 import java.awt.Window
 import javax.swing.JFrame
 import javax.swing.JLabel
 import javax.swing.SwingUtilities
-import org.xtclang.idea.lsp.XtcRenameHandler
 
 /** Small IDE-side observations avoid walking the entire Swing tree for every focus poll. */
 object EditorUi {
@@ -26,7 +26,7 @@ object EditorUi {
     fun renameAvailable(editor: Editor): Boolean =
         XtcRenameHandler()
             .isAvailableOnDataContext(
-                DataManager.getInstance().getDataContext(editor.contentComponent)
+                DataManager.getInstance().getDataContext(editor.contentComponent),
             )
 
     @JvmStatic
@@ -61,7 +61,8 @@ object EditorUi {
     fun isEditorActive(editor: Editor): Boolean =
         editor.contentComponent.isFocusOwner &&
             editor.project?.let { ToolWindowManager.getInstance(it).activeToolWindowId } == null &&
-            DataManager.getInstance()
+            DataManager
+                .getInstance()
                 .getDataContext(editor.contentComponent)
                 .getData(CommonDataKeys.EDITOR) === editor
 
@@ -105,8 +106,7 @@ object EditorUi {
         ApplicationManager.getApplication().assertIsDispatchThread()
         val frame = SwingUtilities.getWindowAncestor(editor.contentComponent) ?: return false
         val manager = KeyboardFocusManager.getCurrentKeyboardFocusManager()
-        return sequenceOf(manager.activeWindow, manager.focusedWindow).filterNotNull().any { active
-            ->
+        return sequenceOf(manager.activeWindow, manager.focusedWindow).filterNotNull().any { active ->
             generateSequence(active) { it.owner }.any { it === frame }
         }
     }

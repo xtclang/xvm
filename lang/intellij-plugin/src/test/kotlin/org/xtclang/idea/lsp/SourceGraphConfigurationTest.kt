@@ -1,10 +1,10 @@
 package org.xtclang.idea.lsp
 
 import com.google.gson.JsonParser
-import java.net.URI
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
+import java.net.URI
 
 class SourceGraphConfigurationTest {
     @Test
@@ -16,7 +16,7 @@ class SourceGraphConfigurationTest {
                     "Library",
                     "Library.x",
                     resourceRoots = listOf("custom/", "fallback/"),
-                )
+                ),
             )
         val content = SourceGraphConfiguration.configure(null, modules, base)
         assertThat(SourceGraphConfiguration.read(content)).isEqualTo(modules)
@@ -29,20 +29,18 @@ class SourceGraphConfigurationTest {
         listOf(null, emptyList<String>()).forEach { resources ->
             val graph = modules.map { it.copy(resourceRoots = resources) }
             assertThat(
-                    SourceGraphConfiguration.read(
-                        SourceGraphConfiguration.configure(null, graph, base)
-                    )
-                )
-                .isEqualTo(graph)
+                SourceGraphConfiguration.read(
+                    SourceGraphConfiguration.configure(null, graph, base),
+                ),
+            ).isEqualTo(graph)
         }
         assertThatThrownBy {
-                SourceGraphConfiguration.configure(
-                    null,
-                    modules.map { it.copy(resourceRoots = listOf("custom/", "custom/")) },
-                    base,
-                )
-            }
-            .isInstanceOf(IllegalArgumentException::class.java)
+            SourceGraphConfiguration.configure(
+                null,
+                modules.map { it.copy(resourceRoots = listOf("custom/", "custom/")) },
+                base,
+            )
+        }.isInstanceOf(IllegalArgumentException::class.java)
     }
 
     @Test
@@ -68,19 +66,17 @@ class SourceGraphConfigurationTest {
         assertThatThrownBy { SourceGraphConfiguration.configure(null, graph, base) }
             .hasMessageContaining("Duplicate source module roots")
         assertThatThrownBy {
-                SourceGraphConfiguration.configure(
-                    null,
-                    listOf(SourceModuleConfiguration("", "Library.x")),
-                    base,
-                )
-            }
-            .hasMessageContaining("non-blank")
-        assertThat(
-                SourceGraphConfiguration.read(
-                    SourceGraphConfiguration.configure(null, before, base)
-                )
+            SourceGraphConfiguration.configure(
+                null,
+                listOf(SourceModuleConfiguration("", "Library.x")),
+                base,
             )
-            .isEqualTo(before)
+        }.hasMessageContaining("non-blank")
+        assertThat(
+            SourceGraphConfiguration.read(
+                SourceGraphConfiguration.configure(null, before, base),
+            ),
+        ).isEqualTo(before)
     }
 
     private val base = URI("file:///workspace/")
@@ -95,12 +91,18 @@ class SourceGraphConfigurationTest {
         assertThat(changed).contains("Renamed", "42", "\"formatting\": null")
         val restored = SourceGraphConfiguration.replace(changed, after, before, base)
         val compiler =
-            JsonParser.parseString(restored)
+            JsonParser
+                .parseString(restored)
                 .asJsonObject["xtc"]
                 .asJsonObject["compiler"]
                 .asJsonObject
-        assertThat(compiler["sourceModules"].asJsonArray.single().asJsonObject["name"].asString)
-            .isEqualTo("Library")
+        assertThat(
+            compiler["sourceModules"]
+                .asJsonArray
+                .single()
+                .asJsonObject["name"]
+                .asString,
+        ).isEqualTo("Library")
         assertThat(compiler["other"].asInt).isEqualTo(42)
         assertThat(SourceGraphConfiguration.replace(restored, before, after, base))
             .isEqualTo(changed)
@@ -109,14 +111,13 @@ class SourceGraphConfigurationTest {
     @Test
     fun `a different graph cannot be overwritten by a late proposal or undo`() {
         assertThatThrownBy {
-                SourceGraphConfiguration.replace(
-                    original.replace("Library", "Elsewhere"),
-                    before,
-                    after,
-                    base,
-                )
-            }
-            .isInstanceOf(IllegalArgumentException::class.java)
+            SourceGraphConfiguration.replace(
+                original.replace("Library", "Elsewhere"),
+                before,
+                after,
+                base,
+            )
+        }.isInstanceOf(IllegalArgumentException::class.java)
         assertThatThrownBy { SourceGraphConfiguration.replace(original, after, before, base) }
             .isInstanceOf(IllegalArgumentException::class.java)
     }
@@ -124,41 +125,37 @@ class SourceGraphConfigurationTest {
     @Test
     fun `malformed intervening settings become a guarded refusal`() {
         listOf(
-                "{",
-                "[]",
-                """{"xtc":1}""",
-                original.replace("\"Library.x\"", "null"),
-                original.replace("\"Library\"", "1"),
-            )
-            .forEach { content ->
-                assertThatThrownBy {
-                        SourceGraphConfiguration.replace(content, before, after, base)
-                    }
-                    .isInstanceOf(IllegalArgumentException::class.java)
-            }
+            "{",
+            "[]",
+            """{"xtc":1}""",
+            original.replace("\"Library.x\"", "null"),
+            original.replace("\"Library\"", "1"),
+        ).forEach { content ->
+            assertThatThrownBy {
+                SourceGraphConfiguration.replace(content, before, after, base)
+            }.isInstanceOf(IllegalArgumentException::class.java)
+        }
     }
 
     @Test
     fun `discovery and duplicate graph entries are not equivalent to an explicit graph`() {
         assertThatThrownBy {
-                SourceGraphConfiguration.replace(
-                    """{"xtc":{"compiler":{"sourceModules":null}}}""",
-                    before,
-                    after,
-                    base,
-                )
-            }
-            .isInstanceOf(IllegalArgumentException::class.java)
+            SourceGraphConfiguration.replace(
+                """{"xtc":{"compiler":{"sourceModules":null}}}""",
+                before,
+                after,
+                base,
+            )
+        }.isInstanceOf(IllegalArgumentException::class.java)
         val entry = """{"name":"Library","uri":"Library.x"}"""
         assertThatThrownBy {
-                SourceGraphConfiguration.replace(
-                    original.replace("[$entry]", "[$entry,$entry]"),
-                    before,
-                    after,
-                    base,
-                )
-            }
-            .isInstanceOf(IllegalArgumentException::class.java)
+            SourceGraphConfiguration.replace(
+                original.replace("[$entry]", "[$entry,$entry]"),
+                before,
+                after,
+                base,
+            )
+        }.isInstanceOf(IllegalArgumentException::class.java)
     }
 
     @Test
@@ -170,21 +167,20 @@ class SourceGraphConfigurationTest {
             )
         val graph =
             listOf(
-                SourceModuleConfiguration("Library", "file:///workspace/Library.x", listOf("Other"))
+                SourceModuleConfiguration("Library", "file:///workspace/Library.x", listOf("Other")),
             )
         val changed =
             SourceGraphConfiguration.replace(withEdge, graph, after, base).replace("42", "17")
         val restored = SourceGraphConfiguration.replace(changed, after, graph, base)
         assertThat(restored).contains("17", "Other")
         assertThatThrownBy {
-                SourceGraphConfiguration.replace(
-                    restored.replace("Other", "Elsewhere"),
-                    graph,
-                    after,
-                    base,
-                )
-            }
-            .isInstanceOf(IllegalArgumentException::class.java)
+            SourceGraphConfiguration.replace(
+                restored.replace("Other", "Elsewhere"),
+                graph,
+                after,
+                base,
+            )
+        }.isInstanceOf(IllegalArgumentException::class.java)
     }
 
     @Test
@@ -200,8 +196,7 @@ class SourceGraphConfigurationTest {
                 {"name":"Library","uri":"file:///libraries/Library.x"},
                 {"name":"App","uri":"file:///apps/App.x","dependencies":["Library"]}
             ]}}}
-            """
-                .trimIndent()
+            """.trimIndent()
         val next =
             listOf(
                 SourceModuleConfiguration("Renamed", "file:///libraries/Renamed.x"),
@@ -212,14 +207,13 @@ class SourceGraphConfigurationTest {
         assertThat(SourceGraphConfiguration.replace(changed, next, graph, base))
             .contains("file:///libraries/Library.x")
         assertThatThrownBy {
-                SourceGraphConfiguration.replace(
-                    content.replace("file:///apps/App.x", "file:///libraries/Library.x"),
-                    graph,
-                    next,
-                    base,
-                )
-            }
-            .isInstanceOf(IllegalArgumentException::class.java)
+            SourceGraphConfiguration.replace(
+                content.replace("file:///apps/App.x", "file:///libraries/Library.x"),
+                graph,
+                next,
+                base,
+            )
+        }.isInstanceOf(IllegalArgumentException::class.java)
             .hasMessageContaining("Duplicate source module roots")
     }
 }

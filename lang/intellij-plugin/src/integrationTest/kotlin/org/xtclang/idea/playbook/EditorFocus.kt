@@ -67,8 +67,7 @@ fun Driver.focusEditor(editor: JEditorUiComponent) {
  * Restore application focus without replaying the action that opened a dialog or applied an edit.
  */
 internal fun Driver.restorePopupFocus(editor: Editor): Boolean {
-    fun focused() =
-        withContext(OnDispatcher.EDT) { utility(NativeEditorUi::class).hasFocus(editor) }
+    fun focused() = withContext(OnDispatcher.EDT) { utility(NativeEditorUi::class).hasFocus(editor) }
     if (focused()) return false
     val window = cast(ideFrame().component, Window::class)
     withContext(OnDispatcher.EDT) {

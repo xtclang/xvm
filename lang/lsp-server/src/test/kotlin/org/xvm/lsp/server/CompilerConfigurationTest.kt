@@ -2,11 +2,6 @@ package org.xvm.lsp.server
 
 import com.google.gson.Gson
 import com.google.gson.JsonParser
-import java.nio.file.Path
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.awaitility.Awaitility.await
@@ -31,6 +26,11 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit.SECONDS
 
 class CompilerConfigurationTest {
     @Test
@@ -44,8 +44,8 @@ class CompilerConfigurationTest {
             val submitted = session.adapter.compilerQueueSnapshot()["submittedTotal"]
             session.server.workspaceService.didChangeConfiguration(
                 DidChangeConfigurationParams(
-                    mapOf("xtc" to mapOf("presentation" to emptyMap<String, Any>()))
-                )
+                    mapOf("xtc" to mapOf("presentation" to emptyMap<String, Any>())),
+                ),
             )
             assertThat(session.requests).isEmpty()
             assertThat(session.adapter.getCachedResult(session.uri)).isEqualTo(before)
@@ -68,32 +68,30 @@ class CompilerConfigurationTest {
         assertThat(CompilerConfiguration.buildModel(explicit)).isNull()
         assertThat(CompilerConfiguration.modules(explicit, emptyList())).isEmpty()
         assertThat(
-                CompilerConfiguration.buildModel(
-                    mapOf("sourceModules" to null, "buildModels" to emptyList<Any>())
-                )
+            CompilerConfiguration.buildModel(
+                mapOf("sourceModules" to null, "buildModels" to emptyList<Any>()),
+            ),
+        ).isNull()
+        assertThatThrownBy {
+            CompilerConfiguration.buildModel(
+                mapOf("sourceModules" to null, "buildModels" to listOf(1)),
             )
-            .isNull()
+        }.isInstanceOf(IllegalArgumentException::class.java)
         assertThatThrownBy {
-                CompilerConfiguration.buildModel(
-                    mapOf("sourceModules" to null, "buildModels" to listOf(1))
-                )
-            }
-            .isInstanceOf(IllegalArgumentException::class.java)
-        assertThatThrownBy {
-                CompilerConfiguration.buildModel(
-                    mapOf(
-                        "sourceModules" to null,
-                        "buildModels" to listOf(mapOf("schemaVersion" to 99)),
-                    )
-                )
-            }
-            .isInstanceOf(IllegalArgumentException::class.java)
+            CompilerConfiguration.buildModel(
+                mapOf(
+                    "sourceModules" to null,
+                    "buildModels" to listOf(mapOf("schemaVersion" to 99)),
+                ),
+            )
+        }.isInstanceOf(IllegalArgumentException::class.java)
     }
 
     @Test
     fun `resource root configuration distinguishes automatic empty and ordered custom paths`() {
         directory = directory.toRealPath()
         val workspace = directory.toUri().toString()
+
         fun configuration(resources: List<String>?) =
             mapOf(
                 "sourceModules" to
@@ -102,45 +100,55 @@ class CompilerConfigurationTest {
                             "name" to "Library",
                             "uri" to "Library.x",
                             "resourceRoots" to resources,
-                        )
-                    )
+                        ),
+                    ),
             )
         val module =
-            CompilerConfiguration.modules(
+            CompilerConfiguration
+                .modules(
                     configuration(listOf("custom/", "fallback/")),
                     listOf(workspace),
                 )!!
                 .single()
         assertThat(module.resourceRoots)
             .containsExactly(
-                directory.resolve("custom").toFile().toURI().toString().trimEnd('/') + "/",
-                directory.resolve("fallback").toFile().toURI().toString().trimEnd('/') + "/",
+                directory
+                    .resolve("custom")
+                    .toFile()
+                    .toURI()
+                    .toString()
+                    .trimEnd('/') + "/",
+                directory
+                    .resolve("fallback")
+                    .toFile()
+                    .toURI()
+                    .toString()
+                    .trimEnd('/') + "/",
             )
         assertThat(
-                CompilerConfiguration.modules(configuration(null), listOf(workspace))!!.single()
-                    .resourceRoots
-            )
-            .isNull()
+            CompilerConfiguration
+                .modules(configuration(null), listOf(workspace))!!
+                .single()
+                .resourceRoots,
+        ).isNull()
         assertThat(
-                CompilerConfiguration.modules(configuration(emptyList()), listOf(workspace))!!
-                    .single()
-                    .resourceRoots
+            CompilerConfiguration
+                .modules(configuration(emptyList()), listOf(workspace))!!
+                .single()
+                .resourceRoots,
+        ).isEmpty()
+        assertThatThrownBy {
+            CompilerConfiguration.modules(
+                configuration(listOf("custom/", "custom/")),
+                listOf(workspace),
             )
-            .isEmpty()
+        }.isInstanceOf(IllegalArgumentException::class.java)
         assertThatThrownBy {
-                CompilerConfiguration.modules(
-                    configuration(listOf("custom/", "custom/")),
-                    listOf(workspace),
-                )
-            }
-            .isInstanceOf(IllegalArgumentException::class.java)
-        assertThatThrownBy {
-                CompilerConfiguration.modules(
-                    configuration(listOf("https://example.com/resources/")),
-                    listOf(workspace),
-                )
-            }
-            .isInstanceOf(IllegalArgumentException::class.java)
+            CompilerConfiguration.modules(
+                configuration(listOf("https://example.com/resources/")),
+                listOf(workspace),
+            )
+        }.isInstanceOf(IllegalArgumentException::class.java)
         assertThat(SourceModuleConfiguration(module).resourceRoots).isEqualTo(module.resourceRoots)
     }
 
@@ -161,34 +169,41 @@ class CompilerConfigurationTest {
             assertThat(modules.map { it.name }).containsExactly("Library", "Consumer")
             assertThat(modules.last().dependencies).containsExactly("Library")
             assertThat(modules.first().uri)
-                .isEqualTo(directory.resolve("Library.x").toFile().canonicalFile.toURI().toString())
+                .isEqualTo(
+                    directory
+                        .resolve("Library.x")
+                        .toFile()
+                        .canonicalFile
+                        .toURI()
+                        .toString(),
+                )
         }
         assertThat(CompilerConfiguration.modules(null, emptyList())).isNull()
         assertThat(CompilerConfiguration.modules(emptyMap<String, Any>(), emptyList())).isNull()
         assertThat(
-                CompilerConfiguration.modules(
-                    mapOf("sourceModules" to emptyList<Any>()),
-                    emptyList(),
-                )
-            )
-            .isEmpty()
-        for (raw in
-            listOf(
-                mapOf("sourceModules" to 1),
-                mapOf("sourceModules" to listOf(1)),
-                mapOf("sourceModules" to listOf(mapOf("name" to 1, "uri" to "Library.x"))),
-                mapOf(
-                    "sourceModules" to
-                        listOf(mapOf("name" to "Library", "uri" to "https://example.org/Library.x"))
-                ),
-            )) {
+            CompilerConfiguration.modules(
+                mapOf("sourceModules" to emptyList<Any>()),
+                emptyList(),
+            ),
+        ).isEmpty()
+        for (
+        raw in
+        listOf(
+            mapOf("sourceModules" to 1),
+            mapOf("sourceModules" to listOf(1)),
+            mapOf("sourceModules" to listOf(mapOf("name" to 1, "uri" to "Library.x"))),
+            mapOf(
+                "sourceModules" to
+                    listOf(mapOf("name" to "Library", "uri" to "https://example.org/Library.x")),
+            ),
+        )
+        ) {
             assertThatThrownBy { CompilerConfiguration.modules(raw, listOf(workspace)) }
                 .isInstanceOf(IllegalArgumentException::class.java)
         }
         assertThatThrownBy {
-                CompilerConfiguration.modules(CONFIG, listOf(workspace, "file:///other/"))
-            }
-            .hasMessageContaining("exactly one workspace")
+            CompilerConfiguration.modules(CONFIG, listOf(workspace, "file:///other/"))
+        }.hasMessageContaining("exactly one workspace")
     }
 
     @Test
@@ -210,15 +225,15 @@ class CompilerConfigurationTest {
                         "xtc",
                         1,
                         "module Library { static String value() = \"text\"; }",
-                    )
-                )
+                    ),
+                ),
             )
             session.expect(true)
             session.server.textDocumentService.didChange(
                 DidChangeTextDocumentParams(
                     VersionedTextDocumentIdentifier(session.libraryUri, 2),
                     listOf(TextDocumentContentChangeEvent(LIBRARY)),
-                )
+                ),
             )
             session.expect(false)
         }
@@ -243,8 +258,8 @@ class CompilerConfigurationTest {
                                 "uri" to "Consumer.x",
                                 "dependencies" to listOf("Library"),
                             ),
-                        )
-                )
+                        ),
+                ),
             )
             session.configure(mapOf("sourceModules" to "bad"))
             assertThat(session.messages).hasSize(2)
@@ -261,7 +276,7 @@ class CompilerConfigurationTest {
             session.server.initialized(InitializedParams())
             val old = requireNotNull(session.requests.poll(10, SECONDS))
             session.server.workspaceService.didChangeConfiguration(
-                DidChangeConfigurationParams(emptyMap<String, Any>())
+                DidChangeConfigurationParams(emptyMap<String, Any>()),
             )
             val latest = requireNotNull(session.requests.poll(10, SECONDS))
             latest.complete(listOf(mapOf("sourceModules" to emptyList<Any>())))
@@ -269,17 +284,17 @@ class CompilerConfigurationTest {
             old.complete(listOf(CONFIG))
             assertThat(session.adapter.compile(session.uri, CONSUMER).success).isFalse()
             session.server.workspaceService.didChangeConfiguration(
-                DidChangeConfigurationParams(emptyMap<String, Any>())
+                DidChangeConfigurationParams(emptyMap<String, Any>()),
             )
             val superseded = requireNotNull(session.requests.poll(10, SECONDS))
             session.server.workspaceService.didChangeConfiguration(
-                DidChangeConfigurationParams(mapOf("xtc" to "invalid"))
+                DidChangeConfigurationParams(mapOf("xtc" to "invalid")),
             )
             superseded.complete(listOf(CONFIG))
             assertThat(session.adapter.compile(session.uri, CONSUMER).success).isFalse()
             assertThat(session.messages).hasSize(1)
             session.server.workspaceService.didChangeConfiguration(
-                DidChangeConfigurationParams(emptyMap<String, Any>())
+                DidChangeConfigurationParams(emptyMap<String, Any>()),
             )
             val closing = requireNotNull(session.requests.poll(10, SECONDS))
             session.close()
@@ -288,42 +303,57 @@ class CompilerConfigurationTest {
         }
     }
 
-    private inner class Session(pull: Boolean = false) : AutoCloseable {
+    private inner class Session(
+        pull: Boolean = false,
+    ) : AutoCloseable {
         val adapter = XdkAdapter()
         val server = XtcLanguageServer(adapter)
         val published = CopyOnWriteArrayList<PublishDiagnosticsParams>()
         val messages = CopyOnWriteArrayList<MessageParams>()
         val requests = LinkedBlockingQueue<CompletableFuture<List<Any>>>()
-        val uri = directory.resolve("Consumer.x").toFile().canonicalFile.toURI().toString()
-        val libraryUri = directory.resolve("Library.x").toFile().canonicalFile.toURI().toString()
+        val uri =
+            directory
+                .resolve("Consumer.x")
+                .toFile()
+                .canonicalFile
+                .toURI()
+                .toString()
+        val libraryUri =
+            directory
+                .resolve("Library.x")
+                .toFile()
+                .canonicalFile
+                .toURI()
+                .toString()
 
         init {
             directory.resolve("Library.x").toFile().writeText(LIBRARY)
             directory.resolve("Consumer.x").toFile().writeText(CONSUMER)
             val client = mock(LanguageClient::class.java)
             doAnswer {
-                    published.add(it.getArgument(0))
-                    null
-                }
-                .`when`(client)
+                published.add(it.getArgument(0))
+                null
+            }.`when`(client)
                 .publishDiagnostics(any())
             doAnswer {
-                    messages.add(it.getArgument(0))
-                    null
-                }
-                .`when`(client)
+                messages.add(it.getArgument(0))
+                null
+            }.`when`(client)
                 .showMessage(any())
             doAnswer { call ->
-                    if (
-                        call.getArgument<ConfigurationParams>(0).items.single().section ==
-                            CompilerConfiguration.SECTION
-                    ) {
-                        CompletableFuture<List<Any>>().also(requests::add)
-                    } else {
-                        CompletableFuture.completedFuture(listOf(emptyMap<String, Any>()))
-                    }
+                if (
+                    call
+                        .getArgument<ConfigurationParams>(0)
+                        .items
+                        .single()
+                        .section ==
+                    CompilerConfiguration.SECTION
+                ) {
+                    CompletableFuture<List<Any>>().also(requests::add)
+                } else {
+                    CompletableFuture.completedFuture(listOf(emptyMap<String, Any>()))
                 }
-                .`when`(client)
+            }.`when`(client)
                 .configuration(any())
             server.connect(client)
             server
@@ -339,19 +369,18 @@ class CompilerConfigurationTest {
                                 workspace =
                                     WorkspaceClientCapabilities().apply { configuration = pull }
                             }
-                    }
-                )
-                .get(20, SECONDS)
+                    },
+                ).get(20, SECONDS)
         }
 
         fun open() =
             server.textDocumentService.didOpen(
-                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 7, CONSUMER))
+                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 7, CONSUMER)),
             )
 
         fun configure(config: Any) =
             server.workspaceService.didChangeConfiguration(
-                DidChangeConfigurationParams(mapOf("xtc" to mapOf("compiler" to config)))
+                DidChangeConfigurationParams(mapOf("xtc" to mapOf("compiler" to config))),
             )
 
         fun expect(errors: Boolean) {
@@ -382,7 +411,7 @@ class CompilerConfigurationTest {
                             "uri" to "Consumer.x",
                             "dependencies" to listOf("Library"),
                         ),
-                    )
+                    ),
             )
     }
 }

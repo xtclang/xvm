@@ -15,9 +15,10 @@ object EditorDiagnostics {
     ): String {
         val document = DocumentMarkupModel.forDocument(editor.document, project, false)
         val diagnostics =
-            (editor.markupModel.allHighlighters.asSequence() +
-                    document?.allHighlighters.orEmpty().asSequence())
-                .mapNotNull(HighlightInfo::fromRangeHighlighter)
+            (
+                editor.markupModel.allHighlighters.asSequence() +
+                    document?.allHighlighters.orEmpty().asSequence()
+            ).mapNotNull(HighlightInfo::fromRangeHighlighter)
                 .filter { it.severity.name in setOf("ERROR", "WARNING") }
                 .map {
                     mapOf(
@@ -25,8 +26,7 @@ object EditorDiagnostics {
                         "description" to it.description.orEmpty(),
                         "start" to it.startOffset,
                     )
-                }
-                .distinct()
+                }.distinct()
                 .toList()
         return Gson().toJson(diagnostics)
     }

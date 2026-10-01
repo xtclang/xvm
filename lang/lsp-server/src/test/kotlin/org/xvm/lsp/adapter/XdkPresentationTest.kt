@@ -13,19 +13,18 @@ class XdkPresentationTest {
     fun `hover retains reference positions after string literals`(marker: String) {
         XdkAdapter().use { adapter ->
             listOf(
-                    "module Presentation { Int run() { String marker = \"$marker\"; Int value = 1; return value; } }",
-                    "module Presentation { private Int run(Int value) { String marker = \"$marker\"; return value; } }",
-                )
-                .forEach { source ->
-                    assertThat(adapter.compile(URI, source).success).isTrue()
-                    val offset = source.lastIndexOf("value")
-                    assertThat(adapter.getHoverInfo(URI, 0, offset))
-                        .describedAs(source)
-                        .contains("Int")
-                    assertThat(adapter.prepareRename(URI, 0, offset)?.range)
-                        .describedAs(source)
-                        .isEqualTo(Range(Position(0, offset), Position(0, offset + "value".length)))
-                }
+                "module Presentation { Int run() { String marker = \"$marker\"; Int value = 1; return value; } }",
+                "module Presentation { private Int run(Int value) { String marker = \"$marker\"; return value; } }",
+            ).forEach { source ->
+                assertThat(adapter.compile(URI, source).success).isTrue()
+                val offset = source.lastIndexOf("value")
+                assertThat(adapter.getHoverInfo(URI, 0, offset))
+                    .describedAs(source)
+                    .contains("Int")
+                assertThat(adapter.prepareRename(URI, 0, offset)?.range)
+                    .describedAs(source)
+                    .isEqualTo(Range(Position(0, offset), Position(0, offset + "value".length)))
+            }
         }
     }
 
@@ -41,8 +40,7 @@ class XdkPresentationTest {
                     new Packet<String>("anonymous", text) { String read() = text; };
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         XdkAdapter().use { adapter ->
             listOf(source, source.replace("return 1 + word.size;", "return pair((pair(1, ;"))
                 .forEach { text ->
@@ -76,22 +74,21 @@ class XdkPresentationTest {
                     return box.value;
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             val tokens = decode(adapter.getSemanticTokens(URI)!!)
 
-            fun token(marker: String): List<Int> = tokens.single {
-                it.take(2) == at(source, marker).let { listOf(it.line, it.column) }
-            }
+            fun token(marker: String): List<Int> =
+                tokens.single {
+                    it.take(2) == at(source, marker).let { listOf(it.line, it.column) }
+                }
             assertThat(SemanticTokenLegend.tokenTypes[token("api")[3]]).isEqualTo("interface")
             assertThat(SemanticTokenLegend.tokenTypes[token("parameter")[3]]).isEqualTo("parameter")
             assertThat(SemanticTokenLegend.tokenTypes[token("local")[3]]).isEqualTo("variable")
             assertThat(
-                    token("method")[4] and
-                        SemanticTokenLegend.modifierBitmask("static", "declaration")
-                )
-                .isEqualTo(SemanticTokenLegend.modifierBitmask("static", "declaration"))
+                token("method")[4] and
+                    SemanticTokenLegend.modifierBitmask("static", "declaration"),
+            ).isEqualTo(SemanticTokenLegend.modifierBitmask("static", "declaration"))
             listOf("write", "compound", "increment", "field").forEach {
                 assertThat(token(it)[4] and SemanticTokenLegend.modifierBitmask("modification"))
                     .isNotZero()
@@ -127,8 +124,7 @@ class XdkPresentationTest {
                     return number + explicit + label.size;
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             val hints = adapter.getInlayHints(URI, ALL)
             assertThat(hints.map { it.label })
@@ -141,11 +137,10 @@ class XdkPresentationTest {
                     at(source, "string"),
                 )
             assertThat(
-                    adapter.getInlayHints(URI, Range(Position(5, 0), Position(6, 0))).map {
-                        it.label
-                    }
-                )
-                .containsExactly(": String", "text:")
+                adapter.getInlayHints(URI, Range(Position(5, 0), Position(6, 0))).map {
+                    it.label
+                },
+            ).containsExactly(": String", "text:")
             val readonly =
                 decode(adapter.getSemanticTokens(URI)!!).single {
                     it.take(2) == at(source, "text").let { listOf(it.line, it.column) }
@@ -165,8 +160,7 @@ class XdkPresentationTest {
                     return fn() + other(1);
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             val outer = at(source, "outer")
             val highlights = adapter.getDocumentHighlights(URI, outer.line, outer.column)
@@ -201,8 +195,13 @@ class XdkPresentationTest {
             assertThat(adapter.getInlayHints(URI, ALL)).isEmpty()
             // Current lexical keywords remain; no previous resolved names may leak into the failed
             // replacement.
-            assertThat(adapter.getSemanticTokens(URI)?.let(::decode).orEmpty().map { it.take(2) })
-                .doesNotContain(listOf(0, source.indexOf("count")))
+            assertThat(
+                adapter
+                    .getSemanticTokens(URI)
+                    ?.let(::decode)
+                    .orEmpty()
+                    .map { it.take(2) },
+            ).doesNotContain(listOf(0, source.indexOf("count")))
             adapter.closeDocument(URI)
             assertThat(adapter.getSemanticTokens(URI)).isNull()
         }
@@ -239,8 +238,7 @@ class XdkPresentationTest {
                     previous[0] + delta[0],
                     if (delta[0] == 0) previous[1] + delta[1] else delta[1],
                 ) + delta.drop(2)
-            }
-            .drop(1)
+            }.drop(1)
 
     private companion object {
         const val URI = "file:///Presentation.x"

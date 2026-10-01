@@ -32,11 +32,9 @@ class XdkAnonymousConstructorTest {
                 "new Base<String>(\"x\", te|) { Int next() { return ++captured; } }",
                 "Base<String> value = new Base(\"x\", te|) { String read() = text; }",
                 "new Base<String>(\"x\", te|) { String text = \"body\"; String read() = text; }",
-            ]
+            ],
     )
-    fun `anonymous constructors fit written arguments without emitting or capturing the body`(
-        expression: String
-    ) {
+    fun `anonymous constructors fit written arguments without emitting or capturing the body`(expression: String) {
         val prefix = HEADER + expression.substringBefore('|')
         val suffix = expression.substringAfter('|') + "; } }"
         val complete = prefix.dropLast(2) + "text" + suffix
@@ -55,7 +53,7 @@ class XdkAnonymousConstructorTest {
                     TextEdit(
                         Range(Position(0, prefix.length - 2), Position(0, prefix.length)),
                         "text",
-                    )
+                    ),
                 )
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
             assertThat(adapter.compile(URI, complete).diagnostics).isEmpty()
@@ -91,7 +89,7 @@ class XdkAnonymousConstructorTest {
                 "new Base<String>(True, te|) { String read() = text; }",
                 "new Missing(\"x\", te|) {}",
                 "new Base<String>(\"x\", missing = te|) {}",
-            ]
+            ],
     )
     fun `invalid anonymous construction never offers an ordinary base call`(expression: String) {
         val prefix = HEADER + expression.substringBefore('|')
@@ -133,7 +131,8 @@ class XdkAnonymousConstructorTest {
         CompilerTestSupport.configure()
         val errors = ErrorList()
         val dependency =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .compileModule(
                     Source(
                         "module Library { class Base<T> { $access construct(T first, T second) {} } }",
@@ -176,8 +175,10 @@ class XdkAnonymousConstructorTest {
     fun `editing the anonymous declaration invalidates its candidate types`() {
         val prefix = HEADER + "new Object(1, te"
         XdkAdapter().use { adapter ->
-            for ((type, selected) in
-                listOf("String" to "text", "Int" to "textNumber", "String" to "text")) {
+            for (
+            (type, selected) in
+            listOf("String" to "text", "Int" to "textNumber", "String" to "text")
+            ) {
                 val suffix = ") { construct(Int first, $type second) {} }; } }"
                 assertThat(adapter.compile(URI, prefix.dropLast(2) + selected + suffix).diagnostics)
                     .isEmpty()
@@ -185,11 +186,10 @@ class XdkAnonymousConstructorTest {
                 assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
                     .containsExactly(selected)
                 assertThat(
-                        adapter.getSignatureHelp(URI, 0, prefix.length)!!.signatures.map {
-                            it.label
-                        }
-                    )
-                    .containsExactly("new Object(Int first, $type second)")
+                    adapter.getSignatureHelp(URI, 0, prefix.length)!!.signatures.map {
+                        it.label
+                    },
+                ).containsExactly("new Object(Int first, $type second)")
                 assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
             }
         }
@@ -206,9 +206,8 @@ class XdkAnonymousConstructorTest {
             assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
                 .containsExactly("text")
             assertThat(
-                    adapter.getSignatureHelp(URI, 0, prefix.length)!!.signatures.map { it.label }
-                )
-                .containsExactly("new Reader(String first, String second)")
+                adapter.getSignatureHelp(URI, 0, prefix.length)!!.signatures.map { it.label },
+            ).containsExactly("new Reader(String first, String second)")
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
             assertThat(adapter.compile(URI, prefix.dropLast(2) + "text)" + suffix).diagnostics)
                 .isEmpty()
@@ -220,11 +219,13 @@ class XdkAnonymousConstructorTest {
         CompilerTestSupport.configure()
         val prefix = HEADER + "new Base<String>(\"x\", te"
         val suffix = ") { String read() = text; }; } }"
-        for (errors in
-            listOf(
-                ErrorList(ErrorList.FIRST_ERROR),
-                ErrorListener.cancellable(ErrorList()) { true },
-            )) {
+        for (
+        errors in
+        listOf(
+            ErrorList(ErrorList.FIRST_ERROR),
+            ErrorListener.cancellable(ErrorList()) { true },
+        )
+        ) {
             val source = Source(prefix + suffix, URI)
             repeat(prefix.length) { source.next() }
             val cursor = source.position
@@ -249,11 +250,9 @@ class XdkAnonymousConstructorTest {
         return EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, errors) to errors
     }
 
-    private fun nodes(node: AstNode): List<AstNode> =
-        listOf(node) + node.children().flatMap(::nodes)
+    private fun nodes(node: AstNode): List<AstNode> = listOf(node) + node.children().flatMap(::nodes)
 
-    private fun components(component: Component): List<Component> =
-        listOf(component) + component.children().flatMap(::components)
+    private fun components(component: Component): List<Component> = listOf(component) + component.children().flatMap(::components)
 
     private companion object {
         const val URI = "untitled:Editing.x"

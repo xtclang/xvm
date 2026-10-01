@@ -3,13 +3,13 @@ package org.xvm.lsp.adapter.xdk
 import org.xvm.lsp.adapter.CompletionItem
 import org.xvm.lsp.adapter.CompletionItem.CompletionKind
 import org.xvm.lsp.adapter.ParameterInfo
-import org.xvm.lsp.adapter.Position as AdapterPosition
 import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.adapter.SignatureHelp
 import org.xvm.lsp.adapter.SignatureInfo
 import org.xvm.lsp.adapter.TextEdit
 import org.xvm.lsp.adapter.xdk.SemanticModel.Position
 import org.xvm.lsp.adapter.xdk.SemanticModel.Signature
+import org.xvm.lsp.adapter.Position as AdapterPosition
 
 /** Editor queries over copied facts only: no AST, constant pool, resolution or source rewriting. */
 internal object XdkCursorQueries {
@@ -45,10 +45,15 @@ internal object XdkCursorQueries {
                         kind =
                             when (member.kind) {
                                 SemanticModel.SymbolKind.METHOD -> CompletionKind.METHOD
+
                                 SemanticModel.SymbolKind.VARIABLE,
-                                SemanticModel.SymbolKind.PARAMETER -> CompletionKind.VARIABLE
+                                SemanticModel.SymbolKind.PARAMETER,
+                                -> CompletionKind.VARIABLE
+
                                 SemanticModel.SymbolKind.TYPE,
-                                SemanticModel.SymbolKind.TYPE_PARAMETER -> CompletionKind.CLASS
+                                SemanticModel.SymbolKind.TYPE_PARAMETER,
+                                -> CompletionKind.CLASS
+
                                 else -> CompletionKind.PROPERTY
                             },
                         detail =
@@ -60,8 +65,7 @@ internal object XdkCursorQueries {
                         textEdit = TextEdit(range, member.name),
                         documentation = model.semantics.symbol(member.symbol)?.documentation,
                     )
-                }
-                .distinctBy { it.label to it.detail }
+                }.distinctBy { it.label to it.detail }
         val formals =
             site.formals
                 .filter { it.name.startsWith(prefix.text) }
@@ -96,12 +100,19 @@ internal object XdkCursorQueries {
         val priority =
             when (item.kind) {
                 CompletionKind.VARIABLE -> 0
+
                 CompletionKind.PROPERTY -> 1
+
                 CompletionKind.METHOD -> 2
+
                 CompletionKind.CLASS,
-                CompletionKind.INTERFACE -> 3
+                CompletionKind.INTERFACE,
+                -> 3
+
                 CompletionKind.MODULE -> 4
+
                 CompletionKind.VALUE -> 5
+
                 CompletionKind.KEYWORD -> 6
             }
         return "$priority:${item.label.lowercase()}:${item.label}:${item.detail}"
@@ -112,8 +123,10 @@ internal object XdkCursorQueries {
         formal: PartialSemanticModel.Formal,
     ): String =
         "type parameter ${formal.name} extends " +
-            (formal.constraint?.let { model.semantics.type(it)?.displayName }
-                ?: "${formal.writtenConstraint} (written constraint)")
+            (
+                formal.constraint?.let { model.semantics.type(it)?.displayName }
+                    ?: "${formal.writtenConstraint} (written constraint)"
+            )
 
     fun signatureHelp(
         model: PartialSemanticModel,
@@ -146,17 +159,14 @@ internal object XdkCursorQueries {
                                 candidate.member.signature
                                     ?.let {
                                         signature(
-                                                model.semantics,
-                                                candidate.member.name,
-                                                it,
-                                                constructor = candidate.constructor,
-                                            )
-                                            .label
-                                    }
-                                    .orEmpty()
-                            }
-                    )
-                    .mapNotNull { candidate ->
+                                            model.semantics,
+                                            candidate.member.name,
+                                            it,
+                                            constructor = candidate.constructor,
+                                        ).label
+                                    }.orEmpty()
+                            },
+                    ).mapNotNull { candidate ->
                         candidate.member.signature?.let {
                             signature(
                                 model = model.semantics,
@@ -165,19 +175,17 @@ internal object XdkCursorQueries {
                                 active = site.parameterAt(candidate, position),
                                 documentation =
                                     listOfNotNull(
-                                            model.semantics
-                                                .symbol(candidate.member.symbol)
-                                                ?.documentation,
-                                            "Candidate signature; written arguments fit, overload not selected.",
-                                            "Argument conversion required."
-                                                .takeIf { candidate.converting },
-                                        )
-                                        .joinToString("\n\n"),
+                                        model.semantics
+                                            .symbol(candidate.member.symbol)
+                                            ?.documentation,
+                                        "Candidate signature; written arguments fit, overload not selected.",
+                                        "Argument conversion required."
+                                            .takeIf { candidate.converting },
+                                    ).joinToString("\n\n"),
                                 constructor = candidate.constructor,
                             )
                         }
-                    }
-                    .distinctBy { it.label }
+                    }.distinctBy { it.label }
             return signatures
                 .takeIf { it.isNotEmpty() }
                 ?.let { SignatureHelp(it, activeParameter = it.first().activeParameter ?: 0) }
@@ -190,10 +198,11 @@ internal object XdkCursorQueries {
                         // compiler
                         // mapping; do not infer one from commas or choose an applicable overload
                         // here.
-                        val active = slot.takeIf {
-                            site.arguments.none { it.label != null } &&
-                                it in candidate.parameters.indices
-                        }
+                        val active =
+                            slot.takeIf {
+                                site.arguments.none { it.label != null } &&
+                                    it in candidate.parameters.indices
+                            }
                         signature(
                             model.semantics,
                             member.name,
@@ -202,8 +211,7 @@ internal object XdkCursorQueries {
                             "Candidate signature; overload not selected.",
                         )
                     }
-                }
-                .distinctBy { it.label }
+                }.distinctBy { it.label }
         return signatures
             .takeIf { it.isNotEmpty() }
             ?.let { SignatureHelp(it, activeParameter = it.first().activeParameter ?: 0) }
@@ -237,7 +245,7 @@ internal object XdkCursorQueries {
             (methods + functions)
                 .filter { position > it.callee.end && position < it.range.end }
                 .minWithOrNull(
-                    compareByDescending<SignatureSite> { it.range.start }.thenBy { it.range.end }
+                    compareByDescending<SignatureSite> { it.range.start }.thenBy { it.range.end },
                 ) ?: return null
         val active =
             (call.arguments.firstOrNull { position <= it.range.end } ?: call.arguments.lastOrNull())
@@ -271,8 +279,11 @@ internal object XdkCursorQueries {
                     "${model.type(parameter.type)?.displayName ?: "?"}${parameter.name?.let { " $it" }.orEmpty()}" +
                         (if (parameter.defaulted) " = …" else ""),
                     "Parameter ${index + 1}${parameter.name?.let { ": $it" }.orEmpty()}. " +
-                        if (parameter.defaulted) "Optional; a default value is declared."
-                        else "Required argument.",
+                        if (parameter.defaulted) {
+                            "Optional; a default value is declared."
+                        } else {
+                            "Required argument."
+                        },
                 )
             }
         // The compiler signature includes the conditional success flag; source syntax does not.

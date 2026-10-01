@@ -1,10 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.nio.file.Path
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit.SECONDS
-import java.util.concurrent.atomic.AtomicBoolean
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -16,6 +11,11 @@ import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
+import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.atomic.AtomicBoolean
 
 class XdkProjectQueryLifecycleTest {
     @TempDir lateinit var directory: Path
@@ -38,14 +38,13 @@ class XdkProjectQueryLifecycleTest {
         Session().use { session ->
             val adapter = session.adapter
             assertThat(
-                    adapter
-                        .findReferences(session.libraryUri, 0, LIBRARY.indexOf("pick"), true)
-                        .map { it.uri }
-                )
-                .containsExactlyInAnyOrder(session.libraryUri, session.consumerUri)
+                adapter
+                    .findReferences(session.libraryUri, 0, LIBRARY.indexOf("pick"), true)
+                    .map { it.uri },
+            ).containsExactlyInAnyOrder(session.libraryUri, session.consumerUri)
             val edit =
                 requireNotNull(
-                    adapter.rename(session.libraryUri, 0, LIBRARY.indexOf("pick"), "choose")
+                    adapter.rename(session.libraryUri, 0, LIBRARY.indexOf("pick"), "choose"),
                 )
             assertThat(edit.changes.keys)
                 .containsExactlyInAnyOrder(session.libraryUri, session.consumerUri)
@@ -58,7 +57,11 @@ class XdkProjectQueryLifecycleTest {
     @Test
     fun `graph queries use unsaved consumer text and return its URI alias`() {
         Session().use { session ->
-            val alias = session.consumer.toPath().toUri().toString()
+            val alias =
+                session.consumer
+                    .toPath()
+                    .toUri()
+                    .toString()
             val overlay = CONSUMER.replace("box.pick(1)", "box.pick(1) + box.pick(2)")
             assertThat(session.adapter.compile(alias, overlay).success).isTrue()
             val references =
@@ -72,7 +75,7 @@ class XdkProjectQueryLifecycleTest {
             assertThat(references.map { it.uri }).containsOnly(alias)
             val edit =
                 requireNotNull(
-                    session.adapter.rename(session.libraryUri, 0, LIBRARY.indexOf("pick"), "choose")
+                    session.adapter.rename(session.libraryUri, 0, LIBRARY.indexOf("pick"), "choose"),
                 )
             assertThat(edit.changes.getValue(alias)).hasSize(2)
             assertThat(session.consumer.readText()).isEqualTo(CONSUMER)
@@ -81,9 +84,7 @@ class XdkProjectQueryLifecycleTest {
 
     @ParameterizedTest
     @EnumSource(Feature::class)
-    fun `changes in another module and client cancellation retire blocked graph work`(
-        feature: Feature
-    ) {
+    fun `changes in another module and client cancellation retire blocked graph work`(feature: Feature) {
         for (change in Change.entries) {
             Session().use { session ->
                 session.hold.set(true)
@@ -92,12 +93,25 @@ class XdkProjectQueryLifecycleTest {
                     .describedAs("$feature / $change")
                     .isTrue()
                 when (change) {
-                    Change.EDIT -> session.adapter.compileAsync(session.consumerUri, "\n$CONSUMER")
-                    Change.CLOSE -> session.adapter.closeDocument(session.consumerUri)
-                    Change.CONFIGURATION ->
+                    Change.EDIT -> {
+                        session.adapter.compileAsync(session.consumerUri, "\n$CONSUMER")
+                    }
+
+                    Change.CLOSE -> {
+                        session.adapter.closeDocument(session.consumerUri)
+                    }
+
+                    Change.CONFIGURATION -> {
                         session.adapter.replaceSourceModules(listOf(session.libraryModule))
-                    Change.REPOSITORY -> session.adapter.replaceDependencies(listOf(session.other))
-                    Change.CANCEL -> query.cancel(false)
+                    }
+
+                    Change.REPOSITORY -> {
+                        session.adapter.replaceDependencies(listOf(session.other))
+                    }
+
+                    Change.CANCEL -> {
+                        query.cancel(false)
+                    }
                 }
                 assertThat(query.isCancelled).describedAs("$feature / $change").isTrue()
                 session.release.countDown()
@@ -172,9 +186,17 @@ class XdkProjectQueryLifecycleTest {
 
     private inner class Session : AutoCloseable {
         val library =
-            directory.toRealPath().resolve("Library.x").toFile().apply { writeText(LIBRARY) }
+            directory
+                .toRealPath()
+                .resolve("Library.x")
+                .toFile()
+                .apply { writeText(LIBRARY) }
         val consumer =
-            directory.toRealPath().resolve("Consumer.x").toFile().apply { writeText(CONSUMER) }
+            directory
+                .toRealPath()
+                .resolve("Consumer.x")
+                .toFile()
+                .apply { writeText(CONSUMER) }
         val libraryUri = library.toURI().toString()
         val consumerUri = consumer.toURI().toString()
         val libraryModule = XdkSourceModule("Library", libraryUri)
@@ -182,12 +204,13 @@ class XdkProjectQueryLifecycleTest {
         val entered = CountDownLatch(1)
         val release = CountDownLatch(1)
         private val support = EmbeddingSupport.instance()
-        val other = run {
-            CompilerTestSupport.configure()
-            support
-                .compileModule(Source("module Other {}", "Other.x"), null, ErrorList())
-                .toDependency()
-        }
+        val other =
+            run {
+                CompilerTestSupport.configure()
+                support
+                    .compileModule(Source("module Other {}", "Other.x"), null, ErrorList())
+                    .toDependency()
+            }
         val adapter =
             XdkAdapter(
                 { source, repository, errors -> support.compileModule(source, repository, errors) },
@@ -209,7 +232,7 @@ class XdkProjectQueryLifecycleTest {
 
         init {
             adapter.replaceSourceModules(
-                listOf(libraryModule, XdkSourceModule("Consumer", consumerUri, setOf("Library")))
+                listOf(libraryModule, XdkSourceModule("Consumer", consumerUri, setOf("Library"))),
             )
             val result = adapter.compile(libraryUri, LIBRARY)
             assertThat(result.success).describedAs(result.diagnostics.toString()).isTrue()
@@ -217,10 +240,13 @@ class XdkProjectQueryLifecycleTest {
 
         fun request(feature: Feature): CompletableFuture<*> =
             when (feature) {
-                Feature.REFERENCES ->
+                Feature.REFERENCES -> {
                     adapter.findReferencesAsync(libraryUri, 0, LIBRARY.indexOf("pick"), true)
-                Feature.RENAME ->
+                }
+
+                Feature.RENAME -> {
                     adapter.renameAsync(libraryUri, 0, LIBRARY.indexOf("pick"), "choose")
+                }
             }
 
         override fun close() {

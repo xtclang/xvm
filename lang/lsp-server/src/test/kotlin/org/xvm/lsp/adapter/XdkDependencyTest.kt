@@ -1,10 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.nio.file.Path
-import java.util.concurrent.CancellationException
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit.SECONDS
-import java.util.concurrent.atomic.AtomicBoolean
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -19,6 +14,11 @@ import org.xvm.lsp.adapter.xdk.XdkDependency
 import org.xvm.lsp.adapter.xdk.semanticSnapshots
 import org.xvm.lsp.adapter.xdk.toDependency
 import org.xvm.tool.ModuleInfo
+import java.nio.file.Path
+import java.util.concurrent.CancellationException
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.atomic.AtomicBoolean
 
 class XdkDependencyTest {
     @TempDir lateinit var directory: Path
@@ -36,7 +36,8 @@ class XdkDependencyTest {
             dependencies.open().let { inputs ->
                 val errors = ErrorList()
                 val result =
-                    EmbeddingSupport.instance()
+                    EmbeddingSupport
+                        .instance()
                         .compileModule(Source(text, CONSUMER), inputs.repository, errors)
                 assertThat(result.succeeded()).describedAs(errors.errors.toString()).isTrue()
                 result.semanticSnapshots(errors, inputs).single()
@@ -76,9 +77,8 @@ class XdkDependencyTest {
             assertThat(type.uri).isEqualTo(LIBRARY_URI)
             assertThat(type.startColumn).isEqualTo(LIBRARY.indexOf("Box"))
             assertThat(
-                    adapter.replaceDependencies(listOf(XdkDependency.fromBinary(library.bytes())))
-                )
-                .containsExactly(adapter.analysisScope(CONSUMER))
+                adapter.replaceDependencies(listOf(XdkDependency.fromBinary(library.bytes()))),
+            ).containsExactly(adapter.analysisScope(CONSUMER))
             assertThat(adapter.findDefinition(CONSUMER, 0, source.indexOf("pick"))).isNull()
             assertThat(adapter.compile(CONSUMER, source).diagnostics).isEmpty()
             assertThat(adapter.findDefinition(CONSUMER, 0, source.indexOf("pick"))).isNull()
@@ -103,12 +103,11 @@ class XdkDependencyTest {
             assertThat(adapter.findImplementation(CONSUMER, 0, source.indexOf("name"))).isEmpty()
             assertThat(adapter.compile(CONSUMER, source).diagnostics).isEmpty()
             assertThat(
-                    adapter
-                        .findImplementation(CONSUMER, 0, source.indexOf("name"))
-                        .single()
-                        .startLine
-                )
-                .isEqualTo(1)
+                adapter
+                    .findImplementation(CONSUMER, 0, source.indexOf("name"))
+                    .single()
+                    .startLine,
+            ).isEqualTo(1)
             adapter.replaceDependencies(listOf(XdkDependency.fromBinary(library.bytes())))
             assertThat(adapter.compile(CONSUMER, source).diagnostics).isEmpty()
             assertThat(adapter.findImplementation(CONSUMER, 0, source.indexOf("name"))).isEmpty()
@@ -134,12 +133,11 @@ class XdkDependencyTest {
             assertThat(adapter.findImplementation(CONSUMER, 0, source.indexOf("name"))).isEmpty()
             assertThat(adapter.compile(CONSUMER, source).diagnostics).isEmpty()
             assertThat(
-                    adapter
-                        .findImplementation(CONSUMER, 0, source.indexOf("name"))
-                        .single()
-                        .startLine
-                )
-                .isEqualTo(1)
+                adapter
+                    .findImplementation(CONSUMER, 0, source.indexOf("name"))
+                    .single()
+                    .startLine,
+            ).isEqualTo(1)
             adapter.replaceDependencies(listOf(XdkDependency.fromBinary(library.bytes())))
             assertThat(adapter.compile(CONSUMER, source).diagnostics).isEmpty()
             assertThat(adapter.findImplementation(CONSUMER, 0, source.indexOf("name"))).isEmpty()
@@ -215,39 +213,37 @@ class XdkDependencyTest {
         val support = EmbeddingSupport.instance()
         val source = "module Consumer { package lib import Library; Int run() = lib.pick(1); }"
         XdkAdapter(
-                { text, repository, errors ->
-                    if (!held.getAndSet(true)) {
-                        entered.countDown()
-                        check(release.await(10, SECONDS))
-                    }
-                    support.compileModule(text, repository, errors)
-                },
-                { sources, repository, errors ->
-                    support.compileModule(sources, repository, errors)
-                },
-                { text, _, cursor, repository, errors ->
-                    support.analyzeIncomplete(text, cursor, repository, errors)
-                },
-            )
-            .use { adapter ->
-                adapter.replaceDependencies(listOf(first))
-                val old = adapter.compileAsync(CONSUMER, source)
-                try {
-                    check(entered.await(10, SECONDS))
-                    assertThat(adapter.replaceDependencies(listOf(moved)))
-                        .containsExactly(adapter.analysisScope(CONSUMER))
-                    assertThat(old.isCancelled).isTrue()
-                    val latest = adapter.compileAsync(CONSUMER, source)
-                    release.countDown()
-                    assertThat(latest.get(20, SECONDS).success).isTrue()
-                    assertThat(
-                            adapter.findDefinition(CONSUMER, 0, source.indexOf("pick"))!!.startLine
-                        )
-                        .isEqualTo(1)
-                } finally {
-                    release.countDown()
+            { text, repository, errors ->
+                if (!held.getAndSet(true)) {
+                    entered.countDown()
+                    check(release.await(10, SECONDS))
                 }
+                support.compileModule(text, repository, errors)
+            },
+            { sources, repository, errors ->
+                support.compileModule(sources, repository, errors)
+            },
+            { text, _, cursor, repository, errors ->
+                support.analyzeIncomplete(text, cursor, repository, errors)
+            },
+        ).use { adapter ->
+            adapter.replaceDependencies(listOf(first))
+            val old = adapter.compileAsync(CONSUMER, source)
+            try {
+                check(entered.await(10, SECONDS))
+                assertThat(adapter.replaceDependencies(listOf(moved)))
+                    .containsExactly(adapter.analysisScope(CONSUMER))
+                assertThat(old.isCancelled).isTrue()
+                val latest = adapter.compileAsync(CONSUMER, source)
+                release.countDown()
+                assertThat(latest.get(20, SECONDS).success).isTrue()
+                assertThat(
+                    adapter.findDefinition(CONSUMER, 0, source.indexOf("pick"))!!.startLine,
+                ).isEqualTo(1)
+            } finally {
+                release.countDown()
             }
+        }
     }
 
     @Test
@@ -262,54 +258,52 @@ class XdkDependencyTest {
             "module Consumer { package lib import Library; void run(lib.Box box) { box. } }"
         val cursor = source.indexOf("box.") + 4
         XdkAdapter(
-                { text, repository, errors -> support.compileModule(text, repository, errors) },
-                { sources, repository, errors ->
-                    support.compileModule(sources, repository, errors)
-                },
-                { text, _, cursor, repository, errors ->
-                    if (!held.getAndSet(true)) {
-                        entered.countDown()
-                        check(release.await(10, SECONDS))
-                    }
-                    val heard = ErrorList()
-                    support
-                        .analyzeIncomplete(
-                            text,
-                            cursor,
-                            repository,
-                            ErrorListener.tee(errors, heard),
-                        )
-                        .also {
-                            if (!errors.isAbortDesired) {
-                                assertThat(heard.errors.map { it.code })
-                                    .describedAs(heard.errors.toString())
-                                    .containsExactly("PARSER-30")
-                            }
-                        }
-                },
-            )
-            .use { adapter ->
-                adapter.replaceDependencies(listOf(first))
-                adapter.compile(CONSUMER, source)
-                val old = adapter.getCompletionsAsync(CONSUMER, 0, cursor, ".")
-                try {
-                    check(entered.await(10, SECONDS))
-                    assertThat(adapter.replaceDependencies(listOf(next)))
-                        .containsExactly(adapter.analysisScope(CONSUMER))
-                    assertThat(old.isCompletedExceptionally).isTrue()
-                    assertThatThrownBy { old.join() }
-                        .hasRootCauseInstanceOf(CancellationException::class.java)
-                    release.countDown()
-                    adapter.compile(CONSUMER, source)
-                    val candidates =
-                        adapter.getCompletionsAsync(CONSUMER, 0, cursor, ".").get(20, SECONDS)
-                    assertThat(candidates.map { it.label })
-                        .contains("label")
-                        .doesNotContain("number")
-                } finally {
-                    release.countDown()
+            { text, repository, errors -> support.compileModule(text, repository, errors) },
+            { sources, repository, errors ->
+                support.compileModule(sources, repository, errors)
+            },
+            { text, _, cursor, repository, errors ->
+                if (!held.getAndSet(true)) {
+                    entered.countDown()
+                    check(release.await(10, SECONDS))
                 }
+                val heard = ErrorList()
+                support
+                    .analyzeIncomplete(
+                        text,
+                        cursor,
+                        repository,
+                        ErrorListener.tee(errors, heard),
+                    ).also {
+                        if (!errors.isAbortDesired) {
+                            assertThat(heard.errors.map { it.code })
+                                .describedAs(heard.errors.toString())
+                                .containsExactly("PARSER-30")
+                        }
+                    }
+            },
+        ).use { adapter ->
+            adapter.replaceDependencies(listOf(first))
+            adapter.compile(CONSUMER, source)
+            val old = adapter.getCompletionsAsync(CONSUMER, 0, cursor, ".")
+            try {
+                check(entered.await(10, SECONDS))
+                assertThat(adapter.replaceDependencies(listOf(next)))
+                    .containsExactly(adapter.analysisScope(CONSUMER))
+                assertThat(old.isCompletedExceptionally).isTrue()
+                assertThatThrownBy { old.join() }
+                    .hasRootCauseInstanceOf(CancellationException::class.java)
+                release.countDown()
+                adapter.compile(CONSUMER, source)
+                val candidates =
+                    adapter.getCompletionsAsync(CONSUMER, 0, cursor, ".").get(20, SECONDS)
+                assertThat(candidates.map { it.label })
+                    .contains("label")
+                    .doesNotContain("number")
+            } finally {
+                release.countDown()
             }
+        }
     }
 
     @Test
@@ -340,7 +334,8 @@ class XdkDependencyTest {
         val inputs = XdkDependencies(listOf(base)).open()
         val errors = ErrorList()
         val result =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .compileModule(
                     Source(
                         "module Library { package base import Base; static Int value() = base.value(); }",
@@ -368,22 +363,20 @@ class XdkDependencyTest {
         XdkAdapter().use { adapter ->
             adapter.replaceDependencies(listOf(artifact))
             assertThatThrownBy {
-                    adapter.replaceDependencies(listOf(artifact, artifact))
-                }
-                .isInstanceOf(IllegalArgumentException::class.java)
+                adapter.replaceDependencies(listOf(artifact, artifact))
+            }.isInstanceOf(IllegalArgumentException::class.java)
             assertThat(
-                    adapter
-                        .compile(
-                            CONSUMER,
-                            "module Consumer { package lib import Library; Int run() = lib.pick(1); }",
-                        )
-                        .success
-                )
-                .isTrue()
+                adapter
+                    .compile(
+                        CONSUMER,
+                        "module Consumer { package lib import Library; Int run() = lib.pick(1); }",
+                    ).success,
+            ).isTrue()
         }
         val errors = ErrorList()
         val failed =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .compileModule(
                     Source("module Broken { Missing value; }", "file:///Broken.x"),
                     null,

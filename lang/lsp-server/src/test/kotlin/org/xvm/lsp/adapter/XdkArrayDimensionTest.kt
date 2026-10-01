@@ -16,11 +16,9 @@ class XdkArrayDimensionTest {
     @ParameterizedTest
     @ValueSource(
         strings =
-            ["new Int[nu|]", "new Int[nu|", "Int[] result = new Int[nu|]", "new String[nu|](\"x\")"]
+            ["new Int[nu|]", "new Int[nu|", "Int[] result = new Int[nu|]", "new String[nu|](\"x\")"],
     )
-    fun `dimension prefixes fit the size parameter and replace only the original token`(
-        expression: String
-    ) {
+    fun `dimension prefixes fit the size parameter and replace only the original token`(expression: String) {
         val prefix = HEADER + expression.substringBefore('|')
         val suffix = expression.substringAfter('|') + "; } }"
         XdkAdapter().use { adapter ->
@@ -36,16 +34,15 @@ class XdkArrayDimensionTest {
                     TextEdit(
                         Range(Position(0, prefix.length - 2), Position(0, prefix.length)),
                         "number",
-                    )
+                    ),
                 )
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
             val correctedSuffix = if (']' in suffix) suffix else "]$suffix"
             assertThat(
-                    adapter
-                        .compile(URI, prefix.dropLast(2) + "number" + correctedSuffix)
-                        .diagnostics
-                )
-                .isEmpty()
+                adapter
+                    .compile(URI, prefix.dropLast(2) + "number" + correctedSuffix)
+                    .diagnostics,
+            ).isEmpty()
         }
     }
 
@@ -56,7 +53,13 @@ class XdkArrayDimensionTest {
             adapter.compile(URI, "$prefix]; } }")
             val help = adapter.getSignatureHelp(URI, 0, prefix.length)!!
             assertThat(help.signatures).hasSize(1)
-            assertThat(help.signatures.single().parameters.first().label).isEqualTo("Int size")
+            assertThat(
+                help.signatures
+                    .single()
+                    .parameters
+                    .first()
+                    .label,
+            ).isEqualTo("Int size")
             assertThat(help.signatures.single().activeParameter).isZero()
             val names = adapter.getCompletions(URI, 0, prefix.length).map { it.label }
             assertThat(names).contains("number").doesNotContain("numberText", "numberArray")
@@ -127,13 +130,12 @@ class XdkArrayDimensionTest {
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix]; } }")
             assertThat(
-                    adapter
-                        .getSignatureHelp(URI, 0, prefix.length)!!
-                        .signatures
-                        .single()
-                        .activeParameter
-                )
-                .isZero()
+                adapter
+                    .getSignatureHelp(URI, 0, prefix.length)!!
+                    .signatures
+                    .single()
+                    .activeParameter,
+            ).isZero()
         }
     }
 
@@ -158,11 +160,13 @@ class XdkArrayDimensionTest {
         assertThat(analysis.cursorBindings()[site]!!.candidates()).hasSize(1)
         assertThat(analysis.cursorBindings()[site]!!.argumentValues().map { it.name() })
             .containsExactly("number")
-        for (listener in
-            listOf(
-                ErrorList(ErrorList.FIRST_ERROR),
-                ErrorListener.cancellable(ErrorList()) { true },
-            )) {
+        for (
+        listener in
+        listOf(
+            ErrorList(ErrorList.FIRST_ERROR),
+            ErrorListener.cancellable(ErrorList()) { true },
+        )
+        ) {
             source.reset()
             val stopped =
                 EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, listener)

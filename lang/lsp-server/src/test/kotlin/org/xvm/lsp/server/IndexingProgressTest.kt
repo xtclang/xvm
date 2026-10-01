@@ -1,8 +1,5 @@
 package org.xvm.lsp.server
 
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.ProgressParams
@@ -17,6 +14,9 @@ import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.mock.MockAdapter
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit.SECONDS
 
 class IndexingProgressTest {
     @Test
@@ -33,10 +33,9 @@ class IndexingProgressTest {
             val client = mock(LanguageClient::class.java)
             val events = LinkedBlockingQueue<ProgressParams>()
             doAnswer {
-                    events.add(it.getArgument(0))
-                    null
-                }
-                .`when`(client)
+                events.add(it.getArgument(0))
+                null
+            }.`when`(client)
                 .notifyProgress(any())
             XtcLanguageServer(adapter).use { server ->
                 server.connect(client)
@@ -47,17 +46,25 @@ class IndexingProgressTest {
                             workspaceFolders =
                                 listOf(WorkspaceFolder("file:///workspace/", "workspace"))
                             workDoneToken = token
-                        }
-                    )
-                    .get(5, SECONDS)
-                assertThat(events.poll(5, SECONDS).value.left.kind)
-                    .isEqualTo(WorkDoneProgressKind.begin)
+                        },
+                    ).get(5, SECONDS)
+                assertThat(
+                    events
+                        .poll(5, SECONDS)
+                        .value.left.kind,
+                ).isEqualTo(WorkDoneProgressKind.begin)
                 assertThat(scan.isDone).isFalse()
                 assertThat(events).isEmpty()
-                if (cancel) server.cancelProgress(WorkDoneProgressCancelParams(token))
-                else scan.complete(Unit)
-                assertThat(events.poll(5, SECONDS).value.left.kind)
-                    .isEqualTo(WorkDoneProgressKind.end)
+                if (cancel) {
+                    server.cancelProgress(WorkDoneProgressCancelParams(token))
+                } else {
+                    scan.complete(Unit)
+                }
+                assertThat(
+                    events
+                        .poll(5, SECONDS)
+                        .value.left.kind,
+                ).isEqualTo(WorkDoneProgressKind.end)
                 assertThat(scan.isCancelled).isEqualTo(cancel)
             }
         }

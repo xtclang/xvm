@@ -22,16 +22,16 @@ internal fun ParityScenarios.navigationCases() {
         check(
             first.single().line() ==
                 ParityWorkspace.position(
-                        doc.text,
-                        doc.at(data.string("declaration"), data.int("offset")),
-                    )["line"]
+                    doc.text,
+                    doc.at(data.string("declaration"), data.int("offset")),
+                )["line"],
         )
     }
     case("X5") { data ->
         val doc = open(data.string("file"))
         check(
             names(targets(doc, "definition", doc.at(data.string("libraryType")))) ==
-                listOf(data.string("libraryTarget"))
+                listOf(data.string("libraryTarget")),
         )
         replace(doc, fixture(doc.file).substringBeforeLast(data.string("missingCloser")))
         diagnostics(doc) { errors ->
@@ -43,7 +43,7 @@ internal fun ParityScenarios.navigationCases() {
             selectionParents(doc.editor, doc.at(data.string("anchor"), data.int("offset")))
         }
         check(
-            targets(doc, "definition", doc.at(data.string("anchor"), data.int("offset"))).isEmpty()
+            targets(doc, "definition", doc.at(data.string("anchor"), data.int("offset"))).isEmpty(),
         )
         replace(doc, fixture(doc.file))
         clean(doc)
@@ -52,29 +52,28 @@ internal fun ParityScenarios.navigationCases() {
         val root = project()
         val refs =
             query(
-                    "textDocument/references",
-                    root,
-                    root.at(data.string("anchor")),
-                    mapOf("context" to mapOf("includeDeclaration" to true)),
-                )
-                .rows()
+                "textDocument/references",
+                root,
+                root.at(data.string("anchor")),
+                mapOf("context" to mapOf("includeDeclaration" to true)),
+            ).rows()
         check(refs.any { it.string("uri") == uri(data.string("file")) })
         val symbols =
             protocol.query("workspace/symbol", mapOf("query" to data.string("symbolName"))).rows()
         check(
-            symbols.any { it.getAsJsonObject("location").string("uri") == uri(data.string("file")) }
+            symbols.any { it.getAsJsonObject("location").string("uri") == uri(data.string("file")) },
         )
         check(
             protocol.server().getOpenedDocuments().none {
                 it.getFile().getPath() == directory.resolve(data.string("file")).toString()
-            }
+            },
         )
         val child = open(data.string("file"))
         data.strings("uses").forEach { word ->
             val locations = targets(child, "definition", child.at(word))
             check(
                 locations.size == data.int("targetCount") &&
-                    locations.single().string("uri") == root.uri
+                    locations.single().string("uri") == root.uri,
             )
         }
     }
@@ -89,7 +88,7 @@ internal fun ParityScenarios.navigationCases() {
         check(
             parents.any {
                 "${it.string("name")} ${it["detail"]}".contains(data.string("typeArgument"))
-            }
+            },
         ) {
             parents.toString()
         }
@@ -97,7 +96,7 @@ internal fun ParityScenarios.navigationCases() {
         val named =
             hierarchy(root, root.at(data.string("interfaceDeclaration"), data.int("offset")))
         check(
-            edges(named, "subtypes").any { it.string("name").startsWith(data.string("baseName")) }
+            edges(named, "subtypes").any { it.string("name").startsWith(data.string("baseName")) },
         )
         with(driver) {
             nativeHierarchy(
@@ -112,7 +111,7 @@ internal fun ParityScenarios.navigationCases() {
         val doc = open(data.string("file"))
         check(
             names(targets(doc, "implementation", doc.at(data.string("anchor")))).sorted() ==
-                data.strings("implementations").sorted()
+                data.strings("implementations").sorted(),
         )
     }
     case("X37") { data ->
@@ -122,25 +121,26 @@ internal fun ParityScenarios.navigationCases() {
                 .pattern("overrides")
                 .findAll(doc.text)
                 .map {
-                    ParityWorkspace.position(
+                    ParityWorkspace
+                        .position(
                             doc.text,
                             it.range.first + data.string("declarationPrefix").length,
-                        )
-                        .getValue("line")
-                }
-                .toList()
+                        ).getValue("line")
+                }.toList()
         check(lines.size == data.int("declarationOffset"))
         listOf(
-                doc.at(data.string("declaration"), data.int("declarationOffset")),
-                doc.at(data.string("use"), data.int("useOffset")),
+            doc.at(data.string("declaration"), data.int("declarationOffset")),
+            doc.at(data.string("use"), data.int("useOffset")),
+        ).forEach { at ->
+            check(
+                targets(doc, "implementation", at).map { it.line() }.sorted() == lines.sorted(),
             )
-            .forEach { at ->
-                check(
-                    targets(doc, "implementation", at).map { it.line() }.sorted() == lines.sorted()
-                )
-            }
+        }
         val offset =
-            doc.text.lineSequence().take(lines[1]).sumOf { it.length + 1 } +
+            doc.text
+                .lineSequence()
+                .take(lines[1])
+                .sumOf { it.length + 1 } +
                 doc.text.lines()[lines[1]].indexOf(data.string("methodName"))
         val child = targets(doc, "implementation", offset)
         check(child.size == data.int("targetCount") && child.single().line() == lines[1])
@@ -157,12 +157,12 @@ internal fun ParityScenarios.navigationCases() {
         val original = lookup()
         check(
             original.size == data.int("targetCount") &&
-                original.single().string("uri") == uri(data.string("memberFile"))
+                original.single().string("uri") == uri(data.string("memberFile")),
         )
         val implementations = targets(root, "implementation", root.at(data.string("method")))
         check(
             implementations.size == data.int("targetCount") &&
-                implementations.single().string("uri") == root.uri
+                implementations.single().string("uri") == root.uri,
         )
         val child = open(data.string("memberFile"))
         replace(child, "\n\n" + fixture(child.file))
@@ -176,12 +176,11 @@ internal fun ParityScenarios.navigationCases() {
         val doc = open(data.string("file"))
         val expected = data["locations"].rows().map { expectedRange(doc, it) }
         listOf(
-                doc.at(data.string("anchor2"), data.int("offset2")),
-                doc.at(data.string("anchor"), data.int("offset")),
-            )
-            .forEach { at ->
-                assertRanges(targets(doc, "implementation", at).map { it["range"] }, expected)
-            }
+            doc.at(data.string("anchor2"), data.int("offset2")),
+            doc.at(data.string("anchor"), data.int("offset")),
+        ).forEach { at ->
+            assertRanges(targets(doc, "implementation", at).map { it["range"] }, expected)
+        }
     }
     case("X65") { data ->
         val doc = open(data.string("file"))
@@ -189,11 +188,10 @@ internal fun ParityScenarios.navigationCases() {
             val expected = variant["expected"].rows().map { expectedRange(doc, it) }
             assertRanges(
                 targets(
-                        doc,
-                        "implementation",
-                        doc.at(variant.string("anchor"), variant.int("offset")),
-                    )
-                    .map { it["range"] },
+                    doc,
+                    "implementation",
+                    doc.at(variant.string("anchor"), variant.int("offset")),
+                ).map { it["range"] },
                 expected,
             )
         }
@@ -203,11 +201,10 @@ internal fun ParityScenarios.navigationCases() {
         data["variants"].rows().forEach { variant ->
             check(
                 targets(
-                        doc,
-                        "implementation",
-                        doc.at(variant.string("anchor"), variant.int("offset")),
-                    )
-                    .isEmpty()
+                    doc,
+                    "implementation",
+                    doc.at(variant.string("anchor"), variant.int("offset")),
+                ).isEmpty(),
             )
         }
     }
@@ -220,7 +217,7 @@ internal fun ParityScenarios.navigationCases() {
         check(original.size == data.int("targetCount"))
         val memberUri = uri(data.string("memberFile"))
         check(
-            original.single { it.string("uri") == memberUri }.line() == data.int("declarationLine")
+            original.single { it.string("uri") == memberUri }.line() == data.int("declarationLine"),
         )
         val member = open(data.string("memberFile"))
         replace(member, "\n\n" + data.string("original"))
@@ -249,11 +246,10 @@ internal fun ParityScenarios.navigationCases() {
         check(targets.single()["range"] == sourceRange(doc, start, data.int("targetLength")))
         val caller =
             query(
-                    "textDocument/prepareCallHierarchy",
-                    doc,
-                    doc.at(data.string("override"), data.int("overrideOffset")),
-                )
-                .rows()
+                "textDocument/prepareCallHierarchy",
+                doc,
+                doc.at(data.string("override"), data.int("overrideOffset")),
+            ).rows()
                 .single()
         val calls = protocol.query("callHierarchy/outgoingCalls", mapOf("item" to caller)).rows()
         check(calls.any { it.getAsJsonObject("to")["selectionRange"] == targets.single()["range"] })
@@ -308,6 +304,5 @@ internal fun sourceRange(
             mapOf(
                 "start" to ParityWorkspace.position(doc.text, at),
                 "end" to ParityWorkspace.position(doc.text, at + length),
-            )
-        )
-        .asJsonObject
+            ),
+        ).asJsonObject

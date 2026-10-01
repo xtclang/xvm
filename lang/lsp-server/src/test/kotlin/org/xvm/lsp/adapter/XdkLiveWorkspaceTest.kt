@@ -1,7 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.nio.file.Path
-import java.util.concurrent.atomic.AtomicInteger
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -11,6 +9,8 @@ import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
+import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicInteger
 
 class XdkLiveWorkspaceTest {
     @TempDir lateinit var directory: Path
@@ -27,7 +27,13 @@ class XdkLiveWorkspaceTest {
             assertThat(adapter.compile(app, changed).diagnostics).isEmpty()
             assertThat(adapter.findDefinition(app, 0, changed.indexOf("answer"))!!.uri)
                 .isEqualTo(library)
-            val fresh = directory.resolve("Fresh.x").toFile().canonicalFile.toURI().toString()
+            val fresh =
+                directory
+                    .resolve("Fresh.x")
+                    .toFile()
+                    .canonicalFile
+                    .toURI()
+                    .toString()
             assertThat(adapter.compile(fresh, "module Fresh { class OnlyInBuffer {} }").success)
                 .isTrue()
             assertThat(adapter.findWorkspaceSymbols("OnlyInBuffer")).hasSize(1)
@@ -46,7 +52,7 @@ class XdkLiveWorkspaceTest {
         val app =
             first.resolve("App.x").also {
                 it.writeText(
-                    "module App { package lib import Library; String run() = lib.answer(); }"
+                    "module App { package lib import Library; String run() = lib.answer(); }",
                 )
             }
         second.resolve("Library.x").writeText("module Library { static String answer() = \"ok\"; }")
@@ -73,30 +79,29 @@ class XdkLiveWorkspaceTest {
         source("Neighbor", "module Neighbor {}")
         val attempts = AtomicInteger()
         XdkAdapter(
-                { source, errors ->
-                    EmbeddingSupport.instance().compileModule(source, null, errors)
-                },
-                { sources, errors ->
-                    attempts.incrementAndGet()
-                    EmbeddingSupport.instance().compileModule(sources, null, errors)
-                },
-            )
-            .use { adapter ->
-                adapter.initializeWorkspace(listOf(directory.toString()))
-                val item = adapter.prepareTypeHierarchy(root, 0, text.indexOf("Base")).single()
-                assertThat(attempts.get()).isEqualTo(2)
-                assertThat(adapter.getSubtypes(item).single().name).isEqualTo("Child")
-                assertThat(adapter.findWorkspaceSymbols("Child")).hasSize(1)
-                assertThat(adapter.findReferences(root, 0, text.indexOf("Base"), true)).hasSize(2)
-                assertThat(attempts.get()).isEqualTo(2)
-                source("Neighbor", "module Neighbor { Missing broken; }")
-                assertThat(adapter.getSubtypes(item)).isEmpty()
-                val current = adapter.prepareTypeHierarchy(root, 0, text.indexOf("Base")).single()
-                assertThat(adapter.getSubtypes(current).single().name).isEqualTo("Child")
-                assertThat(adapter.findReferences(root, 0, text.indexOf("Base"), true)).isEmpty()
-                assertThat(adapter.rename(root, 0, text.indexOf("Base"), "Renamed")).isNull()
-                assertThat(adapter.getCachedResult(root)).isNull()
-            }
+            { source, errors ->
+                EmbeddingSupport.instance().compileModule(source, null, errors)
+            },
+            { sources, errors ->
+                attempts.incrementAndGet()
+                EmbeddingSupport.instance().compileModule(sources, null, errors)
+            },
+        ).use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            val item = adapter.prepareTypeHierarchy(root, 0, text.indexOf("Base")).single()
+            assertThat(attempts.get()).isEqualTo(2)
+            assertThat(adapter.getSubtypes(item).single().name).isEqualTo("Child")
+            assertThat(adapter.findWorkspaceSymbols("Child")).hasSize(1)
+            assertThat(adapter.findReferences(root, 0, text.indexOf("Base"), true)).hasSize(2)
+            assertThat(attempts.get()).isEqualTo(2)
+            source("Neighbor", "module Neighbor { Missing broken; }")
+            assertThat(adapter.getSubtypes(item)).isEmpty()
+            val current = adapter.prepareTypeHierarchy(root, 0, text.indexOf("Base")).single()
+            assertThat(adapter.getSubtypes(current).single().name).isEqualTo("Child")
+            assertThat(adapter.findReferences(root, 0, text.indexOf("Base"), true)).isEmpty()
+            assertThat(adapter.rename(root, 0, text.indexOf("Base"), "Renamed")).isNull()
+            assertThat(adapter.getCachedResult(root)).isNull()
+        }
     }
 
     @Test
@@ -116,15 +121,13 @@ class XdkLiveWorkspaceTest {
                 .isTrue()
             assertThat(adapter.findWorkspaceSymbols("Target")).hasSize(1)
             assertThat(
-                    adapter.compile(app, "module Library { package other import Renamed; }").success
-                )
-                .isTrue()
+                adapter.compile(app, "module Library { package other import Renamed; }").success,
+            ).isTrue()
             assertThat(
-                    adapter
-                        .compile(library, "module Renamed { package other import Library; }")
-                        .diagnostics
-                )
-                .anyMatch { it.code == "SOURCE-GRAPH" }
+                adapter
+                    .compile(library, "module Renamed { package other import Library; }")
+                    .diagnostics,
+            ).anyMatch { it.code == "SOURCE-GRAPH" }
             adapter.closeDocument(library)
             assertThat(adapter.compile(app, "module App {}").success).isTrue()
             assertThat(adapter.findWorkspaceSymbols("Target")).hasSize(1)
@@ -135,13 +138,13 @@ class XdkLiveWorkspaceTest {
     fun `a missing source dependency cannot use an older host binary during partial navigation`() {
         CompilerTestSupport.configure()
         val library =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .compileModule(
                     Source("module Missing { class Base {} }"),
                     null,
                     ErrorList(),
-                )
-                .toDependency()
+                ).toDependency()
         val healthy = source("Healthy", "module Healthy { class Visible {} }")
         val consumer =
             source(
@@ -156,7 +159,7 @@ class XdkLiveWorkspaceTest {
                     XdkSourceModule("Healthy", healthy),
                     XdkSourceModule("Missing", missing),
                     XdkSourceModule("Consumer", consumer, setOf("Missing")),
-                )
+                ),
             )
             assertThat(adapter.findWorkspaceSymbols("Visible")).hasSize(1)
             assertThat(adapter.findWorkspaceSymbols("Hidden")).isEmpty()

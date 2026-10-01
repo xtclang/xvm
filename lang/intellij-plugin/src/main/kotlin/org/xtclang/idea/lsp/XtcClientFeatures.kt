@@ -8,10 +8,6 @@ import com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures
 import com.redhat.devtools.lsp4ij.client.features.LSPInlayHintFeature
 import com.redhat.devtools.lsp4ij.client.features.LSPRenameFeature
 import com.redhat.devtools.lsp4ij.server.DefaultLauncherBuilder
-import java.net.URI
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicReference
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
 import org.eclipse.lsp4j.InitializeParams
@@ -19,6 +15,10 @@ import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.RemoteEndpoint
 import org.eclipse.lsp4j.services.LanguageServer
+import java.net.URI
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicReference
 
 /** Client features and the document ownership of the current transport. */
 class XtcClientFeatures : LSPClientFeatures() {
@@ -43,14 +43,14 @@ class XtcClientFeatures : LSPClientFeatures() {
                             result.complete(edit.apply())
                         } catch (failure: RuntimeException) {
                             result.complete(
-                                ServerWorkspaceEdit.refused(failure.message ?: "Edit failed")
+                                ServerWorkspaceEdit.refused(failure.message ?: "Edit failed"),
                             )
                         }
                     }
                 }
             } catch (failure: RuntimeException) {
                 result.complete(
-                    ServerWorkspaceEdit.refused(failure.message ?: "Edit cannot be verified")
+                    ServerWorkspaceEdit.refused(failure.message ?: "Edit cannot be verified"),
                 )
             }
         }
@@ -79,7 +79,7 @@ class XtcClientFeatures : LSPClientFeatures() {
                 override fun isInlayHintSupported(file: PsiFile): Boolean =
                     LanguageServiceSettings.validated(file.project).inlayHints &&
                         super.isInlayHintSupported(file)
-            }
+            },
         )
         // TODO LSP4IJ: remove this override when native symbol rename checks document
         // epochs.
@@ -88,46 +88,47 @@ class XtcClientFeatures : LSPClientFeatures() {
         setRenameFeature(
             object : LSPRenameFeature() {
                 override fun isRenameSupported(file: PsiFile): Boolean = false
-            }
+            },
         )
     }
 
     override fun <S : LanguageServer> createLauncherBuilder(): Launcher.Builder<S> =
         object : DefaultLauncherBuilder<S>(this) {
-                private fun snapshot(uri: String): DocumentStartupMessages.Snapshot? {
-                    if (project.isDisposed || serverWrapper.isDisposed) return null
-                    val opened = serverWrapper.getOpenedDocument(URI(uri)) ?: return null
-                    val document = opened.synchronizer?.document ?: return null
-                    // File rename waits for didOpen while holding the IDE write lock.
-                    // Transport hooks must use the document's lock-free immutable text;
-                    // acquiring a read action here deadlocks that rename on the EDT.
-                    return DocumentStartupMessages.Snapshot(
-                        opened,
-                        document.modificationStamp,
-                        document.immutableCharSequence.toString(),
+            private fun snapshot(uri: String): DocumentStartupMessages.Snapshot? {
+                if (project.isDisposed || serverWrapper.isDisposed) return null
+                val opened = serverWrapper.getOpenedDocument(URI(uri)) ?: return null
+                val document = opened.synchronizer?.document ?: return null
+                // File rename waits for didOpen while holding the IDE write lock.
+                // Transport hooks must use the document's lock-free immutable text;
+                // acquiring a read action here deadlocks that rename on the EDT.
+                return DocumentStartupMessages.Snapshot(
+                    opened,
+                    document.modificationStamp,
+                    document.immutableCharSequence.toString(),
+                )
+            }
+
+            private val documents =
+                DocumentStartupMessages(::snapshot).also {
+                    this@XtcClientFeatures.documents.set(it)
+                }
+            private val diagnostics = DiagnosticResultMessages(::snapshot)
+
+            override fun wrapMessageConsumer(consumer: MessageConsumer): MessageConsumer {
+                val wrapped = super.wrapMessageConsumer(consumer)
+                return if (consumer is RemoteEndpoint) {
+                    documents.incoming(
+                        diagnostics.incoming(CodeActionMessages.incoming(wrapped)),
                     )
-                }
-
-                private val documents =
-                    DocumentStartupMessages(::snapshot).also {
-                        this@XtcClientFeatures.documents.set(it)
-                    }
-                private val diagnostics = DiagnosticResultMessages(::snapshot)
-
-                override fun wrapMessageConsumer(consumer: MessageConsumer): MessageConsumer {
-                    val wrapped = super.wrapMessageConsumer(consumer)
-                    return if (consumer is RemoteEndpoint)
-                        documents.incoming(
-                            diagnostics.incoming(CodeActionMessages.incoming(wrapped))
-                        )
-                    else documents.outgoing(diagnostics.outgoing(wrapped))
+                } else {
+                    documents.outgoing(diagnostics.outgoing(wrapped))
                 }
             }
-            .configureGson {
-                // configureGson replaces the base callback; retain LSP4IJ's compatibility
-                // adapters.
-                JSONUtils.configureCompatibilityAdapters(it)
-                it.registerTypeAdapterFactory(ConfigurationJson)
-                it.registerTypeAdapterFactory(DiagnosticReportJson)
-            }
+        }.configureGson {
+            // configureGson replaces the base callback; retain LSP4IJ's compatibility
+            // adapters.
+            JSONUtils.configureCompatibilityAdapters(it)
+            it.registerTypeAdapterFactory(ConfigurationJson)
+            it.registerTypeAdapterFactory(DiagnosticReportJson)
+        }
 }

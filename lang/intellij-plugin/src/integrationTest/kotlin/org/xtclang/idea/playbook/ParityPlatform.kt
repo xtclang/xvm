@@ -93,13 +93,13 @@ internal fun ParityScenarios.platformCases() {
                         ?.asInt == data["indent"].asInt
                 }
             }
+
             fun formatted() =
                 query(
-                        "textDocument/formatting",
-                        document,
-                        extra = mapOf("options" to mapOf("tabSize" to 4, "insertSpaces" to true)),
-                    )
-                    .rows()
+                    "textDocument/formatting",
+                    document,
+                    extra = mapOf("options" to mapOf("tabSize" to 4, "insertSpaces" to true)),
+                ).rows()
             check(formatted().any { it.string("newText") == data.string("expectedIndent") })
             with(driver) {
                 withContext(OnDispatcher.EDT) {
@@ -110,7 +110,7 @@ internal fun ParityScenarios.platformCases() {
             val status =
                 protocol.query("xtc/languageServiceStatus", emptyMap<String, Any>()).asJsonObject
             check(
-                !status["saveHookSupported"].asBoolean && !status["serverSaveFormatting"].asBoolean
+                !status["saveHookSupported"].asBoolean && !status["serverSaveFormatting"].asBoolean,
             )
             check(protocol.server().getCurrentProcessId() == previousPid)
             check(document.text == data.string("source"))
@@ -179,26 +179,31 @@ internal fun ParityScenarios.platformCases() {
                     uri(data.string("otherFile")),
                     emptyList(),
                 ),
-            )
+            ),
         )
         val other = open(data.string("otherFile"))
         val document = open(data.string("file"))
-        fun change(target: ParityWorkspace.Document, version: Int, text: String) =
-            mapOf(
-                "textDocument" to mapOf("uri" to target.uri, "version" to version),
-                "edits" to
-                    listOf(
-                        mapOf(
-                            "range" to
-                                mapOf(
-                                    "start" to ParityWorkspace.position(target.text, 0),
-                                    "end" to
-                                        ParityWorkspace.position(target.text, target.text.length),
-                                ),
-                            "newText" to text,
-                        )
+
+        fun change(
+            target: ParityWorkspace.Document,
+            version: Int,
+            text: String,
+        ) = mapOf(
+            "textDocument" to mapOf("uri" to target.uri, "version" to version),
+            "edits" to
+                listOf(
+                    mapOf(
+                        "range" to
+                            mapOf(
+                                "start" to ParityWorkspace.position(target.text, 0),
+                                "end" to
+                                    ParityWorkspace.position(target.text, target.text.length),
+                            ),
+                        "newText" to text,
                     ),
-            )
+                ),
+        )
+
         fun apply(changes: List<Map<String, Any>>): JsonObject {
             val pending =
                 with(driver) {
@@ -210,7 +215,7 @@ internal fun ParityScenarios.platformCases() {
                                     mapOf(
                                         "label" to "Ecstasy guarded edit",
                                         "edit" to mapOf("documentChanges" to changes),
-                                    )
+                                    ),
                                 ),
                         )
                 }
@@ -218,7 +223,7 @@ internal fun ParityScenarios.platformCases() {
         }
         check(
             apply(listOf(change(document, version(document), data.string("changed"))))["applied"]
-                .asBoolean
+                .asBoolean,
         )
         check(document.text == data.string("changed"))
         with(driver) {
@@ -232,12 +237,12 @@ internal fun ParityScenarios.platformCases() {
         replace(other, data.string("otherChanged"))
         check(
             !apply(
-                    listOf(
-                        change(document, version(document), data.string("changed")),
-                        change(other, oldVersion, data.string("otherSource")),
-                    )
-                )["applied"]
-                .asBoolean
+                listOf(
+                    change(document, version(document), data.string("changed")),
+                    change(other, oldVersion, data.string("otherSource")),
+                ),
+            )["applied"]
+                .asBoolean,
         )
         check(document.text == data.string("source"))
         check(other.text == data.string("otherChanged"))
@@ -259,8 +264,8 @@ internal fun ParityScenarios.platformCases() {
                     data.string("module"),
                     uri(data.string("file")),
                     emptyList(),
-                )
-            )
+                ),
+            ),
         )
         val document = open(data.string("file"))
         clean(document)
@@ -280,15 +285,14 @@ internal fun ParityScenarios.platformCases() {
                             "query" to data.string("prefix"),
                             "partialResultToken" to data.string("token"),
                         ),
-                    )
-                    .rows()
+                    ).rows()
             val batches = capture.values().map { JsonParser.parseString(it).asJsonArray }
             check(final.isEmpty())
             check(normal.size == data["declarations"].asInt)
             check(batches.size > 1 && batches.all { it.size() <= data["batchSize"].asInt })
             check(
                 batches.flatMap { it.map { row -> row.asJsonObject.string("name") } } ==
-                    normal.map { it.string("name") }
+                    normal.map { it.string("name") },
             )
         } finally {
             capture.dispose()
@@ -303,8 +307,8 @@ internal fun ParityScenarios.platformCases() {
                     data.string("module"),
                     uri(data.string("file")),
                     emptyList(),
-                )
-            )
+                ),
+            ),
         )
         val document = open(data.string("file"))
         clean(document)
@@ -315,29 +319,28 @@ internal fun ParityScenarios.platformCases() {
         check(
             query("textDocument/hover", document, offset)
                 .toString()
-                .contains(data.string("expected"))
+                .contains(data.string("expected")),
         )
         val definitions = query("textDocument/definition", document, offset).rows()
         check(
             definitions.any {
                 it["range"].asJsonObject["start"].asJsonObject["character"].asInt ==
                     document.text.indexOf(data.string("name"))
-            }
+            },
         )
         check(
             query(
-                    "textDocument/references",
-                    document,
-                    offset,
-                    mapOf("context" to mapOf("includeDeclaration" to true)),
-                )
-                .rows()
-                .size == data["references"].asInt
+                "textDocument/references",
+                document,
+                offset,
+                mapOf("context" to mapOf("includeDeclaration" to true)),
+            ).rows()
+                .size == data["references"].asInt,
         )
         applyRename(document, offset, data.string("newName"))
         check(
             document.text ==
-                data.string("source").replace(data.string("name"), data.string("newName"))
+                data.string("source").replace(data.string("name"), data.string("newName")),
         ) {
             "Initializer rename result: ${Gson().toJson(document.text)}"
         }
@@ -359,13 +362,13 @@ internal fun ParityScenarios.platformCases() {
         check(
             query("textDocument/hover", document, offset)
                 .toString()
-                .contains(data.string("expected"))
+                .contains(data.string("expected")),
         )
         val prepared =
             query("textDocument/prepareRename", document, offset).asJsonObject["range"].asJsonObject
         check(prepared["start"].asJsonObject["character"].asInt == offset)
         check(
-            prepared["end"].asJsonObject["character"].asInt == offset + data.string("anchor").length
+            prepared["end"].asJsonObject["character"].asInt == offset + data.string("anchor").length,
         )
     }
     case("X141") { data ->
@@ -429,8 +432,8 @@ internal fun ParityScenarios.platformCases() {
                         uri(data.string("file")),
                         emptyList(),
                         roots,
-                    )
-                )
+                    ),
+                ),
             )
             with(driver) {
                 withContext(OnDispatcher.EDT) {
@@ -456,8 +459,8 @@ internal fun ParityScenarios.platformCases() {
                         uri(data.string("file")),
                         emptyList(),
                         listOf(replacement.toUri().toString()),
-                    )
-                )
+                    ),
+                ),
             )
             errors(document)
             Files.createDirectories(replacement)
@@ -489,7 +492,13 @@ internal fun ParityScenarios.platformCases() {
             replace(document, marked.replace("§", ""))
             val help =
                 query("textDocument/signatureHelp", document, marked.indexOf('§')).asJsonObject
-            check(help["signatures"].rows().single()["parameters"].asJsonArray.size() == 2)
+            check(
+                help["signatures"]
+                    .rows()
+                    .single()["parameters"]
+                    .asJsonArray
+                    .size() == 2,
+            )
             check(help.int("activeParameter") == call.int("active"))
             with(driver) {
                 signature(document.editor, marked.indexOf('§')) {
@@ -511,7 +520,7 @@ internal fun ParityScenarios.platformCases() {
         check(
             targets(document, "typeDefinition", document.at(data.string("narrowedAnchor"))).any {
                 it.string("uri").endsWith(data.string("targetSuffix"))
-            }
+            },
         )
     }
     case("X126") { data ->
@@ -525,11 +534,10 @@ internal fun ParityScenarios.platformCases() {
         if (deltaSupported) {
             val delta =
                 query(
-                        "textDocument/semanticTokens/full/delta",
-                        document,
-                        extra = mapOf("previousResultId" to full.string("resultId")),
-                    )
-                    .asJsonObject
+                    "textDocument/semanticTokens/full/delta",
+                    document,
+                    extra = mapOf("previousResultId" to full.string("resultId")),
+                ).asJsonObject
             val patched = full["data"].asJsonArray.map { it.asInt }.toMutableList()
             delta["edits"]
                 .rows()
@@ -544,76 +552,73 @@ internal fun ParityScenarios.platformCases() {
                     query("textDocument/semanticTokens/full", document)
                         .asJsonObject["data"]
                         .asJsonArray
-                        .map { it.asInt }
+                        .map { it.asInt },
             )
         } else {
             check(
                 runCatching {
-                        query(
-                            "textDocument/semanticTokens/full/delta",
-                            document,
-                            extra = mapOf("previousResultId" to full.string("resultId")),
-                        )
-                    }
-                    .exceptionOrNull()
+                    query(
+                        "textDocument/semanticTokens/full/delta",
+                        document,
+                        extra = mapOf("previousResultId" to full.string("resultId")),
+                    )
+                }.exceptionOrNull()
                     ?.message
-                    ?.contains("not negotiated") == true
+                    ?.contains("not negotiated") == true,
             )
         }
         if (caps["range"]?.let { it.isJsonObject || it.asBoolean } == true) {
             check(
                 query(
-                        "textDocument/semanticTokens/range",
-                        document,
-                        extra =
-                            mapOf(
-                                "range" to
-                                    mapOf(
-                                        "start" to mapOf("line" to 0, "character" to 0),
-                                        "end" to mapOf("line" to 1, "character" to 0),
-                                    )
-                            ),
-                    )
-                    .asJsonObject["data"]
-                    .asJsonArray
-                    .isEmpty
-            )
-        }
-        discard(document)
-        val reopened = open(data.string("file"))
-        if (deltaSupported)
-            check(
-                query(
-                        "textDocument/semanticTokens/full/delta",
-                        reopened,
-                        extra = mapOf("previousResultId" to full.string("resultId")),
-                    )
-                    .asJsonObject
-                    .has("data")
-            )
-    }
-    case("X127") { data ->
-        write(data.string("file"), data.string("source"))
-        configure(
-            listOf(SharedScenarios.SourceModule("Resolve", uri(data.string("file")), emptyList()))
-        )
-        val document = open(data.string("file"), data.string("source"))
-        val action =
-            query(
-                    "textDocument/codeAction",
+                    "textDocument/semanticTokens/range",
                     document,
                     extra =
                         mapOf(
                             "range" to
                                 mapOf(
                                     "start" to mapOf("line" to 0, "character" to 0),
-                                    "end" to
-                                        mapOf("line" to 0, "character" to document.text.length),
+                                    "end" to mapOf("line" to 1, "character" to 0),
                                 ),
-                            "context" to mapOf("diagnostics" to emptyList<Any>()),
                         ),
-                )
-                .rows()
+                ).asJsonObject["data"]
+                    .asJsonArray
+                    .isEmpty,
+            )
+        }
+        discard(document)
+        val reopened = open(data.string("file"))
+        if (deltaSupported) {
+            check(
+                query(
+                    "textDocument/semanticTokens/full/delta",
+                    reopened,
+                    extra = mapOf("previousResultId" to full.string("resultId")),
+                ).asJsonObject
+                    .has("data"),
+            )
+        }
+    }
+    case("X127") { data ->
+        write(data.string("file"), data.string("source"))
+        configure(
+            listOf(SharedScenarios.SourceModule("Resolve", uri(data.string("file")), emptyList())),
+        )
+        val document = open(data.string("file"), data.string("source"))
+        val action =
+            query(
+                "textDocument/codeAction",
+                document,
+                extra =
+                    mapOf(
+                        "range" to
+                            mapOf(
+                                "start" to mapOf("line" to 0, "character" to 0),
+                                "end" to
+                                    mapOf("line" to 0, "character" to document.text.length),
+                            ),
+                        "context" to mapOf("diagnostics" to emptyList<Any>()),
+                    ),
+            ).rows()
                 .single()
         val capability = protocol.capabilities().asJsonObject["codeActionProvider"]
         if (
@@ -628,9 +633,11 @@ internal fun ParityScenarios.platformCases() {
                 runCatching { protocol.query("codeAction/resolve", action) }
                     .exceptionOrNull()
                     ?.message
-                    ?.contains("expired or changed") == true
+                    ?.contains("expired or changed") == true,
             )
-        } else check(action.has("edit"))
+        } else {
+            check(action.has("edit"))
+        }
     }
     case("X128") { data ->
         data["variants"].rows().forEach { variant ->
@@ -638,8 +645,8 @@ internal fun ParityScenarios.platformCases() {
             write(variant.string("member"), variant.string("memberSource"))
             configure(
                 listOf(
-                    SharedScenarios.SourceModule("App", uri(variant.string("root")), emptyList())
-                )
+                    SharedScenarios.SourceModule("App", uri(variant.string("root")), emptyList()),
+                ),
             )
             val document = open(variant.string("root"))
             clean(document)
@@ -666,32 +673,35 @@ internal fun ParityScenarios.platformCases() {
         val root = with(driver) { Path.of(singleProject().getBasePath()) }
         val report = root.resolve(".gradle/xtc/lsp-model.json")
         val model =
-            JsonParser.parseString(
+            JsonParser
+                .parseString(
                     data["model"]
                         .toString()
-                        .replace("\${workspace}", directory.toUri().toString().trimEnd('/'))
-                )
-                .asJsonObject
+                        .replace("\${workspace}", directory.toUri().toString().trimEnd('/')),
+                ).asJsonObject
         val inputs = model["sourceSets"].asJsonArray[0].asJsonObject
         val resources = inputs["resourceRoots"].deepCopy()
+
         fun refresh() =
             with(driver) {
                 withContext(OnDispatcher.EDT) {
                     utility(CompilerSettingsPage::class).refreshBuildModel(singleProject())
                 }
             }
+
         fun writeModel() {
             Files.createDirectories(report.parent)
             Files.writeString(report, model.toString())
             refresh()
         }
+
         fun automatic() =
             with(driver) {
                 withContext(OnDispatcher.EDT) {
                     check(
                         utility(CompilerSettingsPage::class)
                             .useBuildModel(singleProject())
-                            .contains("Gradle model")
+                            .contains("Gradle model"),
                     )
                 }
             }
@@ -723,8 +733,8 @@ internal fun ParityScenarios.platformCases() {
                         document.uri,
                         emptyList(),
                         emptyList(),
-                    )
-                )
+                    ),
+                ),
             )
             errors(document)
             writeModel()
@@ -767,6 +777,7 @@ internal fun ParityScenarios.platformCases() {
                 withContext(OnDispatcher.EDT) {
                     cast(dialog.button("Refactor").component, NativeButton::class).doClick()
                 }
+
                 fun moved(expected: Boolean) =
                     data.strings("sources").all {
                         Files.exists(target.resolve(it)) == expected &&
@@ -786,14 +797,14 @@ internal fun ParityScenarios.platformCases() {
                     invokeGlobalBackendAction(action, project = singleProject(), now = false)
                     awaitUi("one $action restores all container paths", 45.seconds) {
                         val confirm = ui.dialog(title = if (expected) "Redo" else "Undo")
-                        if (confirm.present())
+                        if (confirm.present()) {
                             withContext(OnDispatcher.EDT) {
                                 cast(
-                                        confirm.button(if (expected) "Redo" else "Undo").component,
-                                        NativeButton::class,
-                                    )
-                                    .doClick()
+                                    confirm.button(if (expected) "Redo" else "Undo").component,
+                                    NativeButton::class,
+                                ).doClick()
                             }
+                        }
                         moved(expected)
                     }
                     clean(document)
@@ -802,9 +813,11 @@ internal fun ParityScenarios.platformCases() {
             data["files"].rows().forEach { file ->
                 val original = file.string("file")
                 val moved =
-                    if (data.strings("sources").any { original.startsWith("$it/") })
+                    if (data.strings("sources").any { original.startsWith("$it/") }) {
                         "${data.string("destination")}/$original"
-                    else original
+                    } else {
+                        original
+                    }
                 check(Files.readString(directory.resolve(moved)) == file.string("text"))
             }
         } finally {
@@ -820,8 +833,8 @@ internal fun ParityScenarios.platformCases() {
                     data.string("module"),
                     uri(data.string("file")),
                     emptyList(),
-                )
-            )
+                ),
+            ),
         )
         val document = open(data.string("file"))
         clean(document)
@@ -832,23 +845,25 @@ internal fun ParityScenarios.platformCases() {
         check(resolvedLens["command"].asJsonObject["arguments"].asJsonArray.size() == 2)
         val link = query("textDocument/documentLink", document).rows().single()
         val resolvedLink =
-            if (link.has("data")) protocol.query("documentLink/resolve", link).asJsonObject
-            else link
+            if (link.has("data")) {
+                protocol.query("documentLink/resolve", link).asJsonObject
+            } else {
+                link
+            }
         check(resolvedLink.string("target") == data.string("link"))
         val hints =
             query(
-                    "textDocument/inlayHint",
-                    document,
-                    extra =
-                        mapOf(
-                            "range" to
-                                mapOf(
-                                    "start" to mapOf("line" to 0, "character" to 0),
-                                    "end" to mapOf("line" to 6, "character" to 0),
-                                )
-                        ),
-                )
-                .rows()
+                "textDocument/inlayHint",
+                document,
+                extra =
+                    mapOf(
+                        "range" to
+                            mapOf(
+                                "start" to mapOf("line" to 0, "character" to 0),
+                                "end" to mapOf("line" to 6, "character" to 0),
+                            ),
+                    ),
+            ).rows()
         val hint = hints.first { it.has("data") || it.has("tooltip") }
         val resolvedHint =
             if (hint.has("data")) protocol.query("inlayHint/resolve", hint).asJsonObject else hint
@@ -859,23 +874,25 @@ internal fun ParityScenarios.platformCases() {
                 .rows()
                 .first()
         val resolvedSymbol =
-            if (symbol.has("data")) protocol.query("workspaceSymbol/resolve", symbol).asJsonObject
-            else symbol
+            if (symbol.has("data")) {
+                protocol.query("workspaceSymbol/resolve", symbol).asJsonObject
+            } else {
+                symbol
+            }
         check(resolvedSymbol["location"].asJsonObject.has("range"))
         replace(document, "\n" + data.string("source"))
         listOf(
-                "codeLens/resolve" to lens,
-                "documentLink/resolve" to link,
-                "inlayHint/resolve" to hint,
-                "workspaceSymbol/resolve" to symbol,
-            )
-            .filter { it.second.has("data") }
+            "codeLens/resolve" to lens,
+            "documentLink/resolve" to link,
+            "inlayHint/resolve" to hint,
+            "workspaceSymbol/resolve" to symbol,
+        ).filter { it.second.has("data") }
             .forEach { (method, item) ->
                 check(
                     runCatching { protocol.query(method, item) }
                         .exceptionOrNull()
                         ?.message
-                        ?.contains("expired or changed") == true
+                        ?.contains("expired or changed") == true,
                 )
             }
     }
@@ -887,35 +904,36 @@ internal fun ParityScenarios.platformCases() {
                     data.string("module"),
                     uri(data.string("file")),
                     emptyList(),
-                )
-            )
+                ),
+            ),
         )
         val document = open(data.string("file"))
         clean(document)
         val edits =
             query(
-                    "textDocument/rangesFormatting",
-                    document,
-                    extra =
-                        mapOf(
-                            "options" to mapOf("tabSize" to 4, "insertSpaces" to true),
-                            "ranges" to data["ranges"],
-                        ),
-                )
-                .rows()
+                "textDocument/rangesFormatting",
+                document,
+                extra =
+                    mapOf(
+                        "options" to mapOf("tabSize" to 4, "insertSpaces" to true),
+                        "ranges" to data["ranges"],
+                    ),
+            ).rows()
         check(
             edits.map { it["range"].asJsonObject["start"].asJsonObject["line"].asInt } ==
-                data["lines"].asJsonArray.map { it.asInt }
+                data["lines"].asJsonArray.map { it.asInt },
         )
         check(edits.all { it.string("newText") == data.string("indent") })
         val sync = protocol.capabilities().asJsonObject["textDocumentSync"]
         if (sync.isJsonObject) {
             val save =
                 mapOf("textDocument" to mapOf("uri" to uri(data.string("file"))), "reason" to 1)
-            if (sync.asJsonObject["willSave"]?.asBoolean == true)
+            if (sync.asJsonObject["willSave"]?.asBoolean == true) {
                 protocol.notify("textDocument/willSave", save)
-            if (sync.asJsonObject["willSaveWaitUntil"]?.asBoolean == true)
+            }
+            if (sync.asJsonObject["willSaveWaitUntil"]?.asBoolean == true) {
                 check(protocol.query("textDocument/willSaveWaitUntil", save).rows().isEmpty())
+            }
         }
         check(document.text == data.string("source"))
     }
@@ -927,20 +945,21 @@ internal fun ParityScenarios.platformCases() {
                     data.string("module"),
                     uri(data.string("file")),
                     emptyList(),
-                )
-            )
+                ),
+            ),
         )
         val document = open(data.string("file"))
         clean(document)
+
         fun linked(anchor: String) =
             query("textDocument/linkedEditingRange", document, document.text.indexOf(anchor))
                 .asJsonObject
-        fun ranges(anchor: String) =
-            linked(anchor)["ranges"]?.takeUnless { it.isJsonNull }?.asJsonArray
+
+        fun ranges(anchor: String) = linked(anchor)["ranges"]?.takeUnless { it.isJsonNull }?.asJsonArray
         check(
             ranges(data.string("anchor"))!!.map {
                 it.asJsonObject["start"].asJsonObject["character"].asInt
-            } == data.strings("uses").map { data.string("source").indexOf(it) }
+            } == data.strings("uses").map { data.string("source").indexOf(it) },
         )
         data.strings("refused").forEach { check(ranges(it)?.size() in listOf(null, 0)) }
         replace(document, data.string("broken"))
@@ -968,7 +987,7 @@ internal fun ParityScenarios.platformCases() {
                         uri(data.string("file")),
                         listOf(data.string("libraryModule")),
                     ),
-                )
+                ),
             )
             val document = open(data.string("file"))
             clean(document)
@@ -991,7 +1010,10 @@ internal fun ParityScenarios.platformCases() {
 
 @Remote("org.xtclang.idea.playbook.probe.PartialResults", plugin = "org.xtclang.playbook.probe")
 interface PartialResults {
-    fun listen(project: Project, token: String): PartialResults
+    fun listen(
+        project: Project,
+        token: String,
+    ): PartialResults
 
     fun values(): List<String>
 
@@ -1000,16 +1022,29 @@ interface PartialResults {
 
 @Remote("org.xtclang.idea.playbook.probe.WorkspaceEdits", plugin = "org.xtclang.playbook.probe")
 interface WorkspaceEdits {
-    fun apply(project: Project, json: String): ClientFuture
+    fun apply(
+        project: Project,
+        json: String,
+    ): ClientFuture
 }
 
 @Remote("org.xtclang.idea.playbook.probe.FileTreeOperations", plugin = "org.xtclang.playbook.probe")
 interface FileTreeOperations {
-    fun globalHistoryAvailable(project: Project, redo: Boolean): Boolean
+    fun globalHistoryAvailable(
+        project: Project,
+        redo: Boolean,
+    ): Boolean
 
-    fun move(project: Project, paths: List<String>, destination: String)
+    fun move(
+        project: Project,
+        paths: List<String>,
+        destination: String,
+    )
 
-    fun rename(project: Project, path: String)
+    fun rename(
+        project: Project,
+        path: String,
+    )
 
     fun loadDirectory(path: String)
 }

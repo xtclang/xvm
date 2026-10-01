@@ -16,8 +16,8 @@ import com.redhat.devtools.lsp4ij.dap.definitions.DebugAdapterServerDefinition
 import com.redhat.devtools.lsp4ij.dap.descriptors.DebugAdapterDescriptor
 import com.redhat.devtools.lsp4ij.dap.descriptors.DebugAdapterDescriptorFactory
 import com.redhat.devtools.lsp4ij.dap.descriptors.ServerReadyConfig
-import java.io.File
 import org.xtclang.idea.PluginPaths
+import java.io.File
 
 /**
  * Factory for creating Ecstasy Debug Adapter (DAP) descriptors.
@@ -78,10 +78,9 @@ class XtcDebugAdapterDescriptor(
     override fun startServer(): ProcessHandler {
         val javaPath =
             File(
-                    System.getProperty("java.home"),
-                    "bin/java" + if (SystemInfo.isWindows) ".exe" else "",
-                )
-                .absolutePath
+                System.getProperty("java.home"),
+                "bin/java" + if (SystemInfo.isWindows) ".exe" else "",
+            ).absolutePath
 
         val serverJar = findDapServerJar()
         val logLevel =
@@ -116,11 +115,9 @@ class XtcDebugAdapterDescriptor(
 
     override fun getDebugMode(): DebugMode = DebugMode.LAUNCH
 
-    override fun getServerReadyConfig(debugMode: DebugMode): ServerReadyConfig =
-        ServerReadyConfig("Ecstasy Debug Adapter")
+    override fun getServerReadyConfig(debugMode: DebugMode): ServerReadyConfig = ServerReadyConfig("Ecstasy Debug Adapter")
 
-    override fun getFileType(): FileType? =
-        FileTypeManager.getInstance().getFileTypeByExtension("x")
+    override fun getFileType(): FileType? = FileTypeManager.getInstance().getFileTypeByExtension("x")
 
     override fun isDebuggableFile(
         file: VirtualFile,

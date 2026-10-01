@@ -1,7 +1,5 @@
 package org.xvm.lsp.server
 
-import java.nio.file.Path
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.eclipse.lsp4j.ClientCapabilities
@@ -35,6 +33,8 @@ import org.junit.jupiter.api.io.TempDir
 import org.mockito.Mockito.mock
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import java.nio.file.Path
+import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkResolveProtocolTest {
     @TempDir lateinit var directory: Path
@@ -55,9 +55,8 @@ class XdkResolveProtocolTest {
                         CompletionParams(
                             TextDocumentIdentifier(uri),
                             Position(0, source.lastIndexOf("re;") + 2),
-                        )
-                    )
-                    .get(30, SECONDS)
+                        ),
+                    ).get(30, SECONDS)
                     .left
                     .single { it.label == "read" }
             assertThat(item.documentation).isNull()
@@ -86,23 +85,30 @@ class XdkResolveProtocolTest {
                             TextDocumentIdentifier(uri),
                             Range(Position(0, 0), Position(0, source.length)),
                             CodeActionContext(emptyList()),
-                        )
-                    )
-                    .get(30, SECONDS)
+                        ),
+                    ).get(30, SECONDS)
                     .single()
                     .right
             assertThat(action.edit).isNull()
             assertThat(action.data).isNotNull()
             val resolved = service.resolveCodeAction(action).get(10, SECONDS)
-            assertThat(resolved.edit.documentChanges.single().left.textDocument.version)
-                .isEqualTo(7)
-            assertThat(resolved.edit.documentChanges.single().left.edits.single().left.newText)
-                .isEmpty()
+            assertThat(
+                resolved.edit.documentChanges
+                    .single()
+                    .left.textDocument.version,
+            ).isEqualTo(7)
+            assertThat(
+                resolved.edit.documentChanges
+                    .single()
+                    .left.edits
+                    .single()
+                    .left.newText,
+            ).isEmpty()
             service.didChange(
                 DidChangeTextDocumentParams(
                     VersionedTextDocumentIdentifier(uri, 8),
                     listOf(TextDocumentContentChangeEvent("\n$source")),
-                )
+                ),
             )
             assertThatThrownBy { service.resolveCodeAction(action).get(10, SECONDS) }
                 .hasMessageContaining("expired or changed")
@@ -122,9 +128,8 @@ class XdkResolveProtocolTest {
                             TextDocumentIdentifier(uri),
                             Range(Position(0, 0), Position(0, source.length)),
                             CodeActionContext(emptyList()),
-                        )
-                    )
-                    .get(30, SECONDS)
+                        ),
+                    ).get(30, SECONDS)
                     .single()
                     .right
             assertThat(action.edit).isNotNull()
@@ -134,7 +139,11 @@ class XdkResolveProtocolTest {
         }
     }
 
-    private fun session(resolve: Boolean, source: String, body: (XtcLanguageServer) -> Unit) {
+    private fun session(
+        resolve: Boolean,
+        source: String,
+        body: (XtcLanguageServer) -> Unit,
+    ) {
         CompilerTestSupport.configure()
         directory = directory.toRealPath()
         directory.resolve("Resolve.x").toFile().writeText(source)
@@ -161,30 +170,30 @@ class XdkResolveProtocolTest {
                                                 CompletionCapabilities().apply {
                                                     completionItem =
                                                         CompletionItemCapabilities().apply {
-                                                            if (resolve)
+                                                            if (resolve) {
                                                                 resolveSupport =
                                                                     CompletionItemResolveSupportCapabilities(
-                                                                        listOf("documentation")
+                                                                        listOf("documentation"),
                                                                     )
+                                                            }
                                                         }
                                                 }
                                             codeAction =
                                                 CodeActionCapabilities().apply {
                                                     codeActionLiteralSupport =
                                                         CodeActionLiteralSupportCapabilities(
-                                                            CodeActionKindCapabilities(listOf(""))
+                                                            CodeActionKindCapabilities(listOf("")),
                                                         )
                                                     dataSupport = resolve
                                                     resolveSupport =
                                                         CodeActionResolveSupportCapabilities(
-                                                            listOf("edit")
+                                                            listOf("edit"),
                                                         )
                                                 }
                                         }
                                 }
-                        }
-                    )
-                    .get(30, SECONDS)
+                        },
+                    ).get(30, SECONDS)
                     .capabilities
             assertThat(capabilities.completionProvider.resolveProvider).isEqualTo(resolve)
             assertThat(capabilities.codeActionProvider.isRight).isEqualTo(resolve)
