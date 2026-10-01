@@ -1,6 +1,5 @@
 package org.xtclang.idea.lsp
 
-import java.util.concurrent.atomic.AtomicReference
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DocumentDiagnosticParams
@@ -16,19 +15,22 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseError
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 import org.junit.jupiter.api.Test
+import java.util.concurrent.atomic.AtomicReference
 
 class DiagnosticResultMessagesTest {
     @Test
     fun `close or cancellation during reply snapshot lookup cannot reinsert a retired result`() {
         listOf(false, true).forEach { cancel ->
             val duringSnapshot = AtomicReference<(() -> Unit)?>(null)
-            val guard = DiagnosticResultMessages {
-                duringSnapshot.getAndSet(null)?.invoke()
-                initial
-            }
+            val guard =
+                DiagnosticResultMessages {
+                    duringSnapshot.getAndSet(null)?.invoke()
+                    initial
+                }
             val sent = mutableListOf<Message>()
             val outgoing = guard.outgoing(MessageConsumer { sent.add(it) })
             val incoming = guard.incoming(MessageConsumer {})
+
             fun request(id: String) =
                 RequestMessage().apply {
                     this.id = id
@@ -41,9 +43,12 @@ class DiagnosticResultMessagesTest {
                     NotificationMessage().apply {
                         method = if (cancel) "$/cancelRequest" else "textDocument/didClose"
                         params =
-                            if (cancel) CancelParams().apply { id = "pending" }
-                            else DidCloseTextDocumentParams(TextDocumentIdentifier(uri))
-                    }
+                            if (cancel) {
+                                CancelParams().apply { id = "pending" }
+                            } else {
+                                DidCloseTextDocumentParams(TextDocumentIdentifier(uri))
+                            }
+                    },
                 )
             }
             incoming.consume(
@@ -53,16 +58,15 @@ class DiagnosticResultMessagesTest {
                         DocumentDiagnosticReport(
                             RelatedFullDocumentDiagnosticReport(emptyList()).apply {
                                 resultId = "retired"
-                            }
+                            },
                         )
-                }
+                },
             )
             outgoing.consume(request("next"))
             assertThat(
-                    ((sent.last() as RequestMessage).params as DocumentDiagnosticParams)
-                        .previousResultId
-                )
-                .isNull()
+                ((sent.last() as RequestMessage).params as DocumentDiagnosticParams)
+                    .previousResultId,
+            ).isNull()
         }
     }
 
@@ -114,7 +118,7 @@ class DiagnosticResultMessagesTest {
             NotificationMessage().apply {
                 method = "textDocument/didClose"
                 params = DidCloseTextDocumentParams(TextDocumentIdentifier(uri))
-            }
+            },
         )
         buffers[uri] = initial.copy(owner = Any())
         reply("late", "obsolete")
@@ -128,7 +132,7 @@ class DiagnosticResultMessagesTest {
             NotificationMessage().apply {
                 method = "$/cancelRequest"
                 params = CancelParams().apply { id = "cancelled" }
-            }
+            },
         )
         reply("cancelled", "ignored")
         assertThat(request("failed").previousResultId).isNull()
@@ -136,7 +140,7 @@ class DiagnosticResultMessagesTest {
             ResponseMessage().apply {
                 id = "failed"
                 error = ResponseError(ResponseErrorCode.ContentModified, "changed", null)
-            }
+            },
         )
         assertThat(request("next").previousResultId).isNull()
     }
@@ -184,19 +188,22 @@ class DiagnosticResultMessagesTest {
                         previousResultId = previous
                         this.identifier = identifier
                     }
-            }
+            },
         )
         return (sent.last() as RequestMessage).params as DocumentDiagnosticParams
     }
 
-    private fun reply(id: String, resultId: String): ResponseMessage =
+    private fun reply(
+        id: String,
+        resultId: String,
+    ): ResponseMessage =
         ResponseMessage().apply {
             this.id = id
             result =
                 DocumentDiagnosticReport(
                     RelatedFullDocumentDiagnosticReport(emptyList()).apply {
                         this.resultId = resultId
-                    }
+                    },
                 )
             incoming.consume(this)
         }

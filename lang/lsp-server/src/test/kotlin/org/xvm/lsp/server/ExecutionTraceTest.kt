@@ -5,11 +5,6 @@ import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.AppenderBase
 import com.google.gson.JsonObject
 import com.google.gson.JsonParser
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
@@ -19,6 +14,11 @@ import org.junit.jupiter.api.Test
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.xdk.CompilerQueueTrace
 import org.xvm.lsp.util.ExecutionTrace
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit.SECONDS
 
 class ExecutionTraceTest {
     @Test
@@ -73,12 +73,11 @@ class ExecutionTraceTest {
             assertThat(final["debouncingSize"].asInt).isZero()
             assertThat(final["startedTotal"].asInt).isEqualTo(2)
             assertThat(
-                    trace.entries
-                        .filter { it["event"].asString == "end" }
-                        .first()["outcome"]
-                        .asString
-                )
-                .isEqualTo("cancelled")
+                trace.entries
+                    .filter { it["event"].asString == "end" }
+                    .first()["outcome"]
+                    .asString,
+            ).isEqualTo("cancelled")
         }
     }
 
@@ -101,38 +100,34 @@ class ExecutionTraceTest {
                 try {
                     check(entered.await(10, SECONDS))
                     assertThat(
-                            trace.entries
-                                .filter { it["event"].asString == "start" }
-                                .map { it["activeApiThreads"].asInt }
-                        )
-                        .contains(2)
+                        trace.entries
+                            .filter { it["event"].asString == "start" }
+                            .map { it["activeApiThreads"].asInt },
+                    ).contains(2)
                 } finally {
                     release.countDown()
                 }
                 work.forEach { it.get(10, SECONDS) }
             }
             assertThat(
-                    trace.entries.filter {
-                        it["operation"].asString.startsWith("nested") &&
-                            it["event"].asString == "start"
-                    }
-                )
-                .allSatisfy { assertThat(it["depth"].asInt).isEqualTo(1) }
+                trace.entries.filter {
+                    it["operation"].asString.startsWith("nested") &&
+                        it["event"].asString == "start"
+                },
+            ).allSatisfy { assertThat(it["depth"].asInt).isEqualTo(1) }
             assertThatThrownBy {
-                    ExecutionTrace.api("exceptional") { error("source text must not be logged") }
-                }
-                .isInstanceOf(IllegalStateException::class.java)
+                ExecutionTrace.api("exceptional") { error("source text must not be logged") }
+            }.isInstanceOf(IllegalStateException::class.java)
             ExecutionTrace.api("after-failure") { Unit }
             assertThat(trace.entries.toString()).doesNotContain("source text must not be logged")
             assertThat(
-                    trace.entries
-                        .last {
-                            it["operation"].asString == "after-failure" &&
-                                it["event"].asString == "start"
-                        }["activeApiThreads"]
-                        .asInt
-                )
-                .isEqualTo(1)
+                trace.entries
+                    .last {
+                        it["operation"].asString == "after-failure" &&
+                            it["event"].asString == "start"
+                    }["activeApiThreads"]
+                    .asInt,
+            ).isEqualTo(1)
         }
     }
 
@@ -146,13 +141,13 @@ class ExecutionTraceTest {
                     RequestMessage().apply {
                         setId(7)
                         method = "textDocument/hover"
-                    }
+                    },
                 )
                 sent.consume(
                     RequestMessage().apply {
                         setId(7)
                         method = "workspace/configuration"
-                    }
+                    },
                 )
                 assertThat(trace.entries.map { it["event"].asString })
                     .containsExactly("start", "start")
@@ -160,13 +155,13 @@ class ExecutionTraceTest {
                     ResponseMessage().apply {
                         setId(7)
                         result = "hover"
-                    }
+                    },
                 )
                 received.consume(
                     ResponseMessage().apply {
                         setId(7)
                         result = emptyList<String>()
-                    }
+                    },
                 )
                 val replies = trace.entries.filter { it["event"].asString == "end" }
                 assertThat(replies.map { it["operation"].asString })
@@ -180,7 +175,7 @@ class ExecutionTraceTest {
                     RequestMessage().apply {
                         id = "pending"
                         method = "textDocument/completion"
-                    }
+                    },
                 )
             }
             assertThat(trace.entries.last()["outcome"].asString).isEqualTo("transport-closed")
@@ -192,11 +187,10 @@ class ExecutionTraceTest {
         private val logger = LoggerFactory.getLogger("org.xvm.lsp.trace") as Logger
         private val appender =
             object : AppenderBase<ILoggingEvent>() {
-                    override fun append(event: ILoggingEvent) {
-                        entries += JsonParser.parseString(event.formattedMessage).asJsonObject
-                    }
+                override fun append(event: ILoggingEvent) {
+                    entries += JsonParser.parseString(event.formattedMessage).asJsonObject
                 }
-                .apply { start() }
+            }.apply { start() }
 
         init {
             logger.addAppender(appender)

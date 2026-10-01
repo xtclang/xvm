@@ -30,9 +30,10 @@ internal fun memberSignature(
 ): String? {
     if (
         signature.paramCount != declaration.params.size ||
-            declaration.params.any { it.annotations.isNotEmpty() }
-    )
+        declaration.params.any { it.annotations.isNotEmpty() }
+    ) {
         return null
+    }
     val formals =
         declaration.params.take(declaration.typeParamCount).associate { parameter ->
             val name = parameter.name?.takeIf(XdkRename::identifier) ?: return null
@@ -43,12 +44,14 @@ internal fun memberSignature(
     val typeParameters =
         signature.params.take(declaration.typeParamCount).zip(formals.values).map { (type, name) ->
             val constraint = type.paramTypes.singleOrNull() ?: return null
-            if (constraint == constraint.constantPool.typeObject()) name
-            else "$name extends ${render(constraint) ?: return null}"
+            if (constraint == constraint.constantPool.typeObject()) {
+                name
+            } else {
+                "$name extends ${render(constraint) ?: return null}"
+            }
         }
     val parameters =
-        signature.params.zip(declaration.params).drop(declaration.typeParamCount).map {
-            (type, parameter) ->
+        signature.params.zip(declaration.params).drop(declaration.typeParamCount).map { (type, parameter) ->
             val name = parameter.name?.takeIf(XdkRename::identifier) ?: return null
             val rendered = render(type) ?: return null
             val default =
@@ -122,9 +125,10 @@ private fun TypeConstant.memberSourceType(
     return when (this) {
         is ParameterizedTypeConstant -> {
             val base = underlyingType.memberSourceType(owner, formals, modules) ?: return null
-            val arguments = paramTypes.map {
-                it.memberSourceType(owner, formals, modules) ?: return null
-            }
+            val arguments =
+                paramTypes.map {
+                    it.memberSourceType(owner, formals, modules) ?: return null
+                }
             arguments.joinToString(", ", "$base<", ">")
         }
 
@@ -153,17 +157,23 @@ private fun TypeConstant.memberSourceType(
 
                 is ClassConstant -> {
                     when {
-                        constantPool.getImplicitlyImportedIdentity(identity.name) == identity ->
+                        constantPool.getImplicitlyImportedIdentity(identity.name) == identity -> {
                             identity.name
+                        }
 
-                        identity.moduleConstant == owner.moduleConstant -> identity.pathString
+                        identity.moduleConstant == owner.moduleConstant -> {
+                            identity.pathString
+                        }
 
-                        XdkAutoImports.target(identity) != null ->
+                        XdkAutoImports.target(identity) != null -> {
                             modules[identity.moduleConstant.name]?.let {
                                 "$it.${identity.pathString}"
                             }
+                        }
 
-                        else -> null
+                        else -> {
+                            null
+                        }
                     }
                 }
 
@@ -182,11 +192,23 @@ private fun TypeConstant.memberSourceType(
 /** Inspect only type structures whose source spelling the renderer understands. */
 internal fun TypeConstant.memberClasses(): List<ClassConstant> =
     when (this) {
-        is ParameterizedTypeConstant ->
+        is ParameterizedTypeConstant -> {
             underlyingType.memberClasses() + paramTypes.flatMap { it.memberClasses() }
-        is RelationalTypeConstant ->
+        }
+
+        is RelationalTypeConstant -> {
             underlyingType.memberClasses() + underlyingType2.memberClasses()
-        is ImmutableTypeConstant -> underlyingType.memberClasses()
-        is TerminalTypeConstant -> listOfNotNull(definingConstant as? ClassConstant)
-        else -> emptyList()
+        }
+
+        is ImmutableTypeConstant -> {
+            underlyingType.memberClasses()
+        }
+
+        is TerminalTypeConstant -> {
+            listOfNotNull(definingConstant as? ClassConstant)
+        }
+
+        else -> {
+            emptyList()
+        }
     }

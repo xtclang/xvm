@@ -34,7 +34,7 @@ class XdkHeaderSlotsTest {
                 "<T extends Str§> void damaged(T value) {}",
                 "class Damaged<T extends Str§> {}",
                 "package damaged incorporates SharedMi§ {} mixin SharedMixin into Package {}",
-            ]
+            ],
     )
     fun `header slots retain exact edits and compile after acceptance`(declaration: String) {
         val marked = "module Headers { $declaration }"
@@ -61,35 +61,33 @@ class XdkHeaderSlotsTest {
             assertThat(item.textEdit)
                 .describedAs(declaration)
                 .isEqualTo(
-                    TextEdit(Range(Position(0, at - before), Position(0, at + after)), selected)
+                    TextEdit(Range(Position(0, at - before), Position(0, at + after)), selected),
                 )
             assertThat(adapter.getSignatureHelp(URI, 0, at)).isNull()
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
             assertThat(
-                    adapter
-                        .compile(URI, source.replaceRange(at - before, at + after, selected))
-                        .diagnostics
-                )
-                .describedAs(declaration)
+                adapter
+                    .compile(URI, source.replaceRange(at - before, at + after, selected))
+                    .diagnostics,
+            ).describedAs(declaration)
                 .isEmpty()
         }
     }
 
     @ParameterizedTest
     @ValueSource(
-        strings = ["<String> void damaged(Str§ value) {}", "class Damaged<String> extends Str§ {}"]
+        strings = ["<String> void damaged(Str§ value) {}", "class Damaged<String> extends Str§ {}"],
     )
     fun `unregistered formals shadow outer types and report their own bound`(declaration: String) {
         val marked = "module Headers { $declaration }"
         XdkAdapter().use { adapter ->
             adapter.compile(URI, marked.replace("§", ""))
             assertThat(
-                    adapter
-                        .getCompletions(URI, 0, marked.indexOf('§'))
-                        .single { it.label == "String" }
-                        .detail
-                )
-                .isEqualTo("type parameter String extends Object")
+                adapter
+                    .getCompletions(URI, 0, marked.indexOf('§'))
+                    .single { it.label == "String" }
+                    .detail,
+            ).isEqualTo("type parameter String extends Object")
         }
     }
 
@@ -99,11 +97,9 @@ class XdkHeaderSlotsTest {
             [
                 "module Headers incorporates SharedMi§ { class Hidden {} }",
                 "module Headers implements ecstasy.text.Str§ { class Hidden {} }",
-            ]
+            ],
     )
-    fun `module header queries preserve diagnostics and never expose an invented body scope`(
-        marked: String
-    ) {
+    fun `module header queries preserve diagnostics and never expose an invented body scope`(marked: String) {
         XdkAdapter().use { adapter ->
             val source = marked.replace("§", "")
             val cached = adapter.compile(URI, source)
@@ -123,17 +119,15 @@ class XdkHeaderSlotsTest {
                 assertThat(errors.errors.map { it.code })
                     .containsExactly(Parser.INCOMPLETE_EXPRESSION)
                 assertThat(
-                        completions.map {
-                            it.label
-                        }
-                    )
-                    .describedAs(
-                        "%s; sites=%s; bindings=%s",
-                        errors.errors,
-                        analysis.sites(),
-                        analysis.cursorBindings(),
-                    )
-                    .contains("String")
+                    completions.map {
+                        it.label
+                    },
+                ).describedAs(
+                    "%s; sites=%s; bindings=%s",
+                    errors.errors,
+                    analysis.sites(),
+                    analysis.cursorBindings(),
+                ).contains("String")
             }
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
         }
@@ -147,7 +141,7 @@ class XdkHeaderSlotsTest {
             val item = adapter.getCompletions(URI, 0, prefix.length).single { it.label == "Item" }
             assertThat(item.textEdit)
                 .isEqualTo(
-                    TextEdit(Range(Position(0, prefix.length), Position(0, prefix.length)), "Item")
+                    TextEdit(Range(Position(0, prefix.length), Position(0, prefix.length)), "Item"),
                 )
             assertThat(adapter.compile(URI, "${prefix}Item value) {} }").diagnostics).isEmpty()
         }

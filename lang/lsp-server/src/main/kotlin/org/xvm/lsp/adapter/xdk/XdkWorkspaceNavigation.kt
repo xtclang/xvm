@@ -20,8 +20,7 @@ internal class XdkWorkspaceNavigation(
     private val sourceUris =
         views.keys.mapNotNull { uri -> XdkSources.file(uri)?.let { it to uri } }.toMap()
 
-    private fun sourceUri(uri: String): String =
-        if (uri in views) uri else sourceUris[XdkSources.file(uri)] ?: uri
+    private fun sourceUri(uri: String): String = if (uri in views) uri else sourceUris[XdkSources.file(uri)] ?: uri
 
     fun symbols(query: String): List<SymbolInfo> =
         views
@@ -31,16 +30,15 @@ internal class XdkWorkspaceNavigation(
                         symbol.declarationSource == model.sourceName &&
                             symbol.declaration != null &&
                             symbol.kind in
-                                setOf(
-                                    SemanticModel.SymbolKind.TYPE,
-                                    SemanticModel.SymbolKind.METHOD,
-                                    SemanticModel.SymbolKind.PROPERTY,
-                                    SemanticModel.SymbolKind.MODULE,
-                                    SemanticModel.SymbolKind.PACKAGE,
-                                ) &&
+                            setOf(
+                                SemanticModel.SymbolKind.TYPE,
+                                SemanticModel.SymbolKind.METHOD,
+                                SemanticModel.SymbolKind.PROPERTY,
+                                SemanticModel.SymbolKind.MODULE,
+                                SemanticModel.SymbolKind.PACKAGE,
+                            ) &&
                             (query.isBlank() || symbol.name.contains(query, ignoreCase = true))
-                    }
-                    .map { symbol ->
+                    }.map { symbol ->
                         val range = requireNotNull(symbol.declaration)
                         SymbolInfo.of(
                             symbol.name,
@@ -60,8 +58,7 @@ internal class XdkWorkspaceNavigation(
                             ),
                         )
                     }
-            }
-            .distinctBy { it.location }
+            }.distinctBy { it.location }
             .sortedBy { it.name }
 
     /**
@@ -81,8 +78,7 @@ internal class XdkWorkspaceNavigation(
                     .filter {
                         it.symbol == target &&
                             (includeDeclaration || it.role != SemanticModel.Role.DECLARATION)
-                    }
-                    .map {
+                    }.map {
                         Location(
                             source,
                             it.range.start.line,
@@ -91,8 +87,7 @@ internal class XdkWorkspaceNavigation(
                             it.range.end.column,
                         )
                     }
-            }
-            .distinct()
+            }.distinct()
             .sortedWith(compareBy(Location::uri, Location::startLine, Location::startColumn))
     }
 
@@ -109,29 +104,25 @@ internal class XdkWorkspaceNavigation(
         uri: String,
         line: Int,
         column: Int,
-    ): List<Location> =
-        locations(views[sourceUri(uri)]?.typeDefinitionLocationsAt(line, column).orEmpty())
+    ): List<Location> = locations(views[sourceUri(uri)]?.typeDefinitionLocationsAt(line, column).orEmpty())
 
     fun declarations(
         uri: String,
         line: Int,
         column: Int,
-    ): List<Location> =
-        locations(views[sourceUri(uri)]?.declarationLocationsAt(line, column).orEmpty())
+    ): List<Location> = locations(views[sourceUri(uri)]?.declarationLocationsAt(line, column).orEmpty())
 
     fun implementations(
         uri: String,
         line: Int,
         column: Int,
-    ): List<Location> =
-        locations(views[sourceUri(uri)]?.implementationLocationsAt(line, column).orEmpty())
+    ): List<Location> = locations(views[sourceUri(uri)]?.implementationLocationsAt(line, column).orEmpty())
 
     fun prepareTypes(
         uri: String,
         line: Int,
         column: Int,
-    ): List<TypeHierarchyItem> =
-        hierarchy.prepare(sourceUri(uri), line, column).map { it.copy(data = revision) }
+    ): List<TypeHierarchyItem> = hierarchy.prepare(sourceUri(uri), line, column).map { it.copy(data = revision) }
 
     fun parents(item: TypeHierarchyItem): List<TypeHierarchyItem> =
         current(item)?.let(hierarchy::supertypes).orEmpty().map { it.copy(data = revision) }
@@ -143,8 +134,7 @@ internal class XdkWorkspaceNavigation(
         uri: String,
         line: Int,
         column: Int,
-    ): List<CallHierarchyItem> =
-        calls.prepare(sourceUri(uri), line, column).map { it.copy(data = revision) }
+    ): List<CallHierarchyItem> = calls.prepare(sourceUri(uri), line, column).map { it.copy(data = revision) }
 
     fun incoming(item: CallHierarchyItem): List<CallHierarchyIncomingCall> =
         current(item)?.let(calls::incoming).orEmpty().map {
@@ -183,23 +173,23 @@ internal class XdkWorkspaceNavigation(
     private fun locations(locations: List<SemanticModel.SourceLocation>): List<Location> =
         locations
             .mapNotNull { target ->
-                (views.entries.firstOrNull { it.value.sourceName == target.sourceName }?.key
-                        ?: XdkLibrarySources.sourceUri(target.sourceName))
-                    ?.let { uri ->
-                        val range =
-                            Range(
-                                Position(target.range.start.line, target.range.start.column),
-                                Position(target.range.end.line, target.range.end.column),
-                            )
-                        Location(
-                            uri,
-                            range.start.line,
-                            range.start.column,
-                            range.end.line,
-                            range.end.column,
+                (
+                    views.entries.firstOrNull { it.value.sourceName == target.sourceName }?.key
+                        ?: XdkLibrarySources.sourceUri(target.sourceName)
+                )?.let { uri ->
+                    val range =
+                        Range(
+                            Position(target.range.start.line, target.range.start.column),
+                            Position(target.range.end.line, target.range.end.column),
                         )
-                    }
-            }
-            .distinct()
+                    Location(
+                        uri,
+                        range.start.line,
+                        range.start.column,
+                        range.end.line,
+                        range.end.column,
+                    )
+                }
+            }.distinct()
             .sortedWith(compareBy(Location::uri, Location::startLine, Location::startColumn))
 }

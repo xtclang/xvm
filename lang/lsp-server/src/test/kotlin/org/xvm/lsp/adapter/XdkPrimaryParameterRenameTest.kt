@@ -1,12 +1,12 @@
 package org.xvm.lsp.adapter
 
-import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import java.nio.file.Path
 
 class XdkPrimaryParameterRenameTest {
     @TempDir lateinit var directory: Path
@@ -17,7 +17,11 @@ class XdkPrimaryParameterRenameTest {
         val text =
             "module App { class Box(Int input) {} Box make() = new Box(input = 1); Int use(Box box) = box.input; }"
         workspace(mapOf("App" to text)) { adapter ->
-            val at = Regex("\\binput\\b").findAll(text).toList()[occurrence].range.first
+            val at =
+                Regex("\\binput\\b")
+                    .findAll(text)
+                    .toList()[occurrence]
+                    .range.first
             val edit = requireNotNull(adapter.rename(uri("App"), 0, at, "value"))
             assertThat(apply(text, edit, "App")).isEqualTo(text.replace("input", "value"))
         }
@@ -100,5 +104,9 @@ class XdkPrimaryParameterRenameTest {
             }
 
     private fun uri(module: String): String =
-        directory.resolve("$module.x").toFile().toURI().toString()
+        directory
+            .resolve("$module.x")
+            .toFile()
+            .toURI()
+            .toString()
 }

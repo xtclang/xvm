@@ -42,14 +42,11 @@ class SharedScenarios(
         val values: JsonObject,
         val intellij: Coverage,
     ) {
-        fun text(key: String): String =
-            requireNotNull(values[key]) { "Missing scenario value $key" }.asString
+        fun text(key: String): String = requireNotNull(values[key]) { "Missing scenario value $key" }.asString
 
-        fun strings(key: String): List<String> =
-            requireNotNull(values[key]).asJsonArray.map { it.asString }
+        fun strings(key: String): List<String> = requireNotNull(values[key]).asJsonArray.map { it.asString }
 
-        fun rows(key: String): List<JsonObject> =
-            requireNotNull(values[key]).asJsonArray.map { it.asJsonObject }
+        fun rows(key: String): List<JsonObject> = requireNotNull(values[key]).asJsonArray.map { it.asJsonObject }
     }
 
     private inline fun <reified T> core(id: String): T {
@@ -163,8 +160,8 @@ class SharedScenarios(
             Gson()
                 .toJson(
                     mapOf(
-                        "xtc" to mapOf("compiler" to mapOf("sourceModules" to common.sourceModules))
-                    )
+                        "xtc" to mapOf("compiler" to mapOf("sourceModules" to common.sourceModules)),
+                    ),
                 )
 
     fun validate(fixtures: Map<String, String>) {
@@ -194,10 +191,12 @@ class SharedScenarios(
         fun read(path: Path): SharedScenarios {
             val contents = Files.readString(path)
             val hash =
-                HexFormat.of()
+                HexFormat
+                    .of()
                     .formatHex(
-                        MessageDigest.getInstance("SHA-256")
-                            .digest(contents.toByteArray(Charsets.UTF_8))
+                        MessageDigest
+                            .getInstance("SHA-256")
+                            .digest(contents.toByteArray(Charsets.UTF_8)),
                     )
             val json = JsonParser.parseString(contents).asJsonObject
             require(json["schemaVersion"].asInt == 2) { "Unsupported shared playbook schema" }
@@ -216,7 +215,7 @@ class SharedScenarios(
                 }
                 require(
                     scenario.intellij.coverage == "full" ||
-                        scenario.intellij.limitations.isNotEmpty()
+                        scenario.intellij.limitations.isNotEmpty(),
                 ) {
                     "Explain the IntelliJ gap for $id"
                 }

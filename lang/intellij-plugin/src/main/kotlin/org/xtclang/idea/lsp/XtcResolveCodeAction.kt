@@ -7,7 +7,10 @@ import org.eclipse.lsp4j.CodeAction
 
 /** Only action selection resolves and applies an edit; the normal intention UI owns selection. */
 class XtcResolveCodeAction : LSPCommandAction() {
-    override fun commandPerformed(command: LSPCommand, event: AnActionEvent) {
+    override fun commandPerformed(
+        command: LSPCommand,
+        event: AnActionEvent,
+    ) {
         val project = event.project ?: return
         val wrapper = getLanguageServer(event)?.serverWrapper ?: return
         if (wrapper.serverDefinition.id != CompilerSettings.SERVER_ID) return

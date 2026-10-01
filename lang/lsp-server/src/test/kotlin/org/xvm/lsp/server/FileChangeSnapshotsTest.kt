@@ -1,12 +1,12 @@
 package org.xvm.lsp.server
 
-import java.nio.file.Files
-import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.FileChangeType
 import org.eclipse.lsp4j.FileEvent
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Files
+import java.nio.file.Path
 
 class FileChangeSnapshotsTest {
     @TempDir lateinit var directory: Path

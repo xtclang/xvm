@@ -30,15 +30,15 @@ fun Driver.memberActions(
                         "textDocument" to
                             mapOf(
                                 "uri" to
-                                    Path.of(editor.editor.getVirtualFile().getPath())
+                                    Path
+                                        .of(editor.editor.getVirtualFile().getPath())
                                         .toUri()
-                                        .toString()
+                                        .toString(),
                             ),
                         "range" to mapOf("start" to position, "end" to position),
                         "context" to mapOf("diagnostics" to emptyList<Any>()),
                     ),
-                )
-                .asJsonArray
+                ).asJsonArray
         if (title.isEmpty()) {
             val actions =
                 awaitUiNotNull("member refusal response", 45.seconds) {
@@ -54,7 +54,7 @@ fun Driver.memberActions(
                     val label = it.asJsonObject["title"].asString
                     (label.startsWith("Implement ") || label.startsWith("Override ")) &&
                         label.contains(" ${data.text("refusalMember")}(")
-                }
+                },
             )
             check(editor.text == original)
         } else {
@@ -65,8 +65,7 @@ fun Driver.memberActions(
                 editor.text == expected
             }
             diagnostics(editor, false)
-            listOf("\$Undo" to original, "\$Redo" to expected, "\$Undo" to original).forEach {
-                (action, text) ->
+            listOf("\$Undo" to original, "\$Redo" to expected, "\$Undo" to original).forEach { (action, text) ->
                 focusEditor(editor)
                 invokeAction(action, now = false, component = editor.component)
                 awaitUi("$action restores the shared member source", 45.seconds) {

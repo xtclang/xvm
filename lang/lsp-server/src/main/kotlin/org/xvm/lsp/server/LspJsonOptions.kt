@@ -15,8 +15,7 @@ internal object LspJsonOptions {
      * True iff [raw] is a JSON-object-shaped value (Map, JsonObject, or JsonElement holding an
      * object).
      */
-    fun isObject(raw: Any?): Boolean =
-        raw is Map<*, *> || raw is JsonObject || (raw is JsonElement && raw.isJsonObject)
+    fun isObject(raw: Any?): Boolean = raw is Map<*, *> || raw is JsonObject || (raw is JsonElement && raw.isJsonObject)
 
     /**
      * Read [key] as a list of non-blank strings; returns `emptyList()` if missing or wrong shape.
@@ -27,12 +26,25 @@ internal object LspJsonOptions {
     ): List<String> {
         val value = lookup(raw, key) ?: return emptyList()
         return when (value) {
-            is List<*> -> value.mapNotNull { it?.toString()?.trim()?.takeIf(String::isNotEmpty) }
-            is JsonArray -> value.mapNotNull { stringOrNull(it) }
-            is JsonElement ->
-                if (value.isJsonArray) value.asJsonArray.mapNotNull { stringOrNull(it) }
-                else emptyList()
-            else -> emptyList()
+            is List<*> -> {
+                value.mapNotNull { it?.toString()?.trim()?.takeIf(String::isNotEmpty) }
+            }
+
+            is JsonArray -> {
+                value.mapNotNull { stringOrNull(it) }
+            }
+
+            is JsonElement -> {
+                if (value.isJsonArray) {
+                    value.asJsonArray.mapNotNull { stringOrNull(it) }
+                } else {
+                    emptyList()
+                }
+            }
+
+            else -> {
+                emptyList()
+            }
         }
     }
 
@@ -58,10 +70,17 @@ internal object LspJsonOptions {
                     .takeUnless { it.isJsonNull }
                     ?.let {
                         when {
-                            it.isJsonPrimitive && it.asJsonPrimitive.isNumber -> it.asInt
-                            it.isJsonPrimitive && it.asJsonPrimitive.isString ->
+                            it.isJsonPrimitive && it.asJsonPrimitive.isNumber -> {
+                                it.asInt
+                            }
+
+                            it.isJsonPrimitive && it.asJsonPrimitive.isString -> {
                                 it.asString.toIntOrNull()
-                            else -> null
+                            }
+
+                            else -> {
+                                null
+                            }
                         }
                     }
             }
@@ -90,10 +109,17 @@ internal object LspJsonOptions {
                     .takeUnless { it.isJsonNull }
                     ?.let {
                         when {
-                            it.isJsonPrimitive && it.asJsonPrimitive.isBoolean -> it.asBoolean
-                            it.isJsonPrimitive && it.asJsonPrimitive.isString ->
+                            it.isJsonPrimitive && it.asJsonPrimitive.isBoolean -> {
+                                it.asBoolean
+                            }
+
+                            it.isJsonPrimitive && it.asJsonPrimitive.isString -> {
                                 it.asString.toBooleanStrictOrNull()
-                            else -> null
+                            }
+
+                            else -> {
+                                null
+                            }
                         }
                     }
             }

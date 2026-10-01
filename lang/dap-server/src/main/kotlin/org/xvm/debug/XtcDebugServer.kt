@@ -1,6 +1,5 @@
 package org.xvm.debug
 
-import java.util.concurrent.CompletableFuture
 import org.eclipse.lsp4j.debug.Breakpoint
 import org.eclipse.lsp4j.debug.Capabilities
 import org.eclipse.lsp4j.debug.ConfigurationDoneArguments
@@ -16,6 +15,7 @@ import org.eclipse.lsp4j.debug.ThreadsResponse
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
 import org.eclipse.lsp4j.debug.services.IDebugProtocolServer
 import org.slf4j.LoggerFactory
+import java.util.concurrent.CompletableFuture
 
 /**
  * Stub XTC Debug Adapter Protocol (DAP) server.
@@ -60,9 +60,7 @@ class XtcDebugServer : IDebugProtocolServer {
      * Called when the user sets or changes breakpoints in a source file. Logs the source file and
      * line numbers, and returns them as verified.
      */
-    override fun setBreakpoints(
-        args: SetBreakpointsArguments
-    ): CompletableFuture<SetBreakpointsResponse> {
+    override fun setBreakpoints(args: SetBreakpointsArguments): CompletableFuture<SetBreakpointsResponse> {
         val sourcePath = args.source?.path ?: args.source?.name ?: "<unknown>"
         val lines = args.breakpoints?.map { it.line } ?: emptyList()
         logger.info("setBreakpoints: source={}, lines={}", sourcePath, lines)
@@ -76,8 +74,7 @@ class XtcDebugServer : IDebugProtocolServer {
                         line = sourceBreakpoint.line
                         source = args.source
                     }
-                }
-                ?.toTypedArray() ?: emptyArray()
+                }?.toTypedArray() ?: emptyArray()
 
         val response =
             SetBreakpointsResponse().apply {
@@ -91,9 +88,7 @@ class XtcDebugServer : IDebugProtocolServer {
      *
      * Called when the user configures exception breakpoint filters.
      */
-    override fun setExceptionBreakpoints(
-        args: SetExceptionBreakpointsArguments
-    ): CompletableFuture<SetExceptionBreakpointsResponse> {
+    override fun setExceptionBreakpoints(args: SetExceptionBreakpointsArguments): CompletableFuture<SetExceptionBreakpointsResponse> {
         logger.info("setExceptionBreakpoints: filters={}", args.filters?.toList())
         return CompletableFuture.completedFuture(SetExceptionBreakpointsResponse())
     }
@@ -147,7 +142,7 @@ class XtcDebugServer : IDebugProtocolServer {
                         Thread().apply {
                             id = MAIN_THREAD_ID
                             name = "main"
-                        }
+                        },
                     )
             }
         return CompletableFuture.completedFuture(response)

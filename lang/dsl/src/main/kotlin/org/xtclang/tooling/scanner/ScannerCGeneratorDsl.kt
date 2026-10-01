@@ -9,13 +9,14 @@ import java.io.File
  * STATELESS - it uses valid_symbols to determine context.
  */
 object ScannerCGeneratorDsl {
-    fun generate(debug: Boolean = false): String = cFile {
-        header(fileHeader(debug))
-        raw(generateEnums())
-        raw(generateLifecycleFunctions())
-        raw(generateHelperFunctions())
-        raw(generateScanFunction())
-    }
+    fun generate(debug: Boolean = false): String =
+        cFile {
+            header(fileHeader(debug))
+            raw(generateEnums())
+            raw(generateLifecycleFunctions())
+            raw(generateHelperFunctions())
+            raw(generateScanFunction())
+        }
 
     private fun fileHeader(debug: Boolean): String =
         """
@@ -51,187 +52,188 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
             }
         }
 
-    private fun generateLifecycleFunctions(): String = buildString {
-        // Persistent scanner state: depth counter for multiline-template
-        // interpolations. Incremented when we emit MULTILINE_EXPR_START
-        // (entering a `{...}` inside a `$|...|`), decremented when we
-        // emit TEMPLATE_EXPR_END (exiting that interpolation). Used by
-        // the MULTILINE_CONTINUATION emit path so we only consume the
-        // `|` continuation marker when we're certain we're inside a
-        // multiline template's interpolation expression -- preventing
-        // valid bitwise-OR `|` operators in normal code from being
-        // silently swallowed.
-        appendLine(
-            """
+    private fun generateLifecycleFunctions(): String =
+        buildString {
+            // Persistent scanner state: depth counter for multiline-template
+            // interpolations. Incremented when we emit MULTILINE_EXPR_START
+            // (entering a `{...}` inside a `$|...|`), decremented when we
+            // emit TEMPLATE_EXPR_END (exiting that interpolation). Used by
+            // the MULTILINE_CONTINUATION emit path so we only consume the
+            // `|` continuation marker when we're certain we're inside a
+            // multiline template's interpolation expression -- preventing
+            // valid bitwise-OR `|` operators in normal code from being
+            // silently swallowed.
+            appendLine(
+                """
             |typedef struct {
             |    unsigned char ml_interp_depth;
             |} ScannerState;
-            """
-                .trimMargin()
-        )
-        appendLine()
+                """.trimMargin(),
+            )
+            appendLine()
 
-        appendLine(
-            cFunction("void *", "tree_sitter_xtc_external_scanner_create") {
-                param("void", "")
-                body {
-                    returnStmt("calloc(1, sizeof(ScannerState))")
-                }
-            }
-        )
-        appendLine()
-
-        appendLine(
-            cFunction("void", "tree_sitter_xtc_external_scanner_destroy") {
-                param("void *", "payload")
-                body {
-                    line("free(payload);")
-                }
-            }
-        )
-        appendLine()
-
-        appendLine(
-            cFunction("unsigned", "tree_sitter_xtc_external_scanner_serialize") {
-                param("void *", "payload")
-                param("char *", "buffer")
-                body {
-                    line("ScannerState * state = (ScannerState *)payload;")
-                    line("buffer[0] = (char)state->ml_interp_depth;")
-                    returnStmt("1")
-                }
-            }
-        )
-        appendLine()
-
-        append(
-            cFunction("void", "tree_sitter_xtc_external_scanner_deserialize") {
-                param("void *", "payload")
-                param("const char *", "buffer")
-                param("unsigned", "length")
-                body {
-                    line("ScannerState * state = (ScannerState *)payload;")
-                    line("state->ml_interp_depth = (length >= 1) ? (unsigned char)buffer[0] : 0;")
-                }
-            }
-        )
-    }
-
-    private fun generateHelperFunctions(): String = buildString {
-        // advance helper
-        appendLine(
-            cFunction("void", "advance") {
-                static()
-                inline()
-                param("TSLexer *", "lexer")
-                body {
-                    line("lexer->advance(lexer, false);")
-                }
-            }
-        )
-        appendLine()
-
-        // at_eof helper
-        appendLine(
-            cFunction("bool", "at_eof") {
-                static()
-                inline()
-                param("TSLexer *", "lexer")
-                body {
-                    returnStmt("lexer->eof(lexer)")
-                }
-            }
-        )
-        appendLine()
-
-        // peek helper
-        appendLine(
-            cFunction("int32_t", "peek") {
-                static()
-                inline()
-                param("TSLexer *", "lexer")
-                body {
-                    returnStmt("lexer->lookahead")
-                }
-            }
-        )
-        appendLine()
-
-        // is_hspace helper
-        appendLine(
-            cFunction("bool", "is_hspace") {
-                static()
-                inline()
-                param("int32_t", "c")
-                body {
-                    returnStmt("c == ' ' || c == '\\t'")
-                }
-            }
-        )
-        appendLine()
-
-        // skip_multiline_continuation helper
-        appendLine(
-            cFunction("bool", "skip_multiline_continuation") {
-                static()
-                param("TSLexer *", "lexer")
-                body {
-                    comment("Skip horizontal whitespace")
-                    whileBlock("!at_eof(lexer) && is_hspace(peek(lexer))") {
-                        advance()
+            appendLine(
+                cFunction("void *", "tree_sitter_xtc_external_scanner_create") {
+                    param("void", "")
+                    body {
+                        returnStmt("calloc(1, sizeof(ScannerState))")
                     }
-                    comment("Check for | continuation marker")
-                    ifBlock("peek(lexer) == '|'") {
-                        advance()
-                        returnTrue()
+                },
+            )
+            appendLine()
+
+            appendLine(
+                cFunction("void", "tree_sitter_xtc_external_scanner_destroy") {
+                    param("void *", "payload")
+                    body {
+                        line("free(payload);")
                     }
-                    returnFalse()
-                }
-            }
-        )
-        appendLine()
+                },
+            )
+            appendLine()
 
-        // scan_stmt_block helper
-        appendLine(generateScanStmtBlock())
-        appendLine()
-
-        // TODO scanner section comment
-        appendLine(
-            cCode {
-                sectionComment("TODO freeform text scanner")
-                comment("Handles: TODO freeform text AFTER the 'TODO' keyword")
-                comment("The 'TODO' keyword is matched by tree-sitter's internal lexer.")
-                comment("This scanner matches \" message text\" (space + message to end of line).")
-                emptyLine()
-                comment(
-                    "This mimics Java Lexer.java:877-885 which calls eatSingleLineComment() for TODO"
-                )
-                comment("when not followed by '('.")
-            }
-        )
-        appendLine()
-
-        // scan_todo_to_eol helper
-        appendLine(
-            cFunction("void", "scan_todo_to_eol") {
-                static()
-                param("TSLexer *", "lexer")
-                body {
-                    whileBlock("!at_eof(lexer) && peek(lexer) != '\\n'") {
-                        advance()
+            appendLine(
+                cFunction("unsigned", "tree_sitter_xtc_external_scanner_serialize") {
+                    param("void *", "payload")
+                    param("char *", "buffer")
+                    body {
+                        line("ScannerState * state = (ScannerState *)payload;")
+                        line("buffer[0] = (char)state->ml_interp_depth;")
+                        returnStmt("1")
                     }
-                }
-            }
-        )
-        appendLine()
+                },
+            )
+            appendLine()
 
-        // scan_todo_freeform_text
-        appendLine(generateScanTodoFreeformText())
-        appendLine()
+            append(
+                cFunction("void", "tree_sitter_xtc_external_scanner_deserialize") {
+                    param("void *", "payload")
+                    param("const char *", "buffer")
+                    param("unsigned", "length")
+                    body {
+                        line("ScannerState * state = (ScannerState *)payload;")
+                        line("state->ml_interp_depth = (length >= 1) ? (unsigned char)buffer[0] : 0;")
+                    }
+                },
+            )
+        }
 
-        // scan_todo_freeform_until_semi
-        append(generateScanTodoFreeformUntilSemi())
-    }
+    private fun generateHelperFunctions(): String =
+        buildString {
+            // advance helper
+            appendLine(
+                cFunction("void", "advance") {
+                    static()
+                    inline()
+                    param("TSLexer *", "lexer")
+                    body {
+                        line("lexer->advance(lexer, false);")
+                    }
+                },
+            )
+            appendLine()
+
+            // at_eof helper
+            appendLine(
+                cFunction("bool", "at_eof") {
+                    static()
+                    inline()
+                    param("TSLexer *", "lexer")
+                    body {
+                        returnStmt("lexer->eof(lexer)")
+                    }
+                },
+            )
+            appendLine()
+
+            // peek helper
+            appendLine(
+                cFunction("int32_t", "peek") {
+                    static()
+                    inline()
+                    param("TSLexer *", "lexer")
+                    body {
+                        returnStmt("lexer->lookahead")
+                    }
+                },
+            )
+            appendLine()
+
+            // is_hspace helper
+            appendLine(
+                cFunction("bool", "is_hspace") {
+                    static()
+                    inline()
+                    param("int32_t", "c")
+                    body {
+                        returnStmt("c == ' ' || c == '\\t'")
+                    }
+                },
+            )
+            appendLine()
+
+            // skip_multiline_continuation helper
+            appendLine(
+                cFunction("bool", "skip_multiline_continuation") {
+                    static()
+                    param("TSLexer *", "lexer")
+                    body {
+                        comment("Skip horizontal whitespace")
+                        whileBlock("!at_eof(lexer) && is_hspace(peek(lexer))") {
+                            advance()
+                        }
+                        comment("Check for | continuation marker")
+                        ifBlock("peek(lexer) == '|'") {
+                            advance()
+                            returnTrue()
+                        }
+                        returnFalse()
+                    }
+                },
+            )
+            appendLine()
+
+            // scan_stmt_block helper
+            appendLine(generateScanStmtBlock())
+            appendLine()
+
+            // TODO scanner section comment
+            appendLine(
+                cCode {
+                    sectionComment("TODO freeform text scanner")
+                    comment("Handles: TODO freeform text AFTER the 'TODO' keyword")
+                    comment("The 'TODO' keyword is matched by tree-sitter's internal lexer.")
+                    comment("This scanner matches \" message text\" (space + message to end of line).")
+                    emptyLine()
+                    comment(
+                        "This mimics Java Lexer.java:877-885 which calls eatSingleLineComment() for TODO",
+                    )
+                    comment("when not followed by '('.")
+                },
+            )
+            appendLine()
+
+            // scan_todo_to_eol helper
+            appendLine(
+                cFunction("void", "scan_todo_to_eol") {
+                    static()
+                    param("TSLexer *", "lexer")
+                    body {
+                        whileBlock("!at_eof(lexer) && peek(lexer) != '\\n'") {
+                            advance()
+                        }
+                    }
+                },
+            )
+            appendLine()
+
+            // scan_todo_freeform_text
+            appendLine(generateScanTodoFreeformText())
+            appendLine()
+
+            // scan_todo_freeform_until_semi
+            append(generateScanTodoFreeformUntilSemi())
+        }
 
     private fun generateScanStmtBlock(): String =
         cFunction("bool", "scan_stmt_block") {
@@ -252,7 +254,7 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
 
                 debugBlock {
                     line(
-                        "fprintf(stderr, \"[SCANNER] Starting stmt block scan, depth=%d, multiline=%d\\n\", depth, multiline);"
+                        "fprintf(stderr, \"[SCANNER] Starting stmt block scan, depth=%d, multiline=%d\\n\", depth, multiline);",
                     )
                 }
                 emptyLine()
@@ -264,7 +266,7 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
                     debugBlock {
                         ifBlock("c >= 32 && c < 127") {
                             line(
-                                "fprintf(stderr, \"[SCANNER] stmt_block char='%c' depth=%d\\n\", (char)c, depth);"
+                                "fprintf(stderr, \"[SCANNER] stmt_block char='%c' depth=%d\\n\", (char)c, depth);",
                             )
                         }
                     }
@@ -323,7 +325,7 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
 
                 debugBlock {
                     line(
-                        "fprintf(stderr, \"[SCANNER] Finished stmt block scan, depth=%d\\n\", depth);"
+                        "fprintf(stderr, \"[SCANNER] Finished stmt block scan, depth=%d\\n\", depth);",
                     )
                 }
                 emptyLine()
@@ -344,7 +346,7 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
         debugBlock {
             line("""fprintf(stderr, "[SCANNER] $funcName called, peek='%c'(0x%02x)\n",""")
             line(
-                """    (peek(lexer) >= 32 && peek(lexer) < 127) ? (char)peek(lexer) : '?', peek(lexer));"""
+                """    (peek(lexer) >= 32 && peek(lexer) < 127) ? (char)peek(lexer) : '?', peek(lexer));""",
             )
         }
 
@@ -366,18 +368,18 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
         debugBlock {
             line("""fprintf(stderr, "[SCANNER] $funcName: after skip ws, peek='%c'(0x%02x)\n",""")
             line(
-                """    (peek(lexer) >= 32 && peek(lexer) < 127) ? (char)peek(lexer) : '?', peek(lexer));"""
+                """    (peek(lexer) >= 32 && peek(lexer) < 127) ? (char)peek(lexer) : '?', peek(lexer));""",
             )
         }
         emptyLine()
 
         comment("Check what follows the whitespace")
         ifBlock(
-            "at_eof(lexer) || peek(lexer) == '(' || peek(lexer) == '\\n' || peek(lexer) == ';'"
+            "at_eof(lexer) || peek(lexer) == '(' || peek(lexer) == '\\n' || peek(lexer) == ';'",
         ) {
             debugBlock {
                 line(
-                    """fprintf(stderr, "[SCANNER] $funcName: not freeform (paren/newline/semi/eof)\n");"""
+                    """fprintf(stderr, "[SCANNER] $funcName: not freeform (paren/newline/semi/eof)\n");""",
                 )
             }
             returnFalse()
@@ -415,7 +417,7 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
                 comment("Not a statement block, but we already consumed {")
                 ifBlock("valid_symbols[${prefix}_EXPR_START]") {
                     line(
-                        "${depthBump}lexer->mark_end(lexer); lexer->result_symbol = ${prefix}_EXPR_START; return true;"
+                        "${depthBump}lexer->mark_end(lexer); lexer->result_symbol = ${prefix}_EXPR_START; return true;",
                     )
                 }
                 breakStmt()
@@ -423,7 +425,7 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
             ifBlock("valid_symbols[${prefix}_EXPR_START]") {
                 advance()
                 line(
-                    "${depthBump}lexer->mark_end(lexer); lexer->result_symbol = ${prefix}_EXPR_START; return true;"
+                    "${depthBump}lexer->mark_end(lexer); lexer->result_symbol = ${prefix}_EXPR_START; return true;",
                 )
             }
             breakStmt()
@@ -462,7 +464,7 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
 
                 debugBlock {
                     line(
-                        """fprintf(stderr, "[SCANNER] scan_todo_freeform_text: consuming to EOL\n");"""
+                        """fprintf(stderr, "[SCANNER] scan_todo_freeform_text: consuming to EOL\n");""",
                     )
                 }
 
@@ -492,7 +494,7 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
 
                 debugBlock {
                     line(
-                        """fprintf(stderr, "[SCANNER] scan_todo_freeform_until_semi: found_semi=%d\n", found_semi);"""
+                        """fprintf(stderr, "[SCANNER] scan_todo_freeform_until_semi: found_semi=%d\n", found_semi);""",
                     )
                 }
 
@@ -546,7 +548,7 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
                 comment("During error recovery, tree-sitter may set ALL external tokens valid.")
                 comment("If both single-line AND multiline tokens are valid simultaneously,")
                 comment(
-                    "we're likely in error recovery - return false to let tree-sitter handle it."
+                    "we're likely in error recovery - return false to let tree-sitter handle it.",
                 )
                 ifBlock("in_singleline && in_multiline") {
                     returnFalse()
@@ -555,14 +557,14 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
 
                 debugBlock {
                     line(
-                        """fprintf(stderr, "[SCANNER] char='%c'(0x%02x) single=%d multi=%d expr=%d todo_text=%d todo_until_semi=%d type_gt=%d\n","""
+                        """fprintf(stderr, "[SCANNER] char='%c'(0x%02x) single=%d multi=%d expr=%d todo_text=%d todo_until_semi=%d type_gt=%d\n",""",
                     )
                     line(
-                        """    (peek(lexer) >= 32 && peek(lexer) < 127) ? (char)peek(lexer) : '?',"""
+                        """    (peek(lexer) >= 32 && peek(lexer) < 127) ? (char)peek(lexer) : '?',""",
                     )
                     line("""    peek(lexer), in_singleline, in_multiline, in_expr,""")
                     line(
-                        """    valid_symbols[TODO_FREEFORM_TEXT], valid_symbols[TODO_FREEFORM_UNTIL_SEMI], valid_symbols[TYPE_GT]);"""
+                        """    valid_symbols[TODO_FREEFORM_TEXT], valid_symbols[TODO_FREEFORM_UNTIL_SEMI], valid_symbols[TYPE_GT]);""",
                     )
                 }
                 emptyLine()
@@ -585,10 +587,10 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
                     }
                     comment("Outside template interpolation, allow whitespace before `>`.")
                     ifBlock(
-                        "!valid_symbols[TEMPLATE_EXPR_END] && !in_singleline && !in_multiline"
+                        "!valid_symbols[TEMPLATE_EXPR_END] && !in_singleline && !in_multiline",
                     ) {
                         whileBlock(
-                            "!at_eof(lexer) && (peek(lexer) == ' ' || peek(lexer) == '\\t' || peek(lexer) == '\\n' || peek(lexer) == '\\r')"
+                            "!at_eof(lexer) && (peek(lexer) == ' ' || peek(lexer) == '\\t' || peek(lexer) == '\\n' || peek(lexer) == '\\r')",
                         ) {
                             line("lexer->advance(lexer, true);")
                         }
@@ -633,7 +635,7 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
                 comment("both are valid; tuple_assignment is not a meaningful")
                 comment("interpretation right after the `TODO` keyword anyway.")
                 ifBlock(
-                    "valid_symbols[TUPLE_ASSIGN_LPAREN] && !in_singleline && !in_multiline && !valid_symbols[TEMPLATE_EXPR_END] && !valid_symbols[TODO_FREEFORM_TEXT] && !valid_symbols[TODO_FREEFORM_UNTIL_SEMI]"
+                    "valid_symbols[TUPLE_ASSIGN_LPAREN] && !in_singleline && !in_multiline && !valid_symbols[TEMPLATE_EXPR_END] && !valid_symbols[TODO_FREEFORM_TEXT] && !valid_symbols[TODO_FREEFORM_UNTIL_SEMI]",
                 ) {
                     comment("Tree-sitter does NOT auto-skip extras (whitespace) before")
                     comment("invoking an external scanner -- so we have to do it ourselves,")
@@ -644,7 +646,7 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
                     comment("we see whitespace under peek, so peek(lexer) == '(' is false")
                     comment("and we incorrectly return false.")
                     whileBlock(
-                        "!at_eof(lexer) && (peek(lexer) == ' ' || peek(lexer) == '\\t' || peek(lexer) == '\\r' || peek(lexer) == '\\n')"
+                        "!at_eof(lexer) && (peek(lexer) == ' ' || peek(lexer) == '\\t' || peek(lexer) == '\\r' || peek(lexer) == '\\n')",
                     ) {
                         line("lexer->advance(lexer, true);")
                     }
@@ -696,7 +698,7 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
                         ifBlock("tc == '\"'") {
                             advance()
                             whileBlock(
-                                "!at_eof(lexer) && peek(lexer) != '\"' && peek(lexer) != '\\n'"
+                                "!at_eof(lexer) && peek(lexer) != '\"' && peek(lexer) != '\\n'",
                             ) {
                                 ifBlock("peek(lexer) == '\\\\'") {
                                     advance()
@@ -719,7 +721,7 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
                         ifBlock("tc == '\\''") {
                             advance()
                             whileBlock(
-                                "!at_eof(lexer) && peek(lexer) != '\\'' && peek(lexer) != '\\n'"
+                                "!at_eof(lexer) && peek(lexer) != '\\'' && peek(lexer) != '\\n'",
                             ) {
                                 ifBlock("peek(lexer) == '\\\\'") {
                                     advance()
@@ -789,7 +791,7 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
 
                     comment("Skip whitespace between `)` and the operator.")
                     whileBlock(
-                        "!at_eof(lexer) && (peek(lexer) == ' ' || peek(lexer) == '\\t' || peek(lexer) == '\\r' || peek(lexer) == '\\n')"
+                        "!at_eof(lexer) && (peek(lexer) == ' ' || peek(lexer) == '\\t' || peek(lexer) == '\\r' || peek(lexer) == '\\n')",
                     ) {
                         advance()
                     }
@@ -820,7 +822,7 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
                 comment("- Otherwise, use freeform_text (consumes to EOL)")
 
                 ifBlock(
-                    "(valid_symbols[TODO_FREEFORM_UNTIL_SEMI] || valid_symbols[TODO_FREEFORM_TEXT]) && is_hspace(peek(lexer))"
+                    "(valid_symbols[TODO_FREEFORM_UNTIL_SEMI] || valid_symbols[TODO_FREEFORM_TEXT]) && is_hspace(peek(lexer))",
                 ) {
                     comment("Skip whitespace first (common to both)")
                     whileBlock("!at_eof(lexer) && is_hspace(peek(lexer))") {
@@ -830,14 +832,14 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
 
                     comment("Check what follows the whitespace")
                     ifBlock(
-                        "at_eof(lexer) || peek(lexer) == '(' || peek(lexer) == '$newline' || peek(lexer) == ';'"
+                        "at_eof(lexer) || peek(lexer) == '(' || peek(lexer) == '$newline' || peek(lexer) == ';'",
                     ) {
                         returnFalse()
                     }
                     emptyLine()
 
                     comment(
-                        "Now we know there's freeform text. Check if there's a ';' on this line."
+                        "Now we know there's freeform text. Check if there's a ';' on this line.",
                     )
                     variable("bool", "has_semicolon", "false")
                     emptyLine()
@@ -859,29 +861,29 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
                         line("lexer->result_symbol = TODO_FREEFORM_UNTIL_SEMI;")
                         debugBlock {
                             line(
-                                """fprintf(stderr, "[SCANNER] TODO: returning UNTIL_SEMI (found ;)\n");"""
+                                """fprintf(stderr, "[SCANNER] TODO: returning UNTIL_SEMI (found ;)\n");""",
                             )
                         }
                         returnTrue()
                     }
                     elseIfBlock("!has_semicolon && valid_symbols[TODO_FREEFORM_TEXT]") {
                         comment(
-                            "No ';' and freeform_text is valid - we've already consumed the text"
+                            "No ';' and freeform_text is valid - we've already consumed the text",
                         )
                         markEnd()
                         line("lexer->result_symbol = TODO_FREEFORM_TEXT;")
                         debugBlock {
                             line(
-                                """fprintf(stderr, "[SCANNER] TODO: returning FREEFORM_TEXT (no ;)\n");"""
+                                """fprintf(stderr, "[SCANNER] TODO: returning FREEFORM_TEXT (no ;)\n");""",
                             )
                         }
                         returnTrue()
                     }
                     elseIfBlock(
-                        "has_semicolon && !valid_symbols[TODO_FREEFORM_UNTIL_SEMI] && valid_symbols[TODO_FREEFORM_TEXT]"
+                        "has_semicolon && !valid_symbols[TODO_FREEFORM_UNTIL_SEMI] && valid_symbols[TODO_FREEFORM_TEXT]",
                     ) {
                         comment(
-                            "Has ';' but only freeform_text is valid - consume to EOL including ';'"
+                            "Has ';' but only freeform_text is valid - consume to EOL including ';'",
                         )
                         whileBlock("!at_eof(lexer) && peek(lexer) != '$newline'") {
                             advance()
@@ -890,7 +892,7 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
                         line("lexer->result_symbol = TODO_FREEFORM_TEXT;")
                         debugBlock {
                             line(
-                                """fprintf(stderr, "[SCANNER] TODO: returning FREEFORM_TEXT (has ; but until_semi not valid)\n");"""
+                                """fprintf(stderr, "[SCANNER] TODO: returning FREEFORM_TEXT (has ; but until_semi not valid)\n");""",
                             )
                         }
                         returnTrue()
@@ -900,7 +902,7 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
                 emptyLine()
 
                 sectionComment(
-                    "Inside expression: skip whitespace + `|` continuations, then look for closing brace"
+                    "Inside expression: skip whitespace + `|` continuations, then look for closing brace",
                 )
                 comment("Tree-sitter does NOT auto-skip extras before invoking an external")
                 comment("scanner, so we have to skip whitespace ourselves to handle forms")
@@ -916,7 +918,7 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
                 ifBlock("in_expr") {
                     comment("Skip horizontal whitespace and check for `}`.")
                     whileBlock(
-                        "!at_eof(lexer) && (peek(lexer) == ' ' || peek(lexer) == '\\t' || peek(lexer) == '\\r')"
+                        "!at_eof(lexer) && (peek(lexer) == ' ' || peek(lexer) == '\\t' || peek(lexer) == '\\r')",
                     ) {
                         line("lexer->advance(lexer, true);")
                     }
@@ -935,7 +937,7 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
                 emptyLine()
 
                 sectionComment(
-                    "MULTILINE_CONTINUATION: `\\n` + optional `   |` inside a multiline interpolation"
+                    "MULTILINE_CONTINUATION: `\\n` + optional `   |` inside a multiline interpolation",
                 )
                 comment("Gated on the persistent `ml_interp_depth` counter so the `|` is")
                 comment("only consumed when we're certain we're inside an interpolation")
@@ -943,7 +945,7 @@ ${if (debug) "\n#define SCANNER_DEBUG 1" else ""}
                 comment("counter is bumped when MULTILINE_EXPR_START is emitted and popped")
                 comment("when the matching TEMPLATE_EXPR_END fires (above).")
                 ifBlock(
-                    "valid_symbols[MULTILINE_CONTINUATION] && peek(lexer) == '\\n' && state->ml_interp_depth > 0 && !in_singleline && !in_multiline"
+                    "valid_symbols[MULTILINE_CONTINUATION] && peek(lexer) == '\\n' && state->ml_interp_depth > 0 && !in_singleline && !in_multiline",
                 ) {
                     advance()
                     whileBlock("!at_eof(lexer) && (peek(lexer) == ' ' || peek(lexer) == '\\t')") {

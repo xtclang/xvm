@@ -57,28 +57,28 @@ class AdapterCodeActions {
         queryData: CodeActionQueryData,
         workspaceIndex: WorkspaceIndex?,
         indexReady: Boolean,
-    ): List<CodeAction> = buildList {
-        buildOrganizeImportsAction(tree, uri)?.let {
-            logger.info("getCodeActions: adding organize-imports action")
-            add(it)
-        } ?: logger.info("getCodeActions: organize-imports not applicable")
+    ): List<CodeAction> =
+        buildList {
+            buildOrganizeImportsAction(tree, uri)?.let {
+                logger.info("getCodeActions: adding organize-imports action")
+                add(it)
+            } ?: logger.info("getCodeActions: organize-imports not applicable")
 
-        val removeUnused = buildRemoveUnusedImportActions(uri, queryData)
-        logger.info(
-            "getCodeActions: remove-unused-import candidates={}",
-            removeUnused.map { it.title },
-        )
-        addAll(removeUnused)
+            val removeUnused = buildRemoveUnusedImportActions(uri, queryData)
+            logger.info(
+                "getCodeActions: remove-unused-import candidates={}",
+                removeUnused.map { it.title },
+            )
+            addAll(removeUnused)
 
-        val docComments = buildGenerateDocCommentActions(tree, uri, range, queryData.declarations)
-        logger.info("getCodeActions: doc-comment candidates={}", docComments.map { it.title })
-        addAll(docComments)
+            val docComments = buildGenerateDocCommentActions(tree, uri, range, queryData.declarations)
+            logger.info("getCodeActions: doc-comment candidates={}", docComments.map { it.title })
+            addAll(docComments)
 
-        val autoImports = buildAutoImportActions(tree, uri, queryData, workspaceIndex, indexReady)
-        logger.info("getCodeActions: auto-import candidates={}", autoImports.map { it.title })
-        addAll(autoImports)
-    }
-        .also {
+            val autoImports = buildAutoImportActions(tree, uri, queryData, workspaceIndex, indexReady)
+            logger.info("getCodeActions: auto-import candidates={}", autoImports.map { it.title })
+            addAll(autoImports)
+        }.also {
             logger.info("getCodeActions -> {} actions", it.size)
         }
 
@@ -111,7 +111,7 @@ class AdapterCodeActions {
             )
         val edit =
             WorkspaceEdit(
-                mapOf(uri to listOf(TextEdit(replaceRange, sortedTexts.joinToString("\n"))))
+                mapOf(uri to listOf(TextEdit(replaceRange, sortedTexts.joinToString("\n")))),
             )
         return CodeAction("Organize Imports", CodeActionKind.SOURCE_ORGANIZE_IMPORTS, edit = edit)
     }
@@ -158,9 +158,10 @@ class AdapterCodeActions {
         declarations: List<SymbolInfo>,
     ): List<CodeAction> {
         val lines = tree.source.split("\n")
-        val filtered = declarations.filter {
-            it.location.startLine in range.start.line..range.end.line
-        }
+        val filtered =
+            declarations.filter {
+                it.location.startLine in range.start.line..range.end.line
+            }
         logger.info(
             "getCodeActions: doc-comment scan range={}..{} declarationsInRange={}",
             range.start.line,
@@ -210,12 +211,13 @@ class AdapterCodeActions {
         if (kind == SymbolKind.METHOD || kind == SymbolKind.CONSTRUCTOR) {
             val firstNonWs = lines[declLine].indexOfFirst { !it.isWhitespace() }.coerceAtLeast(0)
             val node = tree.nodeAt(declLine, firstNonWs)
-            val methodNode = node?.let {
-                generateSequence(it) { n -> n.parent }
-                    .firstOrNull { n ->
-                        n.type == "method_declaration" || n.type == "constructor_declaration"
-                    }
-            }
+            val methodNode =
+                node?.let {
+                    generateSequence(it) { n -> n.parent }
+                        .firstOrNull { n ->
+                            n.type == "method_declaration" || n.type == "constructor_declaration"
+                        }
+                }
             val paramsNode = methodNode?.childByFieldName("parameters")
             paramsNode
                 ?.children

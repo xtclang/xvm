@@ -1,6 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -12,15 +11,14 @@ import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkDependency
 import org.xvm.lsp.adapter.xdk.toDependency
+import java.nio.file.Path
 
 class XdkMemberActionsTest {
     @TempDir lateinit var directory: Path
 
     @ParameterizedTest
     @ValueSource(strings = ["Int read(Int value);", "void read();", "String read(String value);"])
-    fun `implement ordinary abstract source contracts with compiler proven stubs`(
-        signature: String
-    ) {
+    fun `implement ordinary abstract source contracts with compiler proven stubs`(signature: String) {
         val text = "module App { interface Api { $signature } class Box implements Api {} }"
         workspace(text) { adapter, uri ->
             val action = actions(adapter, uri, text).single { it.title.startsWith("Implement ") }
@@ -46,14 +44,12 @@ class XdkMemberActionsTest {
                 }
             assertThat(action.kind).isEqualTo(CodeAction.CodeActionKind.REFACTOR_REWRITE)
             assertThat(
-                    adapter
-                        .compile(
-                            uri,
-                            apply(text, requireNotNull(action.edit).changes.getValue(uri)),
-                        )
-                        .diagnostics
-                )
-                .isEmpty()
+                adapter
+                    .compile(
+                        uri,
+                        apply(text, requireNotNull(action.edit).changes.getValue(uri)),
+                    ).diagnostics,
+            ).isEmpty()
         }
     }
 
@@ -69,14 +65,12 @@ class XdkMemberActionsTest {
             assertThat(actions).hasSize(2)
             actions.forEach { action ->
                 assertThat(
-                        adapter
-                            .compile(
-                                uri,
-                                apply(text, requireNotNull(action.edit).changes.getValue(uri)),
-                            )
-                            .diagnostics
-                    )
-                    .isEmpty()
+                    adapter
+                        .compile(
+                            uri,
+                            apply(text, requireNotNull(action.edit).changes.getValue(uri)),
+                        ).diagnostics,
+                ).isEmpty()
             }
         }
     }
@@ -92,8 +86,7 @@ class XdkMemberActionsTest {
                 Box make() = new Box();
                 String use(Child child) = child.read(value = "text");
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         workspace(text, initiallyValid = false) { adapter, uri ->
             val action =
                 actions(adapter, uri, text).single {
@@ -120,8 +113,7 @@ class XdkMemberActionsTest {
                 Box make() = new Box();
                 String use(Box box) = box.second() + box.label;
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         workspace(text, initiallyValid = false) { adapter, uri ->
             val action =
                 actions(adapter, uri, text).single {
@@ -157,14 +149,12 @@ class XdkMemberActionsTest {
                     it.title.startsWith("Implement String read(String value)")
                 }
             assertThat(
-                    adapter
-                        .compile(
-                            uri,
-                            apply(text, requireNotNull(action.edit).changes.getValue(uri)),
-                        )
-                        .diagnostics
-                )
-                .isEmpty()
+                adapter
+                    .compile(
+                        uri,
+                        apply(text, requireNotNull(action.edit).changes.getValue(uri)),
+                    ).diagnostics,
+            ).isEmpty()
         }
     }
 
@@ -199,7 +189,7 @@ class XdkMemberActionsTest {
                 "immutable List<Int> read();",
                 "List<(Int | String)> read();",
                 "String read(String value = \"line\\n\\\"quoted\\\"\");",
-            ]
+            ],
     )
     fun `broader signatures preserve the compiler contract`(signature: String) {
         val text = "module App { interface Api { $signature } class Box implements Api {} }"
@@ -228,7 +218,7 @@ class XdkMemberActionsTest {
                 "Int read(Int value = -2);",
                 "String read(String value = \"text\");",
                 "Char read(Char value = 'x');",
-            ]
+            ],
     )
     fun `fresh declaration repair retains literal defaults`(signature: String) {
         val text =
@@ -252,14 +242,12 @@ class XdkMemberActionsTest {
                     it.title == "Implement Int64 read(Int64 value = 3)"
                 }
             assertThat(
-                    adapter
-                        .compile(
-                            uri,
-                            apply(text, requireNotNull(action.edit).changes.getValue(uri)),
-                        )
-                        .diagnostics
-                )
-                .isEmpty()
+                adapter
+                    .compile(
+                        uri,
+                        apply(text, requireNotNull(action.edit).changes.getValue(uri)),
+                    ).diagnostics,
+            ).isEmpty()
         }
     }
 
@@ -274,7 +262,7 @@ class XdkMemberActionsTest {
 
     @ParameterizedTest
     @ValueSource(
-        strings = ["Boolean read(Boolean value = True);", "String? read(String? value = Null);"]
+        strings = ["Boolean read(Boolean value = True);", "String? read(String? value = Null);"],
     )
     fun `validated singleton defaults use explicit XDK identities`(signature: String) {
         val text = "module App { interface Api { $signature } class Box implements Api {} }"
@@ -296,14 +284,12 @@ class XdkMemberActionsTest {
                     it.title.startsWith("Override ") && it.title.contains(" read(")
                 }
             assertThat(
-                    adapter
-                        .compile(
-                            uri,
-                            apply(text, requireNotNull(action.edit).changes.getValue(uri)),
-                        )
-                        .diagnostics
-                )
-                .isEmpty()
+                adapter
+                    .compile(
+                        uri,
+                        apply(text, requireNotNull(action.edit).changes.getValue(uri)),
+                    ).diagnostics,
+            ).isEmpty()
         }
     }
 
@@ -350,7 +336,7 @@ class XdkMemberActionsTest {
             .resolve("Library.x")
             .toFile()
             .writeText(
-                "module Library { class Value {} interface Api { Value read(); void write(Value value); } }"
+                "module Library { class Value {} interface Api { Value read(); void write(Value value); } }",
             )
         val text =
             "module App { package lib import Library; class Box implements lib.Api {} Box make() = new Box(); }"
@@ -367,13 +353,12 @@ class XdkMemberActionsTest {
 
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
-    fun `binary contracts generate only user source edits with or without indexed sources`(
-        indexed: Boolean
-    ) {
+    fun `binary contracts generate only user source edits with or without indexed sources`(indexed: Boolean) {
         CompilerTestSupport.configure()
         val errors = ErrorList()
         val library =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .compileModule(
                     Source(
                         "module Library { interface Api { String read(String value); } }",
@@ -426,14 +411,12 @@ class XdkMemberActionsTest {
         workspace(text) { adapter, uri ->
             val action = actions(adapter, uri, text).single { it.title == "Override String take()" }
             assertThat(
-                    adapter
-                        .compile(
-                            uri,
-                            apply(text, requireNotNull(action.edit).changes.getValue(uri)),
-                        )
-                        .diagnostics
-                )
-                .isEmpty()
+                adapter
+                    .compile(
+                        uri,
+                        apply(text, requireNotNull(action.edit).changes.getValue(uri)),
+                    ).diagnostics,
+            ).isEmpty()
         }
     }
 
@@ -447,14 +430,12 @@ class XdkMemberActionsTest {
                     it.title.startsWith("Override ") && it.title.contains(" read(")
                 }
             assertThat(
-                    adapter
-                        .compile(
-                            uri,
-                            apply(text, requireNotNull(action.edit).changes.getValue(uri)),
-                        )
-                        .diagnostics
-                )
-                .isEmpty()
+                adapter
+                    .compile(
+                        uri,
+                        apply(text, requireNotNull(action.edit).changes.getValue(uri)),
+                    ).diagnostics,
+            ).isEmpty()
         }
     }
 
@@ -474,8 +455,7 @@ class XdkMemberActionsTest {
                 Int child(Child child) = child.read(value = 2);
                 String other(Box box) = box.read(value = "text") + box.label;
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         workspace(text) { adapter, uri ->
             val actions =
                 actions(adapter, uri, text).filter {
@@ -501,19 +481,16 @@ class XdkMemberActionsTest {
                 class Child extends Box {}
                 String use(Child child) = child.read(value = "text");
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         workspace(text) { adapter, uri ->
             val action = actions(adapter, uri, text).single { it.title.startsWith("Override <T>") }
             assertThat(
-                    adapter
-                        .compile(
-                            uri,
-                            apply(text, requireNotNull(action.edit).changes.getValue(uri)),
-                        )
-                        .diagnostics
-                )
-                .isEmpty()
+                adapter
+                    .compile(
+                        uri,
+                        apply(text, requireNotNull(action.edit).changes.getValue(uri)),
+                    ).diagnostics,
+            ).isEmpty()
         }
     }
 
@@ -554,14 +531,12 @@ class XdkMemberActionsTest {
             assertThat(adapter.compile(uri, text).diagnostics).isNotEmpty()
             val action = actions(adapter, uri, text).single { it.title.startsWith("Implement ") }
             assertThat(
-                    adapter
-                        .compile(
-                            uri,
-                            apply(text, requireNotNull(action.edit).changes.getValue(uri)),
-                        )
-                        .diagnostics
-                )
-                .isEmpty()
+                adapter
+                    .compile(
+                        uri,
+                        apply(text, requireNotNull(action.edit).changes.getValue(uri)),
+                    ).diagnostics,
+            ).isEmpty()
             assertThat(source.readText()).isEqualTo(text)
         }
     }
@@ -584,9 +559,8 @@ class XdkMemberActionsTest {
         val text = "module App { interface Api { Int read(); } class Box implements Api {} }"
         workspace(text) { adapter, uri ->
             assertThat(
-                    adapter.getCodeActions(uri, Range(Position(0, 0), Position(0, 0)), emptyList())
-                )
-                .isEmpty()
+                adapter.getCodeActions(uri, Range(Position(0, 0), Position(0, 0)), emptyList()),
+            ).isEmpty()
         }
     }
 
@@ -613,8 +587,7 @@ class XdkMemberActionsTest {
         text: String,
         edits: List<TextEdit>,
     ): String {
-        fun offset(at: Position): Int =
-            text.split('\n').take(at.line).sumOf { it.length + 1 } + at.column
+        fun offset(at: Position): Int = text.split('\n').take(at.line).sumOf { it.length + 1 } + at.column
         return edits
             .sortedByDescending { offset(it.range.start) }
             .fold(text) { result, edit ->

@@ -20,17 +20,16 @@ class XdkEditingTest {
                     assertThat(apply(text, adapter.formatDocument(URI, text, OPTIONS)))
                         .isEqualTo(expected)
                     assertThat(
-                            apply(
+                        apply(
+                            text,
+                            adapter.formatRange(
+                                URI,
                                 text,
-                                adapter.formatRange(
-                                    URI,
-                                    text,
-                                    Range(Position(1, 0), Position(2, 0)),
-                                    OPTIONS,
-                                ),
-                            )
-                        )
-                        .isEqualTo(expected)
+                                Range(Position(1, 0), Position(2, 0)),
+                                OPTIONS,
+                            ),
+                        ),
+                    ).isEqualTo(expected)
                     assertThat(apply(text, adapter.onTypeFormatting(URI, 1, 0, "\n", OPTIONS)))
                         .isEqualTo(expected)
                 }
@@ -109,9 +108,8 @@ class XdkEditingTest {
         edits
             .sortedWith(
                 compareByDescending<TextEdit> { it.range.start.line }
-                    .thenByDescending { it.range.start.column }
-            )
-            .fold(text) { current, edit ->
+                    .thenByDescending { it.range.start.column },
+            ).fold(text) { current, edit ->
                 current.replaceRange(
                     offset(text, edit.range.start),
                     offset(text, edit.range.end),

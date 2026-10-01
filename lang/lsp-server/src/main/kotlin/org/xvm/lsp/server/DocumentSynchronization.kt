@@ -32,6 +32,7 @@ internal data class DocumentSynchronization(
                     ?.get("xtcDocumentSync")
                     ?.takeUnless { it.isJsonNull }
             require(options == null || options.isJsonObject) { "xtcDocumentSync must be an object" }
+
             fun flag(name: String): Boolean {
                 val value = options?.asJsonObject?.get(name) ?: return false
                 require(value.isJsonPrimitive && value.asJsonPrimitive.isBoolean) {

@@ -234,51 +234,51 @@ abstract class AbstractAdapter : Adapter {
         content: String,
         options: FormattingOptions,
         range: Range?,
-    ): List<TextEdit> = buildList {
-        val lines = content.split("\n")
-        val startLine = range?.start?.line ?: 0
-        val endLine = range?.end?.line ?: (lines.size - 1)
+    ): List<TextEdit> =
+        buildList {
+            val lines = content.split("\n")
+            val startLine = range?.start?.line ?: 0
+            val endLine = range?.end?.line ?: (lines.size - 1)
 
-        // Trailing whitespace removal
-        for (i in startLine..minOf(endLine, lines.size - 1)) {
-            val line = lines[i]
-            val trimmed = line.trimEnd()
-            if (trimmed.length < line.length && (options.trimTrailingWhitespace || range == null)) {
+            // Trailing whitespace removal
+            for (i in startLine..minOf(endLine, lines.size - 1)) {
+                val line = lines[i]
+                val trimmed = line.trimEnd()
+                if (trimmed.length < line.length && (options.trimTrailingWhitespace || range == null)) {
+                    add(
+                        TextEdit(
+                            range =
+                                Range(
+                                    start = Position(i, trimmed.length),
+                                    end = Position(i, line.length),
+                                ),
+                            newText = "",
+                        ),
+                    )
+                }
+            }
+
+            // Insert final newline if requested and missing (only for full-document format)
+            if (
+                range == null &&
+                options.insertFinalNewline &&
+                content.isNotEmpty() &&
+                !content.endsWith("\n")
+            ) {
+                val lastLine = lines.size - 1
+                val lastCol = lines[lastLine].length
                 add(
                     TextEdit(
                         range =
                             Range(
-                                start = Position(i, trimmed.length),
-                                end = Position(i, line.length),
+                                start = Position(lastLine, lastCol),
+                                end = Position(lastLine, lastCol),
                             ),
-                        newText = "",
-                    )
+                        newText = "\n",
+                    ),
                 )
             }
-        }
-
-        // Insert final newline if requested and missing (only for full-document format)
-        if (
-            range == null &&
-                options.insertFinalNewline &&
-                content.isNotEmpty() &&
-                !content.endsWith("\n")
-        ) {
-            val lastLine = lines.size - 1
-            val lastCol = lines[lastLine].length
-            add(
-                TextEdit(
-                    range =
-                        Range(
-                            start = Position(lastLine, lastCol),
-                            end = Position(lastLine, lastCol),
-                        ),
-                    newText = "\n",
-                )
-            )
-        }
-    }
-        .also {
+        }.also {
             logger.info("format -> {} edits", it.size)
         }
 

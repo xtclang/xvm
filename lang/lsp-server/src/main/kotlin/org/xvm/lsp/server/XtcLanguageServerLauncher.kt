@@ -2,12 +2,6 @@
 
 package org.xvm.lsp.server
 
-import java.io.InputStream
-import java.io.OutputStream
-import java.lang.invoke.MethodHandles
-import java.util.Properties
-import java.util.concurrent.Executors
-import kotlin.system.exitProcess
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.RemoteEndpoint
@@ -17,6 +11,12 @@ import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.adapter.treesitter.TreeSitterAdapter
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import java.io.InputStream
+import java.io.OutputStream
+import java.lang.invoke.MethodHandles
+import java.util.Properties
+import java.util.concurrent.Executors
+import kotlin.system.exitProcess
 
 /**
  * Launcher for the Ecstasy Language Server.
@@ -40,39 +40,56 @@ private val logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass(
 // Static initializer runs before any SLF4J initialization to suppress
 // SLF4J's informational messages that would otherwise go to stdout and
 // corrupt the JSON-RPC protocol stream.
-private val initBlock = run {
-    System.setProperty("slf4j.internal.verbosity", "WARN")
-}
+private val initBlock =
+    run {
+        System.setProperty("slf4j.internal.verbosity", "WARN")
+    }
 
 /** Load build properties from the embedded lsp-version.properties file. */
 private fun loadBuildProperties(): Properties =
     Properties().apply {
-        Thread.currentThread()
+        Thread
+            .currentThread()
             .contextClassLoader
             ?.getResourceAsStream("lsp-version.properties")
             ?.use { load(it) }
     }
 
 /** Adapter backend types for the LSP server. */
-internal enum class AdapterBackend(val displayName: String) {
+internal enum class AdapterBackend(
+    val displayName: String,
+) {
     MOCK("Mock"),
     TREE_SITTER("Tree-sitter"),
-    COMPILER("Ecstasy Compiler");
+    COMPILER("Ecstasy Compiler"),
+    ;
 
     companion object {
         fun fromSetting(setting: String? = null): AdapterBackend =
             when (setting?.lowercase()) {
-                "mock" -> MOCK
+                "mock" -> {
+                    MOCK
+                }
+
                 null,
                 "treesitter",
-                "tree-sitter" -> TREE_SITTER
+                "tree-sitter",
+                -> {
+                    TREE_SITTER
+                }
+
                 "compiler",
                 "xtc",
-                "full" -> COMPILER
-                else ->
+                "full",
+                -> {
+                    COMPILER
+                }
+
+                else -> {
                     throw IllegalArgumentException(
-                        "Unknown lsp.adapter '$setting'; expected treesitter, compiler or mock"
+                        "Unknown lsp.adapter '$setting'; expected treesitter, compiler or mock",
                     )
+                }
             }
     }
 }
@@ -99,7 +116,7 @@ private fun createAdapter(requested: AdapterBackend): Pair<Adapter, AdapterBacke
                     e,
                 )
                 logger.warn(
-                    "to use tree-sitter, build the native library: ./gradlew :lang:tree-sitter:buildAllNativeLibrariesOnDemand"
+                    "to use tree-sitter, build the native library: ./gradlew :lang:tree-sitter:buildAllNativeLibrariesOnDemand",
                 )
                 MockAdapter() to AdapterBackend.MOCK
             } catch (e: Exception) {
@@ -113,9 +130,12 @@ private fun createAdapter(requested: AdapterBackend): Pair<Adapter, AdapterBacke
         }
     }
 
-fun main(@Suppress("UNUSED_PARAMETER") args: Array<String>) {
+fun main(
+    @Suppress("UNUSED_PARAMETER") args: Array<String>,
+) {
     // Ensure init block runs
-    @Suppress("UNUSED_EXPRESSION") initBlock
+    @Suppress("UNUSED_EXPRESSION")
+    initBlock
 
     // Load build properties to determine adapter type
     val buildProps = loadBuildProperties()
@@ -136,16 +156,16 @@ fun main(@Suppress("UNUSED_PARAMETER") args: Array<String>) {
     when (backend) {
         AdapterBackend.TREE_SITTER -> {
             logger.info(
-                "tree-sitter provides: syntax highlighting, document symbols, completions, go-to-definition"
+                "tree-sitter provides: syntax highlighting, document symbols, completions, go-to-definition",
             )
         }
 
         AdapterBackend.COMPILER -> {
             logger.info(
-                "the compiler provides: diagnostics, symbols, hover, same-file navigation, highlights, folding and selection"
+                "the compiler provides: diagnostics, symbols, hover, same-file navigation, highlights, folding and selection",
             )
             logger.info(
-                "not yet from the compiler: completion, rename, formatting or project-wide compilation"
+                "not yet from the compiler: completion, rename, formatting or project-wide compilation",
             )
             logger.info("the compiler uses the XDK libraries bundled with this server")
         }
@@ -154,7 +174,7 @@ fun main(@Suppress("UNUSED_PARAMETER") args: Array<String>) {
             logger.info("mock backend provides: basic symbol detection (regex-based)")
             if (requested == AdapterBackend.TREE_SITTER) {
                 logger.warn(
-                    "tree-sitter was requested but failed to initialize - check native library"
+                    "tree-sitter was requested but failed to initialize - check native library",
                 )
             }
         }
@@ -186,16 +206,15 @@ fun launchStdio(
     try {
         val launcher: Launcher<LanguageClient> =
             object : Launcher.Builder<LanguageClient>() {
-                    override fun wrapMessageConsumer(consumer: MessageConsumer): MessageConsumer =
-                        lifecycle.wrap(
-                            trace.wrap(
-                                super.wrapMessageConsumer(consumer),
-                                received = consumer is RemoteEndpoint,
-                            ),
+                override fun wrapMessageConsumer(consumer: MessageConsumer): MessageConsumer =
+                    lifecycle.wrap(
+                        trace.wrap(
+                            super.wrapMessageConsumer(consumer),
                             received = consumer is RemoteEndpoint,
-                        )
-                }
-                .setLocalService(server)
+                        ),
+                        received = consumer is RemoteEndpoint,
+                    )
+            }.setLocalService(server)
                 .setRemoteInterface(LanguageClient::class.java)
                 .setInput(input)
                 .setOutput(output)

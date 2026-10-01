@@ -1,9 +1,5 @@
 package org.xvm.lsp.server
 
-import java.nio.file.Path
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit.SECONDS
-import java.util.concurrent.atomic.AtomicBoolean
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.eclipse.lsp4j.ClientCapabilities
@@ -40,15 +36,17 @@ import org.xvm.api.EmbeddingSupport
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import java.nio.file.Path
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.atomic.AtomicBoolean
 
 class XdkRenameServerTest {
     @TempDir lateinit var directory: Path
 
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
-    fun `late watched creation preserves a rename proof only while its inputs are unchanged`(
-        changed: Boolean
-    ) {
+    fun `late watched creation preserves a rename proof only while its inputs are unchanged`(changed: Boolean) {
         CompilerTestSupport.configure()
         directory = directory.toRealPath()
         val root =
@@ -87,13 +85,12 @@ class XdkRenameServerTest {
                         capabilities.workspace.workspaceEdit.resourceOperations = listOf("rename")
                         capabilities.workspace.fileOperations =
                             FileOperationsWorkspaceCapabilities().apply { willRename = true }
-                    }
-                )
-                .get(20, SECONDS)
+                    },
+                ).get(20, SECONDS)
             val uri = root.toURI().toString()
             server.replaceCompilerSourceModules(listOf(XdkSourceModule("App", uri)))
             server.textDocumentService.didOpen(
-                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, root.readText()))
+                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, root.readText())),
             )
             server.textDocumentService
                 .documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri)))
@@ -106,9 +103,9 @@ class XdkRenameServerTest {
                             FileRename(
                                 member.toURI().toString(),
                                 directory.resolve("App/Crate.x").toUri().toString(),
-                            )
-                        )
-                    )
+                            ),
+                        ),
+                    ),
                 )
             assertThat(entered.await(20, SECONDS)).isTrue()
             if (changed) member.writeText("class Box { Int extra = 1; }")
@@ -116,14 +113,16 @@ class XdkRenameServerTest {
                 DidChangeWatchedFilesParams(
                     listOf(root.parentFile, member).map {
                         FileEvent(it.toURI().toString(), FileChangeType.Created)
-                    }
-                )
+                    },
+                ),
             )
             release.countDown()
-            if (changed)
+            if (changed) {
                 assertThatThrownBy { proof.get(30, SECONDS) }
                     .hasCauseInstanceOf(ResponseErrorException::class.java)
-            else assertThat(proof.get(30, SECONDS)?.documentChanges).isNotEmpty()
+            } else {
+                assertThat(proof.get(30, SECONDS)?.documentChanges).isNotEmpty()
+            }
             assertThat(root.readText()).contains("new Box()")
         } finally {
             release.countDown()
@@ -149,9 +148,8 @@ class XdkRenameServerTest {
                 .initialize(
                     parameters().apply {
                         capabilities.workspace.workspaceEdit.resourceOperations = listOf("rename")
-                    }
-                )
-                .get(20, SECONDS)
+                    },
+                ).get(20, SECONDS)
             server.replaceCompilerSourceModules(
                 listOf(
                     XdkSourceModule("Library.example.org", uri),
@@ -160,7 +158,7 @@ class XdkRenameServerTest {
                         consumer.toURI().toString(),
                         setOf("Library.example.org"),
                     ),
-                )
+                ),
             )
             val documents = server.textDocumentService
             documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 7, text)))
@@ -187,9 +185,16 @@ class XdkRenameServerTest {
                 .containsExactlyInAnyOrder("Renamed.example.org", "Consumer")
             assertThat(graph.after.single { it.name == "Consumer" }.dependencies)
                 .containsExactly("Renamed.example.org")
-            assertThat(proposal.edit.documentChanges.first().left.textDocument.version).isEqualTo(7)
-            assertThat(proposal.edit.documentChanges.last().right)
-                .isInstanceOf(RenameFile::class.java)
+            assertThat(
+                proposal.edit.documentChanges
+                    .first()
+                    .left.textDocument.version,
+            ).isEqualTo(7)
+            assertThat(
+                proposal.edit.documentChanges
+                    .last()
+                    .right,
+            ).isInstanceOf(RenameFile::class.java)
             assertThat(documents.rename(params).get(30, SECONDS)).isNull()
             assertThat(library.readText()).isEqualTo(text)
             assertThat(consumer.readText()).isEqualTo(use)
@@ -239,25 +244,33 @@ class XdkRenameServerTest {
                                 TextDocumentIdentifier(uri),
                                 Position(0, text.indexOf("local")),
                                 "value",
-                            )
-                        )
-                        .get(30, SECONDS)
+                            ),
+                        ).get(30, SECONDS),
                 )
-            assertThat(rootEdit.documentChanges.single().left.textDocument.version).isEqualTo(7)
+            assertThat(
+                rootEdit.documentChanges
+                    .single()
+                    .left.textDocument.version,
+            ).isEqualTo(7)
             assertThat<Int?>(changes.getValue(memberUri).textDocument.version).isNull()
-            assertThat(changes.getValue(memberUri).edits.first().left.newText).isEqualTo("value")
+            assertThat(
+                changes
+                    .getValue(memberUri)
+                    .edits
+                    .first()
+                    .left.newText,
+            ).isEqualTo("value")
             documents.didOpen(
-                DidOpenTextDocumentParams(TextDocumentItem(memberUri, "xtc", 3, child))
+                DidOpenTextDocumentParams(TextDocumentItem(memberUri, "xtc", 3, child)),
             )
             val openEdit = requireNotNull(documents.rename(params).get(30, SECONDS))
             assertThat(
-                    openEdit.documentChanges
-                        .first { it.left.textDocument.uri == memberUri }
-                        .left
-                        .textDocument
-                        .version
-                )
-                .isEqualTo(3)
+                openEdit.documentChanges
+                    .first { it.left.textDocument.uri == memberUri }
+                    .left
+                    .textDocument
+                    .version,
+            ).isEqualTo(3)
         } finally {
             server.shutdown().get(20, SECONDS)
         }
@@ -283,7 +296,7 @@ class XdkRenameServerTest {
                 listOf(
                     XdkSourceModule("Library", uri),
                     XdkSourceModule("Consumer", consumerUri, setOf("Library")),
-                )
+                ),
             )
             val documents = server.textDocumentService
             documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 7, text)))
@@ -303,7 +316,7 @@ class XdkRenameServerTest {
             assertThat<Int?>(changes.getValue(consumerUri).textDocument.version).isNull()
             val overlay = use.replace("box.pick(1)", "box.pick(1) + box.pick(2)")
             documents.didOpen(
-                DidOpenTextDocumentParams(TextDocumentItem(consumerUri, "xtc", 3, overlay))
+                DidOpenTextDocumentParams(TextDocumentItem(consumerUri, "xtc", 3, overlay)),
             )
             documents
                 .documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(consumerUri)))
@@ -325,30 +338,27 @@ class XdkRenameServerTest {
         server.connect(mock(LanguageClient::class.java))
         try {
             assertThat(
-                    server
-                        .initialize(InitializeParams())
-                        .get(20, SECONDS)
-                        .capabilities
-                        .renameProvider
-                )
-                .isNull()
+                server
+                    .initialize(InitializeParams())
+                    .get(20, SECONDS)
+                    .capabilities
+                    .renameProvider,
+            ).isNull()
             val text = "module Rename { Int run() { Int local = 1; return local; } }"
             val uri = "file:///Rename.x"
             server.textDocumentService.didOpen(
-                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, text))
+                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, text)),
             )
             assertThat(
-                    server.textDocumentService
-                        .rename(
-                            RenameParams(
-                                TextDocumentIdentifier(uri),
-                                Position(0, text.indexOf("local")),
-                                "value",
-                            )
-                        )
-                        .get(30, SECONDS)
-                )
-                .isNull()
+                server.textDocumentService
+                    .rename(
+                        RenameParams(
+                            TextDocumentIdentifier(uri),
+                            Position(0, text.indexOf("local")),
+                            "value",
+                        ),
+                    ).get(30, SECONDS),
+            ).isNull()
         } finally {
             server.shutdown().get(20, SECONDS)
         }
@@ -373,13 +383,22 @@ class XdkRenameServerTest {
                             TextDocumentIdentifier(uri),
                             Range(Position(0, 0), Position(0, text.length)),
                             CodeActionContext(emptyList()),
-                        )
-                    )
-                    .get(30, SECONDS)
+                        ),
+                    ).get(30, SECONDS)
             val edit = actions.single().right.edit
             assertThat(edit.changes).isNull()
-            assertThat(edit.documentChanges.single().left.textDocument.version).isEqualTo(7)
-            assertThat(edit.documentChanges.single().left.edits.single().left.newText).isEmpty()
+            assertThat(
+                edit.documentChanges
+                    .single()
+                    .left.textDocument.version,
+            ).isEqualTo(7)
+            assertThat(
+                edit.documentChanges
+                    .single()
+                    .left.edits
+                    .single()
+                    .left.newText,
+            ).isEmpty()
         } finally {
             server.shutdown().get(20, SECONDS)
         }
@@ -416,7 +435,7 @@ class XdkRenameServerTest {
                 val documents = server.textDocumentService
                 val uri = root.toURI().toString()
                 documents.didOpen(
-                    DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 7, root.readText()))
+                    DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 7, root.readText())),
                 )
                 documents
                     .documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri)))
@@ -428,9 +447,8 @@ class XdkRenameServerTest {
                                 TextDocumentIdentifier(uri),
                                 Position(0, root.readText().indexOf("Item")),
                                 "Renamed",
-                            )
-                        )
-                        .get(30, SECONDS)
+                            ),
+                        ).get(30, SECONDS)
                 if (!enabled) {
                     assertThat(edit).isNull()
                 } else {

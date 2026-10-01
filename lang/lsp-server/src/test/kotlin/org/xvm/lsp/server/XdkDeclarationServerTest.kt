@@ -1,6 +1,5 @@
 package org.xvm.lsp.server
 
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.DeclarationParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
@@ -13,6 +12,7 @@ import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkDeclarationServerTest {
     @Test
@@ -31,7 +31,7 @@ class XdkDeclarationServerTest {
                             "class Both implements A, B { @Override Int read() = 1; } Int use(Both value) = value.read(); }"
                     val documents = server.textDocumentService
                     documents.didOpen(
-                        DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, text))
+                        DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, text)),
                     )
                     val targets =
                         documents
@@ -39,9 +39,8 @@ class XdkDeclarationServerTest {
                                 DeclarationParams(
                                     TextDocumentIdentifier(uri),
                                     Position(0, text.lastIndexOf("read")),
-                                )
-                            )
-                            .get(30, SECONDS)
+                                ),
+                            ).get(30, SECONDS)
                             .left
                     assertThat(targets).hasSize(2)
                     assertThat(targets.map { it.range.start.character })

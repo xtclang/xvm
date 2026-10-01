@@ -1,6 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -11,6 +10,7 @@ import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.semanticSnapshot
 import org.xvm.tool.ModuleInfo
+import java.nio.file.Path
 
 class XdkRecoveryTest {
     @TempDir lateinit var directory: Path
@@ -20,7 +20,8 @@ class XdkRecoveryTest {
         CompilerTestSupport.configure()
         val errors = ErrorList()
         val result =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .compileModule(
                     Source("module Editing { void run() { console.; } Int after = 1; }", URI),
                     null,
@@ -33,7 +34,12 @@ class XdkRecoveryTest {
         assertThat(result.file()).isNull()
         assertThat(result.pool()).isNull()
         assertThat(result.sourceTrees()).hasSize(1)
-        assertThat(result.sourceTrees().single().source.fileName).isEqualTo(URI)
+        assertThat(
+            result
+                .sourceTrees()
+                .single()
+                .source.fileName,
+        ).isEqualTo(URI)
         val semantics = result.semanticSnapshot()
         assertThat(semantics.status).isEqualTo(SemanticModel.Status.UNAVAILABLE)
         assertThat(semantics.symbols).isEmpty()
@@ -103,19 +109,31 @@ class XdkRecoveryTest {
             assertThat(result.diagnostics).isNotEmpty().allSatisfy {
                 assertThat(it.location.uri).isEqualTo(member.toURI().toString())
             }
-            assertThat(adapter.findWorkspaceSymbols("Base").single().location.uri).isEqualTo(uri)
-            assertThat(adapter.findWorkspaceSymbols("changing").single().location.uri)
-                .isEqualTo(member.toURI().toString())
-            assertThat(adapter.findWorkspaceSymbols("Sibling").single().location.uri)
-                .isEqualTo(sibling.toURI().toString())
             assertThat(
-                    adapter.findDefinition(
-                        member.toURI().toString(),
-                        0,
-                        member.readText().indexOf("Base"),
-                    )
-                )
-                .isNull()
+                adapter
+                    .findWorkspaceSymbols("Base")
+                    .single()
+                    .location.uri,
+            ).isEqualTo(uri)
+            assertThat(
+                adapter
+                    .findWorkspaceSymbols("changing")
+                    .single()
+                    .location.uri,
+            ).isEqualTo(member.toURI().toString())
+            assertThat(
+                adapter
+                    .findWorkspaceSymbols("Sibling")
+                    .single()
+                    .location.uri,
+            ).isEqualTo(sibling.toURI().toString())
+            assertThat(
+                adapter.findDefinition(
+                    member.toURI().toString(),
+                    0,
+                    member.readText().indexOf("Base"),
+                ),
+            ).isNull()
             val rootSymbols = adapter.getCachedResult(uri)!!.symbols
             assertThat(rootSymbols.single().children.map { it.name }).containsExactly("Base")
         }

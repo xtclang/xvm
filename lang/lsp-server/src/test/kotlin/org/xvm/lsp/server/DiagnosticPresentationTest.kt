@@ -14,9 +14,7 @@ import org.xvm.lsp.model.Location
 class DiagnosticPresentationTest {
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
-    fun `pull diagnostics negotiate related information independently of push and related documents`(
-        support: Boolean
-    ) {
+    fun `pull diagnostics negotiate related information independently of push and related documents`(support: Boolean) {
         val presentation =
             ClientPresentation.read(
                 InitializeParams().apply {
@@ -35,7 +33,7 @@ class DiagnosticPresentationTest {
                                         }
                                 }
                         }
-                }
+                },
             )
         assertThat(presentation.diagnosticRelatedInformation).isEqualTo(!support)
         assertThat(presentation.pullDiagnosticRelatedInformation).isEqualTo(support)
@@ -53,8 +51,7 @@ class DiagnosticPresentationTest {
                     null,
                     setOf(root, consumer),
                     presentation.pullDiagnosticRelatedInformation,
-                )
-                .left
+                ).left
         val unchanged =
             reports
                 .document(
@@ -62,8 +59,7 @@ class DiagnosticPresentationTest {
                     first.resultId,
                     setOf(root, consumer),
                     presentation.pullDiagnosticRelatedInformation,
-                )
-                .right
+                ).right
         assertThat(unchanged.resultId).isEqualTo(first.resultId)
         val workspace =
             reports.workspace(
@@ -74,18 +70,30 @@ class DiagnosticPresentationTest {
             )
         val diagnostics =
             first.items +
-                first.relatedDocuments.getValue(consumer).left.items +
-                unchanged.relatedDocuments.getValue(consumer).left.items +
+                first.relatedDocuments
+                    .getValue(consumer)
+                    .left.items +
+                unchanged.relatedDocuments
+                    .getValue(consumer)
+                    .left.items +
                 workspace.items.flatMap { it.left.items }
         assertThat(diagnostics).hasSize(5).allSatisfy { diagnostic ->
             assertThat(diagnostic.message.left).contains(origin.uri, "External failure")
             assertThat(diagnostic.range.start.line).isZero()
             if (support) {
-                assertThat(diagnostic.relatedInformation.single().location.uri)
-                    .isEqualTo(origin.uri)
-                assertThat(diagnostic.relatedInformation.single().location.range.start.line)
-                    .isEqualTo(2)
-            } else assertThat(diagnostic.relatedInformation).isNull()
+                assertThat(
+                    diagnostic.relatedInformation
+                        .single()
+                        .location.uri,
+                ).isEqualTo(origin.uri)
+                assertThat(
+                    diagnostic.relatedInformation
+                        .single()
+                        .location.range.start.line,
+                ).isEqualTo(2)
+            } else {
+                assertThat(diagnostic.relatedInformation).isNull()
+            }
         }
         val cached =
             reports.workspace(

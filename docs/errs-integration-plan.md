@@ -6890,6 +6890,10 @@ X105 verifies the shared helper still handles auto-import intentions. No mouse m
 
 ## Spotless and ktfmt migration
 
+Historical checkpoint: the ktfmt choice below is superseded by the
+[alignment with master's Spotless/ktlint setup](#spotlessktlint-alignment-with-master-2026-10-01).
+Do not extract the ktfmt migration as a new PR against current master.
+
 The completed L63 library/complete-repair batch was committed, validated and pushed through
 `c958ef667` before starting this separate tooling change. The ast.partial migration remains planned.
 
@@ -6932,6 +6936,33 @@ Validation after both implementation slices:
   warning; this migration does not claim to eliminate unrelated warnings.
 
 Current formatting commands and behavior are documented in [lang/README.md](../lang/README.md#kotlin-formatting).
+
+## Spotless/ktlint alignment with master (2026-10-01)
+
+Master commit `d604988b5` (#656) replaced the separate ktlint Gradle plugin with Spotless
+8.10.3 calling the ktlint 1.8.0 engine. The errs branch now uses those same versions and default
+rules, replacing its temporary ktfmt 0.64 setup. Kotlin remains 2.4.20. This is the formatter
+portion of master's dependency cleanup, not a claim that all dependency updates from #656 were
+imported here.
+
+The existing broader errs targets remain: all eight lang Gradle scripts and Kotlin source/test
+trees, including IntelliJ integration tests. Generated build outputs remain excluded. Local
+compilation/check applies formatting; CI and explicit `spotlessCheck` only check it. No global
+JVM warning suppression or custom formatter launcher is introduced.
+
+Keep the mechanical reformat separate from L81's progress lifecycle changes. Future PR extraction
+must retain master's formatter configuration and format each extracted source against it; the old
+ktfmt integration/source-format commits are historical checkpoints, not independent PR candidates.
+
+Validation: all **50 DSL tests and 80 IntelliJ unit tests** pass with zero failures/errors/skips
+(JUnit XML timestamps 2026-10-01 08:50–08:52 UTC). LSP sources/tests, DAP sources and the IntelliJ
+native driver compile. Root/lang Spotless checks pass, and repeating the combined check/compile
+command reuses the configuration cache. The eight changed raw strings retain their
+contents after the existing `trimIndent`/`trimMargin` calls. The manual adjustments preserve TODO
+markers and clarify comment placement, one mixed condition and two expressions; the IntelliJ
+serialized uppercase field retains a narrow naming-rule suppression. No Unsafe warning appeared.
+The existing two Kotlin test-source warnings and Gradle daemon metaspace warning are unrelated.
+No editor replay is needed for this formatting-only checkpoint; L81 acceptance follows separately.
 
 L72 implementation checkpoint (2026-09-30): source synchronization and save hooks are connection
 options, not compiler APIs. No additional AST or embedding changes were necessary. The implementation

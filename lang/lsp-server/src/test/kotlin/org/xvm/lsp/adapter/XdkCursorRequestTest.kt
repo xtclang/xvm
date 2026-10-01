@@ -1,10 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.net.URI
-import java.nio.file.Path
-import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -18,6 +13,11 @@ import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.PartialSemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.tool.ModuleInfo
+import java.net.URI
+import java.nio.file.Path
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkCursorRequestTest {
     @TempDir lateinit var directory: Path
@@ -137,13 +137,21 @@ class XdkCursorRequestTest {
         val compiler = PausedCursor()
         val prefix =
             when (kind) {
-                "member" -> prefix("String")
-                "empty" ->
+                "member" -> {
+                    prefix("String")
+                }
+
+                "empty" -> {
                     "module Editing { void take(String value) {} void run(String text) { take("
-                "property" ->
+                }
+
+                "property" -> {
                     "module Editing { String text = \"x\"; void take(String value) {} void run() { take(te"
-                else ->
+                }
+
+                else -> {
                     "module Editing { void take(String value) {} void run(String text) { take(te"
+                }
             }
         val source = "$prefix } }"
         compiler.adapter().use { adapter ->
@@ -161,7 +169,7 @@ class XdkCursorRequestTest {
                             "size"
                         } else {
                             "text"
-                        }
+                        },
                     )
             } finally {
                 compiler.release.countDown()
@@ -185,11 +193,10 @@ class XdkCursorRequestTest {
                 compiler.release.countDown()
                 reopened.get(10, SECONDS)
                 assertThat(
-                        receiverType(
-                            adapter.analyzeAtAsync(URI, position("Int")).get(10, SECONDS)!!
-                        )
-                    )
-                    .contains("Int")
+                    receiverType(
+                        adapter.analyzeAtAsync(URI, position("Int")).get(10, SECONDS)!!,
+                    ),
+                ).contains("Int")
             } finally {
                 compiler.release.countDown()
             }
@@ -291,23 +298,29 @@ class XdkCursorRequestTest {
             val snapshot =
                 adapter.analyzeAtAsync(URI, Position(1, prefix.length)).get(10, SECONDS)!!
             assertThat(receiverType(snapshot)).contains("String")
-            assertThat(snapshot.sites.single().range.end.line).isEqualTo(1)
-            assertThat(snapshot.sites.single().range.end.column).isEqualTo(prefix.length)
+            assertThat(
+                snapshot.sites
+                    .single()
+                    .range.end.line,
+            ).isEqualTo(1)
+            assertThat(
+                snapshot.sites
+                    .single()
+                    .range.end.column,
+            ).isEqualTo(prefix.length)
             listOf(Position(-1, 0), Position(0, -1), Position(1, prefix.length + 100)).forEach {
                 assertThat(adapter.analyzeAtAsync(URI, it).get(10, SECONDS)).isNull()
             }
         }
     }
 
-    private fun prefix(type: String): String =
-        "module Editing { Int run($type value) { return value."
+    private fun prefix(type: String): String = "module Editing { Int run($type value) { return value."
 
     private fun text(type: String): String = prefix(type) + " } }"
 
     private fun position(type: String): Position = Position(0, prefix(type).length)
 
-    private fun receiverType(model: PartialSemanticModel): String =
-        model.semantics.type(model.sites.single().receiverType!!)!!.displayName
+    private fun receiverType(model: PartialSemanticModel): String = model.semantics.type(model.sites.single().receiverType!!)!!.displayName
 
     private companion object {
         const val URI = "untitled:Editing.x"

@@ -1,13 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.io.File
-import java.lang.ref.WeakReference
-import java.net.URI
-import java.nio.file.Path
-import java.time.Duration
-import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.TimeUnit.NANOSECONDS
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
@@ -18,6 +10,14 @@ import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
+import java.io.File
+import java.lang.ref.WeakReference
+import java.net.URI
+import java.nio.file.Path
+import java.time.Duration
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.TimeUnit.NANOSECONDS
+import java.util.concurrent.TimeUnit.SECONDS
 
 /**
  * A bounded repeatable retention workload; it is not a multi-hour editor soak or a performance SLA.
@@ -36,11 +36,12 @@ class XdkRetentionTest {
             if (value != null) observed.add(WeakReference(value))
         }
 
-        fun EmbeddingSupport.Compilation.observe(): EmbeddingSupport.Compilation = also {
-            observe(it)
-            observe(it.pool())
-            it.sourceTrees().forEach(::observe)
-        }
+        fun EmbeddingSupport.Compilation.observe(): EmbeddingSupport.Compilation =
+            also {
+                observe(it)
+                observe(it.pool())
+                it.sourceTrees().forEach(::observe)
+            }
         val artifacts =
             (1..2).map { version ->
                 support
@@ -48,13 +49,12 @@ class XdkRetentionTest {
                         Source("module External { static Int value() = $version; }", "External.x"),
                         null,
                         ErrorList(),
-                    )
-                    .toDependency()
+                    ).toDependency()
             }
         val library =
             directory.resolve("Library.x").toFile().apply {
                 writeText(
-                    "module Library { package ext import External; static Int value() = ext.value(); class Box { Int number = 1; } }"
+                    "module Library { package ext import External; static Int value() = ext.value(); class Box { Int number = 1; } }",
                 )
             }
         val consumer = directory.resolve("Consumer.x").toFile().apply { writeText(CONSUMER) }
@@ -76,8 +76,7 @@ class XdkRetentionTest {
                             cursor,
                             repository,
                             errors,
-                        )
-                        .also {
+                        ).also {
                             observe(it)
                             observe(it.pool().orElse(null))
                             it.sourceTrees().forEach(::observe)
@@ -89,7 +88,7 @@ class XdkRetentionTest {
                 listOf(
                     XdkSourceModule("Library", library.toURI().toString()),
                     XdkSourceModule("Consumer", uri, setOf("Library")),
-                )
+                ),
             )
             val cursorCases =
                 listOf(
@@ -119,14 +118,25 @@ class XdkRetentionTest {
                 val headerQuery = cycle % (cursorCases.size + 1) == cursorCases.size
                 val (marked, expected) =
                     when {
-                        !headerQuery -> cursorCases[cycle % cursorCases.size]
-                        (cycle / (cursorCases.size + 1)) % 4 == 0 ->
+                        !headerQuery -> {
+                            cursorCases[cycle % cursorCases.size]
+                        }
+
+                        (cycle / (cursorCases.size + 1)) % 4 == 0 -> {
                             "void probe(Str| value) {}" to "String"
-                        (cycle / (cursorCases.size + 1)) % 4 == 1 ->
+                        }
+
+                        (cycle / (cursorCases.size + 1)) % 4 == 1 -> {
                             "void probe(Map<Int, List<Str|>> value) {}" to "String"
-                        (cycle / (cursorCases.size + 1)) % 4 == 2 ->
+                        }
+
+                        (cycle / (cursorCases.size + 1)) % 4 == 2 -> {
                             "interface Probe extends List<Str|> {}" to "String"
-                        else -> "void probe(ecstasy.text.Str| value) {}" to "StringBuffer"
+                        }
+
+                        else -> {
+                            "void probe(ecstasy.text.Str| value) {}" to "StringBuffer"
+                        }
                     }
                 val prefix = marked.substringBefore('|')
                 val incomplete =
@@ -138,11 +148,10 @@ class XdkRetentionTest {
                 assertThat(adapter.compile(uri, incomplete).success).isFalse()
                 val column = incomplete.lastIndexOf(prefix) + prefix.length
                 assertThat(
-                        adapter.getCompletionsAsync(uri, 0, column).get(30, SECONDS).map {
-                            it.label
-                        }
-                    )
-                    .contains(expected)
+                    adapter.getCompletionsAsync(uri, 0, column).get(30, SECONDS).map {
+                        it.label
+                    },
+                ).contains(expected)
                 val cancelled = adapter.getCompletionsAsync(uri, 0, column)
                 cancelled.cancel(false)
                 assertThat(adapter.compile(uri, CONSUMER).success).isTrue()
@@ -159,7 +168,7 @@ class XdkRetentionTest {
         val millis = timings.map(NANOSECONDS::toMillis).sorted()
         println(
             "Retention workload: cycles=$CYCLES, edit requests=${CYCLES * 8}, weak references=${observed.size}, retained=0, " +
-                "rebuild p50=${millis[millis.size / 2]}ms, p95=${millis[(millis.size * 0.95).toInt()]}ms (includes debounce)"
+                "rebuild p50=${millis[millis.size / 2]}ms, p95=${millis[(millis.size * 0.95).toInt()]}ms (includes debounce)",
         )
     }
 
