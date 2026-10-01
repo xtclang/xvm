@@ -7688,10 +7688,95 @@ reproducible, and reconcile completed versus remaining scope. Validation is batc
    | L66 editing/structure | Token-preserving indentation, URL links, local linked editing, recorded damaged-source structure | Expression wrapping and comment/string layout, import/source links, broader proven linked scopes and remaining damaged constructs. A full pretty-printer is not implemented. |
    | L67 scale | Live graph discovery/overlays, dependencies and detached per-root caches | Use the platform workload to establish budgets and locate bottlenecks before choosing incremental or persistent indexing; neither exists merely because incremental text transport does. |
    | L80 capability contract | Tested emitted kinds/markup, UTF-16, watcher lifecycle, action forms, versioned text/resource edits and X144 native ownership | Retain the final method/producer-to-capability audit as an explicit submission review. No new snippet/location-link/tag producer is needed solely for optional protocol completeness; revisit negotiation when one is added. Generic native resource/snippet/confirmation edits remain deliberately refused. |
-   | L81 lifecycle | Trace, owned progress/cancel, partial results, refresh, shutdown and X145 pending restart | Run new X146/X147; retain physical Cancel-button and broader multiple-window interactions as manual acceptance rather than absent server implementations. |
-   | L82 release evidence | Previous backend/stdio/unit suite, full native 150-case checkpoint and 360-cycle retention receipt | X130 host failure; new batch regression receipts; measured response-time/heap targets, prolonged editing/restart/process-leak runs and supported-platform/packaging acceptance. Later extracted PRs still need independent validation. |
+   | L81 lifecycle | Trace, owned progress/cancel, partial results, refresh, shutdown, X145 pending restart and X146/X147 refresh/report ownership | Physical Cancel-button selection and broader per-provider visual/multiple-window interactions remain manual acceptance rather than absent server implementations. See the following validation receipt. |
+   | L82 release evidence | Previous backend/compiler suite, full native 150-case checkpoint, 360-cycle retention receipt, current stdio/plugin/selected editor tests and 30-cycle platform baseline | Intermittent X130 host failure; agreed response-time/heap targets, prolonged editing/restart/process-leak runs and supported-platform/packaging acceptance. Later extracted PRs still need independent validation. |
 
    L73–L79 remain explicit missing/optional scopes with their existing investigation tasks. R1–R8
    still own reusable execution and DAP. This reconciliation closes no unimplemented feature by
    renaming it a test task. Validation is the next action; no broad editor suite ran between these
    four implementation checkpoints.
+
+
+### Reliability validation receipt (2026-10-01)
+
+Implementation checkpoints, kept separate for later extraction:
+
+| Commit | Scope |
+| --- | --- |
+| `32e80a612` | Shared native Explorer move and extension-free host reproduction |
+| `7d94c86bd` | Late report ownership and shared X146/X147 in both editors |
+| `62e6a0ec8` | Packaged platform workload, queue/API/heap evidence |
+| `557dbd894` | Reconciled implementation and acceptance checklist |
+| `3db16d923` | Observation-only Explorer wait and cleanup of controlled delayed replies; keep with test infrastructure |
+| `43da5db69` | Native settings/restart publication correction and regression; keep with `7d94c86bd` |
+| `f8980976c` | Compiler trace aggregation and telemetry formatting; keep with `62e6a0ec8` |
+
+The batched build passes TypeScript compilation, native-driver compilation, **74 packaged stdio
+and 80 IntelliJ unit tests**, with zero failures/errors/skips. These reran on October 1. The earlier
+backend/compiler receipts remain historical evidence; the new server change only adds nonblocking
+heap telemetry, covered by the packaged status test.
+
+VS Code `run-Ki54bo` passes **8/8 selected cases**: X118, X129, X130, X136, X137, X139,
+X146 and X147. X146 verifies dependency-driven refresh and changed hints without a consumer edit;
+X147 exercises late real replies, settings changes and retirement of the old connection/PID.
+This does not replace the earlier 149/150 full-catalog receipt. In particular, X130's intermittent
+host failure remains open even though this selected attempt passes.
+
+The extension-free Explorer probe `run-lqt47d` records **not-reproduced** on VS Code 1.140.0,
+with Ecstasy absent and Move/Undo/Redo/content assertions completed. An earlier probe
+`run-xNCQiR` stopped because it read the filesystem before Undo completed. The probe now polls
+only observations within a failure bound; each mutation still executes once. Neither attempt
+establishes an upstream reproduction or a fix. The observed bundled-host repaint path remains the
+lead; preserve the original X130 failure and obtain reliable extension-free reproduction before
+claiming an upstream defect is independently proven.
+
+Platform `platform-workload/run-01` passes **30 overlay cycles and 30 cancellations across three
+server processes**, using eleven configured modules and fifty source files. Each cold workspace
+pull returns 49 diagnostic documents without errors. All child processes exit themselves: graceful
+shutdown, expected EOF exit, then graceful shutdown. Source hashes are unchanged. The report
+records the tested JAR hash and per-session traces, samples, outcomes and timings.
+
+| Measurement | Observed per-session range |
+| --- | --- |
+| Cold workspace diagnostics | 4.85–4.93 seconds |
+| Edit to outline, including debounce | p50 330–338 ms; p95 352–366 ms |
+| Warm hover | p50 0.76–0.77 ms; p95 5.25–5.64 ms |
+| Cached document diagnostics | p50 0.55–0.65 ms; p95 1.78–1.89 ms |
+| `compileModule(tree)` | p50 204–208 ms; p95 663–679 ms; maximum 1.03 seconds |
+| Sampled peak used heap with a 2 GiB cap | 707–930 MiB |
+| Concurrent traced compiler API threads | Maximum one in each process |
+
+The trace captures one queued diagnostic job at its largest observed queue; the periodic sampler
+misses that brief interval and reports zero. Both retain readable job identities. Do not equate
+sampled queue size with all submissions, sampled heap with absolute peak/RSS/retained heap, or
+thirty cycles with a prolonged soak. These are a reproducible local baseline, not release budgets
+or cross-platform guarantees. L67/L82 still require agreed budgets and longer supported-platform
+editing/restart workloads.
+
+
+IntelliJ `run-13013331047107199721` passes seven selected cases plus START, then fails X147:
+the stale report guard observed compiler-graph settings, but a service-only project override retained
+the inherited graph owner. Consequently the old report could still publish after a transport change.
+The final guard captures both compiler and effective service settings, and the actual connections
+at request start, then rechecks all of them on the EDT. This also closes the handoff window between
+reply arrival and UI publication. The shared X147 driver explicitly restarts in that window without
+changing settings; no synthetic server identity replaces the real connection.
+
+Focused IntelliJ `run-5612866093768251189` passes X136/X137/X147 plus START, with zero IDE errors
+and successful shutdown. Together the two selected receipts cover all eight requested cases,
+including X146's native cached inlay refresh. The initial failure remains recorded; this is not
+an uninterrupted eight-case or full 152-case run. Both editors use catalog hash
+`0aedab6aa74999cb21bf41a3d820d05bd45cc6012db4e5fb65646d17573f9374`.
+
+The four-checkpoint scope now has implementation and bounded acceptance evidence. P3/P4's new
+controlled provider/report assertions are automated and pass; physical Cancel-button selection,
+broader per-provider visual and multiple-window acceptance, intermittent X130 reproduction, final
+capability audit and prolonged supported-platform measurements remain open. No AST/embedding change
+or newly advertised language feature was needed for this batch.
+
+
+Final read-only root/lang Spotless checks and `git diff --check` pass. The plugin unit suite reruns
+against the final publication guard: **80 passed, zero failures/errors/skips**. All work stays on
+`lagergren/errs`; these local checkpoint commits have not been pushed by this batch. No upstream
+issue, remote branch or PR was created. Final process inventory finds no surviving test editor,
+playbook runner, workload or language-server processes.
