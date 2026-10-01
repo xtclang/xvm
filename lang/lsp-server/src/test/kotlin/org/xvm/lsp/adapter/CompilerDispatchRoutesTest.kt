@@ -84,6 +84,16 @@ class CompilerDispatchRoutesTest {
         }
     }
 
+    @Test
+    fun `native binary methods do not acquire written executable implementation targets`() {
+        inspect("") { module, errors ->
+            val info = module.constantPool.typeString().ensureTypeInfo(errors)
+            val native = info.methods.values.filter { method -> method.chain.firstOrNull()?.implementation == Implementation.Native }
+            assertThat(native).isNotEmpty()
+            native.forEach { method -> assertThat(info.methodImplementation(method, errors)).isNull() }
+        }
+    }
+
     private fun type(
         module: ClassStructure,
         name: String,
