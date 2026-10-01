@@ -4838,6 +4838,24 @@
             "anchor": "module MissingNames {\n    void run((String | Int) ",
             "label": "value",
             "expected": "module MissingNames {\n    void run((String | Int) value) {}\n}"
+          },
+          {
+            "source": "module MissingNames {\n    void run() {\n        val  = \"hello\";\n    }\n}",
+            "anchor": "val ",
+            "label": "text",
+            "expected": "module MissingNames {\n    void run() {\n        val text = \"hello\";\n    }\n}"
+          },
+          {
+            "source": "module MissingNames {\n    void run() {\n        var  = 42;\n    }\n}",
+            "anchor": "var ",
+            "label": "number",
+            "expected": "module MissingNames {\n    void run() {\n        var number = 42;\n    }\n}"
+          },
+          {
+            "source": "module MissingNames {\n    void run() {\n        val  = new StringBuffer();\n    }\n}",
+            "anchor": "val ",
+            "label": "stringBuffer",
+            "expected": "module MissingNames {\n    void run() {\n        val stringBuffer = new StringBuffer();\n    }\n}"
           }
         ]
       },
