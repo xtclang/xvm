@@ -3132,6 +3132,10 @@
       ],
       "values": {
         "file": "AutoImports.x",
+        "completions": [
+          {"source": "module AutoImports { Doc§ument value; }", "label": "Document", "importText": "import xml.Document;"},
+          {"source": "module AutoImports { Wid§get value; }", "label": "Widget", "importText": "import importLibrary.Widget;"}
+        ],
         "variants": [
           {
             "source": "module AutoImports { Document echo(Document doc) = doc; }",

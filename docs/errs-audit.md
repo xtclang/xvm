@@ -1465,3 +1465,7 @@ about 83 MiB at cycle 100 to 98 MiB at cycle 1,200. Investigate that repeated gr
 bounded retained memory; no plateau or particular leaking owner has been established. The
 [bounded workload receipt](errs-integration-plan.md#l82-bounded-extended-workload-checkpoint-2026-10-01)
 records timings, sampled RSS and deferred combined/full-editor gates.
+
+Functionality continuation: import-producing completion reuses whole-graph repair proof, with
+plain-text atomic additional edits and cancellation across both stages. No AST state or embedding
+API change. Added backend/protocol tests and X105 variants await the combined functionality gate.

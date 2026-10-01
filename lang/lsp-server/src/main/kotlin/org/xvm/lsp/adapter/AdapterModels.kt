@@ -36,6 +36,7 @@ data class CompletionItem(
     val textEdit: TextEdit? = null,
     val documentation: String? = null,
     val sortText: String? = null,
+    val additionalTextEdits: List<TextEdit> = emptyList(),
 ) {
     enum class CompletionKind {
         CLASS,
