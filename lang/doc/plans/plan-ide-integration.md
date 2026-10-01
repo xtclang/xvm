@@ -905,3 +905,11 @@ Delayed no-op directory watches preserve incomplete queries against current open
 closed-source/resource changes still invalidate them. These corrections add no embedding or AST API.
 See the [final batch receipt](../../../docs/errs-integration-plan.md#final-native-and-batch-receipt-2026-09-30)
 and [audit](../../../docs/errs-audit.md#native-save-all-and-fixture-cleanup-follow-up-2026-09-30).
+
+Reliability follow-up (2026-10-01): X146/X147 bring the catalog to 152, with new provider-refresh
+and late-report assertions awaiting batched execution. VS Code effective-configuration publication
+now rejects superseded requests/settings/connections; IntelliJ report publication also checks
+captured settings and connection lifetime. An isolated Explorer reproduction runs without Ecstasy
+to investigate X130 without hiding its failure. The opt-in packaged platform workload records
+latency, queue names/counts, sampled heap and process exit; it does not establish performance budgets
+until measured. No new language capability, embedding API or AST field is added.

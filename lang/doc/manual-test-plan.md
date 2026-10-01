@@ -1,7 +1,8 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has 150 scenarios, including X144 guarded client edits and X145 native
-progress/cancel/restart. The final IntelliJ run passes all 150 plus startup, with zero IDE errors.
+The current catalog has 152 scenarios: X146/X147 add dependency refresh and late-report ownership.
+Their validation is pending the current batch. The previous final IntelliJ run passes all 150
+then-existing cases plus startup, with zero IDE errors.
 The final full VS Code run passes 149/150; X130 remains failed because of the host's post-Paste
 Explorer repaint exception. Current validation receipts are recorded at the end of this document.
 X124/X131/X134/X142/X143 previously passed in both editors across
@@ -2222,7 +2223,7 @@ module Advanced {
 | X128 | Rename Box.x to Crate.x and an implicit tools package folder to util using the IntelliJ project-tree Rename action (Shift+F6), or the VS Code file Rename action. | Compiler-proven declaration/reference edits and the move apply together; root and member diagnostics remain clear. IntelliJ invokes the registered handler and actual Rename dialog. Raw VFS moves occur too early for LSP4IJ's before-listener to obtain proof and are not equivalent coverage. |
 | X129 | Import an evaluated Gradle model with processed resources; refresh to empty roots and back; try a malformed report; enable an explicit empty-resource override and refresh again; reset to the build model. | Diagnostics follow the imported paths, malformed reports retain the last valid import, refresh preserves explicit settings, and resetting restores the model. Both drivers exercise the installed client configuration path. |
 
-| X130 | Select the two shared module containers, Move them into the destination directory, then Undo and Redo once. | Both modules, member files and embedded resources follow the move; the unchanged consumer still resolves its imports. IntelliJ uses the registered Community Move handler and dialog; VS Code uses a native workspace resource edit. |
+| X130 | Select the two shared module containers, Move them into the destination directory, then Undo and Redo once. | Both modules, member files and embedded resources follow the move; the unchanged consumer still resolves its imports. IntelliJ uses the Community Move handler/dialog; VS Code uses Explorer Cut/Paste and native Undo/Redo once each. Its host repaint exception still fails the case even when the move assertions succeed. |
 
 | X131 | Request code lenses, document links, inlay hints and workspace symbols; resolve deferred properties when negotiated; edit the source and retry old handles. | Stable positions/labels, preserved command arguments, complete resolved payloads and explicit stale-handle refusal. Both drivers use their installed client connection; existing UI cases cover presentation/navigation. |
 | X132 | Request formatting for overlapping and disjoint line ranges, then negotiated pre-save hooks with default options. | Formatting edits are sorted and deduplicated; default save hooks return no edits. Both clients retain the unchanged buffer. Incremental UTF-16/CRLF patches and opt-in save edits have backend regression coverage. |
@@ -2641,7 +2642,7 @@ features exercised by changing the modern IDE's capability declaration.
 This map covers the L80/L81 protocol batch and the accompanying state-ownership fixes. A shared
 scenario is automated in both editors only where named below. Controlled backend tests exercise
 interleavings that normal editor actions cannot reliably force. Manual rows remain acceptance
-work; they are not passing automated receipts. The current catalog has 148 cases. The earlier
+work; they are not passing automated receipts. The current catalog has 152 cases. The earlier
 protocol checkpoint reran X136/X137/X140/X141 plus IntelliJ START; follow-up receipts are recorded below.
 
 | Change | Automated regression evidence | Editor/playbook coverage and limits |
@@ -2651,11 +2652,11 @@ protocol checkpoint reran X136/X137/X140/X141 plus IntelliJ START; follow-up rec
 | Progress creation, token ownership, cancellation, late acknowledgements and one terminal event | `ConnectionProgressTest` controls replies and races completion/cancel/close | Manual P1/P2 below. Short compiler fixtures do not guarantee a visible progress popup. |
 | Pending readers canceled independently of shared analysis; immediate retirement on close | `RequestOwnershipTest` uses an analysis future that can ignore cancellation | X137 covers connection restart with an unsaved buffer; P2 covers pending UI work. The selected editor case does not force the backend race. |
 | Pre-initialize, duplicate initialize and shutdown request rules | `ProtocolLifecycleTest`, `XdkStdioTest`; `LspProcessLifecycleTest` covers child-process termination | X137 passes repeated transport restarts; invalid wire order is tested over packaged stdio, not sent through a conforming IDE. |
-| Negotiated, coalesced refresh outside compiler locks | `ClientNotificationsTest`, `XdkPullDiagnosticsTest`, `XdkSemanticTokenProtocolTest` | Manual P3 below checks visible refresh and the negotiated wire requests. There is no new deterministic native case for each refresh provider. |
+| Negotiated, coalesced refresh outside compiler locks | `ClientNotificationsTest`, `XdkPullDiagnosticsTest`, `XdkSemanticTokenProtocolTest` | New shared X146 covers dependency refresh and inferred hints in an untouched consumer; execution is pending. P3 retains broader per-provider visual acceptance. |
 | Runtime `off` / `messages` / `verbose` trace without source payloads | `ClientNotificationsTest` | X141 passes messages/verbose in both editors; switching off and post-close behavior are controlled unit tests. |
 | IntelliJ diagnostic-cache retirement after unlocked snapshot lookup | `DiagnosticResultMessagesTest` forces close/cancel during that lookup | Existing diagnostic/reopen scenarios cover normal editor flow; the precise race is unit-tested. |
 | Tree-sitter scan starvation and native parser/disposal ownership | `WorkspaceIndexerTest` concurrent scans/parser requests run without skips | This is the shipping Tree-sitter adapter, not an XdkAdapter feature. Compiler playbook passes do not validate its UI behavior. |
-| Retired VS Code connections and stale IntelliJ settings reports | X136/X137 pass in both editors | Normal settings/restart flows pass. Out-of-order old-client callbacks and native settings-report races are not deterministically forced by those scenarios; P4 is manual. |
+| Retired VS Code connections and stale IntelliJ settings reports | X136/X137 pass in both editors; new X147 controls late report completion | X147 asserts publication ownership after newer reports, settings changes, restart and native UI disposal; execution is pending. Broader multi-window interaction remains manual. |
 | Negotiated configuration requests and post-close formatting replies | `ClientPresentationTest`, `EditorFormattingStateTest`, `FormattingConfigRoundTripTest` | X136 covers effective settings; earlier X138/X139 cover live formatting and save ownership. |
 | Stalled watcher replies, late registration/removal and disconnect | `ResourceFileWatchersTest` controls acknowledgement deadlines and retry ownership | X124/X134 exercise ordinary external resource/source watching; they do not force client RPC stalls. |
 | Compiler path drafts invalidated by settings/model/new-dialog changes | VS Code `compiler-paths.test.ts` | Actual settings writes and disposal are tested inside the extension host; no automated picker-click race is claimed. |

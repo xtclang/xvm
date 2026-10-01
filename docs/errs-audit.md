@@ -1290,3 +1290,25 @@ respectively. The full VS Code run remains **149 passed / 1 failed**, not green:
 the host repaint exception described above. Smoke fixture/settings isolation passes 23/23;
 both VS Code runners now share a status counter, with selected X144/X145 also passing. Detailed
 receipts, commit separation and remaining acceptance are in the integration plan.
+
+### Late UI reports and reliability follow-up (2026-10-01)
+
+VS Code's effective-configuration command awaited a server reply then unconditionally cleared and
+repopulated its output view. A slower previous command, settings change or retired connection could
+therefore publish obsolete data. Its UI-owned generation now changes on requests, configuration
+changes and disposal; publication also requires the same active connection. Shared X147 holds a
+real reply until a newer report/settings/restart has completed, then verifies the old command returns
+without publishing. The old client's close callback must not restart it.
+
+IntelliJ already had a request/disposal revision guard. It now also captures the settings content,
+and its asynchronous module reader rejects a retired server connection. The real settings component
+is driven with controlled report futures; each assertion waits for an EDT barrier after publication,
+so it cannot pass before the stale callback runs. Its injected reader is a UI data boundary, not a
+new compiler API or mutable AST field. X146 observes actual provider refresh after a dependency edit
+and checks the untouched consumer's inferred type in both hosts. Execution remains pending until
+the four-checkpoint batch is complete.
+
+The platform workload uses only unsaved overlays and asserts source hashes remain unchanged.
+Heap sampling comes from the JVM management bean in the nonblocking service-status response;
+queue metadata remains copied under its existing lock. The sampler does not submit compiler jobs,
+force GC or alter scheduling. Sampled peak heap is not a retained-memory or RSS measurement.
