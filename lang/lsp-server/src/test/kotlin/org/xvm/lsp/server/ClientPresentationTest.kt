@@ -13,6 +13,8 @@ import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializedParams
 import org.eclipse.lsp4j.MarkupKind
 import org.eclipse.lsp4j.PublishDiagnosticsCapabilities
+import org.eclipse.lsp4j.SignatureHelpCapabilities
+import org.eclipse.lsp4j.SignatureInformationCapabilities
 import org.eclipse.lsp4j.SymbolKind
 import org.eclipse.lsp4j.SymbolKindCapabilities
 import org.eclipse.lsp4j.TextDocumentClientCapabilities
@@ -128,6 +130,13 @@ internal fun editorInitializeParams() =
                 workspace = WorkspaceClientCapabilities().apply { configuration = true }
                 textDocument =
                     TextDocumentClientCapabilities().apply {
+                        signatureHelp =
+                            SignatureHelpCapabilities().apply {
+                                signatureInformation =
+                                    SignatureInformationCapabilities().apply {
+                                        activeParameterSupport = true
+                                    }
+                            }
                         codeAction =
                             CodeActionCapabilities().apply {
                                 codeActionLiteralSupport =

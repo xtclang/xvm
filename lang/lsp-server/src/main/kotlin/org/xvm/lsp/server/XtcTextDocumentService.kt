@@ -651,6 +651,7 @@ class XtcTextDocumentService(
                 params.textDocument.uri,
                 params.previousResultId,
                 if (server.supportsRelatedDiagnostics) current else emptySet(),
+                relatedInformation = server.presentation.pullDiagnosticRelatedInformation,
             )
         }
 
@@ -677,6 +678,7 @@ class XtcTextDocumentService(
                 current,
                 params.previousResultIds.orEmpty().associate { it.uri to it.value },
                 openDocuments.mapValues { it.value.version },
+                relatedInformation = server.presentation.pullDiagnosticRelatedInformation,
             )
         }
 
@@ -1055,7 +1057,7 @@ class XtcTextDocumentService(
                         else null
                     if (handle == null) {
                         target = l.target
-                        tooltip = l.tooltip
+                        tooltip = l.tooltip.takeIf { server.presentation.linkTooltips }
                     } else data = handle
                 }
             }
@@ -1086,7 +1088,10 @@ class XtcTextDocumentService(
                             SignatureInformation().apply {
                                 label = s.label
                                 documentation = s.documentation?.let { Either.forLeft(it) }
-                                activeParameter = s.activeParameter
+                                activeParameter =
+                                    s.activeParameter.takeIf {
+                                        server.presentation.signatureActiveParameters
+                                    }
                                 parameters =
                                     s.parameters.map { p ->
                                         ParameterInformation().apply {
@@ -1098,7 +1103,9 @@ class XtcTextDocumentService(
                             }
                         }
                     activeSignature = help.activeSignature
-                    activeParameter = help.activeParameter
+                    activeParameter =
+                        help.signatures.getOrNull(help.activeSignature)?.activeParameter
+                            ?: help.activeParameter
                 }
             }
         }
@@ -1825,7 +1832,7 @@ class XtcTextDocumentService(
             if (link.data != null) {
                 val resolved = linkReports.resolve(link.data, diagnosticRevision, link.range.fmt())
                 link.target = resolved.target
-                link.tooltip = resolved.tooltip
+                link.tooltip = resolved.tooltip.takeIf { server.presentation.linkTooltips }
             }
             link
         }
