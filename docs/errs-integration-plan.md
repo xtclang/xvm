@@ -8198,3 +8198,32 @@ a lexical-by-semantic overlap scan, and hints build every tooltip before range f
 
 Keep the workload and phase tracing as a separate diagnostic commit. The following presentation
 fix and regression/measurement receipt belong to the compiler adapter implementation slice.
+
+The presentation fix filters hint positions before rendering, uses the already-selected declaration
+facts for inferred tooltips, and checks lexical overlap through sorted semantic starts/prefix maximum
+ends. Nested/duplicate ranges and adjacent half-open boundaries are preserved, including single-line
+files. The index is request-local immutable data; no retained cache, AST field or compiler API changes.
+
+`semantic-workload/indexed/results.json` passes all four size/shape sessions, two query cycles each,
+and verifies all four processes exit normally. Local repeated-request measurements:
+
+| Input/request | Before | After |
+| --- | ---: | ---: |
+| 5,000 inferred locals, one-line hints | 7,523 ms | 3.0 ms |
+| 5,000 inferred locals, whole-file hints | 7,801 ms | 22.8 ms |
+| 20,000 inferred locals, one-line hints | 132,714 ms (first request) | 11.7 ms first / 7.3 ms repeated |
+| 20,000 inferred locals, whole-file hints | Remaining baseline interrupted | 87.1 ms first / 66.4 ms repeated |
+| 20,000 plain methods, full tokens | 4,824 ms | 146.8 ms |
+
+At 20,000 inferred locals, the repeated whole-file hint request spends about 34 ms in backend work
+and 25 ms serializing/writing; tokens spend 124 ms in backend work and 28 ms serializing/writing.
+Hover remains 2–3 ms warmed. First references still builds the separate project-analysis snapshot
+(about 10 seconds including another compilation); repeated references take 207 ms. This cold cost
+is retained as a separate L67 follow-up, not attributed to serialization or considered fixed.
+Sampled peak heap is 752 MiB for that case, not retained heap/RSS or an agreed memory budget.
+
+Fifteen focused presentation, overlap/range/tooltip, trace and lazy-resolve tests pass with zero
+failures/errors/skips. The large-file workload is an opt-in diagnostic; no brittle wall-clock
+assertion is added to unit tests. Native editor application cost, UP17, prolonged L82 workloads and
+the combined editor checkpoint remain separate gates. Extract diagnostic commit `3ee97b161` with
+tracing/workload infrastructure and the presentation fix with compiler-adapter presentation.
