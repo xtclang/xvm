@@ -8278,3 +8278,41 @@ The two-cycle `platform-workload/memory-smoke-authorized` control passes, record
 85.2 MB used heap at both GC checkpoints and a 1.05 GB sampled RSS peak, preserves source hashes
 and observes normal child exit. The first sandboxed sampling attempt failed on `ps` access and is
 retained as a failed receipt. Longer workloads and combined validation follow this tooling commit.
+
+### L82 bounded extended-workload checkpoint (2026-10-01)
+
+`platform-workload/extended-edit-restart/results.json` retains two completed 1,200-cycle sessions
+against 11 configured platform modules and 50 source files. Every cycle cancels a pending reference
+request, then checks symbols, hover and diagnostics. Session 0 exits normally with code 0; session 1
+exits with the expected code 1 after transport EOF without shutdown. Both have 1,200 successful
+cancellations, no sampling errors and at most one compiler API thread active. Source hashes are
+unchanged. Median compile time is about 210–212 ms; warm hover p95 is below 0.8 ms.
+
+The initially planned third session was deliberately interrupted at initialization after the user
+questioned the run duration. Its cleanup PID was verified gone, but it is excluded from acceptance.
+The overall JSON therefore remains `failed`/interrupted (launcher exit 130); do not relabel the whole
+three-session run as passing. Completed session records preserve their independent passing results.
+
+| Completed session | Post-GC heap at cycle 100 | Post-GC heap at cycle 1,200 | Sampled peak RSS |
+| --- | ---: | ---: | ---: |
+| Normal shutdown | 83.1 MiB | 97.7 MiB | 1.06 GiB |
+| Transport EOF | 83.1 MiB | 97.8 MiB | 1.28 GiB |
+
+- [ ] Identify the retained heap growth: capture comparable post-GC histograms/heap dominators at
+  bounded early/late checkpoints and distinguish live caches, instrumentation retention and obsolete
+  compiler state. Growth repeats in both processes; this is not yet a plateau or a proven leak.
+- [ ] Re-run the combined compiler/LSP/stdio/plugin gate and current full editor catalogs in a
+  separate time-bounded checkpoint. The present checkpoint retains the 15 focused semantic/trace
+  regression results and native lifetime receipts; it does not claim a new full-suite pass.
+- [ ] Retain VS Code visible Cancel, UP16/UP17 repairs and supported-platform acceptance as open.
+
+Native trust/real-backup validation is commit `9553844fd`, following driver implementation
+`7364e0af8`. The final IntelliJ assertion opens and checks the reopened document without replaying
+the earlier edit. Keep that assertion and this receipt with the editor acceptance/workload slice;
+the semantic presentation fix and tracing instrumentation remain separate extraction commits.
+
+Final focused rerun `run-11163643850362008619` passes START and START_PROJECTS in 38.3 seconds,
+with zero IDE errors. Primary PID 68649 remains intact while closed PID 68659 retires; reopening
+starts PID 68669 and reads the preserved document without rewriting it. Root and lang
+`spotlessCheck` pass. No full editor playbook or combined backend suite was launched for this final
+harness-only assertion change. No owned workload process remained after the shortened run.
