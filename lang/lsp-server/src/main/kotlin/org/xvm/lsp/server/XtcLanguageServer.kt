@@ -1155,9 +1155,14 @@ class XtcLanguageServer(
                         mapOf("readOnly" to true, "modules" to XdkLibraries.packagedResources)
                     else null,
                 "compilerQueue" to (adapter as? XdkAdapter)?.compilerQueueSnapshot(),
-                "heap" to ManagementFactory.getMemoryMXBean().heapMemoryUsage.let {
-                    mapOf("usedBytes" to it.used, "committedBytes" to it.committed, "maxBytes" to it.max)
-                },
+                "heap" to
+                    ManagementFactory.getMemoryMXBean().heapMemoryUsage.let {
+                        mapOf(
+                            "usedBytes" to it.used,
+                            "committedBytes" to it.committed,
+                            "maxBytes" to it.max,
+                        )
+                    },
             )
         )
 
