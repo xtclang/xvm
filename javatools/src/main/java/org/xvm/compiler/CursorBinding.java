@@ -21,7 +21,7 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
                             List<NamedType> types, List<Candidate> candidates, boolean callsInspected,
                             List<FunctionCandidate> functions, List<Variable> argumentValues,
                             List<Property> argumentProperties, List<Formal> formals,
-                            List<String> argumentLiterals) {
+                            List<String> argumentLiterals, List<String> argumentExpressions) {
     public CursorBinding {
         variables = List.copyOf(variables);
         types = List.copyOf(types);
@@ -31,6 +31,16 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
         argumentProperties = List.copyOf(argumentProperties);
         formals = List.copyOf(formals);
         argumentLiterals = List.copyOf(argumentLiterals);
+        argumentExpressions = List.copyOf(argumentExpressions);
+    }
+
+    /** Retain callers predating enclosing-instance insertion proposals. */
+    public CursorBinding(List<Variable> variables, TypeConstant thisType, boolean instance,
+                         List<NamedType> types, List<Candidate> candidates, boolean callsInspected,
+                         List<FunctionCandidate> functions, List<Variable> argumentValues,
+                         List<Property> argumentProperties, List<Formal> formals, List<String> argumentLiterals) {
+        this(variables, thisType, instance, types, candidates, callsInspected, functions,
+                argumentValues, argumentProperties, formals, argumentLiterals, List.of());
     }
 
     /** Retain callers predating literal insertion proposals. */
@@ -69,7 +79,7 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
 
     public CursorBinding withFormals(List<Formal> formals) {
         return new CursorBinding(variables, thisType, instance, types, candidates, callsInspected,
-                functions, argumentValues, argumentProperties, formals, argumentLiterals);
+                functions, argumentValues, argumentProperties, formals, argumentLiterals, argumentExpressions);
     }
 
     /** Retain variable-completion callers. Record patterns must also include argument properties. */
@@ -100,12 +110,12 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
     public CursorBinding(List<Variable> variables, TypeConstant thisType, boolean instance,
                          List<NamedType> types, CallFacts calls) {
         this(variables, thisType, instance, types, calls.candidates(), calls.inspected(),
-                calls.functions(), calls.argumentValues(), calls.argumentProperties(), List.of(), calls.argumentLiterals());
+                calls.functions(), calls.argumentValues(), calls.argumentProperties(), List.of(), calls.argumentLiterals(), calls.argumentExpressions());
     }
 
     /** A grouped immutable view; no context, mutable operation or AST child is introduced. */
     public CallFacts callFacts() {
-        return new CallFacts(candidates, callsInspected, functions, argumentValues, argumentProperties, argumentLiterals);
+        return new CallFacts(candidates, callsInspected, functions, argumentValues, argumentProperties, argumentLiterals, argumentExpressions);
     }
 
     private CursorBinding withCallFacts(CallFacts calls) {
@@ -136,7 +146,13 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
 
     /** Literal source spellings whose insertion fits and validates with the other written arguments. */
     public CursorBinding withArgumentLiterals(List<String> literals) {
-        return withCallFacts(new CallFacts(candidates, callsInspected, functions, argumentValues, argumentProperties, literals));
+        return withCallFacts(new CallFacts(candidates, callsInspected, functions, argumentValues, argumentProperties, literals, argumentExpressions));
+    }
+
+    /** Compiler-validated enclosing-instance source expressions, distinct from literals. */
+    public CursorBinding withArgumentExpressions(List<String> expressions) {
+        return withCallFacts(new CallFacts(candidates, callsInspected, functions, argumentValues,
+                argumentProperties, argumentLiterals, expressions));
     }
 
     /**
@@ -147,13 +163,20 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
      */
     public record CallFacts(List<Candidate> candidates, boolean inspected,
                             List<FunctionCandidate> functions, List<Variable> argumentValues,
-                            List<Property> argumentProperties, List<String> argumentLiterals) {
+                            List<Property> argumentProperties, List<String> argumentLiterals, List<String> argumentExpressions) {
         public CallFacts {
             candidates = List.copyOf(candidates);
             functions = List.copyOf(functions);
             argumentValues = List.copyOf(argumentValues);
             argumentProperties = List.copyOf(argumentProperties);
             argumentLiterals = List.copyOf(argumentLiterals);
+            argumentExpressions = List.copyOf(argumentExpressions);
+        }
+
+        public CallFacts(List<Candidate> candidates, boolean inspected,
+                         List<FunctionCandidate> functions, List<Variable> argumentValues,
+                         List<Property> argumentProperties, List<String> argumentLiterals) {
+            this(candidates, inspected, functions, argumentValues, argumentProperties, argumentLiterals, List.of());
         }
 
         public CallFacts(List<Candidate> candidates, boolean inspected,
@@ -163,19 +186,19 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
         }
 
         public CallFacts withCandidates(List<Candidate> candidates) {
-            return new CallFacts(candidates, true, functions, argumentValues, argumentProperties, argumentLiterals);
+            return new CallFacts(candidates, true, functions, argumentValues, argumentProperties, argumentLiterals, argumentExpressions);
         }
 
         public CallFacts withFunctions(List<FunctionCandidate> functions) {
-            return new CallFacts(candidates, true, functions, argumentValues, argumentProperties, argumentLiterals);
+            return new CallFacts(candidates, true, functions, argumentValues, argumentProperties, argumentLiterals, argumentExpressions);
         }
 
         public CallFacts withArgumentValues(List<Variable> values) {
-            return new CallFacts(candidates, inspected, functions, values, argumentProperties, argumentLiterals);
+            return new CallFacts(candidates, inspected, functions, values, argumentProperties, argumentLiterals, argumentExpressions);
         }
 
         public CallFacts withArgumentProperties(List<Property> properties) {
-            return new CallFacts(candidates, inspected, functions, argumentValues, properties, argumentLiterals);
+            return new CallFacts(candidates, inspected, functions, argumentValues, properties, argumentLiterals, argumentExpressions);
         }
     }
 
