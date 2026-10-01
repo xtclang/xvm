@@ -23,8 +23,10 @@ class XdkValueTemplateTest {
                 assertThat(item.snippet).contains("${'$'}{1:TODO()}${'$'}0")
                 assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
                 val edit = item.textEdit!!
-                assertThat(adapter.compile(URI, source.replaceRange(edit.range.start.column, edit.range.end.column, edit.newText)).diagnostics)
-                    .describedAs(marked).isEmpty()
+                assertThat(
+                    adapter.compile(URI, source.replaceRange(edit.range.start.column, edit.range.end.column, edit.newText)).diagnostics,
+                ).describedAs(marked)
+                    .isEmpty()
             }
         }
     }
@@ -39,7 +41,8 @@ class XdkValueTemplateTest {
             val marked = "module Editing { $body }"
             XdkAdapter().use { adapter ->
                 adapter.compile(URI, marked.replace("§", ""))
-                assertThat(adapter.getCompletions(URI, 0, marked.indexOf('§'))).describedAs(marked)
+                assertThat(adapter.getCompletions(URI, 0, marked.indexOf('§')))
+                    .describedAs(marked)
                     .noneMatch { it.detail == "Lambda fitting this argument" }
             }
         }
