@@ -11,7 +11,7 @@ both our server and LSP4IJ. They are separate projects. The branch pins LSP4IJ 0
 server LSP4J 1.0.0; the VS Code X130 reproduction uses VS Code 1.140.0.
 
 Keep the requested `// TODO LSP4IJ:` prefix for the Java client/library integration family,
-including an explicit underlying LSP4J owner where applicable. Use `// TODO VSCODE:` for
+including an explicit underlying LSP4J or IntelliJ Platform owner where applicable. Use `// TODO VSCODE:` for
 VS Code host defects. Each marker includes the stable UP identifier below. The marker must
 explain the removal condition; a dependency version bump alone does not justify removing it.
 
@@ -49,6 +49,7 @@ not a claim that every referenced suite was rerun for this documentation change.
 | **UP14 — LSP4IJ — bridged** | Semantic caches keyed only to PSI stamps retain old results when a dependency changes but the consumer text does not. | [XtcLanguageClient](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcLanguageClient.kt) retires completed semantic results on compiler analysis updates; X146 observes untouched-consumer refresh. | All negotiated native providers reflect dependency edits without editing the consumer or our invalidation bridge. |
 | **UP15 — LSP4J — open** | Valid JSON with a wrongly typed parameter is classified as `ParseError` rather than `InvalidParams`. | [XdkStdioTest](../lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/XdkStdioTest.kt) records the actual library result and then exercises normal semantic requests. No production parser fork. Details below. | Repair upstream parameter-decoding classification; change the assertion to `ResponseErrorCode.InvalidParams`, retaining reader recovery. |
 | **UP16 — VS Code — open** | Paste repaints obsolete Cut tree nodes after an Explorer refresh; cleanup throws and skips resetting move/copy state. | [Isolated reproduction and traces](errs-integration-plan.md#x130-isolated-host-defect-and-harness-focus-correction-2026-10-01), [probe](../lang/vscode-extension/src/test/explorer-move.ts) and X130. Reproduced without Ecstasy or an LSP server. No host patch or exception suppression. | Upstream reconciles/guards stale repaint targets and always resets cleanup state. Both the controlled standalone reproduction and native X130 must pass on the repaired release. |
+| **UP17 — IntelliJ Platform — open** | Removing many ranges in one document edit repeatedly traverses temporarily invalid interval subtrees on the EDT. Large-file replacement freezes the UI. | [Isolated marker probe](../lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/probe/LargeFileProbe.kt), [native driver](../lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/LargeFileEditing.kt) and [measurements](errs-integration-plan.md#l82-large-file-intellij-freeze-investigation-2026-10-01). Reproduced with unattached platform documents; bulk-update mode does not remove the cost. No production tree patch or discarded highlights. | A platform repair passes the plain-marker scaling control and actual decorated-editor replacement, preserving marker validity and UI responsiveness. A smaller workload or replacement before highlights arrive does not satisfy this gate. |
 
 ## UP15: malformed parameters are not malformed JSON
 
@@ -78,6 +79,8 @@ not an Ecstasy parser/compiler error and not specific to IntelliJ.
 - [ ] Recheck UP15 on a repaired LSP4J release and require `InvalidParams` for typed-parameter
   failures while retaining `ParseError` for actual invalid JSON syntax.
 - [ ] Repair/report UP16 independently of compiler work; keep X130 failed whenever it reproduces.
+- [ ] Prepare UP17's plain-document reproduction and native freeze profile for JetBrains. Verify
+  a platform repair before closing L82; investigate editor decoration cost separately from compiler time.
 - [ ] On each relevant dependency upgrade, rerun the removal gates before deleting a bridge.
   Record the upstream issue/PR, first fixed version and replacement validation here.
 - [ ] Keep this register, source TODO identifiers and the L81/L82 acceptance status synchronized.
