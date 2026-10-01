@@ -50,7 +50,12 @@ internal class DiagnosticReports {
         return uris
     }
 
-    fun document(uri: String, previous: String?, related: Set<String>): DocumentDiagnosticReport {
+    fun document(
+        uri: String,
+        previous: String?,
+        related: Set<String>,
+        relatedInformation: Boolean,
+    ): DocumentDiagnosticReport {
         recordIfAbsent(uri)
         val entry = entries.getValue(identity(uri))
         val others =
@@ -60,7 +65,7 @@ internal class DiagnosticReports {
                     Either.forLeft<FullDocumentDiagnosticReport, UnchangedDocumentDiagnosticReport>(
                         FullDocumentDiagnosticReport(
                                 entries.getValue(identity(other)).diagnostics.map {
-                                    it.present(other)
+                                    it.present(other, relatedInformation)
                                 }
                             )
                             .apply {
@@ -77,7 +82,9 @@ internal class DiagnosticReports {
             )
         } else {
             DocumentDiagnosticReport(
-                RelatedFullDocumentDiagnosticReport(entry.diagnostics.map { it.present(uri) })
+                RelatedFullDocumentDiagnosticReport(
+                        entry.diagnostics.map { it.present(uri, relatedInformation) }
+                    )
                     .apply {
                         resultId = entry.id
                         relatedDocuments = others
@@ -90,6 +97,7 @@ internal class DiagnosticReports {
         current: Set<String>,
         previous: Map<String, String>,
         versions: Map<String, Int>,
+        relatedInformation: Boolean,
     ): WorkspaceDiagnosticReport {
         // A removed root/file must explicitly clear the client's previous report. Do not retain
         // tombstones indefinitely: an unknown old ID simply receives another empty full report.
@@ -114,7 +122,7 @@ internal class DiagnosticReports {
                     } else {
                         WorkspaceDocumentDiagnosticReport(
                             WorkspaceFullDocumentDiagnosticReport(
-                                    entry.diagnostics.map { it.present(uri) },
+                                    entry.diagnostics.map { it.present(uri, relatedInformation) },
                                     uri,
                                     documentVersions[identity(uri)],
                                 )
@@ -135,9 +143,10 @@ internal class DiagnosticReports {
         identity(it) == identity(uri)
     }
 
-    private fun Diagnostic.present(uri: String) =
+    private fun Diagnostic.present(uri: String, relatedInformation: Boolean) =
         (if (location.uri == identity(uri)) copy(location = location.copy(uri = uri)) else this)
             .toLsp(uri)
+            .apply { if (!relatedInformation) this.relatedInformation = null }
 
     private fun identity(uri: String): String = runCatching {
         val parsed = URI(uri).normalize()
