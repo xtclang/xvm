@@ -42,6 +42,15 @@ internal object XdkAutoImports {
             .distinct()
             .sortedWith(compareBy(Target::module, Target::path))
 
+    fun matchingTargets(
+        prefix: String,
+        facts: CompilerRenameFacts,
+    ): List<Target> =
+        (facts.imports + bundled.filterKeys { it.startsWith(prefix) }.values.flatten())
+            .filter { it.name.startsWith(prefix) }
+            .distinct()
+            .sortedWith(compareBy(Target::name, Target::module, Target::path))
+
     internal fun target(constant: Constant): Target? {
         if (constant !is ClassConstant && constant !is TypedefConstant) return null
         val identity = constant as IdentityConstant
