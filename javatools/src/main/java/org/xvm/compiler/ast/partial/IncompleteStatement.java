@@ -20,6 +20,7 @@ import org.xvm.compiler.ast.NamedTypeExpression;
 import org.xvm.compiler.ast.NewExpression;
 import org.xvm.compiler.ast.PartialQueries;
 import org.xvm.compiler.ast.Statement;
+import org.xvm.compiler.ast.TypeExpression;
 
 import static org.xvm.asm.ErrorListener.in;
 
@@ -65,15 +66,27 @@ public final class IncompleteStatement extends Statement {
 
     /** A missing declaration name after a complete written type; never fabricate a name token. */
     public static IncompleteStatement forDeclarationName(NamedTypeExpression type, long cursor) {
-        return new IncompleteStatement(type, type.getNameToken(), List.of(), List.of(), cursor,
+        return forDeclarationName(type, type.getNameToken(), cursor);
+    }
+
+    /** Retain a complete wrapped or compound type and its last written token, without a new name. */
+    public static IncompleteStatement forDeclarationName(TypeExpression type, Token last, long cursor) {
+        return new IncompleteStatement(type, last, List.of(), List.of(), cursor,
                 Parser.INCOMPLETE_EXPRESSION, null);
+    }
+
+    /** Complete written type at an empty declaration-name slot; syntax only, never a binding. */
+    public Optional<TypeExpression> getDeclarationType() {
+        return target instanceof TypeExpression type && cursorName == null
+                && !isCall() && operator.getId() != Id.DOT
+                && operator.getEndPosition() < endPosition && type.getEndPosition() < endPosition
+                ? Optional.of(type) : Optional.empty();
     }
 
     /** The written type's final name, for syntax suggestions only, not a resolved type or binding. */
     public Optional<Token> getDeclarationNameType() {
-        return target instanceof NamedTypeExpression type && cursorName == null
-                && operator == type.getNameToken() && type.getEndPosition() < endPosition
-                ? Optional.of(type.getNameToken()) : Optional.empty();
+        return getDeclarationType().filter(NamedTypeExpression.class::isInstance)
+                .map(NamedTypeExpression.class::cast).map(NamedTypeExpression::getNameToken);
     }
 
     /** A call whose last written name is a named argument awaiting its value. */
@@ -167,19 +180,19 @@ public final class IncompleteStatement extends Statement {
     }
 
     public boolean isNameCompletion() {
-        return operator.getId() == Id.IDENTIFIER && getDeclarationNameType().isEmpty();
+        return operator.getId() == Id.IDENTIFIER && getDeclarationType().isEmpty();
     }
 
     /** A type query in an unfinished declaration, with no value or parameter-name completion. */
     public boolean isTypeCompletion() {
-        return getDeclarationNameType().isEmpty()
+        return getDeclarationType().isEmpty()
                 && (getParent() instanceof IncompleteDeclarationStatement
                         || getParent() instanceof IncompleteTypeCompositionStatement);
     }
 
     /** Explicit receiver only; an unqualified call does not invent an implicit receiver. */
     public Optional<Expression> getReceiver() {
-        if (isNameCompletion() || getDeclarationNameType().isPresent()) {
+        if (isNameCompletion() || getDeclarationType().isPresent()) {
             return Optional.empty();
         }
         return isCall()
@@ -227,7 +240,7 @@ public final class IncompleteStatement extends Statement {
 
     @Override
     public String toString() {
-        if (getDeclarationNameType().isPresent()) {
+        if (getDeclarationType().isPresent()) {
             return target + " <missing declaration name>";
         }
         String syntax = isNameCompletion() ? getMemberName().map(Token::getValueText).orElse("")

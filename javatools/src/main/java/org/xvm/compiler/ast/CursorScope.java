@@ -118,14 +118,23 @@ final class CursorScope {
     static List<CursorBinding.Formal> declarationFormals(IncompleteStatement site, AstNode scope,
             List<Parameter> writtenFormals, ErrorListener errs) {
         return site.getTarget() instanceof NamedTypeExpression named
-                && (named.left != null || named.getNames().length > 1) ? List.of() : resolveFormals(scope, writtenFormals, errs);
+                && (named.left != null || named.getNames().length > 1) ? List.of() : resolveFormals(site, scope, writtenFormals, errs);
     }
 
-    private static List<CursorBinding.Formal> resolveFormals(AstNode scope, List<Parameter> parameters,
+    private static List<CursorBinding.Formal> resolveFormals(IncompleteStatement site, AstNode scope, List<Parameter> parameters,
             ErrorListener errs) {
         var byName = parameters.stream().collect(Collectors.toMap(Parameter::getName, Function.identity(),
                 (first, second) -> first));
         return parameters.stream().takeWhile(parameter -> !errs.isAbortDesired()).map(parameter -> {
+            if (parameter.getType() instanceof BadTypeExpression bad && bad.nonType instanceof TypeExpression written
+                    && site.getTarget() instanceof NamedTypeExpression selected
+                    && parameter.getName().startsWith(site.getCompletionPrefix())) {
+                var proposal = completeBound(written, selected.getNameToken(), parameter.getNameToken());
+                // Only the candidate's own guarded cycle may complete an unfinished bound. Keep
+                // its written text; this probe creates no formal identity or registered signature.
+                return writtenBound(proposal, scope, byName, Map.of(parameter.getName(), 0), 0, errs) == BoundSyntax.RECURSIVE
+                        ? new CursorBinding.Formal(parameter.getNameToken(), null, written + " (incomplete)") : null;
+            }
             TypeConstant bound = formalBound(parameter, scope, byName, Set.of(), errs);
             if (bound != null) {
                 return new CursorBinding.Formal(parameter.getNameToken(), bound);
@@ -136,6 +145,20 @@ final class CursorScope {
         }).filter(Objects::nonNull).toList();
     }
 
+    /** Replace just the selected leaf on disposable syntax, retaining every other bound operand. */
+    private static TypeExpression completeBound(TypeExpression written, Token selected, Token name) {
+        if (written instanceof NamedTypeExpression named && named.left == null && named.paramTypes == null
+                && named.getNames().length == 1
+                && named.getNameToken().getStartPosition() == selected.getStartPosition()) {
+            return new NamedTypeExpression(null, List.of(name), null, null, null, named.getEndPosition());
+        }
+        var copy = (TypeExpression) written.clone();
+        StreamSupport.stream(copy.children().spliterator(), false).filter(TypeExpression.class::isInstance)
+                .map(TypeExpression.class::cast).toList()
+                .forEach(child -> copy.replaceChild(child, completeBound(child, selected, name)));
+        return copy;
+    }
+
     /**
      * Recognize guarded written recursion without assigning it a type. A cycle must cross a real
      * class's type-argument boundary; aliases and direct/sibling cycles cannot establish one.
@@ -144,7 +167,19 @@ final class CursorScope {
      */
     private static BoundSyntax writtenBound(TypeExpression type, AstNode scope,
             Map<String, Parameter> parameters, Map<String, Integer> resolving, int depth, ErrorListener errs) {
-        if (errs.isAbortDesired() || !(type instanceof NamedTypeExpression named) || named.left != null) {
+        if (errs.isAbortDesired()) {
+            return BoundSyntax.INVALID;
+        }
+        // These operators preserve the written recursion guard; none creates a class boundary.
+        // Resolve every operand so an unknown name or an unguarded sibling cycle still rejects it.
+        if (type instanceof NullableTypeExpression || type instanceof DecoratedTypeExpression
+                || type instanceof BiTypeExpression) {
+            return StreamSupport.stream(type.children().spliterator(), false)
+                    .filter(TypeExpression.class::isInstance).map(TypeExpression.class::cast)
+                    .map(child -> writtenBound(child, scope, parameters, resolving, depth, errs))
+                    .reduce(BoundSyntax.COMPLETE, BoundSyntax::combine);
+        }
+        if (!(type instanceof NamedTypeExpression named) || named.left != null) {
             return BoundSyntax.INVALID;
         }
         String name = named.getNames()[0];
@@ -367,6 +402,14 @@ final class CursorScope {
     /** Candidate names only; ordinary read validation still proves accessibility and ownership. */
     static Set<String> valueNames(IncompleteStatement site) {
         return names(site);
+    }
+
+    /** Lexical spellings only; normal expression validation proves that an outer instance exists. */
+    static List<String> enclosingInstances(IncompleteStatement site) {
+        return Stream.iterate(site.getParent(), Objects::nonNull, AstNode::getParent)
+                .filter(TypeCompositionStatement.class::isInstance).map(TypeCompositionStatement.class::cast)
+                .map(TypeCompositionStatement::getNameToken).filter(Objects::nonNull)
+                .map(Token::getValueText).distinct().toList();
     }
 
     private static Set<String> names(IncompleteStatement site) {

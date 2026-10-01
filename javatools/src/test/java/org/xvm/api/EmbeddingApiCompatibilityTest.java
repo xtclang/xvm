@@ -81,7 +81,8 @@ public class EmbeddingApiCompatibilityTest {
         assertEquals(0, switch (candidates) {
             case CursorBinding(var variables, var thisType, var instance, var types,
                     var methods, var inspected, var callable, var argumentValues, var properties, var formals,
-                    var literals) -> argumentValues.size() + properties.size() + formals.size() + literals.size();
+                    var literals, var expressions) -> argumentValues.size() + properties.size() + formals.size()
+                            + literals.size() + expressions.size();
         });
     }
 
