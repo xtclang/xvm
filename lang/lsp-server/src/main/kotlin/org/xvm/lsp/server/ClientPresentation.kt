@@ -2,6 +2,7 @@ package org.xvm.lsp.server
 
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.InitializeParams
+import org.eclipse.lsp4j.InsertTextMode
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.MarkupKind
 import org.eclipse.lsp4j.SymbolKind
@@ -17,6 +18,9 @@ internal data class ClientPresentation(
     val diagnosticRelatedInformation: Boolean = false,
     val workspaceConfiguration: Boolean = false,
     val completionKinds: Set<CompletionItemKind> = legacyCompletionKinds,
+    val completionSnippets: Boolean = false,
+    val completionAsIs: Boolean = false,
+    val completionAdjustIndentation: Boolean = false,
     val actionLiterals: Boolean = false,
     val preferredActions: Boolean = false,
     val applyEdit: Boolean = false,
@@ -51,8 +55,19 @@ internal data class ClientPresentation(
     val codeActions: Boolean
         get() = actionLiterals || applyEdit
 
+    /** Templates contain source indentation. Avoid a second indent by clients that always adjust it. */
+    fun completionTemplate(text: String): String {
+        if (completionAsIs || !completionAdjustIndentation) return text
+        val newline = lineBreaks.find(text)?.value ?: "\n"
+        val lines = text.split(newline)
+        val indent = lines.drop(1).filter(String::isNotBlank).minOfOrNull { it.takeWhile(Char::isWhitespace).length } ?: 0
+        return (lines.take(1) + lines.drop(1).map { it.drop(indent.coerceAtMost(it.takeWhile(Char::isWhitespace).length)) })
+            .joinToString(newline)
+    }
+
     companion object {
         const val APPLY_CODE_ACTION = "xtc.applyCodeAction"
+        private val lineBreaks = Regex("\\r\\n|\\r|\\n")
         private val legacyCompletionKinds =
             CompletionItemKind.entries
                 .filter { it.value <= CompletionItemKind.Reference.value }
@@ -93,6 +108,15 @@ internal data class ClientPresentation(
                         ?.toSet()
                         ?: legacyCompletionKinds,
                 actionLiterals = text?.codeAction?.codeActionLiteralSupport != null,
+                completionSnippets = text?.completion?.completionItem?.snippetSupport == true,
+                completionAsIs =
+                    text
+                        ?.completion
+                        ?.completionItem
+                        ?.insertTextModeSupport
+                        ?.valueSet
+                        ?.contains(InsertTextMode.AsIs) == true,
+                completionAdjustIndentation = text?.completion?.insertTextMode == InsertTextMode.AdjustIndentation,
                 preferredActions = text?.codeAction?.isPreferredSupport == true,
                 applyEdit = params.capabilities?.workspace?.applyEdit == true,
                 linkTooltips = text?.documentLink?.tooltipSupport == true,
