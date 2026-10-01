@@ -107,6 +107,81 @@ class XdkStdioTest {
 
     @TempDir lateinit var directory: Path
 
+    @Test
+    fun `separate connections isolate identical document URIs progress tokens and shutdown`() {
+        val jar = packagedJar()
+        Session(jar, Files.createDirectory(directory.resolve("first"))).use { first ->
+            Session(jar, Files.createDirectory(directory.resolve("second"))).use { second ->
+                first.initialize()
+                second.initialize()
+                val other = "module Stdio { String run() { String value = \"two\"; return value; } }"
+                first.open(VALID)
+                second.open(other)
+                assertThat(first.diagnosticsAt(1).diagnostics).isEmpty()
+                assertThat(second.diagnosticsAt(1).diagnostics).isEmpty()
+                assertThat(first.status()["pid"]).isNotEqualTo(second.status()["pid"])
+
+                fun references(
+                    session: Session,
+                    source: String,
+                ) = session.server.textDocumentService.references(
+                    ReferenceParams(TextDocumentIdentifier(URI), Position(0, source.indexOf("value")), ReferenceContext(true)).apply {
+                        workDoneToken = Either.forLeft("same-token")
+                        partialResultToken = Either.forLeft("same-partial-token")
+                    },
+                )
+                val one = references(first, VALID)
+                val two = references(second, other)
+                first.await(one)
+                second.await(two)
+                assertThat(first.progress.filter { it.token.left == "same-partial-token" }).isNotEmpty()
+                assertThat(second.progress.filter { it.token.left == "same-partial-token" }).isNotEmpty()
+                first.shutdownAndExit()
+                // The other connection still owns its buffer, semantic state and transport.
+                val hover =
+                    second.await(
+                        second.server.textDocumentService.hover(
+                            HoverParams(TextDocumentIdentifier(URI), Position(0, other.indexOf("value"))),
+                        ),
+                    )
+                assertThat(hover.contents.right.value).contains("String")
+                second.change(VALID, 2)
+                assertThat(second.diagnosticsAt(2).diagnostics).isEmpty()
+                second.verifySemantics(VALID, "value", "Int")
+                second.shutdownAndExit()
+            }
+        }
+    }
+
+    @Test
+    fun `unknown methods and malformed parameters cannot kill the packaged message reader`() {
+        Session(packagedJar(), directory).use { session ->
+            session.initialize()
+            session.open(VALID)
+            assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+            listOf(
+                Triple("xtc/unknownMethod", emptyMap<String, Any>(), ResponseErrorCode.MethodNotFound),
+                Triple(
+                    "textDocument/hover",
+                    mapOf(
+                        "textDocument" to mapOf("uri" to URI),
+                        "position" to mapOf("line" to "not-a-number", "character" to 0),
+                    ),
+                    // TODO LSP4IJ: UP15 — underlying LSP4J 1.0.0 labels valid JSON with bad parameter
+                    // types ParseError. Switch to InvalidParams after its decoder is repaired;
+                    // retain reader-recovery checks. See docs/errs-upstream-issues.md (UP15).
+                    ResponseErrorCode.ParseError,
+                ),
+            ).forEach { (method, params, code) ->
+                val failure = assertThrows<ExecutionException> { session.await(session.request(method, params)) }
+                assertThat(failure.cause).isInstanceOf(ResponseErrorException::class.java)
+                assertThat((failure.cause as ResponseErrorException).responseError.code).isEqualTo(code.value)
+                session.verifySemantics(VALID, "value", "Int")
+            }
+            session.shutdownAndExit()
+        }
+    }
+
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
     fun `optional signature and link fields follow negotiated capabilities over stdio`(richPresentation: Boolean) {
@@ -1628,6 +1703,11 @@ class XdkStdioTest {
         val server = launcher.remoteProxy
 
         fun status() = Gson().toJsonTree(await(server.languageServiceStatus())).asJsonObject
+
+        fun request(
+            method: String,
+            params: Any,
+        ): CompletableFuture<Any> = launcher.remoteEndpoint.request(method, params)
 
         fun initialize(
             versionedEdits: Boolean = false,
