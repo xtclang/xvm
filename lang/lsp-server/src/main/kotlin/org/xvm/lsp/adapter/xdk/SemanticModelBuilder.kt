@@ -46,6 +46,7 @@ import org.xvm.compiler.ast.TypeExpression
 import org.xvm.compiler.ast.TypedefStatement
 import org.xvm.compiler.ast.VariableDeclarationStatement
 import org.xvm.compiler.ast.VariableTypeExpression
+import org.xvm.compiler.ast.partial.IncompleteLocalDeclaration
 import org.xvm.lsp.adapter.xdk.SemanticModel.ExpressionType
 import org.xvm.lsp.adapter.xdk.SemanticModel.Occurrence
 import org.xvm.lsp.adapter.xdk.SemanticModel.Position
@@ -1055,7 +1056,9 @@ private class SemanticModelBuilder(
                             },
                         ),
                     members = immutableList(members),
-                    declarationNameType = site.declarationType.map(XdkSyntaxCompletions::declarationName).orElse(null),
+                    declarationNameType = site.declarationType.map {
+                        XdkSyntaxCompletions.declarationName(it, (site.parent as? IncompleteLocalDeclaration)?.initializer)
+                    }.orElse(null),
                     formals =
                         immutableList(
                             cursor?.formals().orEmpty().mapNotNull { formal ->

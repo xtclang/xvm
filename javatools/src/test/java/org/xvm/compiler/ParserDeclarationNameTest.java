@@ -12,6 +12,7 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.compiler.ast.AstNode;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.partial.IncompleteDeclarationStatement;
+import org.xvm.compiler.ast.partial.IncompleteLocalDeclaration;
 import org.xvm.compiler.ast.partial.IncompleteStatement;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -99,6 +100,22 @@ public class ParserDeclarationNameTest {
                     assertTrue(parsed.tree().toDumpString().contains("later"));
                     assertEquals(1, parsed.errors().getSeriousErrorCount(), header);
                 });
+    }
+
+    @Test
+    public void missingInferredLocalsRetainInitializerAndIndependentChildren() {
+        List.of("val § = \"hello\";", "var § = new StringBuffer();").forEach(declaration -> {
+            var parsed = parse("module Names { void run() { " + declaration + " Int later = 1; } }");
+            var slot = slots(parsed.tree()).findFirst().orElseThrow();
+            var local = (IncompleteLocalDeclaration) slot.getParent();
+            var copy = local.clone();
+            assertNotSame(local.getInitializer(), copy.getInitializer());
+            assertSame(copy, copy.getInitializer().getParent());
+            assertTrue(parsed.tree().toDumpString().contains("later"));
+            assertTrue(slot.getDeclarationType().isPresent());
+            assertEquals(1, parsed.errors().getSeriousErrorCount());
+            assertEquals(parsed.source().toRawString(), local.getSource().toRawString());
+        });
     }
 
     @Test

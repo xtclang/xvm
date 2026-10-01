@@ -88,6 +88,43 @@ class XdkMissingDeclarationNameTest {
         }
     }
 
+    @Test
+    fun `inferred local names use retained initializer syntax and exact edits`() {
+        listOf(
+            "val § = \"hello\";" to "text",
+            "var § = 42;" to "number",
+            "val § = True;" to "flag",
+            "val § = new StringBuffer();" to "stringBuffer",
+            "val te§ = \"hello\";" to "text",
+            "String st§ = \"hello\";" to "string",
+            "String[] st§ = [];" to "stringArray",
+        ).forEach { (declaration, expected) ->
+            val marked = "module Editing { void run() { $declaration Int later = 1; } }"
+            val source = marked.replace("§", "")
+            XdkAdapter().use { adapter ->
+                val cached = adapter.compile(URI, source)
+                val item = adapter.getCompletions(URI, 0, marked.indexOf('§')).single { it.label == expected }
+                assertThat(item.detail).startsWith("Name from written")
+                assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
+                val edit = item.textEdit!!
+                assertThat(adapter.compile(URI, source.replaceRange(edit.range.start.column, edit.range.end.column, edit.newText)).diagnostics)
+                    .describedAs(marked).isEmpty()
+            }
+        }
+    }
+
+    @Test
+    fun `inference without a useful written clue does not invent a type or name`() {
+        listOf("val § = Null;", "var § = unknown();", "val §;", "value § = 1;").forEach { declaration ->
+            val marked = "module Editing { void run() { $declaration } }"
+            XdkAdapter().use { adapter ->
+                adapter.compile(URI, marked.replace("§", ""))
+                assertThat(adapter.getCompletions(URI, 0, marked.indexOf('§'))).describedAs(marked)
+                    .noneMatch { it.detail.startsWith("Name from written") }
+            }
+        }
+    }
+
     private companion object {
         const val URI = "untitled:Editing.x"
     }
