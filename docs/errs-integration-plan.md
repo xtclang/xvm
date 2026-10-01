@@ -7519,9 +7519,13 @@ All 23 incomplete-query failures are corrected. X144 passes in 11,571 ms and X14
 X130 verifies Move/Undo/Redo and every resource before reporting the host repaint exception; do
 not describe this as a clean full pass or retry the completed mutation.
 
-- [ ] **L82 native host follow-up — X130:** isolate/report or verify an upstream fix for VS Code
-  1.140.0's post-Paste `itemsCopied` rerender of retired Cut nodes. Keep the host failure visible
-  while preserving separate evidence for compiler move correctness and native Undo/Redo.
+- [x] **L82 X130 isolation:** reproduce the post-Paste `itemsCopied` failure without Ecstasy,
+  using a controlled public Explorer refresh during rename participation. Two independent fresh
+  runs reproduce it; the normal X118–X130 sequence also reproduces it. See the X130 diagnosis below.
+- [ ] **L82 X130 upstream repair:** report the reproduction and verify a VS Code fix. The latest
+  release and inspected upstream source retain the unguarded repaint. X130 remains a failed host
+  acceptance test when it reproduces; compiler Move/Undo/Redo/resource correctness is recorded
+  separately. No upstream issue or PR has been submitted.
 
 
 Final current-server backend verification: **1,504 passed**, three existing disabled placeholders
@@ -7780,3 +7784,78 @@ against the final publication guard: **80 passed, zero failures/errors/skips**. 
 `lagergren/errs`; these local checkpoint commits have not been pushed by this batch. No upstream
 issue, remote branch or PR was created. Final process inventory finds no surviving test editor,
 playbook runner, workload or language-server processes.
+
+
+### X130 isolated host defect and harness focus correction (2026-10-01)
+
+The original failure is now reproduced independently of Ecstasy. The empty-extension probe uses
+X130's actual nested directory layout and unchanged shared source/resource data. It asserts that
+Ecstasy is absent and launches no compiler or LSP client. With `--refresh-during-move`, its sole
+rename participant waits for the public Refresh Explorer command and returns no edit. This forces
+an Explorer refresh between Cut and the filesystem move without sleeps or patched host code.
+
+```bash
+./gradlew :lang:vscode-extension:npmCompile \
+  -PincludeBuildLang=true -PincludeBuildAttachLang=true
+cd lang/vscode-extension
+node scripts/run-vscode-tests.cjs --explorer-move-probe --refresh-during-move
+```
+
+The diagnostic probe exits **nonzero** when the host bug reproduces. Its `results.json` and
+`move-trace.json` retain the exception and completed Move/Undo/Redo/content checks. Omitting
+`--refresh-during-move` runs the same nested fixture without the controlled refresh. It does not
+turn an unreproduced attempt into a claim of a fix.
+
+**Cause:** Cut keeps references to Explorer tree items. Refresh rebuilds those items. Paste moves
+the directories using the current model, then clears Cut highlighting using the obsolete items.
+`ExplorerView.itemsCopied` unconditionally calls `tree.rerender` for them, which throws because their
+old node identities no longer exist. The exception escapes Paste's cleanup; the following reset of
+its move/copy flag is also skipped. The host repair should guard/reconcile stale repaint targets and
+ensure that cleanup resets its state even if repaint fails. That repair has not been implemented or
+validated in an upstream checkout here.
+
+[VS Code 1.140.0](https://github.com/microsoft/vscode/releases/tag/1.140.0) is the latest released
+version checked on October 1. The same unguarded code remains at upstream commit
+[`5e8e57c65bbd4ee459f4cabc5697a9a3a5f3aeda`](https://github.com/microsoft/vscode/blob/5e8e57c65bbd4ee459f4cabc5697a9a3a5f3aeda/src/vs/workbench/contrib/files/browser/views/explorerView.ts#L900).
+An extension has no supported API to replace those private tree nodes or repair Paste's cleanup.
+Intercepting native Paste, changing clipboard/Cut state during a move, replacing the native move
+with a file-only edit or swallowing the exception would change behavior or hide the defect. No such
+workaround is installed. There is no compiler/embedding prerequisite to the upstream repair.
+
+The normal X130 trace proves that our `workspace/willRenameFiles` reply is exactly
+`{"documentChanges":[]}`. The server neither moves files nor duplicates the requested resource
+operations. In `run-LjhgZP`, the reply arrives at 496 ms, the native move notification at 506 ms,
+and the host cleanup exception at 512 ms. Undo and Redo each execute once, deliver their expected
+move notifications, and restore all source/resource contents. This isolates the repaint exception
+from compiler move correctness without declaring the case green.
+
+| Attempt | Result |
+| --- | --- |
+| `compiler-playbook/run-haOXDr` | 7/13 passed; six native Undo failures, including X130. Kept as a failed run. No completed action replayed. |
+| `explorer-probe/run-D9AfiJ` | Nested fixture with Ecstasy absent, no controlled refresh: Move/Undo/Redo/content checks pass; repaint defect not reproduced. |
+| `compiler-playbook/run-QLBWYV` | X130 alone passes with empty compiler edit and native Move/Undo/Redo. |
+| `explorer-probe/run-czIsNj` | Controlled refresh reproduces the exact `itemsCopied` exception without Ecstasy; all move/history/content checks complete. |
+| `compiler-playbook/run-LjhgZP` | X118–X129 pass; X130 reproduces the original host repaint error after all move/history/content assertions. **12/13, not green.** |
+| `explorer-probe/run-GSxFkH` | A second fresh controlled attempt reproduces the same host exception; all move/history/content checks complete. |
+
+The first run exposed a separate harness focus weakness: focusing the editor pane does not ensure
+that the window owns desktop focus. Native Undo can consequently dispatch to a DOM input or fail
+to select Explorer's undo history. The harness now checks `window.state.focused`, activates through
+VS Code's own Focus Window command only when needed, and waits for focus before dispatching the
+native action once. It never moves the mouse. The corrected X118–X129 sequence passes, and X130's
+Undo/Redo assertions pass even in the repaint-failing run. Public command/file/window events and
+the actual LSP request/reply are recorded for X130; observers neither supply edits nor delay rename.
+The explicit diagnostic probe's refresh participant is separate from these observers.
+
+All changes in this slice are test infrastructure and documentation. TypeScript compilation and
+read-only root/lang Spotless checks are the build gates; no Java, Kotlin, compiler or production
+plugin behavior changes require a new backend or IntelliJ run. X130's upstream fix remains open;
+additional LSP implementation can proceed with this independently proven host defect tracked.
+
+
+Extraction checkpoints: `f83707d9b` contains the native-focus test correction;
+`b8ea5fcd3` contains the observed command/file/LSP trace and controlled host reproduction, and
+uses that focus helper. Keep both with the editor test infrastructure. Final TypeScript compilation,
+root/lang Spotless checks and `git diff --check` pass. No test/editor/LSP processes remain. These
+commits are local on `lagergren/errs`; this slice creates no remote issue, branch or PR and performs
+no push. The failed host receipts remain failed.
