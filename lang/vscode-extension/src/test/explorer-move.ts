@@ -1,22 +1,23 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
+import type { ExplorerMoveTrace } from './explorer-move-trace';
 
 /** Native batch move, shared with the extension-free host reproduction. Never replay Paste. */
-export async function cutAndPasteDirectories(sources: readonly vscode.Uri[], destination: vscode.Uri): Promise<Error | undefined> {
+export async function cutAndPasteDirectories(sources: readonly vscode.Uri[], destination: vscode.Uri, trace: ExplorerMoveTrace): Promise<Error | undefined> {
     const expected = sources.map(source => source.fsPath).sort();
     const deadline = Date.now() + 30_000;
-    await vscode.commands.executeCommand('workbench.files.action.refreshFilesExplorer');
+    await trace.command('workbench.files.action.refreshFilesExplorer');
     // Only selection is repeatable: watcher refreshes can retire Explorer nodes before Cut.
     for (;;) {
         try {
-            await vscode.commands.executeCommand('workbench.files.action.focusFilesExplorer');
-            await vscode.commands.executeCommand('workbench.files.action.collapseExplorerFolders');
-            await vscode.commands.executeCommand('revealInExplorer', sources[0]);
-            for (const _ of sources.slice(1)) await vscode.commands.executeCommand('list.expandSelectionDown');
-            await vscode.commands.executeCommand('copyFilePath');
+            await trace.command('workbench.files.action.focusFilesExplorer');
+            await trace.command('workbench.files.action.collapseExplorerFolders');
+            await trace.command('revealInExplorer', sources[0]);
+            for (const _ of sources.slice(1)) await trace.command('list.expandSelectionDown');
+            await trace.command('copyFilePath');
             const selected = (await vscode.env.clipboard.readText()).split(/\r?\n/).sort();
             if (JSON.stringify(selected) === JSON.stringify(expected)) {
-                await vscode.commands.executeCommand('filesExplorer.cut');
+                await trace.command('filesExplorer.cut');
                 break;
             }
         } catch (error) {
@@ -25,8 +26,8 @@ export async function cutAndPasteDirectories(sources: readonly vscode.Uri[], des
         assert.ok(Date.now() < deadline, `Explorer did not select ${expected.join(', ')}`);
         await new Promise(resolve => setTimeout(resolve, 75));
     }
-    await vscode.commands.executeCommand('revealInExplorer', destination);
-    return vscode.commands.executeCommand('filesExplorer.paste').then(
+    await trace.command('revealInExplorer', destination);
+    return trace.command('filesExplorer.paste').then(
         () => undefined,
         (error: unknown) => {
             // The host can move successfully, then repaint retired Cut nodes in its finally
