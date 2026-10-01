@@ -174,6 +174,9 @@ export class Workspace {
         assert.strictEqual(typeof value, 'string', 'These fixtures expect plain completion text');
         const edit = new vscode.WorkspaceEdit();
         edit.replace(document.uri, range, value as string);
+        for (const additional of item.additionalTextEdits ?? []) {
+            edit.replace(document.uri, additional.range, additional.newText);
+        }
         assert.ok(await vscode.workspace.applyEdit(edit));
         await symbols(document);
     }

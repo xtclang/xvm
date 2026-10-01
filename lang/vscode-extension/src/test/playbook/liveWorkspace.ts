@@ -3,7 +3,7 @@ import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
 import { compilerSettingsLocation } from '../../rename-proposal';
 import { edges, hierarchy } from './modules';
-import { client, diagnostics, eventually, noErrors, playbook, position, targetNames, targets, Workspace } from './support';
+import { client, diagnostics, eventually, label, noErrors, playbook, position, targetNames, targets, Workspace } from './support';
 
 export async function discovered<T>(workspace: Workspace, body: () => Promise<T>): Promise<T> {
     const original = vscode.workspace.workspaceFolders!.map(folder => ({ uri: folder.uri.toString(), name: folder.name }));
@@ -156,6 +156,17 @@ export function liveWorkspaceCases(): void {
                 assert.ok(await vscode.workspace.applyEdit(action.edit));
                 await noErrors(document.uri);
                 assert.ok(document.getText().includes(variant.importText));
+            }
+            for (const variant of data.completions) {
+                await workspace.replace(document, variant.source.replace('§', ''));
+                const at = document.positionAt(variant.source.indexOf('§'));
+                const item = await eventually(() => workspace.completion(document, at).then(items =>
+                    items.find(value => label(value) === variant.label && value.additionalTextEdits?.length)),
+                value => !!value, `Completion imports ${variant.label}`);
+                assert.ok(item);
+                await workspace.accept(document, item);
+                assert.ok(document.getText().includes(variant.importText));
+                await noErrors(document.uri);
             }
         });
     });

@@ -31,6 +31,7 @@ import org.xvm.lsp.adapter.SignatureHelp
 import org.xvm.lsp.adapter.TextEdit
 import org.xvm.lsp.adapter.TypeHierarchyItem
 import org.xvm.lsp.adapter.WorkspaceEdit
+import org.xvm.lsp.adapter.composeCancellable
 import org.xvm.lsp.adapter.mapCancellable
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
@@ -511,6 +512,7 @@ class XdkAdapter
             SYMBOLS,
             NAVIGATION,
             CODE_ACTIONS,
+            COMPLETION_IMPORTS,
             DIAGNOSTICS,
         }
 
@@ -2036,9 +2038,26 @@ class XdkAdapter
             line: Int,
             column: Int,
             triggerCharacter: String?,
-        ): CompletableFuture<List<CompletionItem>> =
-            analyzeAtAsync(CursorKey(uri, CursorKind.COMPLETION), Position(line, column))
-                .mapCancellable { it?.let(XdkCursorQueries::completions).orEmpty() }
+        ): CompletableFuture<List<CompletionItem>> {
+            val text = synchronized(lifecycle) { overlays[uri] }
+            return analyzeAtAsync(CursorKey(uri, CursorKind.COMPLETION), Position(line, column))
+                .composeCancellable { partial ->
+                    val ordinary = partial?.let(XdkCursorQueries::completions).orEmpty()
+                    val site = partial?.sites?.singleOrNull()
+                    val prefix = site?.memberPrefix
+                    if (text != synchronized(lifecycle) { overlays[uri] }) {
+                        CompletableFuture.completedFuture(emptyList())
+                    } else if (text == null || site?.kind != PartialSemanticModel.Kind.NAME ||
+                        prefix == null || prefix.text.length < 2 || !hasProject(uri)
+                    ) {
+                        CompletableFuture.completedFuture(ordinary)
+                    } else {
+                        projectQuery(ProjectQueryKey(uri, ProjectQueryKind.COMPLETION_IMPORTS), emptyList()) {
+                            ordinary + it.importCompletions(uri, text, prefix, ordinary.map { item -> item.label }.toSet())
+                        }
+                    }
+                }
+        }
 
         override fun getSignatureHelp(
             uri: String,
