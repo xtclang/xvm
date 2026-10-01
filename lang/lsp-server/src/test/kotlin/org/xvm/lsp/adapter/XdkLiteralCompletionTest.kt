@@ -47,6 +47,23 @@ class XdkLiteralCompletionTest {
     }
 
     @Test
+    fun `additional scalar and empty collection literals compile using the expected type`() {
+        listOf(
+            "Char" to listOf("' '"),
+            "Dec" to listOf("0", "0.0"),
+            "ecstasy.numbers.Float64" to listOf("0", "0.0"),
+            "Byte[]" to listOf("#00", "[]"),
+            "String[]" to listOf("[]"),
+            "Map<String, Int>" to listOf("[]", "Map:[]"),
+            "Tuple" to listOf("Tuple:()"),
+        ).forEach { (type, expected) ->
+            listOf("", "value = ").forEach { label ->
+                verify("module Editing { void take($type value) {} void run() { take($label§); } }", expected)
+            }
+        }
+    }
+
+    @Test
     fun `literal insertion must validate the entire operator expression`() {
         verify(
             "module Editing { void take(Boolean value) {} void run() { take(1 == §); } }",
@@ -99,7 +116,7 @@ class XdkLiteralCompletionTest {
                     it.kind == CompletionItem.CompletionKind.VALUE
                 }
             assertThat(literals.map { it.label })
-                .describedAs(marked)
+                .describedAs("%s: %s", marked, baseline.diagnostics)
                 .containsExactlyInAnyOrderElementsOf(expected)
             assertThat(adapter.getCachedResult(URI)).isEqualTo(baseline)
             literals.forEach { item ->
