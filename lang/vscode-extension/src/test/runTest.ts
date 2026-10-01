@@ -16,8 +16,8 @@ async function main(): Promise<void> {
     // root and the fixtures directory are two levels up.
     const extensionRoot = path.resolve(__dirname, '..', '..');
     const args = process.argv.slice(2);
-    if (args.some(argument => !['--playbook', '--multi-root', '--explorer-move-probe', '--refresh-during-move'].includes(argument) && !argument.startsWith('--cases='))) {
-        throw new Error('Expected --playbook with optional --cases=ID[,ID] and --multi-root, or --explorer-move-probe with optional --refresh-during-move');
+    if (args.some(argument => !['--playbook', '--multi-root', '--cancel-ui', '--explorer-move-probe', '--refresh-during-move'].includes(argument) && !argument.startsWith('--cases='))) {
+        throw new Error('Expected --playbook with optional --cases=ID[,ID], --multi-root and --cancel-ui, or --explorer-move-probe with optional --refresh-during-move');
     }
     const explorerProbe = args.includes('--explorer-move-probe');
     const refreshDuringMove = args.includes('--refresh-during-move');
@@ -27,7 +27,9 @@ async function main(): Promise<void> {
     }
     const playbook = args.includes('--playbook');
     const multiRoot = args.includes('--multi-root');
+    const cancelUi = args.includes('--cancel-ui');
     if (multiRoot && !playbook) throw new Error('Use --multi-root with --playbook');
+    if (cancelUi && !playbook) throw new Error('Use --cancel-ui with --playbook');
     const selections = args.filter(argument => argument.startsWith('--cases='));
     if (selections.length > 1 || (selections.length > 0 && !playbook)) {
         throw new Error('Use --cases=ID[,ID] once, with --playbook');
@@ -35,6 +37,7 @@ async function main(): Promise<void> {
     const selected = playbook
         ? (await import('./playbook/shared.js')).selectedScenarioIds(selections[0]?.slice('--cases='.length))
         : [];
+    if (cancelUi && !selected.includes('X145')) throw new Error('--cancel-ui requires X145 in the selected cases');
     const extensionTestsPath = path.resolve(__dirname, explorerProbe ? 'explorer-probe' : playbook ? 'playbook' : 'suite', 'index');
     const reports = path.join(extensionRoot, 'build', 'reports', explorerProbe ? 'explorer-probe' : playbook ? 'compiler-playbook' : 'extension-tests');
     await fs.mkdir(reports, { recursive: true });
@@ -85,6 +88,7 @@ async function main(): Promise<void> {
             extensionTestsEnv: playbook ? {
                 XTC_PLAYBOOK_REPORT_DIR: runDirectory,
                 XTC_PLAYBOOK_CASES: selected.join(','),
+                XTC_PLAYBOOK_CANCEL_UI: String(cancelUi),
                 XTC_PLAYBOOK_COMMIT: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: extensionDevelopmentPath, encoding: 'utf8' }).trim(),
                 XTC_PLAYBOOK_DIRTY: execFileSync('git', ['status', '--porcelain'], { cwd: extensionDevelopmentPath, encoding: 'utf8' }).trim()
             } : explorerProbe ? { XTC_EXPLORER_PROBE_REPORT: runDirectory,
