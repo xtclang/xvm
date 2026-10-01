@@ -15,13 +15,17 @@ class XdkLiteralExtractionTest {
     @ValueSource(strings = ["Int|42", "String|\"hello 😀\"", "Char|'x'"])
     fun `extract literal preserves exact source and existing bindings`(example: String) {
         val (type, literal) = example.split('|')
-        val text = "module Extract {\r\n    $type read() {\r\n        Int extractedValue = 1;\r\n        assert extractedValue == 1;\r\n        return $literal;\r\n    }\r\n}"
+        val text =
+            "module Extract {\r\n    $type read() {\r\n        Int extractedValue = 1;\r\n" +
+                "        assert extractedValue == 1;\r\n        return $literal;\r\n    }\r\n}"
         query(text, literal) { adapter, uri, actions ->
             val edit = requireNotNull(actions.single { it.kind == CodeAction.CodeActionKind.REFACTOR_EXTRACT }.edit)
             assertThat(edit.versioned).isTrue()
             assertThat(edit.changes.keys).containsExactly(uri)
             val changed = apply(text, edit.changes.getValue(uri))
-            assertThat(changed).contains("val extractedValue1 = $literal;\r\n        return extractedValue1;", "assert extractedValue == 1;")
+            assertThat(
+                changed,
+            ).contains("val extractedValue1 = $literal;\r\n        return extractedValue1;", "assert extractedValue == 1;")
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
             assertThat(directory.resolve("Extract.x").toFile().readText()).isEqualTo(text)
         }
@@ -45,8 +49,36 @@ class XdkLiteralExtractionTest {
         }
     }
 
-    private fun query(text: String, selected: String, check: (XdkAdapter, String, List<CodeAction>) -> Unit) {
-        val uri = directory.resolve("Extract.x").toFile().also { it.writeText(text) }.canonicalFile.toURI().toString()
+    @ParameterizedTest
+    @ValueSource(strings = ["4", "", "42;"])
+    fun `partial empty and oversized selections have no extraction`(selected: String) {
+        val text = "module Extract {\n    Int read() {\n        return 42;\n    }\n}"
+        query(text, selected) { _, _, actions ->
+            assertThat(actions.filter { it.kind == CodeAction.CodeActionKind.REFACTOR_EXTRACT }).isEmpty()
+        }
+    }
+
+    @Test
+    fun `same line siblings are not reformatted by extraction`() {
+        val text = "module Extract { Int read() { return 42; } }"
+        query(text, "42") { _, _, actions ->
+            assertThat(actions.filter { it.kind == CodeAction.CodeActionKind.REFACTOR_EXTRACT }).isEmpty()
+        }
+    }
+
+    private fun query(
+        text: String,
+        selected: String,
+        check: (XdkAdapter, String, List<CodeAction>) -> Unit,
+    ) {
+        val uri =
+            directory
+                .resolve("Extract.x")
+                .toFile()
+                .also { it.writeText(text) }
+                .canonicalFile
+                .toURI()
+                .toString()
         val at = text.positionOf("return $selected", selected)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
@@ -55,8 +87,12 @@ class XdkLiteralExtractionTest {
         }
     }
 
-    private fun apply(text: String, edits: List<TextEdit>): String =
-        edits.sortedWith(compareByDescending<TextEdit> { it.range.start.line }.thenByDescending { it.range.start.column })
+    private fun apply(
+        text: String,
+        edits: List<TextEdit>,
+    ): String =
+        edits
+            .sortedWith(compareByDescending<TextEdit> { it.range.start.line }.thenByDescending { it.range.start.column })
             .fold(text) { current, edit ->
                 fun offset(position: Position) = current.splitToSequence('\n').take(position.line).sumOf { it.length + 1 } + position.column
                 current.replaceRange(offset(edit.range.start), offset(edit.range.end), edit.newText)
