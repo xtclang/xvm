@@ -416,8 +416,8 @@ VS Code receipts above.
   intended call/descendant changes while preserving unrelated bindings. Bodies use `TODO()`.
   Shared X122 now has eleven variants; the latest implementation/validation status is recorded in
   the [library and complete-repair batch](#l63-library-and-complete-repair-batch). Older seven-variant
-  receipts do not establish the new coverage. Missing declarations, extract local/method, inline
-  and safe delete remain unimplemented. Record supported XTC forms per action; doc-comment
+  receipts do not establish the new coverage. Literal-return extract local has a bounded implementation recorded below; general extraction,
+  missing declarations, inline and safe delete remain unimplemented. Record supported XTC forms per action; doc-comment
   generation and reference/test lenses are separate subfeatures. Semantic transformations require
   compiler evidence and versioned multi-file edit validation.
 - [ ] **L64 — Completion/signature breadth and presentation.** After L57/L58, cover unfinished
@@ -8351,3 +8351,20 @@ complete-graph before/after proof and binary/unknown-route refusals remain manda
 manual mixin and conditional-mixin programs for covariant family rename/reverse rename, unrelated
 composition preservation and binary-contract collision refusal. No compiler API addition. These
 tests and the existing composition/refactoring regressions run in the combined gate.
+
+### Functionality continuation: L63 literal extraction
+
+A new `refactor.extract` action extracts an exactly selected integer, string or character literal
+that is the sole expression of a return statement in a block. Java parser/token ranges establish
+the selection and statement boundary. It inserts an inferred immutable local immediately before
+that return, chooses a name absent from the source identifiers, retains indentation/line endings,
+and requires a complete proposed graph with all existing bindings and dispatch preserved.
+The source literal is retained exactly; calls, compound expressions, empty/partial selections,
+expression bodies and same-line statements are outside this first boundary. No AST API/state was
+added. General extract-local, extract-method, missing-declaration, inline and safe-delete remain
+separate tasks requiring their own evaluation-order/capture/caller-closure proof.
+
+Tests cover primitive literal forms, Unicode/CRLF, fresh-name collisions, unchanged disk sources,
+unsupported expressions and broken known neighbors. New shared X148 and both editor drivers
+exercise the action, exact resulting source, diagnostics and native Undo/Redo. Coverage is written;
+execution is pending the combined gate, not inferred from older playbook receipts.
