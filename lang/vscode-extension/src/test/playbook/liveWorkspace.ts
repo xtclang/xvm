@@ -165,6 +165,7 @@ export function liveWorkspaceCases(): void {
                 value => !!value, `Completion imports ${variant.label}`);
                 assert.ok(item);
                 await workspace.accept(document, item);
+                assert.strictEqual(document.getText(), variant.expected);
                 assert.ok(document.getText().includes(variant.importText));
                 await noErrors(document.uri);
             }
