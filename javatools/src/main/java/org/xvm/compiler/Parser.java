@@ -1040,6 +1040,14 @@ public class Parser {
             }
 
             // it's a constant, property, or method
+            if (!fInMethod) {
+                var missingName = declarationNameSlot(type);
+                if (missingName.isPresent()) {
+                    log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
+                    return retainDeclaration(mark(), lStartPos, null, IncompleteDeclarationStatement.Kind.PROPERTY,
+                            List.of(missingName.orElseThrow()), new CompilerException("Missing declaration name"));
+                }
+            }
             Token name = expectNameOrAny();
             if (peek(Id.COMP_LT) || peek(Id.L_PAREN)) {
                 // '<' indicates redundant return type list
@@ -5203,6 +5211,11 @@ public class Parser {
             if (match(Id.R_PAREN) == null) {
                 while (true) {
                     TypeExpression type  = parseDeclarationType();
+                    var missingName = declarationNameSlot(type);
+                    if (missingName.isPresent()) {
+                        log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
+                        throw new IncompleteHeader(missingName.orElseThrow());
+                    }
                     Token          name  = expect(Id.IDENTIFIER);
                     Expression     value = null;
                     if (match(Id.ASN) != null) {
@@ -5225,6 +5238,23 @@ public class Parser {
     /** A header type prefix is queried in its enclosing declaration, never as a value. */
     private TypeExpression parseDeclarationType() {
         return parseDeclarationType(false);
+    }
+
+    /**
+     * Only a grammar position that requires a name may retain an empty name slot. In a method
+     * body, a bare expression followed by whitespace is not evidence of a variable declaration.
+     * Keep the complete written named type as syntax; no parameter or property is registered.
+     */
+    private Optional<IncompleteStatement> declarationNameSlot(TypeExpression type) {
+        return f_cursor != NO_CURSOR && m_cSpeculating == 0 && !m_fAvoidRecovery
+                && !f_errs.get().isAbortDesired() && type instanceof NamedTypeExpression named
+                && named.getNameToken() != null && type.getEndPosition() < f_cursor
+                && f_cursor <= (eof() ? m_source.getPosition() : peek().getStartPosition())
+                && m_source.toString(type.getEndPosition(), f_cursor).isBlank()
+                && (eof() || peek(Id.ASN) || peek(Id.SEMICOLON) || peek(Id.R_CURLY)
+                        || peek(Id.R_PAREN) || peek(Id.COMMA))
+                ? Optional.of(IncompleteStatement.forDeclarationName(named, f_cursor))
+                : Optional.empty();
     }
 
     private TypeExpression parseDeclarationType(boolean extended) {
@@ -5324,7 +5354,7 @@ public class Parser {
             current();
         }
         return new IncompleteTypeCompositionStatement(m_source, category, name, qualified, null,
-                start, prev().getEndPosition(), sites,
+                start, retainedDeclarationEnd(sites), sites,
                 error instanceof IncompleteHeader incomplete ? incomplete.formals : List.of());
     }
 
@@ -5365,8 +5395,14 @@ public class Parser {
             }
             current();
         }
-        return new IncompleteDeclarationStatement(kind, name, start, prev().getEndPosition(), sites,
+        return new IncompleteDeclarationStatement(kind, name, start, retainedDeclarationEnd(sites), sites,
                 error instanceof IncompleteHeader incomplete ? incomplete.formals : List.of());
+    }
+
+    /** An empty name slot at EOF includes the whitespace after its last written type token. */
+    private long retainedDeclarationEnd(List<IncompleteStatement> sites) {
+        return Math.max(prev().getEndPosition(), sites.stream().mapToLong(IncompleteStatement::getEndPosition)
+                .max().orElse(prev().getEndPosition()));
     }
 
     /** Declaration return slots select types without publishing an unfinished callable. */
