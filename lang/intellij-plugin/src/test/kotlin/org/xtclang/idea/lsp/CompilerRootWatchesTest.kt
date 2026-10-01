@@ -1,11 +1,11 @@
 package org.xtclang.idea.lsp
 
 import com.google.gson.JsonParser
-import java.nio.file.Path
-import java.util.concurrent.CompletableFuture
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.Registration
 import org.junit.jupiter.api.Test
+import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
 
 class CompilerRootWatchesTest {
     @Test
@@ -49,46 +49,44 @@ class CompilerRootWatchesTest {
 
     @Test
     fun `decode wire registrations including relative patterns without watching global globs`() {
-        fun registration(id: String, glob: String) =
-            Registration(
-                id,
-                "workspace/didChangeWatchedFiles",
-                JsonParser.parseString("""{"watchers":[{"globPattern":$glob}]}"""),
-            )
+        fun registration(
+            id: String,
+            glob: String,
+        ) = Registration(
+            id,
+            "workspace/didChangeWatchedFiles",
+            JsonParser.parseString("""{"watchers":[{"globPattern":$glob}]}"""),
+        )
         assertThat(
-                CompilerRootWatches.roots(
-                    registration("xtc-resources-a", "\"/outside/assets/**/*\"")
-                )
-            )
-            .containsExactly(Path.of("/outside/assets"))
+            CompilerRootWatches.roots(
+                registration("xtc-resources-a", "\"/outside/assets/**/*\""),
+            ),
+        ).containsExactly(Path.of("/outside/assets"))
         assertThat(
-                CompilerRootWatches.roots(
-                    registration(
-                        "xtc-resources-b",
-                        """{"baseUri":"file:///outside/source/","pattern":"**/*"}""",
-                    )
-                )
-            )
-            .containsExactly(Path.of("/outside/source"))
+            CompilerRootWatches.roots(
+                registration(
+                    "xtc-resources-b",
+                    """{"baseUri":"file:///outside/source/","pattern":"**/*"}""",
+                ),
+            ),
+        ).containsExactly(Path.of("/outside/source"))
         assertThat(
-                CompilerRootWatches.roots(
-                    registration(
-                        "xtc-resources-flat",
-                        """{"baseUri":"file:///","pattern":"generated"}""",
-                    )
-                )
-            )
-            .isEmpty()
+            CompilerRootWatches.roots(
+                registration(
+                    "xtc-resources-flat",
+                    """{"baseUri":"file:///","pattern":"generated"}""",
+                ),
+            ),
+        ).isEmpty()
         assertThat(CompilerRootWatches.roots(registration("xtc-file-watcher", "\"**/*.x\"")))
             .isEmpty()
         assertThat(
-                CompilerRootWatches.roots(
-                    registration(
-                        "xtc-resources-b",
-                        """{"baseUri":"https://example.com/","pattern":"**/*"}""",
-                    )
-                )
-            )
-            .isEmpty()
+            CompilerRootWatches.roots(
+                registration(
+                    "xtc-resources-b",
+                    """{"baseUri":"https://example.com/","pattern":"**/*"}""",
+                ),
+            ),
+        ).isEmpty()
     }
 }

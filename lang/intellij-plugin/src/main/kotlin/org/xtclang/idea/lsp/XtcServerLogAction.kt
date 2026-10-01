@@ -25,7 +25,8 @@ class XtcServerLogAction : DumbAwareAction() {
             window.hide()
         } else {
             val definition =
-                LanguageServersRegistry.getInstance()
+                LanguageServersRegistry
+                    .getInstance()
                     .getServerDefinition(CompilerSettings.SERVER_ID) ?: return
             window.activate { LSPConsoleToolWindowPanel.selectLogTab(definition, project) }
         }

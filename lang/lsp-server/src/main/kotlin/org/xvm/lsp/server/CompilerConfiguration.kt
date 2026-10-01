@@ -2,9 +2,9 @@ package org.xvm.lsp.server
 
 import com.google.gson.GsonBuilder
 import com.google.gson.JsonElement
-import java.net.URI
 import org.xvm.lsp.adapter.xdk.XdkBuildModel
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import java.net.URI
 
 /**
  * Strict editor configuration; absent values preserve the host graph and an empty list clears it.
@@ -16,8 +16,7 @@ internal object CompilerConfiguration {
 
     fun initial(options: Any?): JsonElement? = objectValue(options)?.get(INITIALIZATION_KEY)
 
-    fun changed(settings: Any?): JsonElement? =
-        objectValue(objectValue(settings)?.get("xtc"))?.get("compiler")
+    fun changed(settings: Any?): JsonElement? = objectValue(objectValue(settings)?.get("xtc"))?.get("compiler")
 
     /** Explicit presentation notifications do not request or replace the compiler graph. */
     fun presentationOnly(settings: Any?): Boolean =
@@ -40,7 +39,7 @@ internal object CompilerConfiguration {
                     it.map { model ->
                         require(model.isJsonObject) { "Build models must be objects" }
                         model.asJsonObject
-                    }
+                    },
                 )
             }
     }
@@ -57,11 +56,13 @@ internal object CompilerConfiguration {
             require(entry.isJsonObject) { "Each source module must be an object" }
             val module = entry.asJsonObject
             val name = string(module.get("name"), "name")
+
             fun resolve(value: String): String {
                 val path = URI.create(value)
                 val resolved =
-                    if (path.isAbsolute) path
-                    else {
+                    if (path.isAbsolute) {
+                        path
+                    } else {
                         require(workspaceUris.size == 1) {
                             "Relative source/resource URIs require exactly one workspace folder; use file URIs otherwise"
                         }
@@ -91,8 +92,7 @@ internal object CompilerConfiguration {
                             "dependencies must be an array of module names"
                         }
                         values.asJsonArray.map { string(it, "dependency") }.toSet()
-                    }
-                    .orEmpty()
+                    }.orEmpty()
             XdkSourceModule(name, uri, dependencies, resources)
         }
     }
@@ -114,7 +114,7 @@ internal object CompilerConfiguration {
             value != null &&
                 value.isJsonPrimitive &&
                 value.asJsonPrimitive.isString &&
-                value.asString.isNotBlank()
+                value.asString.isNotBlank(),
         ) {
             "$field must be a non-blank string"
         }

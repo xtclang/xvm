@@ -70,13 +70,12 @@ class FormattingTest : TreeSitterTestBase() {
         private fun formattingOptions(
             trimTrailingWhitespace: Boolean = false,
             insertFinalNewline: Boolean = false,
-        ) =
-            FormattingOptions(
-                tabSize = 4,
-                insertSpaces = true,
-                trimTrailingWhitespace = trimTrailingWhitespace,
-                insertFinalNewline = insertFinalNewline,
-            )
+        ) = FormattingOptions(
+            tabSize = 4,
+            insertSpaces = true,
+            trimTrailingWhitespace = trimTrailingWhitespace,
+            insertFinalNewline = insertFinalNewline,
+        )
     }
 
     // ========================================================================

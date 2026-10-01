@@ -1,12 +1,12 @@
 package org.xtclang.idea.manifest
 
 import com.intellij.refactoring.move.MoveHandlerDelegate
-import javax.xml.parsers.DocumentBuilderFactory
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.w3c.dom.Element
 import org.xtclang.idea.PluginPaths
+import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Self-consistency tests for META-INF/plugin.xml.
@@ -28,7 +28,8 @@ class PluginManifestTest {
         val resourceUrl =
             javaClass.classLoader.getResource("META-INF/plugin.xml")
                 ?: error("META-INF/plugin.xml not on test classpath")
-        DocumentBuilderFactory.newInstance()
+        DocumentBuilderFactory
+            .newInstance()
             .apply { isNamespaceAware = false }
             .newDocumentBuilder()
             .parse(resourceUrl.openStream())
@@ -38,7 +39,12 @@ class PluginManifestTest {
     @Test
     @DisplayName("<id> matches PluginPaths.PLUGIN_ID")
     fun pluginIdMatchesConstant() {
-        val id = pluginXml.getElementsByTagName("id").item(0).textContent.trim()
+        val id =
+            pluginXml
+                .getElementsByTagName("id")
+                .item(0)
+                .textContent
+                .trim()
         assertThat(id)
             .withFailMessage(
                 "plugin.xml <id> is '%s' but PluginPaths.PLUGIN_ID is '%s'. " +
@@ -46,13 +52,12 @@ class PluginManifestTest {
                     "which propagates as opaque NullPointerException in the path-resolution code.",
                 id,
                 PluginPaths.PLUGIN_ID,
-            )
-            .isEqualTo(PluginPaths.PLUGIN_ID)
+            ).isEqualTo(PluginPaths.PLUGIN_ID)
     }
 
     @Test
     @DisplayName(
-        "declares all required extension points (newProjectWizard, configurationType, lang.commenter, LSP server, ...)"
+        "declares all required extension points (newProjectWizard, configurationType, lang.commenter, LSP server, ...)",
     )
     fun declaresAllRequiredExtensions() {
         // Collect every <extensions defaultExtensionNs="..."> child element name
@@ -101,8 +106,7 @@ class PluginManifestTest {
                     "Kotlin class — and update this list. If you added a new Kotlin extension " +
                     "implementation, register it here AND add it to the required set.",
                 missing,
-            )
-            .isEmpty()
+            ).isEmpty()
     }
 
     @Test
@@ -151,9 +155,8 @@ class PluginManifestTest {
                 .firstOrNull { it.getAttribute("id") == "xtcLanguageServer" }
         assertThat(server)
             .withFailMessage(
-                "plugin.xml is missing the LSP4IJ <server id='xtcLanguageServer'> element"
-            )
-            .isNotNull
+                "plugin.xml is missing the LSP4IJ <server id='xtcLanguageServer'> element",
+            ).isNotNull
 
         val mappings = pluginXml.getElementsByTagName("fileNamePatternMapping")
         val mapping =
@@ -163,9 +166,8 @@ class PluginManifestTest {
         assertThat(mapping)
             .withFailMessage(
                 "plugin.xml has no <fileNamePatternMapping serverId='xtcLanguageServer'> — " +
-                    ".x files will not route to our LSP server."
-            )
-            .isNotNull
+                    ".x files will not route to our LSP server.",
+            ).isNotNull
         assertThat(mapping!!.getAttribute("patterns"))
             .withFailMessage("LSP fileNamePatternMapping patterns must include *.x")
             .contains("*.x")
@@ -184,9 +186,8 @@ class PluginManifestTest {
         assertThat(fileType)
             .withFailMessage(
                 "plugin.xml must register org.xtclang.idea.XtcFileType. Without this, IntelliJ treats .x as " +
-                    "unclaimed and offers unrelated Marketplace plugins that also support the extension."
-            )
-            .isNotNull
+                    "unclaimed and offers unrelated Marketplace plugins that also support the extension.",
+            ).isNotNull
         assertThat(fileType!!.getAttribute("name")).isEqualTo("Ecstasy")
         assertThat(fileType.getAttribute("language")).isEqualTo("Ecstasy")
         assertThat(fileType.getAttribute("fieldName")).isEqualTo("INSTANCE")

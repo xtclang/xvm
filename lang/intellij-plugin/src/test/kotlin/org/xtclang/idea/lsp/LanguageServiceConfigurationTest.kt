@@ -9,9 +9,8 @@ class LanguageServiceConfigurationTest {
     fun `service preferences do not claim ownership of an inherited source graph`() {
         assertThat(CompilerSettings.ownsGraph(null)).isFalse()
         assertThat(
-                CompilerSettings.ownsGraph("""{"xtc":{"languageService":{"inlayHints":false}}}""")
-            )
-            .isFalse()
+            CompilerSettings.ownsGraph("""{"xtc":{"languageService":{"inlayHints":false}}}"""),
+        ).isFalse()
         assertThat(CompilerSettings.ownsGraph("""{"xtc":{"compiler":{"sourceModules":[]}}}"""))
             .isTrue()
         assertThat(CompilerSettings.ownsGraph("{}")).isTrue()
@@ -51,23 +50,22 @@ class LanguageServiceConfigurationTest {
     @Test
     fun `invalid values fail before persistence and native save formatting wins`() {
         listOf(
-                "[]",
-                "{",
-                """{"xtc":{"languageService":{"textSynchronization":"patch"}}}""",
-                """{"xtc":{"languageService":{"inlayHints":"false"}}}""",
-            )
-            .forEach { content ->
-                assertThatThrownBy { LanguageServiceConfiguration.read(content) }
-                    .isInstanceOf(IllegalArgumentException::class.java)
-            }
+            "[]",
+            "{",
+            """{"xtc":{"languageService":{"textSynchronization":"patch"}}}""",
+            """{"xtc":{"languageService":{"inlayHints":"false"}}}""",
+        ).forEach { content ->
+            assertThatThrownBy { LanguageServiceConfiguration.read(content) }
+                .isInstanceOf(IllegalArgumentException::class.java)
+        }
         val server = LanguageServiceConfiguration("incremental", "server")
         assertThat(server.initializationOptions(true))
             .isEqualTo(
-                mapOf("xtcDocumentSync" to mapOf("incremental" to true, "formatOnSave" to false))
+                mapOf("xtcDocumentSync" to mapOf("incremental" to true, "formatOnSave" to false)),
             )
         assertThat(server.initializationOptions(false))
             .isEqualTo(
-                mapOf("xtcDocumentSync" to mapOf("incremental" to true, "formatOnSave" to true))
+                mapOf("xtcDocumentSync" to mapOf("incremental" to true, "formatOnSave" to true)),
             )
     }
 }

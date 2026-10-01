@@ -22,10 +22,10 @@ private const val REGEX_SPECIAL = """.+*?|\\^$()[]{}"""
 private const val VIM_SPECIAL = """\\/|^$.*[]()"""
 
 /** Escape special characters by prepending backslash */
-private fun String.escapeChars(special: String) = map {
-    if (it in special) "\\$it" else "$it"
-}
-    .joinToString("")
+private fun String.escapeChars(special: String) =
+    map {
+        if (it in special) "\\$it" else "$it"
+    }.joinToString("")
 
 /** Escape for standard regex patterns (TextMate, Sublime, etc.) */
 fun escapeRegex(s: String) = s.escapeChars(REGEX_SPECIAL)

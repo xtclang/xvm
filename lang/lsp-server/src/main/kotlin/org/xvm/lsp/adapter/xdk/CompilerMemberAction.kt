@@ -78,14 +78,13 @@ internal fun compilerMemberActions(
                                 } ?: return@mapNotNull null
                             parameter.name to
                                 if (value is UnaryMinusExpression) "-$token" else token.toString()
-                        }
-                        .toMap()
-            }
-            .toMap()
+                        }.toMap()
+            }.toMap()
     return nodes.filterIsInstance<TypeCompositionStatement>().flatMap { node ->
         val structure = node.component as? ClassStructure ?: return@flatMap emptyList()
-        if (structure.format != Format.CLASS || structure.isSynthetic || errors.isAbortDesired)
+        if (structure.format != Format.CLASS || structure.isSynthetic || errors.isAbortDesired) {
             return@flatMap emptyList()
+        }
         val info =
             ExecutionTrace.api("TypeConstant.ensureTypeInfo(member-actions)") {
                 structure.formalType.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors)
@@ -104,8 +103,7 @@ internal fun compilerMemberActions(
                     (it.signature.params + it.signature.returns).flatMap { type ->
                         type.memberClasses()
                     }
-                }
-                .filter { it.moduleConstant != structure.identityConstant.moduleConstant }
+                }.filter { it.moduleConstant != structure.identityConstant.moduleConstant }
         val lexicalErrors = ErrorList()
         val names =
             ExecutionTrace.api("Lexer.lex(member-imports)") {
@@ -144,11 +142,11 @@ internal fun compilerMemberActions(
                 val declaration = method.getTopmostMethodStructure(info)
                 if (
                     declaration.containingClass == structure ||
-                        declaration.isSynthetic ||
-                        declaration.isNative ||
-                        method.isOp ||
-                        method.isAuto ||
-                        !info.dispatch(method, errors).supported
+                    declaration.isSynthetic ||
+                    declaration.isNative ||
+                    method.isOp ||
+                    method.isAuto ||
+                    !info.dispatch(method, errors).supported
                 ) {
                     return@mapNotNull null
                 }
@@ -176,15 +174,13 @@ internal fun compilerMemberActions(
                         .filter {
                             it != "ecstasy.xtclang.org" &&
                                 it != structure.identityConstant.moduleConstant.name
-                        }
-                        .map {
+                        }.map {
                             XdkMemberActions.Import(
                                 importAt,
                                 "package ${aliases.getValue(it)} import $it;",
                             )
                         },
                 )
-            }
-            .distinct()
+            }.distinct()
     }
 }

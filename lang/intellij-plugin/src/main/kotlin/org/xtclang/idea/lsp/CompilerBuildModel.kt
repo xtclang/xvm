@@ -14,10 +14,10 @@ import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Key
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
+import org.eclipse.lsp4j.DidChangeConfigurationParams
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
-import org.eclipse.lsp4j.DidChangeConfigurationParams
 
 /** Portable evaluated Gradle contract. Uses only Community platform APIs. */
 object CompilerBuildModel {
@@ -32,40 +32,38 @@ object CompilerBuildModel {
         val entries = model["sourceSets"].asJsonArray.map { it.asJsonObject }
         entries.forEach { entry ->
             listOf(
-                    "projectId",
-                    "projectPath",
-                    "projectDirectory",
-                    "buildFile",
-                    "sourceSet",
-                    "resourceTask",
-                )
-                .forEach { field ->
-                    require(
-                        entry[field]?.let {
-                            it.isJsonPrimitive &&
-                                it.asJsonPrimitive.isString &&
-                                it.asString.isNotBlank()
-                        } == true
-                    ) {
-                        "Invalid build-model $field"
-                    }
+                "projectId",
+                "projectPath",
+                "projectDirectory",
+                "buildFile",
+                "sourceSet",
+                "resourceTask",
+            ).forEach { field ->
+                require(
+                    entry[field]?.let {
+                        it.isJsonPrimitive &&
+                            it.asJsonPrimitive.isString &&
+                            it.asString.isNotBlank()
+                    } == true,
+                ) {
+                    "Invalid build-model $field"
                 }
+            }
             listOf(
-                    "sourceRoots",
-                    "sourceFiles",
-                    "moduleRoots",
-                    "resourceSourceRoots",
-                    "resourceRoots",
-                    "modulePath",
-                )
-                .forEach { field ->
-                    require(entry[field]?.isJsonArray == true) { "Missing build-model $field" }
-                    entry[field].asJsonArray.forEach {
-                        require(URI(it.asString).scheme == "file") {
-                            "Build-model paths must be file URIs"
-                        }
+                "sourceRoots",
+                "sourceFiles",
+                "moduleRoots",
+                "resourceSourceRoots",
+                "resourceRoots",
+                "modulePath",
+            ).forEach { field ->
+                require(entry[field]?.isJsonArray == true) { "Missing build-model $field" }
+                entry[field].asJsonArray.forEach {
+                    require(URI(it.asString).scheme == "file") {
+                        "Build-model paths must be file URIs"
                     }
                 }
+            }
             listOf("buildFile", "projectDirectory").forEach {
                 require(URI(entry[it].asString).scheme == "file")
             }
@@ -73,12 +71,12 @@ object CompilerBuildModel {
             require(
                 entry["projectDependencies"].asJsonArray.all {
                     it.isJsonPrimitive && it.asJsonPrimitive.isString
-                }
+                },
             )
         }
         require(
             entries.map { it["projectId"].asString to it["sourceSet"].asString }.distinct().size ==
-                entries.size
+                entries.size,
         ) {
             "Duplicate Gradle source-set owner"
         }
@@ -92,13 +90,16 @@ object CompilerBuildModel {
             }
         }
 
-    fun settings(project: Project, current: Any?): JsonObject {
+    fun settings(
+        project: Project,
+        current: Any?,
+    ): JsonObject {
         val settings =
             Gson().toJsonTree(current).takeIf { it.isJsonObject }?.asJsonObject ?: JsonObject()
-        val model = runCatching {
-            read(project).also { project.putUserData(lastGoodModel, it) }
-        }
-            .getOrElse {
+        val model =
+            runCatching {
+                read(project).also { project.putUserData(lastGoodModel, it) }
+            }.getOrElse {
                 logger<CompilerBuildModel>()
                     .warn("Cannot read Gradle compiler inputs; retaining previous import", it)
                 project.getUserData(lastGoodModel)
@@ -116,9 +117,11 @@ object CompilerBuildModel {
 
     fun describe(project: Project): String {
         val origin =
-            if (SourceGraphConfiguration.read(CompilerSettings.content(project)) != null)
+            if (SourceGraphConfiguration.read(CompilerSettings.content(project)) != null) {
                 "Explicit project override (preserved across Gradle refresh)"
-            else "Gradle model when imported; workspace conventions otherwise"
+            } else {
+                "Gradle model when imported; workspace conventions otherwise"
+            }
         val model =
             read(project)
                 ?: return "$origin\nNo Gradle model imported. Manual paths also work without a build file."
@@ -127,71 +130,79 @@ object CompilerBuildModel {
             model["sourceSets"].asJsonArray.joinToString("\n\n") { value ->
                 val entry = value.asJsonObject
                 buildList {
-                        add(
-                            "${entry["projectPath"].asString} / ${entry["sourceSet"].asString} [Gradle model]"
-                        )
-                        add("Build: ${entry["buildFile"].asString}")
-                        listOf("sourceRoots", "resourceSourceRoots", "resourceRoots", "modulePath")
-                            .forEach { kind ->
-                                entry[kind].asJsonArray.forEach { item ->
-                                    val uri = URI(item.asString)
-                                    add(
-                                        "  $kind: $uri" +
-                                            if (Files.exists(Path.of(uri))) ""
-                                            else " [missing; prepare generated inputs]"
-                                    )
-                                }
+                    add(
+                        "${entry["projectPath"].asString} / ${entry["sourceSet"].asString} [Gradle model]",
+                    )
+                    add("Build: ${entry["buildFile"].asString}")
+                    listOf("sourceRoots", "resourceSourceRoots", "resourceRoots", "modulePath")
+                        .forEach { kind ->
+                            entry[kind].asJsonArray.forEach { item ->
+                                val uri = URI(item.asString)
+                                add(
+                                    "  $kind: $uri" +
+                                        if (Files.exists(Path.of(uri))) {
+                                            ""
+                                        } else {
+                                            " [missing; prepare generated inputs]"
+                                        },
+                                )
                             }
-                    }
-                    .joinToString("\n")
+                        }
+                }.joinToString("\n")
             }
     }
 
-    fun refresh(project: Project, prepare: Boolean, finished: (String?) -> Unit) {
-        ProgressManager.getInstance()
+    fun refresh(
+        project: Project,
+        prepare: Boolean,
+        finished: (String?) -> Unit,
+    ) {
+        ProgressManager
+            .getInstance()
             .run(
                 object : Task.Backgroundable(project, "Import Ecstasy compiler paths", true) {
                     override fun run(indicator: ProgressIndicator) {
-                        val failure = runCatching {
-                            val root = Path.of(requireNotNull(project.basePath))
-                            val wrapper =
-                                root.resolve(
-                                    if (System.getProperty("os.name").startsWith("Windows"))
-                                        "gradlew.bat"
-                                    else "gradlew"
-                                )
-                            require(Files.isRegularFile(wrapper)) {
-                                "No Gradle wrapper here; configure manual paths instead"
-                            }
-                            val command =
-                                GeneralCommandLine(
+                        val failure =
+                            runCatching {
+                                val root = Path.of(requireNotNull(project.basePath))
+                                val wrapper =
+                                    root.resolve(
+                                        if (System.getProperty("os.name").startsWith("Windows")) {
+                                            "gradlew.bat"
+                                        } else {
+                                            "gradlew"
+                                        },
+                                    )
+                                require(Files.isRegularFile(wrapper)) {
+                                    "No Gradle wrapper here; configure manual paths instead"
+                                }
+                                val command =
+                                    GeneralCommandLine(
                                         wrapper.toString(),
                                         if (prepare) "prepareXtcLspModel" else "exportXtcLspModel",
                                         "--console=plain",
-                                    )
-                                    .withWorkDirectory(root.toFile())
-                            val result =
-                                CapturingProcessHandler(command)
-                                    .runProcessWithProgressIndicator(indicator)
-                            check(
-                                !result.isCancelled && !result.isTimeout && result.exitCode == 0
-                            ) {
-                                "Gradle import failed; previous configuration retained.\n" +
-                                    (result.stdout + result.stderr).takeLast(8000)
-                            }
-                            requireNotNull(read(project)) {
-                                "Gradle did not export an Ecstasy compiler model"
-                            }
-                        }
-                            .exceptionOrNull()
-                            ?.message
+                                    ).withWorkDirectory(root.toFile())
+                                val result =
+                                    CapturingProcessHandler(command)
+                                        .runProcessWithProgressIndicator(indicator)
+                                check(
+                                    !result.isCancelled && !result.isTimeout && result.exitCode == 0,
+                                ) {
+                                    "Gradle import failed; previous configuration retained.\n" +
+                                        (result.stdout + result.stderr).takeLast(8000)
+                                }
+                                requireNotNull(read(project)) {
+                                    "Gradle did not export an Ecstasy compiler model"
+                                }
+                            }.exceptionOrNull()
+                                ?.message
                         ApplicationManager.getApplication().invokeLater {
                             if (project.isDisposed) return@invokeLater
                             if (failure == null) publish(project)
                             finished(failure)
                         }
                     }
-                }
+                },
             )
     }
 
@@ -201,15 +212,17 @@ object CompilerBuildModel {
         val config = settings(project, current?.getLanguageServerConfiguration(project))
         // The evaluated inputs changed, but persisted user settings did not. LSP4IJ suppresses
         // no-op settings updates, so notify the existing connection directly.
-        LanguageServiceAccessor.getInstance(project)
+        LanguageServiceAccessor
+            .getInstance(project)
             .startedServers
             .filter { it.serverDefinition.id == CompilerSettings.SERVER_ID }
             .forEach { wrapper ->
                 wrapper.initializedServer.thenAccept { server ->
-                    if (!project.isDisposed)
+                    if (!project.isDisposed) {
                         server.workspaceService.didChangeConfiguration(
-                            DidChangeConfigurationParams(config)
+                            DidChangeConfigurationParams(config),
                         )
+                    }
                 }
             }
     }

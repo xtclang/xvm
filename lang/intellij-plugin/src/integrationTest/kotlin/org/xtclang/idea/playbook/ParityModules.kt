@@ -35,7 +35,7 @@ internal fun ParityScenarios.moduleCases() {
         check(version(child) == version)
         check(
             with(driver) { receivedDiagnostics(root.editor) }
-                .none { it.code == data.string("diagnosticCode") }
+                .none { it.code == data.string("diagnosticCode") },
         )
         replace(root, fixture(data.string("rootFile")))
         clean(child)
@@ -51,7 +51,7 @@ internal fun ParityScenarios.moduleCases() {
         data.strings("types").forEach { type ->
             val value =
                 data.string(
-                    if (type == data.string("integerType")) "integerValue" else "stringValue"
+                    if (type == data.string("integerType")) "integerValue" else "stringValue",
                 )
             replace(
                 root,
@@ -98,7 +98,7 @@ internal fun ParityScenarios.moduleCases() {
         check(reopened.text == fixture(child.file))
         check(
             targets(reopened, "definition", reopened.at(data.string("anchor"))).size ==
-                data.int("expected")
+                data.int("expected"),
         )
     }
     case("X27") { data ->
@@ -118,18 +118,16 @@ internal fun ParityScenarios.moduleCases() {
         check(edges(old, "supertypes").isEmpty())
         check(
             edges(
-                    hierarchy(child, child.at(data.string("anchor"))),
-                    "supertypes",
-                )
-                .none { it.string("name").startsWith(data.string("contains")) }
+                hierarchy(child, child.at(data.string("anchor"))),
+                "supertypes",
+            ).none { it.string("name").startsWith(data.string("contains")) },
         )
         replace(child, fixture(child.file))
         check(
             edges(
-                    hierarchy(child, child.at(data.string("anchor"))),
-                    "supertypes",
-                )
-                .any { it.string("name").startsWith(data.string("contains")) }
+                hierarchy(child, child.at(data.string("anchor"))),
+                "supertypes",
+            ).any { it.string("name").startsWith(data.string("contains")) },
         )
     }
     case("X29") { data ->
@@ -146,7 +144,7 @@ internal fun ParityScenarios.moduleCases() {
                                 "integerCall"
                             } else {
                                 "stringCall"
-                            }
+                            },
                         ),
                     ),
                     settle = false,
@@ -179,14 +177,17 @@ internal fun ParityScenarios.moduleCases() {
         clean(child)
         check(
             targets(child, "definition", child.at(data.string("anchor"))).size ==
-                data.int("expected")
+                data.int("expected"),
         )
     }
     case("X30") { data ->
         val (document, at) = editing(data.string("body"))
         val pending = protocol.request("textDocument/completion", document.params(at))
-        if (pending.cancel(true)) check(pending.isCancelled())
-        else protocol.await("textDocument/completion", pending)
+        if (pending.cancel(true)) {
+            check(pending.isCancelled())
+        } else {
+            protocol.await("textDocument/completion", pending)
+        }
         discard(document)
         val reopened = open(data.string("file"))
         clean(reopened)
@@ -216,7 +217,7 @@ internal fun ParityScenarios.moduleCases() {
             check(
                 capabilities[it] == null ||
                     capabilities[it].isJsonNull ||
-                    capabilities[it].toString() == "false"
+                    capabilities[it].toString() == "false",
             ) {
                 it
             }
@@ -225,7 +226,7 @@ internal fun ParityScenarios.moduleCases() {
             check(
                 capabilities[it] != null &&
                     !capabilities[it].isJsonNull &&
-                    capabilities[it].toString() != "false"
+                    capabilities[it].toString() != "false",
             ) {
                 it
             }
@@ -233,16 +234,15 @@ internal fun ParityScenarios.moduleCases() {
         replace(document, data.string("unformatted"))
         check(
             query(
-                    "textDocument/formatting",
-                    document,
-                    extra =
-                        mapOf(
-                            "options" to
-                                mapOf("tabSize" to data.int("tabSize"), "insertSpaces" to true)
-                        ),
-                )
-                .rows()
-                .isNotEmpty()
+                "textDocument/formatting",
+                document,
+                extra =
+                    mapOf(
+                        "options" to
+                            mapOf("tabSize" to data.int("tabSize"), "insertSpaces" to true),
+                    ),
+            ).rows()
+                .isNotEmpty(),
         )
     }
     case("X32") { data ->

@@ -39,8 +39,7 @@ class CodeActionTest : TreeSitterTestBase() {
                 import bar.Alpha;
                 module myapp {
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             val actions = ts.getCodeActions(uri, zeroRange(), emptyList())
@@ -62,8 +61,7 @@ class CodeActionTest : TreeSitterTestBase() {
                 import foo.Zebra;
                 module myapp {
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             val actions = ts.getCodeActions(uri, zeroRange(), emptyList())

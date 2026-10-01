@@ -1,11 +1,6 @@
 package org.xvm.lsp.server
 
 import com.google.gson.JsonPrimitive
-import java.io.File
-import java.nio.file.Files
-import java.nio.file.Path
-import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.eclipse.lsp4j.ClientCapabilities
@@ -36,6 +31,11 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import java.io.File
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkModuleServerTest {
     @TempDir lateinit var directory: Path
@@ -105,9 +105,8 @@ class XdkModuleServerTest {
                                                 }
                                         }
                                 }
-                        }
-                    )
-                    .get(10, SECONDS)
+                        },
+                    ).get(10, SECONDS)
                     .capabilities
                     .workspace
                     .fileOperations
@@ -122,8 +121,8 @@ class XdkModuleServerTest {
             renamed.writeText("class Renamed extends Base { MissingType absent; }")
             session.server.workspaceService.didRenameFiles(
                 RenameFilesParams(
-                    listOf(FileRename(member.toURI().toString(), renamed.toURI().toString()))
-                )
+                    listOf(FileRename(member.toURI().toString(), renamed.toURI().toString())),
+                ),
             )
             session.expect(renamed, mark, null, true)
             session.expect(member, mark, null, false)
@@ -132,8 +131,8 @@ class XdkModuleServerTest {
             member.writeText("class Child extends Base {}")
             session.server.workspaceService.didRenameFiles(
                 RenameFilesParams(
-                    listOf(FileRename(renamed.toURI().toString(), member.toURI().toString()))
-                )
+                    listOf(FileRename(renamed.toURI().toString(), member.toURI().toString())),
+                ),
             )
             session.expect(renamed, mark, null, false)
             session.expect(member, mark, null, false)
@@ -145,7 +144,10 @@ class XdkModuleServerTest {
         val (root, member) = fixture()
         Session().use { session ->
             val capabilities =
-                session.server.initialize(InitializeParams()).get(10, SECONDS).capabilities
+                session.server
+                    .initialize(InitializeParams())
+                    .get(10, SECONDS)
+                    .capabilities
             assertThat(capabilities.typeHierarchyProvider.left).isTrue()
             session.open(root, root.readText(), 1)
             val hierarchy =
@@ -154,9 +156,8 @@ class XdkModuleServerTest {
                         TypeHierarchyPrepareParams(
                             TextDocumentIdentifier(root.toURI().toString()),
                             Position(0, root.readText().indexOf("Base")),
-                        )
-                    )
-                    .get(30, SECONDS)
+                        ),
+                    ).get(30, SECONDS)
                     .single()
             hierarchy.data = JsonPrimitive(hierarchy.data as String)
             val child =
@@ -174,11 +175,10 @@ class XdkModuleServerTest {
             assertThat(base.uri).isEqualTo(root.toURI().toString())
             session.change(root, root.readText(), 2)
             assertThat(
-                    session.documents
-                        .typeHierarchySubtypes(TypeHierarchySubtypesParams(hierarchy))
-                        .get(30, SECONDS)
-                )
-                .isEmpty()
+                session.documents
+                    .typeHierarchySubtypes(TypeHierarchySubtypesParams(hierarchy))
+                    .get(30, SECONDS),
+            ).isEmpty()
         }
     }
 
@@ -200,10 +200,9 @@ class XdkModuleServerTest {
         init {
             val client = mock(LanguageClient::class.java)
             doAnswer { call ->
-                    published.add(call.getArgument(0))
-                    null
-                }
-                .`when`(client)
+                published.add(call.getArgument(0))
+                null
+            }.`when`(client)
                 .publishDiagnostics(any())
             server.connect(client)
             server.initialize(editorInitializeParams()).get()
@@ -213,37 +212,34 @@ class XdkModuleServerTest {
             file: File,
             text: String,
             version: Int,
-        ) =
-            documents.didOpen(
-                DidOpenTextDocumentParams(
-                    TextDocumentItem(file.toURI().toString(), "xtc", version, text)
-                )
-            )
+        ) = documents.didOpen(
+            DidOpenTextDocumentParams(
+                TextDocumentItem(file.toURI().toString(), "xtc", version, text),
+            ),
+        )
 
         fun change(
             file: File,
             text: String,
             version: Int,
-        ) =
-            documents.didChange(
-                DidChangeTextDocumentParams(
-                    VersionedTextDocumentIdentifier(file.toURI().toString(), version),
-                    listOf(TextDocumentContentChangeEvent(text)),
-                )
-            )
+        ) = documents.didChange(
+            DidChangeTextDocumentParams(
+                VersionedTextDocumentIdentifier(file.toURI().toString(), version),
+                listOf(TextDocumentContentChangeEvent(text)),
+            ),
+        )
 
         fun closeDocument(file: File) =
             documents.didClose(
-                DidCloseTextDocumentParams(TextDocumentIdentifier(file.toURI().toString()))
+                DidCloseTextDocumentParams(TextDocumentIdentifier(file.toURI().toString())),
             )
 
         fun watched(
             file: File,
             kind: FileChangeType,
-        ) =
-            server.workspaceService.didChangeWatchedFiles(
-                DidChangeWatchedFilesParams(listOf(FileEvent(file.toURI().toString(), kind)))
-            )
+        ) = server.workspaceService.didChangeWatchedFiles(
+            DidChangeWatchedFilesParams(listOf(FileEvent(file.toURI().toString(), kind))),
+        )
 
         fun expect(
             file: File,

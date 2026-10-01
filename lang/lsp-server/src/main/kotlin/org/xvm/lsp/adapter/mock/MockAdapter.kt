@@ -1,6 +1,5 @@
 package org.xvm.lsp.adapter.mock
 
-import java.util.concurrent.ConcurrentHashMap
 import org.xvm.lsp.adapter.AbstractAdapter
 import org.xvm.lsp.adapter.CodeAction
 import org.xvm.lsp.adapter.CodeAction.CodeActionKind
@@ -22,6 +21,7 @@ import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.SymbolInfo.SymbolKind
+import java.util.concurrent.ConcurrentHashMap
 
 /** Pattern to recognize module declarations. */
 private val modulePattern = Regex("""^\s*module\s+([\w.]+)\s*\{?""", RegexOption.MULTILINE)
@@ -118,108 +118,110 @@ class MockAdapter : AbstractAdapter() {
         documentContents[uri] = content
         val lines = content.split("\n")
 
-        val diagnostics = buildList {
-            // Check for deliberate ERROR markers (for testing)
-            errorPattern.findAll(content).forEach { match ->
-                val line = countLines(content, match.range.first)
-                add(Diagnostic.error(Location.ofLine(uri, line), match.groupValues[1]))
-            }
+        val diagnostics =
+            buildList {
+                // Check for deliberate ERROR markers (for testing)
+                errorPattern.findAll(content).forEach { match ->
+                    val line = countLines(content, match.range.first)
+                    add(Diagnostic.error(Location.ofLine(uri, line), match.groupValues[1]))
+                }
 
-            // Check for basic syntax errors
-            if (content.contains("{") && !content.contains("}")) {
-                add(
-                    Diagnostic.error(
-                        Location.ofLine(uri, lines.size - 1),
-                        "Unmatched opening brace",
-                    )
-                )
-            }
-        }
-
-        val symbols = buildList {
-            // Parse module
-            modulePattern.find(content)?.let { match ->
-                val line = countLines(content, match.range.first)
-                val moduleName = match.groupValues[1]
-                add(
-                    SymbolInfo(
-                        name = moduleName,
-                        qualifiedName = moduleName,
-                        kind = SymbolKind.MODULE,
-                        location = Location(uri, line, 0, line, match.value.length),
-                        documentation = "Module $moduleName",
-                    )
-                )
-            }
-
-            // Parse type declarations (classes, interfaces, services)
-            addAll(
-                parseTypeDeclarations(
-                    classPattern,
-                    content,
-                    uri,
-                    SymbolKind.CLASS,
-                    "class",
-                    "Class",
-                )
-            )
-            addAll(
-                parseTypeDeclarations(
-                    interfacePattern,
-                    content,
-                    uri,
-                    SymbolKind.INTERFACE,
-                    "interface",
-                    "Interface",
-                )
-            )
-            addAll(
-                parseTypeDeclarations(
-                    servicePattern,
-                    content,
-                    uri,
-                    SymbolKind.SERVICE,
-                    "service",
-                    "Service",
-                )
-            )
-
-            // Parse methods
-            methodPattern.findAll(content).forEach { match ->
-                val line = countLines(content, match.range.first)
-                val (returnType, methodName) = match.destructured
-                // Skip if this looks like a class/interface/service declaration
-                if (returnType !in listOf("class", "interface", "service")) {
+                // Check for basic syntax errors
+                if (content.contains("{") && !content.contains("}")) {
                     add(
-                        SymbolInfo(
-                            name = methodName,
-                            qualifiedName = methodName,
-                            kind = SymbolKind.METHOD,
-                            location = Location(uri, line, 0, line, match.value.length),
-                            typeSignature = "$returnType $methodName(...)",
-                        )
+                        Diagnostic.error(
+                            Location.ofLine(uri, lines.size - 1),
+                            "Unmatched opening brace",
+                        ),
                     )
                 }
             }
 
-            // Parse properties
-            propertyPattern.findAll(content).forEach { match ->
-                val line = countLines(content, match.range.first)
-                val (propType, propName) = match.destructured
-                // Skip if this looks like something else
-                if (propType !in listOf("class", "interface", "module", "return")) {
+        val symbols =
+            buildList {
+                // Parse module
+                modulePattern.find(content)?.let { match ->
+                    val line = countLines(content, match.range.first)
+                    val moduleName = match.groupValues[1]
                     add(
                         SymbolInfo(
-                            name = propName,
-                            qualifiedName = propName,
-                            kind = SymbolKind.PROPERTY,
+                            name = moduleName,
+                            qualifiedName = moduleName,
+                            kind = SymbolKind.MODULE,
                             location = Location(uri, line, 0, line, match.value.length),
-                            typeSignature = "$propType $propName",
-                        )
+                            documentation = "Module $moduleName",
+                        ),
                     )
                 }
+
+                // Parse type declarations (classes, interfaces, services)
+                addAll(
+                    parseTypeDeclarations(
+                        classPattern,
+                        content,
+                        uri,
+                        SymbolKind.CLASS,
+                        "class",
+                        "Class",
+                    ),
+                )
+                addAll(
+                    parseTypeDeclarations(
+                        interfacePattern,
+                        content,
+                        uri,
+                        SymbolKind.INTERFACE,
+                        "interface",
+                        "Interface",
+                    ),
+                )
+                addAll(
+                    parseTypeDeclarations(
+                        servicePattern,
+                        content,
+                        uri,
+                        SymbolKind.SERVICE,
+                        "service",
+                        "Service",
+                    ),
+                )
+
+                // Parse methods
+                methodPattern.findAll(content).forEach { match ->
+                    val line = countLines(content, match.range.first)
+                    val (returnType, methodName) = match.destructured
+                    // Skip if this looks like a class/interface/service declaration
+                    if (returnType !in listOf("class", "interface", "service")) {
+                        add(
+                            SymbolInfo(
+                                name = methodName,
+                                qualifiedName = methodName,
+                                kind = SymbolKind.METHOD,
+                                location = Location(uri, line, 0, line, match.value.length),
+                                typeSignature = "$returnType $methodName(...)",
+                            ),
+                        )
+                    }
+                }
+
+                // Parse properties
+                propertyPattern.findAll(content).forEach { match ->
+                    val line = countLines(content, match.range.first)
+                    val (propType, propName) = match.destructured
+                    // Skip if this looks like something else
+                    if (propType !in listOf("class", "interface", "module", "return")) {
+                        add(
+                            SymbolInfo(
+                                name = propName,
+                                qualifiedName = propName,
+                                kind = SymbolKind.PROPERTY,
+                                location = Location(uri, line, 0, line, match.value.length),
+                                typeSignature = "$propType $propName",
+                            ),
+                        )
+                    }
+                }
             }
-        }
 
         val result = CompilationResult.withDiagnostics(uri, diagnostics, symbols)
         compiledDocuments[uri] = result
@@ -268,13 +270,12 @@ class MockAdapter : AbstractAdapter() {
                         kind = toCompletionKind(symbol.kind),
                         detail = symbol.typeSignature ?: symbol.kind.name,
                         insertText = symbol.name,
-                    )
+                    ),
                 )
             }
+        }.also {
+            logger.info("getCompletions -> {} items", it.size)
         }
-            .also {
-                logger.info("getCompletions -> {} items", it.size)
-            }
     }
 
     override fun findDefinition(
@@ -311,11 +312,10 @@ class MockAdapter : AbstractAdapter() {
 
         // Mock implementation: just return the declaration
         return listOfNotNull(
-                if (includeDeclaration) findSymbolAt(uri, line, column)?.location else null
-            )
-            .also {
-                logger.info("findReferences -> {} locations", it.size)
-            }
+            if (includeDeclaration) findSymbolAt(uri, line, column)?.location else null,
+        ).also {
+            logger.info("findReferences -> {} locations", it.size)
+        }
     }
 
     // ========================================================================
@@ -344,10 +344,8 @@ class MockAdapter : AbstractAdapter() {
                                 ),
                             kind = HighlightKind.TEXT,
                         )
-                    }
-                    .toList()
-            }
-            .also {
+                    }.toList()
+            }.also {
                 logger.info("highlight '{}' -> {} occurrences", word, it.size)
             }
     }
@@ -379,13 +377,12 @@ class MockAdapter : AbstractAdapter() {
                         importLines.first(),
                         importLines.last(),
                         FoldingRange.FoldingKind.IMPORTS,
-                    )
+                    ),
                 )
             }
+        }.also {
+            logger.info("folding ranges -> {} found", it.size)
         }
-            .also {
-                logger.info("folding ranges -> {} found", it.size)
-            }
     }
 
     override fun prepareRename(
@@ -433,8 +430,7 @@ class MockAdapter : AbstractAdapter() {
                                 ),
                             newText = newName,
                         )
-                    }
-                    .toList()
+                    }.toList()
             }
 
         if (edits.isEmpty()) return null
@@ -485,26 +481,26 @@ class MockAdapter : AbstractAdapter() {
     override fun getDocumentLinks(
         uri: String,
         content: String,
-    ): List<DocumentLink> = buildList {
-        importPattern.findAll(content).forEach { match ->
-            val importPath = match.groupValues[1]
-            val line = countLines(content, match.range.first)
-            val importStart = match.value.indexOf(importPath)
-            val col = match.value.indexOf(importPath, importStart)
-            add(
-                DocumentLink(
-                    range =
-                        Range(
-                            start = Position(line, col),
-                            end = Position(line, col + importPath.length),
-                        ),
-                    target = null,
-                    tooltip = "import $importPath",
+    ): List<DocumentLink> =
+        buildList {
+            importPattern.findAll(content).forEach { match ->
+                val importPath = match.groupValues[1]
+                val line = countLines(content, match.range.first)
+                val importStart = match.value.indexOf(importPath)
+                val col = match.value.indexOf(importPath, importStart)
+                add(
+                    DocumentLink(
+                        range =
+                            Range(
+                                start = Position(line, col),
+                                end = Position(line, col + importPath.length),
+                            ),
+                        target = null,
+                        tooltip = "import $importPath",
+                    ),
                 )
-            )
-        }
-    }
-        .also {
+            }
+        }.also {
             logger.info("documentLinks -> {} found", it.size)
         }
 
@@ -544,17 +540,16 @@ class MockAdapter : AbstractAdapter() {
         word: String,
     ): Sequence<Int> =
         generateSequence(lineText.indexOf(word)) { prev ->
-                lineText.indexOf(word, prev + word.length).takeIf { it >= 0 }
-            }
-            .filter { idx ->
-                val before = if (idx > 0) lineText[idx - 1] else ' '
-                val after =
-                    if (idx + word.length < lineText.length) lineText[idx + word.length] else ' '
-                !before.isLetterOrDigit() &&
-                    before != '_' &&
-                    !after.isLetterOrDigit() &&
-                    after != '_'
-            }
+            lineText.indexOf(word, prev + word.length).takeIf { it >= 0 }
+        }.filter { idx ->
+            val before = if (idx > 0) lineText[idx - 1] else ' '
+            val after =
+                if (idx + word.length < lineText.length) lineText[idx + word.length] else ' '
+            !before.isLetterOrDigit() &&
+                before != '_' &&
+                !after.isLetterOrDigit() &&
+                after != '_'
+        }
 
     private fun countLines(
         content: String,
@@ -582,6 +577,5 @@ class MockAdapter : AbstractAdapter() {
                     documentation = "$kindLabel $name",
                     typeSignature = "$typeKeyword $name",
                 )
-            }
-            .toList()
+            }.toList()
 }

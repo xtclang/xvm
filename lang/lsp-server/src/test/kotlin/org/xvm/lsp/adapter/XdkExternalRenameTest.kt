@@ -1,8 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.io.File
-import java.nio.file.Path
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -13,6 +10,9 @@ import org.xvm.lsp.adapter.xdk.XdkProject
 import org.xvm.lsp.adapter.xdk.XdkProjectQueries
 import org.xvm.lsp.adapter.xdk.XdkRenameScope
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import java.io.File
+import java.nio.file.Path
+import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkExternalRenameTest {
     @TempDir lateinit var directory: Path
@@ -34,8 +34,7 @@ class XdkExternalRenameTest {
                             0,
                             LIBRARY.indexOf("input"),
                             "value",
-                        )
-                        .get(30, SECONDS)
+                        ).get(30, SECONDS),
                 )
             val scope = requireNotNull(proposal.scope)
             assertThat(scope.boundary).isEqualTo(XdkRenameScope.Boundary.CONFIGURED_GRAPH)
@@ -68,8 +67,7 @@ class XdkExternalRenameTest {
                             0,
                             LIBRARY.indexOf("input"),
                             "value",
-                        )
-                        .get(30, SECONDS)
+                        ).get(30, SECONDS),
                 )
             val overlay =
                 CONSUMER.replace("box.pick(input = 1)", "box.pick(input = 1) + box.pick(input = 2)")
@@ -82,8 +80,7 @@ class XdkExternalRenameTest {
                             0,
                             LIBRARY.indexOf("input"),
                             "value",
-                        )
-                        .get(30, SECONDS)
+                        ).get(30, SECONDS),
                 )
             assertThat(requireNotNull(after.scope).revision)
                 .isNotEqualTo(requireNotNull(before.scope).revision)
@@ -101,9 +98,8 @@ class XdkExternalRenameTest {
             adapter.replaceSourceModules(graph(library, missing))
             assertThat(adapter.compile(library.toURI().toString(), LIBRARY).diagnostics).isEmpty()
             assertThat(
-                    adapter.rename(library.toURI().toString(), 0, LIBRARY.indexOf("input"), "value")
-                )
-                .isNull()
+                adapter.rename(library.toURI().toString(), 0, LIBRARY.indexOf("input"), "value"),
+            ).isNull()
         }
     }
 
@@ -126,14 +122,13 @@ class XdkExternalRenameTest {
                 { false },
             )
         assertThat(
-                query.renameProposal(
-                    library.toURI().toString(),
-                    0,
-                    LIBRARY.indexOf("input"),
-                    "value",
-                )
-            )
-            .isNull()
+            query.renameProposal(
+                library.toURI().toString(),
+                0,
+                LIBRARY.indexOf("input"),
+                "value",
+            ),
+        ).isNull()
         assertThat(library.readText()).isEqualTo(LIBRARY)
     }
 
@@ -152,8 +147,7 @@ class XdkExternalRenameTest {
                             0,
                             LIBRARY.indexOf("input"),
                             "value",
-                        )
-                        .get(30, SECONDS)
+                        ).get(30, SECONDS),
                 )
             assertThat(requireNotNull(proposal.scope).boundary)
                 .isEqualTo(XdkRenameScope.Boundary.DISCOVERED_GRAPH)

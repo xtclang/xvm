@@ -16,7 +16,10 @@ interface CompilerSettingsPage {
 
     fun dismissExpectedConfigurationError(project: Project)
 
-    fun resourceRootsRoundTrip(project: Project, roots: String)
+    fun resourceRootsRoundTrip(
+        project: Project,
+        roots: String,
+    )
 
     fun content(project: Project): String?
 

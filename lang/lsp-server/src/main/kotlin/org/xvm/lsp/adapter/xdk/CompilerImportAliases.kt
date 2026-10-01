@@ -29,24 +29,30 @@ internal fun compilerImportAliases(
             fun range(
                 start: Long,
                 end: Long,
-            ) =
-                SemanticModel.Range(
-                    SemanticModel.Position(
-                        Source.calculateLine(start),
-                        Source.calculateOffset(start),
-                    ),
-                    SemanticModel.Position(Source.calculateLine(end), Source.calculateOffset(end)),
-                )
+            ) = SemanticModel.Range(
+                SemanticModel.Position(
+                    Source.calculateLine(start),
+                    Source.calculateOffset(start),
+                ),
+                SemanticModel.Position(Source.calculateLine(end), Source.calculateOffset(end)),
+            )
             val uses =
                 nodes
                     .filter { it.source?.fileName == source }
                     .mapNotNull { node ->
                         val first =
                             when (node) {
-                                is NameExpression ->
+                                is NameExpression -> {
                                     node.nameToken.takeIf { node.leftExpression == null }
-                                is NamedTypeExpression -> node.nameBindings.firstOrNull()?.name()
-                                else -> null
+                                }
+
+                                is NamedTypeExpression -> {
+                                    node.nameBindings.firstOrNull()?.name()
+                                }
+
+                                else -> {
+                                    null
+                                }
                             } ?: return@mapNotNull null
                         if (first.valueText != alias.aliasName) return@mapNotNull null
                         val at = range(first.startPosition, first.endPosition)
@@ -63,8 +69,7 @@ internal fun compilerImportAliases(
                                     }
                                 }
                         at.takeIf { owner === alias }
-                    }
-                    .distinct()
+                    }.distinct()
             SemanticModel.ImportAlias(
                 alias.aliasName,
                 range(token.startPosition, token.endPosition),

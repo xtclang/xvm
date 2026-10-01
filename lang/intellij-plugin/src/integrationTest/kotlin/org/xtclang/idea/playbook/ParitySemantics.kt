@@ -21,7 +21,7 @@ internal fun ParityScenarios.semanticCases() {
                     it.getAsJsonObject("from").string("name").contains(data.string("callerName"))
                 }["fromRanges"]
                 .asJsonArray
-                .size() == data.int("edgeCount")
+                .size() == data.int("edgeCount"),
         )
         check(
             incoming
@@ -29,7 +29,7 @@ internal fun ParityScenarios.semanticCases() {
                     it.getAsJsonObject("from").string("name").contains(data.string("lambdaName"))
                 }["fromRanges"]
                 .asJsonArray
-                .size() == data.int("lambdaSites")
+                .size() == data.int("lambdaSites"),
         )
         val run = calls(doc, doc.at(data.string("caller"), data.int("offset"))).single()
         val outgoing = callEdges(run, "outgoingCalls")
@@ -37,17 +37,17 @@ internal fun ParityScenarios.semanticCases() {
         check(
             outgoing
                 .map {
-                    it.getAsJsonObject("to")["selectionRange"]
+                    it
+                        .getAsJsonObject("to")["selectionRange"]
                         .asJsonObject["start"]
                         .asJsonObject
                         .int("line")
-                }
-                .toSet()
-                .size == data.int("edgeCount")
+                }.toSet()
+                .size == data.int("edgeCount"),
         )
         check(
             outgoing.map { it["fromRanges"].asJsonArray.size() }.sorted() ==
-                data["sitesPerCallee"].asJsonArray.map { it.asInt }
+                data["sitesPerCallee"].asJsonArray.map { it.asInt },
         )
         with(driver) {
             nativeHierarchy(
@@ -63,18 +63,22 @@ internal fun ParityScenarios.semanticCases() {
         val leaf = calls(doc, doc.at(data.string("callee"), data.int("offset"))).single()
         val lambda =
             callEdges(
-                    leaf,
-                    "incomingCalls",
-                )
-                .single {
-                    it.getAsJsonObject("from").string("name").contains(data.string("lambdaName"))
-                }
+                leaf,
+                "incomingCalls",
+            ).single {
+                it.getAsJsonObject("from").string("name").contains(data.string("lambdaName"))
+            }
         val outgoing = callEdges(lambda.getAsJsonObject("from"), "outgoingCalls")
         check(outgoing.size == data.int("edgeCount"))
         check(outgoing.single().getAsJsonObject("to")["selectionRange"] == leaf["selectionRange"])
         check(
-            outgoing.single()["fromRanges"].rows().single().getAsJsonObject("start").int("line") ==
-                ParityWorkspace.position(doc.text, doc.at(data.string("lambdaCall")))["line"]
+            outgoing
+                .single()["fromRanges"]
+                .rows()
+                .single()
+                .getAsJsonObject("start")
+                .int("line") ==
+                ParityWorkspace.position(doc.text, doc.at(data.string("lambdaCall")))["line"],
         )
         check(calls(doc, doc.at(data.string("dynamicCall"))).isEmpty())
     }
@@ -132,8 +136,7 @@ internal fun ParityScenarios.semanticCases() {
                             .asJsonArray
                             .mapIndexedNotNull { bit, name ->
                                 name.asString.takeIf { tuple[4] and (1 shl bit) != 0 }
-                            }
-                            .toSet(),
+                            }.toSet(),
                     )
             }
         data["tokenKinds"].rows().forEach { kind ->
@@ -143,9 +146,9 @@ internal fun ParityScenarios.semanticCases() {
             decoded.any {
                 it.text == data.string("methodName") &&
                     it.modifiers.containsAll(
-                        listOf(data.string("staticModifier"), data.string("declarationModifier"))
+                        listOf(data.string("staticModifier"), data.string("declarationModifier")),
                     )
-            }
+            },
         )
         val write = doc.at(data.string("anchor2"))
         check(
@@ -153,12 +156,14 @@ internal fun ParityScenarios.semanticCases() {
                 it.line == ParityWorkspace.position(doc.text, write)["line"] &&
                     it.text == data.string("variableName") &&
                     data.string("writeModifier") in it.modifiers
-            }
+            },
         )
         with(driver) {
             focusEditor(doc.editor)
             withContext(OnDispatcher.EDT) {
-                doc.editor.editor.getCaretModel().moveToOffset(write)
+                doc.editor.editor
+                    .getCaretModel()
+                    .moveToOffset(write)
             }
             invokeAction("HighlightUsagesInFile", component = doc.editor.component)
             val highlights =
@@ -166,7 +171,7 @@ internal fun ParityScenarios.semanticCases() {
                     val psi =
                         requireNotNull(
                             service<PsiManager>(singleProject())
-                                .findFile(doc.editor.editor.getVirtualFile())
+                                .findFile(doc.editor.editor.getVirtualFile()),
                         )
                     utility(LspFileSupport::class).getSupport(psi).getHighlightSupport()
                 }
@@ -208,19 +213,22 @@ internal fun ParityScenarios.semanticCases() {
                                 .getValidLSPFuture()
                                 ?.takeIf {
                                     it.isDone() && !it.isCompletedExceptionally()
-                                }
-                                ?.get()
+                                }?.get()
                                 ?.map { protocol.copy(it.inlayHint()).asJsonObject }
                         },
                         checker = { it != null && it.isNotEmpty() },
                     )
                 }!!
-            val labels = hints.map {
-                it["label"].let { label ->
-                    if (label.isJsonPrimitive) label.asString
-                    else label.rows().joinToString("") { part -> part.string("value") }
+            val labels =
+                hints.map {
+                    it["label"].let { label ->
+                        if (label.isJsonPrimitive) {
+                            label.asString
+                        } else {
+                            label.rows().joinToString("") { part -> part.string("value") }
+                        }
+                    }
                 }
-            }
             expected.strings("hints").forEach { expected ->
                 check(labels.any { it.contains(expected) })
             }
@@ -228,8 +236,9 @@ internal fun ParityScenarios.semanticCases() {
                 hints.none {
                     it.getAsJsonObject("position").int("line") ==
                         ParityWorkspace.position(doc.text, doc.at(expected.string("anchor")))[
-                                "line"]
-                }
+                            "line",
+                        ]
+                },
             )
             check(hints.count { it.int("kind") == 1 } == expected.int("typeHintCount"))
             check(labels.none { it.contains(expected.string("excludedHint")) })
@@ -270,7 +279,7 @@ internal fun ParityScenarios.semanticCases() {
         check(
             fresh["selectionRange"].asJsonObject["start"].asJsonObject.int("line") ==
                 old["selectionRange"].asJsonObject["start"].asJsonObject.int("line") +
-                    data.int("lineShift")
+                data.int("lineShift"),
         )
         check(callEdges(fresh, "outgoingCalls").size == data.int("edgeCount"))
         replace(doc, doc.text.replace(data.string("anchor"), data.string("replaceWith")))
@@ -281,11 +290,10 @@ internal fun ParityScenarios.semanticCases() {
         val reopened = open(doc.file)
         check(
             callEdges(
-                    calls(reopened, reopened.at(data.string("anchor"), data.int("offset")))
-                        .single(),
-                    "outgoingCalls",
-                )
-                .size == data.int("edgeCount")
+                calls(reopened, reopened.at(data.string("anchor"), data.int("offset")))
+                    .single(),
+                "outgoingCalls",
+            ).size == data.int("edgeCount"),
         )
     }
     case("X44") { data ->
@@ -312,7 +320,11 @@ internal fun ParityScenarios.semanticCases() {
         val moved = callEdges(current(), "incomingCalls").single()
 
         fun line(item: JsonObject) =
-            item["fromRanges"].rows().first().getAsJsonObject("start").int("line")
+            item["fromRanges"]
+                .rows()
+                .first()
+                .getAsJsonObject("start")
+                .int("line")
         check(line(moved) == line(edge) + data.int("lineShift"))
     }
 }

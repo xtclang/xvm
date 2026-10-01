@@ -9,10 +9,6 @@
  */
 package org.xtclang.tooling
 
-import java.io.File
-import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.condition.EnabledIf
@@ -24,6 +20,10 @@ import org.xtclang.tooling.generators.VimGenerator
 import org.xtclang.tooling.model.Cardinality
 import org.xtclang.tooling.model.KeywordCategory
 import org.xtclang.tooling.model.OperatorCategory
+import java.io.File
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class LanguageModelTest {

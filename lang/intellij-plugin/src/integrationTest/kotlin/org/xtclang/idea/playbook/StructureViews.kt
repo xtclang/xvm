@@ -30,9 +30,10 @@ fun Driver.structure(
         tree.expandAll()
         val rows = tree.collectExpandedPaths().map { it.path.last() }
 
-        fun contains(name: String) = rows.any {
-            Regex("(?<![\\w$])${Regex.escape(name)}(?![\\w$])").containsMatchIn(it)
-        }
+        fun contains(name: String) =
+            rows.any {
+                Regex("(?<![\\w$])${Regex.escape(name)}(?![\\w$])").containsMatchIn(it)
+            }
         include.all(::contains) && exclude.none(::contains)
     }
 }
@@ -47,9 +48,9 @@ fun Driver.folds(editor: JEditorUiComponent): List<IntRange> =
             .getAllFoldRegions()
             .filter { it.isValid() }
             .map {
-                editor.document.getLineNumber(it.getStartOffset())..editor.document.getLineNumber(
-                        it.getEndOffset()
-                    )
+                val firstLine = editor.document.getLineNumber(it.getStartOffset())
+                val lastLine = editor.document.getLineNumber(it.getEndOffset())
+                firstLine..lastLine
             }
     }
 
@@ -67,7 +68,7 @@ fun Driver.selectionParents(
             editor.editor.getCaretModel().moveToOffset(at)
             val file =
                 requireNotNull(
-                    service<PsiManager>(singleProject()).findFile(editor.editor.getVirtualFile())
+                    service<PsiManager>(singleProject()).findFile(editor.editor.getVirtualFile()),
                 )
             utility(LspFileSupport::class).getSupport(file).getSelectionRangeSupport()
         }
@@ -84,11 +85,12 @@ fun Driver.selectionParents(
         val future = support.getValidLSPFuture()
         if (
             future == null ||
-                future == previous ||
-                !future.isDone() ||
-                future.isCompletedExceptionally()
-        )
+            future == previous ||
+            !future.isDone() ||
+            future.isCompletedExceptionally()
+        ) {
             return@awaitUi false
+        }
 
         fun offsets(range: SourceRange): IntRange =
             withContext(OnDispatcher.EDT) {

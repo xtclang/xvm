@@ -1,6 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -13,6 +12,7 @@ import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.compiler.ast.partial.IncompleteDeclarationStatement
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import java.nio.file.Path
 
 class XdkDeclarationHeaderTest {
     @TempDir lateinit var directory: Path
@@ -24,16 +24,18 @@ class XdkDeclarationHeaderTest {
                 "void damaged(Int value, Str) {}",
                 "void damaged(Int ) {}",
                 "void damaged(Int value {}",
-            ]
+            ],
     )
-    fun `unfinished parameter headers preserve their written name and following declarations`(
-        declaration: String
-    ) {
+    fun `unfinished parameter headers preserve their written name and following declarations`(declaration: String) {
         XdkAdapter().use { adapter ->
             val result = adapter.compile(URI, "module Headers { $declaration Int later = 1; }")
             assertThat(result.diagnostics).isNotEmpty()
-            assertThat(result.symbols.single().children.map { it.name })
-                .containsExactly("damaged", "later")
+            assertThat(
+                result.symbols
+                    .single()
+                    .children
+                    .map { it.name },
+            ).containsExactly("damaged", "later")
         }
     }
 
@@ -45,7 +47,7 @@ class XdkDeclarationHeaderTest {
                 "void damaged(Int first, Str| second) {}",
                 "Str| property;",
                 "Str| damaged() = \"x\";",
-            ]
+            ],
     )
     fun `header type prefixes expose compiler types with exact edits`(declaration: String) {
         val prefix =
@@ -63,7 +65,7 @@ class XdkDeclarationHeaderTest {
                     TextEdit(
                         Range(Position(0, prefix.length - 3), Position(0, prefix.length)),
                         "String",
-                    )
+                    ),
                 )
             assertThat(adapter.getSignatureHelp(URI, 0, prefix.length)).isNull()
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
@@ -100,13 +102,15 @@ class XdkDeclarationHeaderTest {
     @Test
     fun `header types use enclosing names imports aliases and compiler shadowing`() {
         XdkAdapter().use { adapter ->
-            for ((setup, name) in
-                listOf(
-                    "import ecstasy.text.StringBuffer as Buffer;" to "Buffer",
-                    "import ecstasy.text.*;" to "StringBuffer",
-                    "class ItemType {}" to "ItemType",
-                    "typedef String as Text;" to "Text",
-                )) {
+            for (
+            (setup, name) in
+            listOf(
+                "import ecstasy.text.StringBuffer as Buffer;" to "Buffer",
+                "import ecstasy.text.*;" to "StringBuffer",
+                "class ItemType {}" to "ItemType",
+                "typedef String as Text;" to "Text",
+            )
+            ) {
                 val prefix =
                     "module Headers { $setup class Nested { void damaged(${name.dropLast(1)}"
                 adapter.compile(URI, "$prefix value) {} } }")
@@ -200,11 +204,13 @@ class XdkDeclarationHeaderTest {
         assertThat(declaration.component.getChild("damaged")).isNull()
         assertThat(declaration.component.getChild("hidden")).isNull()
         assertThat(analysis.cursorBindings()[site]!!.types().map { it.name() }).contains("String")
-        for (listener in
-            listOf(
-                ErrorList(ErrorList.FIRST_ERROR),
-                ErrorListener.cancellable(ErrorList()) { true },
-            )) {
+        for (
+        listener in
+        listOf(
+            ErrorList(ErrorList.FIRST_ERROR),
+            ErrorListener.cancellable(ErrorList()) { true },
+        )
+        ) {
             source.reset()
             val stopped =
                 EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, listener)

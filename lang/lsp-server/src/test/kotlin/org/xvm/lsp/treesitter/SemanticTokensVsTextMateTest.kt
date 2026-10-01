@@ -135,9 +135,10 @@ class SemanticTokensVsTextMateTest {
         type: String,
     ): DecodedToken? = find { it.text == text && it.tokenType == type }
 
-    private fun List<DecodedToken>.findAllByText(text: String): List<DecodedToken> = filter {
-        it.text == text
-    }
+    private fun List<DecodedToken>.findAllByText(text: String): List<DecodedToken> =
+        filter {
+            it.text == text
+        }
 
     // ========================================================================
     // Benefit 1: Same identifier, different semantic roles
@@ -172,8 +173,7 @@ class SemanticTokensVsTextMateTest {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val tokens = encode(source)
             logTokens("param vs property", tokens)
@@ -182,26 +182,23 @@ class SemanticTokensVsTextMateTest {
             val propToken = tokens.findByTextAndType("name", "property")
             assertThat(propToken)
                 .describedAs(
-                    "TextMate sees property 'name' as @variable.member; semantic tokens classify it as 'property' with 'declaration' modifier"
-                )
-                .isNotNull
+                    "TextMate sees property 'name' as @variable.member; semantic tokens classify it as 'property' with 'declaration' modifier",
+                ).isNotNull
             assertThat(propToken!!.modifiers).contains("declaration")
 
             // Parameter declaration: name -> "parameter" with "declaration"
             val paramToken = tokens.findByTextAndType("name", "parameter")
             assertThat(paramToken)
                 .describedAs(
-                    "TextMate sees parameter 'name' as @variable.parameter; semantic tokens give it the distinct 'parameter' type"
-                )
-                .isNotNull
+                    "TextMate sees parameter 'name' as @variable.parameter; semantic tokens give it the distinct 'parameter' type",
+                ).isNotNull
             assertThat(paramToken!!.modifiers).contains("declaration")
 
             // The two should be DIFFERENT token types -- TextMate can't do this
             assertThat(propToken.tokenType)
                 .describedAs(
-                    "Property and parameter 'name' must have DIFFERENT semantic token types -- TextMate would color both as @variable"
-                )
-                .isNotEqualTo(paramToken.tokenType)
+                    "Property and parameter 'name' must have DIFFERENT semantic token types -- TextMate would color both as @variable",
+                ).isNotEqualTo(paramToken.tokenType)
         }
 
         /**
@@ -227,8 +224,7 @@ class SemanticTokensVsTextMateTest {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val tokens = encode(source)
             logTokens("method decl vs call", tokens)
@@ -236,18 +232,16 @@ class SemanticTokensVsTextMateTest {
             val methodTokens = tokens.filter { it.text == "getValue" && it.tokenType == "method" }
             assertThat(methodTokens)
                 .describedAs(
-                    "'getValue' should appear as method at both declaration and member-call site"
-                )
-                .hasSizeGreaterThanOrEqualTo(2)
+                    "'getValue' should appear as method at both declaration and member-call site",
+                ).hasSizeGreaterThanOrEqualTo(2)
 
             val declToken = methodTokens.find { "declaration" in it.modifiers }
             val callToken = methodTokens.find { "declaration" !in it.modifiers }
 
             assertThat(declToken)
                 .describedAs(
-                    "Declaration site should have 'declaration' modifier -- TextMate has no modifier concept"
-                )
-                .isNotNull
+                    "Declaration site should have 'declaration' modifier -- TextMate has no modifier concept",
+                ).isNotNull
             assertThat(callToken)
                 .describedAs("Call site should NOT have 'declaration' modifier")
                 .isNotNull
@@ -287,8 +281,7 @@ class SemanticTokensVsTextMateTest {
                     service Worker {}
                     mixin Printable {}
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val tokens = encode(source)
             logTokens("type categories", tokens)
@@ -298,16 +291,14 @@ class SemanticTokensVsTextMateTest {
             val personToken = tokens.findByTextAndType("Person", "class")
             assertThat(personToken)
                 .describedAs(
-                    "'Person' should be 'class', not generic 'type' -- TextMate sees @type.definition"
-                )
-                .isNotNull
+                    "'Person' should be 'class', not generic 'type' -- TextMate sees @type.definition",
+                ).isNotNull
 
             val runnableToken = tokens.findByTextAndType("Runnable", "interface")
             assertThat(runnableToken)
                 .describedAs(
-                    "'Runnable' should be 'interface' -- TextMate can't distinguish from class"
-                )
-                .isNotNull
+                    "'Runnable' should be 'interface' -- TextMate can't distinguish from class",
+                ).isNotNull
 
             val colorToken = tokens.findByTextAndType("Color", "enum")
             assertThat(colorToken)
@@ -324,7 +315,7 @@ class SemanticTokensVsTextMateTest {
             assertThat(types)
                 .hasSize(3)
                 .describedAs(
-                    "class, interface, enum should map to 3 distinct token types -- TextMate gives them all @type.definition"
+                    "class, interface, enum should map to 3 distinct token types -- TextMate gives them all @type.definition",
                 )
         }
 
@@ -340,8 +331,7 @@ class SemanticTokensVsTextMateTest {
                 module myapp {
                     const Point(Int x, Int y);
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val tokens = encode(source)
             logTokens("const readonly", tokens)
@@ -350,9 +340,8 @@ class SemanticTokensVsTextMateTest {
             if (constToken != null) {
                 assertThat(constToken.modifiers)
                     .describedAs(
-                        "'const' maps to 'struct' with both 'declaration' and 'readonly' -- TextMate has no modifier system"
-                    )
-                    .contains("declaration", "readonly")
+                        "'const' maps to 'struct' with both 'declaration' and 'readonly' -- TextMate has no modifier system",
+                    ).contains("declaration", "readonly")
             }
         }
     }
@@ -386,8 +375,7 @@ class SemanticTokensVsTextMateTest {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val tokens = encode(source)
             logTokens("type refs", tokens)
@@ -397,9 +385,8 @@ class SemanticTokensVsTextMateTest {
 
             assertThat(typeTexts)
                 .describedAs(
-                    "String (property type), Int (return type), Boolean (param type) should all be 'type' -- TextMate may lose this to catch-all @variable"
-                )
-                .contains("String", "Int", "Boolean")
+                    "String (property type), Int (return type), Boolean (param type) should all be 'type' -- TextMate may lose this to catch-all @variable",
+                ).contains("String", "Int", "Boolean")
         }
 
         /**
@@ -421,8 +408,7 @@ class SemanticTokensVsTextMateTest {
                         String name = "unknown";
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val tokens = encode(source)
             logTokens("type vs id", tokens)
@@ -465,8 +451,7 @@ class SemanticTokensVsTextMateTest {
                         @Inject Console console;
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val tokens = encode(source)
             logTokens("annotation", tokens)
@@ -477,17 +462,15 @@ class SemanticTokensVsTextMateTest {
 
             assertThat(decoratorToken)
                 .describedAs(
-                    "'Inject' in @Inject should be 'decorator' -- TextMate uses @attribute which many themes don't style distinctly"
-                )
-                .isNotNull
+                    "'Inject' in @Inject should be 'decorator' -- TextMate uses @attribute which many themes don't style distinctly",
+                ).isNotNull
 
             // Verify it's NOT classified as a type (a common TextMate mistake)
             val typeToken = injectTokens.find { it.tokenType == "type" }
             assertThat(typeToken)
                 .describedAs(
-                    "'Inject' should not also appear as 'type' -- semantic tokens prevent double-classification"
-                )
-                .isNull()
+                    "'Inject' should not also appear as 'type' -- semantic tokens prevent double-classification",
+                ).isNull()
         }
     }
 
@@ -523,8 +506,7 @@ class SemanticTokensVsTextMateTest {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val tokens = encode(source)
             logTokens("static method", tokens)
@@ -535,9 +517,8 @@ class SemanticTokensVsTextMateTest {
             if (parseToken != null) {
                 assertThat(parseToken.modifiers)
                     .describedAs(
-                        "static method should carry 'static' modifier -- TextMate has no modifier concept"
-                    )
-                    .contains("static")
+                        "static method should carry 'static' modifier -- TextMate has no modifier concept",
+                    ).contains("static")
                 assertThat(parseToken.modifiers)
                     .describedAs("declaration site should carry 'declaration' modifier")
                     .contains("declaration")
@@ -578,29 +559,29 @@ class SemanticTokensVsTextMateTest {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val tokens = encode(source)
             logTokens("member call vs property", tokens)
 
             // this.getName() -- "getName" at call site should be "method"
-            val getNameCallTokens = tokens.filter {
-                it.text == "getName" && it.tokenType == "method"
-            }
+            val getNameCallTokens =
+                tokens.filter {
+                    it.text == "getName" && it.tokenType == "method"
+                }
             assertThat(getNameCallTokens)
                 .describedAs("'getName' should appear as 'method' (both declaration and call site)")
                 .hasSizeGreaterThanOrEqualTo(1)
 
             // this.name -- "name" in member_expression (not call) should be "property"
-            val namePropertyTokens = tokens.filter {
-                it.text == "name" && it.tokenType == "property"
-            }
+            val namePropertyTokens =
+                tokens.filter {
+                    it.text == "name" && it.tokenType == "property"
+                }
             assertThat(namePropertyTokens)
                 .describedAs(
-                    "'name' in this.name should be 'property' -- TextMate would just say @variable"
-                )
-                .isNotEmpty
+                    "'name' in this.name should be 'property' -- TextMate would just say @variable",
+                ).isNotEmpty
         }
     }
 
@@ -646,8 +627,7 @@ class SemanticTokensVsTextMateTest {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val tokens = encode(source)
             logTokens("combined", tokens)
@@ -662,9 +642,8 @@ class SemanticTokensVsTextMateTest {
             assertThat(distinctTypes)
                 .describedAs(
                     "Semantic tokens should produce 5+ distinct token types from a realistic " +
-                        "class -- TextMate effectively produces only ~3 (type.definition, variable, function)"
-                )
-                .hasSizeGreaterThanOrEqualTo(5)
+                        "class -- TextMate effectively produces only ~3 (type.definition, variable, function)",
+                ).hasSizeGreaterThanOrEqualTo(5)
 
             // Verify specific classifications
             assertThat(tokens.findByTextAndType("myapp", "namespace"))
@@ -690,9 +669,8 @@ class SemanticTokensVsTextMateTest {
             val declTokens = tokens.filter { "declaration" in it.modifiers }
             assertThat(declTokens)
                 .describedAs(
-                    "Multiple tokens should carry 'declaration' modifier -- TextMate has no modifier support"
-                )
-                .hasSizeGreaterThanOrEqualTo(5)
+                    "Multiple tokens should carry 'declaration' modifier -- TextMate has no modifier support",
+                ).hasSizeGreaterThanOrEqualTo(5)
         }
     }
 
@@ -719,8 +697,7 @@ class SemanticTokensVsTextMateTest {
                         Blue
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val tokens = encode(source)
             logTokens("shouldClassifyEnumValuesAsEnumMember", tokens)
@@ -751,8 +728,7 @@ class SemanticTokensVsTextMateTest {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val tokens = encode(source)
             logTokens("shouldClassifyNewExpressionCalleeAsType", tokens)
@@ -785,8 +761,7 @@ class SemanticTokensVsTextMateTest {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val tokens = encode(source)
             logTokens("shouldAddDeprecatedModifier", tokens)

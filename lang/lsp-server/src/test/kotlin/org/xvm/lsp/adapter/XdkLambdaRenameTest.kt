@@ -1,12 +1,12 @@
 package org.xvm.lsp.adapter
 
-import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import java.nio.file.Path
 
 class XdkLambdaRenameTest {
     @TempDir lateinit var directory: Path
@@ -37,7 +37,7 @@ class XdkLambdaRenameTest {
                 .isEqualTo(
                     text
                         .replace("f = (Int input)", "f = (Int value)")
-                        .replace("() -> input", "() -> value")
+                        .replace("() -> input", "() -> value"),
                 )
         }
     }
@@ -48,19 +48,18 @@ class XdkLambdaRenameTest {
             [
                 "function Int(Int) saved() = (Int input) -> input;",
                 "Int consume(function Int(Int) f) = f(1); Int run() = consume((Int input) -> input);",
-            ]
+            ],
     )
     fun `returned and passed lambdas keep local parameter names`(body: String) {
         val text = "module App { $body }"
         workspace(text) { adapter, uri ->
             assertThat(
-                    apply(
-                        text,
-                        requireNotNull(adapter.rename(uri, 0, text.indexOf("input"), "value")),
-                        uri,
-                    )
-                )
-                .isEqualTo(text.replace("input", "value"))
+                apply(
+                    text,
+                    requireNotNull(adapter.rename(uri, 0, text.indexOf("input"), "value")),
+                    uri,
+                ),
+            ).isEqualTo(text.replace("input", "value"))
         }
     }
 
@@ -80,16 +79,20 @@ class XdkLambdaRenameTest {
     fun `standalone compilation needs no generated callable identity for a lambda`() {
         val text = "module App { function Int(Int) saved() = input -> input; }"
         XdkAdapter().use { adapter ->
-            val uri = directory.resolve("App.x").toFile().toURI().toString()
+            val uri =
+                directory
+                    .resolve("App.x")
+                    .toFile()
+                    .toURI()
+                    .toString()
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
             assertThat(
-                    apply(
-                        text,
-                        requireNotNull(adapter.rename(uri, 0, text.indexOf("input"), "value")),
-                        uri,
-                    )
-                )
-                .isEqualTo(text.replace("input", "value"))
+                apply(
+                    text,
+                    requireNotNull(adapter.rename(uri, 0, text.indexOf("input"), "value")),
+                    uri,
+                ),
+            ).isEqualTo(text.replace("input", "value"))
         }
     }
 

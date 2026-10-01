@@ -8,18 +8,19 @@ import com.intellij.psi.codeStyle.CodeStyleSettingsManager
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.util.xmlb.XmlSerializerUtil
 import com.redhat.devtools.lsp4ij.settings.ProjectLanguageServerSettings
+import org.xtclang.idea.XtcIntelliJLanguage
+import org.xtclang.idea.lsp.LanguageServiceProjectConfigurable
 import java.awt.Component
 import java.awt.Container
 import javax.swing.JComboBox
-import org.xtclang.idea.XtcIntelliJLanguage
-import org.xtclang.idea.lsp.LanguageServiceProjectConfigurable
 
 /** Exercise actual settings components on the EDT, without replaying editor mutations. */
 object LanguageServicePage {
-    private fun children(component: Component): Sequence<Component> = sequence {
-        yield(component)
-        if (component is Container) component.components.forEach { yieldAll(children(it)) }
-    }
+    private fun children(component: Component): Sequence<Component> =
+        sequence {
+            yield(component)
+            if (component is Container) component.components.forEach { yieldAll(children(it)) }
+        }
 
     @JvmStatic
     fun exercise(project: Project) {
@@ -47,11 +48,12 @@ object LanguageServicePage {
             page.apply()
             check(
                 !page.isModified() &&
-                    JsonParser.parseString(content(project))
+                    JsonParser
+                        .parseString(content(project))
                         .asJsonObject["xtc"]
                         .asJsonObject["languageService"]
                         .asJsonObject["inlayHints"]
-                        .asBoolean != initial
+                        .asBoolean != initial,
             )
         } finally {
             page.disposeUIResources()
@@ -61,12 +63,16 @@ object LanguageServicePage {
 
     @JvmStatic
     fun content(project: Project): String? =
-        ProjectLanguageServerSettings.getInstance(project)
+        ProjectLanguageServerSettings
+            .getInstance(project)
             .getLanguageServerSettings("xtcLanguageServer")
             ?.configurationContent
 
     @JvmStatic
-    fun restore(project: Project, content: String?) {
+    fun restore(
+        project: Project,
+        content: String?,
+    ) {
         val store = ProjectLanguageServerSettings.getInstance(project)
         val current = store.getLanguageServerSettings("xtcLanguageServer") ?: return
         val copy = XmlSerializerUtil.createCopy(current)
@@ -75,7 +81,10 @@ object LanguageServicePage {
     }
 
     @JvmStatic
-    fun transport(project: Project, value: String) {
+    fun transport(
+        project: Project,
+        value: String,
+    ) {
         val page = LanguageServiceProjectConfigurable(project)
         try {
             val components = children(page.createComponent()).toList()
@@ -94,7 +103,10 @@ object LanguageServicePage {
     }
 
     @JvmStatic
-    fun saveFormatting(project: Project, enabled: Boolean): Boolean {
+    fun saveFormatting(
+        project: Project,
+        enabled: Boolean,
+    ): Boolean {
         val options = FormatOnSaveOptions.getInstance(project)
         val previous = options.isRunOnSaveEnabled
         options.isRunOnSaveEnabled = enabled
@@ -102,12 +114,16 @@ object LanguageServicePage {
     }
 
     @JvmStatic
-    fun indent(project: Project, value: Int): Int {
+    fun indent(
+        project: Project,
+        value: Int,
+    ): Int {
         val options =
             requireNotNull(
-                CodeStyle.getProjectOrDefaultSettings(project)
+                CodeStyle
+                    .getProjectOrDefaultSettings(project)
                     .getCommonSettings(XtcIntelliJLanguage)
-                    .indentOptions
+                    .indentOptions,
             )
         val previous = options.INDENT_SIZE
         options.INDENT_SIZE = value

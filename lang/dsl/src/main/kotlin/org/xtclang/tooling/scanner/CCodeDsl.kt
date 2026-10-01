@@ -21,7 +21,9 @@ package org.xtclang.tooling.scanner
  */
 @Suppress("unused", "MemberVisibilityCanBePrivate")
 @CCodeDsl
-class CCodeBuilder(private val indentLevel: Int = 0) {
+class CCodeBuilder(
+    private val indentLevel: Int = 0,
+) {
     private val lines = mutableListOf<String>()
     private val indent = "    ".repeat(indentLevel)
 
@@ -338,24 +340,25 @@ class CFunctionBuilder(
         body = init
     }
 
-    fun build(): String = buildString {
-        val modifiers = buildList {
-            if (isStatic) add("static")
-            if (isInline) add("inline")
-        }
-            .joinToString(" ")
+    fun build(): String =
+        buildString {
+            val modifiers =
+                buildList {
+                    if (isStatic) add("static")
+                    if (isInline) add("inline")
+                }.joinToString(" ")
 
-        val prefix = if (modifiers.isNotEmpty()) "$modifiers " else ""
-        val paramList = params.joinToString(", ")
+            val prefix = if (modifiers.isNotEmpty()) "$modifiers " else ""
+            val paramList = params.joinToString(", ")
 
-        appendLine("$prefix$returnType $name($paramList) {")
-        body?.let {
-            val bodyBuilder = CCodeBuilder(1)
-            bodyBuilder.it()
-            appendLine(bodyBuilder.build())
+            appendLine("$prefix$returnType $name($paramList) {")
+            body?.let {
+                val bodyBuilder = CCodeBuilder(1)
+                bodyBuilder.it()
+                appendLine(bodyBuilder.build())
+            }
+            append("}")
         }
-        append("}")
-    }
 }
 
 fun cFunction(
@@ -371,7 +374,9 @@ fun cFunction(
 /** Builder for C enums. */
 @Suppress("unused", "MemberVisibilityCanBePrivate")
 @CCodeDsl
-class CEnumBuilder(private val name: String) {
+class CEnumBuilder(
+    private val name: String,
+) {
     private val entries = mutableListOf<String>()
     private var enumComment: String? = null
 
@@ -387,15 +392,16 @@ class CEnumBuilder(private val name: String) {
         entries.addAll(names)
     }
 
-    fun build(): String = buildString {
-        enumComment?.let { appendLine("// $it") }
-        appendLine("enum $name {")
-        entries.forEachIndexed { index, entryName ->
-            val comma = if (index < entries.size - 1) "," else ""
-            appendLine("    $entryName$comma")
+    fun build(): String =
+        buildString {
+            enumComment?.let { appendLine("// $it") }
+            appendLine("enum $name {")
+            entries.forEachIndexed { index, entryName ->
+                val comma = if (index < entries.size - 1) "," else ""
+                appendLine("    $entryName$comma")
+            }
+            append("};")
         }
-        append("};")
-    }
 }
 
 fun cEnum(
@@ -410,7 +416,9 @@ fun cEnum(
 /** Builder for C struct definitions. */
 @Suppress("unused", "MemberVisibilityCanBePrivate")
 @CCodeDsl
-class CStructBuilder(private val name: String) {
+class CStructBuilder(
+    private val name: String,
+) {
     private val fields = mutableListOf<Pair<String, String>>()
 
     fun field(
@@ -420,13 +428,14 @@ class CStructBuilder(private val name: String) {
         fields.add(type to fieldName)
     }
 
-    fun build(): String = buildString {
-        appendLine("typedef struct {")
-        fields.forEach { (type, fieldName) ->
-            appendLine("    $type $fieldName;")
+    fun build(): String =
+        buildString {
+            appendLine("typedef struct {")
+            fields.forEach { (type, fieldName) ->
+                appendLine("    $type $fieldName;")
+            }
+            append("} $name;")
         }
-        append("} $name;")
-    }
 }
 
 fun cStruct(
@@ -500,8 +509,7 @@ class CFileBuilder {
             // ${"=".repeat(77)}
             // $title
             // ${"=".repeat(77)}
-            """
-                .trimIndent()
+            """.trimIndent()
         sections.add(sectionComment)
         sections.addAll(nested.sections)
     }

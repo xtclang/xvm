@@ -1,9 +1,5 @@
 package org.xvm.lsp.server
 
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.eclipse.lsp4j.CompletionParams
@@ -22,6 +18,10 @@ import org.xvm.lsp.adapter.CompletionItem
 import org.xvm.lsp.adapter.TypeHierarchyItem
 import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.model.CompilationResult
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkCallbackServerTest {
     enum class Callback {
@@ -60,8 +60,8 @@ class XdkCallbackServerTest {
         try {
             documents.didOpen(
                 DidOpenTextDocumentParams(
-                    TextDocumentItem(document.uri, "xtc", 1, "module Healthy {}")
-                )
+                    TextDocumentItem(document.uri, "xtc", 1, "module Healthy {}"),
+                ),
             )
             val response = documents.completion(CompletionParams(document, Position(0, 0)))
             await().atMost(10, SECONDS).until { pending.numberOfDependents > 0 }
@@ -83,9 +83,7 @@ class XdkCallbackServerTest {
 
     @ParameterizedTest
     @EnumSource(Callback::class)
-    fun `compiler completion releases its worker before publishing under the document lock`(
-        callback: Callback
-    ) {
+    fun `compiler completion releases its worker before publishing under the document lock`(callback: Callback) {
         val release = CountDownLatch(1)
         val navigationEntered = CountDownLatch(1)
         val callbackQueued = CompletableFuture<CompletableFuture<*>>()
@@ -100,14 +98,14 @@ class XdkCallbackServerTest {
                         content: String,
                     ): CompletableFuture<CompilationResult> =
                         if (uri.endsWith("Neighbor.x")) {
-                            CompletableFuture.supplyAsync(
+                            CompletableFuture
+                                .supplyAsync(
                                     {
                                         check(release.await(10, SECONDS))
                                         delegate.compile(uri, content)
                                     },
                                     worker,
-                                )
-                                .also { callbackQueued.complete(it) }
+                                ).also { callbackQueued.complete(it) }
                         } else {
                             CompletableFuture.completedFuture(delegate.compile(uri, content))
                         }
@@ -118,14 +116,14 @@ class XdkCallbackServerTest {
                         column: Int,
                         triggerCharacter: String?,
                     ): CompletableFuture<List<CompletionItem>> =
-                        CompletableFuture.supplyAsync(
+                        CompletableFuture
+                            .supplyAsync(
                                 {
                                     check(release.await(10, SECONDS))
                                     emptyList<CompletionItem>()
                                 },
                                 worker,
-                            )
-                            .also { callbackQueued.complete(it) }
+                            ).also { callbackQueued.complete(it) }
 
                     override fun prepareTypeHierarchy(
                         uri: String,
@@ -146,20 +144,20 @@ class XdkCallbackServerTest {
             val documents = server.textDocumentService
             try {
                 documents.didOpen(
-                    DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, source))
+                    DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, source)),
                 )
                 when (callback) {
                     Callback.ANALYSIS -> {
                         documents.didOpen(
                             DidOpenTextDocumentParams(
-                                TextDocumentItem("file:///Neighbor.x", "xtc", 1, source)
-                            )
+                                TextDocumentItem("file:///Neighbor.x", "xtc", 1, source),
+                            ),
                         )
                     }
 
                     Callback.QUERY -> {
                         documents.completion(
-                            CompletionParams(TextDocumentIdentifier(uri), Position(0, 0))
+                            CompletionParams(TextDocumentIdentifier(uri), Position(0, 0)),
                         )
                     }
                 }
@@ -170,7 +168,7 @@ class XdkCallbackServerTest {
                 worker.execute { queued.countDown() }
                 val result =
                     documents.prepareTypeHierarchy(
-                        TypeHierarchyPrepareParams(TextDocumentIdentifier(uri), Position(0, 0))
+                        TypeHierarchyPrepareParams(TextDocumentIdentifier(uri), Position(0, 0)),
                     )
                 assertThat(navigationEntered.await(10, SECONDS)).isTrue()
                 release.countDown()

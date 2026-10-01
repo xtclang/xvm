@@ -35,18 +35,16 @@ class EditorFormattingStateTest {
         val state = EditorFormattingState()
         state.accept(state.request(), mapOf("indentSize" to 2)) {}
         listOf(
-                mapOf("indentSize" to 0),
-                mapOf("indentSize" to 1.5),
-                mapOf("indentSize" to "2"),
-                mapOf("insertSpaces" to "false"),
-                mapOf("continuationIndentSize" to 1000000),
-            )
-            .forEach { invalid ->
-                assertThatThrownBy {
-                        state.accept(state.request(), invalid) { error("invalid install") }
-                    }
-                    .isInstanceOf(IllegalArgumentException::class.java)
-                assertThat(state.config?.indentSize).isEqualTo(2)
-            }
+            mapOf("indentSize" to 0),
+            mapOf("indentSize" to 1.5),
+            mapOf("indentSize" to "2"),
+            mapOf("insertSpaces" to "false"),
+            mapOf("continuationIndentSize" to 1000000),
+        ).forEach { invalid ->
+            assertThatThrownBy {
+                state.accept(state.request(), invalid) { error("invalid install") }
+            }.isInstanceOf(IllegalArgumentException::class.java)
+            assertThat(state.config?.indentSize).isEqualTo(2)
+        }
     }
 }

@@ -44,8 +44,7 @@ class InlayHintTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent(),
+                """.trimIndent(),
             )
 
             val range =

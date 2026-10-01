@@ -25,15 +25,16 @@ internal data class LanguageServiceConfiguration(
                 mapOf(
                     "incremental" to (textSynchronization == "incremental"),
                     "formatOnSave" to (saveFormatting == "server" && !nativeFormatOnSave),
-                )
+                ),
         )
 
     companion object {
         private val gson = GsonBuilder().setPrettyPrinting().serializeNulls().create()
 
         private fun objectValue(content: String?): JsonObject =
-            if (content.isNullOrBlank()) JsonObject()
-            else
+            if (content.isNullOrBlank()) {
+                JsonObject()
+            } else {
                 runCatching { JsonParser.parseString(content).asJsonObject }
                     .getOrElse {
                         throw IllegalArgumentException(
@@ -41,6 +42,7 @@ internal data class LanguageServiceConfiguration(
                             it,
                         )
                     }
+            }
 
         fun section(content: String?): JsonObject? =
             objectValue(content)
@@ -59,11 +61,19 @@ internal data class LanguageServiceConfiguration(
                         }
                 }
 
-        fun read(global: String?, project: String? = null): LanguageServiceConfiguration {
+        fun read(
+            global: String?,
+            project: String? = null,
+        ): LanguageServiceConfiguration {
             val defaults = section(global)
             val override = section(project)
+
             fun value(name: String) = override?.get(name) ?: defaults?.get(name)
-            fun string(name: String, fallback: String): String =
+
+            fun string(
+                name: String,
+                fallback: String,
+            ): String =
                 value(name)?.let {
                     require(it.isJsonPrimitive && it.asJsonPrimitive.isString) {
                         "$name must be a string"
@@ -99,8 +109,11 @@ internal data class LanguageServiceConfiguration(
             val xtc =
                 settings["xtc"]?.takeUnless { it.isJsonNull }?.asJsonObject
                     ?: JsonObject().also { settings.add("xtc", it) }
-            if (replacement == null) xtc.remove("languageService")
-            else xtc.add("languageService", gson.toJsonTree(replacement))
+            if (replacement == null) {
+                xtc.remove("languageService")
+            } else {
+                xtc.add("languageService", gson.toJsonTree(replacement))
+            }
             return gson.toJson(settings)
         }
     }

@@ -1,14 +1,5 @@
 package org.xvm.lsp.adapter.xdk
 
-import java.io.ByteArrayOutputStream
-import java.io.DataOutputStream
-import java.io.File
-import java.io.IOException
-import java.nio.file.Files
-import java.security.MessageDigest
-import java.util.HexFormat
-import java.util.concurrent.CancellationException
-import java.util.concurrent.atomic.AtomicReference
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
@@ -23,6 +14,15 @@ import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.util.ExecutionTrace
 import org.xvm.tool.ModuleInfo
+import java.io.ByteArrayOutputStream
+import java.io.DataOutputStream
+import java.io.File
+import java.io.IOException
+import java.nio.file.Files
+import java.security.MessageDigest
+import java.util.HexFormat
+import java.util.concurrent.CancellationException
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Worker-only whole-graph queries. Capture every configured module before compiling any of them.
@@ -33,8 +33,7 @@ internal class XdkProjectQueries(
     private val project: XdkProject,
     private val overlays: Map<String, String>,
     private val dependencies: XdkDependencies,
-    private val compileTree:
-        (ModuleInfo, ModuleRepository?, ErrorListener) -> EmbeddingSupport.Compilation,
+    private val compileTree: (ModuleInfo, ModuleRepository?, ErrorListener) -> EmbeddingSupport.Compilation,
     private val cancelled: () -> Boolean,
     private val cache: AtomicReference<Map<String, XdkWorkspaceNavigation>> =
         AtomicReference(emptyMap()),
@@ -45,7 +44,7 @@ internal class XdkProjectQueries(
         project.buildOrder().associateWith { module ->
             try {
                 Result.success(
-                    XdkSources.capture(module.root, overlays, module.resourceFiles, cancelled)
+                    XdkSources.capture(module.root, overlays, module.resourceFiles, cancelled),
                 )
             } catch (failure: IOException) {
                 Result.failure(failure)
@@ -81,13 +80,19 @@ internal class XdkProjectQueries(
                                 location = Location(uri, 0, 0, 0, 0),
                                 severity = Diagnostic.Severity.ERROR,
                                 message =
-                                    if (source == null) "Cannot read source for ${module.name}"
-                                    else "Dependencies unavailable: ${missing.joinToString()}",
+                                    if (source == null) {
+                                        "Cannot read source for ${module.name}"
+                                    } else {
+                                        "Dependencies unavailable: ${missing.joinToString()}"
+                                    },
                                 code =
-                                    if (source == null) "SOURCE-UNAVAILABLE"
-                                    else "DEPENDENCY-FAILED",
+                                    if (source == null) {
+                                        "SOURCE-UNAVAILABLE"
+                                    } else {
+                                        "DEPENDENCY-FAILED"
+                                    },
                                 source = "xtc",
-                            )
+                            ),
                         ),
                         emptyList(),
                         source?.documentUris ?: setOf(module.uri),
@@ -95,9 +100,10 @@ internal class XdkProjectQueries(
                 } else {
                     val sourceDependencies =
                         project.buildOrder(module.uri).mapTo(hashSetOf()) { it.name }
-                    val inputs = artifacts.filterKeys {
-                        it !in project.modules || it in sourceDependencies
-                    }
+                    val inputs =
+                        artifacts.filterKeys {
+                            it !in project.modules || it in sourceDependencies
+                        }
                     val key =
                         XdkDiagnosticIndex.Key(
                             module.name,
@@ -123,11 +129,13 @@ internal class XdkProjectQueries(
                                         it.toDiagnostic(fallback, source.sourceUris, declarations)
                                     }
                                 val artifact =
-                                    if (compilation.succeeded() && !heard.hasSeriousErrors())
+                                    if (compilation.succeeded() && !heard.hasSeriousErrors()) {
                                         compilation.toDependency()
-                                    else null
+                                    } else {
+                                        null
+                                    }
                                 val items =
-                                    if (artifact != null && artifact.module != module.name)
+                                    if (artifact != null && artifact.module != module.name) {
                                         listOf(
                                             Diagnostic(
                                                 location = Location(uri, 0, 0, 0, 0),
@@ -136,9 +144,11 @@ internal class XdkProjectQueries(
                                                     "Expected module ${module.name}, found ${artifact.module}",
                                                 code = "PROJECT-MODULE",
                                                 source = "xtc",
-                                            )
+                                            ),
                                         )
-                                    else diagnostics
+                                    } else {
+                                        diagnostics
+                                    }
                                 XdkDiagnosticIndex.Build(
                                     key,
                                     CompilationResult.withDiagnostics(
@@ -179,8 +189,7 @@ internal class XdkProjectQueries(
                         group.firstOrNull { declared[it.declarationSource] == it.id.snapshot }
                             ?: group.first()
                     group.map { it.id to canonical.id }
-                }
-                .toMap()
+                }.toMap()
         val views =
             SemanticModel.joined(models, aliases).associateBy {
                 uris.getValue(requireNotNull(it.sourceName))
@@ -209,7 +218,13 @@ internal class XdkProjectQueries(
                             value(module.name)
                             value(module.uri)
                             value(module.dependencies.sorted().joinToString("\u0000"))
-                            value(sources[module]?.inputs?.resources?.revision.orEmpty())
+                            value(
+                                sources[module]
+                                    ?.inputs
+                                    ?.resources
+                                    ?.revision
+                                    .orEmpty(),
+                            )
                         }
                         uris.toSortedMap().forEach { (source, uri) ->
                             value(source)
@@ -224,8 +239,7 @@ internal class XdkProjectQueries(
                             value(artifact.revision)
                         }
                     }
-                }
-                .toByteArray()
+                }.toByteArray()
         return "graph:" +
             HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes))
     }
@@ -245,8 +259,7 @@ internal class XdkProjectQueries(
         line: Int,
         column: Int,
         name: String,
-    ): WorkspaceEdit? =
-        renameProposal(uri, line, column, name)?.takeIf { it.sourceModules == null }?.edit
+    ): WorkspaceEdit? = renameProposal(uri, line, column, name)?.takeIf { it.sourceModules == null }?.edit
 
     fun renameProposal(
         uri: String,
@@ -298,9 +311,10 @@ internal class XdkProjectQueries(
             (target as? ProofIdentity.Directory)?.path ?: symbol.declarationSource ?: return null
         if (
             target !is ProofIdentity.Directory &&
-                (declarationSource !in texts || symbol.declaration == null)
-        )
+            (declarationSource !in texts || symbol.declaration == null)
+        ) {
             return null
+        }
         val targets =
             when {
                 target is ProofIdentity.Parameter -> {
@@ -342,14 +356,17 @@ internal class XdkProjectQueries(
             project.modules.values.singleOrNull {
                 it.root == file && symbol.kind == SemanticModel.SymbolKind.MODULE
             }
-        val moduleName = renamedModule?.let {
-            if (it.name.substringBefore('.') != symbol.name) return null
-            name + it.name.removePrefix(symbol.name)
-        }
+        val moduleName =
+            renamedModule?.let {
+                if (it.name.substringBefore('.') != symbol.name) return null
+                name + it.name.removePrefix(symbol.name)
+            }
         if (
             renamedModule != null &&
-                ((moduleName != renamedModule.name && moduleName in project.modules) ||
-                    moduleName in XdkLibraries.moduleNames)
+            (
+                (moduleName != renamedModule.name && moduleName in project.modules) ||
+                    moduleName in XdkLibraries.moduleNames
+            )
         ) {
             return null
         }
@@ -363,11 +380,11 @@ internal class XdkProjectQueries(
                 ) ?: return null
             } else if (
                 symbol.kind in
-                    setOf(
-                        SemanticModel.SymbolKind.TYPE,
-                        SemanticModel.SymbolKind.PACKAGE,
-                        SemanticModel.SymbolKind.MODULE,
-                    ) && name != symbol.name && file.nameWithoutExtension == symbol.name
+                setOf(
+                    SemanticModel.SymbolKind.TYPE,
+                    SemanticModel.SymbolKind.PACKAGE,
+                    SemanticModel.SymbolKind.MODULE,
+                ) && name != symbol.name && file.nameWithoutExtension == symbol.name
             ) {
                 XdkSourceMoves.plan(
                     file,
@@ -385,8 +402,11 @@ internal class XdkProjectQueries(
                 XdkProject(
                     project.modules.values.map { module ->
                         XdkSourceModule(
-                            if (module === renamedModule) requireNotNull(moduleName)
-                            else module.name,
+                            if (module === renamedModule) {
+                                requireNotNull(moduleName)
+                            } else {
+                                module.name
+                            },
                             File(moves.paths[module.root.path] ?: module.root.path)
                                 .toURI()
                                 .toString(),
@@ -395,7 +415,7 @@ internal class XdkProjectQueries(
                             },
                             module.resourceRoots,
                         )
-                    }
+                    },
                 )
             }
         val plan = XdkRename.Plan(texts, base.edits, moves.paths)
@@ -429,28 +449,31 @@ internal class XdkProjectQueries(
             requested.entries
                 .associate { (from, to) ->
                     (XdkSources.file(from) ?: return null) to (XdkSources.file(to) ?: return null)
-                }
-                .filter { (from, to) -> from != to }
+                }.filter { (from, to) -> from != to }
         if (operations.isEmpty()) return WorkspaceEdit(emptyMap(), versioned = true)
         if (
             operations.values.distinct().size != operations.size ||
-                operations.any { (from, to) ->
-                    !from.exists() ||
-                        to.exists() ||
-                        Files.isSymbolicLink(from.toPath()) ||
-                        (from.isDirectory &&
-                            from.walkTopDown().any { Files.isSymbolicLink(it.toPath()) }) ||
-                        to.toPath().startsWith(from.toPath())
-                }
-        )
+            operations.any { (from, to) ->
+                !from.exists() ||
+                    to.exists() ||
+                    Files.isSymbolicLink(from.toPath()) ||
+                    (
+                        from.isDirectory &&
+                            from.walkTopDown().any { Files.isSymbolicLink(it.toPath()) }
+                    ) ||
+                    to.toPath().startsWith(from.toPath())
+            }
+        ) {
             return null
+        }
         // Overlapping parent/child requests have ambiguous application order; do not guess.
         if (
             operations.keys.any { parent ->
                 operations.keys.any { it != parent && it.toPath().startsWith(parent.toPath()) }
             }
-        )
+        ) {
             return null
+        }
         val before = compile(texts) ?: return null
         val directories = sources.values.flatMap { it.inputs.directories }.toSet()
         val proposals =
@@ -469,19 +492,21 @@ internal class XdkProjectQueries(
                                         symbol.declarationSource == from.path &&
                                             symbol.name == from.nameWithoutExtension &&
                                             symbol.kind in
-                                                setOf(
-                                                    SemanticModel.SymbolKind.TYPE,
-                                                    SemanticModel.SymbolKind.PACKAGE,
-                                                    SemanticModel.SymbolKind.MODULE,
-                                                )
+                                            setOf(
+                                                SemanticModel.SymbolKind.TYPE,
+                                                SemanticModel.SymbolKind.PACKAGE,
+                                                SemanticModel.SymbolKind.MODULE,
+                                            )
                                     when {
-                                        declaration && symbol.declaration != null ->
+                                        declaration && symbol.declaration != null -> {
                                             Triple(
                                                 uris[from.path] ?: from.toURI().toString(),
                                                 symbol.declaration.start,
                                                 symbol.name,
                                             )
-                                        directory ->
+                                        }
+
+                                        directory -> {
                                             model.occurrences
                                                 .firstOrNull { it.symbol == symbol.id }
                                                 ?.let {
@@ -492,11 +517,14 @@ internal class XdkProjectQueries(
                                                         symbol.name,
                                                     )
                                                 }
-                                        else -> null
+                                        }
+
+                                        else -> {
+                                            null
+                                        }
                                     }
                                 }
-                            }
-                            .firstOrNull() ?: return@map null
+                            }.firstOrNull() ?: return@map null
                     val name = if (from.isDirectory) to.name else to.nameWithoutExtension
                     if (from.isFile && to.extension != "x") return null
                     val proposal =
@@ -512,15 +540,16 @@ internal class XdkProjectQueries(
                         proposal.edit.renames.none { (old, new) ->
                             XdkSources.file(old) == from && XdkSources.file(new) == to
                         }
-                    )
+                    ) {
                         return null
+                    }
                     proposal.edit
-                }
-                .filterNotNull()
-        if (operations.size == 1 && proposals.size == 1)
+                }.filterNotNull()
+        if (operations.size == 1 && proposals.size == 1) {
             return proposals.single().let { edit ->
                 edit.copy(renames = edit.renames.filterKeys { XdkSources.file(it) !in operations })
             }
+        }
         val allMoves =
             operations.entries.map { it.key to it.value } +
                 proposals
@@ -528,8 +557,9 @@ internal class XdkProjectQueries(
                     .map { (from, to) ->
                         requireNotNull(XdkSources.file(from)) to requireNotNull(XdkSources.file(to))
                     }
-        if (allMoves.groupBy({ it.first }, { it.second }).values.any { it.distinct().size > 1 })
+        if (allMoves.groupBy({ it.first }, { it.second }).values.any { it.distinct().size > 1 }) {
             return null
+        }
         val resources = allMoves.toMap()
         val paths =
             (texts.keys.map(::File) + directories)
@@ -543,8 +573,7 @@ internal class XdkProjectQueries(
                             .toPath()
                             .resolve(move.key.toPath().relativize(file.toPath()))
                             .toString()
-                }
-                .toMap()
+                }.toMap()
         if (paths.isEmpty() || paths.values.distinct().size != paths.size) return null
         val names =
             project.buildOrder().associate { module ->
@@ -552,11 +581,13 @@ internal class XdkProjectQueries(
                 module.name to
                     if (
                         destination != null &&
-                            destination.nameWithoutExtension != module.root.nameWithoutExtension
-                    )
+                        destination.nameWithoutExtension != module.root.nameWithoutExtension
+                    ) {
                         destination.nameWithoutExtension +
                             module.name.removePrefix(module.root.nameWithoutExtension)
-                    else module.name
+                    } else {
+                        module.name
+                    }
             }
         val graph =
             XdkProject(
@@ -570,16 +601,17 @@ internal class XdkProjectQueries(
                                 resources.entries.firstOrNull {
                                     resource.toPath().startsWith(it.key.toPath())
                                 }
-                            (move
+                            (
+                                move
                                     ?.value
                                     ?.toPath()
                                     ?.resolve(move.key.toPath().relativize(resource.toPath()))
-                                    ?.toFile() ?: resource)
-                                .toURI()
+                                    ?.toFile() ?: resource
+                            ).toURI()
                                 .toString()
                         },
                     )
-                }
+                },
             )
         if (!discoverImports && !project.sameConfiguration(graph)) return null
         val edits =
@@ -609,15 +641,15 @@ internal class XdkProjectQueries(
                                 ) ?: return null,
                                 edit.newText,
                             )
-                        }
-                        .sortedBy { it.start }
+                        }.sortedBy { it.start }
                         .also { ordered ->
                             if (
                                 ordered.zipWithNext().any { (first, next) ->
                                     first.end > next.start
                                 }
-                            )
+                            ) {
                                 return null
+                            }
                         }
                 }
         val plan = XdkRename.Plan(texts, edits, paths)
@@ -630,15 +662,27 @@ internal class XdkProjectQueries(
             renames =
                 resources
                     .filterKeys { it !in operations }
-                    .mapKeys { it.key.toURI().toString().removeSuffix("/") }
-                    .mapValues { it.value.toURI().toString().removeSuffix("/") },
+                    .mapKeys {
+                        it.key
+                            .toURI()
+                            .toString()
+                            .removeSuffix("/")
+                    }.mapValues {
+                        it.value
+                            .toURI()
+                            .toString()
+                            .removeSuffix("/")
+                    },
         )
     }
 
     private fun renameScope(): XdkRenameScope =
         XdkRenameScope(
-            if (discoverImports) XdkRenameScope.Boundary.DISCOVERED_GRAPH
-            else XdkRenameScope.Boundary.CONFIGURED_GRAPH,
+            if (discoverImports) {
+                XdkRenameScope.Boundary.DISCOVERED_GRAPH
+            } else {
+                XdkRenameScope.Boundary.CONFIGURED_GRAPH
+            },
             project.buildOrder(),
             uris.values.sorted(),
             revision(),
@@ -711,8 +755,9 @@ internal class XdkProjectQueries(
                         candidate.members,
                         edit.member,
                     )
-                )
+                ) {
                     return@mapNotNull null
+                }
                 CodeAction(
                     candidate.title,
                     // The class may be valid until constructed, and a construction diagnostic can
@@ -760,15 +805,17 @@ internal class XdkProjectQueries(
                             try {
                                 XdkProject(
                                     project.modules.values.map {
-                                        if (it.name == owner.name)
+                                        if (it.name == owner.name) {
                                             XdkSourceModule(
                                                 it.name,
                                                 it.uri,
                                                 it.dependencies + target.module,
                                                 it.resourceRoots,
                                             )
-                                        else it
-                                    }
+                                        } else {
+                                            it
+                                        }
+                                    },
                                 )
                             } catch (_: IllegalArgumentException) {
                                 return@mapNotNull null
@@ -780,8 +827,9 @@ internal class XdkProjectQueries(
                         XdkAutoImports.edit(text, owner.name, target) ?: return@mapNotNull null
                     val plan = XdkRename.Plan(texts, mapOf(source to listOf(edit)))
                     val after = compile(plan.proposed, graph = graph) ?: return@mapNotNull null
-                    if (!XdkRename.preservesKnownBindings(before, after, plan))
+                    if (!XdkRename.preservesKnownBindings(before, after, plan)) {
                         return@mapNotNull null
+                    }
                     CodeAction(
                         "Import '${target.path}' from ${target.module}",
                         CodeAction.CodeActionKind.QUICKFIX,
@@ -831,12 +879,19 @@ internal class XdkProjectQueries(
 
     private fun members(identity: ProofIdentity): Set<ProofIdentity> =
         when (identity) {
-            is ProofIdentity.Composed -> identity.members.flatMapTo(linkedSetOf(), ::members)
-            is ProofIdentity.Parameter ->
+            is ProofIdentity.Composed -> {
+                identity.members.flatMapTo(linkedSetOf(), ::members)
+            }
+
+            is ProofIdentity.Parameter -> {
                 members(identity.method).mapTo(linkedSetOf()) {
                     ProofIdentity.Parameter(it, identity.index)
                 }
-            else -> setOf(identity)
+            }
+
+            else -> {
+                setOf(identity)
+            }
         }
 
     /** Parameter names belong to callable slots, including differently named overrides. */
@@ -849,15 +904,16 @@ internal class XdkProjectQueries(
                 .flatMap { it.symbols }
                 .filter {
                     it.declaration != null && it.declarationSource in texts
-                }
-                .mapNotNull { symbol -> facts.constants[symbol.id]?.let { it to symbol } }
+                }.mapNotNull { symbol -> facts.constants[symbol.id]?.let { it to symbol } }
                 .toMap()
         val method = declarations[target.method]
         val methods =
             if (
                 method != null &&
-                    (method.name == "construct" ||
-                        SemanticModel.Modifier.STATIC in method.modifiers)
+                (
+                    method.name == "construct" ||
+                        SemanticModel.Modifier.STATIC in method.modifiers
+                )
             ) {
                 setOf(target.method)
             } else {
@@ -893,8 +949,7 @@ internal class XdkProjectQueries(
                         sources.entries
                             .firstOrNull {
                                 (moves[it.key.root.path] ?: it.key.root.path) == module.root.path
-                            }
-                            ?.value ?: return@mapNotNull null
+                            }?.value ?: return@mapNotNull null
                     checkCurrent()
                     if (
                         module.dependencies.any {
@@ -911,13 +966,17 @@ internal class XdkProjectQueries(
                     // dependencies.
                     val sourceDependencies =
                         graph.buildOrder(module.uri).mapTo(hashSetOf()) { it.name }
-                    val inputs = artifacts.filterKeys {
-                        it !in graph.modules || it in sourceDependencies
-                    }
+                    val inputs =
+                        artifacts.filterKeys {
+                            it !in graph.modules || it in sourceDependencies
+                        }
                     val open = XdkDependencies(inputs.values.toList()).open()
                     val heard = ErrorList()
                     val errors = ErrorListener.cancellable(heard, cancelled)
-                    val originalRoot = sources.entries.single { it.value === source }.key.root
+                    val originalRoot =
+                        sources.entries
+                            .single { it.value === source }
+                            .key.root
                     val compilation =
                         compileTree(
                             XdkSources.replay(originalRoot, source.inputs, text, moves),
@@ -927,8 +986,8 @@ internal class XdkProjectQueries(
                     checkCurrent()
                     if (
                         !compilation.succeeded() ||
-                            heard.hasSeriousErrors() ||
-                            compilation.file()?.module?.name != module.name
+                        heard.hasSeriousErrors() ||
+                        compilation.file()?.module?.name != module.name
                     ) {
                         if (proof == Proof.REPAIR) {
                             val partial = compilation.renameFacts(open)
@@ -936,11 +995,13 @@ internal class XdkProjectQueries(
                             val declarationErrors =
                                 ErrorListener.cancellable(ErrorList(), cancelled)
                             val declarations =
-                                ExecutionTrace.api(
+                                ExecutionTrace
+                                    .api(
                                         "EmbeddingSupport.analyzeDeclarations(tree)",
                                         module.uri,
                                     ) {
-                                        EmbeddingSupport.instance()
+                                        EmbeddingSupport
+                                            .instance()
                                             .analyzeDeclarations(
                                                 XdkSources.replay(
                                                     originalRoot,
@@ -951,18 +1012,17 @@ internal class XdkProjectQueries(
                                                 fresh.repository,
                                                 declarationErrors,
                                             )
-                                    }
-                                    .orElse(null)
+                                    }.orElse(null)
                             checkCurrent()
                             val headers = declarations?.memberActionFacts(fresh, declarationErrors)
                             val repaired =
                                 if (
                                     headers != null &&
-                                        !declarationErrors.hasSeriousErrors() &&
-                                        !declarationErrors.isAbortDesired
+                                    !declarationErrors.hasSeriousErrors() &&
+                                    !declarationErrors.isAbortDesired
                                 ) {
                                     CompilerRenameFacts.merge(
-                                        mapOf("headers" to headers, "partial" to partial)
+                                        mapOf("headers" to headers, "partial" to partial),
                                     )
                                 } else {
                                     partial
@@ -985,8 +1045,7 @@ internal class XdkProjectQueries(
                     }
                     artifacts[module.name] = compilation.toDependency()
                     module.uri to facts
-                }
-                .toMap()
+                }.toMap()
         checkCurrent()
         return CompilerRenameFacts.merge(attempts)
     }
@@ -1003,19 +1062,18 @@ internal class XdkProjectQueries(
                 .all { (module, original) ->
                     val current =
                         try {
-                            XdkSources.capture(
+                            XdkSources
+                                .capture(
                                     module.root,
                                     overlays,
                                     module.resourceFiles,
                                     cancelled,
-                                )
-                                .inputs
+                                ).inputs
                         } catch (_: IOException) {
                             null
                         }
                     current == original.getOrNull()?.inputs
-                }
-                .also { checkCurrent() }
+                }.also { checkCurrent() }
         } catch (_: IOException) {
             false
         }
