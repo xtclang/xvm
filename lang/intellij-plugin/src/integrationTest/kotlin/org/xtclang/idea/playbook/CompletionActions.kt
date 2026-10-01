@@ -37,10 +37,11 @@ fun Driver.syntaxCompletions(
                 val selection = cast(editor.editor.getSelectionModel(), SelectionOffsets::class)
                 check(selection.getSelectionStart() == selection.getSelectionEnd())
                 check(editor.text == expected) { "Template navigation changed source: ${editor.text}" }
-                val finalOffset = variant["finalAnchor"]?.asString?.let { expected.indexOf(it) + it.length }
-                    ?: expected.lines().first { it.isNotEmpty() && it.isBlank() }.let {
-                        expected.indexOf("\n$it\n") + 1 + it.length
-                    }
+                val finalOffset =
+                    variant["finalAnchor"]?.asString?.let { expected.indexOf(it) + it.length }
+                        ?: expected.lines().first { it.isNotEmpty() && it.isBlank() }.let {
+                            expected.indexOf("\n$it\n") + 1 + it.length
+                        }
                 check(editor.editor.getCaretModel().getOffset() == finalOffset)
             }
         }
