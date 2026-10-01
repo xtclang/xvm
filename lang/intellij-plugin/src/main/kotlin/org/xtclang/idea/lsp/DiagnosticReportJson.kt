@@ -9,7 +9,7 @@ import org.eclipse.lsp4j.UnchangedDocumentDiagnosticReport
 import org.eclipse.lsp4j.jsonrpc.json.adapters.EitherTypeAdapter
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 
-// TODO LSP4IJ: remove this adapter when the bundled LSP4J correctly decodes relatedDocuments
+// TODO LSP4IJ: UP06 — remove this adapter when the bundled LSP4J correctly decodes relatedDocuments
 // unions by kind. The underlying defect is in LSP4J 1.0.0; keep full/unchanged transport
 // regressions.
 
