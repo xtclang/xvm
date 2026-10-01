@@ -16,7 +16,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 import java.net.URI
 
-// TODO LSP4IJ: serialize didOpen/change/close and reject folding responses for retired editors.
+// TODO LSP4IJ: UP09 — serialize didOpen/change/close and reject folding responses for retired editors.
 // Remove this transport bridge once upstream passes startup typing and close/reopen regressions.
 
 /**

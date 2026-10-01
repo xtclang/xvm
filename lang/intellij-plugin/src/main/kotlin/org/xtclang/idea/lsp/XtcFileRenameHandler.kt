@@ -22,7 +22,7 @@ import javax.swing.JComponent
 class XtcFileRenameHandler :
     RenameHandler,
     TitledHandler {
-    // TODO LSP4IJ: move willRenameFiles preflight before the physical mutation; its current VFS
+    // TODO LSP4IJ: UP03 — move willRenameFiles preflight before the physical mutation; its current VFS
     // before-event is already too late. Then this host-specific preflight can be removed.
     override fun getActionTitle(): String = "Rename Ecstasy file and references"
 

@@ -241,7 +241,7 @@ local or import-alias declarations and inherited written member contracts, prese
 | Document colors and color presentations | Ordinary token coloring; no color-value provider | L77 |
 | Notebook synchronization | File/module document sessions | L78 |
 | Debug inline values | Compiler type/parameter inlay hints; no runtime values | L79 |
-| Application work-done progress, refresh, partial results and trace controls | Negotiated progress/create/cancel, lifecycle gating, coalesced refresh and runtime trace are implemented and tested. Bounded partial-result batches, actual Tree-sitter scan progress and shared X143 pass. X145 verifies native progress-model cancellation and restart during pending work in both editors. Physical Cancel-button selection and broader P3/P4 checks remain manual. | L81 / X141, X143, X145; [coverage map](../manual-test-plan.md#protocol-and-lifecycle-coverage-map) |
+| Application work-done progress, refresh, partial results and trace controls | Negotiated progress/create/cancel, lifecycle gating, coalesced refresh and runtime trace are implemented and tested. Bounded partial-result batches, actual Tree-sitter scan progress and shared X143 pass. X145 verifies native progress-model cancellation and restart during pending work in both editors. IntelliJ visible Cancel passes; VS Code physical-button selection and broader P3/P4 checks remain manual. | L81 / X141, X143, X145; [coverage map](../manual-test-plan.md#protocol-and-lifecycle-coverage-map) |
 | Constant-folded property initializer facts | Detached initializer facts survive constant folding; backend and shared X142 pass in both editors | L83 |
 
 Every absent feature above has an explicit task and a
@@ -941,3 +941,15 @@ provider inventory and rich/reduced protocol tests cover the changes; the shared
 [audit and validation](../../../docs/errs-integration-plan.md#l80-final-capability-contract-audit-2026-10-01).
 L80 is complete for current producers; L81/L82 acceptance and X130's upstream Explorer failure remain
 open. Future optional response fields require new negotiation checks.
+
+
+L81 follow-up (2026-10-01): connection-owned progress now retires late successful create replies,
+shows file/workspace and live compiler queue activity, and stops periodic reports on completion or
+close. All five refresh providers have controlled lifecycle regressions; X146 observes each host's
+negotiated native refresh handlers. Malformed-request recovery and two-process same-URI/token isolation
+are covered over real stdio. This adds no language capability or AST/embedding API. See the
+[L81 checkpoint](../../../docs/errs-integration-plan.md#l81-progress-refresh-and-transport-checkpoint-2026-10-01)
+for exact validation: IntelliJ visible Cancel passes; VS Code physical-click and broader
+multi-window acceptance remain open. The larger IntelliJ fixture's bulk-replacement freeze is
+retained as an L82 scale investigation. Upstream defects and
+removable bridges are centralized in the [UP register](../../../docs/errs-upstream-issues.md).
