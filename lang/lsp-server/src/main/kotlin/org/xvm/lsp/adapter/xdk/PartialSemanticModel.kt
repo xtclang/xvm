@@ -25,6 +25,12 @@ class PartialSemanticModel
             CALL,
         }
 
+        /** Syntax-derived spelling policy, with no compiler type or inferred identity. */
+        data class DeclarationName(
+            val base: String,
+            val writtenType: String,
+        )
+
         /** A resolved upper bound or explicitly written recursive constraint, never a new identity. */
         data class Formal(
             val name: String,
@@ -97,7 +103,8 @@ class PartialSemanticModel
                 val formals: List<Formal> = emptyList(),
                 val argumentLiterals: List<String> = emptyList(),
                 /** Written type spelling at an empty declaration-name slot; no resolved identity. */
-                val declarationNameType: String? = null,
+                val declarationNameType: DeclarationName? = null,
+                val argumentExpressions: List<String> = emptyList(),
             ) {
                 /**
                  * Source argument index only; no argument-to-parameter mapping exists for an incomplete

@@ -77,6 +77,22 @@ public class CursorBindingTest {
                 .forEach(list -> assertThrows(UnsupportedOperationException.class, list::clear));
     }
 
+    @Test
+    public void enclosingInstanceProposalsSurviveIndependentUpdatesAndDetachFromTheirCaller() {
+        var input = new ArrayList<>(List.of("this.Outer"));
+        var scope = fixture().withArgumentExpressions(input).withArgumentLiterals(List.of("0"));
+        input.clear();
+        assertEquals(List.of("this.Outer"), scope.argumentExpressions());
+        List.of(scope.withCandidates(List.of()), scope.withFunctions(List.of()),
+                scope.withArgumentValues(List.of()), scope.withArgumentProperties(List.of()),
+                scope.withTypes(List.of()), scope.withFormals(List.of()), scope.withArgumentLiterals(List.of()))
+                .forEach(updated -> assertEquals(scope.argumentExpressions(), updated.argumentExpressions()));
+        assertThrows(UnsupportedOperationException.class, () -> scope.argumentExpressions().clear());
+        assertThrows(UnsupportedOperationException.class, () -> scope.callFacts().argumentExpressions().clear());
+        assertEquals(scope, new CursorBinding(scope.variables(), scope.thisType(), scope.instance(),
+                scope.types(), scope.callFacts()));
+    }
+
     private static CursorBinding fixture() {
         var file      = new FileStructure("CursorFacts");
         var pool      = file.getConstantPool();

@@ -37,6 +37,30 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /** Recovery retains real syntax without validating or inventing a replacement expression. */
 public class ParserRecoveryTest {
     @Test
+    public void selectedMembersBeforeOperatorsRetainBothOperandsAndFollowingStatements() {
+        List.of(" + 1", " < 1", " == 1", " ? 1 : 0", " ?: 1", " * 2")
+                .forEach(suffix -> {
+                    String marked = "module Recovery { void run(String text) { val value = text.si§ze"
+                            + suffix + "; Int after = 1; } }";
+                    var source = new Source(marked.replace("§", ""));
+                    marked.substring(0, marked.indexOf('§')).chars().forEach(_ -> source.next());
+                    long cursor = source.getPosition();
+                    source.reset();
+                    var errors = new ErrorList();
+                    var tree = Parser.forPartialAnalysis(source, cursor, errors).parseSource();
+                    var sites = nodes(tree).stream().filter(IncompleteStatement.class::isInstance)
+                            .map(IncompleteStatement.class::cast).toList();
+                    assertEquals(1, sites.size(), suffix);
+                    assertEquals("size", sites.getFirst().getMemberName().orElseThrow().getValueText());
+                    assertEquals(cursor, sites.getFirst().getEndPosition());
+                    assertTrue(tree.toDumpString().contains("after"));
+                    assertTrue(errors.getErrors().stream().allMatch(error ->
+                            error.getCode().equals(Parser.INCOMPLETE_EXPRESSION)));
+                    assertEquals(marked.replace("§", ""), source.toRawString());
+                });
+    }
+
+    @Test
     public void memberCursorsBeforeWrittenCallsRetainTheirArgumentsAndFollowingStatements() {
         List.of("text.tr§()", "text.trim().tr§()", "text.ind§(\"a,b\", 1)")
                 .forEach(expression -> {
