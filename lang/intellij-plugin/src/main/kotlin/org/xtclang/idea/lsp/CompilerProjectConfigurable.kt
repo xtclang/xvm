@@ -22,6 +22,8 @@ import java.awt.BorderLayout
 import java.awt.FlowLayout
 import java.net.URI
 import java.nio.file.Path
+import java.util.concurrent.CancellationException
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicLong
 import javax.swing.JButton
 import javax.swing.JComponent
@@ -30,7 +32,10 @@ import javax.swing.JTextArea
 import javax.swing.table.DefaultTableModel
 
 /** Project-local source roots, backed by the same LSP4IJ settings used by rename and Undo. */
-class CompilerProjectConfigurable(private val project: Project) : Configurable {
+class CompilerProjectConfigurable @JvmOverloads constructor(
+    private val project: Project,
+    private val readModules: (Project) -> CompletableFuture<List<SourceModuleConfiguration>> = ::effectiveModules,
+) : Configurable {
     private val discovery = JBCheckBox("Use Gradle model or automatic source discovery")
     private val effective = JTextArea(8, 60).apply { isEditable = false }
     private val rows =
@@ -217,29 +222,22 @@ class CompilerProjectConfigurable(private val project: Project) : Configurable {
 
     private fun refreshEffectivePaths() {
         val revision = reportRevision.incrementAndGet()
+        val settings = CompilerSettings.content(project)
         val description = runCatching {
             CompilerBuildModel.describe(project)
         }
             .getOrElse { it.message.orEmpty() }
         effective.text = description
-        LanguageServiceAccessor.getInstance(project)
-            .startedServers
-            .filter { it.serverDefinition.id == CompilerSettings.SERVER_ID }
-            .forEach { wrapper ->
-                wrapper.initializedServer.thenAccept { server ->
-                    (server as? XtcLanguageServer)?.compilerSourceModules()?.thenAccept { modules ->
-                        ApplicationManager.getApplication().invokeLater {
-                            if (!project.isDisposed && reportRevision.get() == revision)
-                                effective.text =
-                                    description +
-                                        "\n\nEffective compiler modules:\n" +
-                                        modules.joinToString("\n") {
-                                            "${it.name}: ${it.uri}\n  Resources: ${it.resourceRoots.orEmpty().joinToString()}\n  Dependencies: ${it.dependencies.joinToString()}"
-                                        }
+        readModules(project).thenAccept { modules ->
+            ApplicationManager.getApplication().invokeLater {
+                if (!project.isDisposed && reportRevision.get() == revision &&
+                    CompilerSettings.content(project) == settings)
+                    effective.text = description + "\n\nEffective compiler modules:\n" +
+                        modules.joinToString("\n") {
+                            "${it.name}: ${it.uri}\n  Resources: ${it.resourceRoots.orEmpty().joinToString()}\n  Dependencies: ${it.dependencies.joinToString()}"
                         }
-                    }
-                }
             }
+        }
     }
 
     private fun modules(): List<SourceModuleConfiguration>? =
@@ -325,4 +323,23 @@ class CompilerProjectConfigurable(private val project: Project) : Configurable {
             throw ConfigurationException(failure.message ?: "Invalid compiler source graph")
         }
     }
+}
+
+/** Separate asynchronous transport from EDT publication; a retired connection cannot supply a report. */
+private fun effectiveModules(project: Project): CompletableFuture<List<SourceModuleConfiguration>> {
+    val accessor = LanguageServiceAccessor.getInstance(project)
+    val requests = accessor.startedServers
+        .filter { it.serverDefinition.id == CompilerSettings.SERVER_ID }
+        .map { wrapper ->
+            wrapper.initializedServer.thenCompose { server ->
+                val request = (server as? XtcLanguageServer)?.compilerSourceModules()
+                    ?: CompletableFuture.completedFuture(emptyList())
+                request.thenApply { modules ->
+                    if (project.isDisposed || wrapper !in accessor.startedServers || wrapper.languageServer !== server)
+                        throw CancellationException("Compiler report belongs to a retired connection")
+                    modules
+                }
+            }
+        }
+    return CompletableFuture.allOf(*requests.toTypedArray()).thenApply { requests.flatMap { it.join() } }
 }
