@@ -184,6 +184,7 @@ final class PartialCallResolver {
         var templates = qualified || !prefix.isEmpty() ? List.<String>of()
                 : Stream.concat(scope.candidates().stream().flatMap(candidate -> Arrays.stream(candidate.signature().getRawParams())),
                         scope.functions().stream().flatMap(function -> Arrays.stream(site.pool().extractFunctionParams(function.type()))))
+                    .map(TypeConstant::resolveTypedefs).map(TypeConstant::removeNullable)
                     .filter(TypeConstant::isFunction)
                     .map(site.pool()::extractFunctionParams).filter(Objects::nonNull)
                     .map(parameters -> parameters.length).distinct().sorted()

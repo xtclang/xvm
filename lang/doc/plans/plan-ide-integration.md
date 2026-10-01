@@ -1013,3 +1013,10 @@ extended and X152 adds enclosing/indexed-call acceptance in both editors. All fi
 cases pass in both editors, alongside 65 Java and 410 LSP tests with no failures or skips.
 Exact receipts and remaining exclusions are recorded in docs/errs-integration-plan.md; completion remains partial
 for arbitrary damaged syntax and inferred declaration names.
+
+
+The L64 closure batch extends enclosing-instance completion to ordinary expressions, inferred
+local naming to useful written initializer clues, and lambda argument snippets to arities accepted
+by the whole-call fitter. Empty collections continue to use compiler-validated plain values.
+The shared playbook and both native drivers include the additions; final combined acceptance is
+pending. Ambiguous local syntax and arbitrary nested value/body synthesis remain explicit limits.
