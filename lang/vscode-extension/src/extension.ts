@@ -116,8 +116,13 @@ export function activate(context: vscode.ExtensionContext): void {
 
     // Register LSP-related commands
     const effectiveOutput = vscode.window.createOutputChannel('Ecstasy Effective Configuration');
+    // Owned by this UI command on the extension event loop, never by compiler callbacks.
+    let effectiveRevision = 0;
     context.subscriptions.push(effectiveOutput,
+        { dispose: () => { effectiveRevision++; } },
+        vscode.workspace.onDidChangeConfiguration(() => { effectiveRevision++; }),
         vscode.commands.registerCommand('xtc.showLanguageServiceStatus', async () => {
+            const revision = ++effectiveRevision;
             const resource = vscode.window.activeTextEditor?.document.uri;
             const settings = vscode.workspace.getConfiguration('xtc', resource);
             const keys = Object.keys(context.extension.packageJSON.contributes.configuration.properties).map(key => key.slice('xtc.'.length));
@@ -129,6 +134,7 @@ export function activate(context: vscode.ExtensionContext): void {
             const effective = running?.isRunning()
                 ? await running.sendRequest('xtc/languageServiceStatus').catch(error => ({ status: 'unavailable', reason: String(error) }))
                 : { status: 'not running; open an Ecstasy file or check the server log' };
+            if (revision !== effectiveRevision || running !== getClient()) return undefined;
             const report = { configured, effective, activeDocument: resource?.toString(), nativeFormatOnSave: vscode.workspace.getConfiguration('editor', { uri: resource, languageId: 'xtc' }).get('formatOnSave', false), sourceRoots: settings.get('sourceRoots', []), compilerPaths: 'Ecstasy: Show Effective Compiler Paths', log: 'Ecstasy: Show Language Server Output' };
             effectiveOutput.clear();
             effectiveOutput.appendLine(JSON.stringify(report, null, 2));
