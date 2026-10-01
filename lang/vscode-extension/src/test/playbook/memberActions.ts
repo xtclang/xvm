@@ -5,6 +5,32 @@ import { discovered } from './liveWorkspace';
 import { diagnostics, eventually, noErrors, playbook, position } from './support';
 
 export function memberActionCases(): void {
+    playbook('X148', async (workspace, data) => {
+        await workspace.write(data.file, data.source);
+        await discovered(workspace, async () => {
+            const document = await workspace.open(data.file);
+            await noErrors(document.uri);
+            const start = position(document, data.selected);
+            const range = new vscode.Range(start, start.translate(0, data.selected.length));
+            const action = await eventually(async () => {
+                const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
+                    'vscode.executeCodeActionProvider', document.uri, range, vscode.CodeActionKind.RefactorExtract.value, 100);
+                return actions?.find(item => item.title === data.title);
+            }, item => !!item?.edit, data.title);
+            assert.ok(action?.edit);
+            assert.ok(await vscode.workspace.applyEdit(action.edit));
+            assert.strictEqual(document.getText(), data.expected);
+            await noErrors(document.uri);
+            for (const [command, expected] of [['undo', data.source], ['redo', data.expected], ['undo', data.source]]) {
+                await focusTestWindow();
+                await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
+                await vscode.commands.executeCommand(command);
+                await eventually(async () => document.getText(), text => text === expected, `${command} literal extraction`);
+                await noErrors(document.uri);
+            }
+        });
+    });
+
     playbook('X122', async (workspace, data) => {
         await workspace.write(data.file, data.variants[0].source);
         await discovered(workspace, async () => {
