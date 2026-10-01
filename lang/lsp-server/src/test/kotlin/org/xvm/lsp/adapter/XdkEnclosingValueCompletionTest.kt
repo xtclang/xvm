@@ -67,8 +67,10 @@ class XdkEnclosingValueCompletionTest {
                 assertThat(item.detail).isEqualTo("Accessible enclosing instance")
                 assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
                 val edit = item.textEdit!!
-                assertThat(adapter.compile(URI, source.replaceRange(edit.range.start.column, edit.range.end.column, edit.newText)).diagnostics)
-                    .describedAs(marked).isEmpty()
+                assertThat(
+                    adapter.compile(URI, source.replaceRange(edit.range.start.column, edit.range.end.column, edit.newText)).diagnostics,
+                ).describedAs(marked)
+                    .isEmpty()
             }
         }
     }
@@ -83,7 +85,8 @@ class XdkEnclosingValueCompletionTest {
             val marked = "module Editing { $body }"
             XdkAdapter().use { adapter ->
                 adapter.compile(URI, marked.replace("§", ""))
-                assertThat(adapter.getCompletions(URI, 0, marked.indexOf('§'))).describedAs(marked)
+                assertThat(adapter.getCompletions(URI, 0, marked.indexOf('§')))
+                    .describedAs(marked)
                     .noneMatch { it.label == "this.Owner" }
             }
         }

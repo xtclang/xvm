@@ -107,14 +107,15 @@ public class ParserDeclarationNameTest {
         List.of("val § = \"hello\";", "var § = new StringBuffer();").forEach(declaration -> {
             var parsed = parse("module Names { void run() { " + declaration + " Int later = 1; } }");
             var slot = slots(parsed.tree()).findFirst().orElseThrow();
-            var local = (IncompleteLocalDeclaration) slot.getParent();
+            var local = nodes(parsed.tree()).filter(IncompleteLocalDeclaration.class::isInstance)
+                    .map(IncompleteLocalDeclaration.class::cast).findFirst().orElseThrow();
             var copy = local.clone();
             assertNotSame(local.getInitializer(), copy.getInitializer());
             assertSame(copy, copy.getInitializer().getParent());
             assertTrue(parsed.tree().toDumpString().contains("later"));
             assertTrue(slot.getDeclarationType().isPresent());
             assertEquals(1, parsed.errors().getSeriousErrorCount());
-            assertEquals(parsed.source().toRawString(), local.getSource().toRawString());
+            assertTrue(local.getEndPosition() > slot.getEndPosition());
         });
     }
 

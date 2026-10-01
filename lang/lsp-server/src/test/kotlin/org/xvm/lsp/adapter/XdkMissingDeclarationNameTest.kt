@@ -107,8 +107,10 @@ class XdkMissingDeclarationNameTest {
                 assertThat(item.detail).startsWith("Name from written")
                 assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
                 val edit = item.textEdit!!
-                assertThat(adapter.compile(URI, source.replaceRange(edit.range.start.column, edit.range.end.column, edit.newText)).diagnostics)
-                    .describedAs(marked).isEmpty()
+                assertThat(
+                    adapter.compile(URI, source.replaceRange(edit.range.start.column, edit.range.end.column, edit.newText)).diagnostics,
+                ).describedAs(marked)
+                    .isEmpty()
             }
         }
     }
@@ -119,7 +121,8 @@ class XdkMissingDeclarationNameTest {
             val marked = "module Editing { void run() { $declaration } }"
             XdkAdapter().use { adapter ->
                 adapter.compile(URI, marked.replace("§", ""))
-                assertThat(adapter.getCompletions(URI, 0, marked.indexOf('§'))).describedAs(marked)
+                assertThat(adapter.getCompletions(URI, 0, marked.indexOf('§')))
+                    .describedAs(marked)
                     .noneMatch { it.detail.startsWith("Name from written") }
             }
         }

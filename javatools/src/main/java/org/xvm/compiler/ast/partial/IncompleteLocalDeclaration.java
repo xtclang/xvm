@@ -25,6 +25,11 @@ public final class IncompleteLocalDeclaration extends Statement {
     }
 
     @Override
+    public String toString() {
+        return cursor + " = " + initializer;
+    }
+
+    @Override
     public long getStartPosition() {
         return cursor.getStartPosition();
     }
