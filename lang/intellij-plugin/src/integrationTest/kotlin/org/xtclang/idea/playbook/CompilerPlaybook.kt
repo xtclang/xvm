@@ -32,6 +32,7 @@ enum class PlaybookMode {
     FEATURES,
     STARTUP,
     FOCUS_RECOVERY,
+    LARGE_FILE,
 }
 
 /** Drive editor actions and inspect the diagnostics/lookup actually delivered to IntelliJ. */
@@ -127,6 +128,12 @@ class CompilerPlaybook(
                     "Restore interrupted popups without replaying completed edits",
                 ) {
                     focusRecovery(fixtures, shared)
+                }
+                return@with
+            }
+            if (mode == PlaybookMode.LARGE_FILE) {
+                case("START_LARGE_FILE", "Measure large-document range-marker updates") {
+                    largeFileEditing(fixtures, shared)
                 }
                 return@with
             }
