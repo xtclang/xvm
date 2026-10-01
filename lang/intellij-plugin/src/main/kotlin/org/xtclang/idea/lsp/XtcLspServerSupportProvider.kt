@@ -6,6 +6,7 @@ import com.intellij.notification.NotificationType
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.popup.Balloon
+import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.BalloonImpl
 import com.redhat.devtools.lsp4ij.LanguageServerFactory
@@ -179,7 +180,11 @@ class XtcLspConnectionProvider(
             showNotification(
                 title = "Ecstasy Language Server Started",
                 content =
-                    "Out-of-process server (v${LspBuildProperties.version}, adapter=${LspBuildProperties.adapter}, pid=$pid)",
+                    listOf(
+                        "Version: ${LspBuildProperties.version}",
+                        "Adapter: ${LspBuildProperties.adapter}",
+                        "Process ID: $pid",
+                    ).joinToString("<br>") { StringUtil.escapeXmlEntities(it) },
                 type = NotificationType.INFORMATION,
             )
         }
