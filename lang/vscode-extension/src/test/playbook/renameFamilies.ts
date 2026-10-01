@@ -2,6 +2,7 @@ import * as assert from 'node:assert';
 import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
 import { compilerSettingsLocation, compilerSourceModules, renameWithConfiguration } from '../../rename-proposal';
+import { focusTestWindow } from '../native-focus';
 import { discovered } from './liveWorkspace';
 import { client, eventually, noErrors, playbook, position, symbols, Workspace } from './support';
 
@@ -130,6 +131,7 @@ export function renameFamilyCases(): void {
                     assert.ok(!JSON.stringify(compilerSourceModules()).includes('Library.example.org'));
                     assert.ok(await vscode.workspace.saveAll());
                 }
+                await focusTestWindow();
                 await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
                 await vscode.commands.executeCommand('undo');
                 await eventually(() => contents(workspace, data.file).catch(() => ''),
@@ -145,6 +147,7 @@ export function renameFamilyCases(): void {
                     assert.ok(JSON.stringify(compilerSourceModules()).includes('Library.example.org'));
                     assert.ok(JSON.stringify(compilerSourceModules()).includes('assets') && JSON.stringify(compilerSourceModules()).includes('fallback'));
                     assert.ok(!JSON.stringify(compilerSourceModules()).includes('Renamed.example.org'));
+                    await focusTestWindow();
                     await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
                     await vscode.commands.executeCommand('redo');
                     await eventually(async () => compilerSourceModules(),
@@ -152,6 +155,7 @@ export function renameFamilyCases(): void {
                     await eventually(async () => Promise.all(data.files.map(file => contents(workspace, file.destination).catch(() => ''))),
                         texts => texts.every((text, index) => text === data.files[index].expected), 'Redo restores every source and resource');
                     await workspace.open(destination);
+                    await focusTestWindow();
                     await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
                     await vscode.commands.executeCommand('undo');
                     await eventually(async () => compilerSourceModules(),
