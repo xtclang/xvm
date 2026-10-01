@@ -891,8 +891,8 @@ IntelliJ startup with zero IDE errors. See the [protocol validation record](../.
 Server progress, cancellation, lifecycle and refresh have controlled protocol
 regressions; partial results and visible long-operation/cancel acceptance remain separately tracked.
 
-Current catalog: 150 scenarios, including X142 initializer navigation/rename, X143 partial workspace
-symbols, X144 guarded client edits and X145 progress/cancel/restart. IntelliJ passes all 150 plus
+Previous full-catalog checkpoint: 150 scenarios, including X142 initializer navigation/rename,
+X143 partial workspace symbols, X144 guarded client edits and X145 progress/cancel/restart. IntelliJ passes all 150 plus
 startup in `run-1843149430446112481`, with zero IDE errors and successful shutdown. Full VS Code
 `run-06Z6tq` passes 149/150; X130's host repaint exception remains a failure after successful
 Move/Undo/Redo/resource assertions. No completed mutation is replayed or failure hidden.
@@ -907,9 +907,16 @@ See the [final batch receipt](../../../docs/errs-integration-plan.md#final-nativ
 and [audit](../../../docs/errs-audit.md#native-save-all-and-fixture-cleanup-follow-up-2026-09-30).
 
 Reliability follow-up (2026-10-01): X146/X147 bring the catalog to 152, with new provider-refresh
-and late-report assertions awaiting batched execution. VS Code effective-configuration publication
-now rejects superseded requests/settings/connections; IntelliJ report publication also checks
+and late-report assertions passing in both editors after the native service-settings correction.
+VS Code effective-configuration publication now rejects superseded requests/settings/connections; IntelliJ report publication also checks
 captured settings and connection lifetime. An isolated Explorer reproduction runs without Ecstasy
 to investigate X130 without hiding its failure. The opt-in packaged platform workload records
-latency, queue names/counts, sampled heap and process exit; it does not establish performance budgets
-until measured. No new language capability, embedding API or AST field is added.
+latency, queue names/counts, sampled heap and process exit. Thirty cycles across three processes pass;
+the measured local baseline does not establish release budgets or prolonged soak acceptance.
+No new language capability, embedding API or AST field is added.
+
+See the [reliability validation receipt](../../../docs/errs-integration-plan.md#reliability-validation-receipt-2026-10-01)
+for the eight selected cases, native initial failure and focused rerun. The final IntelliJ guard
+rechecks graph/service settings and original connection identity on the EDT, including restarts
+between reply arrival and publication. The extension-free Explorer probe did not reproduce X130;
+the intermittent full-run failure remains open even though the selected attempt passes.
