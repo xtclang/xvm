@@ -3,6 +3,7 @@ package org.xvm.compiler.ast;
 import java.math.BigDecimal;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
@@ -180,7 +181,19 @@ final class PartialCallResolver {
                 }).toList();
         var expressions = instanceSpellings(cursor).takeWhile(text -> !errs.isAbortDesired())
                 .filter(text -> fitsValue.test(proposedInstance(cursor, text))).toList();
-        var result = scope.withArgumentValues(variables).withArgumentLiterals(literals).withArgumentExpressions(expressions);
+        var templates = qualified || !prefix.isEmpty() ? List.<String>of()
+                : Stream.concat(scope.candidates().stream().flatMap(candidate -> Arrays.stream(candidate.signature().getRawParams())),
+                        scope.functions().stream().flatMap(function -> Arrays.stream(site.pool().extractFunctionParams(function.type()))))
+                    .filter(TypeConstant::isFunction)
+                    .map(site.pool()::extractFunctionParams).filter(Objects::nonNull)
+                    .map(parameters -> parameters.length).distinct().sorted()
+                    .takeWhile(arity -> !errs.isAbortDesired())
+                    .filter(arity -> fitsValue.test(proposedLambda(cursor, arity)))
+                    .map(arity -> "(" + IntStream.range(0, arity).mapToObj(index -> "arg" + (index + 1))
+                            .collect(Collectors.joining(", ")) + ") -> TODO()")
+                    .toList();
+        var result = scope.withArgumentValues(variables).withArgumentLiterals(literals)
+                .withArgumentExpressions(expressions).withArgumentTemplates(templates);
         if (errs.isAbortDesired()) {
             return result;
         }
@@ -209,6 +222,22 @@ final class PartialCallResolver {
                 .filter(property -> fitsName.test(property.name()))
                 .toList();
         return result.withArgumentProperties(properties);
+    }
+
+    /** A real inferred-parameter lambda on disposable syntax; the whole-call fitter proves its arity. */
+    private static Expression proposedLambda(IncompleteStatement site, int arity) {
+        long cursor = site.getEndPosition();
+        var names = IntStream.range(0, arity).mapToObj(index ->
+                new NameExpression(new Token(cursor, cursor, Id.IDENTIFIER, "arg" + (index + 1))))
+                .collect(Collectors.toCollection(ArrayList::new));
+        var body = new ThrowExpression(new Token(cursor, cursor, Id.TODO), null, null,
+                new Token(cursor, cursor, Id.R_PAREN));
+        var returns = new ReturnStatement(new Token(cursor, cursor, Id.RETURN), body);
+        var lambda = new LambdaExpression(names, new Token(cursor, cursor, Id.LAMBDA),
+                new StatementBlock(new ArrayList<>(List.of(returns)), cursor, cursor), cursor);
+        lambda.setParent(site);
+        lambda.introduceParentage();
+        return lambda;
     }
 
     private static Expression proposedLiteral(IncompleteStatement site, String text, ErrorListener errs) {

@@ -106,6 +106,7 @@ class PartialSemanticModel
                 val declarationNameType: DeclarationName? = null,
                 val argumentExpressions: List<String> = emptyList(),
                 val enclosingExpressions: List<String> = emptyList(),
+                val argumentTemplates: List<String> = emptyList(),
             ) {
                 /**
                  * Source argument index only; no argument-to-parameter mapping exists for an incomplete

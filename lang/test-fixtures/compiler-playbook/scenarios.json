@@ -4783,6 +4783,15 @@
             "label": "try catch",
             "selected": "Exception",
             "expected": "module Templates {\n    void run() {\n        try {\n            \n        } catch (Exception e) {\n        }\n    }\n}"
+          },
+          {
+            "source": "module Templates {\n    void take(function Int(Int) action) {}\n    void run() { take(); }\n}",
+            "anchor": "take();",
+            "prefix": "take(",
+            "label": "(arg1) -> TODO()",
+            "expected": "module Templates {\n    void take(function Int(Int) action) {}\n    void run() { take((arg1) -> TODO()); }\n}",
+            "selected": "TODO()",
+            "finalAnchor": "(arg1) -> TODO()"
           }
         ]
       },

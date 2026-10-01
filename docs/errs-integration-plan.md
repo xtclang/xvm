@@ -8611,3 +8611,14 @@ The node cannot declare a register, infer a semantic type or emit code. The Kotl
 uses written clues (text/number/flag or the constructor type); arbitrary calls and Null provide
 no useful clue. Bare assignments remain assignments, and ambiguous empty typed locals remain
 refused. X151 adds literal and constructor initializer cases; combined validation follows.
+
+
+### L64 closure batch: expected-type value templates
+
+Function-typed parameters supply possible lambda arities. Disposable lambda ASTs with inferred
+parameter names and an explicit TODO() body must pass the same whole-call fit/argument validation
+as other insertion proposals, including named slots, constructors and function values. Kotlin
+presents accepted spellings as snippets with a selected TODO() body and a plain-text fallback.
+No function-type parsing or semantic inference is duplicated in the host. Empty collection values
+already use expected-type fitting; arbitrary nested element generation is excluded. X150 gains
+a lambda placeholder/Undo case in both editors. Combined execution follows the closure audit.
