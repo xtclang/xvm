@@ -3272,7 +3272,8 @@ public class Parser {
                         }
                     }
                     if (noDeRef == null && name.getId() == Id.IDENTIFIER
-                            && name.getEndPosition() == f_cursor && canRetainIncompleteAt(f_cursor, true)) {
+                            && name.getStartPosition() < f_cursor && f_cursor <= name.getEndPosition()
+                            && canRetainIncompleteAt(name.getEndPosition(), true)) {
                         var hole = incomplete(expr, dot, name);
                         if (peek(Id.L_PAREN) || peek(Id.ASYNC_PAREN)) {
                             expr = new IncompleteExpression(hole.statement);
@@ -3643,7 +3644,8 @@ public class Parser {
                 }
 
                 left    = new NameExpression(left, nameNDR, name, null, lEndPos);
-                if (fNormal && nameNext.getEndPosition() == f_cursor && canRetainIncompleteAt(f_cursor, true)) {
+                if (fNormal && nameNext.getStartPosition() < f_cursor && f_cursor <= nameNext.getEndPosition()
+                        && canRetainIncompleteAt(nameNext.getEndPosition(), true)) {
                     var hole = incomplete(left, dot, nameNext);
                     if (peek(Id.L_PAREN) || peek(Id.ASYNC_PAREN)) {
                         return new IncompleteExpression(hole.statement);
@@ -5070,7 +5072,7 @@ public class Parser {
                         type = header ? parseDeclarationType(true) : parseExtendedTypeExpression();
                     } catch (IncompleteHeader error) {
                         throw error.withFormals(Stream.concat(typeParams.stream(),
-                                Stream.of(new Parameter(new BadTypeExpression((Expression) error.site.getTarget().clone()), param))).toList());
+                                Stream.of(new Parameter(new BadTypeExpression((Expression) error.writtenType.clone()), param))).toList());
                     }
                 }
                 typeParams.add(new Parameter(type, param));
@@ -5282,17 +5284,17 @@ public class Parser {
     /**
      * Only a grammar position that requires a name may retain an empty name slot. In a method
      * body, a bare expression followed by whitespace is not evidence of a variable declaration.
-     * Keep the complete written named type as syntax; no parameter or property is registered.
+     * Keep the complete written type as syntax; no parameter or property is registered.
      */
     private Optional<IncompleteStatement> declarationNameSlot(TypeExpression type) {
         return f_cursor != NO_CURSOR && m_cSpeculating == 0 && !m_fAvoidRecovery
-                && !f_errs.get().isAbortDesired() && type instanceof NamedTypeExpression named
-                && named.getNameToken() != null && type.getEndPosition() < f_cursor
+                && !f_errs.get().isAbortDesired() && !(type instanceof BadTypeExpression)
+                && prev().getEndPosition() < f_cursor
                 && f_cursor <= (eof() ? m_source.getPosition() : peek().getStartPosition())
-                && m_source.toString(type.getEndPosition(), f_cursor).isBlank()
+                && m_source.toString(prev().getEndPosition(), f_cursor).isBlank()
                 && (eof() || peek(Id.ASN) || peek(Id.SEMICOLON) || peek(Id.R_CURLY)
                         || peek(Id.R_PAREN) || peek(Id.COMMA))
-                ? Optional.of(IncompleteStatement.forDeclarationName(named, f_cursor))
+                ? Optional.of(IncompleteStatement.forDeclarationName(type, prev(), f_cursor))
                 : Optional.empty();
     }
 
@@ -5307,7 +5309,7 @@ public class Parser {
             var prefix = declarationTypePrefix(type);
             if (prefix.isPresent()) {
                 log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
-                throw new IncompleteHeader(IncompleteStatement.forDeclarationType(prefix.orElseThrow(), f_cursor));
+                throw new IncompleteHeader(IncompleteStatement.forDeclarationType(prefix.orElseThrow(), f_cursor), type, List.of());
             }
         }
         return type;
@@ -5352,22 +5354,24 @@ public class Parser {
 
     private static class IncompleteHeader extends CompilerException {
         private IncompleteHeader(IncompleteStatement site) {
-            this(site, List.of());
+            this(site, site.getTarget(), List.of());
         }
 
-        private IncompleteHeader(IncompleteStatement site, List<Parameter> formals) {
+        private IncompleteHeader(IncompleteStatement site, Expression writtenType, List<Parameter> formals) {
             super("Incomplete declaration header");
             this.site = site;
             this.formals = formals;
+            this.writtenType = writtenType;
         }
 
         private IncompleteHeader withFormals(List<Parameter> parameters) {
-            return parameters == null ? this : new IncompleteHeader(site,
+            return parameters == null ? this : new IncompleteHeader(site, writtenType,
                     Stream.concat(formals.stream(), parameters.stream()).distinct().toList());
         }
 
         private final IncompleteStatement site;
         private final List<Parameter> formals;
+        private final Expression writtenType;
     }
 
     /** Keep a type's real body for structure, but never register an unfinished inheritance header. */
@@ -5723,6 +5727,14 @@ public class Parser {
                 && cursor <= (eof() ? m_source.getPosition() : peek().getStartPosition())
                 && (eof() || peek(Id.R_CURLY) || peek(Id.SEMICOLON) || peek(Id.R_PAREN)
                         || peek(Id.R_SQUARE) || peek(Id.COMMA) || peek(Id.COLON) || peek(Id.L_CURLY)
+                        || prev().getId() == Id.IDENTIFIER && switch (peek().getId()) {
+                            case ADD, SUB, MUL, DIV, MOD, DIVREM, SHL, SHR, USHR,
+                                 BIT_AND, BIT_OR, BIT_XOR, COND_AND, COND_OR, COND_XOR,
+                                 COMP_EQ, COMP_NEQ, COMP_LT, COMP_LTEQ, COMP_GT, COMP_GTEQ,
+                                 COMP_ORD, COND_ELSE -> true;
+                            case COND -> peek().hasLeadingWhitespace();
+                            default -> false;
+                        }
                         || allowCall && (peek(Id.L_PAREN) || peek(Id.ASYNC_PAREN)));
     }
 

@@ -7737,7 +7737,7 @@ reproducible, and reconcile completed versus remaining scope. Validation is batc
    | --- | --- | --- |
    | L62 rename | Recorded source families, primary/ordinary parameter slots, lambdas, escaped method values, packages/modules/companions and guarded graph replacement | Cross-package qualification rewrites and explicit graph relocation; characterize additional refused composition routes with reproductions before extending proof. External consumers omitted from the configured graph remain an explicit unknown boundary. |
    | L63 semantic actions | Import fixes and compiler-proven implement/override, including bundled contracts | Exact-selection literal-return extraction is implemented in the continuation below. General extract local, missing-declaration fixes, extract method, inline and safe delete remain separate transformations. Each needs its own side-effect/capture/caller-closure design and positive/refusal tests. |
-   | L64 completion/signatures | Recorded cursor recovery, generic/formal constraints, bounded literal values, documentation and ranking | Import-producing completion and the bounded declaration-name/keyword/template contexts are implemented in the continuations below. Empty property/parameter names are covered by the next continuation; ambiguous local-name recovery and broader keyword/snippet contexts; arbitrary enclosing-instance enumeration; additional literal/callable/damaged-bound forms. Earlier claims that all literal synthesis or documentation were absent are superseded by the L64 receipt. |
+   | L64 completion/signatures | Import edits, syntax names/templates, guarded bounds and compiler-fitted literals/values; latest continuation adds wrapped names, enclosing-instance arguments and real platform anonymous-body recovery | Latest continuation below gives the exact supported forms, evidence and conservative exclusions. Remaining expansion includes inferred/ambiguous local names, arbitrary value synthesis and general special-this enumeration outside calls; these are not counted as implemented. |
    | L65 navigation/classification | Source/bundled navigation, recorded hierarchy/composition relations and resolved tokens | Conditional/synthetic/native/redirect routes and ambiguous binary source metadata need individual fixtures. Runtime function targets cannot be invented by a static hierarchy. |
    | L66 editing/structure | Token-preserving indentation, URL links, local linked editing, recorded damaged-source structure | Expression wrapping and comment/string layout, import/source links, broader proven linked scopes and remaining damaged constructs. A full pretty-printer is not implemented. |
    | L67 scale | Live graph discovery/overlays, dependencies and detached per-root caches | Use the platform workload to establish budgets and locate bottlenecks before choosing incremental or persistent indexing; neither exists merely because incremental text transport does. |
@@ -8513,3 +8513,69 @@ playbook rerun is claimed. The slice needed no corrections after its first combi
 Future extraction: keep the parser and three `ast.partial` changes together with the Java recovery
 tests; layer the copied Kotlin syntax fact, completion policy and protocol tests on top. The shared
 scenario, both driver registrations and catalog/manual updates travel with that adapter slice.
+
+
+### L64 real-source completion continuation (2026-10-01)
+
+Checkpoint `fb0925569` committed the validated empty-name slice before this continuation.
+The following work remains together on errs; no remote operation was requested for this checkpoint.
+
+- Wrapped declaration-name types retain nullable, array, immutable, annotation, function and
+  compound syntax without registering an absent name. Kotlin proposes `stringArray`, `fn` or
+  `value` where appropriate and keeps existing collision/UTF-16 rules. No new mutable AST fields.
+- Eleven templates cover the original six plus interface/service declarations, for ranges,
+  do loops and try/catch. Anonymous member bodies and block lambdas use their actual grammar;
+  break/continue respect intervening callable boundaries. Templates are syntax, not semantic edits.
+- Argument proposals include `0.0`, a space character, `#00`, empty arrays/maps/tuples, plus the
+  original five values. Fitting uses actual compiler conversions and validates the entire call.
+  A proposal token carries its immutable spelling because a zero-width source span is empty;
+  that fixes an existing numeric-conversion gap. Empty map trials resolve their written Map type
+  through normal staging. Tests also compile every accepted proposal.
+- Lexical enclosing instances (`this`, `this.Owner`, and qualified `this.Ow` completion) use the
+  same argument fitter. Static boundaries, incompatible arguments and inaccessible receivers
+  refuse proposals. Immutable `argumentExpressions` keep these facts separate from literals;
+  old constructors remain, while CursorBinding/CallFacts record patterns gain a component.
+- Wrapped and compound recursive bounds inspect every operand without manufacturing a formal
+  identity. A cursor inside its own guarded bound retains the complete written bound and tests
+  a disposable candidate substitution. Direct cycles and unknown/inaccessible operands remain
+  rejected. Written/incomplete constraints are labelled as such.
+- A checked-in copy of platform's CircularBuffer class (`b8be627`) exposed two real gaps:
+  member cursors before operators/ternary conditions, and anonymous bodies invisible to initial
+  partial inspection. Read-only deferred-body access and source-owned anonymous validation keep
+  the real cursor and enclosing receiver. Incomplete body methods/constructions cannot emit.
+  Existing capture analysis for complete programs is unchanged; no new mutable node field exists.
+  Indexed, escaped, returned and narrowed callable values have dedicated regression coverage.
+
+Shared acceptance now contains 157 ordered cases. X97 has 30 variants, X108 has 17, X150 has six,
+X151 has seven, and new X152 has three enclosing-instance/indexed-function variants. Both drivers
+consume these rows, including exact post-edit source, diagnostics, snippet stops where applicable
+and native Undo.
+
+The backend gate passes **65 Java tests and 410 LSP tests**, with zero failures/errors/skips.
+Root and LSP/IntelliJ Spotless checks, IntelliJ integration-harness compilation and TypeScript
+compilation pass. The ordered shared/manual catalog has 157 cases, with hash
+`57e076c1566b84453531ae434bd699fb4c61d9052a5bdc03b9eac7f61efa466e`.
+VS Code `run-C2gpLR` passes all five selected cases (63 variants, approximately 40 seconds),
+with zero recorded extension errors. It uses installed providers, editor edits, the native snippet
+engine and Undo; this is not physical completion-popup selection. IntelliJ
+`run-4606554214556777779` stopped during X97 after source text changed during popup inspection;
+the harness refused to replay the action. The user reported typing in the focused test window.
+Replacement IntelliJ `run-16005944962074733631` passes START and all five selected cases
+(63 variants, approximately 68 seconds after startup), with zero IDE failures. It exercises
+native completion acceptance, parameter hints, snippet stops and Undo. No full playbook rerun
+is claimed.
+
+L64 remains explicitly bounded: ambiguous empty local declarations (`value ;`, `String ;`),
+name inference from `val`/`var`, naming a new method/type outside a template, arbitrary nested
+literal/lambda synthesis, unguarded/unknown recursive constraints and repair of unrelated syntax
+errors are not advertised. Qualified enclosing-instance *argument* proposals do not claim a new
+general-purpose enumeration of every special `this` spelling outside calls. The implementation
+list must retain any requested expansion of these boundaries instead of treating an empty result
+as tested support.
+
+Extraction: keep the parser/partial-node and copied Kotlin naming changes together; keep the
+literal spelling token, fitting and ordinary-compilation checks together; keep CursorBinding's
+expression component with compiler/adapter producers and compatibility tests; keep deferred-body
+access, actual-body validation and the platform fixture together. Shared scenario/driver and
+manual/capability changes accompany the respective feature slices. Each extracted PR still needs
+its own independent gate.

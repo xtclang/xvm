@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.xvm.asm.Annotation;
@@ -55,6 +56,7 @@ import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.Context.CaptureContext;
+import org.xvm.compiler.ast.partial.PartialSyntax;
 
 import org.xvm.util.Severity;
 
@@ -130,6 +132,15 @@ public class NewExpression
      */
     public List<Expression> getArguments() {
         return List.copyOf(args);
+    }
+
+    /**
+     * Written anonymous body before an anonymous class owns it. It is deliberately not a compiler
+     * child yet: registering/validating it requires the construction's inferred type and context.
+     * Syntax readers may inspect this borrowed node; they must not adopt or validate it themselves.
+     */
+    public Optional<StatementBlock> getUnregisteredBody() {
+        return anon == null ? Optional.ofNullable(body) : Optional.empty();
     }
 
     @Override
@@ -748,6 +759,22 @@ public class NewExpression
         }
 
         if (fAnonymous) {
+            if (ctx.getCursorBindings().isEnabled() && PartialSyntax.contains(body)) {
+                // A body cursor needs the actual source nodes and their enclosing-instance
+                // context. Capture analysis below validates disposable clones and then drops
+                // them; publishing those identities would lose the cursor or leak trial facts.
+                var capture = new AnonInnerClassContext(ctx);
+                m_ctxCapture = capture;
+                try {
+                    new StageMgr(anon, Stage.Emitted, errs, bindings, ctx.getCursorBindings()).fastForward(20);
+                } finally {
+                    capture.exit();
+                    m_ctxCapture = null;
+                }
+                // The cursor is never a valid value, and must not start capture rewriting or
+                // produce a constructor binding/emittable construction.
+                return null;
+            }
             // at this point, we need to create a temporary copy of the anonymous inner class for
             // the purpose of determining which local variables from this context will be "captured"
             // by the code in the anonymous inner class; to determine the captures, we need to go
