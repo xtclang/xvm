@@ -2990,3 +2990,11 @@ text. In condMixinTests rename the first `MixS.size` to `width`; only its corres
 changes, not the independent t2 composition. A rename colliding with another default method must
 be refused. Go to Definition on Element in a conditional-incorporation clause reaches the
 corresponding mixin formal.
+
+
+L64 closure additions (execution pending): X150 now includes a function argument lambda. Accept
+`(arg1) -> TODO()`, verify that TODO() is selected, Tab reaches the end of the expression and Undo
+restores the empty argument. This is a scaffold; replace TODO() before executing the program.
+X151 adds unnamed val/var locals with string, integer and constructor initializers; accept the
+syntax-derived name, verify the following source and Undo. X152 adds ordinary return expressions
+with `thi` and `this.Ow`; verify the real enclosing instance, exact replacement and Undo.
