@@ -1,6 +1,7 @@
 package org.xvm.lsp.server
 
 import java.io.IOException
+import java.lang.management.ManagementFactory
 import java.net.URI
 import java.nio.file.Path
 import java.util.Properties
@@ -1154,6 +1155,9 @@ class XtcLanguageServer(
                         mapOf("readOnly" to true, "modules" to XdkLibraries.packagedResources)
                     else null,
                 "compilerQueue" to (adapter as? XdkAdapter)?.compilerQueueSnapshot(),
+                "heap" to ManagementFactory.getMemoryMXBean().heapMemoryUsage.let {
+                    mapOf("usedBytes" to it.used, "committedBytes" to it.committed, "maxBytes" to it.max)
+                },
             )
         )
 
