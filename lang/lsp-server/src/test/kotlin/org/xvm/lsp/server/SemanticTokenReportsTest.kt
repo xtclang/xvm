@@ -39,11 +39,10 @@ class SemanticTokenReportsTest {
         val previous = reports.full("file:///test.x", listOf(0, 0, 1, 0, 0))
         assertThat(reports.delta("file:///other.x", previous.resultId, emptyList()).isLeft).isTrue()
         assertThat(
-                SemanticTokenReports()
-                    .delta("file:///test.x", previous.resultId, emptyList())
-                    .isLeft
-            )
-            .isTrue()
+            SemanticTokenReports()
+                .delta("file:///test.x", previous.resultId, emptyList())
+                .isLeft,
+        ).isTrue()
         reports.retire("file:/test.x")
         assertThat(reports.delta("file:///test.x", previous.resultId, emptyList()).isLeft).isTrue()
     }

@@ -1,13 +1,5 @@
 package org.xvm.lsp.server
 
-import java.util.UUID
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.RejectedExecutionException
-import java.util.concurrent.TimeUnit.MILLISECONDS
-import java.util.concurrent.TimeUnit.SECONDS
-import java.util.concurrent.atomic.AtomicBoolean
 import org.eclipse.lsp4j.ProgressParams
 import org.eclipse.lsp4j.WorkDoneProgressBegin
 import org.eclipse.lsp4j.WorkDoneProgressCreateParams
@@ -17,6 +9,14 @@ import org.eclipse.lsp4j.WorkDoneProgressReport
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.services.LanguageClient
 import org.slf4j.LoggerFactory
+import java.util.UUID
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.RejectedExecutionException
+import java.util.concurrent.TimeUnit.MILLISECONDS
+import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * Serializes progress transport calls outside compiler/document locks. Each token owns only its
@@ -28,10 +28,14 @@ internal class ConnectionProgress(
     private val dispatcher: ExecutorService =
         Executors.newSingleThreadExecutor(Thread.ofVirtual().name("lsp-progress").factory()),
 ) : AutoCloseable {
-    private data class Entry(val title: String, val result: CompletableFuture<*>)
+    private data class Entry(
+        val title: String,
+        val result: CompletableFuture<*>,
+    )
 
     private val canCreate = AtomicBoolean()
     private val closed = AtomicBoolean()
+
     // Confined to dispatcher, including completion and cancellation callbacks.
     private val entries = mutableMapOf<Either<String, Int>, Entry>()
     private val begun = mutableSetOf<Either<String, Int>>()
@@ -48,31 +52,42 @@ internal class ConnectionProgress(
         if (closed.get() || (suppliedToken == null && !canCreate.get())) return result
         val token = suppliedToken ?: Either.forLeft("xtc-${UUID.randomUUID()}")
         val entry = Entry(title, result)
-        val start = Runnable {
-            dispatch {
-                if (closed.get() || result.isDone || token in entries) return@dispatch
-                entries[token] = entry
-                result.whenComplete { _, _ -> dispatch { finish(token, entry) } }
-                if (suppliedToken != null) begin(token, entry)
-                else {
-                    runCatching { client()?.createProgress(WorkDoneProgressCreateParams(token)) }
-                        .getOrNull()
-                        ?.orTimeout(10, SECONDS)
-                        ?.whenComplete { _, failure ->
-                            dispatch {
-                                if (failure == null) begin(token, entry)
-                                else entries.remove(token, entry)
-                            }
-                        } ?: entries.remove(token, entry)
+        val start =
+            Runnable {
+                dispatch {
+                    if (closed.get() || result.isDone || token in entries) return@dispatch
+                    entries[token] = entry
+                    result.whenComplete { _, _ -> dispatch { finish(token, entry) } }
+                    if (suppliedToken != null) {
+                        begin(token, entry)
+                    } else {
+                        runCatching { client()?.createProgress(WorkDoneProgressCreateParams(token)) }
+                            .getOrNull()
+                            ?.orTimeout(10, SECONDS)
+                            ?.whenComplete { _, failure ->
+                                dispatch {
+                                    if (failure == null) {
+                                        begin(token, entry)
+                                    } else {
+                                        entries.remove(token, entry)
+                                    }
+                                }
+                            } ?: entries.remove(token, entry)
+                    }
                 }
             }
+        if (suppliedToken != null) {
+            start.run()
+        } else {
+            CompletableFuture.delayedExecutor(delayMillis, MILLISECONDS).execute(start)
         }
-        if (suppliedToken != null) start.run()
-        else CompletableFuture.delayedExecutor(delayMillis, MILLISECONDS).execute(start)
         return result
     }
 
-    private fun begin(token: Either<String, Int>, entry: Entry) {
+    private fun begin(
+        token: Either<String, Int>,
+        entry: Entry,
+    ) {
         if (closed.get() || entries[token] !== entry) return
         begun.add(token)
         send(
@@ -86,10 +101,13 @@ internal class ConnectionProgress(
         if (entry.result.isDone) finish(token, entry)
     }
 
-    private fun finish(token: Either<String, Int>, entry: Entry) {
+    private fun finish(
+        token: Either<String, Int>,
+        entry: Entry,
+    ) {
         if (token !in begun && !closed.get()) return
         if (!entries.remove(token, entry)) return
-        if (begun.remove(token))
+        if (begun.remove(token)) {
             send(
                 token,
                 WorkDoneProgressEnd().apply {
@@ -101,9 +119,14 @@ internal class ConnectionProgress(
                         }
                 },
             )
+        }
     }
 
-    fun report(result: CompletableFuture<*>, message: String, percent: Int) = dispatch {
+    fun report(
+        result: CompletableFuture<*>,
+        message: String,
+        percent: Int,
+    ) = dispatch {
         if (closed.get() || result.isDone) return@dispatch
         entries.entries
             .firstOrNull { it.value.result === result && it.key in begun }
@@ -120,7 +143,10 @@ internal class ConnectionProgress(
 
     fun cancel(token: Either<String, Int>) = dispatch { entries[token]?.result?.cancel(false) }
 
-    private fun send(token: Either<String, Int>, value: WorkDoneProgressNotification) {
+    private fun send(
+        token: Either<String, Int>,
+        value: WorkDoneProgressNotification,
+    ) {
         runCatching { client()?.notifyProgress(ProgressParams(token, Either.forLeft(value))) }
             .onFailure { logger.debug("Unable to publish progress", it) }
     }
@@ -129,7 +155,7 @@ internal class ConnectionProgress(
         try {
             dispatcher.execute(block)
         } catch (_: RejectedExecutionException) {
-            /* Connection already closed. */
+            // Connection already closed.
         }
     }
 

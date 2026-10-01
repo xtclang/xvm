@@ -51,8 +51,7 @@ object SemanticTokenLegend {
     val typeIndex: Map<String, Int> = tokenTypes.withIndex().associate { (i, v) -> v to i }
     val modIndex: Map<String, Int> = tokenModifiers.withIndex().associate { (i, v) -> v to i }
 
-    fun modifierBitmask(vararg mods: String): Int =
-        mods.fold(0) { mask, mod -> modIndex[mod]?.let { mask or (1 shl it) } ?: mask }
+    fun modifierBitmask(vararg mods: String): Int = mods.fold(0) { mask, mod -> modIndex[mod]?.let { mask or (1 shl it) } ?: mask }
 }
 
 /**

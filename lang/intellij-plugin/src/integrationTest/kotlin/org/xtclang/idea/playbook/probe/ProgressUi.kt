@@ -13,7 +13,10 @@ object ProgressUi {
     }
 
     @JvmStatic
-    fun visible(project: Project, title: String): Boolean =
+    fun visible(
+        project: Project,
+        title: String,
+    ): Boolean =
         status(project).backgroundProcessModels.any { (_, model) ->
             model.title.contains(title) && model.isRunning() && model.isCancellable()
         }
@@ -29,14 +32,16 @@ object ProgressUi {
     }
 
     @JvmStatic
-    fun cancel(project: Project, title: String): Boolean {
+    fun cancel(
+        project: Project,
+        title: String,
+    ): Boolean {
         val model =
             status(project)
                 .backgroundProcessModels
                 .singleOrNull { (_, model) ->
                     model.title.contains(title) && model.isRunning() && model.isCancellable()
-                }
-                ?.second ?: return false
+                }?.second ?: return false
         model.cancel()
         return true
     }

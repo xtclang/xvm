@@ -6,8 +6,8 @@ import com.intellij.ide.wizard.NewProjectWizardBaseStep
 import com.intellij.ide.wizard.NewProjectWizardChainStep.Companion.nextStep
 import com.intellij.ide.wizard.NewProjectWizardStep
 import com.intellij.ide.wizard.RootNewProjectWizardStep
-import javax.swing.Icon
 import org.xtclang.idea.XtcIconProvider
+import javax.swing.Icon
 
 /**
  * Project generator for the New Project wizard in IntelliJ IDEA. Creates XTC projects by invoking

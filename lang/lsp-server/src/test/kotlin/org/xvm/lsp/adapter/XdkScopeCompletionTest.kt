@@ -1,10 +1,10 @@
 package org.xvm.lsp.adapter
 
-import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import java.nio.file.Path
 
 class XdkScopeCompletionTest {
     @TempDir lateinit var directory: Path
@@ -50,12 +50,11 @@ class XdkScopeCompletionTest {
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix; } } }")
             assertThat(
-                    adapter
-                        .getCompletions(URI, 0, prefix.length)
-                        .single { it.label == "item" }
-                        .detail
-                )
-                .isEqualTo("String item")
+                adapter
+                    .getCompletions(URI, 0, prefix.length)
+                    .single { it.label == "item" }
+                    .detail,
+            ).isEqualTo("String item")
         }
     }
 
@@ -134,13 +133,15 @@ class XdkScopeCompletionTest {
     @Test
     fun `type names come from contextual lookup including imports and enclosing types`() {
         XdkAdapter().use { adapter ->
-            for ((setup, name) in
-                listOf(
-                    "" to "String",
-                    "import ecstasy.text.StringBuffer as Buffer;" to "Buffer",
-                    "import ecstasy.text.*;" to "StringBuffer",
-                    "class ItemType {}" to "ItemType",
-                )) {
+            for (
+            (setup, name) in
+            listOf(
+                "" to "String",
+                "import ecstasy.text.StringBuffer as Buffer;" to "Buffer",
+                "import ecstasy.text.*;" to "StringBuffer",
+                "class ItemType {}" to "ItemType",
+            )
+            ) {
                 val prefix =
                     "module Editing { $setup class Nested { void run() { ${name.dropLast(1)}"
                 adapter.compile(URI, "$prefix; } } }")
@@ -164,20 +165,18 @@ class XdkScopeCompletionTest {
             adapter.compile(rootUri, "module Editing { class Base { String item = \"overlay\"; } }")
             adapter.compile(childUri, child.readText())
             assertThat(
-                    adapter
-                        .getCompletions(childUri, 0, prefix.length)
-                        .single { it.label == "item" }
-                        .detail
-                )
-                .isEqualTo("String item")
+                adapter
+                    .getCompletions(childUri, 0, prefix.length)
+                    .single { it.label == "item" }
+                    .detail,
+            ).isEqualTo("String item")
             adapter.compile(rootUri, root.readText())
             assertThat(
-                    adapter
-                        .getCompletions(childUri, 0, prefix.length)
-                        .single { it.label == "item" }
-                        .detail
-                )
-                .isEqualTo("Int item")
+                adapter
+                    .getCompletions(childUri, 0, prefix.length)
+                    .single { it.label == "item" }
+                    .detail,
+            ).isEqualTo("Int item")
             assertThat(root.readText()).contains("Int item")
         }
     }

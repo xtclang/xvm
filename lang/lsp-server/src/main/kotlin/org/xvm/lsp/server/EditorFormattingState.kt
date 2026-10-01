@@ -1,8 +1,8 @@
 package org.xvm.lsp.server
 
 import com.google.gson.Gson
-import java.util.concurrent.atomic.AtomicReference
 import org.xvm.lsp.adapter.FormattingConfig
+import java.util.concurrent.atomic.AtomicReference
 
 /** A late configuration reply cannot undo a newer preference or restore a reset value. */
 internal class EditorFormattingState : AutoCloseable {
@@ -20,7 +20,11 @@ internal class EditorFormattingState : AutoCloseable {
     fun request(): Long = current.updateAndGet { it.copy(revision = it.revision + 1) }.revision
 
     @Synchronized
-    fun accept(revision: Long, raw: Any?, install: (FormattingConfig?) -> Unit): Boolean {
+    fun accept(
+        revision: Long,
+        raw: Any?,
+        install: (FormattingConfig?) -> Unit,
+    ): Boolean {
         if (current.get().let { it.closed || it.revision != revision }) return false
         val config = parse(raw)
         current.set(Snapshot(revision, config))
@@ -40,7 +44,12 @@ internal class EditorFormattingState : AutoCloseable {
             if (element.isJsonNull) return null
             require(element.isJsonObject) { "Ecstasy formatting settings must be an object" }
             val settings = element.asJsonObject
-            fun integer(name: String, default: Int, maximum: Int): Int =
+
+            fun integer(
+                name: String,
+                default: Int,
+                maximum: Int,
+            ): Int =
                 settings[name]?.let {
                     require(it.isJsonPrimitive && it.asJsonPrimitive.isNumber) {
                         "$name must be an integer"

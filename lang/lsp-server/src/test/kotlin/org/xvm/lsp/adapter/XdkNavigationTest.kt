@@ -17,8 +17,7 @@ class XdkNavigationTest {
                     return /*read*/count;
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             val read = position(source, "read")
             val declaration = span(source, "declaration", "count")
@@ -52,8 +51,7 @@ class XdkNavigationTest {
                     }
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             for (prefix in listOf("first", "second")) {
                 val read = position(source, "${prefix}Read")
@@ -64,9 +62,8 @@ class XdkNavigationTest {
                 assertThat(adapter.findReferences(URI, read.line, read.column, true))
                     .containsExactly(declaration, use)
                 assertThat(
-                        adapter.getDocumentHighlights(URI, read.line, read.column).map { it.range }
-                    )
-                    .containsExactly(range(declaration), range(use))
+                    adapter.getDocumentHighlights(URI, read.line, read.column).map { it.range },
+                ).containsExactly(range(declaration), range(use))
             }
         }
     }
@@ -79,8 +76,7 @@ class XdkNavigationTest {
                 Int first() { Int /*firstDeclaration*/value = 1; return /*firstRead*/value; }
                 Int second() { Int /*secondDeclaration*/value = 2; return /*secondRead*/value; }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             val read = position(source, "secondRead")
             assertThat(adapter.findDefinition(URI, read.line, read.column))
@@ -111,8 +107,7 @@ class XdkNavigationTest {
                     return /*original*/value.toString();
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             val narrowed = position(source, "narrowed")
             assertThat(adapter.findDefinition(URI, narrowed.line, narrowed.column))
@@ -137,8 +132,7 @@ class XdkNavigationTest {
                     return /*call*/twice(/*argument*/value) + twice(/*literal*/1);
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             val argument = position(source, "argument")
             assertThat(adapter.findDefinition(URI, argument.line, argument.column))
@@ -167,19 +161,17 @@ class XdkNavigationTest {
                     }
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             val local = position(source, "local")
             assertThat(adapter.findReferences(URI, local.line, local.column, false))
                 .containsExactly(span(source, "local", "value"))
             assertThat(
-                    adapter.getDocumentHighlights(URI, local.line, local.column).map { it.range }
-                )
-                .containsExactly(
-                    range(span(source, "declaration", "value")),
-                    range(span(source, "local", "value")),
-                )
+                adapter.getDocumentHighlights(URI, local.line, local.column).map { it.range },
+            ).containsExactly(
+                range(span(source, "declaration", "value")),
+                range(span(source, "local", "value")),
+            )
         }
     }
 
@@ -191,8 +183,7 @@ class XdkNavigationTest {
                 Int good() { Int value = 1; return value; }
                 Int broken() { return /*unresolved*/value; }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         CompilerTestSupport.configure()
         XdkAdapter().use { adapter ->
             assertThat(adapter.compile(URI, source).success).isFalse()
@@ -219,8 +210,7 @@ class XdkNavigationTest {
                     return /*call*/box.read();
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             val method = position(source, "methodDeclaration")
             val callStart =
@@ -239,9 +229,8 @@ class XdkNavigationTest {
             assertThat(adapter.findReferences(URI, method.line, method.column, false))
                 .containsExactly(call)
             assertThat(
-                    adapter.getDocumentHighlights(URI, method.line, method.column).map { it.range }
-                )
-                .containsExactly(range(methodDeclaration), range(call))
+                adapter.getDocumentHighlights(URI, method.line, method.column).map { it.range },
+            ).containsExactly(range(methodDeclaration), range(call))
 
             val type = position(source, "typeDeclaration")
             assertThat(adapter.findReferences(URI, type.line, type.column, false))
@@ -263,8 +252,7 @@ class XdkNavigationTest {
                 Int first(Int value) { return value; }
                 Int second(Int /*declaration*/value) { return /*firstUse*/value + /*secondUse*/value; }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             val use = position(source, "firstUse")
             assertThat(adapter.findDefinition(URI, use.line, use.column))
@@ -293,8 +281,7 @@ class XdkNavigationTest {
                     Int read() { return /*use*/value; }
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             val use = position(source, "use")
             assertThat(adapter.findDefinition(URI, use.line, use.column))
@@ -315,8 +302,7 @@ class XdkNavigationTest {
                     return value.toString();
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             val use = position(source, "use")
             assertThat(adapter.findDefinition(URI, use.line, use.column))
@@ -335,8 +321,7 @@ class XdkNavigationTest {
                     return fn();
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             val capture = position(source, "capture")
             assertThat(adapter.findDefinition(URI, capture.line, capture.column))
@@ -357,8 +342,7 @@ class XdkNavigationTest {
                 class /*outerDeclaration*/Outer { class /*declaration*/Nested {} }
                 void use(List</*qualified*/Outer.Nested> values) {}
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             val qualifier = position(source, "qualified")
             val inner = qualifier.copy(column = qualifier.column + "Outer.".length)
@@ -386,8 +370,7 @@ class XdkNavigationTest {
                     return outer() + /*direct*/value;
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             val use = position(source, "nested")
             assertThat(adapter.findDefinition(URI, use.line, use.column))
@@ -413,8 +396,7 @@ class XdkNavigationTest {
                         return first(1) + second(2);
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
             withSource(source) { adapter ->
                 for (prefix in listOf("first", "second")) {
                     val use = position(source, "${prefix}Use")
@@ -441,8 +423,7 @@ class XdkNavigationTest {
                     return increment() + /*direct*/value;
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             val use = position(source, "capture")
             assertThat(adapter.findDefinition(URI, use.line, use.column))
@@ -461,8 +442,7 @@ class XdkNavigationTest {
                 class /*qualifierDeclaration*/Derived extends Base {}
                 void use(/*qualifier*/Derived. /*member*/Nested value) {}
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             val qualifier = position(source, "qualifier")
             val member = position(source, "member")
@@ -486,8 +466,7 @@ class XdkNavigationTest {
                     return value.toString();
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             val use = position(source, "capture")
             assertThat(adapter.findDefinition(URI, use.line, use.column))

@@ -1,6 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.util.stream.Stream
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.DisplayName
@@ -10,6 +9,7 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import java.util.stream.Stream
 
 /**
  * Navigation tests for [TreeSitterAdapter].
@@ -43,8 +43,7 @@ class NavigationTest : TreeSitterTestBase() {
                     class Person {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             val definition = ts.findDefinition(uri, 1, 10)
@@ -87,8 +86,7 @@ class NavigationTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // cursor on 'add' in the call site at line 9
@@ -119,8 +117,7 @@ class NavigationTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // cursor on 'add' in call at line 6, col 12
@@ -146,8 +143,7 @@ class NavigationTest : TreeSitterTestBase() {
                         return whitespace(test);
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // cursor on `whitespace` in `whitespace(test)` -- line 6, column 15
@@ -178,8 +174,7 @@ class NavigationTest : TreeSitterTestBase() {
                         Int globalThing = 42;
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // cursor on `globalThing` in `globalThing.toString()` (line 3) -- before the
@@ -215,8 +210,7 @@ class NavigationTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // cursor on `x` in `x.toString();` -- line 5, column 12
@@ -248,8 +242,7 @@ class NavigationTest : TreeSitterTestBase() {
                         Helper h = new Helper();
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // cursor on `Helper` in `Helper h = new Helper();` -- line 4, column 8.
@@ -280,8 +273,7 @@ class NavigationTest : TreeSitterTestBase() {
                         return x * x;
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // cursor on the first `x` in `x * x` -- line 2, column 15
@@ -312,8 +304,7 @@ class NavigationTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // cursor on 'Person' in return type at line 5, col 8
@@ -343,8 +334,7 @@ class NavigationTest : TreeSitterTestBase() {
                         structure.y = 2;
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // cursor on `y` in `structure.y` -- line 3, col 18
@@ -377,8 +367,7 @@ class NavigationTest : TreeSitterTestBase() {
                         console.print("hi");
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // `console` on line 3 spans cols 8..15; col 15 is the exclusive end
@@ -405,8 +394,7 @@ class NavigationTest : TreeSitterTestBase() {
                         Name n = "x";
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // cursor on `Name` usage -- line 3, col 8
@@ -443,8 +431,7 @@ class NavigationTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
 
@@ -489,8 +476,7 @@ class NavigationTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // cursor on 'add' at declaration, line 2, col 12
@@ -535,8 +521,7 @@ class NavigationTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             val highlights = ts.getDocumentHighlights(uri, 1, 10)
@@ -575,8 +560,7 @@ class NavigationTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // cursor on 'add' at declaration, line 2, col 12
@@ -619,8 +603,7 @@ class NavigationTest : TreeSitterTestBase() {
                         // see https://example.com for details
                         class Foo {}
                     }
-                    """
-                        .trimIndent(),
+                    """.trimIndent(),
                     "https://example.com",
                     1,
                     "    // see ".length,
@@ -634,8 +617,7 @@ class NavigationTest : TreeSitterTestBase() {
                            and more text */
                         class Foo {}
                     }
-                    """
-                        .trimIndent(),
+                    """.trimIndent(),
                     "https://anthropic.com",
                     2,
                     "       with ".length,
@@ -647,8 +629,7 @@ class NavigationTest : TreeSitterTestBase() {
                         /** see http://docs.xtclang.org/guide */
                         class Foo {}
                     }
-                    """
-                        .trimIndent(),
+                    """.trimIndent(),
                     "http://docs.xtclang.org/guide",
                     1,
                     "    /** see ".length,
@@ -659,8 +640,7 @@ class NavigationTest : TreeSitterTestBase() {
                     module myapp {
                         String home = "https://xtclang.org";
                     }
-                    """
-                        .trimIndent(),
+                    """.trimIndent(),
                     "https://xtclang.org",
                     1,
                     "    String home = \"".length,
@@ -672,8 +652,7 @@ class NavigationTest : TreeSitterTestBase() {
                         // visit https://example.com.
                         class Foo {}
                     }
-                    """
-                        .trimIndent(),
+                    """.trimIndent(),
                     "https://example.com",
                     1,
                     "    // visit ".length,
@@ -714,8 +693,7 @@ class NavigationTest : TreeSitterTestBase() {
                     // links: https://a.test https://b.test
                     class Foo {}
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
             ts.compile(uri, source)
 
             val links = ts.getDocumentLinks(uri, source)
@@ -738,8 +716,7 @@ class NavigationTest : TreeSitterTestBase() {
                     import crypto.CertificateManager;
                     import json.xtclang.org;
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
             ts.compile(uri, source)
 
             assertThat(ts.getDocumentLinks(uri, source)).isEmpty()
@@ -775,8 +752,7 @@ class NavigationTest : TreeSitterTestBase() {
                         Person manager;
                     }
                 }
-                """
-                    .trimIndent(),
+                """.trimIndent(),
             )
 
             // "Person" on line 4 (0-based), column 8 should resolve to class Person declaration
@@ -830,8 +806,7 @@ class NavigationTest : TreeSitterTestBase() {
                     class Person {
                     }
                 }
-                """
-                    .trimIndent(),
+                """.trimIndent(),
             )
             ts.compile(
                 uri2,
@@ -840,8 +815,7 @@ class NavigationTest : TreeSitterTestBase() {
                     class Animal {
                     }
                 }
-                """
-                    .trimIndent(),
+                """.trimIndent(),
             )
 
             // Initialize workspace to enable the index (using a temp dir approach)

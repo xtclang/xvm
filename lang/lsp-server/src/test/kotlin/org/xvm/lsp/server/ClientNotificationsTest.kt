@@ -1,8 +1,5 @@
 package org.xvm.lsp.server
 
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.LogTraceParams
 import org.eclipse.lsp4j.services.LanguageClient
@@ -12,6 +9,9 @@ import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verifyNoInteractions
 import org.xvm.lsp.util.ExecutionTrace
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit.SECONDS
 
 class ClientNotificationsTest {
     @Test
@@ -48,10 +48,9 @@ class ClientNotificationsTest {
         val client = mock(LanguageClient::class.java)
         val messages = LinkedBlockingQueue<LogTraceParams>()
         doAnswer { call ->
-                messages.add(call.getArgument(0))
-                null
-            }
-            .`when`(client)
+            messages.add(call.getArgument(0))
+            null
+        }.`when`(client)
             .logTrace(any())
         ClientTrace { client }
             .use { trace ->

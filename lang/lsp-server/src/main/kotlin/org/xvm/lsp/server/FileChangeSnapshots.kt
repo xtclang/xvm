@@ -1,17 +1,19 @@
 package org.xvm.lsp.server
 
+import org.eclipse.lsp4j.FileEvent
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.LinkOption.NOFOLLOW_LINKS
 import java.nio.file.Path
 import java.security.MessageDigest
-import org.eclipse.lsp4j.FileEvent
 
 /**
  * Coalesce small-file duplicates by content. Directory and large-file events always propagate:
  * fingerprinting an entire moved workspace on the notification thread would stall the server.
  */
-internal class FileChangeSnapshots(private val limit: Int = 512) {
+internal class FileChangeSnapshots(
+    private val limit: Int = 512,
+) {
     private val observed = linkedMapOf<Path, List<Byte>>()
 
     @Synchronized

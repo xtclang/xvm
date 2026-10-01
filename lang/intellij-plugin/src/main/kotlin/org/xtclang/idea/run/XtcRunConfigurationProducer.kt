@@ -14,8 +14,7 @@ import com.intellij.psi.PsiFile
  * This allows users to run XTC modules without manually creating run configurations.
  */
 class XtcRunConfigurationProducer : LazyRunConfigurationProducer<XtcRunConfiguration>() {
-    override fun getConfigurationFactory(): ConfigurationFactory =
-        XtcRunConfigurationType().configurationFactories.first()
+    override fun getConfigurationFactory(): ConfigurationFactory = XtcRunConfigurationType().configurationFactories.first()
 
     override fun setupConfigurationFromContext(
         configuration: XtcRunConfiguration,

@@ -34,38 +34,39 @@ class TextMateBundleManifestGenerator(
         // identifier
         val languageId = model.scopeName.substringAfterLast(".")
 
-        val config = buildJsonObject {
-            put("name", "$languageId-language")
-            put("displayName", "${model.name} Language")
-            put("description", "${model.name} language support")
-            put("version", version)
-            putJsonObject("engines") {
-                put("vscode", "^1.50.0")
-            }
-            putJsonObject("contributes") {
-                putJsonArray("languages") {
-                    addJsonObject {
-                        put("id", languageId)
-                        putJsonArray("aliases") {
-                            add(JsonPrimitive(model.name))
-                            add(JsonPrimitive(languageId.uppercase()))
-                            add(JsonPrimitive(languageId))
+        val config =
+            buildJsonObject {
+                put("name", "$languageId-language")
+                put("displayName", "${model.name} Language")
+                put("description", "${model.name} language support")
+                put("version", version)
+                putJsonObject("engines") {
+                    put("vscode", "^1.50.0")
+                }
+                putJsonObject("contributes") {
+                    putJsonArray("languages") {
+                        addJsonObject {
+                            put("id", languageId)
+                            putJsonArray("aliases") {
+                                add(JsonPrimitive(model.name))
+                                add(JsonPrimitive(languageId.uppercase()))
+                                add(JsonPrimitive(languageId))
+                            }
+                            putJsonArray("extensions") {
+                                model.fileExtensions.forEach { add(JsonPrimitive(".$it")) }
+                            }
+                            put("configuration", "./language-configuration.json")
                         }
-                        putJsonArray("extensions") {
-                            model.fileExtensions.forEach { add(JsonPrimitive(".$it")) }
+                    }
+                    putJsonArray("grammars") {
+                        addJsonObject {
+                            put("language", languageId)
+                            put("scopeName", model.scopeName)
+                            put("path", "./$languageId.tmLanguage.json")
                         }
-                        put("configuration", "./language-configuration.json")
                     }
                 }
-                putJsonArray("grammars") {
-                    addJsonObject {
-                        put("language", languageId)
-                        put("scopeName", model.scopeName)
-                        put("path", "./$languageId.tmLanguage.json")
-                    }
-                }
             }
-        }
         return json.encodeToString(JsonObject.serializer(), config)
     }
 }

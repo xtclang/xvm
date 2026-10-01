@@ -1,13 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.lang.reflect.Modifier
-import java.time.Instant
-import java.util.Collections
-import java.util.IdentityHashMap
-import java.util.UUID
-import java.util.concurrent.Executors
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -25,6 +17,14 @@ import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkDependency
 import org.xvm.lsp.adapter.xdk.semanticSnapshot
 import org.xvm.lsp.adapter.xdk.semanticSnapshots
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.lang.reflect.Modifier
+import java.time.Instant
+import java.util.Collections
+import java.util.IdentityHashMap
+import java.util.UUID
+import java.util.concurrent.Executors
 
 class CompilerBoundaryRequirementsTest {
     @ParameterizedTest
@@ -32,7 +32,7 @@ class CompilerBoundaryRequirementsTest {
     fun `bound generic functions retain binary AST and emit readable artifacts`(reference: String) {
         val result =
             compile(
-                "module Boundary { static <T> T id(T value) = value; <T> T pick(T value) = value; function Int(Int) make() = $reference; }"
+                "module Boundary { static <T> T id(T value) = value; <T> T pick(T value) = value; function Int(Int) make() = $reference; }",
             )
         val artifact = bytes(result)
         val restored = FileStructure(ByteArrayInputStream(artifact)).module
@@ -46,7 +46,7 @@ class CompilerBoundaryRequirementsTest {
     fun `serialized dependency identities match source declarations without conflating overloads or modules`() {
         val library =
             compile(
-                "module Library { static Int pick(Int n) = n; static String pick(String n) = n; }"
+                "module Library { static Int pick(Int n) = n; static String pick(String n) = n; }",
             )
         val other = compile("module Other { static Int pick(Int n) = n; }")
         val repository = repository(library, other)
@@ -79,12 +79,11 @@ class CompilerBoundaryRequirementsTest {
         consumerModel.calls.forEach { call ->
             assertThat(consumerModel.symbol(call.method)!!.declaration).isNull()
             assertThat(
-                    consumerModel.definitionLocationAt(
-                        call.callee.start.line,
-                        call.callee.end.column - 1,
-                    )
-                )
-                .isNull()
+                consumerModel.definitionLocationAt(
+                    call.callee.start.line,
+                    call.callee.end.column - 1,
+                ),
+            ).isNull()
         }
     }
 
@@ -92,7 +91,7 @@ class CompilerBoundaryRequirementsTest {
     fun `a fresh dependency repository changes selected types and rejects removed members`() {
         fun dependency(type: String) =
             compile(
-                "module Library { static $type value() = ${if (type == "Int") "1" else "\"new\""}; }"
+                "module Library { static $type value() = ${if (type == "Int") "1" else "\"new\""}; }",
             )
         val text =
             "module Consumer { package lib import Library; void run() { var value = lib.value(); } }"
@@ -100,14 +99,22 @@ class CompilerBoundaryRequirementsTest {
         val second = compile(text, repository(dependency("String"))).semanticSnapshot()
 
         fun returned(model: SemanticModel): String =
-            model.type(model.calls.single().signature.returns.single())!!.displayName
+            model
+                .type(
+                    model.calls
+                        .single()
+                        .signature.returns
+                        .single(),
+                )!!
+                .displayName
         assertThat(returned(first)).isEqualTo("Int")
         assertThat(returned(second)).isEqualTo("String")
         assertThat(second.symbol(first.calls.single().method)).isNull()
         val errors = ErrorList()
         val removed = repository(compile("module Library { static Int replacement() = 1; }"))
         val failed =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .compileModule(Source(text, "file:///Boundary.x"), removed, errors)
         assertThat(failed.succeeded()).isFalse()
         assertThat(errors.hasSeriousErrors()).isTrue()
@@ -140,9 +147,8 @@ class CompilerBoundaryRequirementsTest {
         val snapshots =
             (0 until 20).map { version ->
                 compile(
-                        "module Boundary { Int run(Int n) { var value = n + $version; return value; } }"
-                    )
-                    .semanticSnapshot()
+                    "module Boundary { Int run(Int n) { var value = n + $version; return value; } }",
+                ).semanticSnapshot()
             }
         assertThat(snapshots.map { it.id }.distinct()).hasSize(20)
         Executors.newFixedThreadPool(4).use { executor ->
@@ -157,8 +163,7 @@ class CompilerBoundaryRequirementsTest {
                             assertPure(snapshot)
                         }
                     }
-                }
-                .forEach { it.get() }
+                }.forEach { it.get() }
         }
     }
 
@@ -169,7 +174,8 @@ class CompilerBoundaryRequirementsTest {
         CompilerTestSupport.configure()
         val errors = ErrorList()
         val result =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .compileModule(Source(text, "file:///Boundary.x"), repository, errors)
         assertThat(result.succeeded()).describedAs(errors.errors.toString()).isTrue()
         return result
@@ -189,7 +195,13 @@ class CompilerBoundaryRequirementsTest {
         }
 
     private fun nodes(node: AstNode): List<AstNode> =
-        listOf(node) + node.children().iterator().asSequence().flatMap(::nodes).toList()
+        listOf(node) +
+            node
+                .children()
+                .iterator()
+                .asSequence()
+                .flatMap(::nodes)
+                .toList()
 
     private fun assertPure(root: SemanticModel) {
         val seen = Collections.newSetFromMap(IdentityHashMap<Any, Boolean>())
@@ -201,7 +213,8 @@ class CompilerBoundaryRequirementsTest {
                 is Number,
                 is Boolean,
                 is Enum<*>,
-                is UUID -> {
+                is UUID,
+                -> {
                     return
                 }
 
@@ -218,10 +231,9 @@ class CompilerBoundaryRequirementsTest {
 
                 else -> {
                     assertThat(
-                            value.javaClass.name.startsWith(SemanticModel::class.java.name) ||
-                                value is XdkDependency.SymbolKey
-                        )
-                        .describedAs("Detached snapshot value: %s", value.javaClass.name)
+                        value.javaClass.name.startsWith(SemanticModel::class.java.name) ||
+                            value is XdkDependency.SymbolKey,
+                    ).describedAs("Detached snapshot value: %s", value.javaClass.name)
                         .isTrue()
                     value.javaClass.declaredFields
                         .filterNot { Modifier.isStatic(it.modifiers) }

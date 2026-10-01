@@ -1,10 +1,10 @@
 package org.xtclang.idea.manifest
 
-import javax.xml.parsers.DocumentBuilderFactory
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.w3c.dom.Element
+import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Verifies that the live-template file referenced by plugin.xml's
@@ -25,9 +25,10 @@ class LiveTemplateRegistrationTest {
         val resourceUrl =
             javaClass.classLoader.getResource("liveTemplates/XTC.xml")
                 ?: error(
-                    "liveTemplates/XTC.xml not on test classpath — file path drifted from plugin.xml"
+                    "liveTemplates/XTC.xml not on test classpath — file path drifted from plugin.xml",
                 )
-        DocumentBuilderFactory.newInstance()
+        DocumentBuilderFactory
+            .newInstance()
             .apply { isNamespaceAware = false }
             .newDocumentBuilder()
             .parse(resourceUrl.openStream())
@@ -42,9 +43,8 @@ class LiveTemplateRegistrationTest {
         assertThat(group)
             .withFailMessage(
                 "liveTemplates/XTC.xml has no <templateSet group='...'> — the file would " +
-                    "load with templates dumped into an unnamed group in Settings -> Live Templates."
-            )
-            .isNotEmpty
+                    "load with templates dumped into an unnamed group in Settings -> Live Templates.",
+            ).isNotEmpty
     }
 
     @Test
@@ -84,8 +84,7 @@ class LiveTemplateRegistrationTest {
                 "live template shortcuts missing from XTC.xml that are documented in the README/test plan: %s. " +
                     "Either restore the templates in liveTemplates/XTC.xml or remove the row from the docs.",
                 missing,
-            )
-            .isEmpty()
+            ).isEmpty()
     }
 
     @Test
@@ -114,8 +113,7 @@ class LiveTemplateRegistrationTest {
         assertThat(withOtherContext)
             .withFailMessage(
                 "no template in liveTemplates/XTC.xml declares <context><option name='OTHER' value='true'/></context>. " +
-                    "Without an applicable context the templates won't trigger in TextMate-backed editors like ours."
-            )
-            .isGreaterThan(0)
+                    "Without an applicable context the templates won't trigger in TextMate-backed editors like ours.",
+            ).isGreaterThan(0)
     }
 }

@@ -40,7 +40,7 @@ object StartupEdits {
                     "phase" to "cold-open",
                     "stamp" to document.modificationStamp,
                     "text" to document.text,
-                )
+                ),
             )
     }
 
@@ -80,7 +80,7 @@ object StartupEdits {
                     "stamp" to document.modificationStamp,
                     "reopened" to reopen,
                     "text" to document.text,
-                )
+                ),
             )
     }
 }

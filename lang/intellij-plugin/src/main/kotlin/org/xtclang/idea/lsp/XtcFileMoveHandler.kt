@@ -38,8 +38,10 @@ class XtcFileMoveHandler : MoveHandlerDelegate() {
             XtcFileOperations.server(elements.first().project) != null &&
             (targetContainer == null || targetContainer is PsiDirectory)
 
-    override fun isValidTarget(target: PsiElement?, sources: Array<out PsiElement>): Boolean =
-        target is PsiDirectory
+    override fun isValidTarget(
+        target: PsiElement?,
+        sources: Array<out PsiElement>,
+    ): Boolean = target is PsiDirectory
 
     override fun doMove(
         project: Project,
@@ -74,7 +76,7 @@ class XtcFileMoveHandler : MoveHandlerDelegate() {
                 addDocumentListener(
                     object : DocumentAdapter() {
                         override fun textChanged(event: DocumentEvent) = validateButtons()
-                    }
+                    },
                 )
             }
 
@@ -95,11 +97,11 @@ class XtcFileMoveHandler : MoveHandlerDelegate() {
 
         override fun areButtonsValid(): Boolean = targets()?.let(FileMoveTargets::valid) == true
 
-        private fun targets(): Map<Path, Path>? = runCatching {
-            val directory = Path.of(destination.text).toAbsolutePath().normalize()
-            files.associate { Path.of(it.path) to directory.resolve(it.name) }
-        }
-            .getOrNull()
+        private fun targets(): Map<Path, Path>? =
+            runCatching {
+                val directory = Path.of(destination.text).toAbsolutePath().normalize()
+                files.associate { Path.of(it.path) to directory.resolve(it.name) }
+            }.getOrNull()
 
         override fun doAction() {
             val targets = targets() ?: return
@@ -110,15 +112,16 @@ class XtcFileMoveHandler : MoveHandlerDelegate() {
             val requested = files.associateWith { targets.getValue(Path.of(it.path)) }
             val cancellation = CancellationSupport()
             val future =
-                CompletableFuture.runAsync {
+                CompletableFuture
+                    .runAsync {
                         requireNotNull(
-                            LocalFileSystem.getInstance()
-                                .refreshAndFindFileByNioFile(targets.values.first().parent)
+                            LocalFileSystem
+                                .getInstance()
+                                .refreshAndFindFileByNioFile(targets.values.first().parent),
                         ) {
                             "Destination directory no longer exists"
                         }
-                    }
-                    .thenCompose {
+                    }.thenCompose {
                         cancellation.checkCanceled()
                         cancellation.execute(XtcRenameEdit.requestFileMoves(wrapper, requested))
                     }

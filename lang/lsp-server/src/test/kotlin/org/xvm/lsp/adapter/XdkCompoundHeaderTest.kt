@@ -38,11 +38,9 @@ class XdkCompoundHeaderTest {
                 "void damaged(function void(List<Str§>) value) {}",
                 "void damaged(Function<<Str§>, <Int>> value) {}",
                 "void damaged(Function<<Int>, <Str§>> value) {}",
-            ]
+            ],
     )
-    fun `written leaf type prefixes complete inside parameterized and compound headers`(
-        declaration: String
-    ) {
+    fun `written leaf type prefixes complete inside parameterized and compound headers`(declaration: String) {
         val prefix =
             "module Headers { String StringValue = \"x\"; " + declaration.substringBefore('§')
         val suffix = declaration.substringAfter('§') + " Int later = 1; }"
@@ -58,7 +56,7 @@ class XdkCompoundHeaderTest {
                     TextEdit(
                         Range(Position(0, prefix.length - 3), Position(0, prefix.length)),
                         "String",
-                    )
+                    ),
                 )
             assertThat(adapter.getSignatureHelp(URI, 0, prefix.length)).isNull()
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
@@ -75,11 +73,9 @@ class XdkCompoundHeaderTest {
                 "List<ecstasy.text.Str§>",
                 "Map<Int, List<ecstasy.text.Str§>>",
                 "Object + ecstasy.text.Str§",
-            ]
+            ],
     )
-    fun `qualified leaf types use compiler lookup and replace only their final token`(
-        type: String
-    ) {
+    fun `qualified leaf types use compiler lookup and replace only their final token`(type: String) {
         val prefix = "module Headers { void damaged(" + type.substringBefore('§')
         val suffix = type.substringAfter('§') + " value) {} }"
         XdkAdapter().use { adapter ->
@@ -91,12 +87,11 @@ class XdkCompoundHeaderTest {
                     TextEdit(
                         Range(Position(0, prefix.length - 3), Position(0, prefix.length)),
                         "StringBuffer",
-                    )
+                    ),
                 )
             assertThat(
-                    adapter.compile(URI, prefix.dropLast(3) + "StringBuffer" + suffix).diagnostics
-                )
-                .isEmpty()
+                adapter.compile(URI, prefix.dropLast(3) + "StringBuffer" + suffix).diagnostics,
+            ).isEmpty()
         }
     }
 
@@ -113,11 +108,9 @@ class XdkCompoundHeaderTest {
                 "void damaged(List<Str§ {}",
                 "void damaged(function void(Str§ value) {}",
                 "void damaged(Function<<Str§ value) {}",
-            ]
+            ],
     )
-    fun `bounded missing type closers allow completion without hiding ordinary errors`(
-        declaration: String
-    ) {
+    fun `bounded missing type closers allow completion without hiding ordinary errors`(declaration: String) {
         val prefix = "module Headers { " + declaration.substringBefore('§')
         val suffix = declaration.substringAfter('§') + " Int later = 1; }"
         XdkAdapter().use { adapter ->
@@ -147,9 +140,7 @@ class XdkCompoundHeaderTest {
 
     @ParameterizedTest
     @ValueSource(strings = ["void damaged(List<Missing>.§ value) {}"])
-    fun `unsupported shapes do not invent a generic owner operand or formal scope`(
-        declaration: String
-    ) {
+    fun `unsupported shapes do not invent a generic owner operand or formal scope`(declaration: String) {
         val prefix = "module Headers { " + declaration.substringBefore('§')
         XdkAdapter().use { adapter ->
             adapter.compile(URI, prefix + declaration.substringAfter('§') + " }")
@@ -183,11 +174,13 @@ class XdkCompoundHeaderTest {
         assertThat(declaration.component.getChild("hidden")).isNull()
         assertThat(analysis.cursorBindings()[site]!!.types().map { it.name() })
             .contains("StringBuffer")
-        for (listener in
-            listOf(
-                ErrorList(ErrorList.FIRST_ERROR),
-                ErrorListener.cancellable(ErrorList()) { true },
-            )) {
+        for (
+        listener in
+        listOf(
+            ErrorList(ErrorList.FIRST_ERROR),
+            ErrorListener.cancellable(ErrorList()) { true },
+        )
+        ) {
             source.reset()
             val stopped =
                 EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, listener)

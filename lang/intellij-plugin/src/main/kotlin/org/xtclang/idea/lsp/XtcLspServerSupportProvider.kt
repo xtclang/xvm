@@ -12,11 +12,11 @@ import com.redhat.devtools.lsp4ij.LanguageServerFactory
 import com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures
 import com.redhat.devtools.lsp4ij.server.JavaProcessCommandBuilder
 import com.redhat.devtools.lsp4ij.server.OSProcessStreamConnectionProvider
+import org.eclipse.lsp4j.services.LanguageServer
+import org.xtclang.idea.PluginPaths
 import java.nio.file.Path
 import java.util.Properties
 import java.util.concurrent.atomic.AtomicBoolean
-import org.eclipse.lsp4j.services.LanguageServer
-import org.xtclang.idea.PluginPaths
 
 /**
  * Shared build properties loaded once at class initialization time. This avoids concurrent
@@ -59,7 +59,7 @@ class XtcLanguageServerFactory : LanguageServerFactory {
     override fun createConnectionProvider(project: Project) =
         XtcLspConnectionProvider(project).also {
             logger.info(
-                "Creating Ecstasy LSP connection provider (out-of-process) - ${LspBuildProperties.buildInfo}"
+                "Creating Ecstasy LSP connection provider (out-of-process) - ${LspBuildProperties.buildInfo}",
             )
         }
 
@@ -82,7 +82,9 @@ class XtcLanguageServerFactory : LanguageServerFactory {
  * The server JAR is in `bin/` (not `lib/`) to avoid classloader conflicts with LSP4IJ's bundled
  * lsp4j.
  */
-class XtcLspConnectionProvider(private val project: Project) : OSProcessStreamConnectionProvider() {
+class XtcLspConnectionProvider(
+    private val project: Project,
+) : OSProcessStreamConnectionProvider() {
     private val logger = logger<XtcLspConnectionProvider>()
     private val lifetime = ConnectionLifetime({ super.start() }, { super.stop() })
 
@@ -99,8 +101,7 @@ class XtcLspConnectionProvider(private val project: Project) : OSProcessStreamCo
          * Resolve the LSP server JAR from a plugin directory. Returns the path to
          * `bin/xtc-lsp-server.jar` if it exists, or null otherwise.
          */
-        internal fun resolveServerJar(pluginDir: Path): Path? =
-            PluginPaths.resolveInBin(pluginDir, LSP_SERVER_JAR)
+        internal fun resolveServerJar(pluginDir: Path): Path? = PluginPaths.resolveInBin(pluginDir, LSP_SERVER_JAR)
     }
 
     init {
@@ -151,12 +152,13 @@ class XtcLspConnectionProvider(private val project: Project) : OSProcessStreamCo
 
         logger.info(
             "Ecstasy LSP command configured (v${LspBuildProperties.version}, " +
-                "adapter=${LspBuildProperties.adapter}, semanticTokens=$semanticTokens): ${commandLine.commandLineString}"
+                "adapter=${LspBuildProperties.adapter}, semanticTokens=$semanticTokens): ${commandLine.commandLineString}",
         )
     }
 
     override fun getInitializationOptions(rootUri: VirtualFile?): Any =
-        LanguageServiceSettings.validated(project)
+        LanguageServiceSettings
+            .validated(project)
             // TODO LSP4IJ: native willSaveWaitUntil is absent; keep server save edits disabled.
             .copy(saveFormatting = "editor")
             .initializationOptions()
@@ -170,7 +172,7 @@ class XtcLspConnectionProvider(private val project: Project) : OSProcessStreamCo
         lifetime.start()
 
         logger.info(
-            "Ecstasy LSP Server process started (v${LspBuildProperties.version}, adapter=${LspBuildProperties.adapter}, pid=$pid)"
+            "Ecstasy LSP Server process started (v${LspBuildProperties.version}, adapter=${LspBuildProperties.adapter}, pid=$pid)",
         )
 
         if (startNotificationShown.compareAndSet(false, true)) {
@@ -197,18 +199,17 @@ class XtcLspConnectionProvider(private val project: Project) : OSProcessStreamCo
         type: NotificationType,
     ) {
         object : Notification("XTC Language Server", title, content, type) {
-                override fun setBalloon(balloon: Balloon) {
-                    super.setBalloon(balloon)
-                    // The IDE timer pauses during interaction and hides only the balloon, keeping
-                    // the startup details in Notifications and the log for later inspection.
-                    (balloon as? BalloonImpl)?.apply {
-                        startSmartFadeoutTimer(8_000)
-                        // Smart fadeout alone waits for input before starting its clock. Also
-                        // schedule it now so an untouched startup balloon disappears.
-                        startFadeoutTimer(8_000)
-                    }
+            override fun setBalloon(balloon: Balloon) {
+                super.setBalloon(balloon)
+                // The IDE timer pauses during interaction and hides only the balloon, keeping
+                // the startup details in Notifications and the log for later inspection.
+                (balloon as? BalloonImpl)?.apply {
+                    startSmartFadeoutTimer(8_000)
+                    // Smart fadeout alone waits for input before starting its clock. Also
+                    // schedule it now so an untouched startup balloon disappears.
+                    startFadeoutTimer(8_000)
                 }
             }
-            .notify(project)
+        }.notify(project)
     }
 }

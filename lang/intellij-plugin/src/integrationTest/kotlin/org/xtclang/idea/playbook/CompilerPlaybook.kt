@@ -21,12 +21,12 @@ import com.intellij.driver.sdk.ui.components.common.ideFrame
 import com.intellij.driver.sdk.waitForIndicators
 import com.intellij.driver.sdk.waitForProblemsViewFile
 import com.intellij.openapi.progress.ProcessCanceledException
+import org.xtclang.idea.playbook.SharedScenarios.Companion.offset
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
-import org.xtclang.idea.playbook.SharedScenarios.Companion.offset
 
 enum class PlaybookMode {
     FEATURES,
@@ -145,7 +145,7 @@ class CompilerPlaybook(
                 check(
                     service<FileEditorManager>(singleProject()).getAllEditors().none {
                         it.getFile().getPath().endsWith("/${scenario.location.targetFile}")
-                    }
+                    },
                 ) {
                     "The dependency must resolve before opening its source file"
                 }
@@ -171,7 +171,7 @@ class CompilerPlaybook(
                     }
                 }
                 check(
-                    cast(changed.document, DocumentVersion::class).getModificationStamp() == version
+                    cast(changed.document, DocumentVersion::class).getModificationStamp() == version,
                 ) {
                     "Dependency recompilation changed the consumer document"
                 }
@@ -243,9 +243,10 @@ class CompilerPlaybook(
                             "textDocument" to
                                 mapOf(
                                     "uri" to
-                                        Path.of(editor.editor.getVirtualFile().getPath())
+                                        Path
+                                            .of(editor.editor.getVirtualFile().getPath())
                                             .toUri()
-                                            .toString()
+                                            .toString(),
                                 ),
                             "position" to
                                 mapOf(
@@ -255,7 +256,7 @@ class CompilerPlaybook(
                         )
                     check(
                         client.query("textDocument/declaration", params) ==
-                            client.query("textDocument/definition", params)
+                            client.query("textDocument/definition", params),
                     ) {
                         "Local/property declarations must match their resolved definition"
                     }
@@ -292,7 +293,7 @@ class CompilerPlaybook(
                                     it.severity == "Warning" &&
                                     it.start.first == it.end.first &&
                                     it.end.second - it.start.second ==
-                                        data.values["warningCount"].asInt
+                                    data.values["warningCount"].asInt
                             }
                     }
                 }
@@ -487,14 +488,13 @@ class CompilerPlaybook(
                 restore(data.text("file"))
             }
             ParityScenarios(driver, fixtures, shared) { id, action ->
-                    case(
-                        id,
-                        shared.scenarios.getValue(id).title,
-                        continueAfterFailure = true,
-                        action = action,
-                    )
-                }
-                .run()
+                case(
+                    id,
+                    shared.scenarios.getValue(id).title,
+                    continueAfterFailure = true,
+                    action = action,
+                )
+            }.run()
             check(completed.filter { it.id != "START" }.map { it.id }.toSet() == selectedIds) {
                 "Every selected implemented case must execute; omitted cases remain not-run"
             }
@@ -638,8 +638,10 @@ class CompilerPlaybook(
                         it.isNotEmpty() &&
                             Regex(data.values["signature"].asJsonObject["source"].asString)
                                 .containsMatchIn(it.first().label) &&
-                            (id != "X83" ||
-                                it.first().activeParameter == data.values["activeParameter"].asInt)
+                            (
+                                id != "X83" ||
+                                    it.first().activeParameter == data.values["activeParameter"].asInt
+                            )
                     }
                     val labels =
                         data.strings(
@@ -649,7 +651,7 @@ class CompilerPlaybook(
                                 "requiredLabels"
                             } else {
                                 "provisionalLabels"
-                            }
+                            },
                         )
                     acceptCandidates(
                         editor,
@@ -783,8 +785,8 @@ class CompilerPlaybook(
                 check(
                     editor.text ==
                         marked.take(at - data.values["prefixLength"].asInt) +
-                            data.text("selected") +
-                            marked.substring(at + 1)
+                        data.text("selected") +
+                        marked.substring(at + 1),
                 )
                 editor.awaitDiagnostics(emptyList())
             }
@@ -809,8 +811,8 @@ class CompilerPlaybook(
                 check(
                     editor.text ==
                         marked.take(at - data.values["prefixLength"].asInt) +
-                            variant["selected"].asString +
-                            marked.substring(at + 1)
+                        variant["selected"].asString +
+                        marked.substring(at + 1),
                 )
                 editor.awaitDiagnostics(emptyList())
             }
@@ -826,39 +828,53 @@ class CompilerPlaybook(
                     val before = variant["prefixLength"]?.asInt ?: data.values["prefixLength"].asInt
                     val after = variant["suffixLength"]?.asInt ?: 0
                     editor.text = marked.replace(data.text("marker"), "")
-                    if (variant["initiallyValid"]?.asBoolean == true)
+                    if (variant["initiallyValid"]?.asBoolean == true) {
                         editor.awaitDiagnostics(emptyList())
-                    else editor.awaitError()
+                    } else {
+                        editor.awaitError()
+                    }
                     signature(
                         editor,
                         at,
                         inspectDocumentation = variant["signatureDocumentationContains"] != null,
                     ) { signatures ->
-                        (if (data.values["callContext"]?.asBoolean == true) signatures.isNotEmpty()
-                        else signatures.isEmpty()) &&
-                            (variant["activeParameter"] == null ||
-                                signatures.all {
-                                    it.activeParameter == variant["activeParameter"].asInt
-                                }) &&
-                            (variant["signatureDocumentationContains"] == null ||
-                                signatures.any {
-                                    it.documentation?.contains(
-                                        variant["signatureDocumentationContains"].asString
-                                    ) == true
-                                })
+                        (
+                            if (data.values["callContext"]?.asBoolean == true) {
+                                signatures.isNotEmpty()
+                            } else {
+                                signatures.isEmpty()
+                            }
+                        ) &&
+                            (
+                                variant["activeParameter"] == null ||
+                                    signatures.all {
+                                        it.activeParameter == variant["activeParameter"].asInt
+                                    }
+                            ) &&
+                            (
+                                variant["signatureDocumentationContains"] == null ||
+                                    signatures.any {
+                                        it.documentation?.contains(
+                                            variant["signatureDocumentationContains"].asString,
+                                        ) == true
+                                    }
+                            )
                     }
                     lookup(editor, at) { items ->
                         val names = items.map { it.getLookupString() }
                         names.containsAll(variant["include"].asJsonArray.map { it.asString }) &&
-                            (variant["exclude"]?.asJsonArray?.map { it.asString }
-                                    ?: data.strings("exclude"))
-                                .none { it in names } &&
-                            (variant["metadata"] == null ||
-                                hasCompletionMetadata(
-                                    items,
-                                    variant["selected"].asString,
-                                    variant["metadata"].asJsonObject,
-                                ))
+                            (
+                                variant["exclude"]?.asJsonArray?.map { it.asString }
+                                    ?: data.strings("exclude")
+                            ).none { it in names } &&
+                            (
+                                variant["metadata"] == null ||
+                                    hasCompletionMetadata(
+                                        items,
+                                        variant["selected"].asString,
+                                        variant["metadata"].asJsonObject,
+                                    )
+                            )
                     }
                     dismissPopups()
                     accept(
@@ -937,8 +953,7 @@ class CompilerPlaybook(
             }
             awaitUi("selected union declaration opens", 30.seconds) {
                 withContext(OnDispatcher.EDT) {
-                    service<FileEditorManager>(singleProject()).getSelectedTextEditor()?.let {
-                        selected ->
+                    service<FileEditorManager>(singleProject()).getSelectedTextEditor()?.let { selected ->
                         reopened.text
                             .substring(selected.getCaretModel().getOffset())
                             .startsWith(expected.last())
@@ -991,7 +1006,7 @@ class CompilerPlaybook(
                 val original = library.text
                 rejectFormatting(library)
                 check(
-                    library.text == original && Files.readString(Path.of(target.first)) == original
+                    library.text == original && Files.readString(Path.of(target.first)) == original,
                 )
                 check(!Files.isWritable(Path.of(target.first)))
                 val reopened = open(data.text("file"))
@@ -1186,16 +1201,16 @@ class CompilerPlaybook(
             val editor = open(data.text("file"))
             editor.text =
                 data.text("moduleStart") +
-                    (0 until data.values["declarationCount"].asInt).joinToString("\n") {
-                        SharedScenarios.text(data.text("declaration"), it.toString(), it.toString())
-                    } +
-                    data.text("moduleEnd")
+                (0 until data.values["declarationCount"].asInt).joinToString("\n") {
+                    SharedScenarios.text(data.text("declaration"), it.toString(), it.toString())
+                } +
+                data.text("moduleEnd")
             editor.awaitError()
             awaitUi("bounded source diagnostics without an internal compiler failure", 45.seconds) {
                 receivedDiagnostics(editor).let { items ->
                     items.isNotEmpty() &&
                         items.count { it.severity == "Error" } <=
-                            data.values["maximumErrors"].asInt &&
+                        data.values["maximumErrors"].asInt &&
                         items.none { it.code == data.text("diagnosticCode") }
                 }
             }
@@ -1228,8 +1243,7 @@ class CompilerPlaybook(
                     val preceding = text.take(diagnostic.start)
                     preceding.count { it == '\n' } to
                         (diagnostic.start - preceding.lastIndexOf('\n') - 1)
-                }
-                .sortedWith(compareBy({ it.first }, { it.second }))
+                }.sortedWith(compareBy({ it.first }, { it.second }))
         val file =
             withContext(OnDispatcher.EDT) {
                 requireNotNull(service<FileEditorManager>(singleProject()).getSelectedTextEditor())
@@ -1311,28 +1325,27 @@ class CompilerPlaybook(
             progress(id, "passed")
         } catch (failure: Throwable) {
             runCatching {
-                    ClientTrace(this)
-                        .capture(
-                            Path.of(singleProject().getBasePath())
-                                .parent
-                                .resolve("client-trace-$id.log")
-                        )
-                }
-                .onFailure(failure::addSuppressed)
+                ClientTrace(this)
+                    .capture(
+                        Path
+                            .of(singleProject().getBasePath())
+                            .parent
+                            .resolve("client-trace-$id.log"),
+                    )
+            }.onFailure(failure::addSuppressed)
             completed +=
                 Result(
-                        id,
-                        description,
-                        "failed",
-                        start.elapsedNow().inWholeMilliseconds,
-                        failure.stackTraceToString(),
-                    )
-                    .also(onResult)
+                    id,
+                    description,
+                    "failed",
+                    start.elapsedNow().inWholeMilliseconds,
+                    failure.stackTraceToString(),
+                ).also(onResult)
             runCatching { progress(id, "failed") }.onFailure(failure::addSuppressed)
             if (
                 !continueAfterFailure ||
-                    failure is InterruptedException ||
-                    (failure !is Exception && failure !is AssertionError)
+                failure is InterruptedException ||
+                (failure !is Exception && failure !is AssertionError)
             ) {
                 throw failure
             }
@@ -1373,7 +1386,8 @@ class CompilerPlaybook(
                             val entry = module.asJsonObject
                             entry.addProperty(
                                 "uri",
-                                Path.of(singleProject().getBasePath())
+                                Path
+                                    .of(singleProject().getBasePath())
                                     .resolve(id)
                                     .resolve(entry["uri"].asString)
                                     .toUri()
@@ -1384,18 +1398,20 @@ class CompilerPlaybook(
                     }
                     val projectSettings = data.values["projectSettingsRoundTrip"]?.asBoolean == true
                     try {
-                        if (projectSettings)
+                        if (projectSettings) {
                             withContext(OnDispatcher.EDT) {
                                 utility(CompilerSettingsPage::class)
                                     .installProjectGraph(singleProject())
                             }
+                        }
                         renameFamily(id, data, { open(it) }, { it.awaitDiagnostics(emptyList()) })
                     } finally {
-                        if (projectSettings)
+                        if (projectSettings) {
                             withContext(OnDispatcher.EDT) {
                                 utility(CompilerSettingsPage::class)
                                     .clearProjectGraph(singleProject())
                             }
+                        }
                     }
                 }
             }
@@ -1415,7 +1431,7 @@ class CompilerPlaybook(
                 val discarded = open(data.text("library"))
                 check(
                     Files.readString(Path.of(discarded.editor.getVirtualFile().getPath())) ==
-                        data.text("libraryText")
+                        data.text("libraryText"),
                 )
                 discarded.text = data.text("libraryText")
                 withContext(OnDispatcher.EDT) {
@@ -1426,7 +1442,7 @@ class CompilerPlaybook(
                 restored.awaitDiagnostics(emptyList())
                 check(
                     Files.readString(Path.of(restored.editor.getVirtualFile().getPath())) ==
-                        data.text("original")
+                        data.text("original"),
                 )
                 restored.text = data.text("original")
             }
@@ -1485,11 +1501,11 @@ class CompilerPlaybook(
                     moved.text ==
                         data
                             .text("memberSource")
-                            .replace(data.text("anchor"), data.text("replacement"))
+                            .replace(data.text("anchor"), data.text("replacement")),
                 )
                 check(
                     Files.readString(root.resolve(data.text("companionDestination"))) ==
-                        data.text("companionSource")
+                        data.text("companionSource"),
                 )
                 check(!Files.exists(root.resolve(data.text("companion"))))
                 val reopened = open(data.text("file"))
@@ -1507,11 +1523,11 @@ class CompilerPlaybook(
                 }
                 reopened.awaitDiagnostics(emptyList())
                 check(
-                    Files.readString(root.resolve(data.text("member"))) == data.text("memberSource")
+                    Files.readString(root.resolve(data.text("member"))) == data.text("memberSource"),
                 )
                 check(
                     Files.readString(root.resolve(data.text("companion"))) ==
-                        data.text("companionSource")
+                        data.text("companionSource"),
                 )
                 check(!Files.exists(root.resolve(data.text("companionDestination"))))
             }
@@ -1532,7 +1548,7 @@ class CompilerPlaybook(
                     protocol
                         .query("textDocument/diagnostic", previous)
                         .asJsonObject["kind"]
-                        .asString == "unchanged"
+                        .asString == "unchanged",
                 )
                 editor.text = data.text("repaired")
                 editor.awaitDiagnostics(emptyList())
@@ -1584,7 +1600,7 @@ class CompilerPlaybook(
                         listOf("file", "library", "neighbor").filter(::has).forEach { key ->
                             addProperty(key, "$id/${get(key).asString}")
                         }
-                    }
+                    },
             )
         // Match VS Code's per-case discovery workspace so unrelated teaching fixtures cannot
         // silently alter this scenario's graph or the scope of its refactoring proof.
@@ -1733,8 +1749,9 @@ class CompilerPlaybook(
         } catch (e: DriverCallException) {
             // A concurrent edit can cancel an IDE read.
             // Retry that transient read; never turn cancellation into an empty problem list.
-            if (generateSequence<Throwable>(e) { it.cause }.none { it is ProcessCanceledException })
+            if (generateSequence<Throwable>(e) { it.cause }.none { it is ProcessCanceledException }) {
                 throw e
+            }
             null
         }
 

@@ -28,8 +28,7 @@ class MockAdapterTest {
                 """
                 module myapp {
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = adapter.compile("file:///test.x", source)
 
@@ -49,8 +48,7 @@ class MockAdapterTest {
                     class Person {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = adapter.compile("file:///test.x", source)
 
@@ -69,8 +67,7 @@ class MockAdapterTest {
                     interface Runnable {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = adapter.compile("file:///test.x", source)
 
@@ -88,8 +85,7 @@ class MockAdapterTest {
                     service UserService {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = adapter.compile("file:///test.x", source)
 
@@ -110,8 +106,7 @@ class MockAdapterTest {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = adapter.compile("file:///test.x", source)
 
@@ -128,8 +123,7 @@ class MockAdapterTest {
                 module myapp {
                     // ERROR: undefined variable 'x'
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = adapter.compile("file:///test.x", source)
 
@@ -147,8 +141,7 @@ class MockAdapterTest {
                 """
                 module myapp {
                     class Person {
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = adapter.compile("file:///test.x", source)
 
@@ -168,8 +161,7 @@ class MockAdapterTest {
                     class Person {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             adapter.compile("file:///test.x", source)
             val hover = adapter.getHoverInfo("file:///test.x", 1, 10)
@@ -185,8 +177,7 @@ class MockAdapterTest {
                 """
                 module myapp {
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             adapter.compile("file:///test.x", source)
             val hover = adapter.getHoverInfo("file:///test.x", 100, 0)
@@ -229,8 +220,7 @@ class MockAdapterTest {
                     class Person {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             adapter.compile("file:///test.x", source)
             val completions = adapter.getCompletions("file:///test.x", 3, 0)
@@ -251,8 +241,7 @@ class MockAdapterTest {
                     class Person {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             adapter.compile("file:///test.x", source)
             val definition = adapter.findDefinition("file:///test.x", 1, 10)
@@ -277,8 +266,7 @@ class MockAdapterTest {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             adapter.compile("file:///test.x", source)
             val highlights = adapter.getDocumentHighlights("file:///test.x", 1, 10)
@@ -312,8 +300,7 @@ class MockAdapterTest {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             adapter.compile("file:///test.x", source)
             val ranges = adapter.getFoldingRanges("file:///test.x")
@@ -333,8 +320,7 @@ class MockAdapterTest {
                     class Person {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             adapter.compile("file:///test.x", source)
             val ranges = adapter.getFoldingRanges("file:///test.x")
@@ -355,8 +341,7 @@ class MockAdapterTest {
                     class Person {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             adapter.compile("file:///test.x", source)
             val result = adapter.prepareRename("file:///test.x", 1, 10)
@@ -377,8 +362,7 @@ class MockAdapterTest {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             adapter.compile("file:///test.x", source)
             val edit = adapter.rename("file:///test.x", 1, 10, "Human")
@@ -415,8 +399,7 @@ class MockAdapterTest {
                     class Person {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             adapter.compile("file:///test.x", source)
             val actions =
@@ -443,8 +426,7 @@ class MockAdapterTest {
                     class Person {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             adapter.compile("file:///test.x", source)
             val actions =
@@ -526,8 +508,7 @@ class MockAdapterTest {
                     import foo.Bar;
                     import baz.Qux;
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val links = adapter.getDocumentLinks("file:///test.x", source)
 
@@ -559,8 +540,7 @@ class MockAdapterTest {
                     class Person {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             adapter.compile("file:///test.x", source)
             val refs = adapter.findReferences("file:///test.x", 1, 10, includeDeclaration = true)
@@ -578,8 +558,7 @@ class MockAdapterTest {
                     class Person {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             adapter.compile("file:///test.x", source)
             val refs = adapter.findReferences("file:///test.x", 1, 10, includeDeclaration = false)

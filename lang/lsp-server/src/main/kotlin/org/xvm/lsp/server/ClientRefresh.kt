@@ -1,14 +1,16 @@
 package org.xvm.lsp.server
 
+import org.eclipse.lsp4j.services.LanguageClient
+import org.slf4j.LoggerFactory
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
-import org.eclipse.lsp4j.services.LanguageClient
-import org.slf4j.LoggerFactory
 
 /** One outstanding refresh per provider; changes during a reply produce one follow-up refresh. */
-internal class ClientRefresh(private val client: () -> LanguageClient?) : AutoCloseable {
+internal class ClientRefresh(
+    private val client: () -> LanguageClient?,
+) : AutoCloseable {
     enum class Feature {
         DIAGNOSTICS,
         TOKENS,
@@ -35,7 +37,9 @@ internal class ClientRefresh(private val client: () -> LanguageClient?) : AutoCl
         features.filter { it in enabled.get() }.forEach { slots.getValue(it).request() }
     }
 
-    private inner class Slot(private val feature: Feature) {
+    private inner class Slot(
+        private val feature: Feature,
+    ) {
         private val dirty = AtomicBoolean()
         private val running = AtomicBoolean()
 
@@ -46,8 +50,9 @@ internal class ClientRefresh(private val client: () -> LanguageClient?) : AutoCl
             CompletableFuture.runAsync {
                 dirty.set(false)
                 val work =
-                    if (closed.get()) CompletableFuture.completedFuture(null)
-                    else
+                    if (closed.get()) {
+                        CompletableFuture.completedFuture(null)
+                    } else {
                         runCatching {
                             client()?.let {
                                 when (feature) {
@@ -58,11 +63,12 @@ internal class ClientRefresh(private val client: () -> LanguageClient?) : AutoCl
                                     Feature.FOLDING -> it.refreshFoldingRanges()
                                 }
                             } ?: CompletableFuture.completedFuture(null)
-                        }
-                            .getOrElse { CompletableFuture.failedFuture(it) }
+                        }.getOrElse { CompletableFuture.failedFuture(it) }
+                    }
                 work.orTimeout(10, SECONDS).whenComplete { _, failure ->
-                    if (failure != null && !closed.get())
+                    if (failure != null && !closed.get()) {
                         logger.debug("{} refresh failed", feature, failure)
+                    }
                     running.set(false)
                     // Either this callback or a concurrent request wins the next CAS. Neither
                     // clears dirty until its worker starts, so a change cannot disappear.

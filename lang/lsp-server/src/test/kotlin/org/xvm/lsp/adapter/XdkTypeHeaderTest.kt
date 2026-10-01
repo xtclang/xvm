@@ -1,6 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -13,6 +12,7 @@ import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.compiler.ast.partial.IncompleteTypeCompositionStatement
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import java.nio.file.Path
 
 class XdkTypeHeaderTest {
     @TempDir lateinit var directory: Path
@@ -31,11 +31,9 @@ class XdkTypeHeaderTest {
                 "class Damaged implements List<ecstasy.text.Str§>",
                 "class Damaged implements List<Str§",
                 "class Damaged extends §",
-            ]
+            ],
     )
-    fun `composition type slots query the enclosing scope without registering a partial class`(
-        header: String
-    ) {
+    fun `composition type slots query the enclosing scope without registering a partial class`(header: String) {
         CompilerTestSupport.configure()
         val prefix =
             "module Headers { class Base {} Int BaseValue = 1; " + header.substringBefore('§')
@@ -56,8 +54,13 @@ class XdkTypeHeaderTest {
         assertThat(owner.getChild("Damaged")).isNull()
         assertThat(owner.getChild("inside")).isNull()
         assertThat(owner.getChild("later")).isNotNull()
-        assertThat(analysis.cursorBindings().getValue(site).types().map { it.name() })
-            .contains(if (header.contains("Str")) "String" else "Base")
+        assertThat(
+            analysis
+                .cursorBindings()
+                .getValue(site)
+                .types()
+                .map { it.name() },
+        ).contains(if (header.contains("Str")) "String" else "Base")
             .doesNotContain("BaseValue")
         assertThat(source.toRawString()).isEqualTo(text)
         listOf(ErrorList(ErrorList.FIRST_ERROR), ErrorListener.cancellable(ErrorList()) { true })
@@ -107,7 +110,7 @@ class XdkTypeHeaderTest {
                     TextEdit(
                         Range(Position(0, prefix.length - 2), Position(0, prefix.length)),
                         "Base",
-                    )
+                    ),
                 )
             assertThat(adapter.getSignatureHelp(URI, 0, prefix.length)).isNull()
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
@@ -170,7 +173,7 @@ class XdkTypeHeaderTest {
                 "class Damaged extends Missing.Ow§ner.Base",
                 "class Damaged extends Owner.§",
                 "module Headers extends Missing.Ba§",
-            ]
+            ],
     )
     fun `unsupported composition prefixes do not invent a scope`(declaration: String) {
         val prefix =
