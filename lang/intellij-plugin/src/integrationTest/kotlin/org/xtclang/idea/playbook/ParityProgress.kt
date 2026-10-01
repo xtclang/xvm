@@ -4,6 +4,7 @@ import com.intellij.driver.client.Remote
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.singleProject
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import java.util.concurrent.CancellationException
 import kotlin.time.Duration.Companion.seconds
 
@@ -20,13 +21,16 @@ internal fun ParityScenarios.progressCases() {
             ),
         )
         val document = open(data.string("file"))
-        val title = "Ecstasy: finding references"
-        val large =
+        val title = "Finding references"
+
+        fun workload(methods: Int) =
             "module ${data.string("module")} {\n    static Int value = 1;\n" +
-                (0 until data["methods"].asInt).joinToString("\n") {
+                (0 until methods).joinToString("\n") {
                     "    Int read$it() { return value; }"
                 } +
                 "\n}\n"
+
+        val large = workload(data["methods"].asInt)
 
         fun visible() =
             with(driver) {
@@ -56,14 +60,18 @@ internal fun ParityScenarios.progressCases() {
         try {
             val canceled = start(large)
             with(driver) {
-                withContext(OnDispatcher.EDT) {
-                    check(utility(ProgressUi::class).cancel(singleProject(), title))
+                awaitUi("visible progress Cancel control", 20.seconds) {
+                    check(!canceled.isDone()) { "Workload completed before Cancel was exercised" }
+                    // False means the button is not visible yet; a successful click ends polling.
+                    withContext(OnDispatcher.EDT) {
+                        utility(ProgressUi::class).cancel(singleProject(), title)
+                    }
                 }
             }
             val outcome = runCatching { protocol.await("textDocument/references", canceled) }
             check(
                 outcome.exceptionOrNull().let {
-                    it is CancellationException || (it is ClientRequestFailure && it.code == -32800)
+                    it is CancellationException || (it is ClientRequestFailure && it.code == ResponseErrorCode.RequestCancelled.value)
                 },
             ) {
                 "Cancel must terminate the pending request: ${outcome.exceptionOrNull() ?: "completed before cancellation"}"
