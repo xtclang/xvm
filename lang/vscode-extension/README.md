@@ -290,7 +290,7 @@ vscode-extension/
 | **Interactive smoke test** | `./gradlew :lang:vscode-extension:runCode -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Launches VS Code in Extension Development Host mode with `src/test/fixtures/` open. Use this to verify highlighting, hover, completion, etc. by eye. |
 | **Compile only** | `./gradlew :lang:vscode-extension:npmCompile -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Runs `tsc -p ./`; fastest feedback when editing TypeScript. |
 
-The headless test uses `@vscode/test-electron`, which downloads a self-contained VS Code build into `lang/vscode-extension/.vscode-test/` (~210 MB, gitignored). The cache survives `gradlew clean` for the same reason `.intellijPlatform/` does — re-downloading on every clean would be punishing.
+The headless test uses `@vscode/test-electron` to download self-contained VS Code builds, the minimum version `engines.vscode` allows and the latest stable, into a cache shared by all checkouts and worktrees: `~/Library/Caches/xtclang/vscode-test` on macOS, `$XDG_CACHE_HOME` or `~/.cache/xtclang/vscode-test` on Linux, `%LOCALAPPDATA%\xtclang\vscode-test` on Windows, or `$XTC_VSCODE_TEST_CACHE` when set. Downloads take a cross-process lock, and builds no test run has used for 30 days are removed. The checkout's `lang/vscode-extension/.vscode-test/` (gitignored) holds only the throwaway test profile.
 
 **Platform behaviour of `testVscodeExtension`:**
 - **macOS / Windows**: a VS Code window appears briefly during the test (Electron has no true headless mode on these platforms) and closes when the test finishes.
