@@ -8316,3 +8316,20 @@ with zero IDE errors. Primary PID 68649 remains intact while closed PID 68659 re
 starts PID 68669 and reads the preserved document without rewriting it. Root and lang
 `spotlessCheck` pass. No full editor playbook or combined backend suite was launched for this final
 harness-only assertion change. No owned workload process remained after the shortened run.
+
+### Functionality continuation: L64 import completion
+
+First of four separate scope checkpoints, with validation batched after implementation.
+Unqualified prefixes of at least two characters can offer public source or bundled types with
+an eager name edit and disjoint `additionalTextEdits`. Up to eight deterministic candidates are
+proved against the configured source graph; the selected replacement and imports must compile
+completely and preserve known bindings. Discovery may add a proven import edge; an explicit
+source graph is never changed by completion. Cancellation follows cursor analysis and the proof.
+No embedding or AST API was added. Declaration-name, keyword/snippet contexts and the other
+L64 exclusions remain open; this is not a whole-family completion claim.
+
+Tests added: atomic bundled import, middle-token/CRLF/UTF-16 edits, ambiguous source choices,
+private and undeclared-dependency refusals, unrelated-error/member-site refusals, protocol edits,
+and cancellation before/during/after the second stage. Shared X105 and both drivers now also
+accept bundled/source import completions. Their older receipts cover quick fixes only; execution
+of the new variants is pending the combined gate.
