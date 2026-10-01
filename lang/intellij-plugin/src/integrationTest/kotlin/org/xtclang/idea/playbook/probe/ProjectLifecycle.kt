@@ -1,8 +1,10 @@
 package org.xtclang.idea.playbook.probe
 
 import com.intellij.ide.impl.OpenProjectTask
+import com.intellij.ide.trustedProjects.TrustedProjects
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.application.WriteIntentReadAction
 import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.Document
 import com.intellij.openapi.fileEditor.FileDocumentManager
@@ -22,12 +24,13 @@ object ProjectLifecycle {
     fun open(path: String): CompletableFuture<Project?> =
         CompletableFuture.supplyAsync {
             runBlocking {
+                // The driver created this fixture. Trust only its exact path in the disposable IDE.
+                TrustedProjects.setProjectTrusted(Path.of(path), true)
                 ProjectManagerEx.getInstanceEx().openProjectAsync(
                     Path.of(path),
                     OpenProjectTask {
                         forceOpenInNewFrame = true
                         isNewProject = !Files.exists(Path.of(path, ".idea"))
-                        runConfigurators = false
                     },
                 )
             }
@@ -46,13 +49,15 @@ object ProjectLifecycle {
         text: String,
     ) {
         ApplicationManager.getApplication().assertIsDispatchThread()
-        val file = requireNotNull(LocalFileSystem.getInstance().refreshAndFindFileByNioFile(Path.of(path)))
-        FileEditorManager.getInstance(project).openFile(file, false)
-        val document =
-            ReadAction.computeBlocking<Document, RuntimeException> {
-                requireNotNull(FileDocumentManager.getInstance().getDocument(file))
-            }
-        WriteCommandAction.runWriteCommandAction(project) { document.setText(text) }
+        WriteIntentReadAction.run {
+            val file = requireNotNull(LocalFileSystem.getInstance().refreshAndFindFileByNioFile(Path.of(path)))
+            FileEditorManager.getInstance(project).openFile(file, false)
+            val document =
+                ReadAction.computeBlocking<Document, RuntimeException> {
+                    requireNotNull(FileDocumentManager.getInstance().getDocument(file))
+                }
+            WriteCommandAction.runWriteCommandAction(project) { document.setText(text) }
+        }
     }
 
     @JvmStatic

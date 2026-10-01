@@ -1266,8 +1266,9 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
     request is needed for the currently implemented features.
   - [x] IntelliJ visible Cancel button, continued hover, pending restart and old-process exit.
   - [ ] VS Code visible Cancel button; its real SDK cancellation callback is covered separately.
-  - [ ] Overlapping project close/reopen and multiple native windows. A two-process protocol test
-    is not that UI evidence.
+  - [x] Overlapping project close/reopen and multiple native windows: IntelliJ uses two frames in
+    one IDE; VS Code uses two normal installed-extension instances and real hot-exit restoration.
+    See the native lifetime receipt below. Shared-Electron-process windows remain separate coverage.
 - [ ] **L82 — Completion evidence and API closure.** For every applicable task, require a
   meaningful backend regression, advertised-capability/protocol test and shared editor scenario
   where observable. Cover supported, rejected, canceled and stale requests. Re-run the combined
@@ -8238,14 +8239,34 @@ references/hover. The closed project's pending future and process must retire. N
 that project's source; reopening must recover its contents and start a different compiler process.
 
 VS Code's `--project-lifecycle` launcher uses two native windows with separate disposable profiles
-and extension hosts. One closes through the native window command while work is pending, then
+and extension hosts. One quits its single-window instance through the native command while work is pending, then
 reopens using the same profile. Its unsaved buffer must come back from actual hot-exit backup;
 the sibling's buffer, request and PID must remain intact. All compiler processes must exit with
 their hosts. This is separate-instance window evidence, not two windows sharing one Electron process.
 The drivers do not kill servers to make lifecycle assertions pass and do not move the pointer.
 
-Both drivers compile. Native validation, including the still-open VS Code visible Cancel-button
-receipt, follows this implementation checkpoint; these are not yet passing acceptance claims.
+Native validation now passes:
+
+- IntelliJ `run-3852388644684425549`: START and START_PROJECTS pass; zero IDE errors. Closing PID
+  62874 retires its pending reader; reopening starts PID 62895. Primary PID 62872 and both source
+  contents are preserved. The generated second project's exact path is trusted in the disposable
+  IDE before opening it; normal project-trust defaults remain unchanged. The probe uses a write-intent
+  action for VFS refresh/editor setup, and query positions come from source anchors.
+- VS Code `project-lifecycle/run-zI8fT9`: primary PID 65779 keeps its unsaved source and 5,001
+  references while secondary PID 65762 closes during pending work. Real hot-exit restoration keeps
+  the reopened source dirty and starts PID 66383. All three processes exit with their native hosts.
+  The driver installs the local extension and a test-only controller into an isolated extensions
+  directory. VS Code deliberately omits persistent backup paths in extension-development windows;
+  earlier development-host attempts (`run-VFX6e3`, `run-dSJ2k0`) failed restoration and are retained.
+  Normal installed-extension windows exercise the actual backup path; no exit failure is suppressed.
+- VS Code visible Cancel attempt `compiler-playbook/run-6JOJx7` fails as unexercised: the accessibility
+  tool selected another running Code instance, so no click was made. The request completed before
+  cancellation. This does not close the visible-control gate or indicate a server cancellation defect.
+
+Driver implementation `7364e0af8` and the following trust/normal-profile correction belong together
+in the future editor-acceptance PR. The semantic fix remains the separate `4acdbdb59` slice; memory
+instrumentation is `78023c53b`. Broader shared-process windows, supported platforms and visible VS Code
+Cancel remain explicitly outside these passing receipts.
 
 ### L82 memory-workload instrumentation (2026-10-01)
 
