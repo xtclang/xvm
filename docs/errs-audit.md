@@ -1469,3 +1469,7 @@ records timings, sampled RSS and deferred combined/full-editor gates.
 Functionality continuation: import-producing completion reuses whole-graph repair proof, with
 plain-text atomic additional edits and cancellation across both stages. No AST state or embedding
 API change. Added backend/protocol tests and X105 variants await the combined functionality gate.
+
+L65/L62 continuation follows existing compiler redirect metadata for implementation lookup and
+written rename families. Real manual mixin/delegation fixtures now exercise these paths, including
+reverse edits and refusals. No AST modifications, optimized-body generation or new mutable state.

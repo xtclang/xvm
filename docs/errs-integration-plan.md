@@ -8342,3 +8342,12 @@ bodies or guess runtime delegate receivers. Real `manualTests` mixin and delegat
 loaded as standalone test modules; covariant self-return lookup and interface-valued delegation
 have explicit source-location assertions. No AST/embedding API change. Validation is batched.
 Dynamic receivers, unsupported property forwarding and missing binary source remain boundaries.
+
+### Functionality continuation: L62 composition families
+
+Method families now copy written contracts from the same compiler dispatch traversal used for
+call provenance, rather than treating raw capped/into identities as editable declarations. The
+complete-graph before/after proof and binary/unknown-route refusals remain mandatory. Tests reuse
+manual mixin and conditional-mixin programs for covariant family rename/reverse rename, unrelated
+composition preservation and binary-contract collision refusal. No compiler API addition. These
+tests and the existing composition/refactoring regressions run in the combined gate.
