@@ -21,7 +21,7 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
                             List<NamedType> types, List<Candidate> candidates, boolean callsInspected,
                             List<FunctionCandidate> functions, List<Variable> argumentValues,
                             List<Property> argumentProperties, List<Formal> formals,
-                            List<String> argumentLiterals, List<String> argumentExpressions) {
+                            List<String> argumentLiterals, List<String> argumentExpressions, List<String> enclosingExpressions) {
     public CursorBinding {
         variables = List.copyOf(variables);
         types = List.copyOf(types);
@@ -32,6 +32,22 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
         formals = List.copyOf(formals);
         argumentLiterals = List.copyOf(argumentLiterals);
         argumentExpressions = List.copyOf(argumentExpressions);
+        enclosingExpressions = List.copyOf(enclosingExpressions);
+    }
+
+    /** Preserve the previous constructor while adding ordinary-expression proposals. */
+    public CursorBinding(List<Variable> variables, TypeConstant thisType, boolean instance,
+                         List<NamedType> types, List<Candidate> candidates, boolean callsInspected,
+                         List<FunctionCandidate> functions, List<Variable> argumentValues,
+                         List<Property> argumentProperties, List<Formal> formals,
+                         List<String> argumentLiterals, List<String> argumentExpressions) {
+        this(variables, thisType, instance, types, candidates, callsInspected, functions,
+                argumentValues, argumentProperties, formals, argumentLiterals, argumentExpressions, List.of());
+    }
+
+    public CursorBinding withEnclosingExpressions(List<String> expressions) {
+        return new CursorBinding(variables, thisType, instance, types, candidates, callsInspected,
+                functions, argumentValues, argumentProperties, formals, argumentLiterals, argumentExpressions, expressions);
     }
 
     /** Retain callers predating enclosing-instance insertion proposals. */
@@ -79,7 +95,7 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
 
     public CursorBinding withFormals(List<Formal> formals) {
         return new CursorBinding(variables, thisType, instance, types, candidates, callsInspected,
-                functions, argumentValues, argumentProperties, formals, argumentLiterals, argumentExpressions);
+                functions, argumentValues, argumentProperties, formals, argumentLiterals, argumentExpressions, enclosingExpressions);
     }
 
     /** Retain variable-completion callers. Record patterns must also include argument properties. */
@@ -119,7 +135,7 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
     }
 
     private CursorBinding withCallFacts(CallFacts calls) {
-        return new CursorBinding(variables, thisType, instance, types, calls).withFormals(formals);
+        return new CursorBinding(variables, thisType, instance, types, calls).withFormals(formals).withEnclosingExpressions(enclosingExpressions);
     }
 
     public CursorBinding withCandidates(List<Candidate> candidates) {
@@ -131,7 +147,7 @@ public record CursorBinding(List<Variable> variables, TypeConstant thisType, boo
     }
 
     public CursorBinding withTypes(List<NamedType> types) {
-        return new CursorBinding(variables, thisType, instance, types, callFacts()).withFormals(formals);
+        return new CursorBinding(variables, thisType, instance, types, callFacts()).withFormals(formals).withEnclosingExpressions(enclosingExpressions);
     }
 
     /** Readable source variables whose proposed insertion fits at least one incomplete-call candidate. */

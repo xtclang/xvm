@@ -1191,6 +1191,7 @@ private class SemanticModelBuilder(
                     argumentOffset = operation.leadingArguments.size,
                     argumentLiterals = immutableList(callFacts?.argumentLiterals().orEmpty()),
                     argumentExpressions = immutableList(callFacts?.argumentExpressions().orEmpty()),
+                    enclosingExpressions = immutableList(cursor?.enclosingExpressions().orEmpty()),
                 )
             }
         return if (errors.isAbortDesired) {

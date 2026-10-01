@@ -93,6 +93,19 @@ public class CursorBindingTest {
                 scope.types(), scope.callFacts()));
     }
 
+    @Test
+    public void ordinaryEnclosingFactsRemainIndependentOfCallFacts() {
+        var names = new ArrayList<>(List.of("this.Owner"));
+        var scope = fixture().withEnclosingExpressions(names);
+        names.clear();
+        List.of(scope.withCandidates(List.of()), scope.withFunctions(List.of()),
+                scope.withArgumentValues(List.of()), scope.withArgumentProperties(List.of()),
+                scope.withTypes(List.of()), scope.withFormals(List.of()), scope.withArgumentLiterals(List.of()),
+                scope.withArgumentExpressions(List.of())).forEach(updated ->
+                    assertEquals(List.of("this.Owner"), updated.enclosingExpressions()));
+        assertThrows(UnsupportedOperationException.class, () -> scope.enclosingExpressions().clear());
+    }
+
     private static CursorBinding fixture() {
         var file      = new FileStructure("CursorFacts");
         var pool      = file.getConstantPool();
