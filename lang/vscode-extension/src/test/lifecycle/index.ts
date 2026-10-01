@@ -26,6 +26,8 @@ export async function run(): Promise<void> {
     const wait = async (name: string) => {
         const deadline = Date.now() + 120_000;
         while (Date.now() < deadline) {
+            const failures = (await fs.readdir(directory)).filter(file => file.endsWith('-failure.json'));
+            assert.deepStrictEqual(failures, [], `Another window failed while waiting for ${name}`);
             try { return JSON.parse(await fs.readFile(path.join(directory, `${name}.json`), 'utf8')); }
             catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
             await new Promise(resolve => setTimeout(resolve, 100));
@@ -42,9 +44,9 @@ export async function run(): Promise<void> {
         const health = await client().sendRequest<{ adapter: string }>('xtc/healthCheck');
         assert.strictEqual(health.adapter, 'XDK');
         const status = await client().sendRequest<{ pid: number }>('xtc/languageServiceStatus');
-        const params = { textDocument: { uri: uri.toString() }, position: { line: 1, character: 16 } };
+        const params = { textDocument: { uri: uri.toString() }, position: { line: 1, character: text.split('\n')[1].indexOf('value') } };
         if (role === 'reopened') {
-            assert.strictEqual(document.getText(), text, 'Hot exit restores the actual unsaved source');
+            await eventually(async () => document.getText() === text, Boolean, 'Hot exit restores the actual unsaved source');
             assert.ok(document.isDirty, 'The reopened buffer remains unsaved');
             const previous = await wait('closing');
             assert.notStrictEqual(status.pid, previous.pid);
@@ -74,7 +76,10 @@ export async function run(): Promise<void> {
             assert.ok(document.isDirty);
             await receipt('closing', { pid: status.pid, pending: true, unsaved: true });
             // The native window owns shutdown and hot-exit backup. No client.stop or process kill.
-            await vscode.commands.executeCommand('workbench.action.closeWindow');
+            // Quit this single-window instance so macOS also exits the application after close.
+            await vscode.commands.executeCommand('workbench.action.quit');
+            // Native shutdown owns backup and extension deactivation; this dies with the host.
+            await new Promise<void>(() => {});
             return;
         }
         await wait('reopened');
