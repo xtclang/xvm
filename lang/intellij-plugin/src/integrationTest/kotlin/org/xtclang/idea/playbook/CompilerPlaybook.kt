@@ -33,6 +33,7 @@ enum class PlaybookMode {
     STARTUP,
     FOCUS_RECOVERY,
     LARGE_FILE,
+    PROJECT_LIFECYCLE,
 }
 
 /** Drive editor actions and inspect the diagnostics/lookup actually delivered to IntelliJ. */
@@ -134,6 +135,12 @@ class CompilerPlaybook(
             if (mode == PlaybookMode.LARGE_FILE) {
                 case("START_LARGE_FILE", "Measure large-document range-marker updates") {
                     largeFileEditing(fixtures, shared)
+                }
+                return@with
+            }
+            if (mode == PlaybookMode.PROJECT_LIFECYCLE) {
+                case("START_PROJECTS", "Two project windows, pending close and reopen") {
+                    projectLifecycle(shared)
                 }
                 return@with
             }
