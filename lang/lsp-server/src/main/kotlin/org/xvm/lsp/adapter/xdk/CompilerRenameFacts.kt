@@ -45,6 +45,12 @@ internal sealed interface ProofIdentity {
         val method: ProofIdentity,
     ) : ProofIdentity
 
+    /** A predefined receiver is bound to its compiler-selected class and access view. */
+    data class Receiver(
+        val owner: ProofIdentity,
+        val register: Int,
+    ) : ProofIdentity
+
     /** A generated forwarding method is identified by its host, written contracts and receivers. */
     data class Composed(
         val owner: ProofIdentity,
@@ -62,6 +68,11 @@ internal sealed interface ProofIdentity {
         val id: UUID = UUID.randomUUID(),
     ) : ProofIdentity
 }
+
+internal data class CompilerReceiver(
+    val owner: IdentityConstant,
+    val register: Int,
+)
 
 internal class ProofRelations(
     val declarations: Set<ProofIdentity> = emptySet(),
@@ -119,6 +130,7 @@ internal fun captureRenameFacts(
     errors: ErrorListener? = null,
     supers: Map<SemanticModel.SymbolId, MethodConstant> = emptyMap(),
     members: List<CompilerMemberAction> = emptyList(),
+    receivers: Map<SemanticModel.SymbolId, CompilerReceiver> = emptyMap(),
 ): CompilerRenameFacts {
     val declarations =
         models
@@ -292,7 +304,8 @@ internal fun captureRenameFacts(
                         }
                     }
                 }.toMap() +
-            supers.mapValues { ProofIdentity.Super(identity(it.value)) },
+            supers.mapValues { ProofIdentity.Super(identity(it.value)) } +
+            receivers.mapValues { (_, receiver) -> ProofIdentity.Receiver(identity(receiver.owner), receiver.register) },
         ProofRelations(
             methods.declarations.mapTo(linkedSetOf(), ::identity),
             methods.chains.map {
