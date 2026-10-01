@@ -182,7 +182,7 @@ See the [L83 task and ownership record](../../../docs/errs-integration-plan.md#p
 | Go-to-definition (cross-file) | - | Via workspace index | **Done** - resolved identities within a module, across the complete discovered/configured source graph and into dependencies with host-supplied source indices |
 | Find references (same file) | Decl only | By name | **Done** - by identity, not by name |
 | Find references (cross-file) | - | - | **Done** - exact identities across the current module or the complete configured source graph, including unopened consumers and binary-member uses |
-| Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Partial** - visible locals/parameters, narrowed types, implicit members, imported/enclosing types and static functions/constants; qualified dot/prefix and bare-name/empty statement completion with exact token edits; compiler-fitted locals/parameters and implicit properties/constants in empty final positional and pending named argument slots, including qualified/grouped values and slots before later arguments; member/return and parameter-header type prefixes use the enclosing compiler scope; flat and parameterized qualifiers use visible nested types with substituted aliases; registered formals and empty generic slots complete; mid-token edits replace the entire final identifier, including generic base names before written type arguments; import-producing completion for public source/bundled types uses whole-graph proof and atomic additional edits (new X105 variants await validation) |
+| Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Partial** - visible locals/parameters, narrowed types, implicit members, imported/enclosing types and static functions/constants; qualified dot/prefix and bare-name/empty statement completion with exact token edits; compiler-fitted locals/parameters and implicit properties/constants in empty final positional and pending named argument slots, including qualified/grouped values and slots before later arguments; member/return and parameter-header type prefixes use the enclosing compiler scope; flat and parameterized qualifiers use visible nested types with substituted aliases; registered formals and empty generic slots complete; mid-token edits replace the entire final identifier, including generic base names before written type arguments; import-producing completion for public source/bundled types uses whole-graph proof and atomic additional edits (backend/protocol tests and the new X105 variants pass in both editors) |
 | Syntax errors | Markers | Full | **Done** - the compiler's own codes and spans |
 | Semantic errors | - | - | **Done** - the reason this adapter exists |
 | Hover (signature) | Basic | Basic | **Done** - declaration plus the resolved type |
@@ -979,9 +979,15 @@ still needs ownership analysis. Full combined/native validation remains a separa
 see the [L82 receipt](../../../docs/errs-integration-plan.md#l82-bounded-extended-workload-checkpoint-2026-10-01).
 
 L65 implementation lookup also follows existing compiler into/capped method redirects to written
-source bodies, without body generation. Manual-module regression tests added; validation pending.
+source bodies, without body generation. Two manual-module and 27 existing lookup regression
+tests pass; those manual-module editor actions have not been run in the native harness.
 
 L63 now also produces `refactor.extract` for an exactly selected integer/string/character literal
 returned from a block: atomic immutable-local insertion, fresh source name and complete graph proof.
 General expression extraction and other semantic transformations remain open. Shared X148 includes
-both editor drivers and Undo/Redo; the new acceptance run is pending.
+both editor drivers and Undo/Redo; selected acceptance passes in both editors.
+
+Conditional-incorporation formal names now navigate to the actual mixin formal rather than being
+classified as declarations. Rename proof retains predefined receiver class/access identity. Both
+manual-module positive rename examples, wider regression and new editor cases pass; exact
+receipts and extraction commit groups are in docs/errs-integration-plan.md.
