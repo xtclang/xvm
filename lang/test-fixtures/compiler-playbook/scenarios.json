@@ -4869,6 +4869,18 @@
             "anchor": "callbacks[0](",
             "label": "0",
             "expected": "module SemanticValues {\n    void run() {\n        function Int(Int)[] callbacks = [n -> n + 1];\n        callbacks[0](0);\n    }\n}"
+          },
+          {
+            "source": "module SemanticValues {\\n    class Owner {\\n        class Nested {\\n            Owner current() = thi;\n        }\n    }\n}",
+            "anchor": "= thi",
+            "label": "this.Owner",
+            "expected": "module SemanticValues {\\n    class Owner {\\n        class Nested {\\n            Owner current() = this.Owner;\n        }\n    }\n}"
+          },
+          {
+            "source": "module SemanticValues {\\n    class Owner {\\n        class Nested {\\n            Owner current() = this.Ow;\n        }\n    }\n}",
+            "anchor": "= this.Ow",
+            "label": "Owner",
+            "expected": "module SemanticValues {\\n    class Owner {\\n        class Nested {\\n            Owner current() = this.Owner;\n        }\n    }\n}"
           }
         ]
       },

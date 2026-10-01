@@ -178,13 +178,8 @@ final class PartialCallResolver {
                     Expression proposal = proposedLiteral(cursor, text, errs);
                     return proposal != null && fitsValue.test(proposal);
                 }).toList();
-        boolean explicitThis = qualified && cursor.getReceiver().orElseThrow() instanceof NameExpression receiver
-                && receiver.getLeftExpression() == null && receiver.getName().equals("this");
-        var expressions = qualified && !explicitThis ? List.<String>of()
-                : Stream.concat(qualified ? Stream.empty() : Stream.of("this"),
-                        CursorScope.enclosingInstances(cursor).stream().map(name -> qualified ? name : "this." + name))
-                    .filter(text -> text.startsWith(prefix)).takeWhile(text -> !errs.isAbortDesired())
-                    .filter(text -> fitsValue.test(proposedInstance(cursor, text))).toList();
+        var expressions = instanceSpellings(cursor).takeWhile(text -> !errs.isAbortDesired())
+                .filter(text -> fitsValue.test(proposedInstance(cursor, text))).toList();
         var result = scope.withArgumentValues(variables).withArgumentLiterals(literals).withArgumentExpressions(expressions);
         if (errs.isAbortDesired()) {
             return result;
@@ -240,7 +235,18 @@ final class PartialCallResolver {
         };
     }
 
-    private static Expression proposedInstance(IncompleteStatement site, String text) {
+    /** Lexical candidates only; each caller must prove these through ordinary validation. */
+    static Stream<String> instanceSpellings(IncompleteStatement site) {
+        boolean qualified = !site.isCall() && site.getReceiver().isPresent();
+        boolean explicitThis = qualified && site.getReceiver().orElseThrow() instanceof NameExpression receiver
+                && receiver.getLeftExpression() == null && receiver.getName().equals("this");
+        return qualified && !explicitThis ? Stream.empty()
+                : Stream.concat(qualified ? Stream.empty() : Stream.of("this"),
+                        CursorScope.enclosingInstances(site).stream().map(name -> qualified ? name : "this." + name))
+                    .filter(text -> text.startsWith(site.getCompletionPrefix()));
+    }
+
+    static Expression proposedInstance(IncompleteStatement site, String text) {
         if (!text.startsWith("this.")) {
             return proposedName(site, text);
         }
