@@ -977,3 +977,6 @@ retirement and unchanged sources. Its planned third session was deliberately int
 is partial acceptance, not an overall green run. Repeated post-GC growth from about 83 to 98 MiB
 still needs ownership analysis. Full combined/native validation remains a separate checkpoint;
 see the [L82 receipt](../../../docs/errs-integration-plan.md#l82-bounded-extended-workload-checkpoint-2026-10-01).
+
+L65 implementation lookup also follows existing compiler into/capped method redirects to written
+source bodies, without body generation. Manual-module regression tests added; validation pending.
