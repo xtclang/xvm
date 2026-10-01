@@ -10,12 +10,24 @@ export async function run(): Promise<void> {
     const sources = ['old', 'second'];
     const completed: string[] = [];
     const report = { vscode: vscode.version, ecstasyLoaded: !!vscode.extensions.getExtension('xtclang.xtc-language'), completed };
-    assert.strictEqual(report.ecstasyLoaded, false, 'The host probe must not load the Ecstasy extension');
     try {
+        assert.strictEqual(report.ecstasyLoaded, false, 'The host probe must not load the Ecstasy extension');
         for (const folder of [...sources, 'target']) await fs.mkdir(path.join(root.fsPath, folder));
         for (const folder of sources) await fs.writeFile(path.join(root.fsPath, folder, 'data.txt'), folder + '\n');
         const failure = await cutAndPasteDirectories(sources.map(source => vscode.Uri.joinPath(root, source)), vscode.Uri.joinPath(root, 'target'));
         async function verify(moved: boolean) {
+            const deadline = Date.now() + 10_000;
+            for (;;) {
+                try { await verifyContents(moved); return; }
+                catch (error) {
+                    if (Date.now() >= deadline) throw error;
+                    // Native command completion precedes filesystem events. Observe only;
+                    // never replay the move, Undo or Redo while waiting for their effects.
+                    await new Promise(resolve => setTimeout(resolve, 75));
+                }
+            }
+        }
+        async function verifyContents(moved: boolean) {
             for (const folder of sources) {
                 const current = path.join(root.fsPath, ...(moved ? ['target', folder] : [folder]));
                 assert.strictEqual(await fs.readFile(path.join(current, 'data.txt'), 'utf8'), folder + '\n');
