@@ -7,9 +7,9 @@ import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AstNode
-import org.xvm.compiler.ast.BlockStatement
 import org.xvm.compiler.ast.LiteralExpression
 import org.xvm.compiler.ast.ReturnStatement
+import org.xvm.compiler.ast.StatementBlock
 import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.util.ExecutionTrace
 
@@ -39,7 +39,7 @@ internal object XdkLiteralExtraction {
 
         fun returns(node: AstNode): List<ReturnStatement> =
             node.childNodes().flatMap { child ->
-                if (node is BlockStatement && child is ReturnStatement) listOf(child) else returns(child)
+                if (node is StatementBlock && child is ReturnStatement) listOf(child) else returns(child)
             }
         val statement =
             returns(root).singleOrNull { statement ->
