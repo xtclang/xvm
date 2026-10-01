@@ -1,6 +1,6 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
-import { ProgressType, WorkDoneProgressBegin, WorkDoneProgressEnd, WorkDoneProgressReport } from 'vscode-languageclient/node';
+import { LSPErrorCodes, ProgressType, WorkDoneProgressBegin, WorkDoneProgressEnd, WorkDoneProgressReport } from 'vscode-languageclient/node';
 import { client, eventually, hover, noErrors, playbook } from './support';
 
 export function progressCases(): void {
@@ -8,10 +8,13 @@ export function progressCases(): void {
         await workspace.write(data.file, data.source);
         await workspace.configure([{ name: data.module, uri: workspace.uri(data.file).toString() }]);
         const document = await workspace.open(data.file);
-        const large = `module ${data.module} {\n    static Int value = 1;\n${Array.from({ length: data.methods }, (_, i) =>
+        const cancelUi = process.env.XTC_PLAYBOOK_CANCEL_UI === 'true';
+        const workload = (methods: number) => `module ${data.module} {\n    static Int value = 1;\n${Array.from({ length: methods }, (_, i) =>
             `    Int read${i}() { return value; }`).join('\n')}\n}\n`;
+        const large = workload(data.methods);
         const connection = client();
         const titles = new Map<string | number, string>();
+        const messages: string[] = [];
         const original = connection.onProgress;
         const subscribe = original.bind(connection);
         // Observe registration without replacing the SDK handler or inventing progress events.
@@ -21,6 +24,7 @@ export function progressCases(): void {
             if (typeof value === 'object' && value !== null && 'kind' in value) {
                 const event = value as WorkDoneProgressBegin | WorkDoneProgressReport | WorkDoneProgressEnd;
                 if (event.kind === 'begin') { titles.set(token, event.title); }
+                if (titles.get(token) === 'Finding references' && event.message) { messages.push(event.message); }
                 if (event.kind === 'end') { titles.delete(token); }
             }
             handler(value);
@@ -33,7 +37,7 @@ export function progressCases(): void {
         const parts = Reflect.get(feature, 'activeParts') as Set<object>;
         assert.ok(parts instanceof Set);
         function active(): vscode.CancellationToken[] {
-            return [...parts].filter(part => titles.get(Reflect.get(part, '_token')) === 'Ecstasy: finding references'
+            return [...parts].filter(part => titles.get(Reflect.get(part, '_token')) === 'Finding references'
                 && Reflect.get(part, '_progress')).map(part => Reflect.get(part, '_cancellationToken'));
         }
         async function start(text: string) {
@@ -50,7 +54,7 @@ export function progressCases(): void {
                 } catch (error) {
                     // A delayed fixture-create watch can retire this read. Re-request only;
                     // never replay the edit, cancel, restart or an already completed mutation.
-                    if ((error as { code?: number }).code === -32801 && Date.now() < deadline) { return references(); }
+                    if ((error as { code?: number }).code === LSPErrorCodes.ContentModified && Date.now() < deadline) { return references(); }
                     throw error;
                 }
             }
@@ -60,20 +64,31 @@ export function progressCases(): void {
                 assert.ok(!completed, 'Workload must remain pending until native progress is exercised');
                 return active();
             }, values => values.length === 1, 'Real compiler reference progress');
-            return { outcome, token: tokens[0] };
+            return { outcome, token: tokens[0], completed: () => completed };
         }
         try {
             await vscode.commands.executeCommand('notifications.clearAll');
-            const canceled = await start(large);
-            await vscode.commands.executeCommand('notifications.showList');
-            // Cancel the actual workbench token (the same callback used by its Cancel button).
-            // Do not activate an arbitrary notification when unrelated progress is also visible.
-            const cancel = Reflect.get(canceled.token, 'cancel') as () => void;
-            assert.strictEqual(typeof cancel, 'function');
-            cancel.call(canceled.token);
-            await eventually(async () => canceled.token.isCancellationRequested, value => value, 'Native progress Cancel action');
+            const canceled = await start(cancelUi ? workload(data.uiMethods) : large);
+            assert.ok(messages.some(message => message.includes(data.file.split('/').pop()!)),
+                'Reference progress identifies the source being analyzed');
+            if (cancelUi) {
+                // Explicit manual/accessibility acceptance mode: only the visible Cancel button
+                // may cancel this query. A fast completed workload is a failure, never a pass.
+                await vscode.commands.executeCommand('notifications.showList');
+                console.log('[X145] Click Cancel on "Finding references" now.');
+            } else {
+                // Ordinary unattended runs exercise the real workbench token callback.
+                const cancel = Reflect.get(canceled.token, 'cancel') as () => void;
+                assert.strictEqual(typeof cancel, 'function');
+                cancel.call(canceled.token);
+            }
+            await eventually(async () => {
+                assert.ok(!canceled.completed() || canceled.token.isCancellationRequested,
+                    'Workload completed before Cancel was exercised');
+                return canceled.token.isCancellationRequested;
+            }, value => value, 'Native progress Cancel action');
             const result = await canceled.outcome;
-            assert.strictEqual((result.error as { code?: number })?.code, -32800, 'Pending reference request is canceled');
+            assert.strictEqual((result.error as { code?: number })?.code, LSPErrorCodes.RequestCancelled, 'Pending reference request is canceled');
             await eventually(async () => active().length, size => size === 0, 'Canceled progress disappears');
             assert.ok((await hover(document, document.positionAt(large.indexOf('value')))).includes('Int'));
             await noErrors(document.uri);
@@ -91,7 +106,7 @@ export function progressCases(): void {
             await eventually(async () => active().length, size => size === 0, 'Disconnected progress disappears');
         } finally {
             connection.onProgress = original;
-            await vscode.commands.executeCommand('notifications.hideList');
+            if (cancelUi) { await vscode.commands.executeCommand('notifications.hideList'); }
         }
     });
 }
