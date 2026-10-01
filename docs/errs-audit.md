@@ -1473,3 +1473,7 @@ API change. Added backend/protocol tests and X105 variants await the combined fu
 L65/L62 continuation follows existing compiler redirect metadata for implementation lookup and
 written rename families. Real manual mixin/delegation fixtures now exercise these paths, including
 reverse edits and refusals. No AST modifications, optimized-body generation or new mutable state.
+
+L63 adds exact-selection literal-return extraction entirely on the Kotlin LSP side. Ordinary Java
+parser ranges locate the edit; complete compilation and binding/dispatch proof gate publication.
+No new AST classes, mutable fields or compiler public APIs. X148 acceptance and unit tests added.
