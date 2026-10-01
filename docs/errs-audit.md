@@ -1517,4 +1517,8 @@ The L64 closure inventory covers all original completion/signature topics with e
 forms and refusal boundaries. New tests exercise immutable fact updates, ordinary enclosing values,
 missing inferred-local syntax/cloning, compiler-fitted lambda arities, real platform callbacks and
 minimal/rich-client snippets. X150/X151/X152 are extended in the common catalog and both drivers.
-Execution remains pending the combined gate; see errs-integration-plan.md for checkpoint hashes.
+The L64 gate passes 68 Java and 418 LSP tests; the L65 gate passes 78 tests, all without failures
+or skips. L65 found and fixed missing conditional implementations on concrete validated source
+types; accessor redirects and binary debug-span refusals have direct regressions. X153/X154 cover
+the corresponding native navigation/classification behavior. Full editor acceptance is pending;
+see errs-integration-plan.md for checkpoint hashes and receipts.
