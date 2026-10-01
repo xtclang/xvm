@@ -4466,6 +4466,38 @@
         "limitations": []
       }
     },
+    "X146": {
+      "title": "dependency edits refresh untouched consumer presentation",
+      "manual": [],
+      "values": {
+        "library": "RefreshLibrary.x",
+        "consumer": "RefreshConsumer.x",
+        "libraryModule": "RefreshLibrary",
+        "consumerModule": "RefreshConsumer",
+        "original": "module RefreshLibrary { static Int make() = 1; }\n",
+        "changed": "module RefreshLibrary { static String make() = \"one\"; }\n",
+        "source": "module RefreshConsumer {\n    package lib import RefreshLibrary;\n    void run() { var value = lib.make(); }\n}\n",
+        "before": "Int",
+        "after": "String"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X147": {
+      "title": "late settings and retired connection reports cannot replace current state",
+      "manual": [],
+      "values": {
+        "file": "ReportOwnership.x",
+        "module": "ReportOwnership",
+        "source": "module ReportOwnership { Int value = 1; }\n"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],

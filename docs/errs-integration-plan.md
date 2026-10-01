@@ -7631,3 +7631,15 @@ reproducible, and reconcile completed versus remaining scope. Validation is batc
    on a reproduced error; `not-reproduced` is explicitly distinct from proving X130 fixed.
    The standalone reproduction and X130 will run in the final validation batch. An upstream
    issue/PR has not been submitted.
+
+2. **P3/P4 automation — implementation checkpoint.** Shared X146 changes only a dependency's
+   return type and verifies provider refresh plus updated inferred hints in its untouched consumer,
+   then reverses the change. X147 orders old report completion after a newer request, settings
+   change, restart or UI disposal. VS Code's real status command previously published its reply
+   unconditionally; it now checks request generation and connection ownership. IntelliJ adds the
+   captured settings identity and retired-connection checks to its existing revision guard.
+   Its asynchronous module reader is a constructor dependency, keeping the real UI testable without
+   modifying global services or adding compiler state. Native publication tests wait for the EDT
+   callback, not a sleep. The shared catalog grows to **152** cases; tests are written and execution
+   is deferred until all four checkpoints are complete. Physical button selection and broad
+   multi-project/window interaction remain separate from these bounded assertions.
