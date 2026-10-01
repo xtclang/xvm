@@ -8622,3 +8622,27 @@ presents accepted spellings as snippets with a selected TODO() body and a plain-
 No function-type parsing or semantic inference is duplicated in the host. Empty collection values
 already use expected-type fitting; arbitrary nested element generation is excluded. X150 gains
 a lambda placeholder/Undo case in both editors. Combined execution follows the closure audit.
+
+
+### L64 closure audit and acceptance gate
+
+Implementation checkpoints: `b3159f7c6` (ordinary enclosing values), `965531afb` (local naming),
+`c2ff62441` (fitted lambda templates). Keep later validation corrections with their corresponding
+slices. None of these intermediate commits has yet passed independently.
+
+| Original L64 requirement | Implementation / acceptance | Explicit boundary |
+| --- | --- | --- |
+| Recursive bounds | Written guarded constraints and selected self-bound leaves; X108 | Unknown/inaccessible names, direct cycles and unrelated syntax damage refuse completion |
+| Value synthesis | Compiler-fitted scalar/empty collection literals; X97; lambda templates in X150 | No arbitrary nested values, captured body generation or runtime execution |
+| Enclosing instances | Ordinary and whole-call proposals use compiler validation; X152 | Static boundaries and incompatible expected types refuse proposals |
+| Declaration names | Written types and literal/construction clues for inferred locals; X149/X151 | Bare ambiguous typed locals and missing names without useful initializer clues remain conservative; new methods/types use templates |
+| Keywords/templates | Parser-owned contexts, callable/loop boundaries and negotiated snippets; X150 | No text-only grammar reconstruction |
+| Callable/signature breadth | Escaped/indexed/returned/narrowed functions, constructors and named/default arguments; backend and X97/X152 | Unresolved runtime identity is not a statically selected target |
+| Documentation/ranking | Copied documentation, stable ordering, overload-specific active parameters; X97 | No claim that an incomplete overload has been selected |
+| Import edits/client formats | X105 atomic imports; exact ranges and minimal/rich-client protocol tests | Version/access/graph proof refusals remain |
+
+The platform CircularBuffer fixture now also exercises the real nullable callback parameter for
+a lambda argument. Shared X150 has seven variants, X151 ten and X152 five. Both drivers assert
+exact insertion, diagnostics, placeholder selection/final stop where applicable, and Undo.
+Protocol tests separately prove plain-text fallback without snippet-marker leakage. Final validation
+is pending; the top-level L64 checkbox is not closed by this pre-validation inventory.
