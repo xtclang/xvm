@@ -16,6 +16,7 @@ import pathlib
 import subprocess
 import threading
 import time
+from types import SimpleNamespace
 
 
 class RpcError(RuntimeError):
@@ -183,6 +184,8 @@ def percentiles(values):
 
 def trace_statistics(directory):
     timings = collections.defaultdict(list)
+    phases = collections.defaultdict(list)
+    previous = {}
     max_active = 0
     largest_queue = []
     for file in sorted((directory / "trace").glob("*.jsonl")):
@@ -194,7 +197,16 @@ def trace_statistics(directory):
                 largest_queue = jobs
             if event.get("kind") == "javatools" and event.get("event") == "end":
                 timings[event["operation"]].append(event["elapsedMs"])
+            if event.get("kind") == "lsp-query" and event["event"] in (
+                    "start", "analysis-ready", "started", "backend-complete", "converted"):
+                phase = event["event"]
+                if phase != "start" and event["id"] in previous:
+                    phases[f"{event['operation']}:{phase}"].append(event["elapsedMs"] - previous[event["id"]])
+                previous[event["id"]] = event["elapsedMs"]
+            if event.get("writeMs") is not None:
+                phases[f"{event['operation']}:write"].append(event["writeMs"])
     return {"apiTimings": {name: percentiles(values) for name, values in sorted(timings.items())},
+            "queryPhaseTimings": {name: percentiles(values) for name, values in sorted(phases.items())},
             "maxActiveApiThreads": max_active, "largestTracedQueue": largest_queue,
             "traceDirectory": str(directory / "trace")}
 
@@ -260,7 +272,7 @@ def run(args):
                 session.cleanup()
                 result.update(trace_statistics(directory))
         report["status"] = "passed"
-    except Exception as error:
+    except (Exception, KeyboardInterrupt) as error:
         report["status"], report["error"] = "failed", str(error)
         raise
     finally:
@@ -269,9 +281,79 @@ def run(args):
         assert report["sourcesUnchanged"], "Workspace source contents changed during the workload"
 
 
+def semantic_workload(args):
+    """Measure detached queries after diagnostics confirm compilation has completed."""
+    report = {"jarSha256": hashlib.sha256(args.jar.read_bytes()).hexdigest(), "cases": []}
+    try:
+        for methods in args.semantic_methods:
+            for inferred in (False, True):
+                directory = args.output / f"methods-{methods}-{'inferred' if inferred else 'plain'}"
+                workspace = directory / "workspace"
+                workspace.mkdir(parents=True)
+                source_file = workspace / "LargeFile.x"
+                body = "var local = value; return local;" if inferred else "return value;"
+                source = "module LargeFile {\n    static Int value = 1;\n" + "\n".join(
+                    f"    Int read{index}() {{ {body} }}" for index in range(methods)
+                ) + "\n}\n"
+                source_file.write_text(source)
+                document = {"uri": source_file.as_uri()}
+                session_args = SimpleNamespace(**{**vars(args), "workspace": workspace})
+                session = Session(session_args, directory, [{"name": "LargeFile", **document}])
+                result = {"methods": methods, "inferred": inferred, "pid": session.process.pid, "queries": []}
+                report["cases"].append(result)
+                try:
+                    session.initialize()
+                    session.notify("textDocument/didOpen", {"textDocument": {
+                        **document, "languageId": "xtc", "version": 1, "text": source,
+                    }})
+                    diagnostics = session.call("textDocument/diagnostic", {"textDocument": document})
+                    assert not diagnostics.get("items"), diagnostics
+                    queue = session.call("xtc/languageServiceStatus")["compilerQueue"]
+                    result["compilesBeforeQueries"] = queue["startedTotal"]
+                    position = {"line": 1, "character": 16}
+                    queries = [
+                        ("textDocument/hover", {"position": position}),
+                        ("textDocument/references", {"position": position, "context": {"includeDeclaration": True}}),
+                        ("textDocument/inlayHint", {"range": {"start": {"line": 2, "character": 0}, "end": {"line": 3, "character": 0}}}),
+                        ("textDocument/inlayHint", {"range": {"start": {"line": 0, "character": 0}, "end": {"line": methods + 3, "character": 0}}}),
+                        ("textDocument/semanticTokens/full", {}),
+                    ]
+                    for cycle in range(args.cycles):
+                        for method, params in queries:
+                            started = time.perf_counter()
+                            reply = session.call(method, {"textDocument": document, **params})
+                            elapsed = (time.perf_counter() - started) * 1000
+                            if method.endswith("hover"):
+                                assert reply and "Int" in str(reply), reply
+                            elif method.endswith("references"):
+                                assert len(reply) == methods + 1, len(reply)
+                            elif method.endswith("inlayHint"):
+                                expected = (1 if params["range"]["start"]["line"] == 2 else methods) if inferred else 0
+                                assert len(reply) == expected, (len(reply), expected)
+                            else:
+                                assert len(reply["data"]) >= methods * 5, len(reply["data"])
+                            measurement = {"method": method, "cycle": cycle, "params": params, "ms": elapsed,
+                                           "responseBytes": len(json.dumps(reply).encode())}
+                            result["queries"].append(measurement)
+                            print(f"{methods} methods, inferred={inferred}: {method} {elapsed:.1f} ms", flush=True)
+                    result["queueAfterQueries"] = session.call("xtc/languageServiceStatus")["compilerQueue"]
+                    result["exit"] = session.finish()
+                    result["status"] = "passed"
+                finally:
+                    result["sampledPeakHeapBytes"] = max((s["heap"]["usedBytes"] for s in session.samples), default=0)
+                    session.cleanup()
+                    result.update(trace_statistics(directory))
+        report["status"] = "passed"
+    except (Exception, KeyboardInterrupt) as error:
+        report["status"], report["error"] = "failed", str(error)
+        raise
+    finally:
+        (args.output / "results.json").write_text(json.dumps(report, indent=2) + "\n")
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--workspace", required=True, type=pathlib.Path)
+    parser.add_argument("--workspace", type=pathlib.Path)
     parser.add_argument("--jar", required=True, type=pathlib.Path)
     parser.add_argument("--graph", type=pathlib.Path, default=pathlib.Path(__file__).resolve().parents[1] / "test-fixtures/compiler-workload/platform.json")
     parser.add_argument("--output", required=True, type=pathlib.Path)
@@ -280,8 +362,16 @@ if __name__ == "__main__":
     parser.add_argument("--cycles", type=int, default=10)
     parser.add_argument("--restarts", type=int, default=2)
     parser.add_argument("--timeout", type=float, default=120)
+    parser.add_argument("--semantic-methods", nargs="+", type=int,
+                        help="Generate isolated large files and measure queries after compilation")
     args = parser.parse_args()
     assert args.cycles > 0 and args.restarts >= 0 and args.timeout > 0
-    args.workspace, args.jar, args.output = args.workspace.resolve(), args.jar.resolve(), args.output.resolve()
+    args.jar, args.output = args.jar.resolve(), args.output.resolve()
     args.output.mkdir(parents=True, exist_ok=False)
-    run(args)
+    if args.semantic_methods:
+        assert all(count > 0 for count in args.semantic_methods)
+        semantic_workload(args)
+    else:
+        assert args.workspace is not None, "--workspace is required for the project workload"
+        args.workspace = args.workspace.resolve()
+        run(args)

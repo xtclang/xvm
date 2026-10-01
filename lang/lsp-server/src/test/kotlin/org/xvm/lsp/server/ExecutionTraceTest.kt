@@ -173,6 +173,10 @@ class ExecutionTraceTest {
                 assertThat(replies).allSatisfy {
                     assertThat(it["elapsedMs"].asDouble).isGreaterThanOrEqualTo(0.0)
                 }
+                assertThat(replies.first()["writeMs"].asDouble).isGreaterThanOrEqualTo(0.0)
+                assertThat(replies.last().has("writeMs")).isFalse()
+                assertThat(trace.entries.filter { it["event"].asString == "reply-ready" }.map { it["operation"].asString })
+                    .containsExactly("textDocument/hover")
                 received.consume(
                     RequestMessage().apply {
                         id = "pending"
