@@ -22,11 +22,9 @@ class XdkArgumentContextTest {
                 "fn(nu§, \"x\")",
                 "fn((nu§), \"x\")",
                 "new Pair(nu§, \"x\")",
-            ]
+            ],
     )
-    fun `argument candidates fit the entire written call and preserve surrounding syntax`(
-        call: String
-    ) {
+    fun `argument candidates fit the entire written call and preserve surrounding syntax`(call: String) {
         val marked = HEADER + call + "; } }"
         val at = marked.indexOf('§')
         val text = marked.replace("§", "")
@@ -43,9 +41,8 @@ class XdkArgumentContextTest {
                 .isEqualTo(TextEdit(Range(Position(0, at - typed), Position(0, at)), "number"))
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
             assertThat(
-                    adapter.compile(URI, text.replaceRange(at - typed, at, "number")).diagnostics
-                )
-                .isEmpty()
+                adapter.compile(URI, text.replaceRange(at - typed, at, "number")).diagnostics,
+            ).isEmpty()
         }
     }
 
@@ -57,7 +54,7 @@ class XdkArgumentContextTest {
                 "pair((nu§), True)",
                 "pair(box.nu§, True)",
                 "pair(number = nu§, unknown = 1)",
-            ]
+            ],
     )
     fun `later incompatible arguments cannot produce a fitting suggestion`(call: String) {
         val marked = HEADER + call + "; } }"

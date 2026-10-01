@@ -16,8 +16,8 @@ internal fun ParityScenarios.progressCases() {
                     data.string("module"),
                     uri(data.string("file")),
                     emptyList(),
-                )
-            )
+                ),
+            ),
         )
         val document = open(data.string("file"))
         val title = "Ecstasy: finding references"
@@ -27,12 +27,14 @@ internal fun ParityScenarios.progressCases() {
                     "    Int read$it() { return value; }"
                 } +
                 "\n}\n"
+
         fun visible() =
             with(driver) {
                 withContext(OnDispatcher.EDT) {
                     utility(ProgressUi::class).visible(singleProject(), title)
                 }
             }
+
         fun start(text: String): ClientFuture {
             replace(document, text, settle = false)
             flush(document)
@@ -61,8 +63,8 @@ internal fun ParityScenarios.progressCases() {
             val outcome = runCatching { protocol.await("textDocument/references", canceled) }
             check(
                 outcome.exceptionOrNull().let {
-                    it is CancellationException || it is ClientRequestFailure && it.code == -32800
-                }
+                    it is CancellationException || (it is ClientRequestFailure && it.code == -32800)
+                },
             ) {
                 "Cancel must terminate the pending request: ${outcome.exceptionOrNull() ?: "completed before cancellation"}"
             }
@@ -93,13 +95,19 @@ internal fun ParityScenarios.progressCases() {
 
 @Remote("org.xtclang.idea.playbook.probe.ProgressUi", plugin = "org.xtclang.playbook.probe")
 internal interface ProgressUi {
-    fun visible(project: Project, title: String): Boolean
+    fun visible(
+        project: Project,
+        title: String,
+    ): Boolean
 
     fun show(project: Project)
 
     fun hide(project: Project)
 
-    fun cancel(project: Project, title: String): Boolean
+    fun cancel(
+        project: Project,
+        title: String,
+    ): Boolean
 
     fun alive(pid: Long): Boolean
 }

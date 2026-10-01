@@ -24,7 +24,7 @@ internal fun Driver.semanticSupport(editor: JEditorUiComponent): NativeSemanticS
     withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
         val file =
             requireNotNull(
-                service<PsiManager>(singleProject()).findFile(editor.editor.getVirtualFile())
+                service<PsiManager>(singleProject()).findFile(editor.editor.getVirtualFile()),
             )
         cast(utility(LspFileSupport::class).getSupport(file), NativeSemanticSupport::class)
     }
@@ -74,13 +74,14 @@ internal fun Driver.nativeLocations(
         dismissPopups()
         return
     }
-    val expectedPoints = expected.map { target ->
-        Triple(
-            Path.of(URI(target.string("uri"))).toString(),
-            target.getAsJsonObject("range").getAsJsonObject("start").int("line"),
-            target.getAsJsonObject("range").getAsJsonObject("start").int("character"),
-        )
-    }
+    val expectedPoints =
+        expected.map { target ->
+            Triple(
+                Path.of(URI(target.string("uri"))).toString(),
+                target.getAsJsonObject("range").getAsJsonObject("start").int("line"),
+                target.getAsJsonObject("range").getAsJsonObject("start").int("character"),
+            )
+        }
     val opened =
         expected.indices.map { index ->
             val inspection = PopupInspection(this, document.editor, ::invoke)
@@ -103,8 +104,7 @@ internal fun Driver.nativeLocations(
                 timeout = 30.seconds,
                 getter = {
                     withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
-                        service<FileEditorManager>(singleProject()).getSelectedTextEditor()?.let {
-                            selected ->
+                        service<FileEditorManager>(singleProject()).getSelectedTextEditor()?.let { selected ->
                             val position =
                                 ParityWorkspace.position(
                                     selected.getDocument().getText(),
@@ -137,7 +137,9 @@ internal fun Driver.nativeHover(
     dismissPopups()
     focusEditor(document.editor)
     withContext(OnDispatcher.EDT) {
-        document.editor.editor.getCaretModel().moveToOffset(at)
+        document.editor.editor
+            .getCaretModel()
+            .moveToOffset(at)
     }
     val support = semanticSupport(document.editor).getHoverSupport()
     document.editor.scrollToCaretNow()
@@ -162,7 +164,9 @@ internal fun Driver.nativeHierarchy(
 ) {
     focusEditor(document.editor)
     withContext(OnDispatcher.EDT) {
-        document.editor.editor.getCaretModel().moveToOffset(at)
+        document.editor.editor
+            .getCaretModel()
+            .moveToOffset(at)
     }
     document.editor.scrollToCaretNow()
     invokeAction(
@@ -182,14 +186,15 @@ internal fun Driver.nativeHierarchy(
 internal fun targetNames(
     locations: List<JsonObject>,
     openText: (String) -> String?,
-): List<String> = locations.map { location ->
-    val uri = location.string("uri")
-    val text = openText(uri) ?: Files.readString(Path.of(URI(uri)))
-    val at =
-        ParityWorkspace.offset(text, location.getAsJsonObject("range").getAsJsonObject("start"))
-    Regex("[\\p{L}_$][\\p{L}\\p{N}_$]*").find(text, at)?.takeIf { it.range.first == at }?.value
-        ?: error("Target does not select a declaration: $location")
-}
+): List<String> =
+    locations.map { location ->
+        val uri = location.string("uri")
+        val text = openText(uri) ?: Files.readString(Path.of(URI(uri)))
+        val at =
+            ParityWorkspace.offset(text, location.getAsJsonObject("range").getAsJsonObject("start"))
+        Regex("[\\p{L}_$][\\p{L}\\p{N}_$]*").find(text, at)?.takeIf { it.range.first == at }?.value
+            ?: error("Target does not select a declaration: $location")
+    }
 
 @Remote("com.redhat.devtools.lsp4ij.LSPFileSupport", plugin = "com.redhat.devtools.lsp4ij")
 interface NativeSemanticSupport {

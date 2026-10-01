@@ -1,12 +1,12 @@
 package org.xvm.lsp.adapter
 
-import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import java.nio.file.Path
 
 class XdkSpecializedConstructorTest {
     @TempDir lateinit var directory: Path
@@ -25,7 +25,7 @@ class XdkSpecializedConstructorTest {
                 "outer.new Outer<String>.Part(\"x\", te",
                 "new String[2](supply = te",
                 "new @Tagged Box<String>(second = \"x\", first = te",
-            ]
+            ],
     )
     fun `specialized constructor arguments preserve compiler rules and source edits`(call: String) {
         val prefix = HEADER + call
@@ -41,18 +41,20 @@ class XdkSpecializedConstructorTest {
             val items = adapter.getCompletions(URI, 0, prefix.length)
             assertThat(items.map { it.label })
                 .containsExactlyInAnyOrderElementsOf(
-                    if (call == "new Box(\"x\", te") listOf("text", "textNumber")
-                    else listOf("text")
+                    if (call == "new Box(\"x\", te") {
+                        listOf("text", "textNumber")
+                    } else {
+                        listOf("text")
+                    },
                 )
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
             for (suggestion in items) {
                 // Omitted class parameters can be inferred again as more arguments are supplied.
                 assertThat(
-                        adapter
-                            .compile(URI, "${prefix.dropLast(2)}${suggestion.label}); } }")
-                            .diagnostics
-                    )
-                    .isEmpty()
+                    adapter
+                        .compile(URI, "${prefix.dropLast(2)}${suggestion.label}); } }")
+                        .diagnostics,
+                ).isEmpty()
             }
             val item = items.single { it.label == "text" }
             assertThat(item.label).isEqualTo("text")
@@ -61,7 +63,7 @@ class XdkSpecializedConstructorTest {
                     TextEdit(
                         Range(Position(0, prefix.length - 2), Position(0, prefix.length)),
                         "text",
-                    )
+                    ),
                 )
         }
     }
@@ -73,22 +75,19 @@ class XdkSpecializedConstructorTest {
                 "module Editing { class Box<T> { construct(T first, T second) {} } Box<String> run(String text, Int textNumber) { return new Box(\"x\", te",
                 "module Editing { class Outer<T> { class Part { construct(T first, T second) {} } void run(T text, Int textNumber) { new Part(text, te",
                 "module Editing { class Box { construct(String first, String second) {} } <T extends Box> void run(String text, Int textNumber) { new T(\"x\", te",
-            ]
+            ],
     )
-    fun `expected return types implicit parents and formal constructors use real contexts`(
-        prefix: String
-    ) {
+    fun `expected return types implicit parents and formal constructors use real contexts`(prefix: String) {
         val suffix = if (prefix.contains("class Outer")) "); } } }" else "); } }"
         XdkAdapter().use { adapter ->
             assertThat(adapter.compile(URI, prefix.dropLast(2) + "text" + suffix).diagnostics)
                 .isEmpty()
             val cached = adapter.compile(URI, prefix + suffix)
             assertThat(
-                    adapter.getSignatureHelp(URI, 0, prefix.length)!!.signatures.map {
-                        it.activeParameter
-                    }
-                )
-                .containsOnly(1)
+                adapter.getSignatureHelp(URI, 0, prefix.length)!!.signatures.map {
+                    it.activeParameter
+                },
+            ).containsOnly(1)
             assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
                 .containsExactly("text")
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
@@ -108,15 +107,16 @@ class XdkSpecializedConstructorTest {
             val prefix = header + "new Item[2](va"
             adapter.compile(URI, "$prefix); } }")
             assertThat(
-                    adapter.getSignatureHelp(URI, 0, prefix.length)!!.signatures.map {
-                        it.activeParameter
-                    }
-                )
-                .containsOnly(1)
+                adapter.getSignatureHelp(URI, 0, prefix.length)!!.signatures.map {
+                    it.activeParameter
+                },
+            ).containsOnly(1)
             assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
                 .containsExactlyInAnyOrder("valueItem", "valueSupplier")
-            for (call in
-                listOf("new Item[True](va", "new Item[2, 3](va", "new Item[2](unknown = va")) {
+            for (
+            call in
+            listOf("new Item[True](va", "new Item[2, 3](va", "new Item[2](unknown = va")
+            ) {
                 val invalid = header + call
                 adapter.compile(URI, "$invalid); } }")
                 assertThat(adapter.getSignatureHelp(URI, 0, invalid.length))
@@ -129,14 +129,16 @@ class XdkSpecializedConstructorTest {
     @Test
     fun `specialized constructors reject unavailable parents and inaccessible or incompatible arguments`() {
         XdkAdapter().use { adapter ->
-            for (call in
-                listOf(
-                    "outer.new Part(True, te",
-                    "box.new(True, te",
-                    "text.new Part(\"x\", te",
-                    "new Outer.Part(\"x\", te",
-                    "new @Missing Box<String>(\"x\", te",
-                )) {
+            for (
+            call in
+            listOf(
+                "outer.new Part(True, te",
+                "box.new(True, te",
+                "text.new Part(\"x\", te",
+                "new Outer.Part(\"x\", te",
+                "new @Missing Box<String>(\"x\", te",
+            )
+            ) {
                 val prefix = HEADER + call
                 adapter.compile(URI, "$prefix); } }")
                 assertThat(adapter.getSignatureHelp(URI, 0, prefix.length))

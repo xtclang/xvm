@@ -1,10 +1,10 @@
 package org.xvm.lsp.adapter
 
-import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import java.nio.file.Path
 
 class XdkCallHierarchyTest {
     @TempDir lateinit var directory: Path
@@ -19,8 +19,7 @@ class XdkCallHierarchyTest {
                 Int /*run*/run() { Int n = /*one*/pick(1); return /*two*/pick(n); }
                 Int /*recursive*/recursive(Int n) { if (n == 0) { return 0; } return recursive(n - 1); }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             val target = prepare(adapter, source, "integer")
             val incoming = adapter.getIncomingCalls(target).single()
@@ -48,8 +47,7 @@ class XdkCallHierarchyTest {
                     return fn(1);
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             val leaf = prepare(adapter, source, "leaf")
             val caller = adapter.getIncomingCalls(leaf).single().from
@@ -71,8 +69,7 @@ class XdkCallHierarchyTest {
                     return new Reader() { @Override Int /*body*/read() = leaf(); };
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             val incoming = adapter.getIncomingCalls(prepare(adapter, source, "leaf")).single()
             assertThat(incoming.from.selectionRange).isEqualTo(range(source, "body", "read"))
@@ -89,8 +86,7 @@ class XdkCallHierarchyTest {
                 class Value implements Named { @Override String /*override*/name() = "value"; }
                 String /*caller*/run(Named value) = value.name();
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         withSource(source) { adapter ->
             val outgoing = adapter.getOutgoingCalls(prepare(adapter, source, "caller")).single()
             assertThat(outgoing.to).isEqualTo(prepare(adapter, source, "interface"))
@@ -113,7 +109,12 @@ class XdkCallHierarchyTest {
             val target = prepare(adapter, source, "target", uri)
             val caller = adapter.getIncomingCalls(target).single().from
             assertThat(caller.uri).isEqualTo(member.toURI().toString())
-            assertThat(adapter.getOutgoingCalls(caller).single().to.uri).isEqualTo(uri)
+            assertThat(
+                adapter
+                    .getOutgoingCalls(caller)
+                    .single()
+                    .to.uri,
+            ).isEqualTo(uri)
             assertThat(adapter.compile(uri, "\n$source").diagnostics).isEmpty()
             assertThat(adapter.getIncomingCalls(target)).isEmpty()
             assertThat(adapter.getOutgoingCalls(caller)).isEmpty()

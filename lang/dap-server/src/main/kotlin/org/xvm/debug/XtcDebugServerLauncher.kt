@@ -2,13 +2,13 @@
 
 package org.xvm.debug
 
-import java.io.InputStream
-import java.io.OutputStream
-import java.lang.invoke.MethodHandles
 import org.eclipse.lsp4j.debug.launch.DSPLauncher
 import org.eclipse.lsp4j.debug.services.IDebugProtocolClient
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.slf4j.LoggerFactory
+import java.io.InputStream
+import java.io.OutputStream
+import java.lang.invoke.MethodHandles
 
 /**
  * Launcher for the XTC Debug Adapter Protocol (DAP) server.
@@ -21,13 +21,17 @@ import org.slf4j.LoggerFactory
 private val logger = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass())
 
 // Suppress SLF4J informational messages that would corrupt the JSON-RPC protocol stream.
-private val initBlock = run {
-    System.setProperty("slf4j.internal.verbosity", "WARN")
-}
+private val initBlock =
+    run {
+        System.setProperty("slf4j.internal.verbosity", "WARN")
+    }
 
-fun main(@Suppress("UNUSED_PARAMETER") args: Array<String>) {
+fun main(
+    @Suppress("UNUSED_PARAMETER") args: Array<String>,
+) {
     // Ensure init block runs
-    @Suppress("UNUSED_EXPRESSION") initBlock
+    @Suppress("UNUSED_EXPRESSION")
+    initBlock
 
     logger.info("========================================")
     logger.info("XTC Debug Adapter (DAP) Server")
@@ -55,17 +59,16 @@ fun launchStdio(
 
     runCatching {
         launcher.startListening().get()
-    }
-        .onFailure { e ->
-            when (e) {
-                is InterruptedException -> {
-                    Thread.currentThread().interrupt()
-                    logger.error("DAP server interrupted", e)
-                }
+    }.onFailure { e ->
+        when (e) {
+            is InterruptedException -> {
+                Thread.currentThread().interrupt()
+                logger.error("DAP server interrupted", e)
+            }
 
-                else -> {
-                    logger.error("DAP server error", e)
-                }
+            else -> {
+                logger.error("DAP server error", e)
             }
         }
+    }
 }

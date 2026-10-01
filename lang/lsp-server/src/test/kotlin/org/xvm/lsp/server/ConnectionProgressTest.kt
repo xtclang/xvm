@@ -1,9 +1,5 @@
 package org.xvm.lsp.server
 
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.Executors
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.ProgressParams
 import org.eclipse.lsp4j.WorkDoneProgressCreateParams
@@ -15,6 +11,10 @@ import org.junit.jupiter.api.Test
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executors
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit.SECONDS
 
 class ConnectionProgressTest {
     private class Session : AutoCloseable {
@@ -27,16 +27,14 @@ class ConnectionProgressTest {
 
         init {
             doAnswer { call ->
-                    created.add(call.getArgument(0))
-                    ack
-                }
-                .`when`(client)
+                created.add(call.getArgument(0))
+                ack
+            }.`when`(client)
                 .createProgress(any())
             doAnswer { call ->
-                    events.add(call.getArgument(0))
-                    null
-                }
-                .`when`(client)
+                events.add(call.getArgument(0))
+                null
+            }.`when`(client)
                 .notifyProgress(any())
         }
 
@@ -64,7 +62,11 @@ class ConnectionProgressTest {
             assertThat(report.message).contains("50/100")
             assertThat(work.isDone).isFalse()
             work.complete(Unit)
-            assertThat(session.event().value.left.kind).isEqualTo(WorkDoneProgressKind.end)
+            assertThat(
+                session
+                    .event()
+                    .value.left.kind,
+            ).isEqualTo(WorkDoneProgressKind.end)
             session.progress.report(work, "Late report", 100)
             session.flush()
             assertThat(session.events).isEmpty()
@@ -77,10 +79,18 @@ class ConnectionProgressTest {
             val work = CompletableFuture<String>()
             val token = Either.forRight<String, Int>(7)
             session.progress.track("Indexing", token, work)
-            assertThat(session.event().value.left.kind).isEqualTo(WorkDoneProgressKind.begin)
+            assertThat(
+                session
+                    .event()
+                    .value.left.kind,
+            ).isEqualTo(WorkDoneProgressKind.begin)
             assertThat(session.created).isEmpty()
             work.complete("done")
-            assertThat(session.event().value.left.kind).isEqualTo(WorkDoneProgressKind.end)
+            assertThat(
+                session
+                    .event()
+                    .value.left.kind,
+            ).isEqualTo(WorkDoneProgressKind.end)
             session.progress.cancel(token)
             session.flush()
             assertThat(work.join()).isEqualTo("done")
@@ -103,7 +113,11 @@ class ConnectionProgressTest {
             session.ack.complete(null)
             assertThat(session.event().token).isEqualTo(token)
             session.progress.cancel(token)
-            assertThat(session.event().value.left.kind).isEqualTo(WorkDoneProgressKind.end)
+            assertThat(
+                session
+                    .event()
+                    .value.left.kind,
+            ).isEqualTo(WorkDoneProgressKind.end)
             assertThat(work.isCancelled).isTrue()
             assertThat(unreported.isDone).isFalse()
         }
@@ -119,13 +133,23 @@ class ConnectionProgressTest {
                 assertThat(session.created.poll(5, SECONDS)).isNotNull()
                 work.complete("done")
                 session.flush()
-                if (reject) session.ack.completeExceptionally(IllegalStateException("unsupported"))
-                else session.ack.complete(null)
+                if (reject) {
+                    session.ack.completeExceptionally(IllegalStateException("unsupported"))
+                } else {
+                    session.ack.complete(null)
+                }
                 session.flush()
                 if (!reject) {
-                    assertThat(session.event().value.left.kind)
-                        .isEqualTo(WorkDoneProgressKind.begin)
-                    assertThat(session.event().value.left.kind).isEqualTo(WorkDoneProgressKind.end)
+                    assertThat(
+                        session
+                            .event()
+                            .value.left.kind,
+                    ).isEqualTo(WorkDoneProgressKind.begin)
+                    assertThat(
+                        session
+                            .event()
+                            .value.left.kind,
+                    ).isEqualTo(WorkDoneProgressKind.end)
                 }
                 assertThat(session.events).isEmpty()
                 assertThat(work.join()).isEqualTo("done")
@@ -147,8 +171,11 @@ class ConnectionProgressTest {
             val completions =
                 work.mapIndexed { index, result ->
                     CompletableFuture.runAsync {
-                        if (index % 2 == 0) result.complete("done")
-                        else session.progress.cancel(Either.forRight(index))
+                        if (index % 2 == 0) {
+                            result.complete("done")
+                        } else {
+                            session.progress.cancel(Either.forRight(index))
+                        }
                     }
                 } + CompletableFuture.runAsync { session.progress.close() }
             CompletableFuture.allOf(*completions.toTypedArray()).get(5, SECONDS)
@@ -169,7 +196,11 @@ class ConnectionProgressTest {
             session.progress.track("Checking workspace", Either.forLeft("owned"), work)
             session.event()
             session.progress.close()
-            assertThat(session.event().value.left.kind).isEqualTo(WorkDoneProgressKind.end)
+            assertThat(
+                session
+                    .event()
+                    .value.left.kind,
+            ).isEqualTo(WorkDoneProgressKind.end)
             assertThat(work.isCancelled).isTrue()
         }
     }

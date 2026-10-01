@@ -12,7 +12,11 @@ import org.xvm.lsp.treesitter.SemanticTokenLegend
 /** Presentation of copied compiler facts; the shared protocol legend does not load a parser. */
 internal object XdkPresentation {
     /** Hover describes the resolved occurrence, never the declaration enclosing its body. */
-    fun hover(model: SemanticModel, line: Int, column: Int): String? {
+    fun hover(
+        model: SemanticModel,
+        line: Int,
+        column: Int,
+    ): String? {
         val symbol = model.symbolAt(line, column)
         val type = model.typeAt(line, column)?.displayName
         val position = SemanticModel.Position(line, column)
@@ -21,12 +25,18 @@ internal object XdkPresentation {
                 ?: symbol?.signature
         val label =
             when {
-                symbol != null && signature != null ->
+                symbol != null && signature != null -> {
                     XdkCursorQueries.signature(model, symbol.name, signature).label
-                symbol != null ->
+                }
+
+                symbol != null -> {
                     listOfNotNull(type ?: symbol.kind.name.lowercase(), symbol.name)
                         .joinToString(" ")
-                else -> type
+                }
+
+                else -> {
+                    type
+                }
             } ?: return null
         return "```xtc\n$label\n```" + symbol?.documentation?.let { "\n\n$it" }.orEmpty()
     }
@@ -40,23 +50,31 @@ internal object XdkPresentation {
                 .mapNotNull { occurrence ->
                     val symbol = occurrence.symbol?.let(model::symbol) ?: return@mapNotNull null
                     val range = occurrence.range
-                    if (range.start.line != range.end.line || range.start == range.end)
+                    if (range.start.line != range.end.line || range.start == range.end) {
                         return@mapNotNull null
+                    }
                     val type =
                         when (symbol.kind) {
                             SymbolKind.MODULE,
-                            SymbolKind.PACKAGE -> {
+                            SymbolKind.PACKAGE,
+                            -> {
                                 "namespace"
                             }
 
                             SymbolKind.TYPE -> {
                                 when (model.typeDeclarations[symbol.id]?.category) {
                                     "class",
-                                    "service" -> "class"
+                                    "service",
+                                    -> "class"
+
                                     "interface",
-                                    "mixin" -> "interface"
+                                    "mixin",
+                                    -> "interface"
+
                                     "const" -> "struct"
+
                                     "enum" -> "enum"
+
                                     else -> "type"
                                 }
                             }
@@ -81,12 +99,14 @@ internal object XdkPresentation {
                                 "parameter"
                             }
                         }
-                    val modifiers = buildList {
-                        if (occurrence.role == Role.DECLARATION) add("declaration")
-                        addAll(symbol.modifiers.map { it.name.lowercase() })
-                        if (occurrence.usage == Usage.WRITE || occurrence.usage == Usage.READ_WRITE)
-                            add("modification")
-                    }
+                    val modifiers =
+                        buildList {
+                            if (occurrence.role == Role.DECLARATION) add("declaration")
+                            addAll(symbol.modifiers.map { it.name.lowercase() })
+                            if (occurrence.usage == Usage.WRITE || occurrence.usage == Usage.READ_WRITE) {
+                                add("modification")
+                            }
+                        }
                     listOf(
                         range.start.line,
                         range.start.column,
@@ -94,8 +114,7 @@ internal object XdkPresentation {
                         SemanticTokenLegend.typeIndex.getValue(type),
                         SemanticTokenLegend.modifierBitmask(*modifiers.toTypedArray()),
                     )
-                }
-                .let { semantic ->
+                }.let { semantic ->
                     semantic +
                         lexical.filter { token ->
                             semantic.none { name ->
@@ -104,15 +123,14 @@ internal object XdkPresentation {
                                     token[1] < name[1] + name[2]
                             }
                         }
-                }
-                .sortedWith(compareBy({ it[0] }, { it[1] }))
+                }.sortedWith(compareBy({ it[0] }, { it[1] }))
         return SemanticTokens(
             tokens.flatMapIndexed { index, token ->
                 val previous = tokens.getOrNull(index - 1)
                 val lineDelta = token[0] - (previous?.get(0) ?: 0)
                 val columnDelta = token[1] - if (lineDelta == 0) previous?.get(1) ?: 0 else 0
                 listOf(lineDelta, columnDelta, token[2], token[3], token[4])
-            }
+            },
         )
     }
 
@@ -124,8 +142,7 @@ internal object XdkPresentation {
             model.occurrences
                 .filter {
                     model.status == SemanticModel.Status.COMPLETE && it.role == Role.DECLARATION
-                }
-                .mapNotNull { occurrence ->
+                }.mapNotNull { occurrence ->
                     val symbol =
                         occurrence.symbol?.let(model::symbol)?.takeIf { it.inferred }
                             ?: return@mapNotNull null
@@ -148,7 +165,9 @@ internal object XdkPresentation {
                     .filterNot { it.named }
                     .mapNotNull { argument ->
                         val name =
-                            call.signature.parameters.getOrNull(argument.parameterIndex)?.name
+                            call.signature.parameters
+                                .getOrNull(argument.parameterIndex)
+                                ?.name
                                 ?: return@mapNotNull null
                         InlayHint(
                             argument.range.start.toPosition(),
@@ -186,8 +205,7 @@ internal object XdkPresentation {
                 SemanticModel.Position(it.position.line, it.position.column).let { at ->
                     at >= start && at < end
                 }
-            }
-            .distinct()
+            }.distinct()
             .sortedWith(compareBy({ it.position.line }, { it.position.column }))
     }
 

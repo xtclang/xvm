@@ -1,11 +1,11 @@
 package org.xvm.lsp.treesitter
 
 import io.github.treesitter.jtreesitter.NativeLibraryLookup
+import org.slf4j.LoggerFactory
 import java.lang.foreign.Arena
 import java.lang.foreign.SymbolLookup
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
-import org.slf4j.LoggerFactory
 
 /**
  * Custom NativeLibraryLookup implementation that loads libtree-sitter from JAR resources.
@@ -36,7 +36,7 @@ class TreeSitterLibraryLookup : NativeLibraryLookup {
 
         throw IllegalStateException(
             "tree-sitter runtime library not found at $resourcePath. " +
-                "Build it with: ./gradlew :lang:tree-sitter:copyAllNativeLibrariesToResources"
+                "Build it with: ./gradlew :lang:tree-sitter:copyAllNativeLibrariesToResources",
         )
     }
 

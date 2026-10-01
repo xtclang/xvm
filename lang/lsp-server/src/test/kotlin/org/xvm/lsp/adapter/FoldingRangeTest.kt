@@ -42,8 +42,7 @@ class FoldingRangeTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             val ranges = ts.getFoldingRanges(uri)
@@ -71,8 +70,7 @@ class FoldingRangeTest : TreeSitterTestBase() {
                     class Person {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             val ranges = ts.getFoldingRanges(uri)
@@ -101,8 +99,7 @@ class FoldingRangeTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             val ranges = logged("shouldFoldDeeplyNestedDeclarations", ts.getFoldingRanges(uri))

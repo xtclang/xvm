@@ -1,7 +1,5 @@
 package org.xvm.lsp.server
 
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.eclipse.lsp4j.ClientCapabilities
@@ -33,6 +31,8 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkSemanticTokenProtocolTest {
     @Test
@@ -56,7 +56,7 @@ class XdkSemanticTokenProtocolTest {
                                                     requests =
                                                         SemanticTokensClientCapabilitiesRequests(
                                                             SemanticTokensClientCapabilitiesRequestsFull(
-                                                                true
+                                                                true,
                                                             ),
                                                             true,
                                                         )
@@ -68,9 +68,8 @@ class XdkSemanticTokenProtocolTest {
                                                 SemanticTokensWorkspaceCapabilities(true)
                                         }
                                 }
-                        }
-                    )
-                    .get()
+                        },
+                    ).get()
                     .capabilities
             server.initialized(InitializedParams())
             assertThat(capabilities.semanticTokensProvider.full.right.delta).isTrue()
@@ -79,7 +78,7 @@ class XdkSemanticTokenProtocolTest {
             val document = TextDocumentIdentifier("file:///Tokens.x")
             val source = "module Tokens { Int value = 1; Int run() = value; }"
             service.didOpen(
-                DidOpenTextDocumentParams(TextDocumentItem(document.uri, "xtc", 1, source))
+                DidOpenTextDocumentParams(TextDocumentItem(document.uri, "xtc", 1, source)),
             )
             val before = service.semanticTokensFull(SemanticTokensParams(document)).get(30, SECONDS)
             assertThat(before.data).isNotEmpty()
@@ -92,7 +91,7 @@ class XdkSemanticTokenProtocolTest {
                 DidChangeTextDocumentParams(
                     VersionedTextDocumentIdentifier(document.uri, 2),
                     listOf(TextDocumentContentChangeEvent("\r\n$source")),
-                )
+                ),
             )
             val delta =
                 service
@@ -104,26 +103,23 @@ class XdkSemanticTokenProtocolTest {
             val range =
                 service
                     .semanticTokensRange(
-                        SemanticTokensRangeParams(document, Range(Position(1, 0), Position(2, 0)))
-                    )
-                    .get(30, SECONDS)
+                        SemanticTokensRangeParams(document, Range(Position(1, 0), Position(2, 0))),
+                    ).get(30, SECONDS)
             assertThat(range.data)
                 .isEqualTo(
-                    service.semanticTokensFull(SemanticTokensParams(document)).get(30, SECONDS).data
+                    service.semanticTokensFull(SemanticTokensParams(document)).get(30, SECONDS).data,
                 )
             service.didClose(DidCloseTextDocumentParams(document))
             service.didOpen(
-                DidOpenTextDocumentParams(TextDocumentItem(document.uri, "xtc", 1, source))
+                DidOpenTextDocumentParams(TextDocumentItem(document.uri, "xtc", 1, source)),
             )
             assertThat(
-                    service
-                        .semanticTokensFullDelta(
-                            SemanticTokensDeltaParams(document, before.resultId)
-                        )
-                        .get(30, SECONDS)
-                        .isLeft
-                )
-                .isTrue()
+                service
+                    .semanticTokensFullDelta(
+                        SemanticTokensDeltaParams(document, before.resultId),
+                    ).get(30, SECONDS)
+                    .isLeft,
+            ).isTrue()
             verify(client, timeout(5000).atLeastOnce()).refreshSemanticTokens()
         }
     }
@@ -137,16 +133,14 @@ class XdkSemanticTokenProtocolTest {
             assertThat(capabilities.semanticTokensProvider.full.left).isTrue()
             assertThat(capabilities.semanticTokensProvider.range).isNull()
             assertThatThrownBy {
-                    server.textDocumentService
-                        .semanticTokensFullDelta(
-                            SemanticTokensDeltaParams(
-                                TextDocumentIdentifier("file:///Tokens.x"),
-                                "old",
-                            )
-                        )
-                        .get(10, SECONDS)
-                }
-                .hasMessageContaining("not negotiated")
+                server.textDocumentService
+                    .semanticTokensFullDelta(
+                        SemanticTokensDeltaParams(
+                            TextDocumentIdentifier("file:///Tokens.x"),
+                            "old",
+                        ),
+                    ).get(10, SECONDS)
+            }.hasMessageContaining("not negotiated")
         }
     }
 }

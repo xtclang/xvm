@@ -68,9 +68,7 @@ internal fun compilerImplementationTargets(
  * dispatch. Some mixin accessors live only in PropertyBody, with their compiler order and field
  * identity.
  */
-private fun TypeInfo.propertyImplementationTargets(
-    errors: ErrorListener
-): Map<IdentityConstant, Set<IdentityConstant>> {
+private fun TypeInfo.propertyImplementationTargets(errors: ErrorListener): Map<IdentityConstant, Set<IdentityConstant>> {
     val targets = linkedMapOf<IdentityConstant, MutableSet<IdentityConstant>>()
     properties.values
         .filter { !it.isConstant && !it.isFormalType }
@@ -98,14 +96,15 @@ private fun TypeInfo.propertyImplementationTargets(
 /**
  * Implicit adoption or injected/native storage has no written field implementation to navigate to.
  */
-private fun PropertyInfo.sourceField(): IdentityConstant? = fieldIdentity?.takeIf { field ->
-    propertyBodies.any {
-        it.identity == field &&
-            it.implementation == Implementation.Explicit &&
-            !it.isAbstract &&
-            !it.isSynthetic
+private fun PropertyInfo.sourceField(): IdentityConstant? =
+    fieldIdentity?.takeIf { field ->
+        propertyBodies.any {
+            it.identity == field &&
+                it.implementation == Implementation.Explicit &&
+                !it.isAbstract &&
+                !it.isSynthetic
+        }
     }
-}
 
 /** A delegate's declared concrete type bounds lookup; an interface value has no selected body. */
 private fun TypeInfo.delegateType(
@@ -134,7 +133,8 @@ private fun TypeInfo.methodImplementation(
     val body = method.chain.firstOrNull { !it.isAbstract } ?: return null
     return when (body.implementation) {
         Implementation.Explicit,
-        Implementation.Default -> {
+        Implementation.Default,
+        -> {
             body.methodStructure?.identityConstant
         }
 
@@ -170,16 +170,21 @@ private fun TypeInfo.accessorImplementation(
         method?.chain?.any {
             it.implementation in setOf(Implementation.Delegating, Implementation.Capped)
         } == true
-    )
+    ) {
         return null
+    }
     if (method != null) {
         val chain =
-            if (getter) property.ensureOptimizedGetChain(this, null)
-            else property.ensureOptimizedSetChain(this, null)
+            if (getter) {
+                property.ensureOptimizedGetChain(this, null)
+            } else {
+                property.ensureOptimizedSetChain(this, null)
+            }
         val body = chain?.firstOrNull() ?: return null
         return when (body.implementation) {
             Implementation.Explicit,
-            Implementation.Default -> body.methodStructure?.identityConstant
+            Implementation.Default,
+            -> body.methodStructure?.identityConstant
 
             // Annotation/native storage is not a written accessor (for example Lazy.set).
             Implementation.Field -> property.takeUnless { it.isRefAnnotated }?.sourceField()

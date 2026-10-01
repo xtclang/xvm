@@ -1,11 +1,11 @@
 package org.xvm.lsp.adapter
 
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkIncompleteCallTest {
     @Test
@@ -32,13 +32,15 @@ class XdkIncompleteCallTest {
     @Test
     fun `candidate inference copies expected types and named argument mappings`() {
         XdkAdapter().use { adapter ->
-            for ((call, parameter) in
-                listOf(
-                    "pair(\"x\", second =" to 1,
-                    "pair(second = \"x\", first =" to 0,
-                    "pair(second = \"x\"" to 1,
-                    "generic(\"x\", " to 1,
-                )) {
+            for (
+            (call, parameter) in
+            listOf(
+                "pair(\"x\", second =" to 1,
+                "pair(second = \"x\", first =" to 0,
+                "pair(second = \"x\"" to 1,
+                "generic(\"x\", " to 1,
+            )
+            ) {
                 val prefix = "$BOX void run(Box<String> box) { box.$call"
                 adapter.compile(URI, "$prefix); } }")
                 val position = Position(0, prefix.length)
@@ -50,20 +52,17 @@ class XdkIncompleteCallTest {
                     .describedAs(call)
                     .isEqualTo(parameter)
                 assertThat(
-                        model.semantics.type(site.expectedTypeAt(candidate, cursor)!!)!!.displayName
-                    )
-                    .isEqualTo("String")
+                    model.semantics.type(site.expectedTypeAt(candidate, cursor)!!)!!.displayName,
+                ).isEqualTo("String")
                 Executors.newSingleThreadExecutor().use { executor ->
                     assertThat(
-                            executor
-                                .submit<String> {
-                                    model.semantics
-                                        .type(site.expectedTypeAt(candidate, cursor)!!)!!
-                                        .displayName
-                                }
-                                .get()
-                        )
-                        .isEqualTo("String")
+                        executor
+                            .submit<String> {
+                                model.semantics
+                                    .type(site.expectedTypeAt(candidate, cursor)!!)!!
+                                    .displayName
+                            }.get(),
+                    ).isEqualTo("String")
                 }
                 val help = adapter.getSignatureHelp(URI, 0, prefix.length)!!
                 assertThat(help.signatures.single().activeParameter)

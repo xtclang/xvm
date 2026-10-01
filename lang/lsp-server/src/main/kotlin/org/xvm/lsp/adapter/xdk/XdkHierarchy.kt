@@ -6,22 +6,28 @@ import org.xvm.lsp.adapter.TypeHierarchyItem
 import org.xvm.lsp.model.SymbolInfo.SymbolKind
 
 /** Queries use copied declaration edges, never compiler objects or a new TypeInfo build. */
-internal class XdkHierarchy(private val views: Map<String, SemanticModel>) {
+internal class XdkHierarchy(
+    private val views: Map<String, SemanticModel>,
+) {
     private val model = views.values.firstOrNull()
     private val types = model?.typeDeclarations.orEmpty()
     private val children =
         types.values
             .flatMap { child ->
                 child.parents.map { it.symbol to child.symbol }
-            }
-            .groupBy({ it.first }, { it.second })
+            }.groupBy({ it.first }, { it.second })
 
     fun prepare(
         uri: String,
         line: Int,
         column: Int,
     ): List<TypeHierarchyItem> =
-        views[uri]?.symbolAt(line, column)?.id?.let(::item)?.let(::listOf).orEmpty()
+        views[uri]
+            ?.symbolAt(line, column)
+            ?.id
+            ?.let(::item)
+            ?.let(::listOf)
+            .orEmpty()
 
     fun supertypes(item: TypeHierarchyItem): List<TypeHierarchyItem> =
         resolve(item)?.parents.orEmpty().mapNotNull {
@@ -51,11 +57,17 @@ internal class XdkHierarchy(private val views: Map<String, SemanticModel>) {
             symbol.name,
             when (declaration.category) {
                 "interface" -> SymbolKind.INTERFACE
+
                 "mixin",
-                "annotation" -> SymbolKind.MIXIN
+                "annotation",
+                -> SymbolKind.MIXIN
+
                 "service" -> SymbolKind.SERVICE
+
                 "const" -> SymbolKind.CONST
+
                 "enum" -> SymbolKind.ENUM
+
                 else -> SymbolKind.CLASS
             },
             uri,
@@ -66,11 +78,9 @@ internal class XdkHierarchy(private val views: Map<String, SemanticModel>) {
         )
     }
 
-    private fun sourceUri(name: String?): String? =
-        views.entries.firstOrNull { it.value.sourceName == name }?.key
+    private fun sourceUri(name: String?): String? = views.entries.firstOrNull { it.value.sourceName == name }?.key
 
     private fun token(id: SemanticModel.SymbolId): String = "${id.snapshot}:${id.index}"
 
-    private fun SemanticModel.Range.toRange(): Range =
-        Range(Position(start.line, start.column), Position(end.line, end.column))
+    private fun SemanticModel.Range.toRange(): Range = Range(Position(start.line, start.column), Position(end.line, end.column))
 }

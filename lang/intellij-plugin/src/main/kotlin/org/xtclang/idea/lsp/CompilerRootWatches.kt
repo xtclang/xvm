@@ -9,14 +9,14 @@ import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.vfs.newvfs.NewVirtualFile
 import com.intellij.util.concurrency.AppExecutorUtil
 import com.redhat.devtools.lsp4ij.JSONUtils
+import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
+import org.eclipse.lsp4j.Registration
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
-import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
-import org.eclipse.lsp4j.Registration
 
 /** One connection owns its watch leases; duplicate registrations share a native watch. */
 internal class CompilerRootWatches(
@@ -35,7 +35,10 @@ internal class CompilerRootWatches(
     private val refreshing = AtomicBoolean()
 
     @Synchronized
-    fun replace(added: Map<String, Set<Path>>, removed: Set<String> = emptySet()) {
+    fun replace(
+        added: Map<String, Set<Path>>,
+        removed: Set<String> = emptySet(),
+    ) {
         if (state.closed) return
         val registrations = (state.registrations - removed) + added
         val roots = registrations.values.flatten().toSet()
@@ -66,9 +69,10 @@ internal class CompilerRootWatches(
         fun roots(registration: Registration): Set<Path> {
             if (
                 registration.method != "workspace/didChangeWatchedFiles" ||
-                    !registration.id.startsWith("xtc-resources-")
-            )
+                !registration.id.startsWith("xtc-resources-")
+            ) {
                 return emptySet()
+            }
             val options =
                 JSONUtils.toModel(
                     registration.registerOptions,
@@ -91,31 +95,31 @@ internal class CompilerRootWatches(
                                 ?.let(Path::of)
                                 ?.takeIf(Path::isAbsolute)
                         }
-                    }
-                        .getOrNull()
-                }
-                .toSet()
+                    }.getOrNull()
+                }.toSet()
         }
     }
 }
+
+// TODO LSP4IJ: dynamic watcher registrations need owned VFS roots and refresh while focused.
+// Remove this bridge when upstream covers unknown/missing external roots and disposal (X124).
 
 /**
  * Native watching marks VFS entries dirty but does not refresh while the IDE stays focused. Refresh
  * just these compiler roots on the shared scheduler. No new thread or OS watcher is created per
  * root. Unknown directories must be loaded for VFS to emit child create events.
  */
-// TODO LSP4IJ: dynamic watcher registrations need owned VFS roots and refresh while focused.
-// Remove this bridge when upstream covers unknown/missing external roots and disposal (X124).
 internal class CompilerVfsWatches : Disposable {
     private val files = LocalFileSystem.getInstance()
     private val roots =
         CompilerRootWatches(
             watch = { paths ->
-                val parents = paths.mapNotNull { path ->
-                    generateSequence(path.parent) { it.parent }
-                        .firstOrNull(Files::isDirectory)
-                        ?.toString()
-                }
+                val parents =
+                    paths.mapNotNull { path ->
+                        generateSequence(path.parent) { it.parent }
+                            .firstOrNull(Files::isDirectory)
+                            ?.toString()
+                    }
                 val requests =
                     files.replaceWatchedRoots(emptySet(), paths.map(Path::toString), parents)
                 AutoCloseable { files.removeWatchedRoots(requests) }
@@ -123,7 +127,8 @@ internal class CompilerVfsWatches : Disposable {
             refresh = ::refresh,
         )
     private val timer =
-        AppExecutorUtil.getAppScheduledExecutorService()
+        AppExecutorUtil
+            .getAppScheduledExecutorService()
             .scheduleWithFixedDelay(
                 {
                     runCatching(roots::refresh).onFailure {
@@ -139,7 +144,7 @@ internal class CompilerVfsWatches : Disposable {
         roots.replace(
             registrations
                 .associate { it.id to CompilerRootWatches.roots(it) }
-                .filterValues { it.isNotEmpty() }
+                .filterValues { it.isNotEmpty() },
         )
         roots.refresh()
     }
@@ -147,12 +152,13 @@ internal class CompilerVfsWatches : Disposable {
     fun unregister(ids: Set<String>) = roots.replace(emptyMap(), ids)
 
     private fun refresh(paths: Set<Path>): CompletableFuture<Void> {
-        val directories = paths.mapNotNull { path ->
-            // Missing generated roots are observed through their nearest existing parent. Never
-            // recurse into that ancestor (which can be a large unrelated directory).
-            val existing = generateSequence(path) { it.parent }.firstOrNull(Files::isDirectory)
-            existing?.let(files::refreshAndFindFileByNioFile)?.let { it to (existing == path) }
-        }
+        val directories =
+            paths.mapNotNull { path ->
+                // Missing generated roots are observed through their nearest existing parent. Never
+                // recurse into that ancestor (which can be a large unrelated directory).
+                val existing = generateSequence(path) { it.parent }.firstOrNull(Files::isDirectory)
+                existing?.let(files::refreshAndFindFileByNioFile)?.let { it to (existing == path) }
+            }
         ReadAction.runBlocking<RuntimeException> {
             directories.forEach { (file, recursive) ->
                 load(file, recursive)
@@ -163,22 +169,24 @@ internal class CompilerVfsWatches : Disposable {
         }
         val result = CompletableFuture<Void>()
         val groups = directories.groupBy({ it.second }, { it.first })
-        CompletableFuture.allOf(
+        CompletableFuture
+            .allOf(
                 *groups
                     .map { (recursive, group) ->
                         CompletableFuture<Void>().also { done ->
                             files.refreshFiles(group, true, recursive) { done.complete(null) }
                         }
-                    }
-                    .toTypedArray()
-            )
-            .whenComplete { _, error ->
+                    }.toTypedArray(),
+            ).whenComplete { _, error ->
                 if (error == null) result.complete(null) else result.completeExceptionally(error)
             }
         return result
     }
 
-    private fun load(file: VirtualFile, recursive: Boolean) {
+    private fun load(
+        file: VirtualFile,
+        recursive: Boolean,
+    ) {
         if (!file.isValid || !file.isDirectory || file.`is`(VFileProperty.SYMLINK)) return
         val children = file.children
         if (recursive) children.filter { it.isDirectory }.forEach { load(it, true) }

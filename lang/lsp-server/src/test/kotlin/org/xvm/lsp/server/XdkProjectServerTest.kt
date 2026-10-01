@@ -1,10 +1,5 @@
 package org.xvm.lsp.server
 
-import java.io.File
-import java.nio.file.Files
-import java.nio.file.Path
-import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.eclipse.lsp4j.DefinitionParams
@@ -36,6 +31,11 @@ import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
+import java.io.File
+import java.nio.file.Files
+import java.nio.file.Path
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkProjectServerTest {
     @TempDir lateinit var directory: Path
@@ -58,7 +58,7 @@ class XdkProjectServerTest {
                         resourceRoots = listOf(resources.toURI().toString()),
                     ),
                     XdkSourceModule("Consumer", consumer.toURI().toString(), setOf("Library")),
-                )
+                ),
             )
             session.open(consumer, consumerText, 1)
             session.expect(consumer, 0, 1, false)
@@ -94,9 +94,8 @@ class XdkProjectServerTest {
                         DefinitionParams(
                             TextDocumentIdentifier(consumer.toURI().toString()),
                             Position(0, CONSUMER.indexOf("value")),
-                        )
-                    )
-                    .get(20, SECONDS)
+                        ),
+                    ).get(20, SECONDS)
                     .left
                     .single()
             assertThat(target.uri).isEqualTo(library.toURI().toString())
@@ -124,13 +123,12 @@ class XdkProjectServerTest {
             session.expect(library, mark, 2, true)
             session.expect(consumer, mark, 7, true, "DEPENDENCY-FAILED")
             assertThat(
-                    session.adapter.findDefinition(
-                        consumer.toURI().toString(),
-                        0,
-                        CONSUMER.indexOf("value"),
-                    )
-                )
-                .isNull()
+                session.adapter.findDefinition(
+                    consumer.toURI().toString(),
+                    0,
+                    CONSUMER.indexOf("value"),
+                ),
+            ).isNull()
             mark = session.published.size
             session.change(library, LIBRARY, 3)
             session.expect(consumer, mark, 7, false)
@@ -229,7 +227,8 @@ class XdkProjectServerTest {
         CompilerTestSupport.configure()
 
         fun artifact(type: String) =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .compileModule(
                     Source(
                         "module Binary { static $type value() =" +
@@ -239,8 +238,7 @@ class XdkProjectServerTest {
                     ),
                     null,
                     ErrorList(),
-                )
-                .toDependency()
+                ).toDependency()
         val first = artifact("Int")
         val incompatible = artifact("String")
         val library =
@@ -277,7 +275,7 @@ class XdkProjectServerTest {
                     XdkSourceModule("Library", library.toURI().toString()),
                     XdkSourceModule("Consumer", consumer.toURI().toString(), setOf("Library")),
                     XdkSourceModule("Other", other.toURI().toString(), setOf("Library")),
-                )
+                ),
             )
             session.open(consumer, consumer.readText(), 7)
             session.expect(consumer, 0, 7, true)
@@ -293,7 +291,12 @@ class XdkProjectServerTest {
 
     @Test
     fun `live discovered edges propagate unsaved edits and folder notifications refresh diagnostics`() {
-        val first = directory.toRealPath().resolve("first").toFile().also { it.mkdirs() }
+        val first =
+            directory
+                .toRealPath()
+                .resolve("first")
+                .toFile()
+                .also { it.mkdirs() }
         val library = first.resolve("Library.x").also { it.writeText(LIBRARY) }
         val consumer = first.resolve("Consumer.x").also { it.writeText("module Consumer {}") }
         Session(library, consumer, automatic = true).use { session ->
@@ -317,8 +320,8 @@ class XdkProjectServerTest {
             // The second folder is outside the original folder's automatic scan.
             session.server.workspaceService.didChangeWorkspaceFolders(
                 DidChangeWorkspaceFoldersParams(
-                    WorkspaceFoldersChangeEvent(listOf(folder), emptyList())
-                )
+                    WorkspaceFoldersChangeEvent(listOf(folder), emptyList()),
+                ),
             )
             mark = session.published.size
             session.change(consumer, CONSUMER.replace("Library", "External"), 9)
@@ -326,8 +329,8 @@ class XdkProjectServerTest {
             mark = session.published.size
             session.server.workspaceService.didChangeWorkspaceFolders(
                 DidChangeWorkspaceFoldersParams(
-                    WorkspaceFoldersChangeEvent(emptyList(), listOf(folder))
-                )
+                    WorkspaceFoldersChangeEvent(emptyList(), listOf(folder)),
+                ),
             )
             session.expect(consumer, mark, 9, true)
             assertThat(external.isFile).isTrue()
@@ -356,10 +359,9 @@ class XdkProjectServerTest {
         init {
             val client = mock(LanguageClient::class.java)
             doAnswer { call ->
-                    published.add(call.getArgument(0))
-                    null
-                }
-                .`when`(client)
+                published.add(call.getArgument(0))
+                null
+            }.`when`(client)
                 .publishDiagnostics(any())
             server.connect(client)
             if (automatic) {
@@ -371,11 +373,10 @@ class XdkProjectServerTest {
                                     WorkspaceFolder(
                                         consumer.parentFile.toURI().toString(),
                                         "workspace",
-                                    )
+                                    ),
                                 )
-                        }
-                    )
-                    .get(30, SECONDS)
+                        },
+                    ).get(30, SECONDS)
             } else {
                 server.initialize(editorInitializeParams()).get()
                 server.replaceCompilerSourceModules(
@@ -389,9 +390,9 @@ class XdkProjectServerTest {
                                 "Consumer",
                                 consumer.toURI().toString(),
                                 setOf(if (bridge == null) "Library" else "Bridge"),
-                            )
+                            ),
                         )
-                    }
+                    },
                 )
             }
         }
@@ -400,37 +401,34 @@ class XdkProjectServerTest {
             file: File,
             text: String,
             version: Int,
-        ) =
-            documents.didOpen(
-                DidOpenTextDocumentParams(
-                    TextDocumentItem(file.toURI().toString(), "xtc", version, text)
-                )
-            )
+        ) = documents.didOpen(
+            DidOpenTextDocumentParams(
+                TextDocumentItem(file.toURI().toString(), "xtc", version, text),
+            ),
+        )
 
         fun change(
             file: File,
             text: String,
             version: Int,
-        ) =
-            documents.didChange(
-                DidChangeTextDocumentParams(
-                    VersionedTextDocumentIdentifier(file.toURI().toString(), version),
-                    listOf(TextDocumentContentChangeEvent(text)),
-                )
-            )
+        ) = documents.didChange(
+            DidChangeTextDocumentParams(
+                VersionedTextDocumentIdentifier(file.toURI().toString(), version),
+                listOf(TextDocumentContentChangeEvent(text)),
+            ),
+        )
 
         fun closeDocument(file: File) =
             documents.didClose(
-                DidCloseTextDocumentParams(TextDocumentIdentifier(file.toURI().toString()))
+                DidCloseTextDocumentParams(TextDocumentIdentifier(file.toURI().toString())),
             )
 
         fun watched(
             file: File,
             kind: FileChangeType,
-        ) =
-            server.workspaceService.didChangeWatchedFiles(
-                DidChangeWatchedFilesParams(listOf(FileEvent(file.toURI().toString(), kind)))
-            )
+        ) = server.workspaceService.didChangeWatchedFiles(
+            DidChangeWatchedFilesParams(listOf(FileEvent(file.toURI().toString(), kind))),
+        )
 
         fun expect(
             file: File,

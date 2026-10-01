@@ -19,15 +19,14 @@ class XdkInferredPresentationTest {
             assertThat(types.map { it.label }).containsExactly(": Int", ": Int")
             assertThat(adapter.getHoverInfo(URI, 0, source.indexOf("value)"))).contains("Int")
             assertThat(
-                    adapter.getInlayHints(
-                        URI,
-                        Range(
-                            Position(0, source.indexOf("->")),
-                            Position(0, source.indexOf("->") + 2),
-                        ),
-                    )
-                )
-                .hasSize(1)
+                adapter.getInlayHints(
+                    URI,
+                    Range(
+                        Position(0, source.indexOf("->")),
+                        Position(0, source.indexOf("->") + 2),
+                    ),
+                ),
+            ).hasSize(1)
         }
     }
 

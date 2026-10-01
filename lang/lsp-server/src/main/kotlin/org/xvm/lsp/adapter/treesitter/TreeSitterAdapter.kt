@@ -1,12 +1,5 @@
 package org.xvm.lsp.adapter.treesitter
 
-import java.net.URI
-import java.nio.file.Path
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.io.path.extension
-import kotlin.time.measureTimedValue
 import org.xvm.lsp.adapter.AbstractAdapter
 import org.xvm.lsp.adapter.AdapterCodeActions
 import org.xvm.lsp.adapter.AdapterFormatter
@@ -53,6 +46,13 @@ import org.xvm.lsp.treesitter.XtcNode
 import org.xvm.lsp.treesitter.XtcParser
 import org.xvm.lsp.treesitter.XtcQueryEngine
 import org.xvm.lsp.treesitter.XtcTree
+import java.net.URI
+import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.io.path.extension
+import kotlin.time.measureTimedValue
 
 /**
  * XTC Compiler Adapter implementation using Tree-sitter for fast, syntax-level intelligence.
@@ -241,7 +241,9 @@ class TreeSitterAdapter : AbstractAdapter() {
                     workspaceIndex.symbolCount,
                     workspaceIndex.fileCount,
                 )
-            } else if (!scan.isCancelled) logger.error("workspace indexing failed", failure)
+            } else if (!scan.isCancelled) {
+                logger.error("workspace indexing failed", failure)
+            }
         }
         return scan
     }
@@ -265,10 +267,9 @@ class TreeSitterAdapter : AbstractAdapter() {
                     logger.info("removed deleted file from index: {}", uri.substringAfterLast('/'))
                 }
             }
+        }.onFailure { e ->
+            logger.warn("didChangeWatchedFile failed for {}: {}", uri, e.message)
         }
-            .onFailure { e ->
-                logger.warn("didChangeWatchedFile failed for {}: {}", uri, e.message)
-            }
     }
 
     override fun findWorkspaceSymbols(query: String): List<SymbolInfo> {
@@ -464,7 +465,7 @@ class TreeSitterAdapter : AbstractAdapter() {
                                     kind = toCompletionKind(symbol.kind),
                                     detail = symbol.typeSignature ?: symbol.kind.name.lowercase(),
                                     insertText = symbol.name,
-                                )
+                                ),
                             )
                         }
                         // Add workspace index types
@@ -481,14 +482,15 @@ class TreeSitterAdapter : AbstractAdapter() {
 
                 CompletionContext.ANNOTATION -> {
                     // After '@': known annotation names
-                    val common = commonAnnotations.map { name ->
-                        CompletionItem(
-                            label = name,
-                            kind = CompletionKind.CLASS,
-                            detail = "annotation",
-                            insertText = name,
-                        )
-                    }
+                    val common =
+                        commonAnnotations.map { name ->
+                            CompletionItem(
+                                label = name,
+                                kind = CompletionKind.CLASS,
+                                detail = "annotation",
+                                insertText = name,
+                            )
+                        }
                     logger.info(
                         "getCompletions: annotation-context common={}",
                         common.map { it.label },
@@ -508,7 +510,7 @@ class TreeSitterAdapter : AbstractAdapter() {
                                     kind = CompletionKind.CLASS,
                                     detail = "annotation",
                                     insertText = name,
-                                )
+                                ),
                             )
                         }
                     }
@@ -530,7 +532,7 @@ class TreeSitterAdapter : AbstractAdapter() {
                                     kind = toCompletionKind(symbol.kind),
                                     detail = symbol.kind.name.lowercase(),
                                     insertText = symbol.qualifiedName,
-                                )
+                                ),
                             )
                         }
                     }
@@ -564,8 +566,7 @@ class TreeSitterAdapter : AbstractAdapter() {
                     }
                 }
             }
-        }
-            .distinctBy { it.label }
+        }.distinctBy { it.label }
             .also { logger.info("getCompletions -> {} items ({})", it.size, context) }
     }
 
@@ -615,13 +616,15 @@ class TreeSitterAdapter : AbstractAdapter() {
                 "mixin_body",
                 "service_body",
                 "const_body",
-                "block" -> {
+                "block",
+                -> {
                     return CompletionContext.BODY
                 }
 
                 "type_expression",
                 "type_name",
-                "generic_type" -> {
+                "generic_type",
+                -> {
                     return CompletionContext.TYPE
                 }
 
@@ -670,9 +673,13 @@ class TreeSitterAdapter : AbstractAdapter() {
                 val kind =
                     when (child.type) {
                         "method_declaration",
-                        "function_declaration" -> CompletionKind.METHOD
+                        "function_declaration",
+                        -> CompletionKind.METHOD
+
                         "constructor_declaration" -> CompletionKind.METHOD
+
                         "property_declaration" -> CompletionKind.PROPERTY
+
                         else -> continue
                     }
                 add(
@@ -681,7 +688,7 @@ class TreeSitterAdapter : AbstractAdapter() {
                         kind = kind,
                         detail = child.type.replace("_declaration", "").replace("_", " "),
                         insertText = name,
-                    )
+                    ),
                 )
             }
         }
@@ -719,18 +726,19 @@ class TreeSitterAdapter : AbstractAdapter() {
         line: Int,
         column: Int,
         uri: String,
-    ): List<CompletionItem> = buildList {
-        if (tree != null) {
-            queryEngine.enumerateInScope(tree, line, column, uri).mapTo(this) {
-                it.toCompletionItem()
+    ): List<CompletionItem> =
+        buildList {
+            if (tree != null) {
+                queryEngine.enumerateInScope(tree, line, column, uri).mapTo(this) {
+                    it.toCompletionItem()
+                }
+                queryEngine.findAllDeclarations(tree, uri).mapTo(this) { it.toCompletionItem() }
+                queryEngine.findImports(tree).mapTo(this) { it.toImportCompletionItem() }
             }
-            queryEngine.findAllDeclarations(tree, uri).mapTo(this) { it.toCompletionItem() }
-            queryEngine.findImports(tree).mapTo(this) { it.toImportCompletionItem() }
+            if (indexReady.get()) addAll(workspaceIndexTypeCompletions())
+            addAll(builtInTypeCompletions())
+            addAll(keywordCompletions().filter { it.label in bodyFlowKeywords })
         }
-        if (indexReady.get()) addAll(workspaceIndexTypeCompletions())
-        addAll(builtInTypeCompletions())
-        addAll(keywordCompletions().filter { it.label in bodyFlowKeywords })
-    }
 
     private fun SymbolInfo.toCompletionItem(): CompletionItem =
         CompletionItem(
@@ -953,8 +961,11 @@ class TreeSitterAdapter : AbstractAdapter() {
         return locations.map { loc ->
             val node = tree.nodeAt(loc.startLine, loc.startColumn)
             val kind =
-                if (node != null && isAssignmentTarget(node)) HighlightKind.WRITE
-                else HighlightKind.READ
+                if (node != null && isAssignmentTarget(node)) {
+                    HighlightKind.WRITE
+                } else {
+                    HighlightKind.READ
+                }
             val range =
                 Range(
                     Position(loc.startLine, loc.startColumn),
@@ -980,7 +991,7 @@ class TreeSitterAdapter : AbstractAdapter() {
                         Position(loc.startLine, loc.startColumn),
                         Position(loc.endLine, loc.endColumn),
                     )
-                }
+                },
         )
     }
 
@@ -988,12 +999,14 @@ class TreeSitterAdapter : AbstractAdapter() {
         val parent = node.parent ?: return false
         return when (parent.type) {
             "assignment_statement",
-            "assignment_expression" -> {
+            "assignment_expression",
+            -> {
                 parent.childByFieldName("left")?.let { isOrContains(it, node) } == true
             }
 
             "variable_declaration",
-            "parameter" -> {
+            "parameter",
+            -> {
                 parent.childByFieldName("name")?.let { isSameNode(it, node) } == true
             }
 
@@ -1006,8 +1019,7 @@ class TreeSitterAdapter : AbstractAdapter() {
     private fun isOrContains(
         container: XtcNode,
         target: XtcNode,
-    ): Boolean =
-        isSameNode(container, target) || container.children.any { isOrContains(it, target) }
+    ): Boolean = isSameNode(container, target) || container.children.any { isOrContains(it, target) }
 
     private fun isSameNode(
         a: XtcNode,
@@ -1049,21 +1061,22 @@ class TreeSitterAdapter : AbstractAdapter() {
         val node = tree.nodeAt(line, column) ?: return fallback
 
         // Walk up from the leaf node to the root, skipping nodes with identical ranges
-        val nodes = buildList {
-            add(node)
-            generateSequence(node.parent) { it.parent }
-                .forEach { ancestor ->
-                    val prev = last()
-                    if (
-                        ancestor.startLine != prev.startLine ||
+        val nodes =
+            buildList {
+                add(node)
+                generateSequence(node.parent) { it.parent }
+                    .forEach { ancestor ->
+                        val prev = last()
+                        if (
+                            ancestor.startLine != prev.startLine ||
                             ancestor.startColumn != prev.startColumn ||
                             ancestor.endLine != prev.endLine ||
                             ancestor.endColumn != prev.endColumn
-                    ) {
-                        add(ancestor)
+                        ) {
+                            add(ancestor)
+                        }
                     }
-                }
-        }
+            }
 
         // Build the SelectionRange chain from outermost (parent) to innermost (leaf)
         return nodes.foldRight(null) { n, parent ->
@@ -1086,10 +1099,9 @@ class TreeSitterAdapter : AbstractAdapter() {
         return buildList {
             collectFoldingRanges(tree.root, this)
             mergeConsecutiveLineComments(tree.root, this)
+        }.also {
+            logger.info("getFoldingRanges -> {} ranges", it.size)
         }
-            .also {
-                logger.info("getFoldingRanges -> {} ranges", it.size)
-            }
     }
 
     private fun collectFoldingRanges(
@@ -1108,7 +1120,8 @@ class TreeSitterAdapter : AbstractAdapter() {
                 "method_declaration",
                 "constructor_declaration",
                 "module_declaration",
-                "package_declaration" -> {
+                "package_declaration",
+                -> {
                     null
                 }
 
@@ -1117,7 +1130,8 @@ class TreeSitterAdapter : AbstractAdapter() {
                 "comment",
                 "line_comment",
                 "block_comment",
-                "doc_comment" -> {
+                "doc_comment",
+                -> {
                     FoldingRange.FoldingKind.COMMENT
                 }
 
@@ -1174,7 +1188,7 @@ class TreeSitterAdapter : AbstractAdapter() {
     ) {
         if (
             (node.type == "comment" || node.type == "line_comment") &&
-                node.startLine == node.endLine
+            node.startLine == node.endLine
         ) {
             result.add(node)
         }
@@ -1273,14 +1287,15 @@ class TreeSitterAdapter : AbstractAdapter() {
             locations.size,
             allOccurrences.size,
         )
-        val edits = locations.map { loc ->
-            val range =
-                Range(
-                    Position(loc.startLine, loc.startColumn),
-                    Position(loc.endLine, loc.endColumn),
-                )
-            TextEdit(range, newName)
-        }
+        val edits =
+            locations.map { loc ->
+                val range =
+                    Range(
+                        Position(loc.startLine, loc.startColumn),
+                        Position(loc.endLine, loc.endColumn),
+                    )
+                TextEdit(range, newName)
+            }
         return WorkspaceEdit(mapOf(uri to edits))
     }
 
@@ -1352,21 +1367,22 @@ class TreeSitterAdapter : AbstractAdapter() {
             return null
         }
 
-        val signatures = methods.map { method ->
-            // Find the method_declaration node to extract parameters
-            val methodNode =
-                tree.nodeAt(method.location.startLine, method.location.startColumn)?.let {
-                    findDeclarationNode(it, "method_declaration")
-                }
-            val params =
-                methodNode?.childByFieldName("parameters")?.let { extractParameters(it) }
-                    ?: emptyList()
-            val paramLabel = params.joinToString(", ") { p -> p.label }
-            SignatureInfo(
-                label = "$funcName($paramLabel)",
-                parameters = params,
-            )
-        }
+        val signatures =
+            methods.map { method ->
+                // Find the method_declaration node to extract parameters
+                val methodNode =
+                    tree.nodeAt(method.location.startLine, method.location.startColumn)?.let {
+                        findDeclarationNode(it, "method_declaration")
+                    }
+                val params =
+                    methodNode?.childByFieldName("parameters")?.let { extractParameters(it) }
+                        ?: emptyList()
+                val paramLabel = params.joinToString(", ") { p -> p.label }
+                SignatureInfo(
+                    label = "$funcName($paramLabel)",
+                    parameters = params,
+                )
+            }
 
         logger.info(
             "signatureHelp '{}' -> {} signatures, active param {}",
@@ -1456,13 +1472,12 @@ class TreeSitterAdapter : AbstractAdapter() {
                                 command = "xtc.runModule",
                                 arguments = listOf(uri, decl.name),
                             ),
-                    )
+                    ),
                 )
             }
+        }.also {
+            logger.info("getCodeLenses -> {} lenses", it.size)
         }
-            .also {
-                logger.info("getCodeLenses -> {} lenses", it.size)
-            }
     }
 
     // ========================================================================
@@ -1553,18 +1568,19 @@ class TreeSitterAdapter : AbstractAdapter() {
     ): List<DocumentLink> {
         val tree = parsedTrees[uri] ?: return emptyList()
         val hosts = queryEngine.findCommentAndStringNodes(tree, uri)
-        val links = buildList {
-            for ((text, loc) in hosts) {
-                urlPattern.findAll(text).forEach { match ->
-                    // Strip trailing punctuation that's almost never part of the URL itself
-                    // (sentences in comments end with these, e.g. "see https://example.com.")
-                    val trimmed = match.value.trimEnd(*urlTrailingTrim)
-                    if (trimmed.isEmpty()) return@forEach
-                    val range = rangeWithinText(text, match.range.first, trimmed.length, loc)
-                    add(DocumentLink(range, trimmed, trimmed))
+        val links =
+            buildList {
+                for ((text, loc) in hosts) {
+                    urlPattern.findAll(text).forEach { match ->
+                        // Strip trailing punctuation that's almost never part of the URL itself
+                        // (sentences in comments end with these, e.g. "see https://example.com.")
+                        val trimmed = match.value.trimEnd(*urlTrailingTrim)
+                        if (trimmed.isEmpty()) return@forEach
+                        val range = rangeWithinText(text, match.range.first, trimmed.length, loc)
+                        add(DocumentLink(range, trimmed, trimmed))
+                    }
                 }
             }
-        }
         logger.info(
             "getDocumentLinks: {} URL links across {} comment/string nodes",
             links.size,
@@ -1616,8 +1632,7 @@ class TreeSitterAdapter : AbstractAdapter() {
                 .mapNotNull { chunk ->
                     val tokenTypeIndex = chunk.getOrNull(3) ?: return@mapNotNull null
                     SemanticTokenLegend.tokenTypes.getOrNull(tokenTypeIndex)
-                }
-                .groupingBy { it }
+                }.groupingBy { it }
                 .eachCount()
         logger.info(
             "getSemanticTokens -> {} data items ({} tokens) types={}",
@@ -1658,27 +1673,35 @@ class TreeSitterAdapter : AbstractAdapter() {
     private fun collectSyntaxErrors(
         node: XtcNode,
         uri: String,
-    ): List<Diagnostic> = buildList {
-        val message =
-            when {
-                node.isError ->
-                    "Syntax error: unexpected '${node.text.take(20)}${if (node.text.length > 20) "..." else ""}'"
-                node.isMissing -> "Syntax error: missing ${node.type}"
-                else -> null
+    ): List<Diagnostic> =
+        buildList {
+            val message =
+                when {
+                    node.isError -> {
+                        "Syntax error: unexpected '${node.text.take(20)}${if (node.text.length > 20) "..." else ""}'"
+                    }
+
+                    node.isMissing -> {
+                        "Syntax error: missing ${node.type}"
+                    }
+
+                    else -> {
+                        null
+                    }
+                }
+
+            if (message != null) {
+                add(
+                    Diagnostic.error(
+                        Location(uri, node.startLine, node.startColumn, node.endLine, node.endColumn),
+                        message,
+                    ),
+                )
             }
 
-        if (message != null) {
-            add(
-                Diagnostic.error(
-                    Location(uri, node.startLine, node.startColumn, node.endLine, node.endColumn),
-                    message,
-                )
-            )
+            // Recursively check children
+            node.children.filter { it.hasError }.forEach { addAll(collectSyntaxErrors(it, uri)) }
         }
-
-        // Recursively check children
-        node.children.filter { it.hasError }.forEach { addAll(collectSyntaxErrors(it, uri)) }
-    }
 
     private fun findIdentifierNode(node: XtcNode): XtcNode? =
         if (node.type == "identifier" || node.type == "type_name") {

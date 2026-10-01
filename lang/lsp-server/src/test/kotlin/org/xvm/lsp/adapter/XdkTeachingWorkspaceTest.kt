@@ -1,9 +1,6 @@
 package org.xvm.lsp.adapter
 
 import com.google.gson.JsonParser
-import java.lang.ref.WeakReference
-import java.nio.file.Path
-import java.time.Duration
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
@@ -13,6 +10,9 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkWorkspaceDiscovery
+import java.lang.ref.WeakReference
+import java.nio.file.Path
+import java.time.Duration
 
 /**
  * The actual teaching sources, including companion files and all automatically discovered roots.
@@ -36,9 +36,7 @@ class XdkTeachingWorkspaceTest {
 
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
-    fun `transitive consumers allow proven annotations but reject an incomplete graph`(
-        broken: Boolean
-    ) {
+    fun `transitive consumers allow proven annotations but reject an incomplete graph`(broken: Boolean) {
         val library = "module Library { class Box { Int number = 1; } }"
         val unrelated =
             "annotation Tracked<T> into Var<T> { @Override T get() = super(); } class State { @Tracked Int value = 1; } "
@@ -70,11 +68,10 @@ class XdkTeachingWorkspaceTest {
                 assertThat(adapter.compile(uri, library.replace("number", "amount")).diagnostics)
                     .isEmpty()
                 assertThat(
-                        adapter
-                            .compile(consumerUri, consumer.replace("box.number", "box.amount"))
-                            .diagnostics
-                    )
-                    .isEmpty()
+                    adapter
+                        .compile(consumerUri, consumer.replace("box.number", "box.amount"))
+                        .diagnostics,
+                ).isEmpty()
             }
             assertThat(libraryFile.readText()).isEqualTo(library)
             assertThat(consumerFile.readText()).isEqualTo(consumer)
@@ -83,9 +80,7 @@ class XdkTeachingWorkspaceTest {
 
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
-    fun `teaching workspace property proof preserves live buffers and releases compiler state`(
-        multipleBuffers: Boolean
-    ) {
+    fun `teaching workspace property proof preserves live buffers and releases compiler state`(multipleBuffers: Boolean) {
         CompilerTestSupport.configure()
         val fixtures = teachingSources()
         fixtures.forEach { (name, text) ->
@@ -102,27 +97,31 @@ class XdkTeachingWorkspaceTest {
         assertThat(roots).hasSize(25)
         val observed = mutableListOf<WeakReference<Any>>()
         XdkAdapter(
-                { source, repository, errors ->
-                    EmbeddingSupport.instance().compileModule(source, repository, errors)
-                },
-                { sources, repository, errors ->
-                    EmbeddingSupport.instance().compileModule(sources, repository, errors).also {
-                        compilation ->
-                        observed += WeakReference(compilation)
-                        compilation.pool()?.let { observed += WeakReference(it) }
-                        compilation.sourceTrees().forEach { observed += WeakReference(it) }
-                    }
-                },
-                { _, _, _, _, _ -> error("A complete rename proof must not use cursor recovery") },
-            )
-            .use { adapter ->
-                adapter.initializeWorkspace(listOf(directory.toString()))
-                val target = "X102/PropertyRename.x"
-                val text = fixtures.getValue(target)
+            { source, repository, errors ->
+                EmbeddingSupport.instance().compileModule(source, repository, errors)
+            },
+            { sources, repository, errors ->
+                EmbeddingSupport.instance().compileModule(sources, repository, errors).also { compilation ->
+                    observed += WeakReference(compilation)
+                    compilation.pool()?.let { observed += WeakReference(it) }
+                    compilation.sourceTrees().forEach { observed += WeakReference(it) }
+                }
+            },
+            { _, _, _, _, _ -> error("A complete rename proof must not use cursor recovery") },
+        ).use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            val target = "X102/PropertyRename.x"
+            val text = fixtures.getValue(target)
 
-                fun uri(file: String) =
-                    directory.resolve(file).toFile().canonicalFile.toURI().toString()
-                val buffers = buildMap {
+            fun uri(file: String) =
+                directory
+                    .resolve(file)
+                    .toFile()
+                    .canonicalFile
+                    .toURI()
+                    .toString()
+            val buffers =
+                buildMap {
                     put(uri(target), text + "\n// Unsaved target buffer\n")
                     if (multipleBuffers) {
                         listOf("Navigation.x", "Consumer.x", "Project/Child.x", "Properties.x")
@@ -134,39 +133,39 @@ class XdkTeachingWorkspaceTest {
                             }
                     }
                 }
-                buffers.forEach { (uri, source) ->
-                    assertThat(adapter.compile(uri, source).success).describedAs(uri).isTrue()
-                }
-                val diagnostics =
-                    buffers.keys.associateWith { adapter.getCachedResult(it)?.diagnostics }
-                observed.clear()
-                val edit =
-                    requireNotNull(adapter.rename(uri(target), 0, text.indexOf("value"), "amount"))
-                assertThat(edit.changes.keys).containsExactly(uri(target))
-                assertThat(edit.changes.getValue(uri(target))).hasSize(4)
-                assertThat(edit.renames).isEmpty()
-                assertThat(buffers.keys.associateWith { adapter.getCachedResult(it)?.diagnostics })
-                    .isEqualTo(diagnostics)
-                released(observed)
-
-                val collision =
-                    buffers
-                        .getValue(uri(target))
-                        .replace("class Base {", "class Base { Int amount = 3;")
-                assertThat(adapter.compile(uri(target), collision).success).isTrue()
-                val beforeRefusal = adapter.getCachedResult(uri(target))
-                observed.clear()
-                assertThat(adapter.rename(uri(target), 0, collision.indexOf("value"), "amount"))
-                    .isNull()
-                assertThat(adapter.getCachedResult(uri(target))).isEqualTo(beforeRefusal)
-                released(observed)
-                fixtures.forEach { (file, source) ->
-                    assertThat(directory.resolve(file).toFile().readText()).isEqualTo(source)
-                }
-                println(
-                    "Teaching workspace: roots=${roots.size}, open buffers=${buffers.size}, heap=${Runtime.getRuntime().maxMemory()} bytes"
-                )
+            buffers.forEach { (uri, source) ->
+                assertThat(adapter.compile(uri, source).success).describedAs(uri).isTrue()
             }
+            val diagnostics =
+                buffers.keys.associateWith { adapter.getCachedResult(it)?.diagnostics }
+            observed.clear()
+            val edit =
+                requireNotNull(adapter.rename(uri(target), 0, text.indexOf("value"), "amount"))
+            assertThat(edit.changes.keys).containsExactly(uri(target))
+            assertThat(edit.changes.getValue(uri(target))).hasSize(4)
+            assertThat(edit.renames).isEmpty()
+            assertThat(buffers.keys.associateWith { adapter.getCachedResult(it)?.diagnostics })
+                .isEqualTo(diagnostics)
+            released(observed)
+
+            val collision =
+                buffers
+                    .getValue(uri(target))
+                    .replace("class Base {", "class Base { Int amount = 3;")
+            assertThat(adapter.compile(uri(target), collision).success).isTrue()
+            val beforeRefusal = adapter.getCachedResult(uri(target))
+            observed.clear()
+            assertThat(adapter.rename(uri(target), 0, collision.indexOf("value"), "amount"))
+                .isNull()
+            assertThat(adapter.getCachedResult(uri(target))).isEqualTo(beforeRefusal)
+            released(observed)
+            fixtures.forEach { (file, source) ->
+                assertThat(directory.resolve(file).toFile().readText()).isEqualTo(source)
+            }
+            println(
+                "Teaching workspace: roots=${roots.size}, open buffers=${buffers.size}, heap=${Runtime.getRuntime().maxMemory()} bytes",
+            )
+        }
     }
 
     private fun released(observed: List<WeakReference<Any>>) {
@@ -183,13 +182,13 @@ class XdkTeachingWorkspaceTest {
     private fun teachingSources(): Map<String, String> {
         val lang = Path.of(System.getProperty("xtc.composite.root")).resolve("lang")
         val catalog =
-            JsonParser.parseString(
+            JsonParser
+                .parseString(
                     lang
                         .resolve("test-fixtures/compiler-playbook/scenarios.json")
                         .toFile()
-                        .readText()
-                )
-                .asJsonObject
+                        .readText(),
+                ).asJsonObject
         val manual = lang.resolve("doc/manual-test-plan.md").toFile().readText()
         val blocks =
             Regex("```xtc\\n([\\s\\S]*?)\\n```").findAll(manual).map { it.groupValues[1] }.toList()

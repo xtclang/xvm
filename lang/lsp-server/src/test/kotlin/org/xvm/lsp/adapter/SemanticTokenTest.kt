@@ -72,8 +72,7 @@ class SemanticTokenTest : TreeSitterTestBase() {
                     class Person {
                     }
                 }
-                """
-                    .trimIndent(),
+                """.trimIndent(),
             )
 
             val tokens = ts.getSemanticTokens(uri)
@@ -85,9 +84,10 @@ class SemanticTokenTest : TreeSitterTestBase() {
 
             // "Person" should be classified as "class" with "declaration" modifier
             // IntArray: [line, column, length, tokenType, tokenModifiers]
-            val classToken = decoded.find {
-                it[3] == semanticTypeIndex["class"] && it[2] == "Person".length
-            }
+            val classToken =
+                decoded.find {
+                    it[3] == semanticTypeIndex["class"] && it[2] == "Person".length
+                }
             assertThat(classToken).isNotNull
             assertThat(hasSemanticModifier(classToken!![4], "declaration")).isTrue()
         }
@@ -103,17 +103,17 @@ class SemanticTokenTest : TreeSitterTestBase() {
                     interface Runnable {
                     }
                 }
-                """
-                    .trimIndent(),
+                """.trimIndent(),
             )
 
             val tokens = ts.getSemanticTokens(uri)
             assertThat(tokens).isNotNull
 
             val decoded = decodeSemanticTokens(tokens!!.data)
-            val ifaceToken = decoded.find {
-                it[3] == semanticTypeIndex["interface"] && it[2] == "Runnable".length
-            }
+            val ifaceToken =
+                decoded.find {
+                    it[3] == semanticTypeIndex["interface"] && it[2] == "Runnable".length
+                }
             assertThat(ifaceToken).isNotNull
             assertThat(hasSemanticModifier(ifaceToken!![4], "declaration")).isTrue()
         }
@@ -132,8 +132,7 @@ class SemanticTokenTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent(),
+                """.trimIndent(),
             )
 
             val tokens = ts.getSemanticTokens(uri)
@@ -142,9 +141,10 @@ class SemanticTokenTest : TreeSitterTestBase() {
             val decoded = decodeSemanticTokens(tokens!!.data)
             logger.info("[TEST] method decl tokens: {}", decoded.map { it.toList() })
 
-            val methodToken = decoded.find {
-                it[3] == semanticTypeIndex["method"] && it[2] == "getName".length
-            }
+            val methodToken =
+                decoded.find {
+                    it[3] == semanticTypeIndex["method"] && it[2] == "getName".length
+                }
             assertThat(methodToken).isNotNull
             assertThat(hasSemanticModifier(methodToken!![4], "declaration")).isTrue()
         }
@@ -161,8 +161,7 @@ class SemanticTokenTest : TreeSitterTestBase() {
                         String name = "hello";
                     }
                 }
-                """
-                    .trimIndent(),
+                """.trimIndent(),
             )
 
             val tokens = ts.getSemanticTokens(uri)
@@ -171,9 +170,10 @@ class SemanticTokenTest : TreeSitterTestBase() {
             val decoded = decodeSemanticTokens(tokens!!.data)
             logger.info("[TEST] property decl tokens: {}", decoded.map { it.toList() })
 
-            val propToken = decoded.find {
-                it[3] == semanticTypeIndex["property"] && it[2] == "name".length
-            }
+            val propToken =
+                decoded.find {
+                    it[3] == semanticTypeIndex["property"] && it[2] == "name".length
+                }
             assertThat(propToken).isNotNull
             assertThat(hasSemanticModifier(propToken!![4], "declaration")).isTrue()
         }
@@ -192,8 +192,7 @@ class SemanticTokenTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent(),
+                """.trimIndent(),
             )
 
             val tokens = ts.getSemanticTokens(uri)
@@ -221,8 +220,7 @@ class SemanticTokenTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent(),
+                """.trimIndent(),
             )
 
             val tokens = ts.getSemanticTokens(uri)
@@ -271,8 +269,7 @@ class SemanticTokenTest : TreeSitterTestBase() {
                 """
                 module myapp {
                     class Person {
-                """
-                    .trimIndent(),
+                """.trimIndent(),
             )
 
             // Should not throw -- may return partial tokens or null
@@ -293,8 +290,7 @@ class SemanticTokenTest : TreeSitterTestBase() {
                         Int age = 0;
                     }
                 }
-                """
-                    .trimIndent(),
+                """.trimIndent(),
             )
 
             val tokens = ts.getSemanticTokens(uri)
@@ -339,8 +335,7 @@ class SemanticTokenTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent(),
+                """.trimIndent(),
             )
 
             val tokens = ts.getSemanticTokens(uri)
@@ -364,8 +359,7 @@ class SemanticTokenTest : TreeSitterTestBase() {
                 module myapp {
                     const Point(Int x, Int y);
                 }
-                """
-                    .trimIndent(),
+                """.trimIndent(),
             )
 
             val tokens = ts.getSemanticTokens(uri)
@@ -410,8 +404,7 @@ class SemanticTokenTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             // Step 1: Initial compile
             val result1 = ts.compile(uri, originalSource)
@@ -463,8 +456,7 @@ class SemanticTokenTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, originalSource)
             val tokens1 = ts.getSemanticTokens(uri)
@@ -518,8 +510,7 @@ class SemanticTokenTest : TreeSitterTestBase() {
                         console.print("Hello!");
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, originalSource)
             val folds1 = ts.getFoldingRanges(uri)

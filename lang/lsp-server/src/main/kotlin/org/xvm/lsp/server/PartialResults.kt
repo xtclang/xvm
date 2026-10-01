@@ -1,14 +1,14 @@
 package org.xvm.lsp.server
 
+import org.eclipse.lsp4j.ProgressParams
+import org.eclipse.lsp4j.jsonrpc.messages.Either
+import org.eclipse.lsp4j.services.LanguageClient
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.atomic.AtomicBoolean
-import org.eclipse.lsp4j.ProgressParams
-import org.eclipse.lsp4j.jsonrpc.messages.Either
-import org.eclipse.lsp4j.services.LanguageClient
 
 /** Publish detached result batches outside compiler/document locks, before the final response. */
 internal class PartialResults(
@@ -16,7 +16,10 @@ internal class PartialResults(
     private val dispatcher: ExecutorService =
         Executors.newSingleThreadExecutor(Thread.ofVirtual().name("lsp-partial-results").factory()),
 ) : AutoCloseable {
-    data class Plan<T>(val batches: List<Any>, val remainder: T)
+    data class Plan<T>(
+        val batches: List<Any>,
+        val remainder: T,
+    )
 
     private val closed = AtomicBoolean()
     private val pending = ConcurrentHashMap.newKeySet<CompletableFuture<*>>()
@@ -81,7 +84,10 @@ internal class PartialResults(
         fun <T> list(values: List<T>): Plan<List<T>> = Plan(values.chunked(BATCH_SIZE), emptyList())
 
         fun <L, R> eitherLists(values: Either<List<L>, List<R>>): Plan<Either<List<L>, List<R>>> =
-            if (values.isLeft) Plan(values.left.chunked(BATCH_SIZE), Either.forLeft(emptyList()))
-            else Plan(values.right.chunked(BATCH_SIZE), Either.forRight(emptyList()))
+            if (values.isLeft) {
+                Plan(values.left.chunked(BATCH_SIZE), Either.forLeft(emptyList()))
+            } else {
+                Plan(values.right.chunked(BATCH_SIZE), Either.forRight(emptyList()))
+            }
     }
 }

@@ -17,7 +17,10 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /** Keep the IDE's asynchronous edit/Undo handling, including Save All for closed tabs. */
 class XtcFormattingService : LSPFormattingAndRangeBothService() {
-    override fun canSupportFormatting(feature: LSPFormattingFeature, file: PsiFile): Boolean =
+    override fun canSupportFormatting(
+        feature: LSPFormattingFeature,
+        file: PsiFile,
+    ): Boolean =
         file.virtualFile?.extension == "x" &&
             feature.clientFeatures.isServerDefinition(CompilerSettings.SERVER_ID) &&
             super.canSupportFormatting(feature, file)
@@ -39,7 +42,8 @@ class XtcFormattingService : LSPFormattingAndRangeBothService() {
                 try {
                     if (cancelled.get()) return
                     val servers =
-                        LanguageServiceAccessor.getInstance(file.project)
+                        LanguageServiceAccessor
+                            .getInstance(file.project)
                             .getLanguageServers(
                                 file,
                                 {
@@ -58,7 +62,7 @@ class XtcFormattingService : LSPFormattingAndRangeBothService() {
                         server.clientFeatures.formattingFeature.getFormattingOptions(file, null)
                     val result =
                         support.getFeatureData(
-                            LSPFormattingParams(range, document, server, options)
+                            LSPFormattingParams(range, document, server, options),
                         )
                     if (cancelled.get()) support.cancel()
                     val edits = result?.let { ProgressIndicatorUtils.awaitWithCheckCanceled(it) }

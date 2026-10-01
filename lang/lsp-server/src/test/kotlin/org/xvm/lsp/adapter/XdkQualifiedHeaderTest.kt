@@ -1,6 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -13,6 +12,7 @@ import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.compiler.ast.NamedTypeExpression
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import java.nio.file.Path
 
 class XdkQualifiedHeaderTest {
     @TempDir lateinit var directory: Path
@@ -24,7 +24,7 @@ class XdkQualifiedHeaderTest {
                 "void damaged(ecstasy.text.Str| value) {}",
                 "ecstasy.text.Str| property;",
                 "ecstasy.text.Str| damaged() = new StringBuffer();",
-            ]
+            ],
     )
     fun `qualified type prefixes replace only the final token`(declaration: String) {
         val prefix = "module Headers { " + declaration.substringBefore('|')
@@ -38,14 +38,13 @@ class XdkQualifiedHeaderTest {
                     TextEdit(
                         Range(Position(0, prefix.length - 3), Position(0, prefix.length)),
                         "StringBuffer",
-                    )
+                    ),
                 )
             assertThat(adapter.getSignatureHelp(URI, 0, prefix.length)).isNull()
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
             assertThat(
-                    adapter.compile(URI, prefix.dropLast(3) + "StringBuffer" + suffix).diagnostics
-                )
-                .isEmpty()
+                adapter.compile(URI, prefix.dropLast(3) + "StringBuffer" + suffix).diagnostics,
+            ).isEmpty()
         }
     }
 
@@ -75,11 +74,10 @@ class XdkQualifiedHeaderTest {
             assertThat(items.map { it.label }).containsExactlyInAnyOrder("ItemBase", "ItemOwn")
             for (item in items) {
                 assertThat(
-                        adapter
-                            .compile(URI, prefix.dropLast(3) + item.label + " value) {} }")
-                            .diagnostics
-                    )
-                    .isEmpty()
+                    adapter
+                        .compile(URI, prefix.dropLast(3) + item.label + " value) {} }")
+                        .diagnostics,
+                ).isEmpty()
             }
         }
     }
@@ -93,19 +91,16 @@ class XdkQualifiedHeaderTest {
             assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
                 .containsExactly("ItemPrivate")
             assertThat(
-                    adapter
-                        .compile(URI, prefix.dropLast(3) + "ItemPrivate value) {} } }")
-                        .diagnostics
-                )
-                .isEmpty()
+                adapter
+                    .compile(URI, prefix.dropLast(3) + "ItemPrivate value) {} } }")
+                    .diagnostics,
+            ).isEmpty()
         }
     }
 
     @ParameterizedTest
     @ValueSource(strings = ["Owner.Hidden.Ite", "Alias.Ite", "missing.Str", "number.Str"])
-    fun `inaccessible unknown and value qualifiers do not fall back to enclosing names`(
-        qualified: String
-    ) {
+    fun `inaccessible unknown and value qualifiers do not fall back to enclosing names`(qualified: String) {
         val alias = if (qualified.startsWith("Alias.")) "import Owner.Hidden as Alias; " else ""
         val prefix =
             "module Headers { class Owner { class ItemPublic {} private class Hidden { class Item {} } } " +
@@ -133,11 +128,10 @@ class XdkQualifiedHeaderTest {
             assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
                 .contains("StringBuffer")
             assertThat(
-                    adapter
-                        .compile(URI, prefix.dropLast(3) + "StringBuffer value) {} }")
-                        .diagnostics
-                )
-                .isEmpty()
+                adapter
+                    .compile(URI, prefix.dropLast(3) + "StringBuffer value) {} }")
+                    .diagnostics,
+            ).isEmpty()
         }
     }
 
@@ -148,11 +142,9 @@ class XdkQualifiedHeaderTest {
                 "void damaged(ecstasy.text.Str|",
                 "void damaged(ecstasy.text.Str| {}",
                 "ecstasy.text.Str|;",
-            ]
+            ],
     )
-    fun `qualified type queries keep diagnostics for missing names and delimiters`(
-        declaration: String
-    ) {
+    fun `qualified type queries keep diagnostics for missing names and delimiters`(declaration: String) {
         val prefix = "module Headers { " + declaration.substringBefore('|')
         val suffix = declaration.substringAfter('|') + " }"
         XdkAdapter().use { adapter ->
@@ -160,9 +152,8 @@ class XdkQualifiedHeaderTest {
             assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
                 .contains("StringBuffer")
             assertThat(
-                    adapter.compile(URI, prefix.dropLast(3) + "StringBuffer" + suffix).diagnostics
-                )
-                .isNotEmpty()
+                adapter.compile(URI, prefix.dropLast(3) + "StringBuffer" + suffix).diagnostics,
+            ).isNotEmpty()
         }
     }
 
@@ -173,7 +164,7 @@ class XdkQualifiedHeaderTest {
                 "void damaged(missing.te|xt.StringBuffer value) {}",
                 "void damaged(missing.text.| value) {}",
                 "<ecstasy> void damaged(ecstasy.text.Str| value) {}",
-            ]
+            ],
     )
     fun `unsupported cursor positions and generic headers remain empty`(declaration: String) {
         val prefix = "module Headers { " + declaration.substringBefore('|')
@@ -228,11 +219,13 @@ class XdkQualifiedHeaderTest {
         assertThat(type.nameBindings.map { it.target() }).containsOnlyNulls()
         assertThat(analysis.cursorBindings()[site]!!.types().map { it.name() })
             .contains("StringBuffer")
-        for (listener in
-            listOf(
-                ErrorList(ErrorList.FIRST_ERROR),
-                ErrorListener.cancellable(ErrorList()) { true },
-            )) {
+        for (
+        listener in
+        listOf(
+            ErrorList(ErrorList.FIRST_ERROR),
+            ErrorListener.cancellable(ErrorList()) { true },
+        )
+        ) {
             source.reset()
             val stopped =
                 EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, listener)

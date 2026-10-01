@@ -50,7 +50,7 @@ class CapabilityContractTest {
             // This client has not negotiated versioned edits or pull diagnostics.
             assertThat(providers(capabilities))
                 .containsExactlyInAnyOrderElementsOf(
-                    (adapter.capabilities - AdapterCapability.RENAME).map(::provider)
+                    (adapter.capabilities - AdapterCapability.RENAME).map(::provider),
                 )
             assertThat(capabilities.experimental).isEqualTo(mapOf("xtcRenameProposal" to 1))
             assertThat(capabilities.workspace.workspaceFolders.supported).isTrue()
@@ -60,7 +60,11 @@ class CapabilityContractTest {
     }
 
     private fun providers(capabilities: ServerCapabilities) =
-        Gson().toJsonTree(capabilities).asJsonObject.keySet().filter { it.endsWith("Provider") }
+        Gson()
+            .toJsonTree(capabilities)
+            .asJsonObject
+            .keySet()
+            .filter { it.endsWith("Provider") }
 
     private fun provider(feature: AdapterCapability): String =
         when (feature) {

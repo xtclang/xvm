@@ -14,15 +14,15 @@ import com.redhat.devtools.lsp4ij.LSPFileSupport
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
 import com.redhat.devtools.lsp4ij.settings.LanguageServerSettingsListener
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicReference
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
 import org.eclipse.lsp4j.PublishDiagnosticsParams
 import org.eclipse.lsp4j.RegistrationParams
 import org.eclipse.lsp4j.UnregistrationParams
 import org.xtclang.idea.XtcIntelliJLanguage
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Refreshes compiler semantic caches and bridges Ecstasy Code Style settings. Compiler source
@@ -34,36 +34,40 @@ import org.xtclang.idea.XtcIntelliJLanguage
  * them as a JSON-compatible map. Code Style changes refresh the server's immutable formatting
  * snapshot. `xtc-format.toml` and line wrapping are not implemented.
  */
-class XtcLanguageClient(project: Project) : LanguageClientImpl(project) {
+class XtcLanguageClient(
+    project: Project,
+) : LanguageClientImpl(project) {
     private val compilerWatches = CompilerVfsWatches()
     private val preferences = AtomicReference(LanguageServiceSettings.validated(project))
     private val updateQueued = AtomicBoolean()
     private val settingsStores =
         listOf(LanguageServiceSettings.store(null), LanguageServiceSettings.store(project))
-    private val settingsListener = LanguageServerSettingsListener { event ->
-        if (
-            event.languageServerId() == CompilerSettings.SERVER_ID &&
+    private val settingsListener =
+        LanguageServerSettingsListener { event ->
+            if (
+                event.languageServerId() == CompilerSettings.SERVER_ID &&
                 event.configurationContentChanged()
-        ) {
-            if (updateQueued.compareAndSet(false, true)) {
-                ApplicationManager.getApplication().invokeLater {
-                    updateQueued.set(false)
-                    if (!isDisposed && !project.isDisposed) {
-                        val next = LanguageServiceSettings.validated(project)
-                        val before = preferences.getAndSet(next)
-                        if (before.textSynchronization != next.textSynchronization) {
-                            LanguageServiceAccessor.getInstance(project)
-                                .startedServers
-                                .filter { it.serverDefinition.id == CompilerSettings.SERVER_ID }
-                                .forEach { it.restart() }
-                        } else if (before.inlayHints != next.inlayHints) {
-                            refreshInlayHints()
+            ) {
+                if (updateQueued.compareAndSet(false, true)) {
+                    ApplicationManager.getApplication().invokeLater {
+                        updateQueued.set(false)
+                        if (!isDisposed && !project.isDisposed) {
+                            val next = LanguageServiceSettings.validated(project)
+                            val before = preferences.getAndSet(next)
+                            if (before.textSynchronization != next.textSynchronization) {
+                                LanguageServiceAccessor
+                                    .getInstance(project)
+                                    .startedServers
+                                    .filter { it.serverDefinition.id == CompilerSettings.SERVER_ID }
+                                    .forEach { it.restart() }
+                            } else if (before.inlayHints != next.inlayHints) {
+                                refreshInlayHints()
+                            }
                         }
                     }
                 }
             }
         }
-    }
 
     init {
         settingsStores.forEach { it.addSettingsListener(settingsListener) }
@@ -83,12 +87,12 @@ class XtcLanguageClient(project: Project) : LanguageClientImpl(project) {
         super.dispose()
     }
 
-    override fun applyEdit(
-        params: ApplyWorkspaceEditParams
-    ): CompletableFuture<ApplyWorkspaceEditResponse> =
-        if (isDisposed || project.isDisposed)
+    override fun applyEdit(params: ApplyWorkspaceEditParams): CompletableFuture<ApplyWorkspaceEditResponse> =
+        if (isDisposed || project.isDisposed) {
             CompletableFuture.completedFuture(ServerWorkspaceEdit.refused("Connection is closed"))
-        else (clientFeatures as XtcClientFeatures).applyEdit(params)
+        } else {
+            (clientFeatures as XtcClientFeatures).applyEdit(params)
+        }
 
     override fun registerCapability(params: RegistrationParams): CompletableFuture<Void> =
         super.registerCapability(params).thenRunAsync {
@@ -112,7 +116,8 @@ class XtcLanguageClient(project: Project) : LanguageClientImpl(project) {
     override fun createSettings(): Any? =
         CompilerBuildModel.settings(
             project,
-            CompilerSettings.store(project, serverDefinition.id)
+            CompilerSettings
+                .store(project, serverDefinition.id)
                 .getLanguageServerSettings(serverDefinition.id)
                 ?.getLanguageServerConfiguration(project),
         )
@@ -121,20 +126,23 @@ class XtcLanguageClient(project: Project) : LanguageClientImpl(project) {
         semanticUpdate {
             clientFeatures.findFileByUri(params.uri)?.let(::invalidateSemanticFacts)
             super.publishDiagnostics(params)
-        }
-            .exceptionally { failure ->
-                if (!isDisposed && !project.isDisposed)
-                    logger.warn("Failed to publish Ecstasy diagnostics", failure)
-                null
+        }.exceptionally { failure ->
+            if (!isDisposed && !project.isDisposed) {
+                logger.warn("Failed to publish Ecstasy diagnostics", failure)
             }
+            null
+        }
     }
 
-    override fun refreshDiagnostics(): CompletableFuture<Void> = semanticUpdate {
-        FileEditorManager.getInstance(project).openFiles.forEach(::invalidateSemanticFacts)
-    }
-        .thenCompose {
-            if (isDisposed || project.isDisposed) CompletableFuture.completedFuture(null)
-            else super.refreshDiagnostics()
+    override fun refreshDiagnostics(): CompletableFuture<Void> =
+        semanticUpdate {
+            FileEditorManager.getInstance(project).openFiles.forEach(::invalidateSemanticFacts)
+        }.thenCompose {
+            if (isDisposed || project.isDisposed) {
+                CompletableFuture.completedFuture(null)
+            } else {
+                super.refreshDiagnostics()
+            }
         }
 
     private fun semanticUpdate(update: () -> Unit): CompletableFuture<Void> =
@@ -156,29 +164,28 @@ class XtcLanguageClient(project: Project) : LanguageClientImpl(project) {
             // compiler queue and retain their normal cancellation/version checks.
             with(support) {
                 listOf(
-                        completionSupport,
-                        definitionSupport,
-                        typeDefinitionSupport,
-                        implementationSupport,
-                        referenceSupport,
-                        hoverSupport,
-                        signatureHelpSupport,
-                        highlightSupport,
-                        prepareRenameSupport,
-                        renameSupport,
-                        intentionCodeActionSupport,
-                        codeLensSupport,
-                        documentSymbolSupport,
-                        semanticTokensSupport,
-                        inlayHintsSupport,
-                        prepareTypeHierarchySupport,
-                        typeHierarchySupertypesSupport,
-                        typeHierarchySubtypesSupport,
-                        prepareCallHierarchySupport,
-                        callHierarchyIncomingCallsSupport,
-                        callHierarchyOutgoingCallsSupport,
-                    )
-                    .forEach { feature -> if (feature.future?.isDone == true) feature.cancel() }
+                    completionSupport,
+                    definitionSupport,
+                    typeDefinitionSupport,
+                    implementationSupport,
+                    referenceSupport,
+                    hoverSupport,
+                    signatureHelpSupport,
+                    highlightSupport,
+                    prepareRenameSupport,
+                    renameSupport,
+                    intentionCodeActionSupport,
+                    codeLensSupport,
+                    documentSymbolSupport,
+                    semanticTokensSupport,
+                    inlayHintsSupport,
+                    prepareTypeHierarchySupport,
+                    typeHierarchySupertypesSupport,
+                    typeHierarchySubtypesSupport,
+                    prepareCallHierarchySupport,
+                    callHierarchyIncomingCallsSupport,
+                    callHierarchyOutgoingCallsSupport,
+                ).forEach { feature -> if (feature.future?.isDone == true) feature.cancel() }
             }
         }
     }

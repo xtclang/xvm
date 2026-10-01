@@ -3,21 +3,20 @@ package org.xvm.lsp.server
 import com.google.gson.JsonArray
 import com.google.gson.JsonObject
 import com.google.gson.JsonPrimitive
-import java.io.File
-import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import java.io.File
+import java.nio.file.Path
 
 @DisplayName("SourceRootResolver")
 class SourceRootResolverTest {
     @TempDir lateinit var tmp: Path
 
     /** Create a real directory under [tmp] so the existence-check passes. */
-    private fun realDir(name: String): String =
-        tmp.resolve(name).also { it.toFile().mkdirs() }.toString()
+    private fun realDir(name: String): String = tmp.resolve(name).also { it.toFile().mkdirs() }.toString()
 
     private fun pathList(vararg paths: String): String = paths.joinToString(File.pathSeparator)
 

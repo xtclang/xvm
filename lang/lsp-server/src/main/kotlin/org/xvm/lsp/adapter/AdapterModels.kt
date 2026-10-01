@@ -149,7 +149,9 @@ data class CodeAction(
 }
 
 /** Semantic tokens for enhanced syntax highlighting. */
-data class SemanticTokens(val data: List<Int>)
+data class SemanticTokens(
+    val data: List<Int>,
+)
 
 /** Inlay hint for inline annotations. */
 data class InlayHint(

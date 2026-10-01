@@ -138,8 +138,7 @@ data class LanguageModel(
         get() = keywords + contextKeywords
 
     /** Get keywords by category. */
-    fun keywordsByCategory(category: KeywordCategory): List<String> =
-        categorizedKeywords.filter { it.category == category }.map { it.word }
+    fun keywordsByCategory(category: KeywordCategory): List<String> = categorizedKeywords.filter { it.category == category }.map { it.word }
 
     /** Get a concept by name. */
     fun getConcept(name: String): ConceptDefinition? = concepts.find { it.name == name }
@@ -157,9 +156,10 @@ data class LanguageModel(
         get() = operators.sortedBy { it.precedence }
 
     /** Get constants by category (e.g., "boolean", "null"). */
-    fun constantsByCategory(category: String): List<ConstantDefinition> = constants.filter {
-        it.category == category
-    }
+    fun constantsByCategory(category: String): List<ConstantDefinition> =
+        constants.filter {
+            it.category == category
+        }
 
     /** Get boolean constant literals (e.g., ["True", "False"]). */
     val booleanLiterals: List<String>
@@ -173,16 +173,15 @@ data class LanguageModel(
     val bracketPairs: List<Pair<String, String>>
         get() =
             listOf(
-                    punctuation.find { it.name == "L_PAREN" }?.symbol to
-                        punctuation.find { it.name == "R_PAREN" }?.symbol,
-                    punctuation.find { it.name == "L_SQUARE" }?.symbol to
-                        punctuation.find { it.name == "R_SQUARE" }?.symbol,
-                    punctuation.find { it.name == "L_CURLY" }?.symbol to
-                        punctuation.find { it.name == "R_CURLY" }?.symbol,
-                    punctuation.find { it.name == "L_ANGLE" }?.symbol to
-                        punctuation.find { it.name == "R_ANGLE" }?.symbol,
-                )
-                .filter { it.first != null && it.second != null }
+                punctuation.find { it.name == "L_PAREN" }?.symbol to
+                    punctuation.find { it.name == "R_PAREN" }?.symbol,
+                punctuation.find { it.name == "L_SQUARE" }?.symbol to
+                    punctuation.find { it.name == "R_SQUARE" }?.symbol,
+                punctuation.find { it.name == "L_CURLY" }?.symbol to
+                    punctuation.find { it.name == "R_CURLY" }?.symbol,
+                punctuation.find { it.name == "L_ANGLE" }?.symbol to
+                    punctuation.find { it.name == "R_ANGLE" }?.symbol,
+            ).filter { it.first != null && it.second != null }
                 .map { it.first!! to it.second!! }
 }
 
@@ -316,7 +315,9 @@ data class ReferenceDefinition(
 // =============================================================================
 
 /** Builder for scope definitions. */
-class ScopeBuilder(private val name: String) {
+class ScopeBuilder(
+    private val name: String,
+) {
     /** TextMate scope name (e.g., "keyword.control.xtc") */
     var textMate: String = ""
 

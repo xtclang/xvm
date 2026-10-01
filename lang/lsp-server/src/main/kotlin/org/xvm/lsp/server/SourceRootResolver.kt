@@ -1,7 +1,7 @@
 package org.xvm.lsp.server
 
-import java.io.File
 import org.slf4j.LoggerFactory
+import java.io.File
 
 /**
  * Resolves extra `.x` source roots beyond the workspace folders the client opens.

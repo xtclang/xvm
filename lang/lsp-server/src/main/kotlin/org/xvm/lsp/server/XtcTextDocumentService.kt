@@ -1,12 +1,6 @@
 package org.xvm.lsp.server
 
 import com.google.gson.JsonPrimitive
-import java.util.concurrent.CancellationException
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.CompletionException
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.TimeUnit.SECONDS
-import kotlin.time.Duration.Companion.nanoseconds
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.CallHierarchyIncomingCall
 import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
@@ -105,28 +99,34 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.services.TextDocumentService
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.Adapter
-import org.xvm.lsp.adapter.CallHierarchyItem as AdapterCallHierarchyItem
 import org.xvm.lsp.adapter.CodeLensCommand
-import org.xvm.lsp.adapter.CompletionItem as AdapterCompletionItem
-import org.xvm.lsp.adapter.DocumentLink as AdapterDocumentLink
 import org.xvm.lsp.adapter.FormattingConfig
-import org.xvm.lsp.adapter.FormattingOptions as AdapterFormattingOptions
-import org.xvm.lsp.adapter.Position as AdapterPosition
-import org.xvm.lsp.adapter.Range as AdapterRange
-import org.xvm.lsp.adapter.SelectionRange as AdapterSelectionRange
-import org.xvm.lsp.adapter.TypeHierarchyItem as AdapterTypeHierarchyItem
-import org.xvm.lsp.adapter.WorkspaceEdit as AdapterWorkspaceEdit
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
-import org.xvm.lsp.model.Location as AdapterLocation
-import org.xvm.lsp.model.Location as DiagnosticLocation
 import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.fmt
 import org.xvm.lsp.model.fromLsp
 import org.xvm.lsp.model.toLsp
 import org.xvm.lsp.model.toRange
 import org.xvm.lsp.util.ExecutionTrace
+import java.util.concurrent.CancellationException
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionException
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit.SECONDS
+import kotlin.time.Duration.Companion.nanoseconds
+import org.xvm.lsp.adapter.CallHierarchyItem as AdapterCallHierarchyItem
+import org.xvm.lsp.adapter.CompletionItem as AdapterCompletionItem
+import org.xvm.lsp.adapter.DocumentLink as AdapterDocumentLink
+import org.xvm.lsp.adapter.FormattingOptions as AdapterFormattingOptions
+import org.xvm.lsp.adapter.Position as AdapterPosition
+import org.xvm.lsp.adapter.Range as AdapterRange
+import org.xvm.lsp.adapter.SelectionRange as AdapterSelectionRange
+import org.xvm.lsp.adapter.TypeHierarchyItem as AdapterTypeHierarchyItem
+import org.xvm.lsp.adapter.WorkspaceEdit as AdapterWorkspaceEdit
+import org.xvm.lsp.model.Location as AdapterLocation
+import org.xvm.lsp.model.Location as DiagnosticLocation
 
 /**
  * Text document service for Ecstasy Language Server. Handles document synchronization and language
@@ -162,24 +162,27 @@ class XtcTextDocumentService(
 
     private fun clearResolveReports() =
         listOf(
-                completionReports,
-                actionReports,
-                lensReports,
-                linkReports,
-                hintReports,
-                symbolReports,
-            )
-            .forEach { it.clear() }
+            completionReports,
+            actionReports,
+            lensReports,
+            linkReports,
+            hintReports,
+            symbolReports,
+        ).forEach { it.clear() }
 
-    private fun requireResolve(enabled: Boolean, feature: String) {
-        if (!enabled)
+    private fun requireResolve(
+        enabled: Boolean,
+        feature: String,
+    ) {
+        if (!enabled) {
             throw ResponseErrorException(
                 ResponseError(
                     ResponseErrorCode.MethodNotFound,
                     "$feature resolution was not negotiated",
                     null,
-                )
+                ),
             )
+        }
     }
 
     private var diagnosticRevision = 0L
@@ -203,8 +206,9 @@ class XtcTextDocumentService(
             request = {
                 server.supplyAsync(method, logParams, logResult) {
                     synchronized(lifecycle) {
-                        if (closed || (uri != null && openDocuments[uri] !== document))
+                        if (closed || (uri != null && openDocuments[uri] !== document)) {
                             throw contentModified()
+                        }
                         block()
                     }
                 }
@@ -261,12 +265,18 @@ class XtcTextDocumentService(
             )
         }
         val ready =
-            if (sourceOnly) CompletableFuture.completedFuture(null)
-            else if (documents != null)
+            if (sourceOnly) {
+                CompletableFuture.completedFuture(null)
+            } else if (documents != null) {
                 CompletableFuture.allOf(
-                    *documents.values.map { it.analysis }.distinct().toTypedArray()
+                    *documents.values
+                        .map { it.analysis }
+                        .distinct()
+                        .toTypedArray(),
                 )
-            else document?.analysis ?: CompletableFuture.completedFuture(null)
+            } else {
+                document?.analysis ?: CompletableFuture.completedFuture(null)
+            }
         ready
             .handle { _, _ -> Unit }
             .thenRunAsync {
@@ -291,11 +301,13 @@ class XtcTextDocumentService(
                                 failure != null -> {
                                     val cause =
                                         generateSequence(failure) {
-                                                (it as? CompletionException)?.cause
-                                            }
-                                            .last()
-                                    if (cause is CancellationException) result.cancel(false)
-                                    else result.completeExceptionally(cause)
+                                            (it as? CompletionException)?.cause
+                                        }.last()
+                                    if (cause is CancellationException) {
+                                        result.cancel(false)
+                                    } else {
+                                        result.completeExceptionally(cause)
+                                    }
                                 }
 
                                 else -> {
@@ -312,13 +324,13 @@ class XtcTextDocumentService(
                         }
                     }
                 }
-            }
-            .whenComplete { _, failure ->
+            }.whenComplete { _, failure ->
                 if (failure != null) result.completeExceptionally(failure)
             }
         val publication =
-            if (partial == null) result
-            else
+            if (partial == null) {
+                result
+            } else {
                 server.partialResults.publish(
                     (progress as? PartialResultParams)?.partialResultToken,
                     result,
@@ -329,6 +341,7 @@ class XtcTextDocumentService(
                     },
                     partial,
                 )
+            }
         return server.observeQuery(method, progress, publication)
     }
 
@@ -338,7 +351,7 @@ class XtcTextDocumentService(
                 ResponseErrorCode.ContentModified,
                 "Document changed during analysis",
                 null,
-            )
+            ),
         )
 
     /** Called under lifecycle; retire the public result even if a backend ignores cancellation. */
@@ -399,9 +412,11 @@ class XtcTextDocumentService(
         val changedGraph = compiler?.updateDocument(uri, content).orEmpty()
         analyseOne(uri, content, version)
         refreshScopes(
-            (changedGraph +
-                (compiler?.affectedSourceScopes(uri) ?: adapter.affectedAnalysisScopes(uri))) -
-                adapter.analysisScope(uri)
+            (
+                changedGraph +
+                    (compiler?.affectedSourceScopes(uri) ?: adapter.affectedAnalysisScopes(uri))
+            ) -
+                adapter.analysisScope(uri),
         )
     }
 
@@ -411,8 +426,7 @@ class XtcTextDocumentService(
                 openDocuments.entries.firstOrNull {
                     it.value.scope == scope || adapter.analysisScope(it.key) == scope
                 }
-            }
-            .distinctBy { adapter.analysisScope(it.key) }
+            }.distinctBy { adapter.analysisScope(it.key) }
             .forEach { (uri, document) ->
                 analyseOne(uri, document.content, document.version)
             }
@@ -426,15 +440,15 @@ class XtcTextDocumentService(
     ) {
         val analysis = adapter.compileAsync(uri, content)
         val scope = adapter.analysisScope(uri)
-        val affected = openDocuments.filter { (otherUri, document) ->
-            otherUri == uri || document.scope == scope || adapter.analysisScope(otherUri) == scope
-        }
+        val affected =
+            openDocuments.filter { (otherUri, document) ->
+                otherUri == uri || document.scope == scope || adapter.analysisScope(otherUri) == scope
+            }
         val current =
             affected
                 .mapValues { (_, document) ->
                     Document(document.content, document.version, scope, analysis)
-                }
-                .toMutableMap()
+                }.toMutableMap()
         current[uri] = Document(content, version, scope, analysis)
         openDocuments.putAll(current)
         invalidateQueries(current.keys)
@@ -448,9 +462,9 @@ class XtcTextDocumentService(
             synchronized(lifecycle) {
                 if (
                     !closed &&
-                        current.all { (documentUri, document) ->
-                            openDocuments[documentUri] === document
-                        }
+                    current.all { (documentUri, document) ->
+                        openDocuments[documentUri] === document
+                    }
                 ) {
                     if (failure == null) {
                         publish(scope, result)
@@ -468,7 +482,7 @@ class XtcTextDocumentService(
                                             "Ecstasy analysis failed; see the language server log for details",
                                         code = "ANALYSIS-FAILED",
                                         source = "xtc",
-                                    )
+                                    ),
                                 ),
                             ),
                         )
@@ -601,9 +615,7 @@ class XtcTextDocumentService(
 
     // Saving does not wait for compilation. The formatter uses the captured source and the same
     // version guard as formatting requests; returned edits are applied only by the client.
-    override fun willSaveWaitUntil(
-        params: WillSaveTextDocumentParams
-    ): CompletableFuture<List<TextEdit>> =
+    override fun willSaveWaitUntil(params: WillSaveTextDocumentParams): CompletableFuture<List<TextEdit>> =
         supplyAsync(
             "textDocument/willSaveWaitUntil",
             params.textDocument.uri,
@@ -624,8 +636,7 @@ class XtcTextDocumentService(
                         tabSize = config.indentSize,
                         insertSpaces = config.insertSpaces,
                     ),
-                )
-                .map { TextEdit(it.range.toLsp(), it.newText) }
+                ).map { TextEdit(it.range.toLsp(), it.newText) }
         }
 
     override fun didSave(params: DidSaveTextDocumentParams) {
@@ -633,9 +644,7 @@ class XtcTextDocumentService(
         refreshForFile(params.textDocument.uri)
     }
 
-    override fun diagnostic(
-        params: DocumentDiagnosticParams
-    ): CompletableFuture<DocumentDiagnosticReport> =
+    override fun diagnostic(params: DocumentDiagnosticParams): CompletableFuture<DocumentDiagnosticReport> =
         pullDiagnostics(
             "textDocument/diagnostic",
             params.textDocument.uri,
@@ -645,8 +654,9 @@ class XtcTextDocumentService(
         ) { results ->
             val current = diagnosticReports.record(results)
             // Unknown or removed documents have an empty report, never an old cached error.
-            if (!diagnosticReports.includes(current, params.textDocument.uri))
+            if (!diagnosticReports.includes(current, params.textDocument.uri)) {
                 diagnosticReports.record(params.textDocument.uri, emptyList())
+            }
             diagnosticReports.document(
                 params.textDocument.uri,
                 params.previousResultId,
@@ -655,9 +665,7 @@ class XtcTextDocumentService(
             )
         }
 
-    internal fun workspaceDiagnostics(
-        params: WorkspaceDiagnosticParams
-    ): CompletableFuture<WorkspaceDiagnosticReport> =
+    internal fun workspaceDiagnostics(params: WorkspaceDiagnosticParams): CompletableFuture<WorkspaceDiagnosticReport> =
         pullDiagnostics(
             "workspace/diagnostic",
             "",
@@ -698,8 +706,8 @@ class XtcTextDocumentService(
                         ResponseErrorCode.InvalidParams,
                         "Compiler pull diagnostics were not negotiated for this provider",
                         null,
-                    )
-                )
+                    ),
+                ),
             )
         }
         val revision = synchronized(lifecycle) { diagnosticRevision }
@@ -708,9 +716,11 @@ class XtcTextDocumentService(
             uri,
             request = {
                 val open = openDocuments[uri]
-                if (!workspace && open != null)
+                if (!workspace && open != null) {
                     CompletableFuture.completedFuture(listOf(open.analysis.join()))
-                else (adapter as XdkAdapter).workspaceDiagnosticsAsync()
+                } else {
+                    (adapter as XdkAdapter).workspaceDiagnosticsAsync()
+                }
             },
             progress = progress,
             partial = partial,
@@ -752,8 +762,7 @@ class XtcTextDocumentService(
                     params.textDocument.uri,
                     params.position.line,
                     params.position.character,
-                )
-                ?.let {
+                )?.let {
                     Hover().apply {
                         contents = Either.forRight(server.presentation.hover(it))
                     }
@@ -765,9 +774,7 @@ class XtcTextDocumentService(
      *
      * @see org.eclipse.lsp4j.services.TextDocumentService.completion
      */
-    override fun completion(
-        params: CompletionParams
-    ): CompletableFuture<Either<List<CompletionItem>, CompletionList>> =
+    override fun completion(params: CompletionParams): CompletableFuture<Either<List<CompletionItem>, CompletionList>> =
         queryAsync(
             "textDocument/completion",
             params.textDocument.uri,
@@ -781,43 +788,48 @@ class XtcTextDocumentService(
             },
             progress = params,
         ) { completions ->
-            val items = completions.map { c ->
-                CompletionItem(c.label).apply {
-                    kind = server.presentation.completionKind(toCompletionItemKind(c.kind))
-                    insertTextFormat = InsertTextFormat.PlainText
-                    detail = c.detail
-                    insertText = c.insertText
-                    val handle =
-                        c.documentation
-                            ?.takeIf { server.resolvesCompletionDocumentation }
-                            ?.let {
-                                completionReports.remember(
-                                    diagnosticRevision,
-                                    c.label,
-                                    it,
-                                    it.length,
-                                )
-                            }
-                    if (handle == null) documentation = c.documentation?.let { Either.forLeft(it) }
-                    else data = handle
-                    sortText = c.sortText
-                    textEdit =
-                        c.textEdit?.let { Either.forLeft(TextEdit(it.range.toLsp(), it.newText)) }
+            val items =
+                completions.map { c ->
+                    CompletionItem(c.label).apply {
+                        kind = server.presentation.completionKind(toCompletionItemKind(c.kind))
+                        insertTextFormat = InsertTextFormat.PlainText
+                        detail = c.detail
+                        insertText = c.insertText
+                        val handle =
+                            c.documentation
+                                ?.takeIf { server.resolvesCompletionDocumentation }
+                                ?.let {
+                                    completionReports.remember(
+                                        diagnosticRevision,
+                                        c.label,
+                                        it,
+                                        it.length,
+                                    )
+                                }
+                        if (handle == null) {
+                            documentation = c.documentation?.let { Either.forLeft(it) }
+                        } else {
+                            data = handle
+                        }
+                        sortText = c.sortText
+                        textEdit =
+                            c.textEdit?.let { Either.forLeft(TextEdit(it.range.toLsp(), it.newText)) }
+                    }
                 }
-            }
             Either.forLeft(items)
         }
 
     override fun resolveCompletionItem(item: CompletionItem): CompletableFuture<CompletionItem> =
         supplyAsync("completionItem/resolve", item.label) {
-            if (!server.resolvesCompletionDocumentation)
+            if (!server.resolvesCompletionDocumentation) {
                 throw ResponseErrorException(
                     ResponseError(
                         ResponseErrorCode.MethodNotFound,
                         "Completion resolution was not negotiated",
                         null,
-                    )
+                    ),
                 )
+            }
             if (item.data != null) {
                 val documentation =
                     completionReports.resolve(item.data, diagnosticRevision, item.label)
@@ -826,9 +838,7 @@ class XtcTextDocumentService(
             item
         }
 
-    private fun toCompletionItemKind(
-        kind: AdapterCompletionItem.CompletionKind
-    ): CompletionItemKind =
+    private fun toCompletionItemKind(kind: AdapterCompletionItem.CompletionKind): CompletionItemKind =
         when (kind) {
             AdapterCompletionItem.CompletionKind.CLASS -> CompletionItemKind.Class
             AdapterCompletionItem.CompletionKind.INTERFACE -> CompletionItemKind.Interface
@@ -845,9 +855,7 @@ class XtcTextDocumentService(
      *
      * @see org.eclipse.lsp4j.services.TextDocumentService.definition
      */
-    override fun definition(
-        params: DefinitionParams
-    ): CompletableFuture<Either<List<Location>, List<LocationLink>>> =
+    override fun definition(params: DefinitionParams): CompletableFuture<Either<List<Location>, List<LocationLink>>> =
         supplyAsync(
             "textDocument/definition",
             "${params.textDocument.uri} at ${params.position.fmt()}",
@@ -868,8 +876,7 @@ class XtcTextDocumentService(
                     params.textDocument.uri,
                     params.position.line,
                     params.position.character,
-                )
-                ?.let {
+                )?.let {
                     Either.forLeft<List<Location>, List<LocationLink>>(listOf(it.toLsp()))
                 } ?: Either.forLeft(emptyList())
         }
@@ -903,9 +910,7 @@ class XtcTextDocumentService(
      *
      * @see org.eclipse.lsp4j.services.TextDocumentService.documentSymbol
      */
-    override fun documentSymbol(
-        params: DocumentSymbolParams
-    ): CompletableFuture<List<Either<SymbolInformation, DocumentSymbol>>> =
+    override fun documentSymbol(params: DocumentSymbolParams): CompletableFuture<List<Either<SymbolInformation, DocumentSymbol>>> =
         supplyAsync(
             "textDocument/documentSymbol",
             params.textDocument.uri,
@@ -917,24 +922,27 @@ class XtcTextDocumentService(
             val uri = params.textDocument.uri
             val result = adapter.getCachedResult(uri) ?: return@supplyAsync emptyList()
 
-            if (server.presentation.hierarchicalSymbols)
+            if (server.presentation.hierarchicalSymbols) {
                 result.symbols.map { Either.forRight(toDocumentSymbol(it)) }
-            else flatSymbols(result.symbols).map { Either.forLeft(it) }
+            } else {
+                flatSymbols(result.symbols).map { Either.forLeft(it) }
+            }
         }
 
     private fun flatSymbols(
         symbols: List<SymbolInfo>,
         container: String? = null,
-    ): List<SymbolInformation> = symbols.flatMap { symbol ->
-        listOf(
-            SymbolInformation(
-                symbol.name,
-                server.presentation.symbolKind(symbol.kind.toLsp()),
-                symbol.location.toLsp(),
-                container,
-            )
-        ) + flatSymbols(symbol.children, symbol.name)
-    }
+    ): List<SymbolInformation> =
+        symbols.flatMap { symbol ->
+            listOf(
+                SymbolInformation(
+                    symbol.name,
+                    server.presentation.symbolKind(symbol.kind.toLsp()),
+                    symbol.location.toLsp(),
+                    container,
+                ),
+            ) + flatSymbols(symbol.children, symbol.name)
+        }
 
     private fun toDocumentSymbol(symbol: SymbolInfo): DocumentSymbol =
         DocumentSymbol().apply {
@@ -955,9 +963,7 @@ class XtcTextDocumentService(
      *
      * @see org.eclipse.lsp4j.services.TextDocumentService.documentHighlight
      */
-    override fun documentHighlight(
-        params: DocumentHighlightParams
-    ): CompletableFuture<List<DocumentHighlight>> =
+    override fun documentHighlight(params: DocumentHighlightParams): CompletableFuture<List<DocumentHighlight>> =
         supplyAsync(
             "textDocument/documentHighlight",
             "${params.textDocument.uri} pos=${params.position.fmt()}",
@@ -969,8 +975,7 @@ class XtcTextDocumentService(
                     params.textDocument.uri,
                     params.position.line,
                     params.position.character,
-                )
-                .map { h ->
+                ).map { h ->
                     DocumentHighlight().apply {
                         range = h.range.toLsp()
                         kind = h.kind.toLsp()
@@ -983,9 +988,7 @@ class XtcTextDocumentService(
      *
      * @see org.eclipse.lsp4j.services.TextDocumentService.selectionRange
      */
-    override fun selectionRange(
-        params: SelectionRangeParams
-    ): CompletableFuture<List<SelectionRange>> =
+    override fun selectionRange(params: SelectionRangeParams): CompletableFuture<List<SelectionRange>> =
         supplyAsync(
             "textDocument/selectionRange",
             "${params.textDocument.uri} positions=${params.positions.map { it.fmt() }}",
@@ -998,9 +1001,7 @@ class XtcTextDocumentService(
             }
         }
 
-    private fun toLspSelectionRange(
-        range: AdapterSelectionRange
-    ): org.eclipse.lsp4j.SelectionRange =
+    private fun toLspSelectionRange(range: AdapterSelectionRange): org.eclipse.lsp4j.SelectionRange =
         org.eclipse.lsp4j.SelectionRange().apply {
             this.range = range.range.toLsp()
             this.parent = range.parent?.let { toLspSelectionRange(it) }
@@ -1011,9 +1012,7 @@ class XtcTextDocumentService(
      *
      * @see org.eclipse.lsp4j.services.TextDocumentService.foldingRange
      */
-    override fun foldingRange(
-        params: FoldingRangeRequestParams
-    ): CompletableFuture<List<FoldingRange>> =
+    override fun foldingRange(params: FoldingRangeRequestParams): CompletableFuture<List<FoldingRange>> =
         supplyAsync(
             "textDocument/foldingRange",
             params.textDocument.uri,
@@ -1047,18 +1046,22 @@ class XtcTextDocumentService(
                 DocumentLink().apply {
                     range = l.range.toLsp()
                     val handle =
-                        if (server.resolvesDocumentLinkTarget)
+                        if (server.resolvesDocumentLinkTarget) {
                             linkReports.remember(
                                 diagnosticRevision,
                                 range.fmt(),
                                 l,
                                 (l.target?.length ?: 0) + (l.tooltip?.length ?: 0),
                             )
-                        else null
+                        } else {
+                            null
+                        }
                     if (handle == null) {
                         target = l.target
                         tooltip = l.tooltip.takeIf { server.presentation.linkTooltips }
-                    } else data = handle
+                    } else {
+                        data = handle
+                    }
                 }
             }
         }
@@ -1116,7 +1119,7 @@ class XtcTextDocumentService(
      * @see org.eclipse.lsp4j.services.TextDocumentService.prepareRename
      */
     override fun prepareRename(
-        params: PrepareRenameParams
+        params: PrepareRenameParams,
     ): CompletableFuture<Either3<Range, PrepareRenameResult, PrepareRenameDefaultBehavior>> =
         supplyAsync(
             "textDocument/prepareRename",
@@ -1129,13 +1132,12 @@ class XtcTextDocumentService(
                     params.textDocument.uri,
                     params.position.line,
                     params.position.character,
-                )
-                ?.let { result ->
+                )?.let { result ->
                     Either3.forSecond<Range, PrepareRenameResult, PrepareRenameDefaultBehavior>(
                         PrepareRenameResult().apply {
                             range = result.range.toLsp()
                             placeholder = result.placeholder
-                        }
+                        },
                     )
                 }
                 ?: throw ResponseErrorException(
@@ -1143,7 +1145,7 @@ class XtcTextDocumentService(
                         ResponseErrorCode.InvalidParams,
                         "Rename not allowed at this position",
                         null,
-                    )
+                    ),
                 )
         }
 
@@ -1219,9 +1221,13 @@ class XtcTextDocumentService(
         val first = params.files.firstOrNull() ?: return CompletableFuture.completedFuture(null)
         if (
             !server.supportsVersionedEdits ||
-                params.files.map { it.oldUri }.distinct().size != params.files.size
-        )
+            params.files
+                .map { it.oldUri }
+                .distinct()
+                .size != params.files.size
+        ) {
             return CompletableFuture.completedFuture(null)
+        }
         return queryAsync(
             "workspace/willRenameFiles",
             first.oldUri,
@@ -1234,8 +1240,10 @@ class XtcTextDocumentService(
 
     private fun canConvertEdit(edit: AdapterWorkspaceEdit): Boolean =
         (!edit.versioned || server.supportsVersionedEdits) &&
-            (edit.renames.isEmpty() ||
-                (edit.versioned && server.supportsVersionedEdits && server.supportsFileRenames))
+            (
+                edit.renames.isEmpty() ||
+                    (edit.versioned && server.supportsVersionedEdits && server.supportsFileRenames)
+            )
 
     /** Called while the document lifecycle is locked, after the query's version checks. */
     private fun protocolEdit(edit: AdapterWorkspaceEdit): WorkspaceEdit? {
@@ -1253,23 +1261,21 @@ class XtcTextDocumentService(
                             TextDocumentEdit(
                                 VersionedTextDocumentIdentifier(uri, openDocuments[uri]?.version),
                                 edits.map { Either.forLeft(it) },
-                            )
+                            ),
                         )
                     } +
-                        edit.renames.map { (from, to) ->
-                            Either.forRight<TextDocumentEdit, ResourceOperation>(
-                                RenameFile(from, to, RenameFileOptions(false, false))
-                            )
-                        }
+                    edit.renames.map { (from, to) ->
+                        Either.forRight<TextDocumentEdit, ResourceOperation>(
+                            RenameFile(from, to, RenameFileOptions(false, false)),
+                        )
+                    }
             } else {
                 this.changes = changes
             }
         }
     }
 
-    override fun codeAction(
-        params: CodeActionParams
-    ): CompletableFuture<List<Either<Command, CodeAction>>> =
+    override fun codeAction(params: CodeActionParams): CompletableFuture<List<Either<Command, CodeAction>>> =
         queryAsync(
             "textDocument/codeAction",
             params.textDocument.uri,
@@ -1288,16 +1294,16 @@ class XtcTextDocumentService(
             if (!server.presentation.codeActions) return@queryAsync emptyList()
             actions.mapNotNull { action ->
                 val kind = action.kind.toLsp()
-                if (!ClientPresentation.matchesActionKind(kind, params.context.only))
+                if (!ClientPresentation.matchesActionKind(kind, params.context.only)) {
                     return@mapNotNull null
+                }
                 val edit = action.edit
                 if (edit != null && !canConvertEdit(edit)) return@mapNotNull null
                 val handle =
                     edit
                         ?.takeIf {
                             server.resolvesCodeActionEdit || !server.presentation.actionLiterals
-                        }
-                        ?.let {
+                        }?.let {
                             actionReports.remember(
                                 diagnosticRevision,
                                 action.title,
@@ -1316,7 +1322,7 @@ class XtcTextDocumentService(
                             action.title,
                             ClientPresentation.APPLY_CODE_ACTION,
                             listOf(handle, action.title),
-                        )
+                        ),
                     )
                 }
                 val proposed = if (handle == null) edit?.let(::protocolEdit) else null
@@ -1328,7 +1334,7 @@ class XtcTextDocumentService(
                             action.isPreferred.takeIf { server.presentation.preferredActions }
                         this.edit = proposed
                         data = handle
-                    }
+                    },
                 )
             }
         }
@@ -1361,34 +1367,36 @@ class XtcTextDocumentService(
                     )
                 val proposed = protocolEdit(edit) ?: throw contentModified()
                 // Do not hold the document lifecycle while entering the JSON-RPC transport.
-                CompletableFuture.supplyAsync {
+                CompletableFuture
+                    .supplyAsync {
                         server.applyEdit(ApplyWorkspaceEditParams(proposed, title))
-                    }
-                    .thenCompose { it }
+                    }.thenCompose { it }
                     .orTimeout(10, SECONDS)
             },
         ) { response ->
-            if (!response.isApplied)
+            if (!response.isApplied) {
                 throw ResponseErrorException(
                     ResponseError(
                         ResponseErrorCode.RequestFailed,
                         response.failureReason ?: "Client refused the code action",
                         null,
-                    )
+                    ),
                 )
+            }
             response
         }
 
     override fun resolveCodeAction(action: CodeAction): CompletableFuture<CodeAction> =
         supplyAsync("codeAction/resolve", action.title) {
-            if (!server.resolvesCodeActionEdit)
+            if (!server.resolvesCodeActionEdit) {
                 throw ResponseErrorException(
                     ResponseError(
                         ResponseErrorCode.MethodNotFound,
                         "Code action resolution was not negotiated",
                         null,
-                    )
+                    ),
                 )
+            }
             if (action.data != null) {
                 val edit = actionReports.resolve(action.data, diagnosticRevision, action.title)
                 if (action.edit == null) action.edit = protocolEdit(edit) ?: throw contentModified()
@@ -1401,15 +1409,16 @@ class XtcTextDocumentService(
      *
      * @see org.eclipse.lsp4j.services.TextDocumentService.semanticTokensFull
      */
-    override fun semanticTokensFull(
-        params: SemanticTokensParams
-    ): CompletableFuture<SemanticTokens?> =
+    override fun semanticTokensFull(params: SemanticTokensParams): CompletableFuture<SemanticTokens?> =
         supplyAsync(
             "textDocument/semanticTokens/full",
             params.textDocument.uri,
             { result ->
-                if (result == null) "no tokens"
-                else "${result.data.size} items (${result.data.size / 5} tokens)"
+                if (result == null) {
+                    "no tokens"
+                } else {
+                    "${result.data.size} items (${result.data.size / 5} tokens)"
+                }
             },
             uri = params.textDocument.uri,
         ) {
@@ -1419,7 +1428,7 @@ class XtcTextDocumentService(
         }
 
     override fun semanticTokensFullDelta(
-        params: SemanticTokensDeltaParams
+        params: SemanticTokensDeltaParams,
     ): CompletableFuture<Either<SemanticTokens, SemanticTokensDelta>?> =
         supplyAsync(
             "textDocument/semanticTokens/full/delta",
@@ -1434,9 +1443,7 @@ class XtcTextDocumentService(
             )
         }
 
-    override fun semanticTokensRange(
-        params: SemanticTokensRangeParams
-    ): CompletableFuture<SemanticTokens?> =
+    override fun semanticTokensRange(params: SemanticTokensRangeParams): CompletableFuture<SemanticTokens?> =
         supplyAsync(
             "textDocument/semanticTokens/range",
             params.textDocument.uri,
@@ -1479,12 +1486,14 @@ class XtcTextDocumentService(
                                     it.length,
                                 )
                             }
-                    if (handle == null)
+                    if (handle == null) {
                         tooltip =
                             h.tooltip?.let {
                                 Either.forRight(MarkupContent(MarkupKind.MARKDOWN, it))
                             }
-                    else data = handle
+                    } else {
+                        data = handle
+                    }
                 }
             }
         }
@@ -1517,9 +1526,7 @@ class XtcTextDocumentService(
      *
      * @see org.eclipse.lsp4j.services.TextDocumentService.rangeFormatting
      */
-    override fun rangeFormatting(
-        params: DocumentRangeFormattingParams
-    ): CompletableFuture<List<TextEdit>> =
+    override fun rangeFormatting(params: DocumentRangeFormattingParams): CompletableFuture<List<TextEdit>> =
         supplyAsync(
             "textDocument/rangeFormatting",
             "${params.textDocument.uri} range=${params.range.fmt()}",
@@ -1537,9 +1544,7 @@ class XtcTextDocumentService(
             }
         }
 
-    override fun rangesFormatting(
-        params: DocumentRangesFormattingParams
-    ): CompletableFuture<List<TextEdit>> =
+    override fun rangesFormatting(params: DocumentRangesFormattingParams): CompletableFuture<List<TextEdit>> =
         supplyAsync(
             "textDocument/rangesFormatting",
             params.textDocument.uri,
@@ -1557,11 +1562,11 @@ class XtcTextDocumentService(
                         adapter.formatRange(uri, content, toAdapterRange(range), options).map {
                             TextEdit(it.range.toLsp(), it.newText)
                         }
-                    }
+                    },
                 )
             } catch (e: IllegalArgumentException) {
                 throw ResponseErrorException(
-                    ResponseError(ResponseErrorCode.InvalidParams, e.message, null)
+                    ResponseError(ResponseErrorCode.InvalidParams, e.message, null),
                 )
             }
         }
@@ -1571,9 +1576,7 @@ class XtcTextDocumentService(
      *
      * @see org.eclipse.lsp4j.services.TextDocumentService.declaration
      */
-    override fun declaration(
-        params: DeclarationParams
-    ): CompletableFuture<Either<List<Location>, List<LocationLink>>> =
+    override fun declaration(params: DeclarationParams): CompletableFuture<Either<List<Location>, List<LocationLink>>> =
         supplyAsync(
             "textDocument/declaration",
             "${params.textDocument.uri} at ${params.position.fmt()}",
@@ -1588,8 +1591,7 @@ class XtcTextDocumentService(
                         params.textDocument.uri,
                         params.position.line,
                         params.position.character,
-                    )
-                    .map { it.toLsp() }
+                    ).map { it.toLsp() },
             )
         }
 
@@ -1598,9 +1600,7 @@ class XtcTextDocumentService(
      *
      * @see org.eclipse.lsp4j.services.TextDocumentService.typeDefinition
      */
-    override fun typeDefinition(
-        params: TypeDefinitionParams
-    ): CompletableFuture<Either<List<Location>, List<LocationLink>>> =
+    override fun typeDefinition(params: TypeDefinitionParams): CompletableFuture<Either<List<Location>, List<LocationLink>>> =
         supplyAsync(
             "textDocument/typeDefinition",
             "${params.textDocument.uri} at ${params.position.fmt()}",
@@ -1615,8 +1615,7 @@ class XtcTextDocumentService(
                         params.textDocument.uri,
                         params.position.line,
                         params.position.character,
-                    )
-                    .map { it.toLsp() }
+                    ).map { it.toLsp() },
             )
         }
 
@@ -1625,9 +1624,7 @@ class XtcTextDocumentService(
      *
      * @see org.eclipse.lsp4j.services.TextDocumentService.implementation
      */
-    override fun implementation(
-        params: ImplementationParams
-    ): CompletableFuture<Either<List<Location>, List<LocationLink>>> =
+    override fun implementation(params: ImplementationParams): CompletableFuture<Either<List<Location>, List<LocationLink>>> =
         supplyAsync(
             "textDocument/implementation",
             "${params.textDocument.uri} at ${params.position.fmt()}",
@@ -1642,8 +1639,7 @@ class XtcTextDocumentService(
                         params.textDocument.uri,
                         params.position.line,
                         params.position.character,
-                    )
-                    .map { it.toLsp() }
+                    ).map { it.toLsp() },
             )
         }
 
@@ -1652,9 +1648,7 @@ class XtcTextDocumentService(
      *
      * @see org.eclipse.lsp4j.services.TextDocumentService.prepareTypeHierarchy
      */
-    override fun prepareTypeHierarchy(
-        params: TypeHierarchyPrepareParams
-    ): CompletableFuture<List<TypeHierarchyItem>> =
+    override fun prepareTypeHierarchy(params: TypeHierarchyPrepareParams): CompletableFuture<List<TypeHierarchyItem>> =
         supplyAsync(
             "typeHierarchy/prepare",
             "${params.textDocument.uri} at ${params.position.fmt()}",
@@ -1666,8 +1660,7 @@ class XtcTextDocumentService(
                     params.textDocument.uri,
                     params.position.line,
                     params.position.character,
-                )
-                .map {
+                ).map {
                     it.toLsp(params.textDocument.uri)
                 }
         }
@@ -1677,9 +1670,7 @@ class XtcTextDocumentService(
      *
      * @see org.eclipse.lsp4j.services.TextDocumentService.typeHierarchySupertypes
      */
-    override fun typeHierarchySupertypes(
-        params: TypeHierarchySupertypesParams
-    ): CompletableFuture<List<TypeHierarchyItem>> =
+    override fun typeHierarchySupertypes(params: TypeHierarchySupertypesParams): CompletableFuture<List<TypeHierarchyItem>> =
         supplyAsync(
             "typeHierarchy/supertypes",
             params.item.name,
@@ -1696,9 +1687,7 @@ class XtcTextDocumentService(
      *
      * @see org.eclipse.lsp4j.services.TextDocumentService.typeHierarchySubtypes
      */
-    override fun typeHierarchySubtypes(
-        params: TypeHierarchySubtypesParams
-    ): CompletableFuture<List<TypeHierarchyItem>> =
+    override fun typeHierarchySubtypes(params: TypeHierarchySubtypesParams): CompletableFuture<List<TypeHierarchyItem>> =
         supplyAsync(
             "typeHierarchy/subtypes",
             params.item.name,
@@ -1715,9 +1704,7 @@ class XtcTextDocumentService(
      *
      * @see org.eclipse.lsp4j.services.TextDocumentService.prepareCallHierarchy
      */
-    override fun prepareCallHierarchy(
-        params: CallHierarchyPrepareParams
-    ): CompletableFuture<List<CallHierarchyItem>> =
+    override fun prepareCallHierarchy(params: CallHierarchyPrepareParams): CompletableFuture<List<CallHierarchyItem>> =
         supplyAsync(
             "callHierarchy/prepare",
             "${params.textDocument.uri} at ${params.position.fmt()}",
@@ -1729,8 +1716,7 @@ class XtcTextDocumentService(
                     params.textDocument.uri,
                     params.position.line,
                     params.position.character,
-                )
-                .map { it.toLspCallItem() }
+                ).map { it.toLspCallItem() }
         }
 
     /**
@@ -1738,9 +1724,7 @@ class XtcTextDocumentService(
      *
      * @see org.eclipse.lsp4j.services.TextDocumentService.callHierarchyIncomingCalls
      */
-    override fun callHierarchyIncomingCalls(
-        params: CallHierarchyIncomingCallsParams
-    ): CompletableFuture<List<CallHierarchyIncomingCall>> =
+    override fun callHierarchyIncomingCalls(params: CallHierarchyIncomingCallsParams): CompletableFuture<List<CallHierarchyIncomingCall>> =
         supplyAsync(
             "callHierarchy/incomingCalls",
             params.item.name,
@@ -1762,9 +1746,7 @@ class XtcTextDocumentService(
      *
      * @see org.eclipse.lsp4j.services.TextDocumentService.callHierarchyOutgoingCalls
      */
-    override fun callHierarchyOutgoingCalls(
-        params: CallHierarchyOutgoingCallsParams
-    ): CompletableFuture<List<CallHierarchyOutgoingCall>> =
+    override fun callHierarchyOutgoingCalls(params: CallHierarchyOutgoingCallsParams): CompletableFuture<List<CallHierarchyOutgoingCall>> =
         supplyAsync(
             "callHierarchy/outgoingCalls",
             params.item.name,
@@ -1798,7 +1780,7 @@ class XtcTextDocumentService(
                     range = l.range.toLsp()
                     l.command?.let { cmd ->
                         val handle =
-                            if (server.resolvesCodeLensCommand)
+                            if (server.resolvesCodeLensCommand) {
                                 lensReports.remember(
                                     diagnosticRevision,
                                     range.fmt(),
@@ -1807,10 +1789,14 @@ class XtcTextDocumentService(
                                         cmd.command.length +
                                         cmd.arguments.sumOf { it.toString().length },
                                 )
-                            else null
-                        if (handle == null)
+                            } else {
+                                null
+                            }
+                        if (handle == null) {
                             command = Command(cmd.title, cmd.command, cmd.arguments.toList())
-                        else data = handle
+                        } else {
+                            data = handle
+                        }
                     }
                 }
             }
@@ -1842,19 +1828,20 @@ class XtcTextDocumentService(
     override fun resolveInlayHint(hint: InlayHint): CompletableFuture<InlayHint> =
         supplyAsync("inlayHint/resolve", hint.position.fmt()) {
             requireResolve(server.resolvesInlayHintTooltip, "Inlay hint")
-            if (hint.data != null)
+            if (hint.data != null) {
                 hint.tooltip =
                     Either.forRight(
                         MarkupContent(
                             MarkupKind.MARKDOWN,
                             hintReports.resolve(hint.data, diagnosticRevision, hintKey(hint)),
-                        )
+                        ),
                     )
+            }
             hint
         }
 
     internal fun workspaceSymbols(
-        params: WorkspaceSymbolParams
+        params: WorkspaceSymbolParams,
     ): CompletableFuture<Either<List<SymbolInformation>, List<WorkspaceSymbol>>> =
         supplyAsync(
             "workspace/symbol",
@@ -1863,7 +1850,7 @@ class XtcTextDocumentService(
             partial = PartialResults::eitherLists,
         ) {
             val symbols = adapter.findWorkspaceSymbols(params.query)
-            if (!server.resolvesWorkspaceSymbolRange)
+            if (!server.resolvesWorkspaceSymbolRange) {
                 return@supplyAsync Either.forLeft(
                     symbols.map {
                         SymbolInformation(
@@ -1871,38 +1858,40 @@ class XtcTextDocumentService(
                             server.presentation.symbolKind(it.kind.toLsp(), workspace = true),
                             it.location.toLsp(),
                         )
-                    }
+                    },
                 )
+            }
             Either.forRight(
                 symbols.map { symbol ->
                     WorkspaceSymbol().apply {
                         name = symbol.name
                         kind = server.presentation.symbolKind(symbol.kind.toLsp(), workspace = true)
                         val handle =
-                            if (server.resolvesWorkspaceSymbolRange)
+                            if (server.resolvesWorkspaceSymbolRange) {
                                 symbolReports.remember(
                                     diagnosticRevision,
                                     "$name:$kind",
                                     symbol.location,
                                     symbol.location.uri.length + 64,
                                 )
-                            else null
-                        if (handle == null) location = Either.forLeft(symbol.location.toLsp())
-                        else {
+                            } else {
+                                null
+                            }
+                        if (handle == null) {
+                            location = Either.forLeft(symbol.location.toLsp())
+                        } else {
                             location = Either.forRight(WorkspaceSymbolLocation(symbol.location.uri))
                             data = handle
                         }
                     }
-                }
+                },
             )
         }
 
-    internal fun resolveWorkspaceSymbol(
-        symbol: WorkspaceSymbol
-    ): CompletableFuture<WorkspaceSymbol> =
+    internal fun resolveWorkspaceSymbol(symbol: WorkspaceSymbol): CompletableFuture<WorkspaceSymbol> =
         supplyAsync("workspaceSymbol/resolve", symbol.name) {
             requireResolve(server.resolvesWorkspaceSymbolRange, "Workspace symbol")
-            if (symbol.data != null)
+            if (symbol.data != null) {
                 symbol.location =
                     Either.forLeft(
                         symbolReports
@@ -1910,9 +1899,9 @@ class XtcTextDocumentService(
                                 symbol.data,
                                 diagnosticRevision,
                                 "${symbol.name}:${symbol.kind}",
-                            )
-                            .toLsp()
+                            ).toLsp(),
                     )
+            }
             symbol
         }
 
@@ -1921,9 +1910,7 @@ class XtcTextDocumentService(
      *
      * @see org.eclipse.lsp4j.services.TextDocumentService.onTypeFormatting
      */
-    override fun onTypeFormatting(
-        params: DocumentOnTypeFormattingParams
-    ): CompletableFuture<List<TextEdit>> =
+    override fun onTypeFormatting(params: DocumentOnTypeFormattingParams): CompletableFuture<List<TextEdit>> =
         supplyAsync(
             "textDocument/onTypeFormatting",
             "${params.textDocument.uri} at ${params.position.fmt()} ch='${params.ch}'",
@@ -1953,8 +1940,7 @@ class XtcTextDocumentService(
                     params.position.character,
                     params.ch,
                     options,
-                )
-                .map { e ->
+                ).map { e ->
                     TextEdit().apply {
                         range = e.range.toLsp()
                         newText = e.newText
@@ -1967,9 +1953,7 @@ class XtcTextDocumentService(
      *
      * @see org.eclipse.lsp4j.services.TextDocumentService.linkedEditingRange
      */
-    override fun linkedEditingRange(
-        params: LinkedEditingRangeParams
-    ): CompletableFuture<LinkedEditingRanges> =
+    override fun linkedEditingRange(params: LinkedEditingRangeParams): CompletableFuture<LinkedEditingRanges> =
         supplyAsync(
             "textDocument/linkedEditingRange",
             "${params.textDocument.uri} at ${params.position.fmt()}",
@@ -1981,8 +1965,7 @@ class XtcTextDocumentService(
                     params.textDocument.uri,
                     params.position.line,
                     params.position.character,
-                )
-                ?.let { result ->
+                )?.let { result ->
                     LinkedEditingRanges().apply {
                         ranges = result.ranges.map { it.toLsp() }
                         wordPattern = result.wordPattern
@@ -1994,9 +1977,7 @@ class XtcTextDocumentService(
     // Conversion helpers for hierarchy types
     // ====================================================================
 
-    private fun AdapterTypeHierarchyItem.toLsp(
-        defaultUri: String
-    ): org.eclipse.lsp4j.TypeHierarchyItem {
+    private fun AdapterTypeHierarchyItem.toLsp(defaultUri: String): org.eclipse.lsp4j.TypeHierarchyItem {
         val resolvedUri = this.uri.ifEmpty { defaultUri }
         return org.eclipse.lsp4j
             .TypeHierarchyItem(
@@ -2005,8 +1986,7 @@ class XtcTextDocumentService(
                 resolvedUri,
                 this.range.toLsp(),
                 this.selectionRange.toLsp(),
-            )
-            .apply {
+            ).apply {
                 this.detail = this@toLsp.detail
                 this.data = this@toLsp.data
             }

@@ -20,9 +20,8 @@ class TemplateScannerTest {
 
             assertThat(tokens)
                 .describedAs(
-                    "Source: '$source' (length=${source.length}), chars: ${source.map { it.code }}"
-                )
-                .hasSize(2)
+                    "Source: '$source' (length=${source.length}), chars: ${source.map { it.code }}",
+                ).hasSize(2)
             assertThat(tokens[0].type).isEqualTo(TemplateTokenType.TEMPLATE_START)
             assertThat(tokens[1].type).isEqualTo(TemplateTokenType.TEMPLATE_END)
         }
@@ -262,8 +261,7 @@ class TemplateScannerTest {
                 """
                 val a = ${'$'}"Hello {name}";
                 val b = ${'$'}"World";
-                """
-                    .trimIndent()
+                """.trimIndent()
             val tokens = scanner.tokenize(source)
 
             val templateStarts = tokens.filter { it.type == TemplateTokenType.TEMPLATE_START }

@@ -1,7 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.nio.file.Path
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -15,6 +13,8 @@ import org.xvm.compiler.Source
 import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.semanticSnapshot
+import java.nio.file.Path
+import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkDelimiterRecoveryTest {
     @TempDir lateinit var directory: Path
@@ -34,9 +34,8 @@ class XdkDelimiterRecoveryTest {
             assertThat(adapter.getCompletions(URI, 0, prefix.length).map { it.label })
                 .contains("size")
             assertThat(
-                    adapter.compile(URI, grouped.replace("value.si)", "value.size)")).diagnostics
-                )
-                .isEmpty()
+                adapter.compile(URI, grouped.replace("value.si)", "value.size)")).diagnostics,
+            ).isEmpty()
         }
     }
 
@@ -53,11 +52,9 @@ class XdkDelimiterRecoveryTest {
                 "use((value.si|)",
                 "values[(value.si|]",
                 "use(values[value.si|)",
-            ]
+            ],
     )
-    fun `completion retains a cursor inside unclosed grouping calls and indexes`(
-        expression: String
-    ) {
+    fun `completion retains a cursor inside unclosed grouping calls and indexes`(expression: String) {
         val prefix = "$HEADER return ${expression.substringBefore('|')}"
         val suffix = expression.substringAfter('|') + ";"
         XdkAdapter().use { adapter ->
@@ -80,11 +77,9 @@ class XdkDelimiterRecoveryTest {
                 "use(values[pair(1, ",
                 "(fn(",
                 "use(new Box(",
-            ]
+            ],
     )
-    fun `signature help retains the innermost call with missing enclosing delimiters`(
-        expression: String
-    ) {
+    fun `signature help retains the innermost call with missing enclosing delimiters`(expression: String) {
         val prefix = "$HEADER return $expression"
         XdkAdapter().use { adapter ->
             val result = adapter.compile(URI, "$prefix; } Int later() = 42; }")
@@ -98,7 +93,7 @@ class XdkDelimiterRecoveryTest {
                         expression.contains("fn(") -> "Int fn(Int)"
                         expression.contains("new Box(") -> "new Box(Int n)"
                         else -> "Int pair(Int first, Int second)"
-                    }
+                    },
                 )
             assertThat(signature.activeParameter)
                 .isEqualTo(if (expression.contains("pair(")) 1 else 0)
@@ -119,11 +114,9 @@ class XdkDelimiterRecoveryTest {
     @ParameterizedTest
     @ValueSource(
         strings =
-            ["(pair(1, va", "use((pair(1, va", "values[pair(1, va", "use(fn(va", "use(new Box(va"]
+            ["(pair(1, va", "use((pair(1, va", "values[pair(1, va", "use(fn(va", "use(new Box(va"],
     )
-    fun `typed argument prefixes still fit inside missing enclosing delimiters`(
-        expression: String
-    ) {
+    fun `typed argument prefixes still fit inside missing enclosing delimiters`(expression: String) {
         val prefix = "$HEADER Int valueNumber = 1; return $expression"
         XdkAdapter().use { adapter ->
             val cached = adapter.compile(URI, "$prefix; } Int later() = 42; }")
@@ -135,7 +128,7 @@ class XdkDelimiterRecoveryTest {
                     TextEdit(
                         Range(Position(0, prefix.length - 2), Position(0, prefix.length)),
                         "valueNumber",
-                    )
+                    ),
                 )
             assertThat(adapter.getSignatureHelp(URI, 0, prefix.length)!!.signatures).hasSize(1)
             assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
@@ -144,8 +137,10 @@ class XdkDelimiterRecoveryTest {
 
     @Test
     fun `cursor statements can end at the enclosing brace without a semicolon`() {
-        for (statement in
-            listOf("(value.", "1 + value.", "return (value.", "Int result = (value.")) {
+        for (
+        statement in
+        listOf("(value.", "1 + value.", "return (value.", "Int result = (value.")
+        ) {
             val prefix = "$HEADER $statement"
             XdkAdapter().use { adapter ->
                 adapter.compile(URI, "$prefix } Int later() = 42; }")
@@ -159,12 +154,14 @@ class XdkDelimiterRecoveryTest {
     @Test
     fun `unrelated syntax damage is not repaired by a cursor hole`() {
         XdkAdapter().use { adapter ->
-            for ((expression, suffix) in
-                listOf(
-                    "(value." to "; } void broken( { } }",
-                    "values[1 + , value." to "; } }",
-                    "(value." to " + ; } }",
-                )) {
+            for (
+            (expression, suffix) in
+            listOf(
+                "(value." to "; } void broken( { } }",
+                "values[1 + , value." to "; } }",
+                "(value." to " + ; } }",
+            )
+            ) {
                 val prefix = "$HEADER return $expression"
                 adapter.compile(URI, prefix + suffix)
                 assertThat(adapter.getCompletions(URI, 0, prefix.length))
@@ -176,9 +173,7 @@ class XdkDelimiterRecoveryTest {
 
     @ParameterizedTest
     @ValueSource(strings = ["; } }", ""])
-    fun `delimiter recovery preserves the original source and never emits the incomplete method`(
-        suffix: String
-    ) {
+    fun `delimiter recovery preserves the original source and never emits the incomplete method`(suffix: String) {
         CompilerTestSupport.configure()
         val prefix = "$HEADER return use((value.si"
         val text = prefix + suffix
@@ -199,7 +194,12 @@ class XdkDelimiterRecoveryTest {
                 .first()
         assertThat((method.component as MethodStructure).ast).isNull()
         val model = analysis.semanticSnapshot(errors)
-        assertThat(model.sites.single().members.map { it.name }).contains("size")
+        assertThat(
+            model.sites
+                .single()
+                .members
+                .map { it.name },
+        ).contains("size")
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
     }
 
@@ -221,7 +221,12 @@ class XdkDelimiterRecoveryTest {
             adapter.compile(uri, member.readText())
             val cached = adapter.getCachedResult(uri)
             val model = adapter.analyzeAtAsync(uri, Position(0, prefix.length)).get(10, SECONDS)!!
-            assertThat(model.sites.single().members.map { it.name }).contains("size")
+            assertThat(
+                model.sites
+                    .single()
+                    .members
+                    .map { it.name },
+            ).contains("size")
             assertThat(adapter.getCachedResult(uri)).isEqualTo(cached)
             val narrowed = prefix.replace("(value.si", "(other.si")
             adapter.compile(uri, "$narrowed; } return 0; } }")

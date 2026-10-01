@@ -14,8 +14,7 @@ class XdkCursorPresentationTest {
                 String choose(String value, String backup = "") = value;
                 Int choose(Int value) = value;
                 void run() { ch
-            """
-                .trimIndent()
+            """.trimIndent()
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix; } }")
             val at = Position(prefix.lines().lastIndex, prefix.lines().last().length)
@@ -37,8 +36,7 @@ class XdkCursorPresentationTest {
                 /** Keeps the selected text. */
                 String choose(String value, String backup = "") = value;
                 void run() { choose(backup = "x", value =
-            """
-                .trimIndent()
+            """.trimIndent()
         XdkAdapter().use { adapter ->
             adapter.compile(URI, "$prefix); } }")
             val help =
@@ -67,8 +65,7 @@ class XdkCursorPresentationTest {
                 String choose(String value, String backup = "") = value;
                 void run() { choose(backup = "x", value = "y"); }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         XdkAdapter().use { adapter ->
             assertThat(adapter.compile(URI, source).diagnostics).isEmpty()
             val line = source.lines()[3]

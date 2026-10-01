@@ -97,8 +97,7 @@ class AdapterFormatter {
         content: String,
         config: FormattingConfig,
         options: FormattingOptions,
-    ): List<TextEdit> =
-        buildFormattingEdits(tree, content, config, options, startLine = 0, endLine = null)
+    ): List<TextEdit> = buildFormattingEdits(tree, content, config, options, startLine = 0, endLine = null)
 
     /** Format a range of lines within the document. */
     fun formatRange(
@@ -131,64 +130,64 @@ class AdapterFormatter {
         options: FormattingOptions,
         startLine: Int,
         endLine: Int?,
-    ): List<TextEdit> = buildList {
-        val lines = content.split("\n")
-        val lastLine = endLine ?: (lines.size - 1)
-        val isFullDocument = endLine == null
+    ): List<TextEdit> =
+        buildList {
+            val lines = content.split("\n")
+            val lastLine = endLine ?: (lines.size - 1)
+            val isFullDocument = endLine == null
 
-        for (i in startLine..minOf(lastLine, lines.size - 1)) {
-            val line = lines[i]
+            for (i in startLine..minOf(lastLine, lines.size - 1)) {
+                val line = lines[i]
 
-            // Indentation fix
-            val desiredIndent = computeLineIndent(tree, i, lines, config)
-            if (desiredIndent != SKIP_INDENT) {
-                val currentIndent = line.takeWhile { it == ' ' }.length
-                if (desiredIndent != currentIndent && line.isNotBlank()) {
-                    add(makeIndentEdit(i, currentIndent, desiredIndent))
+                // Indentation fix
+                val desiredIndent = computeLineIndent(tree, i, lines, config)
+                if (desiredIndent != SKIP_INDENT) {
+                    val currentIndent = line.takeWhile { it == ' ' }.length
+                    if (desiredIndent != currentIndent && line.isNotBlank()) {
+                        add(makeIndentEdit(i, currentIndent, desiredIndent))
+                    }
+                }
+
+                // Trailing whitespace removal
+                val trimmed = line.trimEnd()
+                if (
+                    trimmed.length < line.length && (options.trimTrailingWhitespace || isFullDocument)
+                ) {
+                    add(
+                        TextEdit(
+                            range =
+                                Range(
+                                    start = Position(i, trimmed.length),
+                                    end = Position(i, line.length),
+                                ),
+                            newText = "",
+                        ),
+                    )
                 }
             }
 
-            // Trailing whitespace removal
-            val trimmed = line.trimEnd()
+            // Insert final newline if missing. XTC default is true; user can override
+            // via editor settings (insertFinalNewline = false).
             if (
-                trimmed.length < line.length && (options.trimTrailingWhitespace || isFullDocument)
+                isFullDocument &&
+                options.insertFinalNewline &&
+                content.isNotEmpty() &&
+                !content.endsWith("\n")
             ) {
+                val lastIdx = lines.size - 1
+                val lastCol = lines[lastIdx].length
                 add(
                     TextEdit(
                         range =
                             Range(
-                                start = Position(i, trimmed.length),
-                                end = Position(i, line.length),
+                                start = Position(lastIdx, lastCol),
+                                end = Position(lastIdx, lastCol),
                             ),
-                        newText = "",
-                    )
+                        newText = "\n",
+                    ),
                 )
             }
-        }
-
-        // Insert final newline if missing. XTC default is true; user can override
-        // via editor settings (insertFinalNewline = false).
-        if (
-            isFullDocument &&
-                options.insertFinalNewline &&
-                content.isNotEmpty() &&
-                !content.endsWith("\n")
-        ) {
-            val lastIdx = lines.size - 1
-            val lastCol = lines[lastIdx].length
-            add(
-                TextEdit(
-                    range =
-                        Range(
-                            start = Position(lastIdx, lastCol),
-                            end = Position(lastIdx, lastCol),
-                        ),
-                    newText = "\n",
-                )
-            )
-        }
-    }
-        .also {
+        }.also {
             logger.info("format -> {} edits", it.size)
         }
 
@@ -267,8 +266,8 @@ class AdapterFormatter {
         // 6. Case labels -> same indent as switch
         if (
             trimmed.startsWith("case ") ||
-                trimmed.startsWith("default:") ||
-                trimmed.startsWith("default ")
+            trimmed.startsWith("default:") ||
+            trimmed.startsWith("default ")
         ) {
             val switchNode =
                 generateSequence(node) { it.parent }.firstOrNull { it.type in switchTypes }
@@ -362,9 +361,13 @@ class AdapterFormatter {
         if (prevTrimmed.endsWith("{}")) {
             val bodyIndent =
                 when {
-                    isContinuationLine(prevTrimmed) ->
+                    isContinuationLine(prevTrimmed) -> {
                         findDeclarationIndent(tree, prevLineIndex) + config.indentSize
-                    else -> prevIndent + config.indentSize
+                    }
+
+                    else -> {
+                        prevIndent + config.indentSize
+                    }
                 }
             val closingIndent =
                 when {
@@ -389,7 +392,7 @@ class AdapterFormatter {
                             end = Position(line, currentIndent),
                         ),
                     newText = replacement,
-                )
+                ),
             )
         }
 
@@ -401,9 +404,13 @@ class AdapterFormatter {
             val currentIndent = currentLine.takeWhile { it == ' ' }.length
             val bodyIndent =
                 when {
-                    isContinuationLine(prevTrimmed) ->
+                    isContinuationLine(prevTrimmed) -> {
                         findDeclarationIndent(tree, prevLineIndex) + config.indentSize
-                    else -> prevIndent + config.indentSize
+                    }
+
+                    else -> {
+                        prevIndent + config.indentSize
+                    }
                 }
             val closingIndent =
                 when {
@@ -427,7 +434,7 @@ class AdapterFormatter {
                             end = Position(line, currentIndent),
                         ),
                     newText = replacement,
-                )
+                ),
             )
         }
 
@@ -534,7 +541,8 @@ class AdapterFormatter {
                 in declarationTypes,
                 "method_declaration",
                 "function_declaration",
-                "constructor_declaration" -> ownerNode!!.startLine
+                "constructor_declaration",
+                -> ownerNode!!.startLine
 
                 in controlFlowTypes -> ownerNode!!.startLine
 
@@ -668,7 +676,7 @@ class AdapterFormatter {
                             end = Position(line, currentIndent),
                         ),
                     newText = prefix + "\n" + closing,
-                )
+                ),
             )
         }
 
@@ -681,7 +689,7 @@ class AdapterFormatter {
                         end = Position(line, currentIndent),
                     ),
                 newText = prefix,
-            )
+            ),
         )
     }
 

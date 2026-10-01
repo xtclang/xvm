@@ -1,7 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -16,6 +14,8 @@ import org.xvm.asm.constants.ClassConstant
 import org.xvm.asm.constants.TypeConstant
 import org.xvm.compiler.BuildRepository
 import org.xvm.compiler.Source
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 
 /**
  * Diagnostics raised while a TypeInfo is being assembled reach the listener the caller supplied,
@@ -37,8 +37,7 @@ class TypeInfoDiagnosticsTest {
         val base =
             """
             class Base<Element> { @Atomic Int count = 1; Element echo(Element value) = value; }
-            """
-                .trimIndent()
+            """.trimIndent()
         val repository = if (external) dependency("module Library { $base }") else null
         val declarations = if (external) "package lib import Library; import lib.Base;" else base
         val errors = ErrorList(UNLIMITED)
@@ -54,8 +53,7 @@ class TypeInfoDiagnosticsTest {
                         return text.echo("ok") + number.echo(1);
                     }
                 }
-                """
-                    .trimIndent(),
+                """.trimIndent(),
                 errors,
                 repository,
             )
@@ -71,8 +69,7 @@ class TypeInfoDiagnosticsTest {
                 module Library {
                     class Base<Element> { @Atomic Int count = 1; }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent(),
             )
         val errors = ErrorList(UNLIMITED)
         val result =
@@ -82,8 +79,7 @@ class TypeInfoDiagnosticsTest {
                     package lib import Library;
                     class Derived<Element> extends lib.Base<Element> { @Atomic @Override Int count = 2; }
                 }
-                """
-                    .trimIndent(),
+                """.trimIndent(),
                 errors,
                 repository,
             )
@@ -135,8 +131,7 @@ class TypeInfoDiagnosticsTest {
                     }
                     void run() { $body }
                 }
-                """
-                    .trimIndent(),
+                """.trimIndent(),
                 errors,
             )
         assertThat(result.succeeded()).describedAs(errors.errors.toString()).isTrue()
@@ -183,7 +178,7 @@ class TypeInfoDiagnosticsTest {
                 pool.constants
                     .filterIsInstance<ClassConstant>()
                     .firstOrNull { it.name == "Foo" }
-                    ?.type
+                    ?.type,
             ) {
                 "the class the diagnostic was about should be in the pool"
             }
@@ -203,7 +198,8 @@ class TypeInfoDiagnosticsTest {
         repository: ModuleRepository? = null,
     ): EmbeddingSupport.Compilation {
         CompilerTestSupport.configure()
-        return EmbeddingSupport.instance()
+        return EmbeddingSupport
+            .instance()
             .compileModule(Source(source, "file:///Test.x"), repository, errs)
     }
 
@@ -249,7 +245,7 @@ class TypeInfoDiagnosticsTest {
                 pool.constants
                     .filterIsInstance<ClassConstant>()
                     .firstOrNull { it.name == "Derived" }
-                    ?.type
+                    ?.type,
             ) {
                 "the class the warning was about should be in the pool"
             }
@@ -274,8 +270,7 @@ class TypeInfoDiagnosticsTest {
                     @Override void nope() {}
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
 
         val DUPLICATE_ANNOTATION =
             """
@@ -283,8 +278,7 @@ class TypeInfoDiagnosticsTest {
                 class Base { @Atomic Int x = 1; }
                 class Derived extends Base { @Atomic @Override Int x = 2; }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
 
         val CLEAN =
             """
@@ -293,7 +287,6 @@ class TypeInfoDiagnosticsTest {
                     void fine() {}
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
     }
 }

@@ -17,7 +17,9 @@ internal fun compilerWrites(nodes: List<AstNode>): List<Pair<NameExpression, Usa
                 val usage =
                     when (node.category) {
                         AssignmentStatement.Category.InPlace,
-                        AssignmentStatement.Category.CondLeft -> Usage.READ_WRITE
+                        AssignmentStatement.Category.CondLeft,
+                        -> Usage.READ_WRITE
+
                         else -> Usage.WRITE
                     }
                 writeTargets(node.lValue).map { it to usage }
@@ -46,8 +48,13 @@ private fun writeTargets(node: AstNode): List<NameExpression> =
 
         is MultipleLValueStatement,
         is TupleExpression,
-        is ParenthesizedExpression -> {
-            node.childNodes().asSequence().flatMap { writeTargets(it) }.toList()
+        is ParenthesizedExpression,
+        -> {
+            node
+                .childNodes()
+                .asSequence()
+                .flatMap { writeTargets(it) }
+                .toList()
         }
 
         else -> {

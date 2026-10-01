@@ -1,8 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.net.URI
-import java.nio.file.Files
-import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -10,15 +7,16 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import java.net.URI
+import java.nio.file.Files
+import java.nio.file.Path
 
 class XdkResourceRenameTest {
     @TempDir lateinit var directory: Path
 
     @ParameterizedTest
     @ValueSource(strings = ["class", "package"])
-    fun `member rename moves its companion tree and reverse rename restores the sources`(
-        kind: String
-    ) {
+    fun `member rename moves its companion tree and reverse rename restores the sources`(kind: String) {
         val original =
             mapOf(
                 "App.x" to
@@ -37,7 +35,7 @@ class XdkResourceRenameTest {
             assertThat(adapter.compile(root, original.getValue("App.x")).diagnostics).isEmpty()
             val edit =
                 requireNotNull(
-                    adapter.rename(root, 0, original.getValue("App.x").indexOf("Box"), "Renamed")
+                    adapter.rename(root, 0, original.getValue("App.x").indexOf("Box"), "Renamed"),
                 )
             assertThat(edit.renames).hasSize(2)
             assertThat(edit.renames).containsEntry(uri("App/Box.x"), uri("App/Renamed.x"))
@@ -82,7 +80,7 @@ class XdkResourceRenameTest {
             assertThat(adapter.rename(uri("Consumer.x"), 0, alias, "Renamed")).isNull()
             val edit =
                 requireNotNull(
-                    adapter.rename(uri("Library.x"), 0, library.indexOf("Library"), "Renamed")
+                    adapter.rename(uri("Library.x"), 0, library.indexOf("Library"), "Renamed"),
                 )
             assertThat(edit.renames).hasSize(2)
             assertThat(edit.changes.keys)
@@ -97,18 +95,16 @@ class XdkResourceRenameTest {
             assertThat(adapter.findDefinition(uri("Consumer.x"), 0, changed.indexOf("Box"))?.uri)
                 .isEqualTo(uri("Renamed/Box.x"))
             assertThat(
-                    adapter
-                        .compile(
-                            uri("Renamed.x"),
-                            directory.resolve("Renamed.x").toFile().readText(),
-                        )
-                        .diagnostics
-                )
-                .isEmpty()
+                adapter
+                    .compile(
+                        uri("Renamed.x"),
+                        directory.resolve("Renamed.x").toFile().readText(),
+                    ).diagnostics,
+            ).isEmpty()
             apply(
                 requireNotNull(
-                    adapter.rename(uri("Renamed.x"), 0, library.indexOf("Library"), "Library")
-                )
+                    adapter.rename(uri("Renamed.x"), 0, library.indexOf("Library"), "Library"),
+                ),
             )
         }
         assertThat(directory.resolve("Library.x").toFile().readText()).isEqualTo(library)
@@ -161,7 +157,7 @@ class XdkResourceRenameTest {
                 "class Holder { @Lazy Int read.calc() = 1; } Int use(Holder value) = value.read;",
                 "class Base { Int read() = 1; } mixin Loud into Base { @Override Int read() = super() + 1; } " +
                     "class Host extends Base incorporates Loud {} Int use(Host value) = value.read();",
-            ]
+            ],
     )
     fun `delegation mixin and annotated property rename preserves written contracts`(body: String) {
         val text = "module App { $body }"
@@ -176,11 +172,10 @@ class XdkResourceRenameTest {
             assertThat(directory.resolve("App.x").toFile().readText()).isEqualTo(text)
             apply(edit)
             assertThat(
-                    adapter
-                        .compile(uri("App.x"), directory.resolve("App.x").toFile().readText())
-                        .diagnostics
-                )
-                .isEmpty()
+                adapter
+                    .compile(uri("App.x"), directory.resolve("App.x").toFile().readText())
+                    .diagnostics,
+            ).isEmpty()
         }
     }
 
@@ -196,7 +191,7 @@ class XdkResourceRenameTest {
             assertThat(adapter.compile(uri("Library.x"), library).diagnostics).isEmpty()
             val edit =
                 requireNotNull(
-                    adapter.rename(uri("Library.x"), 0, library.indexOf("Library"), "Renamed")
+                    adapter.rename(uri("Library.x"), 0, library.indexOf("Library"), "Renamed"),
                 )
             apply(edit)
         }
@@ -221,8 +216,8 @@ class XdkResourceRenameTest {
             assertThat(edit.renames)
                 .containsExactlyEntriesOf(
                     mapOf(
-                        uri("App/tools").removeSuffix("/") to uri("App/helpers").removeSuffix("/")
-                    )
+                        uri("App/tools").removeSuffix("/") to uri("App/helpers").removeSuffix("/"),
+                    ),
                 )
             apply(edit)
         }
@@ -233,7 +228,7 @@ class XdkResourceRenameTest {
             assertThat(adapter.findDefinition(uri("App.x"), 0, changed.indexOf("Box"))?.uri)
                 .isEqualTo(uri("App/helpers/deep/Box.x"))
             apply(
-                requireNotNull(adapter.rename(uri("App.x"), 0, changed.indexOf("helpers"), "tools"))
+                requireNotNull(adapter.rename(uri("App.x"), 0, changed.indexOf("helpers"), "tools")),
             )
         }
         assertThat(directory.resolve("App.x").toFile().readText()).isEqualTo(text)
@@ -252,7 +247,7 @@ class XdkResourceRenameTest {
                 listOf(
                     XdkSourceModule("Library.example.org", uri("Library.x")),
                     XdkSourceModule("Consumer", uri("Consumer.x"), setOf("Library.example.org")),
-                )
+                ),
             )
             assertThat(adapter.compile(uri("Library.x"), library).diagnostics).isEmpty()
             assertThat(adapter.rename(uri("Library.x"), 0, library.indexOf("Library"), "Renamed"))
@@ -265,8 +260,7 @@ class XdkResourceRenameTest {
                             0,
                             library.indexOf("Library"),
                             "Renamed",
-                        )
-                        .join()
+                        ).join(),
                 )
             val modules = requireNotNull(proposal.sourceModules)
             assertThat(modules.map { it.name })
@@ -299,7 +293,7 @@ class XdkResourceRenameTest {
                             offset(change.range.end),
                             change.newText,
                         )
-                    }
+                    },
             )
         }
         edit.renames.forEach { (from, to) -> Files.move(Path.of(URI(from)), Path.of(URI(to))) }
@@ -308,12 +302,16 @@ class XdkResourceRenameTest {
     private fun source(
         file: String,
         text: String,
-    ) =
-        directory.resolve(file).toFile().apply {
-            parentFile.mkdirs()
-            writeText(text)
-        }
+    ) = directory.resolve(file).toFile().apply {
+        parentFile.mkdirs()
+        writeText(text)
+    }
 
     private fun uri(file: String): String =
-        directory.resolve(file).toFile().canonicalFile.toURI().toString()
+        directory
+            .resolve(file)
+            .toFile()
+            .canonicalFile
+            .toURI()
+            .toString()
 }
