@@ -1164,7 +1164,7 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 | L77 colors | No color-value provider exists. | Decide which XTC values have unambiguous color meaning and reversible source edits. Implement that scope or record why it is inapplicable. |
 | L78 notebooks | Current ownership is file/module based; there are no notebook sessions. | Decide whether XTC notebooks are a product requirement, then define cell/module identity and execution order before synchronization. Record an explicit exclusion if out of scope. |
 | L79 debug inline values | Compiler inlay hints are not runtime values; DAP remains a stub. | Depend on R6–R7 real sessions, stack/source mapping and stop-state ownership; define evaluation safety before exposing values. |
-| L80 negotiation | Presentation, action forms/preferred metadata, completion kinds and edit-format audits pass backend, packaged transport and editor checks. Generic IntelliJ text-edit guarding and shared X144 pass both hosts. | Generic resource/snippet/confirmation edits are refused; native Rename/Move owns resource edits. The comprehensive capability audit remains separate from this bounded acceptance. |
+| L80 negotiation | Current producer/provider audit is complete, including link-tooltip, per-signature parameter and pull-related-info gates. Generic IntelliJ text-edit guarding and shared X144 retain their passing receipts. | Generic resource/snippet/confirmation edits remain refused; native Rename/Move owns resource edits. New producers must extend negotiation and tests; host/release acceptance remains under L81/L82. |
 | L81 progress/trace/refresh | Partial batches and actual Tree-sitter scan progress join owned progress/cancellation, refresh and trace. X143 and X145 pass both hosts, including cancellation and restart during pending work. | X146/X147 now automate bounded P3/P4 refresh and late reports; acceptance follows this batch. Physical button selection and broader multi-window/settings interaction remain manual. |
 | L83 initializer facts | Detached successful initializer facts are implemented with no new AST fields; backend regressions and shared X142 are added. | Backend and shared X142 pass; preserve the explicit eight-component record-pattern migration note. |
 
@@ -1242,14 +1242,15 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
 
 ### Protocol correctness and the completion gate
 
-- [ ] **L80 — Initialization and capability negotiation.** Audit against the 3.18 method
-  model and client capabilities. Watcher registration now occurs after `initialized` and honors
-  dynamic-registration support; audit registration failure and lifecycle cleanup. Audit workspace-folder fallback, UTF-16/default versus negotiated
-  encodings, markup/location-link support, diagnostic versions/tags/related information,
-  symbol kinds/tags, code-action kinds/`context.only`, snippets/edit formats and workspace-edit
-  resource/failure capabilities. Audit stale application in IntelliJ code actions, file-operation
-  edits and server-initiated `workspace/applyEdit`: the L60 native symbol-rename guard does not
-  cover those LSP4IJ entry points. Unsupported optional features must remain unadvertised.
+- [x] **L80 — Initialization and capability negotiation.** The 2026-10-01 audit covers all
+  current method/response producers, adapter provider gates, workspace roots/UTF-16, markup,
+  symbols, diagnostic metadata, action kinds/forms, resolve fields, edits, watcher failures and
+  lifecycle cleanup. It fixes missing link-tooltip, per-signature parameter and pull-related-info
+  gates, and limits the rename-proposal advertisement to compiler mode. See the
+  [producer inventory](errs-audit.md#l80-final-capability-contract-audit-2026-10-01) and
+  [validation receipt](#l80-final-capability-contract-audit-2026-10-01). Generic IntelliJ
+  resource/snippet/confirmation edits remain intentionally refused; native Rename/Move owns
+  its supported resource operations. Future producers must extend negotiation and its tests.
 - [ ] **L81 — Progress, refresh, tracing and transport lifecycle.** Add negotiated work-done
   progress/create/cancel and partial results for long graph operations; propagate cancellation
   without transport/compiler lock cycles. Implement `$/setTrace`/`$/logTrace` behavior and
@@ -1282,8 +1283,9 @@ L80/L81 follow-up status: negotiated action/command forms, completion kinds, fil
 partial batches and actual asynchronous scan progress pass their regressions. Generic IntelliJ server
 text edits have an ownership guard; X144 and X145 progress/cancel/restart acceptance pass both clients.
 The current batch is validated: IntelliJ passes all 150 cases plus startup in one run; VS Code passes
-149/150, with X130's host Explorer repaint exception still failing the test. L80/L81 retain their
-broader audit/manual acceptance scope. L82 retains that host failure, representative-workspace
+149/150, with X130's host Explorer repaint exception still failing the test. L80's final producer
+audit is now complete; L81 retains broader manual acceptance scope. L82 retains that host failure,
+representative-workspace
 performance targets, peak-memory and prolonged lifecycle gates. Their unchecked headings do not
 mean the implemented protocol paths above are absent.
 
@@ -7691,7 +7693,7 @@ reproducible, and reconcile completed versus remaining scope. Validation is batc
    | L65 navigation/classification | Source/bundled navigation, recorded hierarchy/composition relations and resolved tokens | Conditional/synthetic/native/redirect routes and ambiguous binary source metadata need individual fixtures. Runtime function targets cannot be invented by a static hierarchy. |
    | L66 editing/structure | Token-preserving indentation, URL links, local linked editing, recorded damaged-source structure | Expression wrapping and comment/string layout, import/source links, broader proven linked scopes and remaining damaged constructs. A full pretty-printer is not implemented. |
    | L67 scale | Live graph discovery/overlays, dependencies and detached per-root caches | Use the platform workload to establish budgets and locate bottlenecks before choosing incremental or persistent indexing; neither exists merely because incremental text transport does. |
-   | L80 capability contract | Tested emitted kinds/markup, UTF-16, watcher lifecycle, action forms, versioned text/resource edits and X144 native ownership | Retain the final method/producer-to-capability audit as an explicit submission review. No new snippet/location-link/tag producer is needed solely for optional protocol completeness; revisit negotiation when one is added. Generic native resource/snippet/confirmation edits remain deliberately refused. |
+   | L80 capability contract | Current method/producer inventory completed on 2026-10-01; optional presentation gates corrected, with exhaustive adapter-provider and rich/reduced-client checks | Revisit negotiation when a producer adds snippets, location links, tags or other optional fields. Generic native resource/snippet/confirmation edits remain deliberately refused. L81/L82 manual/release evidence is separate. |
    | L81 lifecycle | Trace, owned progress/cancel, partial results, refresh, shutdown, X145 pending restart and X146/X147 refresh/report ownership | Physical Cancel-button selection and broader per-provider visual/multiple-window interactions remain manual acceptance rather than absent server implementations. See the following validation receipt. |
    | L82 release evidence | Previous backend/compiler suite, full native 150-case checkpoint, 360-cycle retention receipt, current stdio/plugin/selected editor tests and 30-cycle platform baseline | Intermittent X130 host failure; agreed response-time/heap targets, prolonged editing/restart/process-leak runs and supported-platform/packaging acceptance. Later extracted PRs still need independent validation. |
 
@@ -7859,3 +7861,40 @@ uses that focus helper. Keep both with the editor test infrastructure. Final Typ
 root/lang Spotless checks and `git diff --check` pass. No test/editor/LSP processes remain. These
 commits are local on `lagergren/errs`; this slice creates no remote issue, branch or PR and performs
 no push. The failed host receipts remain failed.
+
+
+### L80 final capability contract audit (2026-10-01)
+
+The current-producer audit is complete. The [detailed inventory](errs-audit.md#l80-final-capability-contract-audit-2026-10-01)
+maps all provider families to their negotiation choices and regression coverage. Three actual gaps
+are fixed: document-link tooltips on both response paths, per-signature active-parameter metadata
+with a legacy selected-overload fallback, and related information in every pull-diagnostic report
+shape. The compiler-only experimental rename proposal is no longer advertised by other adapters.
+No embedding or AST changes, new mutable state, or editor-private workarounds are needed.
+
+`CapabilityContractTest` checks all 25 adapter flags separately, a featureless adapter and the real
+compiler's provider inventory. `CapabilityNegotiationTest` adds absent/false/true link and signature
+cases. `DiagnosticPresentationTest` covers independent push/pull flags, related documents in full
+and unchanged reports, and full/unchanged workspace reports. Packaged stdio adds rich and reduced
+presentation sessions; existing semantic tests now declare the capabilities their assertions need.
+
+Validation: the corrected focused backend run passes **119/119, zero failures/errors/skips**
+(XML timestamps 2026-10-01 08:17:11–08:17:19 UTC). The full packaged run executes all **76 cases**:
+75 pass; the new reduced-client assertion unboxes a correctly absent optional field. After making
+that assertion nullable, both rich/reduced packaged variants pass **2/2, zero failures/errors/skips**
+(08:20:08 UTC). This is full-suite coverage followed by a focused test correction, not a second
+complete packaged run. The first backend attempt's 117/119 result was likewise corrected after
+two new fixtures expected noncanonical `file:///` spelling. All failures were fixture assertions;
+the receipts are retained rather than silently omitted. Root/lang `spotlessCheck` and
+`git diff --check` pass.
+
+The 152-case shared catalog is unchanged: reduced initialize capabilities are protocol fixtures,
+not settings that a running modern editor can toggle. Existing X131 drivers accept negotiated
+link targets without demanding optional tooltips. No desktop harness is rerun for this server-only
+response-shaping batch. The manual coverage map now identifies the additional protocol cases.
+
+Extraction checkpoint: `84f1f8e63` contains the L80 response-negotiation correction and tests.
+Keep it together after the earlier L80 presentation/resolve/pull-diagnostic slices. The exhaustive provider test and compiler-only
+experimental gate belong with it. The X130 probe/focus commits remain a separate harness/upstream
+slice. L80 completion does not close L81 manual checks, L82 release/scale evidence, the upstream
+Explorer repair, or any explicitly missing language feature.
