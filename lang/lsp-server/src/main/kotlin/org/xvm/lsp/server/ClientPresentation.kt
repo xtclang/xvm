@@ -20,6 +20,9 @@ internal data class ClientPresentation(
     val actionLiterals: Boolean = false,
     val preferredActions: Boolean = false,
     val applyEdit: Boolean = false,
+    val linkTooltips: Boolean = false,
+    val signatureActiveParameters: Boolean = false,
+    val pullDiagnosticRelatedInformation: Boolean = false,
 ) {
     fun hover(markdown: String): MarkupContent =
         if (markdownHover) MarkupContent(MarkupKind.MARKDOWN, markdown)
@@ -53,20 +56,29 @@ internal data class ClientPresentation(
         fun read(params: InitializeParams): ClientPresentation {
             val text = params.capabilities?.textDocument
             return ClientPresentation(
-                text?.hover?.contentFormat?.firstOrNull {
-                    it == MarkupKind.MARKDOWN || it == MarkupKind.PLAINTEXT
-                } == MarkupKind.MARKDOWN,
-                text?.documentSymbol?.hierarchicalDocumentSymbolSupport == true,
-                text?.documentSymbol?.symbolKind?.valueSet?.toSet() ?: legacyKinds,
-                params.capabilities?.workspace?.symbol?.symbolKind?.valueSet?.toSet()
-                    ?: legacyKinds,
-                text?.publishDiagnostics?.versionSupport == true,
-                text?.publishDiagnostics?.relatedInformation == true,
-                params.capabilities?.workspace?.configuration == true,
-                text?.completion?.completionItemKind?.valueSet?.toSet() ?: legacyCompletionKinds,
-                text?.codeAction?.codeActionLiteralSupport != null,
-                text?.codeAction?.isPreferredSupport == true,
-                params.capabilities?.workspace?.applyEdit == true,
+                markdownHover =
+                    text?.hover?.contentFormat?.firstOrNull {
+                        it == MarkupKind.MARKDOWN || it == MarkupKind.PLAINTEXT
+                    } == MarkupKind.MARKDOWN,
+                hierarchicalSymbols =
+                    text?.documentSymbol?.hierarchicalDocumentSymbolSupport == true,
+                documentKinds = text?.documentSymbol?.symbolKind?.valueSet?.toSet() ?: legacyKinds,
+                workspaceKinds =
+                    params.capabilities?.workspace?.symbol?.symbolKind?.valueSet?.toSet()
+                        ?: legacyKinds,
+                diagnosticVersions = text?.publishDiagnostics?.versionSupport == true,
+                diagnosticRelatedInformation = text?.publishDiagnostics?.relatedInformation == true,
+                workspaceConfiguration = params.capabilities?.workspace?.configuration == true,
+                completionKinds =
+                    text?.completion?.completionItemKind?.valueSet?.toSet()
+                        ?: legacyCompletionKinds,
+                actionLiterals = text?.codeAction?.codeActionLiteralSupport != null,
+                preferredActions = text?.codeAction?.isPreferredSupport == true,
+                applyEdit = params.capabilities?.workspace?.applyEdit == true,
+                linkTooltips = text?.documentLink?.tooltipSupport == true,
+                signatureActiveParameters =
+                    text?.signatureHelp?.signatureInformation?.activeParameterSupport == true,
+                pullDiagnosticRelatedInformation = text?.diagnostic?.relatedInformation == true,
             )
         }
 

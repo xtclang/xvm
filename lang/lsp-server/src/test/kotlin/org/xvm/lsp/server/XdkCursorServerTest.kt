@@ -347,6 +347,7 @@ class XdkCursorServerTest {
     fun `signature conversion preserves per-signature parameter mapping`() {
         val backend = Backend()
         Session(backend).use { session ->
+            session.server.initialize(editorInitializeParams()).join()
             session.open()
             val response =
                 session.documents.signatureHelp(
