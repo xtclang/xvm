@@ -70,6 +70,8 @@ CATALOG_USERS = {
 }
 NEEDS = {"build": ("core", "intellij", "vscode"), "corpus": ("core",), "intellij": ("intellij",), "vscode": ("vscode",)}
 READS = {"core": ("build", "corpus"), "intellij": ("build", "intellij"), "vscode": ("build", "vscode")}
+# Build sources only: docs under lang/ show catalog accessors in examples.
+SOURCES = ("**/*.kts", "**/*.kt", "**/*.gradle", "**/*.java")
 ACCESSOR = r'libs\.[A-Za-z0-9_.]+|find(Library|Version|Plugin|Bundle)\("[^"]+"\)'
 FIND_SECTIONS = {"Library": "libraries", "Version": "versions", "Plugin": "plugins", "Bundle": "bundles"}
 
@@ -96,8 +98,10 @@ def is_commit(rev):
 
 
 def catalog_references(head, paths):
-    """(section, alias parts) for each catalog accessor in the sources under paths."""
-    found = subprocess.run(["git", "grep", "-ohE", ACCESSOR, head, "--", *paths],
+    """(section, alias parts) for each catalog accessor in the build sources under paths."""
+    pathspecs = [path if path.startswith(":(exclude)") else f":(glob){path}/{source}"
+                 for path in paths for source in (("",) if path.startswith(":(exclude)") else SOURCES)]
+    found = subprocess.run(["git", "grep", "-ohE", ACCESSOR, head, "--", *pathspecs],
                            capture_output=True, text=True).stdout
     for token in set(found.split()):
         if match := re.fullmatch(r'find(Library|Version|Plugin|Bundle)\("([^"]+)"\)', token):
