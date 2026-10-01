@@ -1,5 +1,7 @@
 package org.xvm.compiler.ast;
 
+import java.math.BigDecimal;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -22,6 +24,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo.MethodKind;
 import org.xvm.asm.constants.TypedefConstant;
 
+import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Token;
@@ -30,6 +33,7 @@ import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 import org.xvm.compiler.ast.partial.IncompleteStatement;
 import org.xvm.compiler.ast.partial.PartialSyntax;
 import org.xvm.compiler.ast.partial.PartialSyntax.ArgumentCursor;
+import org.xvm.compiler.ast.partial.ProposedLiteralToken;
 
 import org.xvm.util.PackedInteger;
 
@@ -166,11 +170,22 @@ final class PartialCallResolver {
                 .filter(variable -> variable.name().startsWith(prefix))
                 .takeWhile(variable -> !errs.isAbortDesired())
                 .filter(variable -> fitsName.test(variable.name())).toList();
-        var literals = qualified ? List.<String>of() : List.of("False", "True", "Null", "0", "\"\"").stream()
+        var literals = qualified ? List.<String>of()
+                : List.of("False", "True", "Null", "0", "0.0", "\"\"", "' '", "#00", "[]", "Map:[]", "Tuple:()").stream()
                 .filter(text -> text.startsWith(prefix))
                 .takeWhile(text -> !errs.isAbortDesired())
-                .filter(text -> fitsValue.test(proposedLiteral(cursor, text))).toList();
-        var result = scope.withArgumentValues(variables).withArgumentLiterals(literals);
+                .filter(text -> {
+                    Expression proposal = proposedLiteral(cursor, text, errs);
+                    return proposal != null && fitsValue.test(proposal);
+                }).toList();
+        boolean explicitThis = qualified && cursor.getReceiver().orElseThrow() instanceof NameExpression receiver
+                && receiver.getLeftExpression() == null && receiver.getName().equals("this");
+        var expressions = qualified && !explicitThis ? List.<String>of()
+                : Stream.concat(qualified ? Stream.empty() : Stream.of("this"),
+                        CursorScope.enclosingInstances(cursor).stream().map(name -> qualified ? name : "this." + name))
+                    .filter(text -> text.startsWith(prefix)).takeWhile(text -> !errs.isAbortDesired())
+                    .filter(text -> fitsValue.test(proposedInstance(cursor, text))).toList();
+        var result = scope.withArgumentValues(variables).withArgumentLiterals(literals).withArgumentExpressions(expressions);
         if (errs.isAbortDesired()) {
             return result;
         }
@@ -201,13 +216,40 @@ final class PartialCallResolver {
         return result.withArgumentProperties(properties);
     }
 
-    private static Expression proposedLiteral(IncompleteStatement site, String text) {
+    private static Expression proposedLiteral(IncompleteStatement site, String text, ErrorListener errs) {
         long cursor = site.getEndPosition();
         return switch (text) {
-            case "0" -> new LiteralExpression(new Token(cursor, cursor, Id.LIT_INT, PackedInteger.ZERO));
-            case "\"\"" -> new LiteralExpression(new Token(cursor, cursor, Id.LIT_STRING, ""));
+            case "0" -> new LiteralExpression(new ProposedLiteralToken(cursor, Id.LIT_INT, PackedInteger.ZERO, text));
+            case "0.0" -> new LiteralExpression(new ProposedLiteralToken(cursor, Id.LIT_DEC, BigDecimal.ZERO, text));
+            case "\"\"" -> new LiteralExpression(new ProposedLiteralToken(cursor, Id.LIT_STRING, "", text));
+            case "' '" -> new LiteralExpression(new ProposedLiteralToken(cursor, Id.LIT_CHAR, ' ', text));
+            case "#00" -> new LiteralExpression(new ProposedLiteralToken(cursor, Id.LIT_BINSTR, new byte[]{0}, text));
+            case "[]" -> new ListExpression(null, new ArrayList<>(), cursor, cursor);
+            case "Map:[]" -> {
+                var map = new MapExpression(new NamedTypeExpression(null,
+                        List.of(new Token(cursor, cursor, Id.IDENTIFIER, "Map")), null, null, null, cursor),
+                        new ArrayList<>(), new ArrayList<>(), cursor);
+                map.setParent(site);
+                map.introduceParentage();
+                var probe = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
+                yield new StageMgr(map, Stage.Resolved, probe).fastForward(20)
+                        && !probe.hasSeriousErrors() && !probe.isAbortDesired() ? map : null;
+            }
+            case "Tuple:()" -> new TupleExpression(null, new ArrayList<>(), cursor, cursor);
             default -> proposedName(site, text);
         };
+    }
+
+    private static Expression proposedInstance(IncompleteStatement site, String text) {
+        if (!text.startsWith("this.")) {
+            return proposedName(site, text);
+        }
+        long cursor = site.getEndPosition();
+        var expression = new NameExpression(new NameExpression(new Token(cursor, cursor, Id.IDENTIFIER, "this")),
+                null, new Token(cursor, cursor, Id.IDENTIFIER, text.substring("this.".length())), null, cursor);
+        expression.setParent(site);
+        expression.introduceParentage();
+        return expression;
     }
 
     /** Normal read validation supplies identity, narrowing and receiver-specific type substitution. */

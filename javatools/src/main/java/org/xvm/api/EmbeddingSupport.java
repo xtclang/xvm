@@ -55,6 +55,7 @@ import org.xvm.compiler.ast.Statement;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 import org.xvm.compiler.ast.partial.IncompleteStatement;
+import org.xvm.compiler.ast.partial.PartialSyntax;
 
 import org.xvm.tool.Console;
 import org.xvm.tool.Launcher.LauncherException;
@@ -766,13 +767,16 @@ public class EmbeddingSupport {
 
         var cursors = new CursorBinding.Collector();
         Compilation attempt = compileModule(listener -> parsed, input, host, cursors);
-        return new PartialAnalysis(parsed.sources(), sites, Optional.ofNullable(attempt.pool()),
+        // Anonymous construction can replace its deferred body with an owned class/validation
+        // clone. Publish only surviving syntax, never the pre-validation cursor identity.
+        var surviving = incompleteSites(parsed.root()).toList();
+        return new PartialAnalysis(parsed.sources(), surviving, Optional.ofNullable(attempt.pool()),
                 attempt.callBindings(), cursors.finish(parsed.sources()), attempt.functionBindings());
     }
 
     /** Parsed children exist before parent links; expose the innermost unfinished operations. */
     private static Stream<IncompleteStatement> incompleteSites(AstNode node) {
-        var nested = StreamSupport.stream(node.children().spliterator(), false)
+        var nested = PartialSyntax.children(node)
                 .flatMap(EmbeddingSupport::incompleteSites);
         if (node instanceof IncompleteStatement site) {
             var descendants = nested.toList();
