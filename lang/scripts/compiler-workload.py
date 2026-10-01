@@ -7,6 +7,7 @@ Run this separately from other compiler workloads to keep timings interpretable.
 """
 
 import argparse
+import collections
 import concurrent.futures
 import hashlib
 import json
@@ -180,6 +181,24 @@ def percentiles(values):
             "p95Ms": ordered[math.ceil(len(ordered) * 0.95) - 1], "maxMs": ordered[-1]}
 
 
+def trace_statistics(directory):
+    timings = collections.defaultdict(list)
+    max_active = 0
+    largest_queue = []
+    for file in sorted((directory / "trace").glob("*.jsonl")):
+        for line in file.open():
+            event = json.loads(line)
+            max_active = max(max_active, event.get("activeApiThreads", 0))
+            jobs = event.get("queuedJobs", [])
+            if len(jobs) > len(largest_queue):
+                largest_queue = jobs
+            if event.get("kind") == "javatools" and event.get("event") == "end":
+                timings[event["operation"]].append(event["elapsedMs"])
+    return {"apiTimings": {name: percentiles(values) for name, values in sorted(timings.items())},
+            "maxActiveApiThreads": max_active, "largestTracedQueue": largest_queue,
+            "traceDirectory": str(directory / "trace")}
+
+
 def run(args):
     graph = json.loads(args.graph.read_text())
     modules = [{**module, "uri": (args.workspace / module["uri"]).resolve().as_uri(),
@@ -239,6 +258,7 @@ def run(args):
                 result["maxRunningJobs"] = max((s["queue"]["runningSize"] for s in session.samples), default=0)
                 result["samplingErrors"] = session.sampling_errors
                 session.cleanup()
+                result.update(trace_statistics(directory))
         report["status"] = "passed"
     except Exception as error:
         report["status"], report["error"] = "failed", str(error)
