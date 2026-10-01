@@ -1,5 +1,7 @@
 # Integrating the embedding diagnostics work
 
+Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
+
 Plan prepared on 2026-09-22 from `lagergren/errs` at `a8213cf04`, against the local
 `origin/master` reference at `4a1eae6f7`, which is also the merge base. This comparison contains
 72 commits and changes 139 files: 6,632 insertions and 984 deletions. The remote was not refreshed
@@ -1165,7 +1167,7 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 | L78 notebooks | Current ownership is file/module based; there are no notebook sessions. | Decide whether XTC notebooks are a product requirement, then define cell/module identity and execution order before synchronization. Record an explicit exclusion if out of scope. |
 | L79 debug inline values | Compiler inlay hints are not runtime values; DAP remains a stub. | Depend on R6–R7 real sessions, stack/source mapping and stop-state ownership; define evaluation safety before exposing values. |
 | L80 negotiation | Current producer/provider audit is complete, including link-tooltip, per-signature parameter and pull-related-info gates. Generic IntelliJ text-edit guarding and shared X144 retain their passing receipts. | Generic resource/snippet/confirmation edits remain refused; native Rename/Move owns resource edits. New producers must extend negotiation and tests; host/release acceptance remains under L81/L82. |
-| L81 progress/trace/refresh | Partial batches and actual Tree-sitter scan progress join owned progress/cancellation, refresh and trace. X143 and X145 pass both hosts, including cancellation and restart during pending work. | X146/X147 now automate bounded P3/P4 refresh and late reports; acceptance follows this batch. Physical button selection and broader multi-window/settings interaction remain manual. |
+| L81 progress/trace/refresh | Partial batches and actual Tree-sitter scan progress join owned progress/cancellation, refresh and trace. X143 and X145 pass both hosts, including cancellation and restart during pending work. | X146/X147 now automate bounded P3/P4 refresh and late reports; acceptance follows this batch. IntelliJ visible Cancel passes; VS Code button selection and broader multi-window/settings interaction remain manual. |
 | L83 initializer facts | Detached successful initializer facts are implemented with no new AST fields; backend regressions and shared X142 are added. | Backend and shared X142 pass; preserve the explicit eight-component record-pattern migration note. |
 
 L76–L79 require explicit scope decisions; their presence in this inventory does not make notebooks,
@@ -1251,14 +1253,21 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
   [validation receipt](#l80-final-capability-contract-audit-2026-10-01). Generic IntelliJ
   resource/snippet/confirmation edits remain intentionally refused; native Rename/Move owns
   its supported resource operations. Future producers must extend negotiation and its tests.
-- [ ] **L81 — Progress, refresh, tracing and transport lifecycle.** Add negotiated work-done
-  progress/create/cancel and partial results for long graph operations; propagate cancellation
-  without transport/compiler lock cycles. Implement `$/setTrace`/`$/logTrace` behavior and
-  negotiated refresh for semantic tokens, inlays, lenses, folding and new providers. Audit
-  shutdown/exit, pre-initialize errors, malformed requests, stale handles and pending work.
-  LSP4J transport support alone does not establish correct application behavior. Audit use of
-  client requests (`showDocument`, messages, workspace folders/configuration, applyEdit) as
-  needed; telemetry is not required to implement language features.
+- [ ] **L81 — Progress, refresh, tracing and transport lifecycle.** Implementation is in place;
+  broader native acceptance remains explicit below. The final audit adds late progress-creation
+  retirement, all-five-provider refresh regressions, malformed-request recovery and independent
+  connection ownership. Progress identifies the source/workspace and updates from compiler queue
+  metadata. See the [L81 checkpoint](#l81-progress-refresh-and-transport-checkpoint-2026-10-01)
+  and [upstream register](errs-upstream-issues.md) for remaining acceptance and UP15's error-code gap.
+  - [x] Negotiated creation/cancel, partial results, trace levels and connection/request ownership.
+  - [x] Shutdown/exit, initialization retry, unknown/malformed requests and two real server connections.
+  - [x] All five refresh providers: negotiation, coalescing, refusal, pending replies and close.
+  - [x] Audit current client-request producers; no additional showDocument/message-choice/folder
+    request is needed for the currently implemented features.
+  - [x] IntelliJ visible Cancel button, continued hover, pending restart and old-process exit.
+  - [ ] VS Code visible Cancel button; its real SDK cancellation callback is covered separately.
+  - [ ] Overlapping project close/reopen and multiple native windows. A two-process protocol test
+    is not that UI evidence.
 - [ ] **L82 — Completion evidence and API closure.** For every applicable task, require a
   meaningful backend regression, advertised-capability/protocol test and shared editor scenario
   where observable. Cover supported, rejected, canceled and stale requests. Re-run the combined
@@ -1269,6 +1278,10 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
   Establish explicit response-time and memory targets using representative project sizes, and
   include prolonged editing/restart/process-leak workloads on supported platforms. Record
   packaging, source attachment and failure-recovery acceptance in both clients.
+  - [ ] Investigate IntelliJ bulk replacement of heavily decorated large files: the 20,000-method
+    X145 attempt recorded a 21.3-second EDT freeze in `RangeMarkerTree.documentChanged` /
+    `IntervalTreeImpl.maxEndOf` during `DocumentImpl.setText`. Preserve the failed receipt below;
+    a passing bounded progress test does not establish large-file responsiveness.
 
 - [x] **L83 — Semantic facts for constant-folded property initializers.** Successful temporary
   initializer probes now export detached constant targets, source spans, types and invocation
@@ -7929,3 +7942,117 @@ Keep it together after the earlier L80 presentation/resolve/pull-diagnostic slic
 experimental gate belong with it. The X130 probe/focus commits remain a separate harness/upstream
 slice. L80 completion does not close L81 manual checks, L82 release/scale evidence, the upstream
 Explorer repair, or any explicitly missing language feature.
+
+
+### L81 progress, refresh and transport checkpoint (2026-10-01)
+
+The progress-creation deadline previously timed out the RPC future itself. A client that successfully
+created its token later could retain that registration until disconnect. The server now races a local
+deadline without completing the RPC future. A late successful acknowledgement receives a
+noncancellable begin/end pair to retire it; it cannot reclaim cancellation ownership of the query.
+Closed connections send no late progress. Controlled tests cover completion, cancellation, timeout,
+late acknowledgement and independent use of identical tokens on separate connections.
+
+Operation titles are now simply `Finding references`, `Checking workspace`, and similar. The
+editor supplies the Ecstasy service/source identity, avoiding `Ecstasy Language Server: Ecstasy:`.
+Progress also identifies the requested source or workspace. Once a second it samples copied
+compiler queue metadata and shows the active operation/source, queued count and pending debounce,
+for example `src/Consumer.x · Compiler: compiling Library.x; 2 jobs queued`. The compiler description
+is shared worker activity, not a claim that each visible progress item is compiling independently.
+Reference and workspace-diagnostic requests retain separate cancellation tokens. No AST traversal,
+compiler invocation, fake percentage or new compiler mutable field is involved. Reporting stops on
+completion/disconnect; scanning retains its existing actual file-count reports. IntelliJ owns the
+shared progress popup size; the requested optional widening was declined rather than changing
+global IDE sizing or reaching into private UI state.
+
+All five refresh families (diagnostics, semantic tokens, inlays, code lenses, folding) have controlled
+negotiation, coalescing, failed-reply and close regressions. X146 observes all five actual VS Code SDK
+refresh events and all providers negotiated by the installed IntelliJ client. It preserves untouched
+consumer text/version and checks inferred types through dependency edit/revert. X147 continues to
+exercise out-of-order settings replies and connection retirement.
+
+The packaged server regressions reject unknown methods and wrongly typed parameters, then perform
+normal semantic requests through the same reader. Two real server processes open the same URI with
+different source and reuse the same progress/partial-result tokens; shutting down one leaves the
+other's semantic state and transport healthy. This does not claim multi-window IDE acceptance.
+LSP4J's wrong `ParseError` classification remains explicit as **UP15** in the
+[upstream register](errs-upstream-issues.md); recovery passing does not fix classification.
+
+Client-request audit: production uses negotiated `workspace/configuration`, guarded
+`workspace/applyEdit`, watcher registration/removal, work-done creation and negotiated refresh
+requests. Workspace roots arrive through initialization/folder notifications. There is no current
+`window/showDocument`, `window/showMessageRequest` or `workspace/workspaceFolders` request producer
+to add merely for protocol coverage. Existing log/show-message notifications and `$/setTrace` /
+`$/logTrace` retain their own contracts. No compiler/embedding API expansion was needed.
+
+Validation: **42 focused backend tests and 78 packaged transport/process tests pass, with zero
+failures/errors/skips**, after correcting the new malformed-input expectation and test-only driver
+compilation/expectation issues. The full packaged receipt is dated 2026-10-01 09:21 UTC; it supersedes
+the earlier 77/78 result. The 36-test pre-notification-detail run is not counted as new coverage.
+The final notification/queue changes pass all 16 focused progress, label, indexing and trace tests
+at 09:37 UTC; the corrected IntelliJ driver compiles.
+
+Native attempts retained for diagnosis:
+
+- VS Code `run-aGrz1Y`: X146/X147 pass (1.13/1.28 seconds). X145's opt-in visible-control attempt
+  fails after no Cancel click was delivered; the UI tool selected a different running Code instance.
+  This is not a passing Cancel-button result.
+- IntelliJ `run-5525893729888553317`: START/X146/X147 pass, zero IDE failures. X145 fails because
+  its 5,000-method workload completes before the old selector activates the visible control.
+  Larger diagnostic attempts below separated selector problems from workload duration.
+- IntelliJ `run-2755943839968156953` and `run-3713040687649832760` time out locating Cancel.
+  The latter diagnosis found that this IDE uses `ProgressPanel`, while the harness searched for
+  the legacy `ProgressComponent.MyComponent`. The corrected driver selects the current panel's
+  public Cancel control by its unique full task title and invokes its accessibility action; it
+  neither reflects into private widgets nor cancels the model directly.
+- VS Code `run-qPLyRY` verifies the simplified title and source detail, then fails after no
+  visible Cancel click is delivered. It is not a passing cancellation receipt.
+- IntelliJ `run-9280218228617766650` activates the visible Cancel control, then fails because
+  the standalone driver lacks `ResponseErrorCode` at runtime. Its source could compile against
+  the IDE plugin APIs, but those APIs are not supplied by the driver JVM. A runtime-only JSON-RPC
+  dependency now supports its named error-code assertions without changing the packaged plugin.
+- IntelliJ `run-704976644057533068` passes START and every X145 assertion (49.7 seconds), but
+  **fails overall** because the IDE records a 21,282 ms UI freeze. Four retained thread dumps show
+  range-marker updates on the EDT during the harness's `DocumentImpl.setText` replacement of the
+  20,000-method fixture, not a wait for a compiler reply. This remains an L82 scale investigation;
+  it has not been isolated sufficiently to assign upstream ownership. The now-working automated
+  button selector returns to the original 5,000-method workload; freeze detection stays enabled.
+
+The catalog remains 152 cases. VS Code's ordinary X145 uses the SDK's real cancellation callback;
+`--cancel-ui` explicitly requires a visible-control click and records that mode in `results.json`.
+VS Code's manual visible-control workload is 20,000 generated methods to allow time for a click.
+Automatic IntelliJ control activation and restart use 5,000. A workload finishing before
+cancellation is exercised remains a failure. Remaining native receipts will be
+recorded separately; broad multi-window/close-overlap, UP15, X130/UP16 and L82 release/scale acceptance
+are not closed by these tests.
+
+Final bounded native receipt: IntelliJ `run-6551466376631163236` passes START and X145, with
+**zero IDE failures**. X145 takes **7,204 ms**, including actual visible-control activation,
+subsequent hover, pending restart, preserved unsaved text and old-PID exit. This closes IntelliJ's
+visible Cancel acceptance only; it does not erase the larger-fixture freeze or validate VS Code's
+manual-click mode.
+
+VS Code `run-EXa2qJ` passes X145 in **4,868 ms**, including the source-detail assertion, actual SDK
+callback cancellation and restart. It records `progressCancellation: native-token`; the physical
+button remains unverified. Its exit code is zero. VS Code's own normal utility-process exit handler
+supplies the literal `signal: "unknown"`, which does not indicate an Ecstasy crash.
+
+Notification presentation follow-up: the IntelliJ startup title is retained and its body lists
+Version, Adapter and Process ID on separate escaped HTML lines, using the native body style.
+The eight-second fade remains unchanged. The ordinary VS Code X145 no longer opens Notifications:
+that exposed the host's empty “No new notifications” panel immediately after automatic cancellation.
+Only explicit `--cancel-ui` acceptance opens/hides that panel. These small presentation changes
+are compiled/formatted; the native receipt above precedes them.
+
+Checkpoint extraction map:
+
+| Commit | Scope | Extraction relationship |
+| --- | --- | --- |
+| `a3b700997` | Spotless with ktlint, aligned with master | Keep the mechanical formatter migration separate from compiler/LSP behavior. |
+| `67b4cf2ea` | L81 progress ownership, live compiler activity and backend/transport regressions | Follow the earlier connection-owned progress/lifecycle implementation. No compiler AST or embedding API changes. |
+| `b724b39bb` | Editor progress/cancellation/refresh acceptance, named protocol codes and startup presentation | Follow `67b4cf2ea`: progress-title and source-detail assertions require its server behavior. The JSON-RPC dependency belongs only to the standalone IntelliJ test runtime. |
+
+The accompanying upstream-tracking/documentation checkpoint adds UP01–UP16 and the source markers,
+records the validation above, and preserves the open acceptance and large-file findings. These three
+L81 checkpoints are one tested integrated slice; each future extracted PR still needs its own
+independent validation. No remote publication is part of this local checkpoint.

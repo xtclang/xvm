@@ -160,13 +160,13 @@ class XtcLspConnectionProvider(
     override fun getInitializationOptions(rootUri: VirtualFile?): Any =
         LanguageServiceSettings
             .validated(project)
-            // TODO LSP4IJ: native willSaveWaitUntil is absent; keep server save edits disabled.
+            // TODO LSP4IJ: UP02 — native willSaveWaitUntil is absent; keep server save edits disabled.
             .copy(saveFormatting = "editor")
             .initializationOptions()
 
     override fun start() {
         logger.info("Starting Ecstasy LSP Server (out-of-process via JBR)")
-        // TODO LSP4IJ: make OS process start/stop atomic and reject starts after stop/disposal.
+        // TODO LSP4IJ: UP01 — make OS process start/stop atomic and reject starts after stop/disposal.
         // LSP4IJ starts on a pooled thread: project disposal or cancellation can stop the
         // provider first. Its OS provider otherwise starts even after its stop flag is set.
         if (project.isDisposed) lifetime.stop()
