@@ -767,7 +767,23 @@ internal class XdkProjectQueries(
                     edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
                 )
             }
-        return if (isCurrent()) actions + members else emptyList()
+        val extraction =
+            if (complete) {
+                XdkLiteralExtraction.edits(text, range)?.let { edits ->
+                    checkCurrent()
+                    val plan = XdkRename.Plan(texts, mapOf(source to edits))
+                    val after = compile(plan.proposed) ?: return@let null
+                    if (!XdkRename.preservesKnownBindings(before, after, plan)) return@let null
+                    CodeAction(
+                        "Extract literal to local variable",
+                        CodeAction.CodeActionKind.REFACTOR_EXTRACT,
+                        edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+                    )
+                }
+            } else {
+                null
+            }
+        return if (isCurrent()) actions + members + listOfNotNull(extraction) else emptyList()
     }
 
     private fun autoImports(
