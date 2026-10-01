@@ -8667,4 +8667,14 @@ Binary-source overload selection has a directly tested pure helper: a unique nam
 without debug lines, while overloads require exactly one matching source span. Missing, overlapping
 or unmatched spans return no target. Bundled-source identity/revision ownership and read-only
 behavior are unchanged. The source/dispatch tests exercise real compiler chains; native/runtime-only
-bodies remain explicit refusals. Backend execution and full GUI acceptance are pending.
+bodies remain explicit refusals.
+
+Validation exposed a real conditional-instantiation gap: inspecting only `Box<T>` omitted the
+body activated on `Box<String>`. The Kotlin worker now also inspects validated expression types
+owned by source classes, deduplicated with their formal declarations. TypeInfo still supplies the
+actual chains; no mixin adoption, receiver type or target is guessed, and no AST API was added.
+The L65 gate passes **78 tests**, zero failures/errors/skips; both driver compilations and root/
+LSP/IntelliJ Spotless checks pass. The new shared catalog has **159 cases** with SHA-256
+`37a901c8879ab18e63e8ce5322bbdeb8f2c762e409585deb16fe790f911087b9`.
+Keep `23d439232` together with this validation/fix checkpoint when extracting L65. Full native
+acceptance follows this checkpoint; it is not yet a passing receipt.
