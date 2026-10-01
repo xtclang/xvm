@@ -234,7 +234,8 @@ class XtcTextDocumentService(
         convert: (T) -> R,
     ): CompletableFuture<R> {
         val result = CompletableFuture<R>()
-        val trace = ExecutionTrace.current()
+        val trace = ExecutionTrace.span("lsp-query", method, uri)
+        ExecutionTrace.event(trace, "start")
         val (document, documents, revision) =
             synchronized(lifecycle) {
                 if (closed) return CompletableFuture.failedFuture(contentModified())
@@ -257,6 +258,7 @@ class XtcTextDocumentService(
         result.whenCompleteAsync { _, failure ->
             synchronized(lifecycle) { pendingQueries.remove(result) }
             val outcome = if (failure == null) "completed" else "canceled or failed"
+            ExecutionTrace.event(trace, "end", mapOf("outcome" to outcome))
             logger.info(
                 "{}: {} in {}",
                 method,
@@ -278,12 +280,13 @@ class XtcTextDocumentService(
                 document?.analysis ?: CompletableFuture.completedFuture(null)
             }
         ready
-            .handle { _, _ -> Unit }
+            .handle { _, _ -> ExecutionTrace.event(trace, "analysis-ready") }
             .thenRunAsync {
                 val work =
                     synchronized(lifecycle) {
                         if (result.isDone) return@thenRunAsync
                         if (stale()) throw contentModified()
+                        ExecutionTrace.event(trace, "started")
                         ExecutionTrace.within(trace, request)
                     }
                 // Register after starting work: prior cancellation still schedules backend cleanup.
@@ -291,6 +294,7 @@ class XtcTextDocumentService(
                 // Do not occupy the compiler worker while acquiring the publication lock: a
                 // synchronous navigation request can hold it while awaiting that same worker.
                 work.whenCompleteAsync { value, failure ->
+                    ExecutionTrace.event(trace, "backend-complete")
                     synchronized(lifecycle) {
                         if (!result.isDone) {
                             when {
@@ -312,7 +316,9 @@ class XtcTextDocumentService(
 
                                 else -> {
                                     try {
-                                        result.complete(convert(value))
+                                        val converted = convert(value)
+                                        ExecutionTrace.event(trace, "converted")
+                                        result.complete(converted)
                                     } catch (e: Exception) {
                                         result.completeExceptionally(e)
                                     } catch (e: Error) {
