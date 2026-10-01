@@ -419,7 +419,7 @@ final class CursorScope {
                         return value != null && value.getTypeFit().isFit()
                                 && !probe.hasSeriousErrors() && !probe.isAbortDesired();
                     } finally {
-                        trial.exit();
+                        trial.discard();
                     }
                 }).toList();
     }
