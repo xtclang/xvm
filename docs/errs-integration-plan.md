@@ -8166,3 +8166,35 @@ Next work after this checkpoint, in priority order:
 
 UP17 remains a separate platform repair/report task. The minimal reproduction and CPU profile
 are retained; no upstream issue has been submitted and no production workaround is claimed.
+
+### L67/L82 semantic-response measurements (2026-10-01)
+
+The packaged workload now accepts `--semantic-methods 5000 20000`. It generates disposable
+modules with ordinary references and inferred locals, waits for diagnostics, and checks hover,
+reference counts, one-line/full-file hints and tokens through stdio. Each size/shape has its own
+process. Reports preserve the JAR hash, PID/exit, sampled heap, query timings and compiler trace.
+No editor or source checkout is changed by this mode.
+
+```bash
+python3 lang/scripts/compiler-workload.py \
+  --jar lang/lsp-server/build/libs/lsp-server-0.4.4-SNAPSHOT-all.jar \
+  --semantic-methods 5000 20000 --cycles 2 --timeout 240 \
+  --output lang/lsp-server/build/reports/semantic-workload/example
+```
+
+`lsp-query` trace phases separate analysis readiness, execution dispatch/lock wait, backend
+completion and conversion/publication. Protocol `reply-ready` and `writeMs` measure serialization
+plus transport output, not pure JSON serialization. Backend completion includes callback scheduling;
+compiler queue/API spans identify actual compiler execution within it. No source/payload logging or
+compiler lifetime changes are introduced.
+
+The baseline uses the prior packaged server: 5,000 inferred locals require 7.5–8.0 seconds for
+either a one-line or whole-file hint request. At 20,000 locals the first one-line request takes
+132.7 seconds. Its 40-second JFR contains 3,314 execution samples, 3,307 in semantic position/range
+comparison; the call path repeatedly enters `occurrenceAt` from hint tooltip construction.
+The baseline was deliberately interrupted during a further repetition; it is not a passing suite.
+Plain 20,000-method token requests take 12.2 seconds cold and 4.8 seconds repeated. The source has
+a lexical-by-semantic overlap scan, and hints build every tooltip before range filtering.
+
+Keep the workload and phase tracing as a separate diagnostic commit. The following presentation
+fix and regression/measurement receipt belong to the compiler adapter implementation slice.
