@@ -2889,3 +2889,25 @@ All upstream compatibility issues are collected in [errs-upstream-issues.md](../
 Source `TODO LSP4IJ:` / `TODO VSCODE:` markers carry matching UP IDs and removal conditions.
 UP15's malformed-parameter classification and UP16's X130 host repaint remain defects; a passing
 reader-recovery or Move/Undo/Redo check is not evidence that those defects are repaired.
+
+### Large-file IntelliJ diagnostic (L82 / UP17)
+
+The optional `CompilerPlaybookTest.largeFileEditing` probe reproduces the recorded UI freeze.
+It is disabled by default, including in ordinary full playbook runs. The
+[integration plan](../../docs/errs-integration-plan.md#l82-large-file-intellij-freeze-investigation-2026-10-01)
+contains its exact Gradle command, failed receipts and plain-document control measurements.
+It can bring the disposable IDE forward without moving the pointer to install highlighting.
+Do not edit that fixture during the measurement.
+
+For a manual check, open its generated `parity/LARGE_FILE/LargeFile.x` and replace the original
+20,000-method source with the first 5,000 methods, retaining the module's closing brace. Wait for
+semantic colors before replacing: the compiler replying does not establish that the IDE applied
+its highlights. Check typing, repaint and navigation responsiveness, then Undo and verify the
+source and highlighting recover. Record UI and server times separately. A freeze or missing
+decoration fails this acceptance; a passing bounded X145 does not override it. UP17 remains open.
+
+Startup notification presentation: the bold service title appears once. Beneath it, Version,
+Adapter and PID share one compact line with dimmed, theme-aware labels and normal value text.
+Verify all three values are readable without truncation or an expansion arrow, then leave the
+balloon untouched and check that it fades after eight seconds. The values remain available in
+Notifications and the server log. This is presentation acceptance, not a compiler capability.

@@ -15,6 +15,7 @@ import com.intellij.ide.starter.runner.Starter
 import com.intellij.platform.testFramework.teamCity.TeamCityReporter.SyntheticTestKind
 import com.intellij.tools.ide.starter.product.idea.ultimate.IdeaUltimate
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty
 import org.kodein.di.DI
 import org.kodein.di.bindSingleton
 import java.nio.file.Files
@@ -31,6 +32,10 @@ class CompilerPlaybookTest {
     @Test fun startupEditing() = runPlaybook(PlaybookMode.STARTUP)
 
     @Test fun focusRecovery() = runPlaybook(PlaybookMode.FOCUS_RECOVERY)
+
+    @Test
+    @EnabledIfSystemProperty(named = "xtc.playbook.largeFileProbe", matches = "true")
+    fun largeFileEditing() = runPlaybook(PlaybookMode.LARGE_FILE)
 
     private fun runPlaybook(mode: PlaybookMode) {
         require(System.getProperty("xtc.playbook.adapter") == "compiler") {
@@ -235,6 +240,7 @@ class CompilerPlaybookTest {
                             PlaybookMode.FEATURES -> selection.ifEmpty { shared.implementedIds }
                             PlaybookMode.STARTUP -> setOf("STARTUP")
                             PlaybookMode.FOCUS_RECOVERY -> setOf("START_FOCUS")
+                            PlaybookMode.LARGE_FILE -> setOf("START_LARGE_FILE")
                         },
                     "sharedScenarios" to
                         mapOf(
