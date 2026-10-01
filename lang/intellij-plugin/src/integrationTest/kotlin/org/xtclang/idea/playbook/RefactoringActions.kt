@@ -168,11 +168,13 @@ fun Driver.quickFix(
     editor: JEditorUiComponent,
     at: Int,
     title: String,
+    selectionEnd: Int = at,
 ) {
     focusEditor(editor)
     withContext(OnDispatcher.EDT) {
         editor.editor.getSelectionModel().removeSelection()
         editor.editor.getCaretModel().moveToOffset(at)
+        if (selectionEnd != at) editor.editor.getSelectionModel().setSelection(at, selectionEnd)
     }
     invokeAction("ShowIntentionActions", component = editor.component)
     choosePopup(editor, listOf(title), title) {

@@ -4544,6 +4544,21 @@
         "limitations": []
       }
     },
+    "X148": {
+      "title": "extract a literal return value with native undo and redo",
+      "manual": [],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    Int read() {\n        return 42;\n    }\n}",
+        "selected": "42",
+        "title": "Extract literal to local variable",
+        "expected": "module Extract {\n    Int read() {\n        val extractedValue = 42;\n        return extractedValue;\n    }\n}"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG3": {
       "title": "unchanged source settings preserve current semantics",
       "manual": [],

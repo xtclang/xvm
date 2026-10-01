@@ -980,3 +980,8 @@ see the [L82 receipt](../../../docs/errs-integration-plan.md#l82-bounded-extende
 
 L65 implementation lookup also follows existing compiler into/capped method redirects to written
 source bodies, without body generation. Manual-module regression tests added; validation pending.
+
+L63 now also produces `refactor.extract` for an exactly selected integer/string/character literal
+returned from a block: atomic immutable-local insertion, fresh source name and complete graph proof.
+General expression extraction and other semantic transformations remain open. Shared X148 includes
+both editor drivers and Undo/Redo; the new acceptance run is pending.
