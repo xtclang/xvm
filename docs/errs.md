@@ -1,3 +1,10 @@
+L81 now has late progress-registration cleanup, all-provider refresh/lifecycle regressions and
+more useful live progress details identifying the source/workspace and compiler queue activity.
+The focused backend and packaged transport checks pass. IntelliJ visible Cancel/restart passes;
+VS Code physical-click and broader native-window acceptance remain open. See the [checkpoint](errs-integration-plan.md#l81-progress-refresh-and-transport-checkpoint-2026-10-01).
+
+Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
+
 L80 final capability audit: current response producers and all 25 adapter provider gates are now
 reviewed. Missing link-tooltip, per-signature active-parameter and pull-related-information gates
 are fixed; legacy signature highlighting is preserved, and compiler rename proposals are advertised
