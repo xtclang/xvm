@@ -1,5 +1,6 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
+import { focusTestWindow } from '../native-focus';
 import { discovered } from './liveWorkspace';
 import { diagnostics, eventually, noErrors, playbook, position } from './support';
 
@@ -32,6 +33,7 @@ export function memberActionCases(): void {
                 assert.strictEqual(document.getText(), variant.expected);
                 await noErrors(document.uri);
                 for (const [command, expected] of [['undo', variant.source], ['redo', variant.expected], ['undo', variant.source]]) {
+                    await focusTestWindow();
                     await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
                     await vscode.commands.executeCommand(command);
                     await eventually(async () => document.getText(), text => text === expected, `${command} member action`);
