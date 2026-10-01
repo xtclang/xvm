@@ -2,6 +2,7 @@ package org.xvm.lsp.server
 
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.ProgressParams
+import org.eclipse.lsp4j.WorkDoneProgressBegin
 import org.eclipse.lsp4j.WorkDoneProgressCreateParams
 import org.eclipse.lsp4j.WorkDoneProgressKind
 import org.eclipse.lsp4j.WorkDoneProgressReport
@@ -15,6 +16,7 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.atomic.AtomicReference
 
 class ConnectionProgressTest {
     private class Session : AutoCloseable {
@@ -23,7 +25,9 @@ class ConnectionProgressTest {
         val created = LinkedBlockingQueue<WorkDoneProgressCreateParams>()
         val events = LinkedBlockingQueue<ProgressParams>()
         val ack = CompletableFuture<Void>()
-        val progress = ConnectionProgress({ client }, 0, dispatcher)
+        val deadline = CompletableFuture<Void>()
+        val reports = LinkedBlockingQueue<Runnable>()
+        val progress = ConnectionProgress({ client }, 0, dispatcher, { reports.add(it) }) { deadline }
 
         init {
             doAnswer { call ->
@@ -47,6 +51,82 @@ class ConnectionProgressTest {
         override fun close() {
             progress.close()
             assertThat(dispatcher.awaitTermination(5, SECONDS)).isTrue()
+        }
+    }
+
+    @Test
+    fun `live details change without compiler calls and stop on completion or close`() {
+        listOf(false, true).forEach { close ->
+            Session().use { session ->
+                val work = CompletableFuture<String>()
+                val details = AtomicReference("Consumer.x · Compiler: compiling Library.x; 1 job queued")
+                session.progress.track("References", Either.forLeft("references"), work, details::get)
+                assertThat((session.event().value.left as WorkDoneProgressBegin).message).isEqualTo(details.get())
+                session.flush()
+                details.set("Consumer.x · Compiler: finding references in Consumer.x")
+                session.reports.remove().run()
+                assertThat((session.event().value.left as WorkDoneProgressReport).message).isEqualTo(details.get())
+                session.flush()
+                val pending = session.reports.remove()
+                if (close) session.progress.close() else work.complete("done")
+                assertThat(
+                    session
+                        .event()
+                        .value.left.kind,
+                ).isEqualTo(WorkDoneProgressKind.end)
+                pending.run()
+                if (close) assertThat(session.dispatcher.awaitTermination(5, SECONDS)).isTrue() else session.flush()
+                assertThat(session.events).isEmpty()
+                assertThat(session.reports).isEmpty()
+            }
+        }
+    }
+
+    @Test
+    fun `timed out creation releases a late client registration without canceling the query`() {
+        listOf(false, true).forEach { completed ->
+            Session().use { session ->
+                session.progress.initialized(true)
+                val work = CompletableFuture<String>()
+                session.progress.track("References", null, work)
+                val token = requireNotNull(session.created.poll(5, SECONDS)).token
+                session.deadline.complete(null)
+                session.flush()
+                assertThat(session.ack.isDone).isFalse()
+                assertThat(session.events).isEmpty()
+                if (completed) work.complete("done")
+                session.ack.complete(null)
+                val begin = session.event()
+                assertThat(begin.token).isEqualTo(token)
+                assertThat((begin.value.left as WorkDoneProgressBegin).cancellable).isFalse()
+                assertThat(
+                    session
+                        .event()
+                        .value.left.kind,
+                ).isEqualTo(WorkDoneProgressKind.end)
+                session.progress.cancel(token)
+                session.flush()
+                assertThat(work.isDone).isEqualTo(completed)
+                work.complete("done")
+                session.flush()
+                assertThat(work.join()).isEqualTo("done")
+                assertThat(session.events).isEmpty()
+            }
+        }
+    }
+
+    @Test
+    fun `late creation after connection close sends no progress to a retired client`() {
+        Session().use { session ->
+            session.progress.initialized(true)
+            val work = CompletableFuture<String>()
+            session.progress.track("References", null, work)
+            assertThat(session.created.poll(5, SECONDS)).isNotNull()
+            session.progress.close()
+            assertThat(session.dispatcher.awaitTermination(5, SECONDS)).isTrue()
+            session.ack.complete(null)
+            assertThat(session.events).isEmpty()
+            assertThat(work.isCancelled).isTrue()
         }
     }
 
@@ -186,6 +266,43 @@ class ConnectionProgressTest {
             assertThat(ended.map { it.token })
                 .containsExactlyInAnyOrderElementsOf(started.map { it.token })
             assertThat(work).allSatisfy { assertThat(it.isDone).isTrue() }
+        }
+    }
+
+    @Test
+    fun `the same client token belongs independently to each connection`() {
+        Session().use { first ->
+            Session().use { second ->
+                val token = Either.forLeft<String, Int>("shared-token")
+                val one = CompletableFuture<String>()
+                val two = CompletableFuture<String>()
+                first.progress.track("First project", token, one)
+                second.progress.track("Second project", token, two)
+                assertThat(first.event().token).isEqualTo(token)
+                assertThat(second.event().token).isEqualTo(token)
+                first.progress.cancel(token)
+                assertThat(
+                    first
+                        .event()
+                        .value.left.kind,
+                ).isEqualTo(WorkDoneProgressKind.end)
+                first.progress.close()
+                assertThat(one.isCancelled).isTrue()
+                assertThat(two.isDone).isFalse()
+                second.progress.report(two, "Second project still running", 75)
+                assertThat(
+                    second
+                        .event()
+                        .value.left.kind,
+                ).isEqualTo(WorkDoneProgressKind.report)
+                two.complete("done")
+                assertThat(
+                    second
+                        .event()
+                        .value.left.kind,
+                ).isEqualTo(WorkDoneProgressKind.end)
+                assertThat(two.join()).isEqualTo("done")
+            }
         }
     }
 
