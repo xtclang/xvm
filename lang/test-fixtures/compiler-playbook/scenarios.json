@@ -4916,6 +4916,112 @@
         "limitations": []
       }
     },
+    "X153": {
+      "title": "property redirects and conditional mixins navigate to written bodies",
+      "manual": [],
+      "values": {
+        "file": "Dispatch.x",
+        "variants": [
+          {
+            "source": "module Dispatch {\n    interface Api { @RO Object value; }\n    class Box implements Api { @Override String value.get() = \"text\"; }\n    Object read(Api box) = box.value;\n}",
+            "anchor": "box.value",
+            "offset": 4,
+            "kind": "implementation",
+            "targets": [
+              "get()"
+            ]
+          },
+          {
+            "source": "module Dispatch {\n    class Box<T>(T value) incorporates conditional Textual<T extends String> {}\n    static mixin Textual<T extends String> into Box<T> { Int size() = value.size; }\n    Int run(Box<String> text) = text.size();\n}",
+            "anchor": "text.size",
+            "offset": 5,
+            "kind": "implementation",
+            "targets": [
+              "size()"
+            ]
+          },
+          {
+            "source": "module Dispatch {\n    interface Api { Int read(); }\n    class Dynamic(Api target) delegates Api(target) {}\n    Int run(Dynamic value) = value.read();\n}",
+            "anchor": "value.read",
+            "offset": 6,
+            "kind": "implementation",
+            "targets": []
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X154": {
+      "title": "destructuring writes and indexed receivers retain semantic access classification",
+      "manual": [
+        "Theme colors and token inspector presentation"
+      ],
+      "values": {
+        "file": "Access.x",
+        "source": "module Access {\n    class Box { Int value = 0; }\n    static Int run(Box box, Int[] values, Int index) {\n        Int left = 0;\n        Int right = 0;\n        (left, right) = (1, 2);\n        ++box.value;\n        values[index] = left;\n        return left + right + box.value;\n    }\n}",
+        "tokenKinds": [
+          {
+            "name": "box",
+            "type": "parameter"
+          },
+          {
+            "name": "left",
+            "type": "variable"
+          },
+          {
+            "name": "value",
+            "type": "property"
+          }
+        ],
+        "methodName": "run",
+        "staticModifier": "static",
+        "declarationModifier": "declaration",
+        "anchor2": "left, right",
+        "variableName": "left",
+        "writeModifier": "modification",
+        "anchor": "return left",
+        "offset": 7,
+        "accesses": [
+          {
+            "anchor": "left, right",
+            "offset": 0,
+            "write": true
+          },
+          {
+            "anchor": "right) =",
+            "offset": 0,
+            "write": true
+          },
+          {
+            "anchor": "++box.value",
+            "offset": 6,
+            "write": true
+          },
+          {
+            "anchor": "++box.value",
+            "offset": 2,
+            "write": false
+          },
+          {
+            "anchor": "values[index]",
+            "offset": 0,
+            "write": false
+          },
+          {
+            "anchor": "values[index]",
+            "offset": 7,
+            "write": false
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
