@@ -7643,3 +7643,32 @@ reproducible, and reconcile completed versus remaining scope. Validation is batc
    callback, not a sleep. The shared catalog grows to **152** cases; tests are written and execution
    is deferred until all four checkpoints are complete. Physical button selection and broad
    multi-project/window interaction remain separate from these bounded assertions.
+
+3. **Representative workload — implementation checkpoint (2026-10-01).**
+   `lang/scripts/compiler-workload.py` launches the packaged server against the explicit eleven-module
+   platform graph from `lang/test-fixtures/compiler-workload/platform.json`. It checks clean workspace
+   diagnostics, repeatedly edits unsaved overlays, cancels reference requests, reads outlines/hover
+   and diagnostics, and reopens the graph in fresh server processes. Alternating graceful shutdown
+   and EOF must exit without forced cleanup being counted as success. Source hashes prove that
+   the checkout is unchanged. A concurrent status sampler records human-readable queued/running
+   jobs and heap usage; the existing trace retains compiler API timings and submission/execution
+   order. `xtc/languageServiceStatus` adds heap used/committed/max values with a packaged regression.
+   Sampling neither forces GC nor enters the compiler worker. Sampled peak heap is a lower bound,
+   not RSS, retained heap, or a multi-hour editor-soak claim.
+
+   Build the compiler fat JAR, then run (choose a new report directory for each attempt):
+
+   ```bash
+   ./gradlew :lang:lsp-server:fatJar -Plsp.adapter=compiler \
+     -PincludeBuildLang=true -PincludeBuildAttachLang=true
+   python3 lang/scripts/compiler-workload.py --workspace ../platform \
+     --jar lang/lsp-server/build/libs/lsp-server-0.4.4-SNAPSHOT-all.jar \
+     --cycles 10 --restarts 2 --heap 2g \
+     --output lang/lsp-server/build/reports/platform-workload/run-01
+   ```
+
+   Use the actual fat-JAR filename produced by the build if its version differs. Resource overrides
+   are explicit graph inputs; the tool never guesses them from `.kts` text. CLI timeouts are failure
+   bounds, not latency targets. A failing workload retains its report, stderr and samples. Run it
+   without competing compiler/editor tests; validation and measured baselines follow the fourth
+   checkpoint, before deciding useful response-time or memory budgets.
