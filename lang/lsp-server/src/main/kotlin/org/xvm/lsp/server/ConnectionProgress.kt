@@ -11,11 +11,13 @@ import org.eclipse.lsp4j.services.LanguageClient
 import org.slf4j.LoggerFactory
 import java.util.UUID
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.Executor
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
 import java.util.concurrent.TimeUnit.MILLISECONDS
 import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicBoolean
 
 /**
@@ -27,10 +29,15 @@ internal class ConnectionProgress(
     private val delayMillis: Long = 300,
     private val dispatcher: ExecutorService =
         Executors.newSingleThreadExecutor(Thread.ofVirtual().name("lsp-progress").factory()),
+    private val reportScheduler: Executor = CompletableFuture.delayedExecutor(1, SECONDS),
+    private val creationDeadline: () -> CompletableFuture<Void> = {
+        CompletableFuture<Void>().completeOnTimeout(null, 10, SECONDS)
+    },
 ) : AutoCloseable {
     private data class Entry(
         val title: String,
         val result: CompletableFuture<*>,
+        val details: (() -> String)?,
     )
 
     private val canCreate = AtomicBoolean()
@@ -48,10 +55,11 @@ internal class ConnectionProgress(
         title: String,
         suppliedToken: Either<String, Int>?,
         result: CompletableFuture<T>,
+        details: (() -> String)? = null,
     ): CompletableFuture<T> {
         if (closed.get() || (suppliedToken == null && !canCreate.get())) return result
         val token = suppliedToken ?: Either.forLeft("xtc-${UUID.randomUUID()}")
-        val entry = Entry(title, result)
+        val entry = Entry(title, result, details)
         val start =
             Runnable {
                 dispatch {
@@ -61,18 +69,7 @@ internal class ConnectionProgress(
                     if (suppliedToken != null) {
                         begin(token, entry)
                     } else {
-                        runCatching { client()?.createProgress(WorkDoneProgressCreateParams(token)) }
-                            .getOrNull()
-                            ?.orTimeout(10, SECONDS)
-                            ?.whenComplete { _, failure ->
-                                dispatch {
-                                    if (failure == null) {
-                                        begin(token, entry)
-                                    } else {
-                                        entries.remove(token, entry)
-                                    }
-                                }
-                            } ?: entries.remove(token, entry)
+                        create(token, entry)
                     }
                 }
             }
@@ -82,6 +79,52 @@ internal class ConnectionProgress(
             CompletableFuture.delayedExecutor(delayMillis, MILLISECONDS).execute(start)
         }
         return result
+    }
+
+    private fun create(
+        token: Either<String, Int>,
+        entry: Entry,
+    ) {
+        val acknowledgement =
+            runCatching {
+                client()?.createProgress(WorkDoneProgressCreateParams(token))
+            }.getOrNull()
+        if (acknowledgement == null) {
+            entries.remove(token, entry)
+            return
+        }
+        // Do not time out the RPC's own future: the client can still create the token later.
+        val bounded = CompletableFuture<Void>()
+        val deadline = creationDeadline()
+        deadline.thenRun {
+            bounded.completeExceptionally(TimeoutException("Progress creation timed out"))
+        }
+        bounded.whenComplete { _, failure ->
+            deadline.cancel(false)
+            dispatch {
+                if (failure == null) begin(token, entry) else entries.remove(token, entry)
+            }
+        }
+        acknowledgement.whenComplete { _, failure ->
+            if (failure != null) {
+                bounded.completeExceptionally(failure)
+            } else if (!bounded.complete(null)) {
+                dispatch {
+                    // A successful late acknowledgement owns a client-side progress registration.
+                    // Retire it without reattaching cancellation to work that outlived the deadline.
+                    if (!closed.get()) {
+                        send(
+                            token,
+                            WorkDoneProgressBegin().apply {
+                                title = entry.title
+                                cancellable = false
+                            },
+                        )
+                        send(token, WorkDoneProgressEnd().apply { message = "Progress expired" })
+                    }
+                }
+            }
+        }
     }
 
     private fun begin(
@@ -95,10 +138,27 @@ internal class ConnectionProgress(
             WorkDoneProgressBegin().apply {
                 title = entry.title
                 cancellable = !entry.result.isDone
-                message = "Waiting for analysis or running compiler query"
+                message = entry.details?.invoke()
             },
         )
-        if (entry.result.isDone) finish(token, entry)
+        if (entry.result.isDone) {
+            finish(token, entry)
+        } else if (entry.details != null) {
+            scheduleReport(token, entry)
+        }
+    }
+
+    private fun scheduleReport(
+        token: Either<String, Int>,
+        entry: Entry,
+    ) {
+        reportScheduler.execute {
+            dispatch {
+                if (closed.get() || entry.result.isDone || entries[token] !== entry || token !in begun) return@dispatch
+                send(token, WorkDoneProgressReport().apply { message = entry.details?.invoke() })
+                scheduleReport(token, entry)
+            }
+        }
     }
 
     private fun finish(
