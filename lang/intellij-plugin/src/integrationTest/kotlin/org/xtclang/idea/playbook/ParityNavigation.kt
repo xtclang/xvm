@@ -145,6 +145,22 @@ internal fun ParityScenarios.navigationCases() {
         val child = targets(doc, "implementation", offset)
         check(child.size == data.int("targetCount") && child.single().line() == lines[1])
     }
+    case("X153") { data ->
+        val variants = data["variants"].rows()
+        write(data.string("file"), variants.first().string("source"))
+        val doc = open(data.string("file"))
+        variants.forEach { variant ->
+            replace(doc, variant.string("source"))
+            clean(doc)
+            val actual = targets(doc, variant.string("kind"), doc.at(variant.string("anchor"), variant.int("offset")))
+            val expected = variant.strings("targets").map { anchor ->
+                ParityWorkspace.position(doc.text, doc.at(anchor))
+            }.toSet()
+            check(actual.map { it.getAsJsonObject("range").getAsJsonObject("start") }.toSet() ==
+                expected.map { Gson().toJsonTree(it).asJsonObject }.toSet()) { "Unexpected implementation locations: $actual; expected $expected" }
+            check(actual.all { it.string("uri") == doc.uri })
+        }
+    }
     case("X38") { data ->
         val root = project()
         replace(
