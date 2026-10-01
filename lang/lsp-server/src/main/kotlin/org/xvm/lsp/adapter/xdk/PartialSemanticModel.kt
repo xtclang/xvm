@@ -28,7 +28,7 @@ class PartialSemanticModel
         /** Syntax-derived spelling policy, with no compiler type or inferred identity. */
         data class DeclarationName(
             val base: String,
-            val writtenType: String,
+            val basis: String,
         )
 
         /** A resolved upper bound or explicitly written recursive constraint, never a new identity. */
