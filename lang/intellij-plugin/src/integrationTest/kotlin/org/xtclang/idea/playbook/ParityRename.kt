@@ -5,6 +5,7 @@ import com.intellij.driver.client.Remote
 import com.intellij.driver.model.LockSemantics
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.VirtualFile
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import java.util.concurrent.CancellationException
 import kotlin.time.Duration.Companion.seconds
 
@@ -184,7 +185,7 @@ internal fun ParityWorkspace.awaitRetired(
     } catch (_: CancellationException) {
         // Client cancellation is an allowed outcome for a deliberately retired request.
     } catch (error: ClientRequestFailure) {
-        check(error.code == -32800 || error.code == -32801) { error }
+        check(error.code == ResponseErrorCode.RequestCancelled.value || error.code == ResponseErrorCode.ContentModified.value) { error }
     }
 }
 
