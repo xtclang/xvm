@@ -261,8 +261,8 @@ native startup test now passes; X103 also passes after fixing the transport snap
 write-lock deadlock on reverse rename. Execution tracing includes queue sizes and ordered job
 lists, compiler/API durations and server request-to-reply times. These are diagnostics improvements,
 not additional LSP capabilities or a completed L81 progress/trace-controls implementation.
-Dynamic watcher registration now waits for `initialized` and negotiated support. The remaining
-capability negotiation and refresh work still belongs to the L80/L81 audit.
+Dynamic watcher registration now waits for `initialized` and negotiated support. The final L80 producer/capability audit is complete; broader progress/refresh manual
+acceptance remains under L81.
 
 **Implementation and validation are separate.** The shared playbook now has 128 cases with
 assertions in both drivers. The [current IntelliJ demo record](../../../docs/errs-integration-plan.md#native-intellij-demo-continuation-2026-09-29)
@@ -929,3 +929,15 @@ is an empty edit. No compiler or production client change is warranted by that d
 window-focus guard fixes separate harness Undo failures. The upstream repair remains open and
 X130 is not relabeled as passing. See the
 [diagnosis and reproduction](../../../docs/errs-integration-plan.md#x130-isolated-host-defect-and-harness-focus-correction-2026-10-01).
+
+
+L80 final audit (2026-10-01): all current provider/response families have a recorded capability
+contract. Link tooltips and per-signature active parameters now honor client support; legacy
+signature highlighting uses the selected overload. Pull diagnostic related information is gated
+independently of push and related-document support. Compiler-only rename proposals are no longer
+advertised by other adapters. No language feature, embedding API or AST node is added. Exhaustive
+provider inventory and rich/reduced protocol tests cover the changes; the shared catalog remains
+152 and no new native receipt is claimed. See the
+[audit and validation](../../../docs/errs-integration-plan.md#l80-final-capability-contract-audit-2026-10-01).
+L80 is complete for current producers; L81/L82 acceptance and X130's upstream Explorer failure remain
+open. Future optional response fields require new negotiation checks.

@@ -1,3 +1,10 @@
+L80 final capability audit: current response producers and all 25 adapter provider gates are now
+reviewed. Missing link-tooltip, per-signature active-parameter and pull-related-information gates
+are fixed; legacy signature highlighting is preserved, and compiler rename proposals are advertised
+only in compiler mode. No AST/embedding change is needed. See the
+[audit and validation](errs-integration-plan.md#l80-final-capability-contract-audit-2026-10-01).
+The existing X130 upstream failure and L81/L82 acceptance work remain open.
+
 X130 follow-up: the repaint exception is now reproduced twice **without Ecstasy or any LSP server**
 by refreshing Explorer while a rename participant is pending. The normal X118–X130 run passes the
 first twelve cases and reproduces X130 after successful Move/Undo/Redo/resource checks. Its compiler
