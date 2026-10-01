@@ -101,7 +101,7 @@ internal class CompilerRootWatches(
     }
 }
 
-// TODO LSP4IJ: dynamic watcher registrations need owned VFS roots and refresh while focused.
+// TODO LSP4IJ: UP05 — dynamic watcher registrations need owned VFS roots and refresh while focused.
 // Remove this bridge when upstream covers unknown/missing external roots and disposal (X124).
 
 /**

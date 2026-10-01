@@ -24,7 +24,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.Either
 import java.util.concurrent.CompletableFuture
 import javax.swing.JComponent
 
-// TODO LSP4IJ: apply rename edits only after checking captured document versions/epochs.
+// TODO LSP4IJ: UP04 — apply rename edits only after checking captured document versions/epochs.
 // This native handler can go once upstream provides the guarded application used by XtcRenameEdit.
 
 /** Uses Community platform refactoring UI with an atomic stale-document guard. */

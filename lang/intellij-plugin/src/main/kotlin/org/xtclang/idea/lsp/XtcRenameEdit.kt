@@ -23,7 +23,7 @@ import java.net.URI
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 
-// TODO LSP4IJ: validate document versions before applying WorkspaceEdit; stale responses currently
+// TODO LSP4IJ: UP04 — validate document versions before applying WorkspaceEdit; stale responses currently
 // overwrite newer edits. Retire this snapshot guard after upstream provides equivalent checks.
 
 /**
@@ -76,7 +76,7 @@ class XtcRenameEdit
                         false
                     } else {
                         graph?.beforeApply()
-                        // TODO LSP4IJ: 0.21 only renames the basename, ignoring a changed parent URI.
+                        // TODO LSP4IJ: UP03 — 0.21 only renames the basename, ignoring a changed parent URI.
                         // Apply resource moves through VFS inside this same undo command.
                         edit.documentChanges.orEmpty().forEach { change ->
                             if (change.isRight && change.right is RenameFile) {
