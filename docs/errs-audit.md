@@ -1468,7 +1468,7 @@ records timings, sampled RSS and deferred combined/full-editor gates.
 
 Functionality continuation: import-producing completion reuses whole-graph repair proof, with
 plain-text atomic additional edits and cancellation across both stages. No AST state or embedding
-API change. Added backend/protocol tests and X105 variants await the combined functionality gate.
+API change. Backend/protocol tests and the new X105 variants pass in the combined/selected gates.
 
 L65/L62 continuation follows existing compiler redirect metadata for implementation lookup and
 written rename families. Real manual mixin/delegation fixtures now exercise these paths, including
@@ -1477,3 +1477,10 @@ reverse edits and refusals. No AST modifications, optimized-body generation or n
 L63 adds exact-selection literal-return extraction entirely on the Kotlin LSP side. Ordinary Java
 parser ranges locate the edit; complete compilation and binding/dispatch proof gate publication.
 No new AST classes, mutable fields or compiler public APIs. X148 acceptance and unit tests added.
+
+Manual-module validation found and repaired missing proof identity for predefined this receivers
+and incorrect declaration classification of conditional-incorporation formal names. Receiver facts
+are derived from existing register metadata; no mutable builder field or AST support was added.
+The restored build passes the 188-test regression gate, followed by 34 lookup/dispatch and 28
+lifecycle/protocol tests. Both editor additions pass in selected runs. See the functionality
+checkpoint map in errs-integration-plan.md for commits, failed development attempts and receipts.
