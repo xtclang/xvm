@@ -5,7 +5,7 @@ import { discovered } from './liveWorkspace';
 import { eventually, label, noErrors, playbook } from './support';
 
 export function syntaxCompletionCases(): void {
-    for (const id of ['X149', 'X150', 'X151'] as const) {
+    for (const id of ['X149', 'X150', 'X151', 'X152'] as const) {
         playbook(id, async (workspace, data) => {
             await workspace.write(data.file, data.variants[0].source);
             await discovered(workspace, async () => {

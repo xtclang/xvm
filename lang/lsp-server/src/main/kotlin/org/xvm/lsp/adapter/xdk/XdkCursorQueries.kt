@@ -90,8 +90,14 @@ internal object XdkCursorQueries {
                         TextEdit(range, text),
                     )
                 }
-        return (ordinary.filterNot { it.label in site.argumentLiterals } + formals + literals + model.syntaxCompletions)
-            .map { item -> item.copy(sortText = completionOrder(item)) }
+        val instances =
+            site.argumentExpressions.map { text ->
+                CompletionItem(text, CompletionKind.VALUE, "Enclosing instance fitting this argument", text, TextEdit(range, text))
+            }
+        return (
+            ordinary.filterNot { it.label in site.argumentLiterals || it.label in site.argumentExpressions } +
+                formals + literals + instances + model.syntaxCompletions
+        ).map { item -> item.copy(sortText = completionOrder(item)) }
             .sortedBy { it.sortText }
     }
 

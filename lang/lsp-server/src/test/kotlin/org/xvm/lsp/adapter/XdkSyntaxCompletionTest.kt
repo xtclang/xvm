@@ -17,6 +17,10 @@ class XdkSyntaxCompletionTest {
             "module Editing { ecstasy.text.StringBuffer str§ange; }" to "stringBuffer",
             "module Editing { List<String> li§stName; }" to "list",
             "module Editing { HTTPClient ht§; class HTTPClient {} }" to "httpClient",
+            "module Editing { String? str§ange; }" to "string",
+            "module Editing { String[] str§ange; }" to "stringArray",
+            "module Editing { void run(function String(Int)? f§unc) {} }" to "fn",
+            "module Editing { void run((String | Int) va§l) {} }" to "value",
         ).forEach { (marked, expected) ->
             val item = complete(marked).single()
             assertThat(item.label).describedAs(marked).isEqualTo(expected)
@@ -57,6 +61,32 @@ class XdkSyntaxCompletionTest {
                 it.label
             },
         ).contains("return", "if block").doesNotContain("void method", "module")
+    }
+
+    @Test
+    fun `loop keywords respect nested callable boundaries`() {
+        assertThat(complete("module Editing { void run() { while (True) { § } } }").map { it.label })
+            .contains("break", "continue")
+        assertThat(complete("module Editing { void run() { § } }").map { it.label })
+            .doesNotContain("break", "continue")
+        assertThat(complete("module Editing { Object make() = new Object() { § }; }").map { it.label })
+            .contains("void method", "class declaration")
+            .doesNotContain("return", "break")
+        assertThat(complete("module Editing { void run() { while (True) { function void() fn = () -> { § }; } } }").map { it.label })
+            .contains("if block")
+            .doesNotContain("break", "continue")
+    }
+
+    @Test
+    fun `additional templates compile as inserted and stay in their declaration or statement context`() {
+        listOf("interface declaration", "service declaration", "for range", "do loop", "try catch").forEach { label ->
+            val declaration = label.endsWith("declaration")
+            val marked = if (declaration) "module Editing { § }" else "module Editing { void run() { § } }"
+            val item = complete(marked).single { it.label == label }
+            XdkAdapter().use { adapter ->
+                assertThat(adapter.compile(URI, marked.replace("§", item.insertText)).diagnostics).describedAs(label).isEmpty()
+            }
+        }
     }
 
     @Test
