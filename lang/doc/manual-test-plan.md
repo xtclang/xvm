@@ -2949,3 +2949,12 @@ are IntelliJ `run-3852388644684425549` and VS Code `project-lifecycle/run-zI8fT9
 [lifetime record](../../docs/errs-integration-plan.md#l81-native-projectwindow-lifetime-batch-2026-10-01).
 VS Code visible Cancel still needs a passing control-click receipt: `run-6JOJx7` failed because the
 request finished before the UI tool could select the correct native window; no cancellation was faked.
+
+Keep longer workload sessions bounded and announce their expected duration. The latest platform run
+completed two 1,200-cycle sessions with preserved source hashes and compiler retirement, then was
+deliberately stopped before the third session ran. Post-GC heap rose about 15 MiB per completed session;
+its ownership remains an investigation, not completed memory acceptance. See the
+[L82 receipt](../../docs/errs-integration-plan.md#l82-bounded-extended-workload-checkpoint-2026-10-01).
+Combined suites and the full native catalogs are deferred to a separate checkpoint.
+The final IntelliJ lifetime rerun `run-11163643850362008619` passes with zero IDE errors and checks
+the reopened document before any edit is replayed; startup plus the lifecycle case take 38.3 seconds.

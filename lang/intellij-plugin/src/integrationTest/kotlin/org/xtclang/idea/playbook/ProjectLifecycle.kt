@@ -145,7 +145,8 @@ internal fun Driver.projectLifecycle(shared: SharedScenarios) {
     hover(first, firstFile, "Int")
     check(Files.readString(secondFile) == secondPendingText) { "Native project close must preserve edited source" }
     val reopened = openSecond()
-    edit(reopened, secondFile, secondPendingText)
+    withContext(OnDispatcher.EDT) { probe.show(reopened, secondFile.toString()) }
+    check(probe.text(secondFile.toString()) == secondPendingText) { "Reopening must restore source without replaying edits" }
     val reconnected = ClientProtocol(this) { reopened }
     hover(reconnected, secondFile, "String")
     val reopenedPid = requireNotNull(reconnected.server().getCurrentProcessId())
@@ -173,6 +174,11 @@ internal interface ProjectLifecycle {
     fun open(path: String): OpenProjectFuture
 
     fun close(project: Project): CloseProjectFuture
+
+    fun show(
+        project: Project,
+        path: String,
+    )
 
     fun edit(
         project: Project,
