@@ -1493,3 +1493,12 @@ new X149/X150 pass in both editor drivers. The 142-test regression gate, final 2
 and four IntelliJ capability tests pass without skips. Native testing exposed LSP4IJ's ignored AsIs
 snippet mode; UP18 records the capability constraint and its removal gate. Validation receipts and
 remaining L64 boundaries are tracked in errs-integration-plan.md.
+
+
+L64 empty-name recovery now retains complete written named types in required property/parameter
+name slots, including primary constructors and EOF. It uses the existing partial cursor node with
+no new field, invented declaration name or semantic binding. The parser owns grammar recognition;
+Kotlin owns name spelling, collision avoidance and empty-range edits. Ambiguous bare local
+expressions stay excluded. The AST inventory in errs.md records placement and clone ownership;
+42 Java and 148 LSP tests pass without failures or skips, and shared X151 passes in both editors.
+Detailed receipts and the remaining L64 boundaries are tracked in errs-integration-plan.md.
