@@ -18,11 +18,15 @@ async function main(): Promise<void> {
     // root and the fixtures directory are two levels up.
     const extensionRoot = path.resolve(__dirname, '..', '..');
     const args = process.argv.slice(2);
-    if (args.some(argument => !['--playbook', '--multi-root', '--explorer-move-probe'].includes(argument) && !argument.startsWith('--cases='))) {
-        throw new Error('Expected --playbook with optional --cases=ID[,ID] and --multi-root, or --explorer-move-probe');
+    if (args.some(argument => !['--playbook', '--multi-root', '--explorer-move-probe', '--refresh-during-move'].includes(argument) && !argument.startsWith('--cases='))) {
+        throw new Error('Expected --playbook with optional --cases=ID[,ID] and --multi-root, or --explorer-move-probe with optional --refresh-during-move');
     }
     const explorerProbe = args.includes('--explorer-move-probe');
-    if (explorerProbe && args.length !== 1) throw new Error('Run --explorer-move-probe alone');
+    const refreshDuringMove = args.includes('--refresh-during-move');
+    if (refreshDuringMove && !explorerProbe) throw new Error('--refresh-during-move requires --explorer-move-probe');
+    if (explorerProbe && args.some(argument => !['--explorer-move-probe', '--refresh-during-move'].includes(argument))) {
+        throw new Error('Run --explorer-move-probe with only the optional --refresh-during-move flag');
+    }
     const playbook = args.includes('--playbook');
     const multiRoot = args.includes('--multi-root');
     if (multiRoot && !playbook) throw new Error('Use --multi-root with --playbook');
@@ -113,7 +117,8 @@ async function main(): Promise<void> {
                 XTC_PLAYBOOK_CASES: selected.join(','),
                 XTC_PLAYBOOK_COMMIT: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: extensionDevelopmentPath, encoding: 'utf8' }).trim(),
                 XTC_PLAYBOOK_DIRTY: execFileSync('git', ['status', '--porcelain'], { cwd: extensionDevelopmentPath, encoding: 'utf8' }).trim()
-            } : explorerProbe ? { XTC_EXPLORER_PROBE_REPORT: runDirectory } : undefined,
+            } : explorerProbe ? { XTC_EXPLORER_PROBE_REPORT: runDirectory,
+                XTC_EXPLORER_PROBE_REFRESH: String(refreshDuringMove) } : undefined,
         });
         }
     } catch (error) {
