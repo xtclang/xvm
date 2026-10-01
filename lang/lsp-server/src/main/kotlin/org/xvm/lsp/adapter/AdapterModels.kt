@@ -37,6 +37,8 @@ data class CompletionItem(
     val documentation: String? = null,
     val sortText: String? = null,
     val additionalTextEdits: List<TextEdit> = emptyList(),
+    /** Optional tab stops; insertText/textEdit always retain a literal, usable fallback. */
+    val snippet: String? = null,
 ) {
     enum class CompletionKind {
         CLASS,
@@ -47,6 +49,7 @@ data class CompletionItem(
         KEYWORD,
         MODULE,
         VALUE,
+        SNIPPET,
     }
 }
 

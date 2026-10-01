@@ -7737,7 +7737,7 @@ reproducible, and reconcile completed versus remaining scope. Validation is batc
    | --- | --- | --- |
    | L62 rename | Recorded source families, primary/ordinary parameter slots, lambdas, escaped method values, packages/modules/companions and guarded graph replacement | Cross-package qualification rewrites and explicit graph relocation; characterize additional refused composition routes with reproductions before extending proof. External consumers omitted from the configured graph remain an explicit unknown boundary. |
    | L63 semantic actions | Import fixes and compiler-proven implement/override, including bundled contracts | Exact-selection literal-return extraction is implemented in the continuation below. General extract local, missing-declaration fixes, extract method, inline and safe delete remain separate transformations. Each needs its own side-effect/capture/caller-closure design and positive/refusal tests. |
-   | L64 completion/signatures | Recorded cursor recovery, generic/formal constraints, bounded literal values, documentation and ranking | Import-producing completion is implemented in the continuation below. Declaration-name and keyword/snippet contexts; arbitrary enclosing-instance enumeration; additional literal/callable/damaged-bound forms. Earlier claims that all literal synthesis or documentation were absent are superseded by the L64 receipt. |
+   | L64 completion/signatures | Recorded cursor recovery, generic/formal constraints, bounded literal values, documentation and ranking | Import-producing completion and the bounded declaration-name/keyword/template contexts are implemented in the continuations below. Missing declaration names and broader keyword/snippet contexts; arbitrary enclosing-instance enumeration; additional literal/callable/damaged-bound forms. Earlier claims that all literal synthesis or documentation were absent are superseded by the L64 receipt. |
    | L65 navigation/classification | Source/bundled navigation, recorded hierarchy/composition relations and resolved tokens | Conditional/synthetic/native/redirect routes and ambiguous binary source metadata need individual fixtures. Runtime function targets cannot be invented by a static hierarchy. |
    | L66 editing/structure | Token-preserving indentation, URL links, local linked editing, recorded damaged-source structure | Expression wrapping and comment/string layout, import/source links, broader proven linked scopes and remaining damaged constructs. A full pretty-printer is not implemented. |
    | L67 scale | Live graph discovery/overlays, dependencies and detached per-root caches | Use the platform workload to establish budgets and locate bottlenecks before choosing incremental or persistent indexing; neither exists merely because incremental text transport does. |
@@ -8414,3 +8414,61 @@ request; those deletions are not part of any commit. No embedding/AST changes or
 builder fields were needed for this batch. Broader declaration/snippet completion, dynamic or
 unsupported composition routes and general semantic transformations remain on the task list;
 none of L62–L65 is marked wholly complete. Performance/heap work remains deferred.
+
+
+### L64 declaration names and syntax templates (2026-10-01)
+
+The Kotlin compiler adapter now reads the existing Java parser's declaration tokens and block
+ownership to offer syntax completions. Properties, parameters and explicit-type local declarations
+with a written name token can suggest a lower-camel-case name from their written named type,
+including qualified/generic type names and acronym word boundaries. A name already used anywhere
+in the document receives a fresh numeric suffix. This deliberately conservative spelling check is
+not a binding, symbol rename, or guarantee about inherited names. The whole selected identifier is
+replaced, including a suffix after the caret. Inferred types, absent names and new method/type names
+are not guessed.
+
+File, type-body and statement boundaries have separate keyword sets. Six initial templates cover
+module/class declarations, void methods, if blocks, while loops and return values. Templates are
+limited to vacant slots; existing conditions/bodies/terminators are not duplicated. The Java lexer
+excludes comments and literals; expression/type/argument/member positions cannot acquire statement
+templates. Accessor/anonymous/lambda-specific template grammars remain excluded. These are labelled
+syntax templates, not compiler-proven semantic edits; users fill their placeholders before compiling.
+
+Snippet-capable clients receive tab stops; other clients receive literal source defaults. The server
+negotiates completion insertion format and AsIs indentation, and provides relative body indentation
+to clients that only support their default indentation adjustment. This follows the
+[LSP completion contract](https://github.com/microsoft/language-server-protocol/blob/gh-pages/_specifications/lsp/3.17/language/completion.md).
+The templates are detached immutable completion values, built on the existing compiler worker and
+retired with its cursor request. No compiler/embedding API, AST node, mutable field or clone hook was
+added. Parsing and lexing remain covered by compiler API timing; source offsets are indexed once.
+
+Shared X149/X150 and both drivers cover exact name replacement, collision suffixes, template
+insertion, first/final snippet stops and insertion Undo. IntelliJ can first undo the caret movement
+back to the selected placeholder; the driver allows only that text-preserving step before requiring
+one Undo to restore the prefix. Backend checks cover syntax exclusions,
+Unicode/line endings, cancellation, unchanged cached diagnostics and reduced-client negotiation.
+Validation passed: the completion/presentation/cursor regression gate ran **142 tests**, followed by
+**25 tests** for the final syntax, protocol and cancellation/boundary changes. IntelliJ capability
+negotiation adds **4 passing tests**. All had zero failures/errors/skips. TypeScript compilation,
+IntelliJ integration-harness compilation, LSP/IntelliJ Spotless and the ordered **155-case**
+shared/manual catalog audit pass. This is focused validation, not a new full-suite run.
+
+Editor receipts:
+
+- VS Code `run-m80ahV`: X149 passes (1.8s); X150 exposed the driver's unconditional indentation
+  adjustment. Applying the provider's snippet edit with its `keepWhitespace` policy fixes that.
+  Final `run-rGXX4j`: X150 passes (1.8s), including exact final caret position, source and Undo.
+  These checks use the installed extension provider and native snippet engine, not physical
+  completion-popup selection.
+- IntelliJ `run-9591212347662100514`: X149 passes (3.9s); X150 exposes **UP18**, LSP4IJ advertising
+  AsIs insertion but adjusting snippet indentation anyway. The plugin now advertises only its
+  implemented AdjustIndentation mode; the server supplies relative template indentation.
+- IntelliJ `run-10874571275660252562`: X150 passes (4.1s), with zero IDE failures. This uses native
+  completion selection, live-template navigation and Undo. Intermediate failures came from using
+  EditorTab instead of the template-navigation action and expecting caret movement to be
+  undo-transparent; both driver assumptions are corrected without changing IDE settings.
+
+UP18 has a searchable `TODO LSP4IJ:` and an explicit removal gate in errs-upstream-issues.md.
+The new cases are accepted; the whole L64 family remains open. Remaining work includes missing
+declaration-name recovery, arbitrary enclosing-instance enumeration, additional callable/literal
+forms and damaged recursive-bound contexts.

@@ -8,7 +8,59 @@ import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.components.common.LookupElementPresentation
+import com.intellij.openapi.actionSystem.IdeActions.ACTION_EDITOR_NEXT_TEMPLATE_VARIABLE
 import kotlin.time.Duration.Companion.seconds
+
+fun Driver.syntaxCompletions(
+    data: SharedScenarios.Scenario,
+    editor: JEditorUiComponent,
+    diagnostics: () -> Unit,
+) {
+    data.rows("variants").forEach { variant ->
+        val source = variant["source"].asString
+        val expected = variant["expected"].asString
+        val anchor = variant["anchor"].asString
+        editor.text = source
+        val at = source.indexOf(anchor) + (variant["prefix"]?.asString ?: anchor).length
+        accept(editor, at, variant["label"].asString, expected)
+        variant["selected"]?.asString?.let { placeholder ->
+            withContext(OnDispatcher.EDT) {
+                val selection = cast(editor.editor.getSelectionModel(), SelectionOffsets::class)
+                check(editor.text.substring(selection.getSelectionStart(), selection.getSelectionEnd()) == placeholder) {
+                    "Native snippet must select its first placeholder: $placeholder"
+                }
+            }
+            // Tab is routed to this action while a live template is active. EditorTab itself
+            // bypasses that routing and replaces the selected placeholder with whitespace.
+            invokeAction(ACTION_EDITOR_NEXT_TEMPLATE_VARIABLE, component = editor.component)
+            withContext(OnDispatcher.EDT) {
+                val selection = cast(editor.editor.getSelectionModel(), SelectionOffsets::class)
+                check(selection.getSelectionStart() == selection.getSelectionEnd())
+                check(editor.text == expected) { "Template navigation changed source: ${editor.text}" }
+                val body = expected.lines().first { it.isNotEmpty() && it.isBlank() }
+                check(editor.editor.getCaretModel().getOffset() == expected.indexOf("\n$body\n") + 1 + body.length)
+            }
+        }
+        diagnostics()
+        focusEditor(editor)
+        invokeAction("\$Undo", now = false, component = editor.component)
+        if (variant["selected"] != null) {
+            // IDEA can undo caret navigation separately (editor.undo.transparent.caret.movement).
+            // Accept only that exact, text-preserving step before undoing the insertion once.
+            awaitUi("undo insertion or restore its selected placeholder", 15.seconds) {
+                editor.text == source ||
+                    withContext(OnDispatcher.EDT) {
+                        val selection = cast(editor.editor.getSelectionModel(), SelectionOffsets::class)
+                        editor.text == expected &&
+                            editor.text.substring(selection.getSelectionStart(), selection.getSelectionEnd()) ==
+                            variant["selected"].asString
+                    }
+            }
+            if (editor.text != source) invokeAction("\$Undo", now = false, component = editor.component)
+        }
+        awaitUi("one undo restores the completion prefix", 15.seconds) { editor.text == source }
+    }
+}
 
 fun Driver.lookup(
     editor: JEditorUiComponent,
