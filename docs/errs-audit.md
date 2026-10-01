@@ -1457,3 +1457,11 @@ the generated fixture path so opening cannot block on the trust dialog. See the
 Physical VS Code Cancel selection remains unverified; a completed uncanceled request is recorded as a
 failed attempt, not a passing cancellation check. Shared-process VS Code windows and cross-platform
 release coverage remain separate gates.
+
+L82's extended platform run completed 2,400 successful edit/cancel/query cycles across two compiler
+processes, including expected EOF retirement. The third planned session was deliberately interrupted;
+the aggregate report remains failed/interrupted. Both completed sessions show post-GC heap rising from
+about 83 MiB at cycle 100 to 98 MiB at cycle 1,200. Investigate that repeated growth before claiming
+bounded retained memory; no plateau or particular leaking owner has been established. The
+[bounded workload receipt](errs-integration-plan.md#l82-bounded-extended-workload-checkpoint-2026-10-01)
+records timings, sampled RSS and deferred combined/full-editor gates.
