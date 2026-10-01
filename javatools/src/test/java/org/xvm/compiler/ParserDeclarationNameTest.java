@@ -80,6 +80,28 @@ public class ParserDeclarationNameTest {
     }
 
     @Test
+    public void wrappedTypesRemainIndependentSyntaxWithoutRegisteringDeclarations() {
+        List.of("String? § = Null;", "String[] § = [];", "immutable String §;",
+                "void run((String | Int) §) {}", "void run(function String(Int)? §) {}",
+                "class Item(Element?[] §) {}", "void run(@RO String §) {}")
+                .forEach(header -> {
+                    var parsed = parse("module Names { " + header + " Int later = 1; }");
+                    var slot = slots(parsed.tree()).findFirst().orElseThrow(() ->
+                            new AssertionError(header + ": " + parsed.tree().toDumpString() + parsed.errors()));
+                    var copy = slots((StatementBlock) parsed.tree().clone()).findFirst().orElseThrow();
+                    assertTrue(slot.getDeclarationType().isPresent(), header);
+                    assertNotSame(slot.getTarget(), copy.getTarget());
+                    assertEquals(slot.getDeclarationType().orElseThrow().toString(),
+                            copy.getDeclarationType().orElseThrow().toString());
+                    assertTrue(slot.getReceiver().isEmpty());
+                    assertFalse(slot.isTypeCompletion());
+                    assertFalse(slot.isCall());
+                    assertTrue(parsed.tree().toDumpString().contains("later"));
+                    assertEquals(1, parsed.errors().getSeriousErrorCount(), header);
+                });
+    }
+
+    @Test
     public void nonNameContextsDoNotAcquireSlots() {
         List.of("String§;", "String §already;", "List<§> value;", "List<String §;",
                 "void run(String §already) {}", "void run() { String §; }",
@@ -125,7 +147,7 @@ public class ParserDeclarationNameTest {
 
     private static Stream<IncompleteStatement> slots(AstNode root) {
         return nodes(root).filter(IncompleteStatement.class::isInstance).map(IncompleteStatement.class::cast)
-                .filter(site -> site.getDeclarationNameType().isPresent());
+                .filter(site -> site.getDeclarationType().isPresent());
     }
 
     private record Parsed(StatementBlock tree, Source source, long cursor, ErrorList errors) {}
