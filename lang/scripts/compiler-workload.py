@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Measure the packaged compiler on an explicit real graph without writing source files.
 
-The sampler observes heap and queue metadata over the same stdio connection. Timings include
-transport/debounce; sampled peak heap is a lower bound, not a claim about RSS or retained objects.
+The sampler observes heap and queue metadata over the same stdio connection. Optional RSS sampling
+and post-GC checkpoints supplement it. Timings include transport/debounce; sampled peaks are lower
+bounds, and post-GC heap includes intentional caches rather than proving object reachability.
 Run this separately from other compiler workloads to keep timings interpretable.
 """
 
@@ -14,6 +15,7 @@ import json
 import math
 import pathlib
 import subprocess
+import sys
 import threading
 import time
 from types import SimpleNamespace
@@ -114,6 +116,7 @@ class Session:
                 future.set_exception(error)
 
     def _sample(self):
+        next_rss = 0.0
         with (self.directory / "samples.jsonl").open("w") as output:
             while not self.stop_sampling.is_set():
                 try:
@@ -121,6 +124,11 @@ class Session:
                     queue = status["compilerQueue"]
                     assert queue["queueSize"] == len(queue["queuedJobs"])
                     sample = {"time": time.monotonic(), "heap": status["heap"], "queue": queue}
+                    if self.args.sample_rss and time.monotonic() >= next_rss:
+                        rss = subprocess.run(["ps", "-o", "rss=", "-p", str(self.process.pid)],
+                                             check=True, capture_output=True, text=True, timeout=5)
+                        sample["rssBytes"] = int(rss.stdout.strip()) * 1024
+                        next_rss = time.monotonic() + 1
                     self.samples.append(sample)
                     output.write(json.dumps(sample) + "\n")
                     output.flush()
@@ -128,6 +136,13 @@ class Session:
                     self.sampling_errors.append(str(error))
                     return
                 self.stop_sampling.wait(0.2)
+
+    def collect_heap(self):
+        """A controlled GC checkpoint between edits, never part of a request latency sample."""
+        collected = subprocess.run([self.args.jcmd, str(self.process.pid), "GC.run"],
+                                   check=True, capture_output=True, text=True, timeout=30)
+        assert "Command executed successfully" in collected.stdout, collected.stdout
+        return self.call("xtc/languageServiceStatus", record=False)["heap"]
 
     def initialize(self):
         self.call("initialize", {
@@ -226,13 +241,13 @@ def run(args):
     report = {"workspace": str(args.workspace), "sourceFiles": len(before), "modules": modules,
               "cyclesPerSession": args.cycles, "sessions": [], "heapLimit": args.heap,
               "jarSha256": hashlib.sha256(args.jar.read_bytes()).hexdigest(),
-              "limits": "Sampled heap, not RSS or retained heap; bounded workload, not a prolonged interactive soak."}
+              "limits": "Sampled peaks are lower bounds; post-GC heap includes intentional caches. This is a controlled workload, not multi-hour interactive acceptance."}
     try:
         for restart in range(args.restarts + 1):
             directory = args.output / f"session-{restart}"
             directory.mkdir()
             session = Session(args, directory, modules)
-            result = {"pid": session.process.pid, "cancellations": 0, "exit": None}
+            result = {"pid": session.process.pid, "cancellations": 0, "exit": None, "heapCheckpoints": []}
             report["sessions"].append(result)
             try:
                 session.initialize()
@@ -258,6 +273,10 @@ def run(args):
                     assert session.call("textDocument/hover", {"textDocument": document, "position": position})
                     diagnostics = session.call("textDocument/diagnostic", {"textDocument": document})
                     assert not diagnostics.get("items"), diagnostics
+                    if args.gc_every and (cycle + 1) % args.gc_every == 0:
+                        result["heapCheckpoints"].append({"cycle": cycle + 1, "heap": session.collect_heap()})
+                    if (cycle + 1) % 100 == 0:
+                        print(f"session {restart + 1}: {cycle + 1}/{args.cycles} edit/cancel cycles", flush=True)
                 session.notify("textDocument/didClose", {"textDocument": document})
                 result["exit"] = session.finish(disconnect=restart % 2 == 1)
                 result["status"] = "passed"
@@ -266,6 +285,7 @@ def run(args):
                 result["timings"] = {method: percentiles([t["ms"] for t in session.timings if t["method"] == method])
                                      for method in sorted({t["method"] for t in session.timings})}
                 result["sampledPeakHeapBytes"] = max((s["heap"]["usedBytes"] for s in session.samples), default=0)
+                result["sampledPeakRssBytes"] = max((s.get("rssBytes", 0) for s in session.samples), default=None) if args.sample_rss else None
                 result["maxQueueSize"] = max((s["queue"]["queueSize"] for s in session.samples), default=0)
                 result["maxRunningJobs"] = max((s["queue"]["runningSize"] for s in session.samples), default=0)
                 result["samplingErrors"] = session.sampling_errors
@@ -362,10 +382,15 @@ if __name__ == "__main__":
     parser.add_argument("--cycles", type=int, default=10)
     parser.add_argument("--restarts", type=int, default=2)
     parser.add_argument("--timeout", type=float, default=120)
+    parser.add_argument("--sample-rss", action="store_true", help="Sample owned server RSS through ps on macOS/Linux")
+    parser.add_argument("--gc-every", type=int, default=0, help="Record post-GC heap every N project edit cycles (0 disables)")
+    parser.add_argument("--jcmd", default="jcmd")
     parser.add_argument("--semantic-methods", nargs="+", type=int,
                         help="Generate isolated large files and measure queries after compilation")
     args = parser.parse_args()
     assert args.cycles > 0 and args.restarts >= 0 and args.timeout > 0
+    assert args.gc_every >= 0
+    assert not args.sample_rss or sys.platform in ("darwin", "linux"), "RSS sampler supports macOS/Linux"
     args.jar, args.output = args.jar.resolve(), args.output.resolve()
     args.output.mkdir(parents=True, exist_ok=False)
     if args.semantic_methods:
