@@ -6,6 +6,7 @@ import org.xvm.asm.ErrorListener
 import org.xvm.asm.ModuleRepository
 import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.CodeAction
+import org.xvm.lsp.adapter.CompletionItem
 import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.adapter.WorkspaceEdit
 import org.xvm.lsp.model.CompilationResult
@@ -795,34 +796,7 @@ internal class XdkProjectQueries(
                 .take(32)
                 .mapNotNull { target ->
                     checkCurrent()
-                    val addedSource =
-                        target.module != owner.name &&
-                            target.module in project.modules &&
-                            target.module !in owner.dependencies
-                    if (addedSource && !discoverImports) return@mapNotNull null
-                    val graph =
-                        if (addedSource) {
-                            try {
-                                XdkProject(
-                                    project.modules.values.map {
-                                        if (it.name == owner.name) {
-                                            XdkSourceModule(
-                                                it.name,
-                                                it.uri,
-                                                it.dependencies + target.module,
-                                                it.resourceRoots,
-                                            )
-                                        } else {
-                                            it
-                                        }
-                                    },
-                                )
-                            } catch (_: IllegalArgumentException) {
-                                return@mapNotNull null
-                            }
-                        } else {
-                            project
-                        }
+                    val graph = importGraph(owner, target) ?: return@mapNotNull null
                     val edit =
                         XdkAutoImports.edit(text, owner.name, target) ?: return@mapNotNull null
                     val plan = XdkRename.Plan(texts, mapOf(source to listOf(edit)))
@@ -838,6 +812,68 @@ internal class XdkProjectQueries(
                     )
                 }
         return if (isCurrent()) actions else emptyList()
+    }
+
+    /** A completion and its imports are one proof; never publish an import for an unfitted name. */
+    fun importCompletions(
+        uri: String,
+        expectedText: String,
+        prefix: PartialSemanticModel.MemberPrefix,
+        visible: Set<String>,
+    ): List<CompletionItem> {
+        val source = XdkSources.file(uri)?.path ?: return emptyList()
+        val text = texts[source]?.takeIf { it == expectedText } ?: return emptyList()
+        val start = XdkRename.offset(text, prefix.range.start) ?: return emptyList()
+        val end = XdkRename.offset(text, prefix.range.end) ?: return emptyList()
+        val written = text.substring(start, end)
+        if (!written.startsWith(prefix.text) || !XdkRename.identifier(written)) return emptyList()
+        val owner = project.modules.values.singleOrNull { it.uri == project.scope(uri) } ?: return emptyList()
+        val before = compile(texts, Proof.REPAIR) ?: return emptyList()
+        val items =
+            XdkAutoImports
+                .matchingTargets(prefix.text, before)
+                .filter { it.name !in visible }
+                .take(8)
+                .mapNotNull { target ->
+                    checkCurrent()
+                    val graph = importGraph(owner, target) ?: return@mapNotNull null
+                    val imported = XdkAutoImports.edit(text, owner.name, target) ?: return@mapNotNull null
+                    // LSP requires additional edits to be disjoint from the replacement edit.
+                    if (imported.start in start..end) return@mapNotNull null
+                    val replacement = XdkRename.Edit(start, end, target.name)
+                    val plan = XdkRename.Plan(texts, mapOf(source to listOf(replacement, imported)))
+                    val after = compile(plan.proposed, graph = graph) ?: return@mapNotNull null
+                    if (!XdkRename.preservesKnownBindings(before, after, plan)) return@mapNotNull null
+                    val edits = plan.textEdits(source)
+                    CompletionItem(
+                        target.name,
+                        CompletionItem.CompletionKind.CLASS,
+                        "${target.path} — import from ${target.module}",
+                        target.name,
+                        textEdit = edits.first(),
+                        sortText = "7:${target.name}:${target.module}:${target.path}",
+                        additionalTextEdits = edits.drop(1),
+                    )
+                }
+        return if (isCurrent()) items else emptyList()
+    }
+
+    private fun importGraph(
+        owner: XdkSourceModule,
+        target: XdkAutoImports.Target,
+    ): XdkProject? {
+        val addedSource = target.module != owner.name && target.module in project.modules && target.module !in owner.dependencies
+        if (!addedSource) return project
+        if (!discoverImports) return null
+        return try {
+            XdkProject(
+                project.modules.values.map {
+                    if (it.name == owner.name) XdkSourceModule(it.name, it.uri, it.dependencies + target.module, it.resourceRoots) else it
+                },
+            )
+        } catch (_: IllegalArgumentException) {
+            null
+        }
     }
 
     private fun propertyFamily(
