@@ -11,9 +11,34 @@ import org.xvm.asm.constants.MethodBody.Implementation
 import org.xvm.asm.constants.TypeInfo
 import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.dispatch
+import org.xvm.lsp.adapter.xdk.methodImplementation
 
 /** Real compiler chains: a body category alone must never manufacture an editable declaration. */
 class CompilerDispatchRoutesTest {
+    @Test
+    fun `capped implementation lookup follows the compiler narrowing method`() {
+        inspect(
+            "interface Api { Api self(); } class Box implements Api { @Override Box self() = this; }",
+        ) { module, errors ->
+            val owner = type(module, "Box", errors)
+            val capped = owner.methods.values.filter { method -> method.chain.any { it.implementation == Implementation.Capped } }
+            assertThat(capped).isNotEmpty()
+            capped.forEach { method ->
+                assertThat(owner.methodImplementation(method, errors)?.namespace?.name).isEqualTo("Box")
+            }
+        }
+    }
+
+    @Test
+    fun `into implementation lookup follows the existing constraint method`() {
+        inspect("class Base { Int value() = 1; } mixin Mix into Base {}") { module, errors ->
+            val owner = type(module, "Mix", errors)
+            val method = owner.methods.values.single { it.identity.name == "value" }
+            assertThat(method.chain.map { it.implementation }).contains(Implementation.FromInto)
+            assertThat(owner.methodImplementation(method, errors)?.namespace?.name).isEqualTo("Base")
+        }
+    }
+
     @Test
     fun `written interface default and class override retain their actual source contracts`() {
         inspect(
