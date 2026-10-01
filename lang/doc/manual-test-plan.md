@@ -2919,3 +2919,33 @@ It checks exact reference/hint counts and server process exit after compilation,
 one-line versus whole-file hints, tokens, hover, queue/API phases and transport timings. Keep cold
 project-query compilation distinct from warmed responses. This does not replace the decorated
 IntelliJ probe, native tooltip/theme checks or a prolonged editing/retention workload.
+
+### Native project lifetime checks (L81)
+
+These optional checks open disposable native windows and exercise real close/reopen behavior:
+
+```bash
+./gradlew :lang:intellij-plugin:testCompilerPlaybook --tests '*CompilerPlaybookTest.projectLifecycle' \
+  -Plsp.adapter=compiler -PincludeBuildLang=true -PincludeBuildAttachLang=true --no-build-cache
+```
+
+After building the VS Code extension, run from `lang/vscode-extension`:
+
+```bash
+node scripts/run-vscode-tests.cjs --project-lifecycle
+```
+
+Both reuse X145's shared workload with different types in the two projects. Watch one close while
+references are pending, then reopen with a new compiler PID. The other must keep its unsaved text,
+original PID, correct hover and reference count. IntelliJ uses two frames in one IDE and saves the
+closing project. VS Code uses two separate normal application instances and restores the closing
+window's dirty buffer through hot exit; this is not shared-Electron-process coverage. Its disposable
+extensions directory contains the local extension and a test controller because development windows
+intentionally have no persistent backup path. Neither driver kills a compiler to satisfy the checks.
+
+IntelliJ trusts only the generated fixture path inside its disposable IDE, avoiding a blocking trust
+dialog without changing normal trust defaults. The commands do not move the pointer. Passing receipts
+are IntelliJ `run-3852388644684425549` and VS Code `project-lifecycle/run-zI8fT9`; see the
+[lifetime record](../../docs/errs-integration-plan.md#l81-native-projectwindow-lifetime-batch-2026-10-01).
+VS Code visible Cancel still needs a passing control-click receipt: `run-6JOJx7` failed because the
+request finished before the UI tool could select the correct native window; no cancellation was faked.
