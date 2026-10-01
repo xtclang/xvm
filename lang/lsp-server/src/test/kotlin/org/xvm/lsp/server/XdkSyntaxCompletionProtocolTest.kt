@@ -22,6 +22,31 @@ import java.util.concurrent.TimeUnit.SECONDS
 
 class XdkSyntaxCompletionProtocolTest {
     @Test
+    fun `missing declaration names use a plain empty edit at the original Unicode position`() {
+        XtcLanguageServer(XdkAdapter()).use { server ->
+            server.connect(mock(LanguageClient::class.java))
+            server.initialize(params(true)).get(30, SECONDS)
+            val line = "    /* 😀 */ String "
+            val text = "module Editing {\r\n$line= \"\";\r\n}"
+            val service = server.textDocumentService
+            service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", 1, text)))
+            val position = Position(1, line.length)
+            val item =
+                service
+                    .completion(CompletionParams(TextDocumentIdentifier(URI), position))
+                    .get(30, SECONDS)
+                    .left
+                    .single()
+            assertThat(item.label).isEqualTo("string")
+            assertThat(item.insertTextFormat).isEqualTo(InsertTextFormat.PlainText)
+            assertThat(item.textEdit.left.range.start).isEqualTo(position)
+            assertThat(item.textEdit.left.range.end).isEqualTo(position)
+            assertThat(item.textEdit.left.newText).isEqualTo("string")
+            assertThat(item.additionalTextEdits).isEmpty()
+        }
+    }
+
+    @Test
     fun `only snippet capable clients receive placeholders and indentation modes are negotiated`() {
         listOf(false, true).forEach { snippets ->
             XtcLanguageServer(XdkAdapter()).use { server ->

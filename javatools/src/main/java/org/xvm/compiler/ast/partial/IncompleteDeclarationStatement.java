@@ -20,8 +20,9 @@ import static org.xvm.asm.ErrorListener.in;
 
 /**
  * Written declaration syntax whose unfinished header cannot register a compiler component.
- * Only a selected type prefix participates in partial analysis; the body and unfinished
- * parameters have no fabricated signatures, registers or validation contexts.
+ * A selected type prefix participates in partial analysis; missing names retain only written
+ * type syntax. The body and unfinished parameters have no fabricated signatures, registers or
+ * validation contexts.
  */
 public final class IncompleteDeclarationStatement extends Statement {
     public enum Kind { METHOD, PROPERTY }
@@ -89,7 +90,7 @@ public final class IncompleteDeclarationStatement extends Statement {
         var bindings = mgr.getCursorBindings();
         cursors.forEach(site -> {
             bindings.begin(site);
-            if (bindings.isEnabled() && !errs.isAbortDesired()) {
+            if (site.isTypeCompletion() && bindings.isEnabled() && !errs.isAbortDesired()) {
                 PartialQueries.declarationBinding(site, site, formals, errs)
                         .ifPresent(binding -> bindings.record(site, binding));
             }
