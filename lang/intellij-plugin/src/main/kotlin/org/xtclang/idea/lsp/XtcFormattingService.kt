@@ -25,7 +25,7 @@ class XtcFormattingService : LSPFormattingAndRangeBothService() {
             feature.clientFeatures.isServerDefinition(CompilerSettings.SERVER_ID) &&
             super.canSupportFormatting(feature, file)
 
-    // TODO LSP4IJ: LSPFormattingSupport.format accepts a nullable editor but dereferences it
+    // TODO LSP4IJ: UP12 — LSPFormattingSupport.format accepts a nullable editor but dereferences it
     // after the reply. Apply edits to the captured document until upstream fixes that path.
     override fun createFormattingTask(request: AsyncFormattingRequest): FormattingTask? {
         val input = request.ioFile ?: return null

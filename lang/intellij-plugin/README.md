@@ -768,7 +768,8 @@ Apache License 2.0 - See [LICENSE](../../LICENSE) for details.
 The native file-tree Move action now requests compiler proof before moving selected source files
 or module containers. Shared X130 passes native batch Move and project Undo/Redo. Labels
 use Ecstasy; implementation names retain Xtc. Upstream compatibility bridges carry searchable
-`// TODO LSP4IJ:` comments with their removal conditions.
+`// TODO LSP4IJ:` comments with their removal conditions and stable UP identifiers in the
+[upstream issue register](../../docs/errs-upstream-issues.md).
 
 Lazy action selection now uses a registered client command to resolve and apply the edit in a
 version-checked undo command; selected native X105/X122/X127 acceptance passes. X131 adds protocol assertions

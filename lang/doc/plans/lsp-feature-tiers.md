@@ -526,3 +526,15 @@ provider inventory and rich/reduced protocol tests cover the changes; the shared
 [audit and validation](../../../docs/errs-integration-plan.md#l80-final-capability-contract-audit-2026-10-01).
 L80 is complete for current producers; L81/L82 acceptance and X130's upstream Explorer failure remain
 open. Future optional response fields require new negotiation checks.
+
+
+L81 follow-up (2026-10-01): connection-owned progress now retires late successful create replies,
+shows file/workspace and live compiler queue activity, and stops periodic reports on completion or
+close. All five refresh providers have controlled lifecycle regressions; X146 observes each host's
+negotiated native refresh handlers. Malformed-request recovery and two-process same-URI/token isolation
+are covered over real stdio. This adds no language capability or AST/embedding API. See the
+[L81 checkpoint](../../../docs/errs-integration-plan.md#l81-progress-refresh-and-transport-checkpoint-2026-10-01)
+for exact validation: IntelliJ visible Cancel passes; VS Code physical-click and broader
+multi-window acceptance remain open. The larger IntelliJ fixture's bulk-replacement freeze is
+retained as an L82 scale investigation. Upstream defects and
+removable bridges are centralized in the [UP register](../../../docs/errs-upstream-issues.md).
