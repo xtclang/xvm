@@ -45,10 +45,13 @@ internal fun compilerMethodRelations(
             info.methods.values
                 .filter { it.identity.isTopLevel && !it.isFunction && !it.isCtorOrValidator }
                 .map { method ->
+                    val route = info.dispatch(method, errors)
                     CompilerMethodRelations.Chain(
                         structure.identityConstant,
-                        method.chain.map { it.methodStructure?.identityConstant ?: it.identity },
-                        info.dispatch(method, errors).supported,
+                        // Rename families use written contracts behind redirects, just like call
+                        // provenance. Generated cap/into identities are not editable declarations.
+                        route.methods,
+                        route.supported,
                     )
                 }
         }

@@ -2969,3 +2969,8 @@ L65 manual-module check (new backend coverage; native run pending): in
 `t5.Root.self`; verify the written `Base.self` body and no generated redirect location. In
 `delegationTests.x`, `ReportableAsString.showText` reaches `ReportableString.showText`; the
 interface-valued delegate field does not invent another executable source body.
+
+L62 manual-module check (validation pending): rename `t5.Root.self` to `copySelf` in mixinTests;
+Root, Base, Mix and the test5 call change together, while t6 stays unchanged. Undo restores exact
+text. In condMixinTests rename the first `MixS.size` to `width`; only its corresponding test1 call
+changes, not the independent t2 composition. Renaming self to toString must be refused.
