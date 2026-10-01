@@ -58,7 +58,16 @@ internal fun Driver.projectLifecycle(shared: SharedScenarios) {
     fun params(file: Path) =
         mapOf(
             "textDocument" to mapOf("uri" to file.toUri().toString()),
-            "position" to mapOf("line" to 1, "character" to 16),
+            "position" to
+                mapOf(
+                    "line" to 1,
+                    "character" to
+                        probe
+                            .text(file.toString())
+                            .lineSequence()
+                            .elementAt(1)
+                            .indexOf("value"),
+                ),
         )
 
     fun hover(

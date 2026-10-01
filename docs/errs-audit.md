@@ -1444,3 +1444,16 @@ state or compiler APIs. One-line hint requests now filter before rendering. Fift
 pass; four large-file server sessions pass with normal process exit. The
 [measurement receipt](errs-integration-plan.md#l67l82-semantic-response-measurements-2026-10-01)
 separates cold project recompilation, warm query work and serialization/output. UP17 remains open.
+### Native lifetime acceptance follow-up (2026-10-01)
+
+The L81 native lifetime drivers now pass: two project frames in one IntelliJ instance, and two
+normal VS Code instances with separate profiles. Close overlaps compiler work and a pending request;
+the closed PID exits, reopening starts a new PID, and the sibling retains correct replies and its
+unsaved source. IntelliJ saves the closing project; VS Code restores its actual unsaved backup.
+Development-host VS Code restoration attempts failed because that host intentionally has no persistent
+backup path; the corrected test uses a disposable installed-extension profile. IntelliJ trusts only
+the generated fixture path so opening cannot block on the trust dialog. See the
+[receipts and extraction boundary](errs-integration-plan.md#l81-native-projectwindow-lifetime-batch-2026-10-01).
+Physical VS Code Cancel selection remains unverified; a completed uncanceled request is recorded as a
+failed attempt, not a passing cancellation check. Shared-process VS Code windows and cross-platform
+release coverage remain separate gates.
