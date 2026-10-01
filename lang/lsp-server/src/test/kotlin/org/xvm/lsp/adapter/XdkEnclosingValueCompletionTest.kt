@@ -51,6 +51,44 @@ class XdkEnclosingValueCompletionTest {
         }
     }
 
+    @Test
+    fun `ordinary returns initializers and operands complete enclosing instances`() {
+        listOf(
+            "Owner current() = thi§;" to "this.Owner",
+            "Owner current() = this.Ow§;" to "Owner",
+            "void run() { Owner current = thi§; }" to "this.Owner",
+            "Boolean same(Owner owner) = owner == thi§;" to "this.Owner",
+        ).forEach { (body, expected) ->
+            val marked = "module Editing { class Owner { class Nested { $body } } }"
+            val source = marked.replace("§", "")
+            XdkAdapter().use { adapter ->
+                val cached = adapter.compile(URI, source)
+                val item = adapter.getCompletions(URI, 0, marked.indexOf('§')).single { it.label == expected }
+                assertThat(item.detail).isEqualTo("Accessible enclosing instance")
+                assertThat(adapter.getCachedResult(URI)).isEqualTo(cached)
+                val edit = item.textEdit!!
+                assertThat(adapter.compile(URI, source.replaceRange(edit.range.start.column, edit.range.end.column, edit.newText)).diagnostics)
+                    .describedAs(marked).isEmpty()
+            }
+        }
+    }
+
+    @Test
+    fun `ordinary enclosing proposals respect static boundaries and expected types`() {
+        listOf(
+            "class Owner { static Owner current() = thi§; }",
+            "class Owner { static class Nested { Owner current() = thi§; } }",
+            "class Owner { Int current() = thi§; }",
+        ).forEach { body ->
+            val marked = "module Editing { $body }"
+            XdkAdapter().use { adapter ->
+                adapter.compile(URI, marked.replace("§", ""))
+                assertThat(adapter.getCompletions(URI, 0, marked.indexOf('§'))).describedAs(marked)
+                    .noneMatch { it.label == "this.Owner" }
+            }
+        }
+    }
+
     private companion object {
         const val URI = "untitled:Editing.x"
     }
