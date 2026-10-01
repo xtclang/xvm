@@ -13,6 +13,7 @@ import org.xvm.asm.constants.PropertyInfo
 import org.xvm.asm.constants.TypeConstant
 import org.xvm.asm.constants.TypeInfo
 import org.xvm.compiler.ast.AstNode
+import org.xvm.compiler.ast.Expression
 import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.lsp.util.ExecutionTrace
 
@@ -28,19 +29,33 @@ internal fun compilerImplementationTargets(
     val targets = linkedMapOf<IdentityConstant, MutableSet<IdentityConstant>>()
     val inspection =
         ErrorListener.cancellable(ErrorListener.collecting(errors::log), errors::isAbortDesired)
-    for (node in nodes.filterIsInstance<TypeCompositionStatement>()) {
+    val classes =
+        nodes
+            .filterIsInstance<TypeCompositionStatement>()
+            .mapNotNull { it.component as? ClassStructure }
+            // A mixin's into type is a constraint, not an adopting host.
+            .filter { it.format != Format.MIXIN }
+            .associateBy { it.identityConstant }
+    // Formal declarations omit conditionally incorporated bodies whose constraint is satisfied
+    // only after substitution. Include actual validated source types (for example Box<String>),
+    // without inventing instantiations or treating an unadopted mixin as an implementation.
+    val instantiated =
+        nodes
+            .filterIsInstance<Expression>()
+            .filter { it.isValidated && it.typeFit.isFit }
+            .mapNotNull { it.type }
+            .filter { it.isSingleUnderlyingClass(false) && it.getSingleUnderlyingClass(false) in classes }
+    val types = (classes.values.map { it.formalType } + instantiated).map { it.ensureAccess(Access.PRIVATE) }.distinct()
+    for (type in types) {
         if (inspection.isAbortDesired) return emptyMap()
-        val structure = node.component as? ClassStructure ?: continue
-        // A mixin's into type is a constraint, not an adopting host. Inspect its composed hosts.
-        if (structure.format == Format.MIXIN) continue
         val info =
             ExecutionTrace.api("TypeConstant.ensureTypeInfo(implementation)") {
-                structure.formalType.ensureAccess(Access.PRIVATE).ensureTypeInfo(inspection)
+                type.ensureTypeInfo(inspection)
             }
         if (inspection.hasSeriousErrors() || inspection.isAbortDesired) return emptyMap()
         if (info.isClass && !info.isAbstract && !info.isSynthetic) {
             (info.classChain.keys + info.defaultChain.keys).forEach { ancestor ->
-                targets.getOrPut(ancestor) { linkedSetOf() }.add(structure.identityConstant)
+                targets.getOrPut(ancestor) { linkedSetOf() }.add(type.getSingleUnderlyingClass(false))
             }
         }
         // Anonymous classes are synthetic containers, but their written method bodies are targets.
