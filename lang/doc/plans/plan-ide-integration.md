@@ -920,3 +920,12 @@ for the eight selected cases, native initial failure and focused rerun. The fina
 rechecks graph/service settings and original connection identity on the EDT, including restarts
 between reply arrival and publication. The extension-free Explorer probe did not reproduce X130;
 the intermittent full-run failure remains open even though the selected attempt passes.
+
+
+X130 isolation update (2026-10-01): two controlled Explorer-refresh probes now reproduce the exact
+post-Paste exception with Ecstasy absent. The normal X118–X130 sequence passes twelve cases and
+fails only X130's host repaint after successful Move/Undo/Redo/resource checks; its compiler reply
+is an empty edit. No compiler or production client change is warranted by that defect. A native
+window-focus guard fixes separate harness Undo failures. The upstream repair remains open and
+X130 is not relabeled as passing. See the
+[diagnosis and reproduction](../../../docs/errs-integration-plan.md#x130-isolated-host-defect-and-harness-focus-correction-2026-10-01).

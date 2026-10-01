@@ -4,7 +4,8 @@ The current catalog has 152 scenarios: X146/X147 add dependency refresh and late
 X146/X147 now pass in both editors; see the selected reliability receipt below. The previous final IntelliJ run passes all 150
 then-existing cases plus startup, with zero IDE errors.
 The final full VS Code run passes 149/150; X130 remains failed because of the host's post-Paste
-Explorer repaint exception. Current validation receipts are recorded at the end of this document.
+Explorer repaint exception, now independently reproduced without Ecstasy. Current validation
+receipts and the controlled reproduction are recorded at the end of this document.
 X124/X131/X134/X142/X143 previously passed in both editors across
 selected runs and a focused IntelliJ X142 correction; see the follow-up receipt below. X140/X141 add explicit UTF-16 navigation and runtime server
 trace switching; X136/X137/X140/X141 pass in both editors, plus IntelliJ startup with zero IDE errors.
@@ -2790,3 +2791,32 @@ For a realistic compiler workload, use `lang/scripts/compiler-workload.py` with 
 It tests unsaved overlays, cancellation, outlines, hover, diagnostics and repeated server lifetimes
 against `../platform`, preserving the checkout and retaining queue/API/heap traces. Its 30-cycle
 baseline is separate from editor interaction, prolonged soak and release performance targets.
+
+
+### X130 controlled Explorer-refresh reproduction (2026-10-01)
+
+The diagnostic probe now uses the shared X130 nested layout. Compile the extension tests, then run
+from `lang/vscode-extension`:
+
+```bash
+node scripts/run-vscode-tests.cjs --explorer-move-probe --refresh-during-move
+```
+
+The development extension is empty: Ecstasy must be absent and no language server is launched.
+A public `onWillRenameFiles` participant waits for Refresh Explorer and supplies no edit. Select
+both source directories, Cut, select the destination, and Paste. This reproduces the stale Cut-node
+repaint exception on VS Code 1.140.0. The script still checks one native Undo, one Redo and all file
+contents before rethrowing; a nonzero exit records the bug, not a passing acceptance case.
+Omit `--refresh-during-move` for the ordinary control. Each attempt uses a fresh profile/workspace.
+
+Normal X130 writes `X130-move-trace.json` with native command/window/file events and the real
+compiler request/reply. The probe writes `move-trace.json` beside `results.json`. Event listeners
+only observe; the explicitly requested probe participant is the sole forced interleaving.
+Native test actions restore window focus through VS Code only when needed, without moving the
+pointer. Already executed edits, Paste, Undo and Redo are never replayed.
+
+`run-czIsNj` and `run-GSxFkH` independently reproduce the host exception without Ecstasy.
+`run-LjhgZP` passes X118–X129, then fails X130 on that exception after all history/content checks.
+X130 alone passes in `run-QLBWYV`; it is not evidence of a host fix. The
+[full diagnosis](../../docs/errs-integration-plan.md#x130-isolated-host-defect-and-harness-focus-correction-2026-10-01)
+records the failed focus attempt, correction, upstream source and remaining repair task.
