@@ -2911,3 +2911,11 @@ Adapter and PID share one compact line with dimmed, theme-aware labels and norma
 Verify all three values are readable without truncation or an expansion arrow, then leave the
 balloon untouched and check that it fades after eight seconds. The values remain available in
 Notifications and the server log. This is presentation acceptance, not a compiler capability.
+
+Large-file semantic response checks can run independently of native decoration: use the
+`compiler-workload.py --semantic-methods 5000 20000` command in the
+[L67 measurement receipt](../../docs/errs-integration-plan.md#l67l82-semantic-response-measurements-2026-10-01).
+It checks exact reference/hint counts and server process exit after compilation, and records
+one-line versus whole-file hints, tokens, hover, queue/API phases and transport timings. Keep cold
+project-query compilation distinct from warmed responses. This does not replace the decorated
+IntelliJ probe, native tooltip/theme checks or a prolonged editing/retention workload.

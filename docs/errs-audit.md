@@ -1436,3 +1436,11 @@ markers take approximately 0.3/1.2/5.6 seconds to replace the same tail. The gua
 reproduction counts 80,005 semantic highlighters and fails the IDE freeze gate after a 14.6-second
 replacement. UP17 belongs to IntelliJ Platform, not compiler locking. Bulk mode does not remove
 the cost; neither a smaller fixture nor replacing before highlights arrive counts as a fix.
+
+L67 presentation follow-up: the separate packaged-server workload reproduces quadratic token
+overlap checks and repeated whole-model lookup for inferred-hint tooltips. Request-local sorted
+coverage and rendering from known declaration facts remove those scans without additional AST
+state or compiler APIs. One-line hint requests now filter before rendering. Fifteen focused tests
+pass; four large-file server sessions pass with normal process exit. The
+[measurement receipt](errs-integration-plan.md#l67l82-semantic-response-measurements-2026-10-01)
+separates cold project recompilation, warm query work and serialization/output. UP17 remains open.
