@@ -13,10 +13,16 @@ import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionItemKindCapabilities
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
+import org.eclipse.lsp4j.DocumentLinkCapabilities
+import org.eclipse.lsp4j.DocumentLinkParams
 import org.eclipse.lsp4j.ExecuteCommandParams
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
+import org.eclipse.lsp4j.SignatureHelpCapabilities
+import org.eclipse.lsp4j.SignatureHelpParams
+import org.eclipse.lsp4j.SignatureInformationCapabilities
+import org.eclipse.lsp4j.TextDocumentClientCapabilities
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
@@ -32,14 +38,134 @@ import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.CodeAction as Action
+import org.xvm.lsp.adapter.DocumentLink as AdapterLink
+import org.xvm.lsp.adapter.ParameterInfo
 import org.xvm.lsp.adapter.Position as AdapterPosition
 import org.xvm.lsp.adapter.Range as AdapterRange
+import org.xvm.lsp.adapter.SignatureHelp as AdapterSignatureHelp
+import org.xvm.lsp.adapter.SignatureInfo
 import org.xvm.lsp.adapter.TextEdit as AdapterEdit
 import org.xvm.lsp.adapter.WorkspaceEdit as AdapterWorkspaceEdit
 import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.model.Diagnostic
 
 class CapabilityNegotiationTest {
+    @Test
+    fun `link tooltips honor missing false and true support on eager and resolved results`() {
+        listOf(null, false, true).forEach { support ->
+            val adapter =
+                object : Adapter by MockAdapter() {
+                    override fun getDocumentLinks(uri: String, content: String) =
+                        listOf(
+                            AdapterLink(
+                                AdapterRange(AdapterPosition(0, 0), AdapterPosition(0, 6)),
+                                URI,
+                                "Open source",
+                            )
+                        )
+                }
+            XtcLanguageServer(adapter).use { server ->
+                val params =
+                    InitializeParams().apply {
+                        capabilities =
+                            ClientCapabilities().apply {
+                                textDocument =
+                                    TextDocumentClientCapabilities().apply {
+                                        if (support != null)
+                                            documentLink =
+                                                DocumentLinkCapabilities().apply {
+                                                    tooltipSupport = support
+                                                }
+                                    }
+                            }
+                    }
+                val options = server.initialize(params).join().capabilities.documentLinkProvider
+                assertThat(options.resolveProvider).isEqualTo(support != null)
+                open(server)
+                val documents = server.textDocumentService
+                val link =
+                    documents
+                        .documentLink(DocumentLinkParams(TextDocumentIdentifier(URI)))
+                        .join()
+                        .single()
+                if (support != null) {
+                    assertThat(link.tooltip).isNull()
+                    assertThat(link.target).isNull()
+                    documents.documentLinkResolve(link).join()
+                }
+                assertThat(link.target).isEqualTo(URI)
+                assertThat(link.tooltip).isEqualTo("Open source".takeIf { support == true })
+            }
+        }
+    }
+
+    @Test
+    fun `signature metadata is negotiated while legacy active parameter follows selected overload`() {
+        listOf(null, false, true).forEach { support ->
+            val adapter =
+                object : Adapter by MockAdapter() {
+                    override fun getSignatureHelpAsync(uri: String, line: Int, column: Int) =
+                        CompletableFuture.completedFuture(
+                            AdapterSignatureHelp(
+                                listOf(
+                                    SignatureInfo(
+                                        "read(Int first)",
+                                        parameters = listOf(ParameterInfo("Int first")),
+                                        activeParameter = 0,
+                                    ),
+                                    SignatureInfo(
+                                        "read(Int first, Int second)",
+                                        parameters =
+                                            listOf(
+                                                ParameterInfo("Int first"),
+                                                ParameterInfo("Int second"),
+                                            ),
+                                        activeParameter = 1,
+                                    ),
+                                ),
+                                activeSignature = 1,
+                                activeParameter = 0,
+                            )
+                        )
+                }
+            XtcLanguageServer(adapter).use { server ->
+                val params =
+                    InitializeParams().apply {
+                        capabilities =
+                            ClientCapabilities().apply {
+                                textDocument =
+                                    TextDocumentClientCapabilities().apply {
+                                        if (support != null)
+                                            signatureHelp =
+                                                SignatureHelpCapabilities().apply {
+                                                    signatureInformation =
+                                                        SignatureInformationCapabilities().apply {
+                                                            activeParameterSupport = support
+                                                        }
+                                                }
+                                    }
+                            }
+                    }
+                server.initialize(params).join()
+                open(server)
+                val help =
+                    server.textDocumentService
+                        .signatureHelp(
+                            SignatureHelpParams(TextDocumentIdentifier(URI), Position(0, 0))
+                        )
+                        .join()!!
+                assertThat(help.activeSignature).isEqualTo(1)
+                assertThat(help.activeParameter).isEqualTo(1)
+                assertThat(help.signatures.map { it.activeParameter })
+                    .containsExactlyElementsOf(
+                        if (support == true) listOf(0, 1) else listOf(null, null)
+                    )
+                assertThat(help.signatures.last().parameters.map { it.label.left })
+                    .containsExactly("Int first", "Int second")
+            }
+        }
+    }
+
     @Test
     fun `completion kinds fall back while action kinds preserve hierarchical and empty filtering`() {
         val params = editorInitializeParams()
