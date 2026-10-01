@@ -8,7 +8,7 @@ import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
 import org.eclipse.lsp4j.DidChangeConfigurationParams
 
-// TODO LSP4IJ: preserve explicit null configuration fields in the client Gson configuration.
+// TODO LSP4IJ: UP08 — preserve explicit null configuration fields in the client Gson configuration.
 // Remove this adapter once reset-to-discovery survives a wire round trip without it.
 
 /** Explicit null settings reset configuration; Gson's normal omission would keep the old value. */
