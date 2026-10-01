@@ -1,4 +1,11 @@
-Current batch: native server text-edit ownership (L80, `992b47f26`) and real editor progress,
+Current follow-up: four reliability checkpoints isolate X130 without Ecstasy, add shared
+X146/X147 for untouched-consumer refresh and late-report ownership, add an opt-in packaged platform
+workload with queue/heap sampling, and reconcile the remaining scopes. The catalog now has 152
+cases; validation follows the four commits. The 150-case receipts below do not validate the new
+cases. The VS Code status-report audit found a real late-reply overwrite, now guarded by request,
+settings and connection ownership. No compiler AST or embedding API changes are introduced.
+
+Previous batch: native server text-edit ownership (L80, `992b47f26`) and real editor progress,
 cancellation and pending-work restart acceptance (L81, `7a312dd9d`). X144 passes both clients;
 X145 passes both clients, including their final full-catalog runs.
 A live stack sample also found quadratic lexical line scans; `3987e26c1` fixes them with immutable
