@@ -1,0 +1,18 @@
+{
+  "description": "Explicit platform demo graph; resource overrides are inputs, never inferred from Gradle source text.",
+  "modules": [
+    { "name": "auth.xqiz.it", "uri": "auth/src/main/x/auth.x", "dependencies": [] },
+    { "name": "githubCLI.xqiz.it", "uri": "githubCLI/src/main/x/githubCLI.x", "dependencies": [] },
+    { "name": "common.xqiz.it", "uri": "common/src/main/x/common.x", "dependencies": ["auth.xqiz.it"] },
+    { "name": "stub.xqiz.it", "uri": "stub/src/main/x/stub.x", "dependencies": [] },
+    { "name": "challenge.xqiz.it", "uri": "challenge/src/main/x/challenge.x", "dependencies": ["common.xqiz.it"] },
+    { "name": "host.xqiz.it", "uri": "host/src/main/x/host.x", "dependencies": ["common.xqiz.it", "challenge.xqiz.it", "stub.xqiz.it"] },
+    { "name": "proxy_manager.xqiz.it", "uri": "proxy/src/main/x/proxy.x", "dependencies": ["common.xqiz.it"] },
+    { "name": "platformDB.xqiz.it", "uri": "platformDB/src/main/x/platformDB.x", "dependencies": ["common.xqiz.it"] },
+    { "name": "platformCLI.xqiz.it", "uri": "platformCLI/src/main/x/platformCLI.x", "dependencies": ["auth.xqiz.it", "common.xqiz.it"] },
+    { "name": "platformUI.xqiz.it", "uri": "platformUI/src/main/x/platformUI.x", "dependencies": ["common.xqiz.it", "challenge.xqiz.it", "auth.xqiz.it"], "resourceRoots": ["platformUI/gui/dist"] },
+    { "name": "kernel.xqiz.it", "uri": "kernel/src/main/x/kernel.x", "dependencies": ["common.xqiz.it", "platformDB.xqiz.it"] }
+  ],
+  "document": "githubCLI/src/main/x/githubCLI.x",
+  "anchor": "sendRequest(HttpMethod"
+}
