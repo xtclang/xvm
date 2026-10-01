@@ -1901,55 +1901,98 @@ public abstract class Builder {
     }
 
     /**
-     * Call the "new$" [static] method, optionally supplying the enclosing object.
+     * Call the "$new" (instantiator) static method, optionally supplying the outer (parent) object.
+     * Virtual children dispatch through a factory on the parent; other classes use the
+     * instantiator directly.
      */
-    public JitMethodDesc buildNew(BuildContext bctx, CodeBuilder code, TypeConstant typeTarget,
-                                  MethodConstant idCtor, RegisterInfo outer,
+    public JitMethodDesc buildNew(BuildContext bctx, CodeBuilder code, TypeConstant targetType,
+                                  MethodConstant ctorId, RegisterInfo outer,
                                   Consumer<JitMethodDesc> argsLoader, int ctxSlot) {
-        // a narrowed return type can be a cast; its callable class owns the constructor
-        TypeConstant typeCallable = typeTarget.getJitCCType();
-        TypeInfo     infoTarget   = typeCallable.ensureTypeInfo();
-        MethodInfo infoCtor   = infoTarget.getMethodById(idCtor);
+        TypeConstant targetJIC  = targetType.getJitICType();
+        TypeInfo     targetInfo = targetJIC.ensureTypeInfo();
+        MethodInfo   ctor       = targetInfo.getMethodById(ctorId);
 
-        if (infoCtor == null) {
-            infoTarget = typeCallable.ensureAccess(Access.PRIVATE).ensureTypeInfo();
-            infoCtor   = infoTarget.getMethodById(idCtor);
+        if (ctor == null) {
+            targetInfo = targetJIC.ensureAccess(Access.PRIVATE).ensureTypeInfo();
+            ctor       = targetInfo.getMethodById(ctorId);
         }
 
-        if (infoCtor == null) {
+        if (ctor == null) {
             throw new RuntimeException("Unresolvable constructor \"" +
-                    idCtor.getValueString() + "\" for " + typeTarget.getValueString());
+                    ctorId.getValueString() + "\" for " + targetType.getValueString());
         }
 
-        ClassDesc     cdTarget = ensureClassDesc(typeTarget);
-        JitMethodDesc jmdNew   = convertConstructToNew(infoTarget, cdTarget,
-                (JitCtorDesc) infoCtor.getJitDesc(this, typeTarget));
+        ClassDesc     targetCD   = ensureClassDesc(targetType);
+        String        instorName = ctor.ensureJitMethodName(typeSystem).replace("construct", NEW);
+        JitMethodDesc instorMD;
 
-        boolean fOptimized = jmdNew.isOptimized;
-        String  sJitNew    = infoCtor.ensureJitMethodName(typeSystem).replace("construct", NEW);
-        MethodTypeDesc md;
-        if (fOptimized) {
-            md       = jmdNew.optimizedMD;
-            sJitNew += Builder.OPT;
-        }
-        else {
-            md = jmdNew.standardMD;
-        }
+        if (targetJIC.isVirtualChild()) {
+            assert outer != null : "Virtual child without an outer";
 
-        code.aload(ctxSlot);
-        if (infoTarget.hasGenericTypes()) {
-            loadTypeConstant(bctx, code, typeTarget); // TODO Chet - is "bctx" required here?
-        }
-        if (outer != null) {
-            outer.load(code);
-            if (!outer.cd().equals(CD_nObject)) {
-                code.checkcast(CD_nObject);
+            // dispatch to the parent's factory so inherited code constructs the overridden child
+            TypeInfo     baseInfo = ctor.getChildConstructorOrigin().getTypeInfo();
+            TypeConstant baseType = baseInfo.getType().getJitICType();
+
+            instorMD = convertConstructToNew(baseInfo, ensureClassDesc(baseType),
+                        (JitCtorDesc) ctor.getJitDesc(this, baseType));
+
+            MethodTypeDesc md;
+            if (instorMD.isOptimized) {
+                md          = instorMD.optimizedMD;
+                instorName += Builder.OPT;
+            } else {
+                md = instorMD.standardMD;
             }
-        }
-        argsLoader.accept(jmdNew);
 
-        code.invokestatic(cdTarget, sJitNew, md);
-        return jmdNew;
+            TypeConstant parentType = targetJIC.getParentType();
+            ClassDesc    parentCD   = ensureClassDesc(parentType);
+
+            RegisterInfo outerReg = outer.load(code);
+            if (!outerReg.type().isJitAssignableTo(parentType)) {
+                code.checkcast(parentCD);
+            }
+            code.aload(ctxSlot);
+            if (baseInfo.hasGenericTypes()) {
+                loadTypeConstant(bctx, code, targetType);
+            }
+            argsLoader.accept(instorMD);
+
+            // the routing method can be extracted from the constructor's MethodDesc
+            int    outerIndex  = baseInfo.hasGenericTypes() ? 2 : 1;
+            String factoryName = targetJIC.getSingleUnderlyingClass(true).getName() + instorName;
+
+            code.invokevirtual(parentCD, factoryName, md.dropParameterTypes(outerIndex, outerIndex + 1));
+
+            if (!md.returnType().equals(targetCD)) {
+                // every override returns the base child type in its Java descriptor
+                code.checkcast(targetCD);
+            }
+        } else {
+            instorMD = convertConstructToNew(targetInfo, targetCD,
+                        (JitCtorDesc) ctor.getJitDesc(this, targetType));
+
+            MethodTypeDesc md;
+            if (instorMD.isOptimized) {
+                md          = instorMD.optimizedMD;
+                instorName += Builder.OPT;
+            } else {
+                md = instorMD.standardMD;
+            }
+
+            code.aload(ctxSlot);
+            if (targetInfo.hasGenericTypes()) {
+                loadTypeConstant(bctx, code, targetType);
+            }
+            if (outer != null) {
+                outer.load(code);
+                if (!outer.cd().equals(CD_nObject)) {
+                    code.checkcast(CD_nObject);
+                }
+            }
+            argsLoader.accept(instorMD);
+            code.invokestatic(targetCD, instorName, md);
+        }
+        return instorMD;
     }
 
     /**
@@ -2217,7 +2260,7 @@ public abstract class Builder {
     public static final String LAMBDA         = "lambda¤"; // the base of the lambda function name
     public static final String EXT            = "$ext";    // a multi-slot extension field of a primitive field
     public static final String INIT           = "$init";   // the singleton initialization instance method
-    public static final String NEW            = "$new";    // the instance creation static method
+    public static final String NEW            = "$new";    // the instance creation static method (i.e. instantiator)
     public static final String OPT            = "$p";      // methods that contains primitive types
     public static final String DELEGATE       = "$d";      // methods that delegates to an underlying property
 

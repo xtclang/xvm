@@ -7448,12 +7448,10 @@ public abstract class TypeConstant
      * @see doc/jit_class_names.txt
      */
     public TypeConstant getJitICType() {
-        if (isModifyingType()) {
-            return getUnderlyingType().getJitICType();
-        }
-
-        assert ensureTypeInfo().isNewable(false, ErrorListener.BLACKHOLE);
-        return removeAutoNarrowing();
+        // TODO CP: plug in the new logic
+        TypeConstant type = getJitCCType();
+        assert type.ensureTypeInfo().isNewable(false, ErrorListener.BLACKHOLE);
+        return type;
     }
 
     /**
