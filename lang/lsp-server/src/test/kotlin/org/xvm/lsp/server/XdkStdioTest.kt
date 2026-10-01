@@ -184,7 +184,9 @@ class XdkStdioTest {
             assertThat(status["pid"].asLong).isPositive()
             assertThat(status["compilerQueue"].asJsonObject["queueSize"].asInt).isZero()
             val heap = status["heap"].asJsonObject
-            assertThat(heap["usedBytes"].asLong).isPositive().isLessThanOrEqualTo(heap["committedBytes"].asLong)
+            assertThat(heap["usedBytes"].asLong)
+                .isPositive()
+                .isLessThanOrEqualTo(heap["committedBytes"].asLong)
             assertThat(heap["committedBytes"].asLong).isLessThanOrEqualTo(heap["maxBytes"].asLong)
             val source = "module Stdio { // 😀\r\nInt value = 1;\r\n}"
             session.open(source)
