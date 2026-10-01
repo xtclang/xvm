@@ -9,6 +9,8 @@ import com.intellij.openapi.ui.popup.Balloon
 import com.intellij.openapi.util.text.StringUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.BalloonImpl
+import com.intellij.ui.ColorUtil
+import com.intellij.util.ui.JBUI
 import com.redhat.devtools.lsp4ij.LanguageServerFactory
 import com.redhat.devtools.lsp4ij.client.features.LSPClientFeatures
 import com.redhat.devtools.lsp4ij.server.JavaProcessCommandBuilder
@@ -177,14 +179,21 @@ class XtcLspConnectionProvider(
         )
 
         if (startNotificationShown.compareAndSet(false, true)) {
+            val labelColor = ColorUtil.toHtmlColor(JBUI.CurrentTheme.ContextHelp.FOREGROUND)
             showNotification(
                 title = "Ecstasy Language Server Started",
                 content =
                     listOf(
-                        "Version: ${LspBuildProperties.version}",
-                        "Adapter: ${LspBuildProperties.adapter}",
-                        "Process ID: $pid",
-                    ).joinToString("<br>") { StringUtil.escapeXmlEntities(it) },
+                        "Version" to LspBuildProperties.version,
+                        "Adapter" to LspBuildProperties.adapter,
+                        "PID" to pid.toString(),
+                    ).joinToString(
+                        separator = "&nbsp;&nbsp;·&nbsp;&nbsp;",
+                        prefix = "<small>",
+                        postfix = "</small>",
+                    ) { (label, value) ->
+                        "<font color='$labelColor'>$label</font>&nbsp;${StringUtil.escapeXmlEntities(value)}"
+                    },
                 type = NotificationType.INFORMATION,
             )
         }
