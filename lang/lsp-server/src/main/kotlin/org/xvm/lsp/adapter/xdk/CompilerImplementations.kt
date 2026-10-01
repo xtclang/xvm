@@ -126,10 +126,10 @@ private fun TypeInfo.delegateType(
 private fun TypeInfo.methodImplementation(
     method: MethodInfo,
     errors: ErrorListener,
-    visited: Set<Pair<TypeConstant, IdentityConstant>> = emptySet(),
+    visited: List<Pair<TypeConstant, MethodInfo>> = emptyList(),
 ): IdentityConstant? {
-    val key = type to method.identity
-    if (errors.isAbortDesired || key in visited || visited.size >= 64) return null
+    val key = type to method
+    if (errors.isAbortDesired || visited.any { it.first == type && it.second === method } || visited.size >= 64) return null
     val body = method.chain.firstOrNull { !it.isAbstract } ?: return null
     return when (body.implementation) {
         Implementation.Explicit,
@@ -142,6 +142,14 @@ private fun TypeInfo.methodImplementation(
             val delegate = delegateType(body.propertyConstant ?: return null, errors) ?: return null
             val selected = delegate.getMethodBySignature(body.signature) ?: return null
             delegate.methodImplementation(selected, errors, visited + key)
+        }
+
+        Implementation.FromInto -> {
+            body.intoMethodInfo?.let { methodImplementation(it, errors, visited + key) }
+        }
+
+        Implementation.Capped -> {
+            getNarrowingMethod(method)?.let { methodImplementation(it, errors, visited + key) }
         }
 
         else -> {

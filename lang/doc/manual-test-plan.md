@@ -2963,3 +2963,9 @@ X105 extension (validation pending): replace the fixture with `module AutoImport
 place the caret after `Doc`, and accept Document. The whole identifier must be replaced once and
 `import xml.Document;` inserted atomically; Problems clears. Repeat with Widget from ImportLibrary.
 Both drivers use the same completion variants; their earlier X105 passes establish only quick fixes.
+
+L65 manual-module check (new backend coverage; native run pending): in
+`manualTests/src/main/x/jit/jit_tests/basic/mixinTests.x`, use Go to Implementation on
+`t5.Root.self`; verify the written `Base.self` body and no generated redirect location. In
+`delegationTests.x`, `ReportableAsString.showText` reaches `ReportableString.showText`; the
+interface-valued delegate field does not invent another executable source body.

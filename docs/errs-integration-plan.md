@@ -8333,3 +8333,12 @@ private and undeclared-dependency refusals, unrelated-error/member-site refusals
 and cancellation before/during/after the second stage. Shared X105 and both drivers now also
 accept bundled/source import completions. Their older receipts cover quick fixes only; execution
 of the new variants is pending the combined gate.
+
+### Functionality continuation: L65 redirect lookup
+
+Implementation lookup now follows existing `FromInto` and capped/narrowing method metadata to
+a written body, with method-instance cycle guards. It does not generate optimized forwarding
+bodies or guess runtime delegate receivers. Real `manualTests` mixin and delegation modules are
+loaded as standalone test modules; covariant self-return lookup and interface-valued delegation
+have explicit source-location assertions. No AST/embedding API change. Validation is batched.
+Dynamic receivers, unsupported property forwarding and missing binary source remain boundaries.
