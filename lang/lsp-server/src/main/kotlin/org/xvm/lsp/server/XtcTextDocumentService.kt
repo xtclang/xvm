@@ -342,7 +342,7 @@ class XtcTextDocumentService(
                     partial,
                 )
             }
-        return server.observeQuery(method, progress, publication)
+        return server.observeQuery(method, progress, publication, uri)
     }
 
     private fun contentModified() =

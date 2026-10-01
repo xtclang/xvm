@@ -1,6 +1,8 @@
 package org.xvm.lsp.adapter.xdk
 
 import org.xvm.lsp.util.ExecutionTrace
+import org.xvm.lsp.util.ProgressLabels
+import java.util.Locale
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.atomic.AtomicLong
 
@@ -151,6 +153,51 @@ internal class CompilerQueueTrace {
                 "runningJobs" to running,
             )
         }
+
+    /** UI text from copied queue metadata only; never inspects an AST or enters compiler locks. */
+    fun progressDescription(): String? {
+        val current = synchronized(lock) { jobs.values.toList() }
+
+        fun Job.label(): String {
+            val operation =
+                when (span.operation) {
+                    "compile" -> {
+                        "compiling"
+                    }
+
+                    "project-REFERENCES" -> {
+                        "finding references in"
+                    }
+
+                    "project-DIAGNOSTICS" -> {
+                        "checking diagnostics in"
+                    }
+
+                    "rename-proof", "project-RENAME", "project-RENAME_PROPOSAL", "project-FILE_RENAME" -> {
+                        "checking rename in"
+                    }
+
+                    else -> {
+                        val kind =
+                            span.operation
+                                .removePrefix("project-")
+                                .removePrefix("cursor-")
+                                .replace('_', ' ')
+                                .lowercase(Locale.ROOT)
+                        "checking $kind in"
+                    }
+                }
+            return "$operation ${ProgressLabels.source(span.uri.orEmpty())}"
+        }
+        return buildList {
+            current.filter { it.phase == Phase.RUNNING }.forEach { add(it.label()) }
+            val queued = current.count { it.phase == Phase.QUEUED }
+            if (queued > 0) add("$queued ${if (queued == 1) "job" else "jobs"} queued")
+            current.firstOrNull { it.phase == Phase.DEBOUNCING }?.let {
+                add("waiting for edits to settle: ${it.label()}")
+            }
+        }.takeIf { it.isNotEmpty() }?.joinToString("; ")
+    }
 
     private fun log(
         span: ExecutionTrace.Span,
