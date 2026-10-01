@@ -885,6 +885,10 @@ intellijPlatformTesting.testIdeUi.register("testCompilerPlaybook") {
         systemProperty("xtc.playbook.adapter", providers.gradleProperty("lsp.adapter").getOrElse("treesitter"))
         systemProperty("xtc.playbook.cases", providers.gradleProperty("intellijPlaybookCases").getOrElse(""))
         systemProperty(
+            "xtc.playbook.largeFileProbe",
+            providers.gradleProperty("intellijLargeFileProbe").getOrElse("false"),
+        )
+        systemProperty(
             "allure.results.directory",
             layout.buildDirectory
                 .dir("reports/compiler-playbook/allure-results")
