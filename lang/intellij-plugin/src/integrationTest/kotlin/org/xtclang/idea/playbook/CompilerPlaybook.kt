@@ -1591,7 +1591,7 @@ class CompilerPlaybook(
                 }
             }
         }
-        listOf("X149", "X150").forEach { id ->
+        listOf("X149", "X150", "X151").forEach { id ->
             scenario(id) {
                 discovered(id) { data ->
                     val editor = open(data.text("file"))

@@ -1016,6 +1016,7 @@ private class SemanticModelBuilder(
                 PartialSemanticModel.Site(
                     kind =
                         when {
+                            site.declarationNameType.isPresent -> PartialSemanticModel.Kind.DECLARATION_NAME
                             operation.isCall -> PartialSemanticModel.Kind.CALL
                             site.isNameCompletion -> PartialSemanticModel.Kind.NAME
                             else -> PartialSemanticModel.Kind.MEMBER_ACCESS
@@ -1054,6 +1055,7 @@ private class SemanticModelBuilder(
                             },
                         ),
                     members = immutableList(members),
+                    declarationNameType = site.declarationNameType.map { it.valueText }.orElse(null),
                     formals =
                         immutableList(
                             cursor?.formals().orEmpty().mapNotNull { formal ->
