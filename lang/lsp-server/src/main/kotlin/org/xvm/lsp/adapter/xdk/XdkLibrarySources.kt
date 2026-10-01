@@ -101,17 +101,8 @@ internal object XdkLibrarySources {
                 .toList()
                 .asReversed()
         val candidates = source.declarations.filter { it.path == namespace }
-        val selected =
-            if (component is MethodStructure && candidates.size > 1) {
-                // Debug source identifies the selected overload; absent/ambiguous spans provide no
-                // target.
-                candidates.singleOrNull {
-                    component.sourceText != null &&
-                        component.sourceLineNumber in it.firstLine..it.lastLine
-                }
-            } else {
-                candidates.singleOrNull()
-            }
+        val sourceLine = (component as? MethodStructure)?.takeIf { it.sourceText != null }?.sourceLineNumber
+        val selected = selectLibraryDeclaration(candidates, sourceLine) { it.firstLine..it.lastLine }
         return selected?.let {
             DependencyDeclaration(
                 XdkDependency.SymbolKey(
@@ -193,3 +184,7 @@ internal object XdkLibrarySources {
             "Bundled XDK source resource is missing: $name"
         }
 }
+
+/** A unique namespace suffices; overloaded names require one unambiguous debug-source span. */
+internal fun <T> selectLibraryDeclaration(candidates: List<T>, sourceLine: Int?, lines: (T) -> IntRange): T? =
+    candidates.singleOrNull() ?: sourceLine?.let { line -> candidates.singleOrNull { line in lines(it) } }

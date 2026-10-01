@@ -8653,3 +8653,18 @@ partial node's required dump method, a parser test that assumed parent links bef
 and optional shared-scenario fields in TypeScript. These corrections accompany the implementation
 commits on extraction. Full GUI acceptance is deferred until the requested L65 follow-up and its
 shared scenarios are complete.
+
+### L65 closure: written implementation routes and classification
+
+Accessor lookup now follows the existing method redirect walker for capped, delegating and into
+entries, without asking optimization to generate forwarding bodies. Explicit/native/synthetic
+methods are checked for a real written executable body. Conditional-mixin invocation, covariant
+property getters and runtime-only delegation have shared X153 fixtures and native navigation
+checks. X154 checks destructuring writes, incremented properties and indexed receiver/index reads,
+including native semantic-token consumption and occurrence highlighting in IntelliJ.
+
+Binary-source overload selection has a directly tested pure helper: a unique namespace can resolve
+without debug lines, while overloads require exactly one matching source span. Missing, overlapping
+or unmatched spans return no target. Bundled-source identity/revision ownership and read-only
+behavior are unchanged. The source/dispatch tests exercise real compiler chains; native/runtime-only
+bodies remain explicit refusals. Backend execution and full GUI acceptance are pending.

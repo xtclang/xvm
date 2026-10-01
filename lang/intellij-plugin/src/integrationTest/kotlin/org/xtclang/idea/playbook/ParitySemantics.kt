@@ -82,7 +82,9 @@ internal fun ParityScenarios.semanticCases() {
         )
         check(calls(doc, doc.at(data.string("dynamicCall"))).isEmpty())
     }
-    case("X41") { data ->
+    listOf("X41", "X154").forEach { id ->
+    case(id) { data ->
+        data["source"]?.asString?.let { write(data.string("file"), it) }
         val doc = open(data.string("file"))
         clean(doc)
         val legend =
@@ -150,6 +152,11 @@ internal fun ParityScenarios.semanticCases() {
                     )
             },
         )
+        data["accesses"]?.rows()?.forEach { access ->
+            val at = ParityWorkspace.position(doc.text, doc.at(access.string("anchor"), access.int("offset")))
+            val token = decoded.single { it.line == at["line"] && it.character == at["character"] }
+            check(("modification" in token.modifiers) == access["write"].asBoolean) { "Wrong access classification: $access; $token" }
+        }
         val write = doc.at(data.string("anchor2"))
         check(
             decoded.any {
@@ -196,6 +203,7 @@ internal fun ParityScenarios.semanticCases() {
             }
             invokeAction("EditorEscape", component = doc.editor.component)
         }
+    }
     }
     case("X42") { data ->
         val doc = open(data.string("file"))

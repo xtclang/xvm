@@ -1020,3 +1020,8 @@ local naming to useful written initializer clues, and lambda argument snippets t
 by the whole-call fitter. Empty collections continue to use compiler-validated plain values.
 The shared playbook and both native drivers include the additions; final combined acceptance is
 pending. Ambiguous local syntax and arbitrary nested value/body synthesis remain explicit limits.
+
+L65 adds property-accessor redirect traversal and explicit non-written implementation refusals.
+Shared X153 covers covariant/conditional targets and runtime-only delegation; X154 covers more
+read/write classification. Binary-source overload selection refuses absent or ambiguous metadata.
+Backend and full native validation are pending; no runtime target enumeration is claimed.

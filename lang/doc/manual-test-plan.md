@@ -2998,3 +2998,10 @@ restores the empty argument. This is a scaffold; replace TODO() before executing
 X151 adds unnamed val/var locals with string, integer and constructor initializers; accept the
 syntax-derived name, verify the following source and Undo. X152 adds ordinary return expressions
 with `thi` and `this.Ow`; verify the real enclosing instance, exact replacement and Undo.
+
+L65 closure additions (execution pending):
+
+| ID | Manual actions | Expected result |
+| --- | --- | --- |
+| X153 | Open each shared Dispatch.x variant. Use Go to Implementation on `box.value`, then `text.size()`, then the interface-valued delegate call. | The covariant property reaches its written getter; the conditional mixin reaches its written method. A runtime-only delegate has no guessed target. Both drivers check exact source positions; IntelliJ follows the native navigation action. |
+| X154 | Open shared Access.x. Inspect tokens and highlight usages of the destructured `left`/`right`, incremented `box.value` and `values[index]` assignment. | Destructured variables and the incremented property are writes. The receiver and index expressions remain reads. Both drivers check exact positions and modification flags; IntelliJ also checks native token consumption and highlights. |
