@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
 The current catalog has 152 scenarios: X146/X147 add dependency refresh and late-report ownership.
-Their validation is pending the current batch. The previous final IntelliJ run passes all 150
+X146/X147 now pass in both editors; see the selected reliability receipt below. The previous final IntelliJ run passes all 150
 then-existing cases plus startup, with zero IDE errors.
 The final full VS Code run passes 149/150; X130 remains failed because of the host's post-Paste
 Explorer repaint exception. Current validation receipts are recorded at the end of this document.
@@ -2652,11 +2652,11 @@ protocol checkpoint reran X136/X137/X140/X141 plus IntelliJ START; follow-up rec
 | Progress creation, token ownership, cancellation, late acknowledgements and one terminal event | `ConnectionProgressTest` controls replies and races completion/cancel/close | Manual P1/P2 below. Short compiler fixtures do not guarantee a visible progress popup. |
 | Pending readers canceled independently of shared analysis; immediate retirement on close | `RequestOwnershipTest` uses an analysis future that can ignore cancellation | X137 covers connection restart with an unsaved buffer; P2 covers pending UI work. The selected editor case does not force the backend race. |
 | Pre-initialize, duplicate initialize and shutdown request rules | `ProtocolLifecycleTest`, `XdkStdioTest`; `LspProcessLifecycleTest` covers child-process termination | X137 passes repeated transport restarts; invalid wire order is tested over packaged stdio, not sent through a conforming IDE. |
-| Negotiated, coalesced refresh outside compiler locks | `ClientNotificationsTest`, `XdkPullDiagnosticsTest`, `XdkSemanticTokenProtocolTest` | New shared X146 covers dependency refresh and inferred hints in an untouched consumer; execution is pending. P3 retains broader per-provider visual acceptance. |
+| Negotiated, coalesced refresh outside compiler locks | `ClientNotificationsTest`, `XdkPullDiagnosticsTest`, `XdkSemanticTokenProtocolTest` | Shared X146 passes dependency refresh and inferred hints in an untouched consumer in both editors. P3 retains broader per-provider visual acceptance. |
 | Runtime `off` / `messages` / `verbose` trace without source payloads | `ClientNotificationsTest` | X141 passes messages/verbose in both editors; switching off and post-close behavior are controlled unit tests. |
 | IntelliJ diagnostic-cache retirement after unlocked snapshot lookup | `DiagnosticResultMessagesTest` forces close/cancel during that lookup | Existing diagnostic/reopen scenarios cover normal editor flow; the precise race is unit-tested. |
 | Tree-sitter scan starvation and native parser/disposal ownership | `WorkspaceIndexerTest` concurrent scans/parser requests run without skips | This is the shipping Tree-sitter adapter, not an XdkAdapter feature. Compiler playbook passes do not validate its UI behavior. |
-| Retired VS Code connections and stale IntelliJ settings reports | X136/X137 pass in both editors; new X147 controls late report completion | X147 asserts publication ownership after newer reports, settings changes, restart and native UI disposal; execution is pending. Broader multi-window interaction remains manual. |
+| Retired VS Code connections and stale IntelliJ settings reports | X136/X137 pass in both editors; new X147 controls late report completion | X147 passes publication ownership after newer reports, settings changes, restart and native UI disposal in both editors, including a native restart between reply receipt and EDT publication. Broader multi-window interaction remains manual. |
 | Negotiated configuration requests and post-close formatting replies | `ClientPresentationTest`, `EditorFormattingStateTest`, `FormattingConfigRoundTripTest` | X136 covers effective settings; earlier X138/X139 cover live formatting and save ownership. |
 | Stalled watcher replies, late registration/removal and disconnect | `ResourceFileWatchersTest` controls acknowledgement deadlines and retry ownership | X124/X134 exercise ordinary external resource/source watching; they do not force client RPC stalls. |
 | Compiler path drafts invalidated by settings/model/new-dialog changes | VS Code `compiler-paths.test.ts` | Actual settings writes and disposal are tested inside the extension host; no automated picker-click race is claimed. |
@@ -2696,7 +2696,7 @@ The disk-index/open-buffer, long-lived path-picker and stalled watcher-registrat
 their deterministic regressions are explicit in the [state audit](../../docs/errs-audit.md#mutable-state-and-deprecated-api-audit-2026-09-30-checkpoint).
 Partial-result streaming and L83 initializer facts are implemented; their acceptance and remaining
 limits are recorded below. Generic IntelliJ server-initiated text-edit checking is implemented;
-X144 passes both editors. The current catalog contains 150 cases.
+X144 passes both editors. The catalog now contains 152 cases; the receipts below retain their original scope.
 
 ### Constant-folded initializer acceptance (X142)
 
@@ -2768,3 +2768,25 @@ and workspace and restoring settings through the editor API. Its new shared stat
 `Ecstasy playbook` with the same counter. X144/X145 pass in `run-aBMhCu` after sharing the reporter;
 this selected run does not replace the full catalog's X130 failure. Hover the counter for the full
 test title. Physical Cancel-button selection and the broader P3/P4 checks remain manual.
+
+
+### Selected reliability receipt (2026-10-01)
+
+The catalog has **152 cases**. VS Code `run-Ki54bo` passes X118/X129/X130/X136/X137/X139/X146/X147.
+IntelliJ `run-13013331047107199721` passes all of those except X147, which exposes a stale report
+after a service-only settings override. Corrected `run-5612866093768251189` passes X136/X137/X147
+plus startup, with zero IDE errors and successful shutdown. Thus both new scenarios pass both
+editors, while the initial failure remains evidence of the bug, not a clean full-catalog run.
+X147 also completes an old reply just before restarting on the same EDT turn, so publication must
+reject the retired connection even though the settings are unchanged.
+
+P3's dependency/inlay refresh and P4's controlled stale-report checks now have automation. Broader
+provider visual checks, physical Cancel-button selection and multiple-window interactions remain
+manual. X130's selected pass and extension-free probe's `not-reproduced` result do not close its
+earlier intermittent full-run Explorer failure.
+
+For a realistic compiler workload, use `lang/scripts/compiler-workload.py` with the recipe in the
+[reliability receipt](../../docs/errs-integration-plan.md#reliability-validation-receipt-2026-10-01).
+It tests unsaved overlays, cancellation, outlines, hover, diagnostics and repeated server lifetimes
+against `../platform`, preserving the checkout and retaining queue/API/heap traces. Its 30-cycle
+baseline is separate from editor interaction, prolonged soak and release performance targets.
