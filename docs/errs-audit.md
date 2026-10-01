@@ -1429,3 +1429,10 @@ IntelliJ's current visible-control X145 passes with zero IDE failures; VS Code's
 check remains separate from its automated SDK callback. A diagnostic 20,000-method IntelliJ
 fixture exposed a 21.3-second range-marker update freeze during bulk replacement. The failed
 receipt and L82 investigation remain recorded; the bounded 5,000-method pass does not close it.
+
+The focused [L82 investigation](errs-integration-plan.md#l82-large-file-intellij-freeze-investigation-2026-10-01)
+now isolates the interval-tree bottleneck without any LSP client: plain documents with 20k/40k/80k
+markers take approximately 0.3/1.2/5.6 seconds to replace the same tail. The guarded native
+reproduction counts 80,005 semantic highlighters and fails the IDE freeze gate after a 14.6-second
+replacement. UP17 belongs to IntelliJ Platform, not compiler locking. Bulk mode does not remove
+the cost; neither a smaller fixture nor replacing before highlights arrive counts as a fix.

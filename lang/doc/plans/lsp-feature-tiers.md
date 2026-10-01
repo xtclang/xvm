@@ -538,3 +538,9 @@ for exact validation: IntelliJ visible Cancel passes; VS Code physical-click and
 multi-window acceptance remain open. The larger IntelliJ fixture's bulk-replacement freeze is
 retained as an L82 scale investigation. Upstream defects and
 removable bridges are centralized in the [UP register](../../../docs/errs-upstream-issues.md).
+
+L82 scale diagnosis: UP17 is now independently reproduced in IntelliJ's range-marker tree without
+an LSP client. The decorated native replacement still fails the freeze gate; the opt-in
+[probe and receipts](../../../docs/errs-integration-plan.md#l82-large-file-intellij-freeze-investigation-2026-10-01)
+separate marker-update time from compiler time. Large-file responsiveness remains open; no
+advertised language capability or AST/embedding API changes as a result of this diagnosis.
