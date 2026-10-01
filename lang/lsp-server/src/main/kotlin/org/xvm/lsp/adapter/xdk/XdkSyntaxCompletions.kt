@@ -8,22 +8,34 @@ import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
 import org.xvm.compiler.Token.Id
+import org.xvm.compiler.ast.AnnotatedTypeExpression
+import org.xvm.compiler.ast.ArrayTypeExpression
 import org.xvm.compiler.ast.AstNode
+import org.xvm.compiler.ast.BiTypeExpression
+import org.xvm.compiler.ast.DecoratedTypeExpression
+import org.xvm.compiler.ast.ForEachStatement
+import org.xvm.compiler.ast.ForStatement
+import org.xvm.compiler.ast.FunctionTypeExpression
 import org.xvm.compiler.ast.LambdaExpression
 import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.compiler.ast.NamedTypeExpression
 import org.xvm.compiler.ast.NewExpression
+import org.xvm.compiler.ast.NullableTypeExpression
 import org.xvm.compiler.ast.Parameter
 import org.xvm.compiler.ast.PropertyDeclarationStatement
 import org.xvm.compiler.ast.StatementBlock
+import org.xvm.compiler.ast.SwitchStatement
 import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.compiler.ast.TypeExpression
 import org.xvm.compiler.ast.VariableDeclarationStatement
+import org.xvm.compiler.ast.WhileStatement
+import org.xvm.compiler.ast.partial.PartialSyntax
 import org.xvm.lsp.adapter.CompletionItem
 import org.xvm.lsp.adapter.CompletionItem.CompletionKind
 import org.xvm.lsp.adapter.Position
 import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.adapter.TextEdit
+import org.xvm.lsp.adapter.xdk.PartialSemanticModel.DeclarationName
 import org.xvm.lsp.util.ExecutionTrace
 import java.util.concurrent.CancellationException
 
@@ -35,7 +47,7 @@ internal object XdkSyntaxCompletions {
     fun complete(
         text: String,
         position: Position,
-        declarationNameType: String? = null,
+        declarationNameType: DeclarationName? = null,
         cancelled: () -> Boolean,
     ): List<CompletionItem> =
         ExecutionTrace.api("Parser.syntaxCompletions") {
@@ -91,7 +103,8 @@ internal object XdkSyntaxCompletions {
                 ancestors: List<AstNode>,
             ): List<Entry> {
                 checkCancellation()
-                return listOf(Entry(node, ancestors)) + node.childNodes().flatMap { nodes(it, ancestors + node) }
+                return listOf(Entry(node, ancestors)) +
+                    PartialSyntax.children(node).use { it.toList() }.flatMap { nodes(it, ancestors + node) }
             }
             val entries = nodes(root, emptyList())
             val declaration = selected?.let { token -> entries.firstOrNull { it.name()?.startPosition == token.startPosition } }
@@ -110,13 +123,14 @@ internal object XdkSyntaxCompletions {
 
                     block == null -> return@api emptyList()
 
-                    block.ancestors.lastOrNull() is TypeCompositionStatement -> Context.TYPE
+                    block.ancestors.lastOrNull() is TypeCompositionStatement ||
+                        block.ancestors.lastOrNull() is NewExpression -> Context.TYPE
 
-                    // Accessors, anonymous bodies and expression lambdas need their own grammar rules.
-                    block.ancestors.lastOrNull {
-                        it is MethodDeclarationStatement || it is TypeCompositionStatement ||
-                            it is NewExpression || it is LambdaExpression || it is PropertyDeclarationStatement
-                    } is MethodDeclarationStatement -> Context.STATEMENT
+                    block.ancestors
+                        .lastOrNull {
+                            it is MethodDeclarationStatement || it is TypeCompositionStatement ||
+                                it is NewExpression || it is LambdaExpression || it is PropertyDeclarationStatement
+                        }.let { it is MethodDeclarationStatement || it is LambdaExpression } -> Context.STATEMENT
 
                     else -> return@api emptyList()
                 }
@@ -148,9 +162,26 @@ internal object XdkSyntaxCompletions {
             val newline = newlines.find(text)?.value ?: "\n"
             val words =
                 when (context) {
-                    Context.FILE -> fileKeywords
-                    Context.TYPE -> typeKeywords
-                    Context.STATEMENT -> statementKeywords
+                    Context.FILE -> {
+                        fileKeywords
+                    }
+
+                    Context.TYPE -> {
+                        typeKeywords
+                    }
+
+                    Context.STATEMENT -> {
+                        val enclosing =
+                            block!!.ancestors.takeLastWhile {
+                                it !is MethodDeclarationStatement && it !is LambdaExpression && it !is NewExpression
+                            }
+                        val loop = enclosing.any { it is ForStatement || it is ForEachStatement || it is WhileStatement }
+                        statementKeywords +
+                            listOfNotNull(
+                                Id.BREAK.takeIf { loop || enclosing.any { it is SwitchStatement } },
+                                Id.CONTINUE.takeIf { loop },
+                            )
+                    }
                 }
             return@api buildList {
                 words.map { it.TEXT }.filter { it.startsWith(prefix) }.forEach { word ->
@@ -214,18 +245,59 @@ internal object XdkSyntaxCompletions {
                 is Parameter -> node.type
                 is VariableDeclarationStatement -> node.childNodes().filterIsInstance<TypeExpression>().singleOrNull()
                 else -> null
-            } as? NamedTypeExpression ?: return emptyList()
-        return declarationNames(type.nameToken?.valueText ?: return emptyList(), tokens, selected, prefix, range)
+            } ?: return emptyList()
+        return declarationNames(declarationName(type) ?: return emptyList(), tokens, selected, prefix, range)
+    }
+
+    /** Copy syntax while on the compiler worker. Presentation policy stays outside the AST. */
+    internal fun declarationName(type: TypeExpression): DeclarationName? {
+        fun base(node: TypeExpression): String? =
+            when (node) {
+                is NamedTypeExpression -> {
+                    node.nameToken?.valueText
+                }
+
+                is FunctionTypeExpression -> {
+                    "fn"
+                }
+
+                is BiTypeExpression -> {
+                    "value"
+                }
+
+                is ArrayTypeExpression -> {
+                    node
+                        .childNodes()
+                        .filterIsInstance<TypeExpression>()
+                        .singleOrNull()
+                        ?.let(::base)
+                        ?.let { "${it}Array" }
+                }
+
+                is NullableTypeExpression, is DecoratedTypeExpression, is AnnotatedTypeExpression -> {
+                    node
+                        .childNodes()
+                        .filterIsInstance<TypeExpression>()
+                        .singleOrNull()
+                        ?.let(::base)
+                }
+
+                else -> {
+                    null
+                }
+            }
+        return base(type)?.let { DeclarationName(it, type.toString()) }
     }
 
     private fun declarationNames(
-        written: String,
+        type: DeclarationName,
         tokens: List<Token>,
         selected: Token?,
         prefix: String,
         range: Range,
     ): List<CompletionItem> {
         // Acronyms retain their word boundary: HTTPClient -> httpClient, URL -> url.
+        val written = type.base
         val capitals = written.takeWhile(Char::isUpperCase).length
         val count = if (capitals > 1 && capitals < written.length) capitals - 1 else capitals.coerceAtLeast(1)
         val base = written.take(count).lowercase() + written.drop(count)
@@ -241,7 +313,7 @@ internal object XdkSyntaxCompletions {
             CompletionItem(
                 name,
                 CompletionKind.VARIABLE,
-                "Name from written type $written",
+                "Name from written type ${type.writtenType}",
                 name,
                 TextEdit(range, name),
                 "Declaration name suggestion, not a resolved reference or rename.",
@@ -284,6 +356,12 @@ internal object XdkSyntaxCompletions {
             Id.PROTECTED,
             Id.PRIVATE,
             Id.STATIC,
+            Id.PACKAGE,
+            Id.ANNOTATION,
+            Id.CONSTRUCT,
+            Id.CONDITIONAL,
+            Id.FUNCTION,
+            Id.IMMUTABLE,
         )
     private val statementKeywords =
         listOf(
@@ -297,8 +375,12 @@ internal object XdkSyntaxCompletions {
             Id.ASSERT,
             Id.VAL,
             Id.VAR,
+            Id.DO,
+            Id.USING,
+            Id.FUNCTION,
+            Id.IMMUTABLE,
         )
-    private val keywords = (fileKeywords + typeKeywords + statementKeywords).toSet()
+    private val keywords = (fileKeywords + typeKeywords + statementKeywords + listOf(Id.BREAK, Id.CONTINUE)).toSet()
     private val templates =
         listOf(
             Template(
@@ -342,6 +424,41 @@ internal object XdkSyntaxCompletions {
                 "return value",
                 "return value;",
                 "return ${'$'}{1:value};${'$'}0",
+            ),
+            Template(
+                Context.TYPE,
+                "interface",
+                "interface declaration",
+                "interface Example {\n    \n}",
+                "interface ${'$'}{1:Example} {\n    ${'$'}0\n}",
+            ),
+            Template(
+                Context.TYPE,
+                "service",
+                "service declaration",
+                "service Example {\n    \n}",
+                "service ${'$'}{1:Example} {\n    ${'$'}0\n}",
+            ),
+            Template(
+                Context.STATEMENT,
+                "for",
+                "for range",
+                "for (Int i : 0..<1) {\n    \n}",
+                "for (Int i : ${'$'}{1:0..<1}) {\n    ${'$'}0\n}",
+            ),
+            Template(
+                Context.STATEMENT,
+                "do",
+                "do loop",
+                "do {\n    \n} while (False);",
+                "do {\n    ${'$'}0\n} while (${'$'}{1:False});",
+            ),
+            Template(
+                Context.STATEMENT,
+                "try",
+                "try catch",
+                "try {\n    \n} catch (Exception e) {\n}",
+                "try {\n    ${'$'}0\n} catch (${'$'}{1:Exception} e) {\n}",
             ),
         )
 }

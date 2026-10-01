@@ -17,13 +17,21 @@ class XdkMissingDeclarationNameTest {
                 "void run(Int count, List<String> § = []) {}" to "list",
                 "class Item { construct(String §) {} }" to "string",
                 "class Item(String §) {}" to "string",
+                "String? § = Null;" to "string",
+                "String[] § = [];" to "stringArray",
+                "immutable String § = \"\";" to "string",
+                "void run((String | Int) §) {}" to "value",
+                "void run(function String(Int)? §) {}" to "fn",
+                "class Item(String?[] §) {}" to "stringArray",
             ).forEach { (header, expected) ->
                 val marked = "module Editing { $header Int later = 1; }"
                 val text = marked.replace("§", "")
                 val at = Position(0, marked.indexOf('§'))
                 val original = adapter.compile(URI, text)
                 assertThat(original.diagnostics).describedAs(marked).isNotEmpty()
-                val item = adapter.getCompletions(URI, at.line, at.column).single()
+                val items = adapter.getCompletions(URI, at.line, at.column)
+                assertThat(items).describedAs(marked).hasSize(1)
+                val item = items.single()
                 assertThat(item.label).describedAs(marked).isEqualTo(expected)
                 assertThat(item.textEdit).isEqualTo(TextEdit(Range(at, at), expected))
                 assertThat(adapter.getCachedResult(URI)).isEqualTo(original)

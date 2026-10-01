@@ -2,11 +2,78 @@ package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.xvm.api.EmbeddingSupport
+import org.xvm.asm.ErrorList
+import org.xvm.asm.MethodStructure
+import org.xvm.compiler.Parser
+import org.xvm.compiler.Source
+import org.xvm.compiler.ast.AstNode
+import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.util.concurrent.TimeUnit.SECONDS
 
 /** Minimized real-source failures from the platform demo, without a sibling checkout dependency. */
 class XdkPlatformRegressionTest {
+    @Test
+    fun `platform CircularBuffer compiles and keeps anonymous enclosing receivers and named signatures`() {
+        val source = javaClass.getResource("/platform/CircularBuffer.x")!!.readText()
+
+        fun position(
+            text: String,
+            anchor: String,
+        ): Position {
+            val prefix = text.substring(0, text.indexOf(anchor) + anchor.length)
+            return Position(prefix.count { it == '\n' }, prefix.substringAfterLast('\n').length)
+        }
+        XdkAdapter().use { adapter ->
+            assertThat(adapter.compile(URI, source).diagnostics).isEmpty()
+            val incomplete = source.replace("this.CircularBuffer.size", "this.CircularBuffer.si")
+            adapter.compile(URI, incomplete)
+            val at = position(incomplete, "this.CircularBuffer.si")
+            val input = Source(incomplete)
+            repeat(incomplete.indexOf("this.CircularBuffer.si") + "this.CircularBuffer.si".length) { input.next() }
+            val cursor = input.position
+            input.reset()
+            val errors = ErrorList()
+            val tree = Parser.forPartialAnalysis(input, cursor, errors).parseSource()
+            assertThat(errors.errors.map { it.code })
+                .describedAs(tree.toDumpString())
+                .containsOnly(Parser.INCOMPLETE_EXPRESSION)
+            val analysisErrors = ErrorList()
+            val analysis = EmbeddingSupport.instance().analyzeIncomplete(Source(incomplete), cursor, null, analysisErrors)
+            assertThat(analysis.pool()).describedAs("%s", analysisErrors).isPresent
+            assertThat(analysis.sites()).hasSize(1)
+            assertThat(analysis.sites().single().source).describedAs("%s", analysisErrors).isNotNull()
+            val site = analysis.sites().single()
+            assertThat(site.target.isValidated).describedAs("%s", analysisErrors).isTrue()
+            assertThat(analysis.cursorBindings()).containsKey(site)
+            val method =
+                generateSequence(site as AstNode) { it.parent }
+                    .filterIsInstance<MethodDeclarationStatement>()
+                    .first()
+                    .component as MethodStructure
+            assertThat(method.ast).isNull()
+            assertThat(method.hasOps()).isFalse()
+            val items = adapter.getCompletions(URI, at.line, at.column)
+            assertThat(items.map { it.label }).describedAs("partial=%s", adapter.analyzeAtAsync(URI, at).join()?.sites).contains("size")
+            val size = items.single { it.label == "size" }
+            assertThat(size.detail).contains("Int")
+            assertThat(
+                size.textEdit!!
+                    .range.start.column,
+            ).isEqualTo(at.column - 2)
+            val constructor = source.replace("new Element?[capacity]", "new Element?[cap]")
+            adapter.compile(URI, constructor)
+            val dimension = position(constructor, "new Element?[cap")
+            assertThat(adapter.getCompletions(URI, dimension.line, dimension.column).map { it.label }).contains("capacity")
+            adapter.compile(URI, source)
+            val call = position(source, "toArray().toString(sep, pre, post, limit, trunc, ")
+            val help = adapter.getSignatureHelp(URI, call.line, call.column)!!
+            assertThat(help.signatures[help.activeSignature].parameters.map { it.label }).anyMatch { "render" in it }
+            assertThat(help.activeParameter).isEqualTo(5)
+        }
+    }
+
     @Test
     fun `hover names the selected generic callee rather than its enclosing method`() {
         CompilerTestSupport.configure()

@@ -1502,3 +1502,12 @@ Kotlin owns name spelling, collision avoidance and empty-range edits. Ambiguous 
 expressions stay excluded. The AST inventory in errs.md records placement and clone ownership;
 42 Java and 148 LSP tests pass without failures or skips, and shared X151 passes in both editors.
 Detailed receipts and the remaining L64 boundaries are tracked in errs-integration-plan.md.
+
+
+L64's real-source continuation checks the platform CircularBuffer class, not only minimized
+invented modules. It exposed deferred anonymous-body discovery and trial-body identity loss,
+plus operator-boundary recovery. The fixes preserve ordinary ownership and use existing capture
+context lifetime under try/finally. The new proposal-only token fixes empty-span numeric spelling;
+all accepted argument spellings are checked by ordinary compilation. Shared X97/X108/X150/X151
+are extended and X152 is registered in both drivers. See the latest integration-plan receipt for
+completed validation and the explicit conservative boundaries; no full editor catalog run is implied.

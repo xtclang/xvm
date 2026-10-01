@@ -22,6 +22,22 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /** Syntax searches must preserve scope boundaries and leave both source and trial ownership intact. */
 public class PartialSyntaxTest {
     @Test
+    public void deferredAnonymousBodiesAreVisibleToSyntaxWithoutBecomingCompilerChildren() {
+        var body = new StatementBlock(List.of(new ExpressionStatement(hole(20))));
+        var creation = new NewExpression(null, token(Id.NEW), null, List.of(), -1, body, 40);
+        var originalParent = body.getParent();
+        assertSame(body, creation.getUnregisteredBody().orElseThrow());
+        assertEquals(List.of(body), PartialSyntax.children(creation).toList());
+        assertFalse(creation.children().hasNext());
+        assertTrue(PartialSyntax.containsAt(creation, 20));
+        assertSame(originalParent, body.getParent());
+        var copy = (NewExpression) creation.clone();
+        assertNotSame(body, copy.getUnregisteredBody().orElseThrow());
+        assertTrue(PartialSyntax.containsAt(copy, 20));
+        assertTrue(PartialSyntax.valueCursor(creation).isEmpty());
+    }
+
+    @Test
     public void containmentIncludesTheRootAndNestedSitesAtTheirExactCursor() {
         var value = hole(20);
         var call = call(value);
