@@ -4518,6 +4518,69 @@
         "limitations": []
       }
     },
+    "X149": {
+      "title": "declaration name completion replaces whole tokens and avoids occupied names",
+      "manual": [],
+      "values": {
+        "file": "Naming.x",
+        "variants": [
+          {
+            "source": "module Naming {\n    String strange = \"\";\n}",
+            "anchor": "strange",
+            "prefix": "str",
+            "label": "string",
+            "expected": "module Naming {\n    String string = \"\";\n}"
+          },
+          {
+            "source": "module Naming {\n    String string = \"\";\n    String stuff = \"\";\n}",
+            "anchor": "stuff",
+            "prefix": "st",
+            "label": "string1",
+            "expected": "module Naming {\n    String string = \"\";\n    String string1 = \"\";\n}"
+          },
+          {
+            "source": "module Naming {\n    void run(String strange) {}\n}",
+            "anchor": "strange",
+            "prefix": "str",
+            "label": "string",
+            "expected": "module Naming {\n    void run(String string) {}\n}"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X150": {
+      "title": "contextual compiler snippets insert templates and navigate placeholders",
+      "manual": [
+        "Inspect completion popup layout and compare file, member and statement keyword lists."
+      ],
+      "values": {
+        "file": "Templates.x",
+        "variants": [
+          {
+            "source": "module Templates {\n    cl\n}",
+            "anchor": "cl",
+            "label": "class declaration",
+            "selected": "Example",
+            "expected": "module Templates {\n    class Example {\n        \n    }\n}"
+          },
+          {
+            "source": "module Templates {\n    void run() {\n        if\n    }\n}",
+            "anchor": "if",
+            "label": "if block",
+            "selected": "True",
+            "expected": "module Templates {\n    void run() {\n        if (True) {\n            \n        }\n    }\n}"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],

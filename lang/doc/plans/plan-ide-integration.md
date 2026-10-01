@@ -182,7 +182,7 @@ See the [L83 task and ownership record](../../../docs/errs-integration-plan.md#p
 | Go-to-definition (cross-file) | - | Via workspace index | **Done** - resolved identities within a module, across the complete discovered/configured source graph and into dependencies with host-supplied source indices |
 | Find references (same file) | Decl only | By name | **Done** - by identity, not by name |
 | Find references (cross-file) | - | - | **Done** - exact identities across the current module or the complete configured source graph, including unopened consumers and binary-member uses |
-| Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Partial** - visible locals/parameters, narrowed types, implicit members, imported/enclosing types and static functions/constants; qualified dot/prefix and bare-name/empty statement completion with exact token edits; compiler-fitted locals/parameters and implicit properties/constants in empty final positional and pending named argument slots, including qualified/grouped values and slots before later arguments; member/return and parameter-header type prefixes use the enclosing compiler scope; flat and parameterized qualifiers use visible nested types with substituted aliases; registered formals and empty generic slots complete; mid-token edits replace the entire final identifier, including generic base names before written type arguments; import-producing completion for public source/bundled types uses whole-graph proof and atomic additional edits (backend/protocol tests and the new X105 variants pass in both editors) |
+| Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Partial** - visible locals/parameters, narrowed types, implicit members, imported/enclosing types and static functions/constants; qualified dot/prefix and bare-name/empty statement completion with exact token edits; compiler-fitted locals/parameters and implicit properties/constants in empty final positional and pending named argument slots, including qualified/grouped values and slots before later arguments; member/return and parameter-header type prefixes use the enclosing compiler scope; flat and parameterized qualifiers use visible nested types with substituted aliases; registered formals and empty generic slots complete; mid-token edits replace the entire final identifier, including generic base names before written type arguments; import-producing completion for public source/bundled types uses whole-graph proof and atomic additional edits (backend/protocol tests and the new X105 variants pass in both editors); syntax name suggestions for written explicit-type declarations and contextual keywords/six templates now have passing backend and shared X149/X150 coverage in both editors |
 | Syntax errors | Markers | Full | **Done** - the compiler's own codes and spans |
 | Semantic errors | - | - | **Done** - the reason this adapter exists |
 | Hover (signature) | Basic | Basic | **Done** - declaration plus the resolved type |
@@ -991,3 +991,11 @@ Conditional-incorporation formal names now navigate to the actual mixin formal r
 classified as declarations. Rename proof retains predefined receiver class/access identity. Both
 manual-module positive rename examples, wider regression and new editor cases pass; exact
 receipts and extraction commit groups are in docs/errs-integration-plan.md.
+
+
+L64 adds declaration-name suggestions from written named types and Java-parser-owned file/member/
+statement keyword/template contexts. Templates support negotiated snippet stops with literal defaults
+for minimal clients. No new AST/embedding API is required. Shared X149/X150 cover both drivers;
+both editor cases pass. IntelliJ constrains its advertised indentation mode for LSP4IJ UP18.
+Absent declaration names, inferred-name suggestions and broader template
+contexts remain outside this boundary; see the L64 continuation in docs/errs-integration-plan.md.
