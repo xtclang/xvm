@@ -949,8 +949,12 @@ close. All five refresh providers have controlled lifecycle regressions; X146 ob
 negotiated native refresh handlers. Malformed-request recovery and two-process same-URI/token isolation
 are covered over real stdio. This adds no language capability or AST/embedding API. See the
 [L81 checkpoint](../../../docs/errs-integration-plan.md#l81-progress-refresh-and-transport-checkpoint-2026-10-01)
-for exact validation: IntelliJ visible Cancel passes; VS Code physical-click and broader
-multi-window acceptance remain open. The larger IntelliJ fixture's bulk-replacement freeze is
+for exact validation: IntelliJ visible Cancel passes; VS Code physical-click remains open.
+Two native IntelliJ project frames and two separate normal VS Code instances pass overlapping
+close/reopen, sibling reply ownership, source preservation and process-exit checks. VS Code restores
+the closed window's dirty buffer from actual hot-exit backup; shared-Electron-process windows remain
+separate coverage. See the [native lifetime receipt](../../../docs/errs-integration-plan.md#l81-native-projectwindow-lifetime-batch-2026-10-01).
+The larger IntelliJ fixture's bulk-replacement freeze is
 retained as an L82 scale investigation. Upstream defects and
 removable bridges are centralized in the [UP register](../../../docs/errs-upstream-issues.md).
 
@@ -959,3 +963,17 @@ an LSP client. The decorated native replacement still fails the freeze gate; the
 [probe and receipts](../../../docs/errs-integration-plan.md#l82-large-file-intellij-freeze-investigation-2026-10-01)
 separate marker-update time from compiler time. Large-file responsiveness remains open; no
 advertised language capability or AST/embedding API changes as a result of this diagnosis.
+
+L67 server response follow-up: inferred-hint rendering and lexical/semantic token merging now
+avoid repeated whole-model scans. A packaged 20,000-local fixture measures a one-line hint reply at
+11.7 ms (7.3 ms repeated), versus 132.7 seconds before; repeated full tokens take about 147–169 ms.
+The [measurement receipt](../../../docs/errs-integration-plan.md#l67l82-semantic-response-measurements-2026-10-01)
+separates compilation, query work and output. Cold project queries still compile a separate project
+snapshot, and native highlight application/UP17 remains independent. These are local measurements,
+not agreed cross-platform latency or memory budgets; no new compiler or AST API is introduced.
+
+The extended platform workload has two completed 1,200-cycle edit/cancel sessions with process
+retirement and unchanged sources. Its planned third session was deliberately interrupted, so this
+is partial acceptance, not an overall green run. Repeated post-GC growth from about 83 to 98 MiB
+still needs ownership analysis. Full combined/native validation remains a separate checkpoint;
+see the [L82 receipt](../../../docs/errs-integration-plan.md#l82-bounded-extended-workload-checkpoint-2026-10-01).
