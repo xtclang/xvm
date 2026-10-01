@@ -2039,13 +2039,14 @@ class XdkAdapter
             column: Int,
             triggerCharacter: String?,
         ): CompletableFuture<List<CompletionItem>> {
-            val text = synchronized(lifecycle) { overlays[uri] }
+            val compilation = synchronized(lifecycle) { requests[analysisScope(uri)] }
+            val text = compilation?.overlays?.get(uri)
             return analyzeAtAsync(CursorKey(uri, CursorKind.COMPLETION), Position(line, column))
                 .composeCancellable { partial ->
                     val ordinary = partial?.let(XdkCursorQueries::completions).orEmpty()
                     val site = partial?.sites?.singleOrNull()
                     val prefix = site?.memberPrefix
-                    if (text != synchronized(lifecycle) { overlays[uri] }) {
+                    if (compilation == null || isStale(compilation)) {
                         CompletableFuture.completedFuture(emptyList())
                     } else if (text == null || site?.kind != PartialSemanticModel.Kind.NAME ||
                         prefix == null || prefix.text.length < 2 || !hasProject(uri)
@@ -2053,7 +2054,9 @@ class XdkAdapter
                         CompletableFuture.completedFuture(ordinary)
                     } else {
                         projectQuery(ProjectQueryKey(uri, ProjectQueryKind.COMPLETION_IMPORTS), emptyList()) {
-                            ordinary + it.importCompletions(uri, text, prefix, ordinary.map { item -> item.label }.toSet())
+                            if (isStale(compilation)) return@projectQuery emptyList()
+                            val imports = it.importCompletions(uri, text, prefix, ordinary.map { item -> item.label }.toSet())
+                            if (isStale(compilation)) emptyList() else ordinary + imports
                         }
                     }
                 }
