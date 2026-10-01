@@ -1056,9 +1056,11 @@ private class SemanticModelBuilder(
                             },
                         ),
                     members = immutableList(members),
-                    declarationNameType = site.declarationType.map {
-                        XdkSyntaxCompletions.declarationName(it, (site.parent as? IncompleteLocalDeclaration)?.initializer)
-                    }.orElse(null),
+                    declarationNameType =
+                        site.declarationType
+                            .map {
+                                XdkSyntaxCompletions.declarationName(it, (site.parent as? IncompleteLocalDeclaration)?.initializer)
+                            }.orElse(null),
                     formals =
                         immutableList(
                             cursor?.formals().orEmpty().mapNotNull { formal ->
