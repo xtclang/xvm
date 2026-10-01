@@ -186,5 +186,8 @@ internal object XdkLibrarySources {
 }
 
 /** A unique namespace suffices; overloaded names require one unambiguous debug-source span. */
-internal fun <T> selectLibraryDeclaration(candidates: List<T>, sourceLine: Int?, lines: (T) -> IntRange): T? =
-    candidates.singleOrNull() ?: sourceLine?.let { line -> candidates.singleOrNull { line in lines(it) } }
+internal fun <T> selectLibraryDeclaration(
+    candidates: List<T>,
+    sourceLine: Int?,
+    lines: (T) -> IntRange,
+): T? = candidates.singleOrNull() ?: sourceLine?.let { line -> candidates.singleOrNull { line in lines(it) } }

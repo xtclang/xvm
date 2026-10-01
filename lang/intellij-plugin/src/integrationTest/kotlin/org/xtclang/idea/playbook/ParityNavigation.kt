@@ -153,11 +153,16 @@ internal fun ParityScenarios.navigationCases() {
             replace(doc, variant.string("source"))
             clean(doc)
             val actual = targets(doc, variant.string("kind"), doc.at(variant.string("anchor"), variant.int("offset")))
-            val expected = variant.strings("targets").map { anchor ->
-                ParityWorkspace.position(doc.text, doc.at(anchor))
-            }.toSet()
-            check(actual.map { it.getAsJsonObject("range").getAsJsonObject("start") }.toSet() ==
-                expected.map { Gson().toJsonTree(it).asJsonObject }.toSet()) { "Unexpected implementation locations: $actual; expected $expected" }
+            val expected =
+                variant
+                    .strings("targets")
+                    .map { anchor ->
+                        ParityWorkspace.position(doc.text, doc.at(anchor))
+                    }.toSet()
+            check(
+                actual.map { it.getAsJsonObject("range").getAsJsonObject("start") }.toSet() ==
+                    expected.map { Gson().toJsonTree(it).asJsonObject }.toSet(),
+            ) { "Unexpected implementation locations: $actual; expected $expected" }
             check(actual.all { it.string("uri") == doc.uri })
         }
     }
