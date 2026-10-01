@@ -404,6 +404,26 @@ final class CursorScope {
         return names(site);
     }
 
+    /** Validate disposable proposals while the real lexical context and required type are alive. */
+    static List<String> enclosingValues(IncompleteStatement site, Context ctx, TypeConstant required,
+                                       ErrorListener errs) {
+        if (site.isCall() || site.isTypeCompletion() || site.getDeclarationType().isPresent()) {
+            return List.of();
+        }
+        return PartialCallResolver.instanceSpellings(site).takeWhile(text -> !errs.isAbortDesired())
+                .filter(text -> {
+                    var probe = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
+                    var trial = ctx.enter();
+                    try {
+                        var value = PartialCallResolver.proposedInstance(site, text).validate(trial, required, probe);
+                        return value != null && value.getTypeFit().isFit()
+                                && !probe.hasSeriousErrors() && !probe.isAbortDesired();
+                    } finally {
+                        trial.exit();
+                    }
+                }).toList();
+    }
+
     /** Lexical spellings only; normal expression validation proves that an outer instance exists. */
     static List<String> enclosingInstances(IncompleteStatement site) {
         return Stream.iterate(site.getParent(), Objects::nonNull, AstNode::getParent)
