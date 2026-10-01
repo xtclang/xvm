@@ -25,7 +25,7 @@ class XtcClientFeatures : LSPClientFeatures() {
     internal val documents = AtomicReference<DocumentStartupMessages?>()
     private val edits = ConcurrentHashMap.newKeySet<CompletableFuture<ApplyWorkspaceEditResponse>>()
 
-    // TODO LSP4IJ: expose transmitted document versions and validate workspace/applyEdit inside
+    // TODO LSP4IJ: UP04 — expose transmitted document versions and validate workspace/applyEdit inside
     // its write command. Reuse our existing transport ownership until upstream provides this.
     fun applyEdit(params: ApplyWorkspaceEditParams): CompletableFuture<ApplyWorkspaceEditResponse> {
         val result = CompletableFuture<ApplyWorkspaceEditResponse>()
@@ -65,7 +65,7 @@ class XtcClientFeatures : LSPClientFeatures() {
 
     override fun initializeParams(params: InitializeParams) {
         super.initializeParams(params)
-        // TODO LSP4IJ: advertise save hooks only when DocumentContentSynchronizer
+        // TODO LSP4IJ: UP02 — advertise save hooks only when DocumentContentSynchronizer
         // actually dispatches them. Native Actions on Save owns formatting here.
         params.capabilities?.textDocument?.synchronization?.apply {
             willSave = false
@@ -81,7 +81,7 @@ class XtcClientFeatures : LSPClientFeatures() {
                         super.isInlayHintSupported(file)
             },
         )
-        // TODO LSP4IJ: remove this override when native symbol rename checks document
+        // TODO LSP4IJ: UP04 — remove this override when native symbol rename checks document
         // epochs.
         // XtcRenameHandler supplies the guarded native entry point until then.
         // Keep LSP4IJ's independent file-operation support enabled.

@@ -9,7 +9,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.NotificationMessage
 import org.eclipse.lsp4j.jsonrpc.messages.RequestMessage
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 
-// TODO LSP4IJ: send previousResultId on automatic pulls and preserve unchanged quick fixes.
+// TODO LSP4IJ: UP07 — send previousResultId on automatic pulls and preserve unchanged quick fixes.
 // Remove this bridge once upstream owns the result lifecycle (diagnostic and quick-fix tests).
 
 /**
