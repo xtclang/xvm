@@ -73,6 +73,23 @@ class XdkResolveProtocolTest {
     }
 
     @Test
+    fun `import completion publishes atomic additional edits before resolve`() {
+        val source = "module Resolve { Doc value; }"
+        session(true, source) { server ->
+            val service = server.textDocumentService
+            service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, source)))
+            val item =
+                service
+                    .completion(CompletionParams(TextDocumentIdentifier(uri), Position(0, source.indexOf("Doc") + 3)))
+                    .get(30, SECONDS)
+                    .left
+                    .single { it.label == "Document" }
+            assertThat(item.textEdit.left.newText).isEqualTo("Document")
+            assertThat(item.additionalTextEdits.single().newText).contains("import xml.Document;")
+        }
+    }
+
+    @Test
     fun `code action lazily converts versioned edits and refuses changed inputs`() {
         val source = "module Resolve { import ecstasy.text.StringBuffer; }"
         session(true, source) { server ->
