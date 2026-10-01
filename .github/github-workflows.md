@@ -265,9 +265,9 @@ The lang checks run only on `ubuntu-latest`. The `Validate lang` step passes `-P
 | XDK GitHub release (snapshot) | always on `push` to `master` | GitHub Releases |
 | **IntelliJ plugin snapshot ZIP** | per the table above (`effective-publish-intellij=true`) | GitHub Releases (`intellij-plugin-snapshots` prerelease) |
 | **VS Code extension snapshot VSIX** | per the table above (`effective-publish-vscode=true`) | GitHub Releases (`vscode-extension-snapshots` prerelease) |
-| IntelliJ Marketplace | **not** by this workflow — release-only via `promote-release.yml` | JetBrains Marketplace |
+| **IntelliJ plugin, JetBrains Marketplace** | with the IntelliJ plugin snapshot ZIP | JetBrains Marketplace, in the channel `xdk.intellij.release.channel` in `version.properties` names (currently `alpha`), as a timestamped version (`0.4.4-SNAPSHOT.<yyyyMMddHHmmss>`) |
 
-Note on Marketplace: snapshot CI never pushes to JetBrains Marketplace. That's intentional — Marketplace is for tagged releases, handled by the separate `promote-release.yml` flow.
+Note on Marketplace: the snapshot pipeline (`publish-snapshot.yml`) is the only workflow that uploads to JetBrains Marketplace; `promote-release.yml` does not publish the IntelliJ plugin. Each snapshot gets its own timestamped version because Marketplace versions are immutable.
 
 ---
 
