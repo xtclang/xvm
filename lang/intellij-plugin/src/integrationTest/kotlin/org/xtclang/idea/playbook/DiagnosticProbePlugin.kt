@@ -24,9 +24,8 @@ object DiagnosticProbePlugin {
                   <depends>com.redhat.devtools.lsp4ij</depends>
                   <depends>org.xtclang.idea</depends>
                 </idea-plugin>
-                """
-                    .trimIndent()
-                    .toByteArray()
+                """.trimIndent()
+                    .toByteArray(),
             )
             jar.closeEntry()
             val packagePath = "org/xtclang/idea/playbook/probe"

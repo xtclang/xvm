@@ -1,14 +1,14 @@
 package org.xvm.lsp.adapter
 
-import java.nio.file.Path
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit.SECONDS
-import java.util.concurrent.atomic.AtomicInteger
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import java.nio.file.Path
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.atomic.AtomicInteger
 
 class XdkRenameTest {
     @TempDir lateinit var directory: Path
@@ -145,7 +145,7 @@ class XdkRenameTest {
             assertThat(compilation.diagnostics).isEmpty()
             val edit =
                 requireNotNull(
-                    adapter.rename(member.toURI().toString(), 0, child.indexOf("input"), "value")
+                    adapter.rename(member.toURI().toString(), 0, child.indexOf("input"), "value"),
                 )
             assertThat(edit.changes.keys).containsExactly(member.toURI().toString())
             assertThat(apply(child, edit.changes.getValue(member.toURI().toString())))
@@ -153,9 +153,8 @@ class XdkRenameTest {
             assertThat(member.readText()).isEqualTo(child)
             member.writeText("\n$child")
             assertThat(
-                    adapter.rename(member.toURI().toString(), 0, child.indexOf("input"), "value")
-                )
-                .isNull()
+                adapter.rename(member.toURI().toString(), 0, child.indexOf("input"), "value"),
+            ).isNull()
         }
     }
 
@@ -165,13 +164,14 @@ class XdkRenameTest {
             val entered = CountDownLatch(1)
             val release = CountDownLatch(1)
             val attempts = AtomicInteger()
-            val adapter = XdkAdapter { source, errors ->
-                if (attempts.incrementAndGet() == 2) {
-                    entered.countDown()
-                    check(release.await(20, SECONDS))
+            val adapter =
+                XdkAdapter { source, errors ->
+                    if (attempts.incrementAndGet() == 2) {
+                        entered.countDown()
+                        check(release.await(20, SECONDS))
+                    }
+                    EmbeddingSupport.instance().compileModule(source, null, errors)
                 }
-                EmbeddingSupport.instance().compileModule(source, null, errors)
-            }
             val text = "module Rename { Int run() { Int local = 1; return local; } }"
             try {
                 CompilerTestSupport.configure()
@@ -203,17 +203,21 @@ class XdkRenameTest {
         edits: List<TextEdit>,
     ): String {
         fun offset(position: Position): Int =
-            (if (position.line == 0) {
-                0
-            } else {
-                Regex("\r\n|\r|\n").findAll(text).elementAt(position.line - 1).range.last + 1
-            }) + position.column
+            (
+                if (position.line == 0) {
+                    0
+                } else {
+                    Regex("\r\n|\r|\n")
+                        .findAll(text)
+                        .elementAt(position.line - 1)
+                        .range.last + 1
+                }
+            ) + position.column
         return edits
             .sortedWith(
                 compareByDescending<TextEdit> { it.range.start.line }
-                    .thenByDescending { it.range.start.column }
-            )
-            .fold(text) { value, edit ->
+                    .thenByDescending { it.range.start.column },
+            ).fold(text) { value, edit ->
                 value.replaceRange(offset(edit.range.start), offset(edit.range.end), edit.newText)
             }
     }

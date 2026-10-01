@@ -1,9 +1,9 @@
 package org.xvm.lsp.adapter
 
-import java.util.concurrent.TimeUnit.SECONDS
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import java.util.concurrent.TimeUnit.SECONDS
 
 /** Minimized real-source failures from the platform demo, without a sibling checkout dependency. */
 class XdkPlatformRegressionTest {
@@ -23,19 +23,18 @@ class XdkPlatformRegressionTest {
     fun `whitespace before a written argument retains selected signature metadata and named mapping`() {
         CompilerTestSupport.configure()
         listOf(
-                "echo(\"a\", §\"b\")" to 1,
-                "echo(backup = \"b\", §value = \"a\")" to 0,
-            )
-            .forEach { (call, parameter) ->
-                val marked =
-                    "module Demo { <T> T echo(T value, T backup) = value; String run() = $call; }"
-                XdkAdapter().use { adapter ->
-                    assertThat(adapter.compile(URI, marked.replace("§", "")).diagnostics).isEmpty()
-                    val help = adapter.getSignatureHelp(URI, 0, marked.indexOf('§'))!!
-                    assertThat(help.signatures.single().parameters).hasSize(2)
-                    assertThat(help.activeParameter).isEqualTo(parameter)
-                }
+            "echo(\"a\", §\"b\")" to 1,
+            "echo(backup = \"b\", §value = \"a\")" to 0,
+        ).forEach { (call, parameter) ->
+            val marked =
+                "module Demo { <T> T echo(T value, T backup) = value; String run() = $call; }"
+            XdkAdapter().use { adapter ->
+                assertThat(adapter.compile(URI, marked.replace("§", "")).diagnostics).isEmpty()
+                val help = adapter.getSignatureHelp(URI, 0, marked.indexOf('§'))!!
+                assertThat(help.signatures.single().parameters).hasSize(2)
+                assertThat(help.activeParameter).isEqualTo(parameter)
             }
+        }
     }
 
     @Test

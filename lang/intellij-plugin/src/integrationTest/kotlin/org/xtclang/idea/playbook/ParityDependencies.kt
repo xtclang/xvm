@@ -15,7 +15,7 @@ internal fun ParityScenarios.dependencyCases() {
         blocked()
         check(
             targets(consumer, "definition", consumer.at(data.string("anchor"), data.int("offset")))
-                .isEmpty()
+                .isEmpty(),
         )
         replace(library, fixture(library.file))
         clean(library)
@@ -111,7 +111,7 @@ internal fun ParityScenarios.dependencyCases() {
         check(
             targets(consumer, "definition", consumer.at(data.string("anchor"), data.int("offset")))
                 .single()
-                .string("uri") == bridge.uri
+                .string("uri") == bridge.uri,
         )
     }
     case("CFG2") { data ->

@@ -1,6 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.util.Properties
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -17,6 +16,7 @@ import org.xvm.compiler.BuildRepository
 import org.xvm.compiler.Source
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.NewExpression
+import java.util.Properties
 
 /** Final compositions must be correct even when earlier fit/composition probes were silent. */
 class TypeInfoFinalCompositionTest {
@@ -26,10 +26,11 @@ class TypeInfoFinalCompositionTest {
         CompilerTestSupport.configure()
         val errors = ErrorList()
         val compilation =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .compileModule(
                     Source(
-                        "module LoadedAudit { package xml import xml.xtclang.org; package db import jsondb.xtclang.org; }"
+                        "module LoadedAudit { package xml import xml.xtclang.org; package db import jsondb.xtclang.org; }",
                     ),
                     repository,
                     errors,
@@ -82,11 +83,14 @@ class TypeInfoFinalCompositionTest {
                         .value
                 assertThat(setter.signature.params.toList())
                     .containsExactlyElementsOf(getter.signature.returns.toList())
-                val element = getter.signature.returns.single().valueString
+                val element =
+                    getter.signature.returns
+                        .single()
+                        .valueString
                 val name = type.identityConstant.pathString
                 assertThat(element)
                     .endsWith(
-                        expected.entries.firstOrNull { name.contains(it.key) }?.value ?: "NumType"
+                        expected.entries.firstOrNull { name.contains(it.key) }?.value ?: "NumType",
                     )
                 val assignedGetter =
                     info.methods.entries
@@ -104,7 +108,10 @@ class TypeInfoFinalCompositionTest {
                 it.identityConstant.pathString.endsWith("ContentList.cursor(Int).Cursor:1")
             }
         inspect(cursor) { info ->
-            val value = info.properties.entries.single { it.key.name == "value" }.value.type
+            val value =
+                info.properties.entries
+                    .single { it.key.name == "value" }
+                    .value.type
             assertThat(value.valueString).isEqualTo("xml:Content")
             val insert = info.methods.values.single { it.signature.name == "insert" }
             assertThat(insert.signature.params.toList()).containsExactly(value)
@@ -142,14 +149,13 @@ class TypeInfoFinalCompositionTest {
 
     @ParameterizedTest
     @ValueSource(strings = ["1, 2", "offset, length"])
-    fun `Parsed annotations with constant and runtime arguments retain final node metadata`(
-        arguments: String
-    ) {
+    fun `Parsed annotations with constant and runtime arguments retain final node metadata`(arguments: String) {
         CompilerTestSupport.configure()
         val errors = ErrorList()
         val source = parsedSource(arguments)
         val compilation =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .compileModule(Source(source, "untitled:ParsedAudit.x"), freshRepository(), errors)
         assertThat(compilation.succeeded()).describedAs(errors.errors.toString()).isTrue()
         assertThat(errors.errors).isEmpty()
@@ -168,13 +174,12 @@ class TypeInfoFinalCompositionTest {
 
     @ParameterizedTest
     @ValueSource(strings = ["", "1", "\"bad\", 2", "1, 2, 3"])
-    fun `invalid Parsed constructor arguments are rejected through the host listener`(
-        arguments: String
-    ) {
+    fun `invalid Parsed constructor arguments are rejected through the host listener`(arguments: String) {
         CompilerTestSupport.configure()
         val errors = ErrorList()
         val compilation =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .compileModule(
                     Source(parsedSource(arguments), "untitled:ParsedAudit.x"),
                     freshRepository(),
@@ -190,7 +195,8 @@ class TypeInfoFinalCompositionTest {
         CompilerTestSupport.configure()
         val errors = ErrorList()
         val compilation =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .compileModule(Source(parsedSource("1, 2")), freshRepository(), errors)
         assertThat(compilation.succeeded()).describedAs(errors.errors.toString()).isTrue()
         assertThat(errors.errors).isEmpty()
@@ -217,11 +223,13 @@ class TypeInfoFinalCompositionTest {
     @Test
     fun `missing declaration annotation arguments and incompatible targets remain errors`() {
         CompilerTestSupport.configure()
-        for (source in
-            listOf(
-                "module Missing { annotation Tag(Int value) into Object; @Tag class Value {} }",
-                parsedSource("1, 2").replace("@ContentNode Data(text)", "Data(text)"),
-            )) {
+        for (
+        source in
+        listOf(
+            "module Missing { annotation Tag(Int value) into Object; @Tag class Value {} }",
+            parsedSource("1, 2").replace("@ContentNode Data(text)", "Data(text)"),
+        )
+        ) {
             val errors = ErrorList()
             val compilation =
                 EmbeddingSupport.instance().compileModule(Source(source), freshRepository(), errors)
@@ -243,8 +251,7 @@ class TypeInfoFinalCompositionTest {
                 return new @Parsed($arguments) @ContentNode Data(text);
             }
         }
-        """
-            .trimIndent()
+        """.trimIndent()
 
     @Test
     fun `fresh anonymous property has Boolean assigned metadata and invalid override reports to host`() {
@@ -263,20 +270,18 @@ class TypeInfoFinalCompositionTest {
                     }.&element;
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
         val compilation = EmbeddingSupport.instance().compileModule(Source(source), null, errors)
         assertThat(compilation.succeeded()).describedAs(errors.errors.toString()).isTrue()
         ConstantPool.withPool(compilation.pool()).use {
             val created = nodes(compilation.parsed()).filterIsInstance<NewExpression>().single()
             val info = created.type.ensureTypeInfo(errors)
             assertThat(
-                    info.properties.entries
-                        .single { it.key.pathString.endsWith(".element.assigned") }
-                        .value
-                        .type
-                )
-                .isEqualTo(compilation.pool().typeBoolean())
+                info.properties.entries
+                    .single { it.key.pathString.endsWith(".element.assigned") }
+                    .value
+                    .type,
+            ).isEqualTo(compilation.pool().typeBoolean())
         }
         assertThat(errors.errors).isEmpty()
 
@@ -304,8 +309,7 @@ class TypeInfoFinalCompositionTest {
         }
     }
 
-    private fun components(root: Component): List<Component> =
-        listOf(root) + root.children().flatMap(::components)
+    private fun components(root: Component): List<Component> = listOf(root) + root.children().flatMap(::components)
 
     private fun freshRepository(): BuildRepository {
         val repository = BuildRepository()
@@ -316,10 +320,11 @@ class TypeInfoFinalCompositionTest {
         return repository
     }
 
-    private fun nodes(root: AstNode): List<AstNode> = buildList {
-        add(root)
-        root.children().forEachRemaining { addAll(nodes(it)) }
-    }
+    private fun nodes(root: AstNode): List<AstNode> =
+        buildList {
+            add(root)
+            root.children().forEachRemaining { addAll(nodes(it)) }
+        }
 
     private fun resource(name: String) =
         checkNotNull(javaClass.getResourceAsStream("/org/xvm/lsp/xdk/$name")) {

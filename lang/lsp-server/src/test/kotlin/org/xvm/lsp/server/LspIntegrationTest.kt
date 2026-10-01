@@ -1,8 +1,5 @@
 package org.xvm.lsp.server
 
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.CodeActionContext
 import org.eclipse.lsp4j.CodeActionParams
@@ -42,6 +39,9 @@ import org.mockito.Mockito.verify
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.adapter.treesitter.TreeSitterAdapter
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
 
 /**
  * Integration test that exercises the LSP server against real `.x` source files from the
@@ -135,17 +135,17 @@ class LspIntegrationTest {
     // Helpers
     // ========================================================================
 
-    private fun createTreeSitterAdapterOrNull(): TreeSitterAdapter? = runCatching {
-        TreeSitterAdapter()
-    }
-        .getOrNull()
+    private fun createTreeSitterAdapterOrNull(): TreeSitterAdapter? =
+        runCatching {
+            TreeSitterAdapter()
+        }.getOrNull()
 
     private fun resolveProjectRoot(): Path {
         val root =
             System.getProperty("xtc.composite.root")
                 ?: throw IllegalStateException(
                     "System property 'xtc.composite.root' not set. " +
-                        "Run tests via Gradle: ./gradlew :lang:lsp-server:test"
+                        "Run tests via Gradle: ./gradlew :lang:lsp-server:test",
                 )
         return Paths.get(root)
     }
@@ -185,7 +185,7 @@ class LspIntegrationTest {
     private fun openFile(name: String): TestFile {
         val tf = testFiles.getValue(name)
         server.textDocumentService.didOpen(
-            DidOpenTextDocumentParams(TextDocumentItem(tf.uri, "xtc", 1, tf.content))
+            DidOpenTextDocumentParams(TextDocumentItem(tf.uri, "xtc", 1, tf.content)),
         )
         return tf
     }
@@ -429,9 +429,8 @@ class LspIntegrationTest {
                             TextDocumentIdentifier(tf.uri),
                             pos,
                             ReferenceContext(true),
-                        )
-                    )
-                    .get()
+                        ),
+                    ).get()
 
             // "Boolean" appears many times in Boolean.x (in method signatures, return types, etc.)
             assertThat(refs).isNotEmpty()
@@ -517,9 +516,8 @@ class LspIntegrationTest {
             val ranges =
                 server.textDocumentService
                     .selectionRange(
-                        SelectionRangeParams(TextDocumentIdentifier(tf.uri), listOf(pos))
-                    )
-                    .get()
+                        SelectionRangeParams(TextDocumentIdentifier(tf.uri), listOf(pos)),
+                    ).get()
 
             assertThat(ranges).isNotNull()
             assertThat(ranges).hasSize(1)
@@ -547,9 +545,8 @@ class LspIntegrationTest {
                         DocumentFormattingParams(
                             TextDocumentIdentifier(tf.uri),
                             FormattingOptions(4, true),
-                        )
-                    )
-                    .get()
+                        ),
+                    ).get()
 
             // May return edits or empty list, but should not throw
             assertThat(edits).isNotNull()
@@ -620,9 +617,8 @@ class LspIntegrationTest {
                             TextDocumentIdentifier(tf.uri),
                             range,
                             CodeActionContext(emptyList()),
-                        )
-                    )
-                    .get()
+                        ),
+                    ).get()
 
             // May return actions or empty, should not crash
             assertThat(actions).isNotNull()
@@ -675,9 +671,8 @@ class LspIntegrationTest {
                             TextDocumentIdentifier(tf.uri),
                             FormattingOptions(4, true),
                             range,
-                        )
-                    )
-                    .get()
+                        ),
+                    ).get()
 
             // Should not throw; result is non-null (may be empty if file is clean)
             assertThat(edits).isNotNull()

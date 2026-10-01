@@ -1,11 +1,5 @@
 package org.xvm.lsp.server
 
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.ExecutionException
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit.SECONDS
-import java.util.concurrent.atomic.AtomicInteger
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
@@ -41,6 +35,12 @@ import org.xvm.lsp.adapter.WorkspaceEdit
 import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Location
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.ExecutionException
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.atomic.AtomicInteger
 
 class XdkCursorServerTest {
     enum class Feature {
@@ -71,8 +71,7 @@ class XdkCursorServerTest {
         override fun compileAsync(
             uri: String,
             content: String,
-        ): CompletableFuture<CompilationResult> =
-            gate.thenApply { delegate.compile(uri, content) }.also { analyses.add(it) }
+        ): CompletableFuture<CompilationResult> = gate.thenApply { delegate.compile(uri, content) }.also { analyses.add(it) }
 
         private fun <T> query(value: T): CompletableFuture<T> {
             val result =
@@ -101,8 +100,8 @@ class XdkCursorServerTest {
                         CompletionItem.CompletionKind.PROPERTY,
                         "Int member",
                         "member",
-                    )
-                )
+                    ),
+                ),
             )
 
         override fun getSignatureHelpAsync(
@@ -117,14 +116,13 @@ class XdkCursorServerTest {
                             "Int call(Int a, Int b)",
                             parameters = listOf(ParameterInfo("Int a"), ParameterInfo("Int b")),
                             activeParameter = 1,
-                        )
+                        ),
                     ),
                     activeParameter = 1,
-                )
+                ),
             )
 
-        fun next(): Pending =
-            checkNotNull(pending.poll(10, SECONDS)) { "query did not reach backend" }
+        fun next(): Pending = checkNotNull(pending.poll(10, SECONDS)) { "query did not reach backend" }
 
         override fun renameAsync(
             uri: String,
@@ -138,11 +136,12 @@ class XdkCursorServerTest {
             line: Int,
             column: Int,
             includeDeclaration: Boolean,
-        ): CompletableFuture<List<Location>> =
-            query(listOf(Location(uri, line, column, line, column + 1)))
+        ): CompletableFuture<List<Location>> = query(listOf(Location(uri, line, column, line, column + 1)))
     }
 
-    private class Session(val backend: Backend) : AutoCloseable {
+    private class Session(
+        val backend: Backend,
+    ) : AutoCloseable {
         val server = XtcLanguageServer(backend)
         val documents = server.textDocumentService
 
@@ -152,7 +151,7 @@ class XdkCursorServerTest {
 
         fun open(uri: String = URI) =
             documents.didOpen(
-                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, "module Editing {}"))
+                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, "module Editing {}")),
             )
 
         fun change(uri: String = URI) =
@@ -160,7 +159,7 @@ class XdkCursorServerTest {
                 DidChangeTextDocumentParams(
                     VersionedTextDocumentIdentifier(uri, 2),
                     listOf(TextDocumentContentChangeEvent("module Changed {}")),
-                )
+                ),
             )
 
         fun request(
@@ -170,19 +169,19 @@ class XdkCursorServerTest {
             when (feature) {
                 Feature.COMPLETION -> {
                     documents.completion(
-                        CompletionParams(TextDocumentIdentifier(uri), Position(0, 0))
+                        CompletionParams(TextDocumentIdentifier(uri), Position(0, 0)),
                     )
                 }
 
                 Feature.SIGNATURE -> {
                     documents.signatureHelp(
-                        SignatureHelpParams(TextDocumentIdentifier(uri), Position(0, 0))
+                        SignatureHelpParams(TextDocumentIdentifier(uri), Position(0, 0)),
                     )
                 }
 
                 Feature.RENAME -> {
                     documents.rename(
-                        RenameParams(TextDocumentIdentifier(uri), Position(0, 0), "renamed")
+                        RenameParams(TextDocumentIdentifier(uri), Position(0, 0), "renamed"),
                     )
                 }
 
@@ -192,7 +191,7 @@ class XdkCursorServerTest {
                             TextDocumentIdentifier(uri),
                             Position(0, 0),
                             ReferenceContext(true),
-                        )
+                        ),
                     )
                 }
             }
@@ -213,7 +212,7 @@ class XdkCursorServerTest {
             // Created, changed and deleted disk files are all masked by the open buffer.
             for (kind in FileChangeType.values()) {
                 session.server.workspaceService.didChangeWatchedFiles(
-                    DidChangeWatchedFilesParams(listOf(FileEvent(URI, kind)))
+                    DidChangeWatchedFilesParams(listOf(FileEvent(URI, kind))),
                 )
             }
             session.documents.didSave(DidSaveTextDocumentParams(TextDocumentIdentifier(URI)))
@@ -226,9 +225,7 @@ class XdkCursorServerTest {
 
     @ParameterizedTest
     @EnumSource(Feature::class)
-    fun `client cancellation reaches the cursor backend without canceling shared analysis`(
-        feature: Feature
-    ) {
+    fun `client cancellation reaches the cursor backend without canceling shared analysis`(feature: Feature) {
         val backend = Backend()
         Session(backend).use { session ->
             session.open()
@@ -280,9 +277,7 @@ class XdkCursorServerTest {
 
     @ParameterizedTest
     @EnumSource(Feature::class)
-    fun `a module edit invalidates member queries without changing their document version`(
-        feature: Feature
-    ) {
+    fun `a module edit invalidates member queries without changing their document version`(feature: Feature) {
         val backend = Backend(ignoreCancellation = true, module = true)
         Session(backend).use { session ->
             session.open()
@@ -351,14 +346,18 @@ class XdkCursorServerTest {
             session.open()
             val response =
                 session.documents.signatureHelp(
-                    SignatureHelpParams(TextDocumentIdentifier(URI), Position(0, 0))
+                    SignatureHelpParams(TextDocumentIdentifier(URI), Position(0, 0)),
                 )
             backend.next().finish()
             val help = response.get(10, SECONDS)!!
             assertThat(help.activeParameter).isEqualTo(1)
             assertThat(help.signatures.single().activeParameter).isEqualTo(1)
-            assertThat(help.signatures.single().parameters.map { it.label.left })
-                .containsExactly("Int a", "Int b")
+            assertThat(
+                help.signatures
+                    .single()
+                    .parameters
+                    .map { it.label.left },
+            ).containsExactly("Int a", "Int b")
         }
     }
 

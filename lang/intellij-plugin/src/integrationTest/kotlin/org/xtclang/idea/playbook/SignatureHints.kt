@@ -35,7 +35,7 @@ fun Driver.signature(
             editor.editor.getCaretModel().moveToOffset(at)
             val file =
                 requireNotNull(
-                    service<PsiManager>(singleProject()).findFile(editor.editor.getVirtualFile())
+                    service<PsiManager>(singleProject()).findFile(editor.editor.getVirtualFile()),
                 )
             utility(LspFileSupport::class).getSupport(file).getSignatureHelpSupport()
         }
@@ -67,8 +67,9 @@ fun Driver.signature(
     ) {
         inspection.recover()
         val future = support.getValidLSPFuture()
-        if (future == null || !future.isDone() || future.isCompletedExceptionally())
+        if (future == null || !future.isDone() || future.isCompletedExceptionally()) {
             return@awaitUi false
+        }
         val help = future.get()
         val signatures =
             help?.getSignatures().orEmpty().map { item ->
@@ -83,7 +84,7 @@ fun Driver.signature(
                             }
                     },
                     item.getActiveParameter() ?: help?.getActiveParameter(),
-                    if (inspectDocumentation)
+                    if (inspectDocumentation) {
                         ClientProtocol(this).copy(item.getDocumentation()).let {
                             when {
                                 it.isJsonPrimitive -> it.asString
@@ -91,7 +92,9 @@ fun Driver.signature(
                                 else -> null
                             }
                         }
-                    else null,
+                    } else {
+                        null
+                    },
                 )
             }
         if (!matches(signatures)) return@awaitUi false
@@ -117,8 +120,11 @@ fun Driver.signature(
                         ?.let { signature.parameters.getOrNull(it) }
                 plainText(html)
                     .contains(
-                        if (signature.parameters.isEmpty()) signature.label
-                        else signature.parameters.joinToString(", ")
+                        if (signature.parameters.isEmpty()) {
+                            signature.label
+                        } else {
+                            signature.parameters.joinToString(", ")
+                        },
                     ) && bold == listOfNotNull(active)
             }
     }

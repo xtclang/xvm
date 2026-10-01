@@ -17,7 +17,7 @@ class XdkWrittenFormalTest {
                 "class Damaged<Element extends String>(Ele§ value) {}",
                 "<Element extends String, Other extends Element> void damaged(Oth§ value) {}",
                 "<String> void damaged(Str§ value) {}",
-            ]
+            ],
     )
     fun `written formals have their own bound and exact completion edit`(header: String) {
         val marked = "module Formals { $header }"
@@ -34,7 +34,7 @@ class XdkWrittenFormalTest {
             val item = adapter.getCompletions(uri, 0, at).single { it.label == name }
             assertThat(item.detail)
                 .isEqualTo(
-                    "type parameter $name extends ${if (name == "String") "Object" else "String"}"
+                    "type parameter $name extends ${if (name == "String") "Object" else "String"}",
                 )
             assertThat(item.textEdit)
                 .isEqualTo(TextEdit(Range(Position(0, at - 3), Position(0, at)), name))
@@ -52,7 +52,7 @@ class XdkWrittenFormalTest {
                 "<Element extends Element> void damaged(Ele§ value) {}",
                 "<Element extends Other, Other extends Element> void damaged(Ele§ value) {}",
                 "<Element extends Missing> void damaged(List<Ele§> value) {}",
-            ]
+            ],
     )
     fun `unresolved and cyclic bounds cannot borrow an outer type`(header: String) {
         val marked = "module Formals { class Element {} $header }"
@@ -96,7 +96,7 @@ class XdkWrittenFormalTest {
                 "class Damaged<Element extends Chain<Element>>(Ele§ value) {}",
                 "<Element extends Chain<Other>, Other extends Element> void damaged(Ele§ value) {}",
                 "<Element extends Chain<Element>> void damaged(List<Ele§> value) {}",
-            ]
+            ],
     )
     fun `recursive written constraints preserve names without inventing types`(header: String) {
         val marked = "module Formals { interface Chain<T> {} $header }"
@@ -131,7 +131,7 @@ class XdkWrittenFormalTest {
                 "<Element extends Missing<Element>> void damaged(Ele§ value) {}",
                 "<Element extends Chain<Other>, Other extends Other> void damaged(Ele§ value) {}",
                 "<Element extends Chain<Element>> void damaged(Element.It§ value) {}",
-            ]
+            ],
     )
     fun `syntax-only recursion cannot authorize unknown bounds or member lookup`(header: String) {
         val marked = "module Formals { interface Chain<T> {} class Element {} $header }"

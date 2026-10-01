@@ -15,7 +15,7 @@ internal fun ParityScenarios.renameCases() {
         check(
             document.text ==
                 fixture(document.file)
-                    .replace(data.pattern("replaceFrom"), data.string("replaceWith"))
+                    .replace(data.pattern("replaceFrom"), data.string("replaceWith")),
         )
     }
     case("X54") { data ->
@@ -24,13 +24,13 @@ internal fun ParityScenarios.renameCases() {
             replace(document, fixture(document.file))
             val offset =
                 data.int(
-                    if (anchor == data.string("declaration")) "callOffset" else "declarationOffset"
+                    if (anchor == data.string("declaration")) "callOffset" else "declarationOffset",
                 )
             applyRename(document, document.at(anchor, offset), data.string("replaceWith"))
             check(
                 document.text ==
                     fixture(document.file)
-                        .replace(data.pattern("replaceFrom"), data.string("replaceWith"))
+                        .replace(data.pattern("replaceFrom"), data.string("replaceWith")),
             )
             check(data.string("namedArgument") in document.text)
         }
@@ -39,7 +39,7 @@ internal fun ParityScenarios.renameCases() {
         val document = open(data.string("file"))
         check(
             proposedRename(document, document.at(data.string("anchor")), data.string("newName"))
-                .isJsonNull
+                .isJsonNull,
         )
         check(document.text == fixture(document.file))
         clean(document)
@@ -48,7 +48,7 @@ internal fun ParityScenarios.renameCases() {
         val document = open(data.string("file"))
         data.strings("variants").forEach { anchor ->
             check(
-                proposedRename(document, document.at(anchor), data.string("newName")).isJsonNull
+                proposedRename(document, document.at(anchor), data.string("newName")).isJsonNull,
             ) {
                 anchor
             }
@@ -59,11 +59,10 @@ internal fun ParityScenarios.renameCases() {
         )
         check(
             proposedRename(
-                    document,
-                    document.at(data.string("anchor"), data.int("offset")),
-                    data.string("newName"),
-                )
-                .isJsonNull
+                document,
+                document.at(data.string("anchor"), data.int("offset")),
+                data.string("newName"),
+            ).isJsonNull,
         )
     }
     case("X57") { data ->
@@ -125,7 +124,7 @@ internal fun ParityScenarios.renameCases() {
         errors(document)
         check(
             proposedRename(document, document.at(data.string("anchor")), data.string("newName"))
-                .isJsonNull
+                .isJsonNull,
         )
         replace(document, fixture(document.file))
         clean(document)

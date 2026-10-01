@@ -45,8 +45,8 @@ class ConfigurationJsonTest {
                     JsonRpcMethod.notification(
                         "workspace/didChangeConfiguration",
                         DidChangeConfigurationParams::class.java,
-                    )
-            )
+                    ),
+            ),
         ) {
             it.registerTypeAdapterFactory(ConfigurationJson)
         }

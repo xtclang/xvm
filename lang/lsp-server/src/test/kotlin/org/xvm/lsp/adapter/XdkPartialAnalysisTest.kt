@@ -1,8 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.io.File
-import java.nio.file.Path
-import java.util.concurrent.atomic.AtomicBoolean
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -29,6 +26,9 @@ import org.xvm.compiler.ast.partial.IncompleteExpression
 import org.xvm.compiler.ast.partial.IncompleteStatement
 import org.xvm.lsp.adapter.xdk.semanticSnapshot
 import org.xvm.tool.ModuleInfo
+import java.io.File
+import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicBoolean
 
 /** A real compiler consumer of the bounded partial-analysis API; no fallback parser or mock. */
 class XdkPartialAnalysisTest {
@@ -41,7 +41,7 @@ class XdkPartialAnalysisTest {
                 "return flag ? 0 : value.|;",
                 "return work(value.|, 2);",
                 "return work(1 + value.|, 2);",
-            ]
+            ],
     )
     fun `compound values and following arguments preserve the cursor context`(statement: String) {
         CompilerTestSupport.configure()
@@ -51,22 +51,29 @@ class XdkPartialAnalysisTest {
         val text = marked.replace("|", "")
         val errors = ErrorList()
         val analysis =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .analyzeIncomplete(Source(text, URI), position(prefix), null, errors)
         assertThat(analysis.pool()).describedAs(errors.errors.toString()).isPresent()
         val site = analysis.sites().single()
         assertThat(site.receiver.orElseThrow().isValidated)
             .describedAs(errors.errors.toString())
             .isTrue()
-        assertThat(analysis.semanticSnapshot(errors).sites.single().members.map { it.name })
-            .contains("size")
+        assertThat(
+            analysis
+                .semanticSnapshot(errors)
+                .sites
+                .single()
+                .members
+                .map { it.name },
+        ).contains("size")
         assertThat(errors.errors.map { it.code }).doesNotContain("EMB-5")
         assertThat(
-                (parents(site).filterIsInstance<MethodDeclarationStatement>().first().component
-                        as MethodStructure)
-                    .ast
-            )
-            .isNull()
+            (
+                parents(site).filterIsInstance<MethodDeclarationStatement>().first().component
+                    as MethodStructure
+            ).ast,
+        ).isNull()
     }
 
     @Test
@@ -75,7 +82,8 @@ class XdkPartialAnalysisTest {
         val prefix = "module Editing { void run(Int item) { ite"
         val errors = ErrorList()
         val analysis =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .analyzeIncomplete(Source("$prefix; } }", URI), position(prefix), null, errors)
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
         val site = analysis.sites().single()
@@ -109,7 +117,8 @@ class XdkPartialAnalysisTest {
             val text = "$prefix } Int later() = 42; }"
             val errors = ErrorList()
             val analysis =
-                EmbeddingSupport.instance()
+                EmbeddingSupport
+                    .instance()
                     .analyzeIncomplete(Source(text, URI), position(prefix), null, errors)
             assertThat(errors.errors.map { it.code })
                 .describedAs(errors.errors.toString())
@@ -123,7 +132,7 @@ class XdkPartialAnalysisTest {
                         ReturnStatement::class.java
                     } else {
                         AssignmentStatement::class.java
-                    }
+                    },
                 )
             val receiver = site.receiver.orElseThrow()
             assertThat(receiver.isValidated && receiver.typeFit.isFit).isTrue()
@@ -133,8 +142,14 @@ class XdkPartialAnalysisTest {
             assertThat((site.parent as IncompleteExpression).isValidated).isFalse()
             val method = parents(site).filterIsInstance<MethodDeclarationStatement>().first()
             assertThat((method.component as MethodStructure).ast).isNull()
-            assertThat(analysis.semanticSnapshot(errors).sites.single().members.map { it.name })
-                .contains(if (site.isCall) "indexOf" else "size")
+            assertThat(
+                analysis
+                    .semanticSnapshot(errors)
+                    .sites
+                    .single()
+                    .members
+                    .map { it.name },
+            ).contains(if (site.isCall) "indexOf" else "size")
             assertThat(errors.errors.map { it.code }).doesNotContain("EMB-5")
         }
     }
@@ -149,7 +164,7 @@ class XdkPartialAnalysisTest {
                 "return work(value.",
                 "Int result = work(value.",
                 "work(value.indexOf(\"x\", ",
-            ]
+            ],
     )
     fun `nested incomplete arguments retain one innermost cursor site`(statement: String) {
         CompilerTestSupport.configure()
@@ -165,7 +180,8 @@ class XdkPartialAnalysisTest {
         val text = "$prefix$closing; } Int later() = 42; }"
         val errors = ErrorList()
         val analysis =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .analyzeIncomplete(Source(text, URI), position(prefix), null, errors)
         assertThat(errors.errors.map { it.code })
             .describedAs(errors.errors.toString())
@@ -215,7 +231,8 @@ class XdkPartialAnalysisTest {
         val prefix = "module Editing { String value = \"property\"; Int run() { Int value = value."
         val errors = ErrorList()
         val complete =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .compileModule(Source("${prefix}size; return value; } }", URI), null, errors)
         assertThat(complete.succeeded()).describedAs(errors.errors.toString()).isTrue()
         val expected =
@@ -225,7 +242,8 @@ class XdkPartialAnalysisTest {
         val expectedSymbol = expected.resolvedTarget.toString()
         val partialErrors = ErrorList()
         val partial =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .analyzeIncomplete(
                     Source("$prefix } }", URI),
                     position(prefix),
@@ -234,7 +252,12 @@ class XdkPartialAnalysisTest {
                 )
         assertThat(partialErrors.errors.map { it.code })
             .containsExactly(Parser.INCOMPLETE_EXPRESSION)
-        val receiver = partial.sites().single().receiver.orElseThrow() as NameExpression
+        val receiver =
+            partial
+                .sites()
+                .single()
+                .receiver
+                .orElseThrow() as NameExpression
         assertThat(receiver.isValidated && receiver.typeFit.isFit).isTrue()
         assertThat(receiver.resolvedTarget.toString()).isEqualTo(expectedSymbol)
     }
@@ -246,7 +269,8 @@ class XdkPartialAnalysisTest {
             val prefix = "module Editing { Int run(String value, Boolean flag) { $statement"
             val errors = ErrorList()
             val analysis =
-                EmbeddingSupport.instance()
+                EmbeddingSupport
+                    .instance()
                     .analyzeIncomplete(Source("$prefix; } }", URI), position(prefix), null, errors)
             assertThat(errors.hasSeriousErrors()).isTrue()
             assertThat(errors.errors.map { it.code }).doesNotContain("EMB-5")
@@ -256,29 +280,34 @@ class XdkPartialAnalysisTest {
         val prefix = "module Editing { Int run() { return work(missing."
         val errors = ErrorList()
         val analysis =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .analyzeIncomplete(Source("$prefix); } }", URI), position(prefix), null, errors)
         assertThat(errors.errors.map { it.code })
             .contains(Parser.INCOMPLETE_EXPRESSION, "COMPILER-38")
             .doesNotContain("EMB-5")
-        val receiver = analysis.sites().single().receiver.orElseThrow()
+        val receiver =
+            analysis
+                .sites()
+                .single()
+                .receiver
+                .orElseThrow()
         assertThat(receiver.isValidated && receiver.typeFit.isFit).isFalse()
     }
 
     @ParameterizedTest
     @ValueSource(
-        strings = ["value.", "value.indexOf(", "value.indexOf(\"x\", ", "value.indexOf(\"x\""]
+        strings = ["value.", "value.indexOf(", "value.indexOf(\"x\", ", "value.indexOf(\"x\""],
     )
-    fun `cursor analysis retains following declarations without changing source`(
-        operation: String
-    ) {
+    fun `cursor analysis retains following declarations without changing source`(operation: String) {
         for (terminator in listOf("", ";")) {
             val prefix = "module Editing { void run(String value) { $operation"
             val text = "$prefix$terminator } Int later() = 42; }"
             CompilerTestSupport.configure()
             val errors = ErrorList()
             val analysis =
-                EmbeddingSupport.instance()
+                EmbeddingSupport
+                    .instance()
                     .analyzeIncomplete(Source(text, URI), position(prefix), null, errors)
             assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
             assertThat(analysis.pool()).isPresent()
@@ -303,11 +332,11 @@ class XdkPartialAnalysisTest {
 
             val compileErrors = ErrorList()
             assertThat(
-                    EmbeddingSupport.instance()
-                        .compileModule(Source(text, URI), null, compileErrors)
-                        .succeeded()
-                )
-                .isFalse()
+                EmbeddingSupport
+                    .instance()
+                    .compileModule(Source(text, URI), null, compileErrors)
+                    .succeeded(),
+            ).isFalse()
             assertThat(compileErrors.hasSeriousErrors()).isTrue()
         }
     }
@@ -323,11 +352,9 @@ class XdkPartialAnalysisTest {
                 "value.si",
                 "return value.si",
                 "value.indexOf(",
-            ]
+            ],
     )
-    fun `cursor analysis in a module member uses the unsaved root and member snapshot`(
-        statement: String
-    ) {
+    fun `cursor analysis in a module member uses the unsaved root and member snapshot`(statement: String) {
         CompilerTestSupport.configure()
         val root = directory.resolve("Editing.x").toFile().canonicalFile
         val member = directory.resolve("Editing/Child.x").toFile().canonicalFile
@@ -342,15 +369,23 @@ class XdkPartialAnalysisTest {
             object : ModuleInfo(root, false) {
                 override fun readSource(file: File): CharArray =
                     when (file) {
-                        root ->
+                        root -> {
                             "module Editing { class Base { String value = \"overlay\"; Int work(String text) = text.size; } }"
-                        member -> overlay
-                        else -> error("Unexpected source $file")
+                        }
+
+                        member -> {
+                            overlay
+                        }
+
+                        else -> {
+                            error("Unexpected source $file")
+                        }
                     }.toCharArray()
             }
         val errors = ErrorList()
         val analysis =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .analyzeIncomplete(sources, member, position(prefix), null, errors)
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
         assertThat(analysis.pool()).isPresent()
@@ -381,17 +416,20 @@ class XdkPartialAnalysisTest {
     @Test
     fun `cursors outside supported boundaries and unrelated syntax errors yield no partial facts`() {
         CompilerTestSupport.configure()
-        for ((prefix, suffix) in
-            listOf(
-                "module Editing { void run(String value) { value." to "size; } }",
-                "module Editing { void run(String value) { value.si" to "ze; } }",
-                "module Editing { void run(String value) { value.ind" to "exOf(); } }",
-                "module Editing { void run(String value) { value.indexOf(" to "\"x\"); } }",
-                "module Editing { void run(String value) { value." to " } void broken( { }",
-            )) {
+        for (
+        (prefix, suffix) in
+        listOf(
+            "module Editing { void run(String value) { value." to "size; } }",
+            "module Editing { void run(String value) { value.si" to "ze; } }",
+            "module Editing { void run(String value) { value.ind" to "exOf(); } }",
+            "module Editing { void run(String value) { value.indexOf(" to "\"x\"); } }",
+            "module Editing { void run(String value) { value." to " } void broken( { }",
+        )
+        ) {
             val errors = ErrorList()
             val analysis =
-                EmbeddingSupport.instance()
+                EmbeddingSupport
+                    .instance()
                     .analyzeIncomplete(Source(prefix + suffix, URI), position(prefix), null, errors)
             assertThat(analysis.pool()).isEmpty()
             assertThat(analysis.sites()).isEmpty()
@@ -409,11 +447,9 @@ class XdkPartialAnalysisTest {
                 "work(value.si",
                 "getValue().si",
                 "work(getValue().si",
-            ]
+            ],
     )
-    fun `typed member prefixes retain compiler context and their original token`(
-        statement: String
-    ) {
+    fun `typed member prefixes retain compiler context and their original token`(statement: String) {
         CompilerTestSupport.configure()
         val prefix =
             "module Editing { String getValue() = \"text\"; Int work(Int n) = n; Int run(String value) { $statement"
@@ -421,7 +457,8 @@ class XdkPartialAnalysisTest {
             prefix + (if (statement.startsWith("work(")) ");" else ";") + " } Int later() = 42; }"
         val errors = ErrorList()
         val analysis =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .analyzeIncomplete(Source(text, URI), position(prefix), null, errors)
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
         val site = analysis.sites().single()
@@ -438,12 +475,11 @@ class XdkPartialAnalysisTest {
         val method = parents(site).filterIsInstance<MethodDeclarationStatement>().first()
         assertThat((method.component as MethodStructure).ast).isNull()
         assertThat(
-                descendants(analysis.sourceTrees().single())
-                    .filterIsInstance<MethodDeclarationStatement>()
-                    .map { it.name }
-                    .toList()
-            )
-            .contains("later")
+            descendants(analysis.sourceTrees().single())
+                .filterIsInstance<MethodDeclarationStatement>()
+                .map { it.name }
+                .toList(),
+        ).contains("later")
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
     }
 
@@ -457,7 +493,7 @@ class XdkPartialAnalysisTest {
                 "return value.indexOf(",
                 "work(value.indexOf(",
                 "getValue().indexOf(",
-            ]
+            ],
     )
     fun `a call cursor before a closing parenthesis retains the intact prefix`(statement: String) {
         CompilerTestSupport.configure()
@@ -467,7 +503,8 @@ class XdkPartialAnalysisTest {
             prefix + (if (statement.startsWith("work(")) "));" else ");") + " } Int later() = 42; }"
         val errors = ErrorList()
         val analysis =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .analyzeIncomplete(Source(text, URI), position(prefix), null, errors)
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
         val site = analysis.sites().single()
@@ -481,36 +518,38 @@ class XdkPartialAnalysisTest {
         val method = parents(site).filterIsInstance<MethodDeclarationStatement>().first()
         assertThat((method.component as MethodStructure).ast).isNull()
         assertThat(
-                descendants(analysis.sourceTrees().single())
-                    .filterIsInstance<MethodDeclarationStatement>()
-                    .map { it.name }
-                    .toList()
-            )
-            .contains("later")
+            descendants(analysis.sourceTrees().single())
+                .filterIsInstance<MethodDeclarationStatement>()
+                .map { it.name }
+                .toList(),
+        ).contains("later")
     }
 
     @Test
     fun `cursor-selected complete syntax remains valid in ordinary compilation`() {
         CompilerTestSupport.configure()
-        for ((prefix, suffix) in
-            listOf(
-                "module Editing { Int run(String value) { return value.size" to "; } }",
-                "module Editing { void run(String value) { value.indexOf(\"x\"" to "); } }",
-            )) {
+        for (
+        (prefix, suffix) in
+        listOf(
+            "module Editing { Int run(String value) { return value.size" to "; } }",
+            "module Editing { void run(String value) { value.indexOf(\"x\"" to "); } }",
+        )
+        ) {
             val text = prefix + suffix
             val errors = ErrorList()
             val partial =
-                EmbeddingSupport.instance()
+                EmbeddingSupport
+                    .instance()
                     .analyzeIncomplete(Source(text, URI), position(prefix), null, errors)
             assertThat(partial.sites()).hasSize(1)
             assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
             val normal = ErrorList()
             assertThat(
-                    EmbeddingSupport.instance()
-                        .compileModule(Source(text, URI), null, normal)
-                        .succeeded()
-                )
-                .describedAs(normal.errors.toString())
+                EmbeddingSupport
+                    .instance()
+                    .compileModule(Source(text, URI), null, normal)
+                    .succeeded(),
+            ).describedAs(normal.errors.toString())
                 .isTrue()
             assertThat(normal.errors).isEmpty()
         }
@@ -518,16 +557,15 @@ class XdkPartialAnalysisTest {
 
     @ParameterizedTest
     @ValueSource(strings = ["", "si"])
-    fun `cursor analysis preserves flow narrowing and UTF-16 positions inside closing blocks`(
-        member: String
-    ) {
+    fun `cursor analysis preserves flow narrowing and UTF-16 positions inside closing blocks`(member: String) {
         CompilerTestSupport.configure()
         for (newline in listOf("\n", "\r\n")) {
             val prefix =
                 "module Editing {$newline void run(Object value) {$newline  if (value.is(String)) { /* 😀 */ value.$member"
             val errors = ErrorList()
             val analysis =
-                EmbeddingSupport.instance()
+                EmbeddingSupport
+                    .instance()
                     .analyzeIncomplete(Source("$prefix } } }", URI), position(prefix), null, errors)
             assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
             val site = analysis.sites().single()
@@ -554,7 +592,8 @@ class XdkPartialAnalysisTest {
         File(member.parentFile, "Broken.x").writeText("class Broken { void broken( { }")
         val errors = ErrorList()
         val analysis =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .analyzeIncomplete(ModuleInfo(root, false), member, position(prefix), null, errors)
         assertThat(analysis.pool()).isEmpty()
         assertThat(analysis.sites()).isEmpty()
@@ -564,18 +603,16 @@ class XdkPartialAnalysisTest {
 
     @ParameterizedTest
     @ValueSource(
-        strings = ["value.", "value.si", "value.indexOf(", "val", "value.indexOf(startAt ="]
+        strings = ["value.", "value.si", "value.indexOf(", "val", "value.indexOf(startAt ="],
     )
-    fun `module cursor diagnostics honor cancellation and budgets without duplicates`(
-        operation: String
-    ) {
+    fun `module cursor diagnostics honor cancellation and budgets without duplicates`(operation: String) {
         CompilerTestSupport.configure()
         val root = directory.resolve("Editing.x").toFile().canonicalFile
         val prefix = "module Editing { void run(String value) { $operation"
         root.writeText(
             prefix +
                 (if (operation.endsWith("(") || operation.endsWith("=")) ");" else ";") +
-                " } }"
+                " } }",
         )
         val support = EmbeddingSupport.instance()
         val delivered = mutableListOf<ErrorListener.ErrorInfo>()
@@ -603,29 +640,25 @@ class XdkPartialAnalysisTest {
                 cancelled::get,
             )
         assertThat(
-                support
-                    .analyzeIncomplete(
-                        ModuleInfo(root, false),
-                        root,
-                        position(prefix),
-                        null,
-                        listener,
-                    )
-                    .pool()
-            )
-            .isEmpty()
+            support
+                .analyzeIncomplete(
+                    ModuleInfo(root, false),
+                    root,
+                    position(prefix),
+                    null,
+                    listener,
+                ).pool(),
+        ).isEmpty()
         assertThat(cancelled.get()).isTrue()
         val unread =
             object : ModuleInfo(root, false) {
-                override fun readSource(file: File): CharArray =
-                    error("A cancelled attempt must not read source")
+                override fun readSource(file: File): CharArray = error("A cancelled attempt must not read source")
             }
         assertThat(
-                support
-                    .analyzeIncomplete(unread, root, position(prefix), null, listener)
-                    .sourceTrees()
-            )
-            .isEmpty()
+            support
+                .analyzeIncomplete(unread, root, position(prefix), null, listener)
+                .sourceTrees(),
+        ).isEmpty()
     }
 
     private fun position(prefix: String): Long {
@@ -681,7 +714,11 @@ class XdkPartialAnalysisTest {
         assertThat((site.target as NameExpression).resolvedTarget).isNull()
         ConstantPool.withPool(analysis.pool().orElseThrow()).use {
             assertThat(receiver.type.valueString).contains("String")
-            assertThat(site.arguments.single().type.valueString).contains("String")
+            assertThat(
+                site.arguments
+                    .single()
+                    .type.valueString,
+            ).contains("String")
         }
         assertThat((method.component as MethodStructure).ast).isNull()
     }
@@ -702,7 +739,12 @@ class XdkPartialAnalysisTest {
                 val text = "module Editing { void run(Object value) { if (value.is($type)) { value."
                 val (analysis, errors) = analyze(text)
                 assertThat(errors.errors.map { it.code }).containsExactly(Parser.UNEXPECTED_EOF)
-                val receiver = analysis.sites().single().receiver.orElseThrow()
+                val receiver =
+                    analysis
+                        .sites()
+                        .single()
+                        .receiver
+                        .orElseThrow()
                 assertThat(receiver.isValidated && receiver.typeFit.isFit).isTrue()
                 val copiedType =
                     ConstantPool.withPool(analysis.pool().orElseThrow()).use {
@@ -722,7 +764,12 @@ class XdkPartialAnalysisTest {
             .contains(Parser.UNEXPECTED_EOF)
             .doesNotContain("EMB-5")
         assertThat(errors.errors).anySatisfy { assertThat(it.code).startsWith("COMPILER-") }
-        val receiver = analysis.sites().single().receiver.orElseThrow() as NameExpression
+        val receiver =
+            analysis
+                .sites()
+                .single()
+                .receiver
+                .orElseThrow() as NameExpression
         assertThat(receiver.resolvedTarget).isNull()
         assertThat(receiver.isValidated && receiver.typeFit.isFit).isFalse()
     }
@@ -758,7 +805,7 @@ class XdkPartialAnalysisTest {
         for (suffix in listOf("work(", "work(1", "work(1,")) {
             val (analysis, errors) =
                 analyze(
-                    "module Editing { void work(Int n) {} void work(String s) {} void run() { $suffix"
+                    "module Editing { void work(Int n) {} void work(String s) {} void run() { $suffix",
                 )
             assertThat(errors.errors.map { it.code }).containsExactly(Parser.UNEXPECTED_EOF)
             val site = analysis.sites().single()
@@ -774,14 +821,16 @@ class XdkPartialAnalysisTest {
 
     @Test
     fun `unsupported contexts and lexer failures never enter semantic analysis`() {
-        for (body in
-            listOf(
-                "return value.",
-                "Int result = value.",
-                "work(value.",
-                "work(value(",
-                "work(\"unterminated",
-            )) {
+        for (
+        body in
+        listOf(
+            "return value.",
+            "Int result = value.",
+            "work(value.",
+            "work(value(",
+            "work(\"unterminated",
+        )
+        ) {
             val (analysis, errors) = analyze("module Editing { void run(String value) { $body")
             assertThat(errors.errors).isNotEmpty()
             assertThat(errors.errors.map { it.code }).doesNotContain("EMB-5")
@@ -800,7 +849,8 @@ class XdkPartialAnalysisTest {
         val text = "module Editing { void run(String value) { value."
         val delivered = mutableListOf<ErrorListener.ErrorInfo>()
         val analysis =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .analyzeIncomplete(Source(text, URI), null, ErrorListener { delivered.add(it) })
         assertThat(delivered.map { it.code }).containsExactly(Parser.UNEXPECTED_EOF)
         assertThat(analysis.pool()).isPresent()
@@ -845,7 +895,8 @@ class XdkPartialAnalysisTest {
                 }
             }
         val analysis =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .analyzeIncomplete(
                     Source("module Editing { void run(String value) { value.", URI),
                     input,
@@ -854,7 +905,14 @@ class XdkPartialAnalysisTest {
         assertThat(cancelled.get()).isTrue()
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.UNEXPECTED_EOF)
         assertThat(analysis.pool()).isEmpty()
-        assertThat(analysis.sites().single().receiver.orElseThrow().isValidated).isFalse()
+        assertThat(
+            analysis
+                .sites()
+                .single()
+                .receiver
+                .orElseThrow()
+                .isValidated,
+        ).isFalse()
     }
 
     private fun analyze(text: String): Pair<EmbeddingSupport.PartialAnalysis, ErrorList> {
@@ -864,13 +922,13 @@ class XdkPartialAnalysisTest {
             errors
     }
 
-    private fun parents(node: AstNode): Sequence<AstNode> =
-        generateSequence(node.parent) { it.parent }
+    private fun parents(node: AstNode): Sequence<AstNode> = generateSequence(node.parent) { it.parent }
 
-    private fun descendants(node: AstNode): Sequence<AstNode> = sequence {
-        yield(node)
-        for (child in node.children()) yieldAll(descendants(child))
-    }
+    private fun descendants(node: AstNode): Sequence<AstNode> =
+        sequence {
+            yield(node)
+            for (child in node.children()) yieldAll(descendants(child))
+        }
 
     private companion object {
         const val URI = "untitled:Editing.x"

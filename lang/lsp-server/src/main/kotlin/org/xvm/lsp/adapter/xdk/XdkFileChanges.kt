@@ -19,50 +19,56 @@ internal object XdkFileChanges {
         root: File,
         inputs: XdkSources.Inputs,
         overlays: Map<File, String> = emptyMap(),
-    ): Boolean = runCatching {
-        val path = file.toPath()
-        val member = root.parentFile.resolve(root.nameWithoutExtension).toPath()
-        val sourceRoots = listOf(root.toPath(), member).filter { it.overlaps(path) }
-        val sourceEntries =
-            sourceRoots
-                .flatMap { entries(if (it.startsWith(path)) it else path) }
-                .filter { Files.isDirectory(it) || it.toString().endsWith(".x") }
-                .toSet()
-        val expectedSources =
-            (inputs.text.keys + inputs.directories)
-                .map { it.toPath() }
-                .filter { it.startsWith(path) }
-                .toSet()
-        if (sourceEntries != expectedSources || !bounded(sourceEntries)) return@runCatching false
-        if (
-            sourceEntries.any {
-                Files.isRegularFile(it) &&
-                    (overlays[it.toFile()] ?: Files.readString(it)) != inputs.text[it.toFile()]
+    ): Boolean =
+        runCatching {
+            val path = file.toPath()
+            val member = root.parentFile.resolve(root.nameWithoutExtension).toPath()
+            val sourceRoots = listOf(root.toPath(), member).filter { it.overlaps(path) }
+            val sourceEntries =
+                sourceRoots
+                    .flatMap { entries(if (it.startsWith(path)) it else path) }
+                    .filter { Files.isDirectory(it) || it.toString().endsWith(".x") }
+                    .toSet()
+            val expectedSources =
+                (inputs.text.keys + inputs.directories)
+                    .map { it.toPath() }
+                    .filter { it.startsWith(path) }
+                    .toSet()
+            if (sourceEntries != expectedSources || !bounded(sourceEntries)) return@runCatching false
+            if (
+                sourceEntries.any {
+                    Files.isRegularFile(it) &&
+                        (overlays[it.toFile()] ?: Files.readString(it)) != inputs.text[it.toFile()]
+                }
+            ) {
+                return@runCatching false
             }
-        )
-            return@runCatching false
 
-        if (inputs.resources.entries.isEmpty()) return@runCatching true
-        val resourceRoots = inputs.resources.roots.map { it.toPath() }.filter { it.overlaps(path) }
-        val currentResources =
-            resourceRoots.flatMap { entries(if (it.startsWith(path)) it else path) }.toSet()
-        val expectedResources = inputs.resources.entries.filterKeys { Path.of(it).startsWith(path) }
-        if (!bounded(currentResources)) return@runCatching false
-        val current =
-            currentResources.associate { it.toString() to XdkResources.entry(it) { false } } +
-                resourceRoots.filterNot(Files::exists).associate { it.toString() to "missing" }
-        current == expectedResources
-    }
-        .getOrDefault(false)
+            if (inputs.resources.entries.isEmpty()) return@runCatching true
+            val resourceRoots =
+                inputs.resources.roots
+                    .map { it.toPath() }
+                    .filter { it.overlaps(path) }
+            val currentResources =
+                resourceRoots.flatMap { entries(if (it.startsWith(path)) it else path) }.toSet()
+            val expectedResources = inputs.resources.entries.filterKeys { Path.of(it).startsWith(path) }
+            if (!bounded(currentResources)) return@runCatching false
+            val current =
+                currentResources.associate { it.toString() to XdkResources.entry(it) { false } } +
+                    resourceRoots.filterNot(Files::exists).associate { it.toString() to "missing" }
+            current == expectedResources
+        }.getOrDefault(false)
 
     private fun Path.overlaps(other: Path) = startsWith(other) || other.startsWith(this)
 
     private fun entries(root: Path): List<Path> =
-        if (!Files.exists(root)) emptyList()
-        else
+        if (!Files.exists(root)) {
+            emptyList()
+        } else {
             Files.walk(root, FOLLOW_LINKS).use { paths ->
                 paths.limit(MAX_ENTRIES + 1).toList().also { require(it.size <= MAX_ENTRIES) }
             }
+        }
 
     private fun bounded(paths: Set<Path>): Boolean =
         paths.size <= MAX_ENTRIES &&

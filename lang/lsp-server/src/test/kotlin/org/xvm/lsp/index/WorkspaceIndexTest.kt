@@ -1,7 +1,5 @@
 package org.xvm.lsp.index
 
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -9,6 +7,8 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo.SymbolKind
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 
 /**
  * Unit tests for [WorkspaceIndex].

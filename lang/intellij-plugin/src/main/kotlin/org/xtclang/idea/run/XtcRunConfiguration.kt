@@ -15,8 +15,8 @@ import com.intellij.openapi.project.Project
 import com.intellij.ui.dsl.builder.bindSelected
 import com.intellij.ui.dsl.builder.bindText
 import com.intellij.ui.dsl.builder.panel
-import kotlin.io.path.Path
 import org.jdom.Element
+import kotlin.io.path.Path
 
 /** Run configuration for XTC applications. Invokes `xtc run` or the Gradle `runXtc` task. */
 class XtcRunConfiguration(
@@ -32,8 +32,7 @@ class XtcRunConfiguration(
     var useGradle = true
     var quietMode = true // Use -q flag for less verbose Gradle output
 
-    override fun getConfigurationEditor(): SettingsEditor<out RunConfiguration> =
-        XtcRunSettingsEditor()
+    override fun getConfigurationEditor(): SettingsEditor<out RunConfiguration> = XtcRunSettingsEditor()
 
     override fun getState(
         executor: Executor,
@@ -45,7 +44,7 @@ class XtcRunConfiguration(
                     when {
                         useGradle -> createGradleCommandLine()
                         else -> createXtcCommandLine()
-                    }
+                    },
                 )
         }
 
@@ -109,7 +108,7 @@ class XtcRunSettingsEditor : SettingsEditor<XtcRunConfiguration>() {
                 textField()
                     .bindText(::moduleName)
                     .comment(
-                        "The Ecstasy (.xtc) module to run (overrides build.gradle.kts default)"
+                        "The Ecstasy (.xtc) module to run (overrides build.gradle.kts default)",
                     )
             }
             row("Method name:") {
