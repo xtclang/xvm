@@ -521,6 +521,11 @@ internal object XdkRename {
             val method: Target,
         ) : Target
 
+        data class Receiver(
+            val owner: Target,
+            val register: Int,
+        ) : Target
+
         data class SourceProof(
             val site: Site,
             val format: Constant.Format,
@@ -553,6 +558,10 @@ internal object XdkRename {
 
             is ProofIdentity.Super -> {
                 composedTarget(identity.method, texts, moved, translate)?.let(Target::Super)
+            }
+
+            is ProofIdentity.Receiver -> {
+                composedTarget(identity.owner, texts, moved, translate)?.let { Target.Receiver(it, identity.register) }
             }
 
             is ProofIdentity.Composed -> {
@@ -641,6 +650,7 @@ internal object XdkRename {
             if (
                 identity is ProofIdentity.Composed ||
                 identity is ProofIdentity.Super ||
+                identity is ProofIdentity.Receiver ||
                 identity is ProofIdentity.PrimaryConstructor ||
                 identity is ProofIdentity.Parameter
             ) {
