@@ -305,7 +305,7 @@ Note on Marketplace: snapshot CI never pushes to JetBrains Marketplace. That's i
 **Manual Test Configuration**:
 - Set via workflow inputs when manually triggering
 - Inline execution to keep cache hot
-- Tasks: `runXtc`, `runOne`, `runTwoTestsInSequence`, `runAllTestTasks`/`runParallel`
+- Tasks: `runCiTestTasks` (`runXtc`, `runTwoTestsInSequence`, `runSequential`, `runJitTests`, `runSmallFloatsJit`), or `runCiTestTasksParallel` with `runParallel` in place of `runSequential` when `parallel-test-mode=true`
 
 **Example Manual Trigger**:
 ```bash

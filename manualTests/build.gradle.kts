@@ -565,16 +565,22 @@ val runAllTestTasksParallel = tasks.register("runAllTestTasksParallel") {
     dependsOn(runOne, runTwoTestsInSequence, runTestAllExecutionModes, runParallel)
 }
 
+// The manual tests CI runs, each module once: runXtc covers the project-level xtcRun configuration,
+// runTwoTestsInSequence a custom run task with several modules and provider arguments. runOne is
+// left out, since runSequential and runParallel already run every test module, and so is
+// runTestAllExecutionModes: every run task exercises the default execution mode.
+val runXtc = tasks.named("runXtc")
+
 val runCiTestTasks = tasks.register("runCiTestTasks") {
     group = "application"
-    description = "Run the CI aggregate manual-test tasks without re-running the explicit smoke tasks."
-    dependsOn(runTestAllExecutionModes, runSequential, runJitTests, runSmallFloatsJit)
+    description = "Run the manual tests CI runs, sequentially."
+    dependsOn(runXtc, runTwoTestsInSequence, runSequential, runJitTests, runSmallFloatsJit)
 }
 
 val runCiTestTasksParallel = tasks.register("runCiTestTasksParallel") {
     group = "application"
-    description = "Run the CI aggregate manual-test tasks in parallel mode without re-running the explicit smoke tasks."
-    dependsOn(runTestAllExecutionModes, runParallel, runJitTests, runSmallFloatsJit)
+    description = "Run the manual tests CI runs, with the test modules in parallel."
+    dependsOn(runXtc, runTwoTestsInSequence, runParallel, runJitTests, runSmallFloatsJit)
 }
 
 /**
