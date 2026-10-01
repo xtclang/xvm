@@ -1327,3 +1327,24 @@ and readable queued jobs in addition to periodic heap/queue samples. All observe
 calls remain serialized. Exact measurements and their sampling limits are in the integration plan.
 X130 passes the selected VS Code run, while the corrected extension-free probe records
 `not-reproduced`; the earlier full-run repaint failure remains unresolved.
+
+
+### X130 host isolation (2026-10-01)
+
+Two fresh empty-extension probes reproduce the original `itemsCopied`/`setToCopy` exception when
+Refresh Explorer runs during an asynchronous rename participant. Ecstasy is absent, no LSP process
+runs, and the participant returns no edit. Cut retains old tree items across the refresh; after
+Paste moves the current items, unconditional repaint of the old ones fails. The normal X130 trace
+also proves the compiler returns an empty `documentChanges` list. Native Move/Undo/Redo and every
+resource check succeed before the test reports the host exception.
+
+The latest checked release (1.140.0) and upstream main retain this code. There is no supported
+extension API to repair its private tree or cleanup. The safe follow-up is an upstream fix and the
+same controlled regression; no host binaries, clipboard behavior or native actions are patched.
+X130 remains failed when reproduced. The [diagnosis and receipts](errs-integration-plan.md#x130-isolated-host-defect-and-harness-focus-correction-2026-10-01)
+include commands, the pinned source link and all failed/passing attempts.
+
+Separately, six Undo failures in the initial preceding-case run disappear after requiring native
+window focus before dispatch. The harness uses the host Focus Window command without moving the
+pointer, waits only when focus was absent, and never retries completed edits. X118–X129 then pass;
+X130's remaining failure is the independently reproduced host repaint defect.

@@ -1,3 +1,11 @@
+X130 follow-up: the repaint exception is now reproduced twice **without Ecstasy or any LSP server**
+by refreshing Explorer while a rename participant is pending. The normal X118–X130 run passes the
+first twelve cases and reproduces X130 after successful Move/Undo/Redo/resource checks. Its compiler
+reply is an empty edit. The latest checked VS Code release and upstream main still contain the
+unguarded repaint; no safe extension-side repair was found. A separate native-focus correction fixes
+the preceding Undo test failures. See the [X130 diagnosis](errs-integration-plan.md#x130-isolated-host-defect-and-harness-focus-correction-2026-10-01).
+The host acceptance failure stays open; isolation is complete and an upstream repair remains.
+
 Current reliability follow-up: four separate checkpoints add the extension-free X130 probe,
 shared X146/X147 provider-refresh and late-report regressions, a packaged platform workload, and
 an evidence-based remaining-scope checklist. The 152-case catalog's new cases pass both editors:
