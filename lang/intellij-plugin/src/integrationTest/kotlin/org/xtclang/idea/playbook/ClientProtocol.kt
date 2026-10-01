@@ -9,6 +9,7 @@ import com.intellij.driver.client.Driver
 import com.intellij.driver.client.Remote
 import com.intellij.driver.client.impl.RefWrapper
 import com.intellij.driver.client.service
+import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.singleProject
 import java.util.concurrent.CancellationException
 import kotlin.time.Duration.Companion.seconds
@@ -16,6 +17,7 @@ import kotlin.time.Duration.Companion.seconds
 /** Protocol assertions use the installed client's existing connection, never a second server. */
 class ClientProtocol(
     private val driver: Driver,
+    private val project: () -> Project = { driver.singleProject() },
 ) {
     private val gson = Gson()
 
@@ -25,7 +27,7 @@ class ClientProtocol(
                 message = "installed language client is started",
                 timeout = 45.seconds,
                 getter = {
-                    service<LanguageClients>(singleProject()).getStartedServers().toList()
+                    service<LanguageClients>(project()).getStartedServers().toList()
                 },
                 checker = { servers ->
                     servers.singleOrNull()?.getServerStatus()?.name() == "started"
