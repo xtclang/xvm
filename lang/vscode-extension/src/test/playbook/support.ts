@@ -171,6 +171,18 @@ export class Workspace {
         assert.ok(item.range, `Completion ${label(item)} must provide its source replacement range`);
         const range = item.range instanceof vscode.Range ? item.range : item.range.replacing;
         const value = item.insertText ?? label(item);
+        if (value instanceof vscode.SnippetString) {
+            assert.strictEqual(item.additionalTextEdits?.length ?? 0, 0, 'Snippet fixtures must not discard additional edits');
+            await vscode.window.showTextDocument(document);
+            // insertSnippet always adjusts indentation. The runner's snippet-edit API can retain
+            // the provider's keepWhitespace choice, as native completion acceptance does.
+            const snippet = Object.assign(vscode.SnippetTextEdit.replace(range, value), { keepWhitespace: item.keepWhitespace });
+            const edit = new vscode.WorkspaceEdit();
+            edit.set(document.uri, [snippet]);
+            assert.ok(await vscode.workspace.applyEdit(edit));
+            await symbols(document);
+            return;
+        }
         assert.strictEqual(typeof value, 'string', 'These fixtures expect plain completion text');
         const edit = new vscode.WorkspaceEdit();
         edit.replace(document.uri, range, value as string);
