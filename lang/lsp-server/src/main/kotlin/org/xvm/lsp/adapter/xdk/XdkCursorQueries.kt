@@ -14,7 +14,7 @@ import org.xvm.lsp.adapter.Position as AdapterPosition
 /** Editor queries over copied facts only: no AST, constant pool, resolution or source rewriting. */
 internal object XdkCursorQueries {
     fun completions(model: PartialSemanticModel): List<CompletionItem> {
-        val site = model.sites.singleOrNull() ?: return emptyList()
+        val site = model.sites.singleOrNull() ?: return model.syntaxCompletions
         val prefix =
             site.memberPrefix
                 ?: when (site.kind) {
@@ -26,7 +26,7 @@ internal object XdkCursorQueries {
                     }
 
                     else -> {
-                        return emptyList()
+                        return model.syntaxCompletions
                     }
                 }
         val range =
@@ -90,7 +90,7 @@ internal object XdkCursorQueries {
                         TextEdit(range, text),
                     )
                 }
-        return (ordinary.filterNot { it.label in site.argumentLiterals } + formals + literals)
+        return (ordinary.filterNot { it.label in site.argumentLiterals } + formals + literals + model.syntaxCompletions)
             .map { item -> item.copy(sortText = completionOrder(item)) }
             .sortedBy { it.sortText }
     }
@@ -114,6 +114,8 @@ internal object XdkCursorQueries {
                 CompletionKind.VALUE -> 5
 
                 CompletionKind.KEYWORD -> 6
+
+                CompletionKind.SNIPPET -> 7
             }
         return "$priority:${item.label.lowercase()}:${item.label}:${item.detail}"
     }

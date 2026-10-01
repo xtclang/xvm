@@ -44,6 +44,7 @@ import org.eclipse.lsp4j.ImplementationParams
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.InlayHintParams
 import org.eclipse.lsp4j.InsertTextFormat
+import org.eclipse.lsp4j.InsertTextMode
 import org.eclipse.lsp4j.LinkedEditingRangeParams
 import org.eclipse.lsp4j.LinkedEditingRanges
 import org.eclipse.lsp4j.Location
@@ -798,9 +799,13 @@ class XtcTextDocumentService(
                 completions.map { c ->
                     CompletionItem(c.label).apply {
                         kind = server.presentation.completionKind(toCompletionItemKind(c.kind))
-                        insertTextFormat = InsertTextFormat.PlainText
+                        val snippet = c.snippet?.takeIf { server.presentation.completionSnippets }
+
+                        fun insertion(text: String) = if (c.snippet == null) text else server.presentation.completionTemplate(text)
+                        insertTextFormat = if (snippet == null) InsertTextFormat.PlainText else InsertTextFormat.Snippet
+                        if (c.snippet != null && server.presentation.completionAsIs) insertTextMode = InsertTextMode.AsIs
                         detail = c.detail
-                        insertText = c.insertText
+                        insertText = insertion(snippet ?: c.insertText)
                         val handle =
                             c.documentation
                                 ?.takeIf { server.resolvesCompletionDocumentation }
@@ -819,7 +824,7 @@ class XtcTextDocumentService(
                         }
                         sortText = c.sortText
                         textEdit =
-                            c.textEdit?.let { Either.forLeft(TextEdit(it.range.toLsp(), it.newText)) }
+                            c.textEdit?.let { Either.forLeft(TextEdit(it.range.toLsp(), insertion(snippet ?: it.newText))) }
                         additionalTextEdits = c.additionalTextEdits.map { TextEdit(it.range.toLsp(), it.newText) }
                     }
                 }
@@ -855,6 +860,7 @@ class XtcTextDocumentService(
             AdapterCompletionItem.CompletionKind.KEYWORD -> CompletionItemKind.Keyword
             AdapterCompletionItem.CompletionKind.MODULE -> CompletionItemKind.Module
             AdapterCompletionItem.CompletionKind.VALUE -> CompletionItemKind.Value
+            AdapterCompletionItem.CompletionKind.SNIPPET -> CompletionItemKind.Snippet
         }
 
     /**
