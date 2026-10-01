@@ -2662,6 +2662,7 @@ protocol checkpoint reran X136/X137/X140/X141 plus IntelliJ START; follow-up rec
 | Stalled watcher replies, late registration/removal and disconnect | `ResourceFileWatchersTest` controls acknowledgement deadlines and retry ownership | X124/X134 exercise ordinary external resource/source watching; they do not force client RPC stalls. |
 | Compiler path drafts invalidated by settings/model/new-dialog changes | VS Code `compiler-paths.test.ts` | Actual settings writes and disposal are tested inside the extension host; no automated picker-click race is claimed. |
 | Open buffers own index entries through scan/watch/close races | `WorkspaceIndexerTest` uses read barriers, including equivalent file URI spellings | Tree-sitter-specific; compiler playbook cases cannot establish this behavior. |
+| Final provider inventory and optional link/signature/pull-diagnostic fields | `CapabilityContractTest` covers every adapter flag; `CapabilityNegotiationTest` tests absent/false/true fields; `DiagnosticPresentationTest` tests independent push/pull and related-report shapes; `XdkStdioTest` exercises rich/reduced sessions | X131 retains modern-client link/resolve coverage. Reduced initialization profiles are protocol tests, not a new UI case; no editor capability is changed midway through a session. |
 | Action literals, preferred metadata, completion kinds and legacy command edits | `CapabilityNegotiationTest` | X131 covers negotiated modern-client actions. Legacy/minimal clients, stale handles and client refusal are protocol regressions. |
 | Partial batches and actual initial scan progress | `PartialResultsTest`, `IndexingProgressTest`, `ConnectionProgressTest`, packaged `XdkStdioTest` | X143 compares every streamed workspace symbol with the ordinary response. Visible long-operation cancellation remains P1. |
 | Detached constant-initializer facts | `SemanticModelTest`, `XdkInitializerTest` | X142 covers initializer hover/definition/references/rename/Undo in both drivers. |
@@ -2820,3 +2821,25 @@ pointer. Already executed edits, Paste, Undo and Redo are never replayed.
 X130 alone passes in `run-QLBWYV`; it is not evidence of a host fix. The
 [full diagnosis](../../docs/errs-integration-plan.md#x130-isolated-host-defect-and-harness-focus-correction-2026-10-01)
 records the failed focus attempt, correction, upstream source and remaining repair task.
+
+
+### Final L80 protocol checks (2026-10-01)
+
+The current response/provider capability audit is complete; see the
+[producer inventory](../../docs/errs-audit.md#l80-final-capability-contract-audit-2026-10-01).
+The shared catalog remains 152 cases. This server-only change is validated through focused backend
+and packaged stdio tests; earlier native receipts are preserved, not claimed as fresh runs.
+
+For protocol acceptance, run `CapabilityContractTest`, `CapabilityNegotiationTest`,
+`DiagnosticPresentationTest` and the packaged `XdkStdioTest` optional-signature/link cases. Clients
+without tooltip support must receive the target without a tooltip, including after lazy resolve.
+Clients without per-signature parameter support must still highlight the selected overload's
+parameter through `SignatureHelp.activeParameter`. Pull clients must not inherit related-information
+support from push diagnostics or from related-document support. Error text retains external source
+identity when related information is suppressed. The tests include supported and reduced clients.
+
+For the next normal editor acceptance run, retain the existing signature-help cases, X123 diagnostics
+and X131 resolve checks in both drivers. These exercise the installed clients' negotiated behavior;
+they cannot substitute for the reduced-client protocol tests. L81 manual checks and the X130 host
+failure remain open. Exact test receipts are in the
+[integration plan](../../docs/errs-integration-plan.md#l80-final-capability-contract-audit-2026-10-01).
