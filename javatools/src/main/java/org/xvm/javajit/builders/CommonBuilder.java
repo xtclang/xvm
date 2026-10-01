@@ -31,6 +31,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.ChildInfo;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.LiteralConstant;
@@ -44,6 +45,7 @@ import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.TypeInfo.MethodKind;
 import org.xvm.asm.constants.UnionTypeConstant;
 
 import org.xvm.javajit.BuildContext;
@@ -1646,11 +1648,138 @@ public class CommonBuilder
 
         if (!isInterface) {
             assembleXvmType(classBuilder);
+            assembleVirtualChildFactory(classBuilder);
         }
 
         if (typeInfo.getFormat() == Format.CONST) {
             assembleConstMethods(classBuilder);
         }
+    }
+
+    /**
+     * Assemble virtual child factory methods on the virtual child parent. Consider the following
+     * example:
+     *  <pre>
+     *    class Base {
+     *         class Child {}
+     *    }
+     *    class Derived extends Base {
+     *         @Override class Child {}
+     *    }
+     *  </pre>
+     * In that case, we generate the factory method "Base.Child Child$new()" on Base class that
+     * returns a new instance of the Base.Child, and an identical method on Derived class that
+     * returns an instance of the Derived.Child instead.
+     */
+    protected void assembleVirtualChildFactory(ClassBuilder classBuilder) {
+        for (ChildInfo child : typeInfo.getChildInfosByName().values()) {
+            if (child == null || !child.isVirtualClass()) {
+                continue;
+            }
+
+            TypeConstant   childType   = pool().ensureVirtualChildTypeConstant(jitType, child.getName());
+            ClassStructure childStruct = (ClassStructure) child.getComponent();
+            TypeConstant   childJIC    = childStruct.getFormalType().
+                                            resolveGenerics(pool(), childType).getJitICType();
+            TypeInfo       infoJIC     = childJIC.ensureAccess(Access.PRIVATE).ensureTypeInfo();
+            if (infoJIC.isAbstract()) {
+                continue;
+            }
+
+            ClassDesc childCD   = ensureClassDesc(childJIC);
+            String    childName = child.getName();
+
+            for (MethodConstant ctorId : infoJIC.findMethods("construct", -1, MethodKind.Constructor)) {
+                MethodInfo ctor     = infoJIC.getMethodById(ctorId);
+                MethodInfo baseCtor = ctor.getChildConstructorOrigin();
+                TypeInfo   baseInfo = baseCtor.getTypeInfo();
+                ClassDesc  baseCD   = baseInfo.getType().getCallableClassDesc(typeSystem);
+
+                // Notes:
+                // 1) baseCD represents the compile-time return type for the factory methods
+                // 2) it's possible that while the parent is not generic, the child is
+
+                String factoryName = childName +
+                        baseCtor.ensureJitMethodName(typeSystem).replace("construct", NEW);
+                String instorName  = ctor.ensureJitMethodName(typeSystem).replace("construct", NEW);
+
+                JitMethodDesc instorJmd = convertConstructToNew(infoJIC, childCD,
+                        (JitCtorDesc) ctor.getJitDesc(this, childJIC));
+
+                assembleChildConstructorRouting(classBuilder, factoryName,
+                        baseCD, baseInfo.hasGenericTypes(), childJIC, infoJIC.hasGenericTypes(),
+                        instorName, instorJmd.standardMD);
+                if (instorJmd.isOptimized) {
+                    assembleChildConstructorRouting(classBuilder, factoryName + OPT,
+                            baseCD, baseInfo.hasGenericTypes(), childJIC, infoJIC.hasGenericTypes(),
+                            instorName + OPT, instorJmd.optimizedMD);
+                }
+            }
+        }
+    }
+
+    /**
+     * Assemble one parent-side route, retaining the ancestor's name and return descriptor.
+     *
+     * For a generic Derived.Child overriding a non-generic Base.Child, the factory on Derived
+     * looks like this (CHILD_TYPE represents the Derived.Child TypeConstant):
+     *
+     *     Base.Child Child$new#17$p(Ctx ctx, long value) {
+     *         TypeConstant actualType = $childType(ctx, CHILD_TYPE);
+     *         return Derived.Child.$new#17$p(ctx, actualType, this, value);
+     *     }
+     *
+     * Here factoryHasType is false and hasType is true. If factoryHasType is true, the factory
+     * accepts a TypeConstant argument and resolves that instead of CHILD_TYPE. If hasType is
+     * false, both the type resolution and the instantiator's TypeConstant argument are omitted.
+     *
+     * @param factoryName      the factory name shared by all parent overrides
+     * @param baseCD           the original child declaration's return class, retained by every override
+     * @param isGenericParent  whether the factory contract includes a TypeConstant argument
+     * @param childType        the actual, non-phantom child implementation type
+     * @param isGenericChild   whether the actual child's instantiator requires a TypeConstant argument
+     * @param instorName       the child's instantiator method name
+     * @param instorMD         the child's instantiator descriptor
+     */
+    private void assembleChildConstructorRouting(
+            ClassBuilder   classBuilder,
+            String         factoryName,
+            ClassDesc      baseCD,
+            boolean        isGenericParent,
+            TypeConstant   childType,
+            boolean        isGenericChild,
+            String         instorName,
+            MethodTypeDesc instorMD) {
+        // the explicit parameters are identical; only the return and implicit arguments differ
+        MethodTypeDesc paramsMD = instorMD.dropParameterTypes(1, isGenericChild ? 3 : 2)
+                                          .changeReturnType(baseCD);
+        MethodTypeDesc factoryMD = isGenericParent
+                ? paramsMD.insertParameterTypes(1, CD_TypeConstant)
+                : paramsMD;
+
+        classBuilder.withMethodBody(factoryName, factoryMD, ClassFile.ACC_PUBLIC, code -> {
+            int ctxSlot = code.parameterSlot(0);
+            code.aload(ctxSlot);
+            if (isGenericChild) {
+                code.aload(0).aload(ctxSlot);
+                if (isGenericParent) {
+                    code.aload(code.parameterSlot(1));
+                } else {
+                    loadTypeConstant(code, childType);
+                }
+                code.invokevirtual(CD_nObject, "$childType", md(CD_TypeConstant, CD_Ctx, CD_TypeConstant));
+            } else {
+                // if the parent was generic, the child must've been too
+                assert !isGenericParent;
+            }
+            int paramStart = isGenericParent ? 2 : 1;
+            code.aload(0);
+            for (int i = paramStart; i < factoryMD.parameterCount(); i++) {
+                load(code, factoryMD.parameterType(i), code.parameterSlot(i));
+            }
+            code.invokestatic(instorMD.returnType(), instorName, instorMD)
+                .areturn();
+        });
     }
 
     /**
@@ -1675,8 +1804,19 @@ public class CommonBuilder
                 code.aload(0)
                     .getfield(CD_this, "$type", CD_TypeConstant);
             } else {
-                // the static field is initialized in assembleCLInit()
-                code.getstatic(CD_this, CONST_PROP + '0', CD_TypeConstant);
+                // the static <CONST_PROP + '0'> field is initialized in assembleCLInit()
+                String sc0 = CONST_PROP + '0';
+                if (classStruct.isVirtualChild()) {
+                    // this.$outer.$childType(ctx, $sc0)
+                    code.aload(0)
+                        .getfield(CD_this, Outer, CD_nObject)
+                        .aload(code.parameterSlot(0))
+                        .getstatic(CD_this, sc0, CD_TypeConstant)
+                        .invokevirtual(CD_nObject, "$childType",
+                            md(CD_TypeConstant, CD_Ctx, CD_TypeConstant));
+                } else {
+                    code.getstatic(CD_this, sc0, CD_TypeConstant);
+                }
             }
             code.areturn();
         });

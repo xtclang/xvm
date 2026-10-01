@@ -376,6 +376,44 @@ public class MethodInfo
     }
 
     /**
+     * Find the base constructor that defines a virtual child's constructor signature.
+     *
+     * TODO CP: this should be a part of the MethodInfo already; unlike the virtual constructors
+     *          we seem to discard the virtual child constructors from the chains
+     *
+     * @return the base MethodInfo
+     */
+    public MethodInfo getChildConstructorOrigin() {
+        assert isConstructor() &&
+                getHead().getMethodStructure().getContainingClass().isVirtualChild();
+
+        MethodInfo ctor      = this;
+        TypeInfo   childInfo = getTypeInfo();
+        if (childInfo.getType().isPhantom()) {
+            // an undeclared inherited child has no constructor contract of its own
+            TypeConstant typeChild = childInfo.getType();
+            childInfo = childInfo.getClassStructure().getFormalType().
+                    resolveGenerics(typeChild.getConstantPool(), typeChild).
+                    ensureAccess(Access.PRIVATE).ensureTypeInfo();
+            ctor = childInfo.getMethodBySignature(getSignature());
+            assert ctor != null;
+        }
+        while (childInfo.getClassStructure().isExplicitlyOverride()) {
+            TypeConstant superType = childInfo.getExtends();
+            assert superType != null && superType.isVirtualChild();
+
+            TypeInfo   superInfo = superType.ensureAccess(Access.PROTECTED).ensureTypeInfo();
+            MethodInfo superCtor = superInfo.getMethodBySignature(ctor.getSignature());
+            if (superCtor == null) {
+                break;
+            }
+            ctor      = superCtor;
+            childInfo = superInfo;
+        }
+        return ctor;
+    }
+
+    /**
      * In terms of the "glass planes" metaphor, the glass plane from "this" (contribution) is to
      * replace the glass plane of "that" (base), with the resulting combination of glass planes
      * returned as a MethodInfo.

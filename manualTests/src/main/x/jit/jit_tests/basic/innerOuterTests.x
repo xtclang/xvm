@@ -2,6 +2,8 @@ package innerOuterTests {
 
     void run() {
         testSimple();
+        testChildOverride();
+        testInheritedChild();
         testOuterIdentity();
         testStaticIface();
         testAnonInner();
@@ -32,13 +34,9 @@ package innerOuterTests {
     class Base(String text)
             implements IfaceOuter {
         class Child() {
-            String textByName.get() {
-                return this.Base.text;
-            }
+            String textByName.get() = this.Base.text;
 
-            String textByOuter.get() {
-                return outer.text;
-            }
+            String textByOuter.get() = outer.text;
         }
 
         @Override
@@ -50,6 +48,72 @@ package innerOuterTests {
             String fnInner() = name;
         }
     }
+
+    void testChildOverride() {
+        assert new ParentBase().childReport() == "Base.Child";
+        // the inherited method must construct the child belonging to the runtime parent
+        assert new ParentDerived().childReport() == "Derived.Child";
+
+        // direct construction also uses the base factory signature, then narrows its result
+        ParentDerived.Child child = new ParentDerived().new Child();
+        assert child.report() == "Derived.Child";
+    }
+
+    class ParentBase {
+        String childReport() = new Child().report();
+
+        Child createChild() = new Child();
+
+        class Child {
+            String report() = "Base.Child";
+        }
+    }
+
+    class ParentDerived extends ParentBase {
+        @Override
+        class Child {
+            @Override
+            String report() = "Derived.Child";
+        }
+    }
+
+    void testInheritedChild() {
+        // no Child declaration: the inherited factory must still create this parent's child
+        ParentInherited parent = new ParentInherited();
+        ParentBase base = parent;
+        ParentBase.Child child = base.createChild();
+        // TODO: Ref.type is not yet implemented by nRef
+        // assert &child.type == ParentInherited.Child;
+        Outer outer = child.outer;
+        assert &outer == &parent;
+        assert child.report() == "Derived.Child";
+
+        ParentInherited.Child direct = parent.new Child();
+        outer = direct.outer;
+        assert &outer == &parent;
+        assert direct.report() == "Derived.Child";
+
+        // the same declared child can be inherited through multiple parents
+        ParentFurther further = new ParentFurther();
+        child = further.createChild();
+        outer = child.outer;
+        assert &outer == &further;
+        assert child.report() == "Derived.Child";
+
+        // the parent introduces a generic parameter, but the base factory has no type argument
+        GenericParent<String> genericParent = new GenericParent();
+        base = genericParent;
+        child = base.createChild();
+        // assert &child.type == GenericParent<String>.Child;
+        outer = child.outer;
+        assert &outer == &genericParent;
+    }
+
+    class ParentInherited extends ParentDerived {}
+
+    class ParentFurther extends ParentInherited {}
+
+    class GenericParent<Element> extends ParentBase {}
 
     void testOuterIdentity() {
         new IdentityParent().new Child().testOuter();
