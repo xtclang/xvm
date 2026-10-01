@@ -142,9 +142,58 @@ concurrency:
     cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 jobs:
-    build-and-test:
+    # What CI this change needs. .github/scripts/ci-changes.py holds the one definition of what
+    # each piece of CI reads and derives every answer from it:
+    #   - docs-only: the change touches only documentation (markdown anywhere, the doc/ tree, apart
+    #     from what the VSIX bundles). A pull request like that skips build-and-test; the required
+    #     "All builds complete" check still reports. Master pushes and manual runs always build.
+    #   - which lang checks the change needs, and a fingerprint of each check's inputs:
+    #       - core (tree-sitter grammar, XDK corpus, native libraries; LSP adapter and DSL tests)
+    #       - IntelliJ plugin (main build with the lang composite attached, Plugin Verifier)
+    #       - VS Code extension (headless tests, VSIX)
+    #     Their inputs live inside lang/ and outside it (build-logic, the Gradle wrapper, XDK sources
+    #     the core checks parse, files the plugins bundle, and the version catalog entries each part
+    #     of the lang build uses). A change to the shared lang build needs every check; a plugin
+    #     change only that plugin's; an XDK source change only the core checks. So a VS Code-only
+    #     change (such as the weekly Dependabot npm bumps) does not build and verify the IntelliJ
+    #     plugin with the two IntelliJ distributions (~3 GB) that downloads, and an XDK-only bump that
+    #     lang does not use runs no lang check.
+    changes:
+        name: Classify changes
+        runs-on: ubuntu-latest
         outputs:
-            lang-changed: ${{ steps.lang-changes.outputs.lang }}
+            docs-only: ${{ steps.classify.outputs.docs-only }}
+            lang: ${{ steps.classify.outputs.lang }}
+            core: ${{ steps.classify.outputs.core }}
+            intellij: ${{ steps.classify.outputs.intellij }}
+            vscode: ${{ steps.classify.outputs.vscode }}
+            reason: ${{ steps.classify.outputs.reason }}
+            core-fingerprint: ${{ steps.classify.outputs.core-fingerprint }}
+            intellij-fingerprint: ${{ steps.classify.outputs.intellij-fingerprint }}
+            vscode-fingerprint: ${{ steps.classify.outputs.vscode-fingerprint }}
+        steps:
+            - name: Fetch Sources
+              uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0  # The comparison base must be in the history
+                  persist-credentials: false
+
+            - name: Classify changes
+              id: classify
+              shell: bash
+              run: |
+                  case "${{ github.event_name }}" in
+                      pull_request) BASE="${{ github.event.pull_request.base.sha }}" ;;
+                      push) BASE="${{ github.event.before }}" ;;
+                      *) BASE=$(git merge-base origin/master HEAD) ;;
+                  esac
+                  python3 .github/scripts/ci-changes.py "$BASE" HEAD | tee -a "$GITHUB_OUTPUT"
+
+    build-and-test:
+        needs: changes
+        if: github.event_name != 'pull_request' || needs.changes.outputs.docs-only != 'true'
+        outputs:
+            lang-changed: ${{ needs.changes.outputs.lang }}
             effective-publish-intellij: ${{ steps.publish-flags.outputs.effective }}
             effective-publish-vscode: ${{ steps.publish-flags.outputs.effective-vscode }}
         strategy:
@@ -157,44 +206,15 @@ jobs:
             - name: Fetch Sources
               uses: actions/checkout@v7
               with:
-                  fetch-depth: 0  # Need full history for path filtering
+                  fetch-depth: 0  # Full history for git version details (palantir git-version in javatools)
                   show-progress: true
                   persist-credentials: false
 
-            # Which lang checks this change needs, and a fingerprint of each check's inputs:
-            #   - core (tree-sitter grammar, XDK corpus, native libraries; LSP adapter and DSL tests)
-            #   - IntelliJ plugin (main build with the lang composite attached, Plugin Verifier)
-            #   - VS Code extension (headless tests, VSIX)
-            # .github/scripts/lang-ci-areas.py holds the one definition of what each check reads,
-            # inside lang/ and outside it (build-logic, the Gradle wrapper, XDK sources the core
-            # checks parse, files the plugins bundle, and the version catalog entries each part of
-            # the lang build uses), and derives both answers from it. A change to the shared lang
-            # build needs every check; a plugin change only that plugin's; an XDK source change only
-            # the core checks. So a VS Code-only change (such as the weekly Dependabot npm bumps)
-            # does not build and verify the IntelliJ plugin with the two IntelliJ distributions
-            # (~3 GB) that downloads, and an XDK-only bump that lang does not use runs no lang check.
-            - name: Check for lang changes
-              id: lang-changes
+            # Cache markers (see the marker steps below) need a file to save.
+            - name: Prepare lang check markers
+              if: github.event_name == 'pull_request' && needs.changes.outputs.lang == 'true'
               shell: bash
-              run: |
-                  case "${{ github.event_name }}" in
-                      pull_request) BASE="${{ github.event.pull_request.base.sha }}" ;;
-                      push) BASE="${{ github.event.before }}" ;;
-                      *) BASE=$(git merge-base origin/master HEAD) ;;
-                  esac
-                  # The Windows runner may only have `python`, or a `python3` that is a store stub.
-                  for PYTHON in python3 python ""; do
-                      if [ -n "$PYTHON" ] && "$PYTHON" -c 'import tomllib' 2>/dev/null; then
-                          break
-                      fi
-                  done
-                  if [ -z "$PYTHON" ]; then
-                      echo "❌ No Python 3.11+ (tomllib) on this runner for .github/scripts/lang-ci-areas.py"
-                      exit 1
-                  fi
-                  "$PYTHON" .github/scripts/lang-ci-areas.py "$BASE" HEAD | tee -a "$GITHUB_OUTPUT"
-                  # Cache markers (see the marker steps below) need a file to save.
-                  echo "$GITHUB_SHA" > "$RUNNER_TEMP/lang-ci-marker"
+              run: echo "$GITHUB_SHA" > "$RUNNER_TEMP/lang-ci-marker"
 
             # A pull request re-ran every lang check on each push while its diff touched lang, even
             # when the push (a rebase, a commit elsewhere) left a check's inputs as an earlier run of
@@ -203,32 +223,32 @@ jobs:
             # scoped to the pull request, so markers never cross pull requests.
             - name: Look up lang core marker
               id: core-marker
-              if: github.event_name == 'pull_request' && steps.lang-changes.outputs.core == 'true'
+              if: github.event_name == 'pull_request' && needs.changes.outputs.core == 'true'
               uses: actions/cache/restore@v6
               with:
                   path: ${{ runner.temp }}/lang-ci-marker
-                  key: lang-core-passed-${{ steps.lang-changes.outputs.core-fingerprint }}
+                  key: lang-core-passed-${{ needs.changes.outputs.core-fingerprint }}
                   lookup-only: true
 
             - name: Look up IntelliJ plugin marker
               id: intellij-marker
-              if: github.event_name == 'pull_request' && steps.lang-changes.outputs.intellij == 'true'
+              if: github.event_name == 'pull_request' && needs.changes.outputs.intellij == 'true'
               uses: actions/cache/restore@v6
               with:
                   path: ${{ runner.temp }}/lang-ci-marker
-                  key: lang-intellij-passed-${{ steps.lang-changes.outputs.intellij-fingerprint }}
+                  key: lang-intellij-passed-${{ needs.changes.outputs.intellij-fingerprint }}
                   lookup-only: true
 
             - name: Look up VS Code extension marker
               id: vscode-marker
-              if: github.event_name == 'pull_request' && steps.lang-changes.outputs.vscode == 'true'
+              if: github.event_name == 'pull_request' && needs.changes.outputs.vscode == 'true'
               uses: actions/cache/restore@v6
               with:
                   path: ${{ runner.temp }}/lang-ci-marker
-                  key: lang-vscode-passed-${{ steps.lang-changes.outputs.vscode-fingerprint }}
+                  key: lang-vscode-passed-${{ needs.changes.outputs.vscode-fingerprint }}
                   lookup-only: true
 
-            # Gating policy. Each check runs when the change needs it (lang-changes step) or a manual
+            # Gating policy. Each check runs when the change needs it (changes job) or a manual
             # override asks for it, unless an earlier run of this pull request passed it on the same
             # inputs:
             #   - include-lang=true runs every check
@@ -301,15 +321,15 @@ jobs:
                   }
 
                   IFS=$'\t' read -r VALIDATE_CORE CORE_REASON < <(check "lang core" \
-                      "${{ steps.lang-changes.outputs.core }}" "$CORE_OVERRIDE" "${{ steps.core-marker.outputs.cache-hit }}")
+                      "${{ needs.changes.outputs.core }}" "$CORE_OVERRIDE" "${{ steps.core-marker.outputs.cache-hit }}")
                   IFS=$'\t' read -r VERIFY_INTELLIJ VERIFY_REASON < <(check "IntelliJ plugin" \
-                      "${{ steps.lang-changes.outputs.intellij }}" "$INTELLIJ_OVERRIDE" "${{ steps.intellij-marker.outputs.cache-hit }}")
+                      "${{ needs.changes.outputs.intellij }}" "$INTELLIJ_OVERRIDE" "${{ steps.intellij-marker.outputs.cache-hit }}")
                   IFS=$'\t' read -r VALIDATE_VSCODE VSCODE_REASON < <(check "VS Code extension" \
-                      "${{ steps.lang-changes.outputs.vscode }}" "$VSCODE_OVERRIDE" "${{ steps.vscode-marker.outputs.cache-hit }}")
+                      "${{ needs.changes.outputs.vscode }}" "$VSCODE_OVERRIDE" "${{ steps.vscode-marker.outputs.cache-hit }}")
                   IFS=$'\t' read -r EFFECTIVE REASON < <(publish "IntelliJ plugin" \
-                      "${{ steps.lang-changes.outputs.intellij }}" "$FORCE_INTELLIJ" "$REQUESTED_INTELLIJ" "publish-intellij-plugin")
+                      "${{ needs.changes.outputs.intellij }}" "$FORCE_INTELLIJ" "$REQUESTED_INTELLIJ" "publish-intellij-plugin")
                   IFS=$'\t' read -r EFFECTIVE_VSCODE VSCODE_PUBLISH_REASON < <(publish "VS Code extension" \
-                      "${{ steps.lang-changes.outputs.vscode }}" "$FORCE_VSCODE" "$REQUESTED_VSCODE" "publish-vscode-extension")
+                      "${{ needs.changes.outputs.vscode }}" "$FORCE_VSCODE" "$REQUESTED_VSCODE" "publish-vscode-extension")
                   # The lang validation step runs the core and VS Code extension checks.
                   VALIDATE_LANG=false
                   if [ "$VALIDATE_CORE" = "true" ] || [ "$VALIDATE_VSCODE" = "true" ]; then
@@ -336,8 +356,8 @@ jobs:
                   }
                   echo ""
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                  echo "🌳 lang changed: ${{ steps.lang-changes.outputs.lang }} (${{ steps.lang-changes.outputs.reason }})"
-                  echo "  📋 fingerprints: core ${{ steps.lang-changes.outputs.core-fingerprint }}, IntelliJ plugin ${{ steps.lang-changes.outputs.intellij-fingerprint }}, VS Code extension ${{ steps.lang-changes.outputs.vscode-fingerprint }}"
+                  echo "🌳 lang changed: ${{ needs.changes.outputs.lang }} (${{ needs.changes.outputs.reason }})"
+                  echo "  📋 fingerprints: core ${{ needs.changes.outputs.core-fingerprint }}, IntelliJ plugin ${{ needs.changes.outputs.intellij-fingerprint }}, VS Code extension ${{ needs.changes.outputs.vscode-fingerprint }}"
                   echo "  📋 event: $EVENT_NAME on $REF; runner: ${{ matrix.os }} (lang checks only run on ubuntu-latest)"
                   echo "  📋 overrides: IntelliJ plugin ${INTELLIJ_OVERRIDE:-<none>}, VS Code extension ${VSCODE_OVERRIDE:-<none>}"
                   show "$VALIDATE_CORE" "Lang core checks (tree-sitter, XDK corpus, LSP adapter and DSL tests)" "$CORE_REASON"
@@ -637,7 +657,7 @@ jobs:
               uses: actions/cache/save@v6
               with:
                   path: ${{ runner.temp }}/lang-ci-marker
-                  key: lang-intellij-passed-${{ steps.lang-changes.outputs.intellij-fingerprint }}
+                  key: lang-intellij-passed-${{ needs.changes.outputs.intellij-fingerprint }}
 
             - name: Skip lang validation
               if: |
@@ -726,7 +746,7 @@ jobs:
               uses: actions/cache/save@v6
               with:
                   path: ${{ runner.temp }}/lang-ci-marker
-                  key: lang-core-passed-${{ steps.lang-changes.outputs.core-fingerprint }}
+                  key: lang-core-passed-${{ needs.changes.outputs.core-fingerprint }}
 
             - name: Record VS Code extension checks pass
               if: |
@@ -736,7 +756,7 @@ jobs:
               uses: actions/cache/save@v6
               with:
                   path: ${{ runner.temp }}/lang-ci-marker
-                  key: lang-vscode-passed-${{ steps.lang-changes.outputs.vscode-fingerprint }}
+                  key: lang-vscode-passed-${{ needs.changes.outputs.vscode-fingerprint }}
 
             - name: Upload VS Code extension
               if: |
@@ -1125,16 +1145,27 @@ jobs:
     # required check covers the full PR-blocking surface.
     build-complete:
         name: All builds complete
-        needs: [build-and-test, integration-test]
+        needs: [changes, build-and-test, integration-test]
         runs-on: ubuntu-latest
         if: always()
         steps:
             - name: Check build status
               run: |
+                  CHANGES_RESULT="${{ needs.changes.result }}"
                   BUILD_RESULT="${{ needs.build-and-test.result }}"
                   INTEGRATION_RESULT="${{ needs.integration-test.result }}"
+                  echo "changes           : $CHANGES_RESULT (docs-only: ${{ needs.changes.outputs.docs-only }})"
                   echo "build-and-test    : $BUILD_RESULT"
                   echo "integration-test  : $INTEGRATION_RESULT"
+                  if [ "$CHANGES_RESULT" != "success" ]; then
+                    echo "❌ classifying the changes failed or was cancelled"
+                    exit 1
+                  fi
+                  if [ "${{ github.event_name }}" = "pull_request" ] && \
+                     [ "${{ needs.changes.outputs.docs-only }}" = "true" ] && [ "$BUILD_RESULT" = "skipped" ]; then
+                    echo "✅ Documentation-only change: no build or tests needed"
+                    exit 0
+                  fi
                   if [ "$BUILD_RESULT" != "success" ]; then
                     echo "❌ build-and-test failed or was cancelled"
                     exit 1

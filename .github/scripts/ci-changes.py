@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
-"""Decide which lang CI checks a change needs, and fingerprint the inputs of each check.
+"""Decide which CI work a change needs, and fingerprint the inputs of each lang check.
 
-CI runs three kinds of lang checks:
+A change that touches only documentation needs no build or tests. Otherwise CI runs three kinds
+of lang checks, each only when the change touches what it reads:
   core      tree-sitter grammar, XDK corpus parse and native libraries; LSP adapter and DSL tests
   intellij  the main build with the lang composite attached, and the IntelliJ Plugin Verifier
   vscode    the VS Code extension's headless tests and VSIX
 
-Their inputs fall into four groups (a file belongs to the first group that matches it):
+Files fall into five groups (a file belongs to the first group that matches it):
   intellij  the IntelliJ plugin, and the file it syncs from javatools
   vscode    the VS Code extension, and the files it bundles from the repository root
+  docs      documentation: markdown anywhere and the doc/ tree, apart from what the VSIX bundles
   build     everything else the lang build reads: the rest of lang/, the build-logic it includes,
             the Gradle wrapper and the root build configuration
   corpus    the XDK sources the core checks parse as test data
@@ -19,10 +21,10 @@ A build change needs every check, a corpus change only the core checks, and a pl
 only that plugin's checks. Each check's fingerprint hashes the groups it reads, so a pull request
 push that leaves them unchanged (a rebase, a commit elsewhere) can skip a check that passed.
 
-Usage: lang-ci-areas.py BASE [HEAD]
-Prints GitHub step outputs (key=value lines): lang, core, intellij, vscode, reason, and
-core-fingerprint, intellij-fingerprint, vscode-fingerprint. When BASE is empty or not a commit,
-every check is needed.
+Usage: ci-changes.py BASE [HEAD]
+Prints GitHub step outputs (key=value lines): docs-only, lang, core, intellij, vscode, reason,
+and core-fingerprint, intellij-fingerprint, vscode-fingerprint. When BASE is empty or not a
+commit, everything is needed.
 """
 
 import hashlib
@@ -33,6 +35,16 @@ import sys
 import tomllib
 
 GROUPS = (
+    # Documentation the VS Code extension packages: vsce validates the README.
+    ("vscode", (
+        "lang/vscode-extension/README.md",
+        "LICENSE.md",
+        "doc/logo/x.jpg",
+    )),
+    ("docs", (
+        "**.md",
+        "doc/**",
+    )),
     ("intellij", (
         "lang/intellij-plugin/**",
         "javatools/src/main/java/org/xvm/tool/XtcProjectCreator.java",
@@ -68,7 +80,8 @@ CATALOG_USERS = {
     "build": ("lang", ":(exclude)lang/intellij-plugin", ":(exclude)lang/vscode-extension",
               "build-logic/settings-plugins", "build-logic/common-plugins"),
 }
-NEEDS = {"build": ("core", "intellij", "vscode"), "corpus": ("core",), "intellij": ("intellij",), "vscode": ("vscode",)}
+NEEDS = {"build": ("core", "intellij", "vscode"), "corpus": ("core",), "intellij": ("intellij",), "vscode": ("vscode",),
+         "docs": ()}
 READS = {"core": ("build", "corpus"), "intellij": ("build", "intellij"), "vscode": ("build", "vscode")}
 # Build sources only: docs under lang/ show catalog accessors in examples.
 SOURCES = ("**/*.kts", "**/*.kt", "**/*.gradle", "**/*.java")
@@ -150,16 +163,19 @@ def main():
 
     if is_commit(base):
         changed = {}
-        for path in git("diff", "--name-only", "--no-renames", base, head).splitlines():
+        paths = git("diff", "--name-only", "--no-renames", base, head).splitlines()
+        docs_only = bool(paths) and all(group_of(path) == "docs" for path in paths)
+        for path in paths:
             if group := group_of(path):
                 changed[group] = changed.get(group, 0) + 1
         for group, group_references in references.items():
             if catalog_entries(base, group_references) != catalog_entries(head, group_references):
                 changed[group] = changed.get(group, 0) + 1
         groups = sorted(changed)
-        reason = ", ".join(f"{group} ({count})" for group, count in sorted(changed.items())) or "nothing lang reads changed"
-        reason = f"changed lang input groups: {reason}" if changed else reason
+        reason = ", ".join(f"{group} ({count})" for group, count in sorted(changed.items()) if NEEDS[group])
+        reason = f"changed lang input groups: {reason}" if reason else "nothing lang reads changed"
     else:
+        docs_only = False
         groups = [group for group, _ in GROUPS]
         reason = f"comparison base '{base}' unavailable: treating every lang input as changed"
     needed = {check for group in groups for check in NEEDS[group]}
@@ -172,6 +188,7 @@ def main():
     for group, group_references in references.items():
         inputs[group] += catalog_entries(head, group_references)
 
+    print(f"docs-only={'true' if docs_only else 'false'}")
     print(f"lang={'true' if needed else 'false'}")
     for check in READS:
         print(f"{check}={'true' if check in needed else 'false'}")

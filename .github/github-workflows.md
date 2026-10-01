@@ -205,18 +205,24 @@ The lang composite build (`lang/`) is gated separately from the rest of the XDK 
 
 ### What each check reads
 
-`.github/scripts/lang-ci-areas.py` holds the one definition of what the checks read, inside `lang/` and outside it, and derives from it both which checks a change needs and a fingerprint of each check's inputs. A file belongs to the first group that matches it:
+`.github/scripts/ci-changes.py`, run once by the `changes` job, holds the one definition of what the checks read, inside `lang/` and outside it, and derives from it both which checks a change needs and a fingerprint of each check's inputs. A file belongs to the first group that matches it:
 
 | Group | Files | Needs |
 |-------|-------|-------|
+| `vscode` | `lang/vscode-extension/README.md`, `LICENSE.md` and `doc/logo/x.jpg` (bundled into the VSIX; vsce validates the README) | VS Code extension |
+| `docs` | any other `*.md`, and the `doc/` tree | nothing |
 | `intellij` | `lang/intellij-plugin/**`, `XtcProjectCreator.java` (synced into the plugin) | IntelliJ plugin |
-| `vscode` | `lang/vscode-extension/**`, `LICENSE.md` and `doc/logo/x.jpg` (bundled into the VSIX) | VS Code extension |
+| `vscode` | `lang/vscode-extension/**` | VS Code extension |
 | `build` | the rest of `lang/**`, `build-logic/settings-plugins/**`, `build-logic/common-plugins/**`, the Gradle wrapper, root `settings.gradle.kts`, `build.gradle.kts`, `gradle.properties`, `version.properties`, `gradle/gradle-daemon-jvm.properties` | all three |
 | `corpus` | `lib_*/**/*.x`, `manualTests/src/main/x/**/*.x` (parsed by the core checks) | lang core |
 
 Version catalog entries belong to the group whose sources use them, found from the `libs.…` accessors and resolved through `version.ref`: `lang-intellij-ide` is an `intellij` entry, `lang-node` a `vscode` entry, and `junit`, used by the lang build and the build-logic it includes, a `build` entry. A catalog entry nothing in lang uses (such as `gson`) needs no lang check.
 
 So a VS Code-only change (such as the weekly Dependabot npm bumps) does not build and verify the IntelliJ plugin with the two IntelliJ distributions (~3 GB) that downloads, an IntelliJ-only change does not run the VS Code tests, and an XDK change runs only the core checks, and only when it touches `.x` sources.
+
+### Documentation-only pull requests
+
+A pull request whose changes are all in the `docs` group needs no build or tests: the `changes` job reports `docs-only=true`, `build-and-test` (and the plugin integration test after it) is skipped, and the required `All builds complete` check reports success. Nothing in CI reads documentation; the markdown files that ship inside the XDK distribution are still built and published by the master push that merges the change. Master pushes and manual dispatches always build.
 
 ### Skipping checks a pull request already passed
 
