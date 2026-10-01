@@ -55,6 +55,8 @@ internal class ProtocolTrace(
 
                 is ResponseMessage -> {
                     val span = replies.remove(message.rawId)
+                    val writeStarted = System.nanoTime()
+                    if (!received) span?.let { ExecutionTrace.event(it, "reply-ready") }
                     try {
                         next.consume(message)
                         span?.let {
@@ -66,6 +68,7 @@ internal class ProtocolTrace(
                                     "rpcId" to message.id,
                                     "outcome" to if (message.error == null) "replied" else "error",
                                     "errorCode" to message.error?.code,
+                                    "writeMs" to if (received) null else ExecutionTrace.elapsed(writeStarted),
                                     "boundary" to
                                         if (received) {
                                             "client-reply-received"
