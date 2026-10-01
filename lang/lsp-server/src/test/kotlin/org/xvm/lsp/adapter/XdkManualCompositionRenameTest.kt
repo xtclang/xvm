@@ -36,6 +36,10 @@ class XdkManualCompositionRenameTest {
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
+            val constraint = text.positionOf("MixN<Element extends Number>", "Element")
+            val declaration = text.positionOf("static mixin MixN<Element", "Element")
+            val target = requireNotNull(adapter.findDefinition(uri, constraint.line, constraint.column))
+            assertThat(Position(target.startLine, target.startColumn)).isEqualTo(declaration)
             val at = text.positionOf("Int size()", "size")
             val edit = requireNotNull(adapter.rename(uri, at.line, at.column, "width"))
             assertThat(edit.changes.getValue(uri)).hasSize(2)
@@ -46,14 +50,14 @@ class XdkManualCompositionRenameTest {
     }
 
     @Test
-    fun `manual mixin rename refuses a changed binary override contract`() {
-        val text = manualCompositionFixture("mixinTests")
+    fun `manual mixin rename refuses a colliding default method`() {
+        val text = manualCompositionFixture("mixinTests").replace("interface Root {", "interface Root { Root occupied() = this;")
         val uri = source("mixinTests", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
             val at = text.positionOf("Root self();", "self")
-            assertThat(adapter.rename(uri, at.line, at.column, "toString")).isNull()
+            assertThat(adapter.rename(uri, at.line, at.column, "occupied")).isNull()
             assertThat(directory.resolve("mixinTests.x").toFile().readText()).isEqualTo(text)
         }
     }
