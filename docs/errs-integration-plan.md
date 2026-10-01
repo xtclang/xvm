@@ -8589,3 +8589,14 @@ expression component with compiler/adapter producers and compatibility tests; ke
 access, actual-body validation and the platform fixture together. Shared scenario/driver and
 manual/capability changes accompany the respective feature slices. Each extracted PR still needs
 its own independent gate.
+
+
+### L64 closure batch: ordinary enclosing expressions
+
+The compiler now probes lexical enclosing instances at ordinary value cursors, including returns,
+initializers and operators. Normal name validation and the actual required type decide availability;
+static boundaries and invalid receivers refuse proposals. The argument fitter reuses the same
+spellings and proposal construction. `CursorBinding.enclosingExpressions` is an immutable list
+separate from whole-call argument facts; existing constructors remain and record patterns add the
+new component. No mutable AST state is introduced. X152 gains two native ordinary-expression
+variants. Regression and editor execution are deferred to the combined closure-batch gate.
