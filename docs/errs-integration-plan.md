@@ -8646,3 +8646,10 @@ a lambda argument. Shared X150 has seven variants, X151 ten and X152 five. Both 
 exact insertion, diagnostics, placeholder selection/final stop where applicable, and Undo.
 Protocol tests separately prove plain-text fallback without snippet-marker leakage. Final validation
 is pending; the top-level L64 checkbox is not closed by this pre-validation inventory.
+
+L64 backend gate passes **68 Java tests and 418 LSP tests**, zero failures/errors/skips;
+TypeScript and IntelliJ integration-driver compilation also pass. Validation corrected the new
+partial node's required dump method, a parser test that assumed parent links before adoption,
+and optional shared-scenario fields in TypeScript. These corrections accompany the implementation
+commits on extraction. Full GUI acceptance is deferred until the requested L65 follow-up and its
+shared scenarios are complete.

@@ -9,19 +9,19 @@ import org.xvm.compiler.Source
 import org.xvm.compiler.Token
 import org.xvm.compiler.Token.Id
 import org.xvm.compiler.ast.AnnotatedTypeExpression
-import org.xvm.compiler.ast.AssignmentStatement
 import org.xvm.compiler.ast.ArrayTypeExpression
+import org.xvm.compiler.ast.AssignmentStatement
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.BiTypeExpression
 import org.xvm.compiler.ast.DecoratedTypeExpression
+import org.xvm.compiler.ast.Expression
 import org.xvm.compiler.ast.ForEachStatement
 import org.xvm.compiler.ast.ForStatement
 import org.xvm.compiler.ast.FunctionTypeExpression
-import org.xvm.compiler.ast.Expression
-import org.xvm.compiler.ast.LiteralExpression
-import org.xvm.compiler.ast.NameExpression
 import org.xvm.compiler.ast.LambdaExpression
+import org.xvm.compiler.ast.LiteralExpression
 import org.xvm.compiler.ast.MethodDeclarationStatement
+import org.xvm.compiler.ast.NameExpression
 import org.xvm.compiler.ast.NamedTypeExpression
 import org.xvm.compiler.ast.NewExpression
 import org.xvm.compiler.ast.NullableTypeExpression
@@ -31,8 +31,8 @@ import org.xvm.compiler.ast.StatementBlock
 import org.xvm.compiler.ast.SwitchStatement
 import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.compiler.ast.TypeExpression
-import org.xvm.compiler.ast.VariableTypeExpression
 import org.xvm.compiler.ast.VariableDeclarationStatement
+import org.xvm.compiler.ast.VariableTypeExpression
 import org.xvm.compiler.ast.WhileStatement
 import org.xvm.compiler.ast.partial.PartialSyntax
 import org.xvm.lsp.adapter.CompletionItem
@@ -256,7 +256,10 @@ internal object XdkSyntaxCompletions {
     }
 
     /** Copy syntax while on the compiler worker. Presentation policy stays outside the AST. */
-    internal fun declarationName(type: TypeExpression, initializer: Expression? = null): DeclarationName? {
+    internal fun declarationName(
+        type: TypeExpression,
+        initializer: Expression? = null,
+    ): DeclarationName? {
         fun base(node: TypeExpression): String? =
             when (node) {
                 is NamedTypeExpression -> {
@@ -293,20 +296,36 @@ internal object XdkSyntaxCompletions {
                 }
             }
         if (type is VariableTypeExpression) {
-            val suggestion = when (initializer) {
-                is NewExpression -> initializer.childNodes().filterIsInstance<TypeExpression>().firstOrNull()?.let(::base)
-                is LiteralExpression -> when (initializer.literal.id) {
-                    Id.LIT_STRING -> "text"
-                    Id.LIT_CHAR -> "character"
-                    Id.LIT_INT, Id.LIT_DEC -> "number"
-                    Id.LIT_BINSTR -> "bytes"
-                    else -> null
+            val suggestion =
+                when (initializer) {
+                    is NewExpression -> {
+                        initializer
+                            .childNodes()
+                            .filterIsInstance<TypeExpression>()
+                            .firstOrNull()
+                            ?.let(::base)
+                    }
+
+                    is LiteralExpression -> {
+                        when (initializer.literal.id) {
+                            Id.LIT_STRING -> "text"
+                            Id.LIT_CHAR -> "character"
+                            Id.LIT_INT, Id.LIT_DEC -> "number"
+                            Id.LIT_BINSTR -> "bytes"
+                            else -> null
+                        }
+                    }
+
+                    is NameExpression -> {
+                        initializer.name.takeUnless { it == "Null" }?.let {
+                            if (it == "True" || it == "False") "flag" else it
+                        }
+                    }
+
+                    else -> {
+                        null
+                    }
                 }
-                is NameExpression -> initializer.name.takeUnless { it == "Null" }?.let {
-                    if (it == "True" || it == "False") "flag" else it
-                }
-                else -> null
-            }
             return suggestion?.let { DeclarationName(it, "written $type initializer") }
         }
         return base(type)?.let { DeclarationName(it, "written type $type") }
