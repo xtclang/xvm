@@ -24,7 +24,7 @@ import javax.swing.event.DocumentEvent
 
 /** Community Move entry point: the compiler sees every old path before VFS changes anything. */
 class XtcFileMoveHandler : MoveHandlerDelegate() {
-    // TODO LSP4IJ: remove this bridge when native Move preflights willRenameFiles and applies
+    // TODO LSP4IJ: UP03 — remove this bridge when native Move preflights willRenameFiles and applies
     // both URI parents and names in one version-checked undo command (shared X130 acceptance).
     override fun canMove(
         elements: Array<out PsiElement>,

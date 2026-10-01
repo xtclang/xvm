@@ -611,8 +611,10 @@ Execution trace files are `~/.xtc/logs/lsp-trace-<pid>-<process-start>.jsonl`; n
 save them in `run-*/server-trace/`. They include compiler queue counts and lists, javatools phase
 and API timings, process/thread IDs, and server request-to-reply latency. Use the
 [trace guide](../lsp-server/README.md#compiler-queue-and-api-timing) for field meanings and controls.
-The service-started notification balloon fades after roughly eight seconds unless being interacted
-with; the notification and server log remain available afterward.
+The service-started notification uses the title **Ecstasy Language Server Started**, with separate
+**Version**, **Adapter** and **Process ID** lines in the normal themed body style. Its balloon fades
+after roughly eight seconds unless being interacted with; the notification and server log remain
+available afterward.
 | 7a.11 | Definition of a method call | F12 on `p.sum()` | Jumps to `sum`'s declaration. The name in a call resolves to nothing by itself - which method it is depends on the target and the arguments - so this is the compiler's answer, not a name match |
 | 7a.12 | Definition of something from the core library | F12 on `Int` or `Console` | Nothing happens. It resolves perfectly well and this document has nowhere to point at; jumping to another mention of `Int` in the same file would be worse than doing nothing |
 | 7a.13 | Hover shows a type | Hover over a variable in an expression | The declaration, and the type the compiler decided. On a document that does not compile the type may be absent - an expression only has one once it has been validated |
@@ -1063,7 +1065,8 @@ the process management and health monitoring.
 ```
 
 **Expected in IDE:**
-- Notification: "Ecstasy Language Server Started - Out-of-process server (v..., adapter=treesitter)"
+- Notification title: **Ecstasy Language Server Started**. The body has separate `Version: …`,
+  `Adapter: treesitter` and `Process ID: …` lines (or `Adapter: compiler` for a compiler build).
 
 ### Test: Health Check
 
@@ -2240,7 +2243,7 @@ module Advanced {
 | X142 | Open configured `FoldedInitializer.x`; hover and navigate from `Int copy = value`, find references, rename `value` to `number`, then Undo. | The declaration, folded initializer and method body share one semantic identity; all three rename together, compile cleanly and restore on Undo. |
 | X143 | Configure `PartialSymbols.x` with 130 classes. Compare ordinary workspace symbols with a request carrying a partial-result token. | Ordered progress batches contain at most 64 symbols each; their combined names match the ordinary result exactly and the final response is empty. |
 | X144 | Apply a current versioned text edit through the installed client, Undo it, then send a two-document edit with one stale version. | Current edit and native Undo succeed. A stale target refuses the whole batch and preserves both current buffers. Drivers invoke the installed application handler; packaged tests separately exercise server-to-client transport. |
-| X145 | Replace ProgressWork with the shared 5,000-method workload and request references. Show native progress, cancel, verify hover still works; repeat and restart while pending. | Cancellation terminates only the request; progress disappears. Restart preserves unsaved text, retires the pending reader and exits the old PID. Both drivers use real compiler work and native progress; a request finishing too early fails as unexercised. Native acceptance passes in both clients; catalog receipts follow below. |
+| X145 | Replace ProgressWork with the shared workload and request references. Verify the progress source/activity text, cancel, then check hover; repeat and restart while pending. | Cancellation terminates only the request; progress disappears. Restart preserves unsaved text, retires the pending reader and exits the old PID. Manual VS Code Cancel-control checks use 20,000 methods; automatic IntelliJ Cancel, the ordinary VS Code callback and restart use 5,000. A request finishing too early fails as unexercised. Historical model-cancellation receipts and current visible-control acceptance are distinguished in the L81 section below. |
 | X146 | Open RefreshConsumer with inferred `var value = lib.make()`. Change only RefreshLibrary from returning Int to String, then restore it. | Both clients receive provider refreshes and show the changed inferred-type hint. Consumer text/version stays unchanged. IntelliJ reads the native cached inlay result; VS Code observes the registered provider's refresh events and result. |
 | X147 | Hold an older settings report while requesting a newer one, changing settings, restarting or closing the settings page. Complete the old reply last. | Older reports cannot overwrite current or disposed UI state. VS Code delays a real server reply; IntelliJ drives the real settings component with controlled asynchronous report data and an EDT completion barrier. Restart retires the old PID and preserves source. |
 
@@ -2674,6 +2677,9 @@ Pending manual acceptance in both editors:
    elsewhere). Check that initialization advertises `window.workDoneProgress`. Request references
    on a widely used source declaration. For a request lasting long enough, verify progress is
    created only after initialization, begins after creation acknowledgement and ends on completion.
+   Check that its detail identifies the source/workspace, then updates with the active compiler
+   operation/source and queued count. Concurrent reference and workspace-check notifications are
+   separate requests and may show the same shared compiler work; they do not imply duplicate compiles.
    Repeat and cancel through the editor's progress UI. A subsequent hover/reference request must
    still succeed. If all requests finish before progress appears, record this as unexercised.
 2. **P2 — Disconnect with pending work.** While P1 or a workspace diagnostic request is running,
@@ -2843,3 +2849,43 @@ and X131 resolve checks in both drivers. These exercise the installed clients' n
 they cannot substitute for the reduced-client protocol tests. L81 manual checks and the X130 host
 failure remain open. Exact test receipts are in the
 [integration plan](../../docs/errs-integration-plan.md#l80-final-capability-contract-audit-2026-10-01).
+
+
+### L81 detailed progress and upstream acceptance (2026-10-01)
+
+X145 now checks that reference progress names its source. The editor supplies the Ecstasy
+service/source name once; the operation title is simply `Finding references`, without another
+prefix. Its ordinary VS Code run exercises the real SDK cancellation callback with 5,000 methods
+and leaves the Notifications panel closed; only the explicit visible-control run opens that panel.
+To exercise the visible button separately, build the compiler extension, then run with Node available:
+
+```bash
+./gradlew :lang:vscode-extension:assemble \
+  -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
+cd lang/vscode-extension
+node scripts/run-vscode-tests.cjs --playbook --cases=X145 --cancel-ui
+```
+
+When prompted, click **Cancel on “Finding references”**, not the independent workspace-check
+notification. This manual workload uses the shared 20,000-method `uiMethods` setting so there
+is time to act. Missing the click or completing before cancellation is a failure; the report records
+`visible-control` separately from `native-token`. IntelliJ's driver activates the actual displayed
+control through its accessibility action, bound to the target task and project, without moving the
+pointer; it uses the normal 5,000-method workload. Both still verify subsequent hover, progress
+removal, unsaved restart and old-PID exit.
+The IntelliJ popup keeps the IDE's standard width; there is no Ecstasy-specific size override.
+The 20,000-method IntelliJ diagnostic attempt exposed a 21-second bulk-replacement UI freeze;
+that failed receipt and the separate L82 large-file investigation remain in the integration plan.
+
+X146 now observes all five refresh families in VS Code and all providers actually negotiated by
+IntelliJ; dependency changes must update the untouched consumer in both directions. Broader visual
+provider presentation and simultaneous windows/project close remain P2–P4 manual checks.
+The [L81 receipt](../../docs/errs-integration-plan.md#l81-progress-refresh-and-transport-checkpoint-2026-10-01)
+retains failed attempts separately from passing refresh/restart cases. IntelliJ
+`run-6551466376631163236` passes visible Cancel and restart in 7.2 seconds with zero IDE errors;
+VS Code's manual visible-control mode still needs a successful click receipt.
+
+All upstream compatibility issues are collected in [errs-upstream-issues.md](../../docs/errs-upstream-issues.md).
+Source `TODO LSP4IJ:` / `TODO VSCODE:` markers carry matching UP IDs and removal conditions.
+UP15's malformed-parameter classification and UP16's X130 host repaint remain defects; a passing
+reader-recovery or Move/Undo/Redo check is not evidence that those defects are repaired.
