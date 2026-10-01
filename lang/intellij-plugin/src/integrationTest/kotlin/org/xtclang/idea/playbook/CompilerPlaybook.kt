@@ -1618,7 +1618,7 @@ class CompilerPlaybook(
                     val marked = variant["source"].asString
                     editor.text = marked.replace("§", "")
                     editor.awaitError()
-                    accept(editor, marked.indexOf('§'), variant["label"].asString)
+                    accept(editor, marked.indexOf('§'), variant["label"].asString, variant["expected"].asString)
                     awaitUi("completion imports the selected type", 45.seconds) {
                         variant["importText"].asString in editor.text
                     }
