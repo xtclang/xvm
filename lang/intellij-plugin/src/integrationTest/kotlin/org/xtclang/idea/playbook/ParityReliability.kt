@@ -29,6 +29,8 @@ internal fun ParityScenarios.reliabilityCases() {
         val version = version(consumer)
         val support = with(driver) { semanticSupport(consumer.editor).getInlayHintsSupport() }
         val events = with(driver) { utility(RefreshRequests::class).listen(singleProject()) }
+        val negotiated = events.negotiated()
+        check(negotiated.containsAll(listOf("workspace/inlayHint/refresh", "workspace/semanticTokens/refresh")))
 
         fun verify(expected: String) {
             // Read the native provider's automatically refreshed future, without manually
@@ -63,15 +65,11 @@ internal fun ParityScenarios.reliabilityCases() {
                     awaitUi("native dependency refresh requests", 45.seconds) {
                         events
                             .values()
-                            .containsAll(
-                                listOf(
-                                    "workspace/inlayHint/refresh",
-                                    "workspace/semanticTokens/refresh",
-                                ),
-                            )
+                            .containsAll(negotiated)
                     }
                 }
                 verify(data.string(expected))
+                check(events.values().all { it in negotiated }) { "Unnegotiated refresh: ${events.values()}" }
                 clean(consumer)
             }
         } finally {
@@ -155,6 +153,8 @@ interface RefreshRequests {
     fun listen(project: Project): RefreshRequests
 
     fun values(): List<String>
+
+    fun negotiated(): List<String>
 
     fun clear()
 

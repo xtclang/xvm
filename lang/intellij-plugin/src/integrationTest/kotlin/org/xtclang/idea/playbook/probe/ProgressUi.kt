@@ -2,10 +2,14 @@ package org.xtclang.idea.playbook.probe
 
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.panel.ProgressPanel
 import com.intellij.openapi.wm.WindowManager
 import com.intellij.openapi.wm.ex.StatusBarEx
+import com.intellij.util.ui.UIUtil
+import java.awt.Window
+import javax.swing.JProgressBar
 
-/** Observe and cancel the real status-bar progress model, without synthetic server messages. */
+/** Observe real progress and activate its visible Cancel control without moving the pointer. */
 object ProgressUi {
     private fun status(project: Project): StatusBarEx {
         ApplicationManager.getApplication().assertIsDispatchThread()
@@ -39,11 +43,24 @@ object ProgressUi {
         val model =
             status(project)
                 .backgroundProcessModels
-                .singleOrNull { (_, model) ->
-                    model.title.contains(title) && model.isRunning() && model.isCancellable()
-                }?.second ?: return false
-        model.cancel()
-        return true
+                .map { it.second }
+                .singleOrNull { it.title.contains(title) && it.isRunning() && it.isCancellable() } ?: return false
+        val control =
+            Window
+                .getWindows()
+                .asSequence()
+                .filter { it.isShowing }
+                .flatMap { UIUtil.uiTraverser(it).filter(JProgressBar::class.java).asSequence() }
+                // The current IDE uses ProgressPanel, not ProgressComponent's legacy child panel.
+                // Match the unique displayed title to the project's running model; heavyweight
+                // popups can use Swing's shared owner frame rather than the project frame.
+                .mapNotNull(ProgressPanel::getProgressPanel)
+                .filter { it.labelText == model.title }
+                .mapNotNull { it.cancelButton }
+                .filter { it.isShowing && it.isEnabled }
+                .distinct()
+                .singleOrNull() ?: return false
+        return control.accessibleContext.accessibleAction.doAccessibleAction(0)
     }
 
     @JvmStatic
