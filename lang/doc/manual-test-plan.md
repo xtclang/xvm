@@ -2246,7 +2246,7 @@ module Advanced {
 | X145 | Replace ProgressWork with the shared workload and request references. Verify the progress source/activity text, cancel, then check hover; repeat and restart while pending. | Cancellation terminates only the request; progress disappears. Restart preserves unsaved text, retires the pending reader and exits the old PID. Manual VS Code Cancel-control checks use 20,000 methods; automatic IntelliJ Cancel, the ordinary VS Code callback and restart use 5,000. A request finishing too early fails as unexercised. Historical model-cancellation receipts and current visible-control acceptance are distinguished in the L81 section below. |
 | X146 | Open RefreshConsumer with inferred `var value = lib.make()`. Change only RefreshLibrary from returning Int to String, then restore it. | Both clients receive provider refreshes and show the changed inferred-type hint. Consumer text/version stays unchanged. IntelliJ reads the native cached inlay result; VS Code observes the registered provider's refresh events and result. |
 | X147 | Hold an older settings report while requesting a newer one, changing settings, restarting or closing the settings page. Complete the old reply last. | Older reports cannot overwrite current or disposed UI state. VS Code delays a real server reply; IntelliJ drives the real settings component with controlled asynchronous report data and an EDT completion barrier. Restart retires the old PID and preserves source. |
-| X148 | Open the shared Extract.x fixture, select exactly `42` in the return statement, and choose Extract literal to local variable. Undo, Redo, then Undo. Repeat with a string/character literal; try selecting a call or only part of a literal. | The action inserts `val extractedValue = 42;` immediately before the return, which uses that local. Existing identifiers force a fresh suffix. Exact text, indentation and diagnostics survive Undo/Redo. Unsupported selections offer no extraction. New driver coverage awaits execution. |
+| X148 | Open the shared Extract.x fixture, select exactly `42` in the return statement, and choose Extract literal to local variable. Undo, Redo, then Undo. Repeat with a string/character literal; try selecting a call or only part of a literal. | The action inserts `val extractedValue = 42;` immediately before the return, which uses that local. Existing identifiers force a fresh suffix. Exact text, indentation and diagnostics survive Undo/Redo. Unsupported selections offer no extraction. Selected X148 acceptance passes in both editors. |
 
 
 For a project using the updated Gradle plugin, run `./gradlew exportXtcLspModel` in that project's
@@ -2960,18 +2960,22 @@ Combined suites and the full native catalogs are deferred to a separate checkpoi
 The final IntelliJ lifetime rerun `run-11163643850362008619` passes with zero IDE errors and checks
 the reopened document before any edit is replayed; startup plus the lifecycle case take 38.3 seconds.
 
-X105 extension (validation pending): replace the fixture with `module AutoImports { Document value; }`,
-place the caret after `Doc`, and accept Document. The whole identifier must be replaced once and
+X105 extension (selected acceptance passes in both editors): replace the fixture with
+`module AutoImports { Document value; }`, place the caret after `Doc`, and accept Document.
+The whole identifier must be replaced once and
 `import xml.Document;` inserted atomically; Problems clears. Repeat with Widget from ImportLibrary.
-Both drivers use the same completion variants; their earlier X105 passes establish only quick fixes.
+Both drivers use the same completion variants and exact expected resulting documents; their
+earlier X105 passes establish only quick fixes.
 
-L65 manual-module check (new backend coverage; native run pending): in
+L65 manual-module check (backend regression coverage passes; these manual actions remain available): in
 `manualTests/src/main/x/jit/jit_tests/basic/mixinTests.x`, use Go to Implementation on
 `t5.Root.self`; verify the written `Base.self` body and no generated redirect location. In
 `delegationTests.x`, `ReportableAsString.showText` reaches `ReportableString.showText`; the
 interface-valued delegate field does not invent another executable source body.
 
-L62 manual-module check (validation pending): rename `t5.Root.self` to `copySelf` in mixinTests;
-Root, Base, Mix and the test5 call change together, while t6 stays unchanged. Undo restores exact
+L62 manual-module check (backend regression coverage passes): rename `t5.Root.self` to `copySelf`
+in mixinTests; Root, Base, Mix and the test5 call change together, while t6 stays unchanged. Undo restores exact
 text. In condMixinTests rename the first `MixS.size` to `width`; only its corresponding test1 call
-changes, not the independent t2 composition. Renaming self to toString must be refused.
+changes, not the independent t2 composition. A rename colliding with another default method must
+be refused. Go to Definition on Element in a conditional-incorporation clause reaches the
+corresponding mixin formal.
