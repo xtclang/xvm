@@ -8227,3 +8227,22 @@ failures/errors/skips. The large-file workload is an opt-in diagnostic; no britt
 assertion is added to unit tests. Native editor application cost, UP17, prolonged L82 workloads and
 the combined editor checkpoint remain separate gates. Extract diagnostic commit `3ee97b161` with
 tracing/workload infrastructure and the presentation fix with compiler-adapter presentation.
+
+### L81 native project/window lifetime batch (2026-10-01)
+
+Two additional opt-in drivers reuse X145's shared source/module/workload data. IntelliJ's
+`CompilerPlaybookTest.projectLifecycle` opens two actual project frames in the same IDE, applies
+different project-local compiler graphs, closes one while compiler work and a reference request
+are pending, and reopens it. The other connection must keep its PID, unsaved text and correct
+references/hover. The closed project's pending future and process must retire. Native close saves
+that project's source; reopening must recover its contents and start a different compiler process.
+
+VS Code's `--project-lifecycle` launcher uses two native windows with separate disposable profiles
+and extension hosts. One closes through the native window command while work is pending, then
+reopens using the same profile. Its unsaved buffer must come back from actual hot-exit backup;
+the sibling's buffer, request and PID must remain intact. All compiler processes must exit with
+their hosts. This is separate-instance window evidence, not two windows sharing one Electron process.
+The drivers do not kill servers to make lifecycle assertions pass and do not move the pointer.
+
+Both drivers compile. Native validation, including the still-open VS Code visible Cancel-button
+receipt, follows this implementation checkpoint; these are not yet passing acceptance claims.
