@@ -50,20 +50,23 @@ export function reliabilityCases(): void {
         const originalSettings = config.inspect('inlayHints.enabled')?.workspaceValue;
         const connection = client();
         const originalRequest = connection.sendRequest;
-        const releases: (() => void)[] = [];
+        const releases = new Set<() => void>();
         let hold = true;
         // Hold a real reply at the UI boundary, so the older command actually finishes last.
         connection.sendRequest = ((...args: unknown[]) => {
             const response = Reflect.apply(originalRequest, connection, args) as Promise<unknown>;
             return hold && args[0] === 'xtc/languageServiceStatus'
-                ? response.then(value => new Promise(resolve => releases.push(() => resolve(value)))) : response;
+                ? response.then(value => new Promise(resolve => {
+                    const release = () => { releases.delete(release); resolve(value); };
+                    releases.add(release);
+                })) : response;
         }) as typeof connection.sendRequest;
         async function delayed() {
             hold = true;
             const pending = vscode.commands.executeCommand('xtc.showLanguageServiceStatus');
-            await eventually(async () => releases.length, count => count === 1, 'Older status reply is held');
+            await eventually(async () => releases.size, count => count === 1, 'Older status reply is held');
             hold = false;
-            return { pending, release: releases.shift()! };
+            return { pending, release: [...releases][0] };
         }
         try {
             const older = await delayed();
