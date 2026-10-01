@@ -3,6 +3,7 @@ package org.xvm.compiler.ast.partial;
 import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 import org.xvm.compiler.Token.Id;
@@ -20,6 +21,13 @@ import org.xvm.compiler.ast.NewExpression;
 public final class PartialSyntax {
     private PartialSyntax() {}
 
+    /** Include deferred anonymous source bodies without changing compiler child ownership. */
+    public static Stream<AstNode> children(AstNode node) {
+        var children = StreamSupport.stream(node.childNodes().spliterator(), false);
+        return node instanceof NewExpression creation
+                ? Stream.concat(children, creation.getUnregisteredBody().stream()) : children;
+    }
+
     /** A value cursor and its written argument slot; no inferred type or candidate is retained. */
     public record ArgumentCursor(IncompleteStatement cursor, int index) {}
 
@@ -35,7 +43,7 @@ public final class PartialSyntax {
 
     private static boolean contains(AstNode node, Predicate<IncompleteStatement> matches) {
         return node != null && (node instanceof IncompleteStatement site && matches.test(site)
-                || StreamSupport.stream(node.childNodes().spliterator(), false)
+                || children(node)
                         .anyMatch(child -> contains(child, matches)));
     }
 

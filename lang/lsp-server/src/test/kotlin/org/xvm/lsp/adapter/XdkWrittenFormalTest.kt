@@ -9,6 +9,34 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 class XdkWrittenFormalTest {
     private val uri = "untitled:Formals.x"
 
+    @Test
+    fun `a self reference in a written generic bound requires a real guarding class`() {
+        listOf(
+            "<Element extends Chain<Ele§>> void damaged(Element value) {}",
+            "class Damaged<Element extends Chain<Ele§>> {}",
+            "<Element extends Chain<Ele§> + Stringable> void damaged(Element value) {}",
+        ).forEach { header ->
+            val marked = "module Formals { interface Chain<T> {} $header }"
+            val at = marked.indexOf('§')
+            XdkAdapter().use { adapter ->
+                adapter.compile(uri, marked.replace("§", ""))
+                val items = adapter.getCompletions(uri, 0, at)
+                assertThat(items.map { it.label }).describedAs(marked).contains("Element")
+                assertThat(items.single { it.label == "Element" }.detail).contains("incomplete", "written constraint")
+                assertThat(adapter.compile(uri, marked.replace("Ele§", "Element")).diagnostics).isEmpty()
+            }
+        }
+        listOf("Ele§", "Ele§ + Stringable", "Missing<Ele§>", "Chain<Ele§> + Missing").forEach { bound ->
+            val marked = "module Formals { interface Chain<T> {} <Element extends $bound> void damaged(Element value) {} }"
+            XdkAdapter().use { adapter ->
+                adapter.compile(uri, marked.replace("§", ""))
+                assertThat(adapter.getCompletions(uri, 0, marked.indexOf('§')).map { it.label })
+                    .describedAs(marked)
+                    .doesNotContain("Element")
+            }
+        }
+    }
+
     @ParameterizedTest
     @ValueSource(
         strings =
@@ -138,6 +166,28 @@ class XdkWrittenFormalTest {
         XdkAdapter().use { adapter ->
             adapter.compile(uri, marked.replace("§", ""))
             assertThat(adapter.getCompletions(uri, 0, marked.indexOf('§'))).isEmpty()
+        }
+    }
+
+    @Test
+    fun `compound recursive written bounds preserve every operand and the recursion guard`() {
+        listOf("Chain<Element> + Stringable", "immutable Chain<Element>", "Chain<Element>?").forEach { bound ->
+            val marked = "module Formals { interface Chain<T> {} <Element extends $bound> void damaged(Ele§ value) {} }"
+            XdkAdapter().use { adapter ->
+                val source = marked.replace("§", "")
+                adapter.compile(uri, source)
+                val at = marked.indexOf('§')
+                val item = adapter.getCompletions(uri, 0, at).single { it.label == "Element" }
+                assertThat(item.detail).contains("written constraint")
+                assertThat(adapter.compile(uri, source.replaceRange(at - 3, at, "Element")).diagnostics).isEmpty()
+            }
+        }
+        listOf("Element?", "Element + Stringable", "Chain<Element> + Missing").forEach { bound ->
+            val marked = "module Formals { interface Chain<T> {} <Element extends $bound> void damaged(Ele§ value) {} }"
+            XdkAdapter().use { adapter ->
+                adapter.compile(uri, marked.replace("§", ""))
+                assertThat(adapter.getCompletions(uri, 0, marked.indexOf('§')).map { it.label }).doesNotContain("Element")
+            }
         }
     }
 

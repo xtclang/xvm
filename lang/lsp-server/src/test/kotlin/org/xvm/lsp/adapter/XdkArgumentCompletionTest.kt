@@ -202,6 +202,14 @@ class XdkArgumentCompletionTest {
                         "Null",
                         "0",
                         "\"\"",
+                        "0.0",
+                        "' '",
+                        "#00",
+                        "[]",
+                        "Map:[]",
+                        "Tuple:()",
+                        "this",
+                        "this.Editing",
                     ) + MODULE_NAMES
                 ).filter { it.startsWith(typed) }
                     .filter { variable ->
