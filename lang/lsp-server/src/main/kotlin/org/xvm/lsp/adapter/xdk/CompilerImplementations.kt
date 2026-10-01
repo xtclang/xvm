@@ -138,7 +138,7 @@ internal fun TypeInfo.methodImplementation(
         Implementation.Explicit,
         Implementation.Default,
         -> {
-            body.methodStructure?.identityConstant
+            body.methodStructure?.takeUnless { it.isSynthetic || it.isNative || it.isAbstract }?.identityConstant
         }
 
         Implementation.Delegating -> {
@@ -179,10 +179,10 @@ private fun TypeInfo.accessorImplementation(
     // Optimizing redirects can generate methods. Keep that operation out of source inspection.
     if (
         method?.chain?.any {
-            it.implementation in setOf(Implementation.Delegating, Implementation.Capped)
+            it.implementation in setOf(Implementation.Delegating, Implementation.Capped, Implementation.FromInto)
         } == true
     ) {
-        return null
+        return methodImplementation(method, errors)
     }
     if (method != null) {
         val chain =
@@ -195,7 +195,7 @@ private fun TypeInfo.accessorImplementation(
         return when (body.implementation) {
             Implementation.Explicit,
             Implementation.Default,
-            -> body.methodStructure?.identityConstant
+            -> body.methodStructure?.takeUnless { it.isSynthetic || it.isNative || it.isAbstract }?.identityConstant
 
             // Annotation/native storage is not a written accessor (for example Lazy.set).
             Implementation.Field -> property.takeUnless { it.isRefAnnotated }?.sourceField()
