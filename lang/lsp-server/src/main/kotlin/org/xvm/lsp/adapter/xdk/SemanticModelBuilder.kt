@@ -9,6 +9,7 @@ import org.xvm.asm.ConstantPool
 import org.xvm.asm.Constants.Access
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.MethodStructure
+import org.xvm.asm.Op
 import org.xvm.asm.PackageStructure
 import org.xvm.asm.PropertyStructure
 import org.xvm.asm.Register
@@ -114,6 +115,7 @@ internal fun EmbeddingSupport.Compilation.renameFacts(dependencies: XdkDependenc
                 builder.constantBindings(),
                 dependencies,
                 supers = builder.superBindings(),
+                receivers = builder.receiverBindings(),
             )
         }
     }
@@ -140,6 +142,7 @@ internal fun EmbeddingSupport.Compilation.projectRenameFacts(
                 errors,
                 builder.superBindings(),
                 if (includeMembers) builder.memberActions(this, errors) else emptyList(),
+                builder.receiverBindings(),
             )
         }
     }
@@ -247,6 +250,15 @@ private class SemanticModelBuilder(
     fun constantBindings(): Map<SymbolId, Constant> = constants.entries.associate { (constant, id) -> id to constant }
 
     fun superBindings(): Map<SymbolId, MethodConstant> = supers.toMap()
+
+    fun receiverBindings(): Map<SymbolId, CompilerReceiver> =
+        registers.entries
+            .mapNotNull { (register, id) ->
+                if (register.index !in setOf(Op.A_THIS, Op.A_PUBLIC, Op.A_PROTECTED, Op.A_PRIVATE, Op.A_STRUCT)) return@mapNotNull null
+                val type = register.type
+                if (!copyableType(type) || !type.isSingleUnderlyingClass(false)) return@mapNotNull null
+                id to CompilerReceiver(type.getSingleUnderlyingClass(false), register.index)
+            }.toMap()
 
     fun methodRelations(
         compilation: EmbeddingSupport.Compilation,
@@ -406,6 +418,9 @@ private class SemanticModelBuilder(
         }
         // Parameters precede synthetic properties that share their source tokens.
         nodes.filterIsInstance<Parameter>().forEach {
+            // Conditional incorporation names refer to the mixin's registered formals. Their
+            // parser representation is a Parameter, but they do not declare another formal.
+            if (it.parent is CompositionNode.Incorporates) return@forEach
             val method = (it.parent as? MethodDeclarationStatement)?.component as? MethodStructure
             val parameter = method?.params?.singleOrNull { parameter -> parameter.name == it.name }
             if (it.resolvedTarget == null && method != null && parameter != null) {
@@ -533,6 +548,18 @@ private class SemanticModelBuilder(
                 expressions[location(node.source, node.startPosition, node.endPosition)] = it
             }
             when (node) {
+                is Parameter -> {
+                    val incorporation = node.parent as? CompositionNode.Incorporates ?: return@forEach
+                    val type = incorporation.contribution?.typeConstant
+                    val owner =
+                        type
+                            ?.takeIf { it.isSingleUnderlyingClass(false) }
+                            ?.getSingleUnderlyingClass(false)
+                            ?.component as? ClassStructure
+                    val formal = (owner?.getChild(node.name) as? PropertyStructure)?.takeIf { it.isGenericTypeParameter }
+                    refer(node.nameToken, formal?.identityConstant, formal?.type, node.source)
+                }
+
                 is InvocationExpression -> {
                     bindings[node]?.let { copyCall(node, it) }
                     functions[node]?.let { copyFunctionCall(node, it) }
