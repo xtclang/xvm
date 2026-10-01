@@ -20,6 +20,7 @@ class PartialSemanticModel
     ) {
         enum class Kind {
             NAME,
+            DECLARATION_NAME,
             MEMBER_ACCESS,
             CALL,
         }
@@ -95,6 +96,8 @@ class PartialSemanticModel
                 val argumentOffset: Int = 0,
                 val formals: List<Formal> = emptyList(),
                 val argumentLiterals: List<String> = emptyList(),
+                /** Written type spelling at an empty declaration-name slot; no resolved identity. */
+                val declarationNameType: String? = null,
             ) {
                 /**
                  * Source argument index only; no argument-to-parameter mapping exists for an incomplete

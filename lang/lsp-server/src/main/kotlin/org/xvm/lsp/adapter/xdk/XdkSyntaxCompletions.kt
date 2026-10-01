@@ -35,6 +35,7 @@ internal object XdkSyntaxCompletions {
     fun complete(
         text: String,
         position: Position,
+        declarationNameType: String? = null,
         cancelled: () -> Boolean,
     ): List<CompletionItem> =
         ExecutionTrace.api("Parser.syntaxCompletions") {
@@ -73,6 +74,9 @@ internal object XdkSyntaxCompletions {
             val prefix = text.substring(start, cursor)
             if (prefix.any { !Lexer.isIdentifierPart(it) }) return@api emptyList()
             val range = selected?.let { XdkAst.spanOf(it.startPosition, it.endPosition) } ?: Range(position, position)
+            if (declarationNameType != null) {
+                return@api if (selected == null) declarationNames(declarationNameType, tokens, null, "", range) else emptyList()
+            }
             val root =
                 try {
                     Parser(Source(text), errors).parseSource()
@@ -211,7 +215,16 @@ internal object XdkSyntaxCompletions {
                 is VariableDeclarationStatement -> node.childNodes().filterIsInstance<TypeExpression>().singleOrNull()
                 else -> null
             } as? NamedTypeExpression ?: return emptyList()
-        val written = type.nameToken?.valueText ?: return emptyList()
+        return declarationNames(type.nameToken?.valueText ?: return emptyList(), tokens, selected, prefix, range)
+    }
+
+    private fun declarationNames(
+        written: String,
+        tokens: List<Token>,
+        selected: Token?,
+        prefix: String,
+        range: Range,
+    ): List<CompletionItem> {
         // Acronyms retain their word boundary: HTTPClient -> httpClient, URL -> url.
         val capitals = written.takeWhile(Char::isUpperCase).length
         val count = if (capitals > 1 && capitals < written.length) capitals - 1 else capitals.coerceAtLeast(1)
@@ -219,11 +232,11 @@ internal object XdkSyntaxCompletions {
         if (!Lexer.isValidIdentifier(base)) return emptyList()
         val occupied =
             tokens
-                .filter { it.id == Id.IDENTIFIER && it.startPosition != selected.startPosition }
+                .filter { it.id == Id.IDENTIFIER && it.startPosition != selected?.startPosition }
                 .map { it.valueText }
                 .toSet()
         val name = generateSequence(0) { it + 1 }.map { if (it == 0) base else "$base$it" }.first { it !in occupied }
-        if (!name.startsWith(prefix) || name == selected.valueText) return emptyList()
+        if (!name.startsWith(prefix) || name == selected?.valueText) return emptyList()
         return listOf(
             CompletionItem(
                 name,
