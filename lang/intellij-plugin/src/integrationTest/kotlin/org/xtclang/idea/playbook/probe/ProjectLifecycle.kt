@@ -12,6 +12,7 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.project.ex.ProjectManagerEx
 import com.intellij.openapi.vfs.LocalFileSystem
+import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.openapi.wm.WindowManager
 import kotlinx.coroutines.runBlocking
 import java.nio.file.Files
@@ -43,6 +44,15 @@ object ProjectLifecycle {
         }
 
     @JvmStatic
+    fun show(
+        project: Project,
+        path: String,
+    ) {
+        ApplicationManager.getApplication().assertIsDispatchThread()
+        WriteIntentReadAction.run { openFile(project, path) }
+    }
+
+    @JvmStatic
     fun edit(
         project: Project,
         path: String,
@@ -50,8 +60,7 @@ object ProjectLifecycle {
     ) {
         ApplicationManager.getApplication().assertIsDispatchThread()
         WriteIntentReadAction.run {
-            val file = requireNotNull(LocalFileSystem.getInstance().refreshAndFindFileByNioFile(Path.of(path)))
-            FileEditorManager.getInstance(project).openFile(file, false)
+            val file = openFile(project, path)
             val document =
                 ReadAction.computeBlocking<Document, RuntimeException> {
                     requireNotNull(FileDocumentManager.getInstance().getDocument(file))
@@ -59,6 +68,14 @@ object ProjectLifecycle {
             WriteCommandAction.runWriteCommandAction(project) { document.setText(text) }
         }
     }
+
+    private fun openFile(
+        project: Project,
+        path: String,
+    ): VirtualFile =
+        requireNotNull(LocalFileSystem.getInstance().refreshAndFindFileByNioFile(Path.of(path))).also {
+            FileEditorManager.getInstance(project).openFile(it, false)
+        }
 
     @JvmStatic
     fun text(path: String): String =
