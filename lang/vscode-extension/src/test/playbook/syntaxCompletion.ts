@@ -26,8 +26,13 @@ export function syntaxCompletionCases(): void {
                         await vscode.commands.executeCommand('jumpToNextSnippetPlaceholder');
                         assert.ok(editor.selection.isEmpty, 'Final snippet tab stop leaves no selected placeholder');
                         assert.strictEqual(document.getText(), variant.expected);
-                        const body = variant.expected.split('\n').find(line => line.length > 0 && !line.trim())!;
-                        assert.strictEqual(document.offsetAt(editor.selection.active), variant.expected.indexOf(`\n${body}\n`) + 1 + body.length);
+                        const finalOffset = 'finalAnchor' in variant
+                            ? variant.expected.indexOf(variant.finalAnchor) + variant.finalAnchor.length
+                            : (() => {
+                                const body = variant.expected.split('\n').find(line => line.length > 0 && !line.trim())!;
+                                return variant.expected.indexOf(`\n${body}\n`) + 1 + body.length;
+                            })();
+                        assert.strictEqual(document.offsetAt(editor.selection.active), finalOffset);
                     }
                     await noErrors(document.uri);
                     await focusTestWindow();

@@ -106,6 +106,16 @@ public class CursorBindingTest {
         assertThrows(UnsupportedOperationException.class, () -> scope.enclosingExpressions().clear());
     }
 
+    @Test
+    public void valueTemplatesSurviveIndependentFactUpdates() {
+        var scope = fixture().withArgumentTemplates(List.of("(arg1) -> TODO()"));
+        List.of(scope.withCandidates(List.of()), scope.withFunctions(List.of()), scope.withTypes(List.of()),
+                scope.withFormals(List.of()), scope.withArgumentExpressions(List.of()),
+                scope.withEnclosingExpressions(List.of()), scope.withArgumentLiterals(List.of()))
+                .forEach(updated -> assertEquals(scope.argumentTemplates(), updated.argumentTemplates()));
+        assertThrows(UnsupportedOperationException.class, () -> scope.argumentTemplates().clear());
+    }
+
     private static CursorBinding fixture() {
         var file      = new FileStructure("CursorFacts");
         var pool      = file.getConstantPool();
