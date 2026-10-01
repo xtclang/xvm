@@ -74,6 +74,7 @@ import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.toLsp
 import org.xvm.lsp.treesitter.SemanticTokenLegend
 import org.xvm.lsp.util.ExecutionTrace
+import org.xvm.lsp.util.ProgressLabels
 import java.io.IOException
 import java.lang.management.ManagementFactory
 import java.net.URI
@@ -144,24 +145,36 @@ class XtcLanguageServer(
         method: String,
         params: WorkDoneProgressParams?,
         result: CompletableFuture<T>,
+        uri: String = "",
     ): CompletableFuture<T> {
         val title =
             when (method) {
-                "textDocument/references" -> "Ecstasy: finding references"
+                "textDocument/references" -> "Finding references"
 
                 "textDocument/rename",
                 "xtc/renameProposal",
                 "workspace/willRenameFiles",
-                -> "Ecstasy: checking rename"
+                -> "Checking rename"
 
-                "textDocument/codeAction" -> "Ecstasy: checking code actions"
+                "textDocument/codeAction" -> "Checking code actions"
 
-                "workspace/diagnostic" -> "Ecstasy: checking workspace"
+                "workspace/diagnostic" -> "Checking workspace"
 
                 else -> null
             }
         return if (title != null || params?.workDoneToken != null) {
-            progress.track(title ?: "Ecstasy: $method", params?.workDoneToken, result)
+            val folders = compilerSettings.get().folders
+            val subject =
+                if (uri.isNotBlank()) {
+                    ProgressLabels.source(uri, folders)
+                } else {
+                    "Workspace: " + folders.take(2).joinToString(", ") { ProgressLabels.source(it) }.ifEmpty { "configured source graph" } +
+                        if (folders.size > 2) " (+${folders.size - 2} more)" else ""
+                }
+            progress.track(title ?: method, params?.workDoneToken, result) {
+                val activity = (adapter as? XdkAdapter)?.compilerProgressDescription()
+                "$subject · ${activity?.let { "Compiler: $it" } ?: "Checking current source state"}"
+            }
         } else {
             result
         }
@@ -553,10 +566,10 @@ class XtcLanguageServer(
 
             if (folders.isNotEmpty()) {
                 if (params.workDoneToken != null) {
-                    progress.track("Ecstasy: indexing workspace", params.workDoneToken, indexing)
+                    progress.track("Indexing workspace", params.workDoneToken, indexing)
                 } else {
                     clientReady.thenRun {
-                        progress.track("Ecstasy: indexing workspace", null, indexing)
+                        progress.track("Indexing workspace", null, indexing)
                     }
                 }
                 try {

@@ -126,6 +126,8 @@ class XdkAdapter
 
         internal fun compilerQueueSnapshot(): Map<String, Any> = queueTrace.snapshot()
 
+        internal fun compilerProgressDescription(): String? = queueTrace.progressDescription()
+
         override val displayName: String = "XDK"
 
         override val capabilities: Set<AdapterCapability> =
