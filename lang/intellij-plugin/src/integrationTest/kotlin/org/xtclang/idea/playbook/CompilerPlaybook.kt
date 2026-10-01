@@ -1596,6 +1596,16 @@ class CompilerPlaybook(
                     }
                     editor.awaitDiagnostics(emptyList())
                 }
+                data.rows("completions").forEach { variant ->
+                    val marked = variant["source"].asString
+                    editor.text = marked.replace("§", "")
+                    editor.awaitError()
+                    accept(editor, marked.indexOf('§'), variant["label"].asString)
+                    awaitUi("completion imports the selected type", 45.seconds) {
+                        variant["importText"].asString in editor.text
+                    }
+                    editor.awaitDiagnostics(emptyList())
+                }
                 editor.text = "module AutoImports {}"
                 editor.awaitDiagnostics(emptyList())
             }

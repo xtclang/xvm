@@ -2958,3 +2958,8 @@ its ownership remains an investigation, not completed memory acceptance. See the
 Combined suites and the full native catalogs are deferred to a separate checkpoint.
 The final IntelliJ lifetime rerun `run-11163643850362008619` passes with zero IDE errors and checks
 the reopened document before any edit is replayed; startup plus the lifecycle case take 38.3 seconds.
+
+X105 extension (validation pending): replace the fixture with `module AutoImports { Document value; }`,
+place the caret after `Doc`, and accept Document. The whole identifier must be replaced once and
+`import xml.Document;` inserted atomically; Problems clears. Repeat with Widget from ImportLibrary.
+Both drivers use the same completion variants; their earlier X105 passes establish only quick fixes.

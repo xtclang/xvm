@@ -820,6 +820,7 @@ class XtcTextDocumentService(
                         sortText = c.sortText
                         textEdit =
                             c.textEdit?.let { Either.forLeft(TextEdit(it.range.toLsp(), it.newText)) }
+                        additionalTextEdits = c.additionalTextEdits.map { TextEdit(it.range.toLsp(), it.newText) }
                     }
                 }
             Either.forLeft(items)
