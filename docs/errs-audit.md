@@ -1,5 +1,7 @@
 # Failures with nowhere to go
 
+Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
+
 **Current watch/rename audit:** missing external roots need a flat watch at their nearest existing
 ancestor as well as the eventual recursive root. Delayed Created events for already compiled inputs
 must not cancel rename proofs; source membership/text and resource fingerprints now distinguish
@@ -1406,3 +1408,24 @@ Validation receipt and extraction checkpoint are recorded in
 [the integration plan](errs-integration-plan.md#l80-final-capability-contract-audit-2026-10-01).
 The audit closes the current producer/capability review; future producers must extend this inventory.
 L81 manual acceptance, L82 release evidence and the independent upstream X130 failure remain open.
+
+
+## L81 progress and connection audit (2026-10-01)
+
+The [L81 checkpoint](errs-integration-plan.md#l81-progress-refresh-and-transport-checkpoint-2026-10-01)
+records the late progress-create acknowledgement fix, timer retirement, per-connection cancellation,
+all-five-provider refresh checks, malformed reader recovery and two-process semantic isolation.
+Progress details use copied queue metadata: file/workspace, active compiler job and pending count.
+They do not acquire compiler/document locks or retain ASTs. The dispatcher still owns progress maps;
+a delayed report rechecks the exact live entry before sending or rescheduling.
+
+The [upstream issue register](errs-upstream-issues.md) now collects all existing LSP4IJ TODO sites,
+underlying LSP4J defects and the independently reproduced VS Code X130 failure under stable UP IDs.
+The malformed typed-parameter case uses named LSP4J error codes. UP15 remains incorrect upstream
+classification even though the same-reader recovery test passes. Native Cancel/multi-window acceptance
+is recorded separately from protocol coverage and must not be inferred from unit or child-process tests.
+
+IntelliJ's current visible-control X145 passes with zero IDE failures; VS Code's physical-click
+check remains separate from its automated SDK callback. A diagnostic 20,000-method IntelliJ
+fixture exposed a 21.3-second range-marker update freeze during bulk replacement. The failed
+receipt and L82 investigation remain recorded; the bounded 5,000-method pass does not close it.
