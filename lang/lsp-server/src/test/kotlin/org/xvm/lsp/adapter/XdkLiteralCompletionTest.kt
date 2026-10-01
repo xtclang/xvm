@@ -32,11 +32,9 @@ class XdkLiteralCompletionTest {
                 "void run() { take(§, 2); }",
                 "void run() { function void(Int) fn = value -> {}; fn(§); }",
                 "class Box(Int value) {} void run() { Box box = new Box(§); }",
-            ]
+            ],
     )
-    fun `literal fitting preserves compound later function and constructor arguments`(
-        body: String
-    ) {
+    fun `literal fitting preserves compound later function and constructor arguments`(body: String) {
         verify("module Editing { void take(Int value, Int later = 2) {} $body }", listOf("0"))
     }
 
@@ -63,11 +61,9 @@ class XdkLiteralCompletionTest {
                 "void run() { take(§, 1); }",
                 "void run() { missing(§); }",
                 "void run(String text) { take(text.§, \"\"); }",
-            ]
+            ],
     )
-    fun `invalid other arguments and qualified reads cannot acquire literal proposals`(
-        body: String
-    ) {
+    fun `invalid other arguments and qualified reads cannot acquire literal proposals`(body: String) {
         verify("module Editing { void take(String value, String later) {} $body }", emptyList())
     }
 
@@ -90,7 +86,10 @@ class XdkLiteralCompletionTest {
         }
     }
 
-    private fun verify(marked: String, expected: List<String>) {
+    private fun verify(
+        marked: String,
+        expected: List<String>,
+    ) {
         val at = marked.indexOf('§')
         val source = marked.replace("§", "")
         XdkAdapter().use { adapter ->
@@ -107,9 +106,8 @@ class XdkLiteralCompletionTest {
                 assertThat(item.textEdit)
                     .isEqualTo(TextEdit(Range(Position(0, at), Position(0, at)), item.label))
                 assertThat(
-                        adapter.compile(URI, source.replaceRange(at, at, item.label)).diagnostics
-                    )
-                    .isEmpty()
+                    adapter.compile(URI, source.replaceRange(at, at, item.label)).diagnostics,
+                ).isEmpty()
                 adapter.compile(URI, source)
             }
         }

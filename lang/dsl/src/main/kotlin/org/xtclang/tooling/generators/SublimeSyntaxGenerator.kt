@@ -15,53 +15,56 @@ import org.xtclang.tooling.model.OperatorCategory
  * This format is more powerful than TextMate grammars and supports context-based parsing with
  * push/pop/set operations.
  */
-class SublimeSyntaxGenerator(private val model: LanguageModel) {
-    fun generate(): String = buildString {
-        appendLine("%YAML 1.2")
-        appendLine("---")
-        appendLine("# ${model.name} language syntax for Sublime Text / bat")
-        appendLine("# Generated from Ecstasy language model DSL")
-        appendLine("name: ${model.name}")
-        appendLine("file_extensions:")
-        model.fileExtensions.forEach { ext ->
-            appendLine("  - $ext")
+class SublimeSyntaxGenerator(
+    private val model: LanguageModel,
+) {
+    fun generate(): String =
+        buildString {
+            appendLine("%YAML 1.2")
+            appendLine("---")
+            appendLine("# ${model.name} language syntax for Sublime Text / bat")
+            appendLine("# Generated from Ecstasy language model DSL")
+            appendLine("name: ${model.name}")
+            appendLine("file_extensions:")
+            model.fileExtensions.forEach { ext ->
+                appendLine("  - $ext")
+            }
+            appendLine("scope: ${model.scopeName}")
+            appendLine()
+            appendLine("contexts:")
+
+            // Main context
+            appendLine("  main:")
+            appendLine("    - include: comments")
+            appendLine("    - include: strings")
+            appendLine("    - include: numbers")
+            appendLine("    - include: annotations")
+            appendLine("    - include: keywords")
+            appendLine("    - include: types")
+            appendLine("    - include: operators")
+            appendLine()
+
+            // Comments context
+            generateCommentsContext()
+
+            // Strings context
+            generateStringsContext()
+
+            // Numbers context
+            generateNumbersContext()
+
+            // Annotations context
+            generateAnnotationsContext()
+
+            // Keywords context
+            generateKeywordsContext()
+
+            // Types context
+            generateTypesContext()
+
+            // Operators context
+            generateOperatorsContext()
         }
-        appendLine("scope: ${model.scopeName}")
-        appendLine()
-        appendLine("contexts:")
-
-        // Main context
-        appendLine("  main:")
-        appendLine("    - include: comments")
-        appendLine("    - include: strings")
-        appendLine("    - include: numbers")
-        appendLine("    - include: annotations")
-        appendLine("    - include: keywords")
-        appendLine("    - include: types")
-        appendLine("    - include: operators")
-        appendLine()
-
-        // Comments context
-        generateCommentsContext()
-
-        // Strings context
-        generateStringsContext()
-
-        // Numbers context
-        generateNumbersContext()
-
-        // Annotations context
-        generateAnnotationsContext()
-
-        // Keywords context
-        generateKeywordsContext()
-
-        // Types context
-        generateTypesContext()
-
-        // Operators context
-        generateOperatorsContext()
-    }
 
     private fun StringBuilder.generateCommentsContext() {
         appendLine("  comments:")

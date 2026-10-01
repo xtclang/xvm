@@ -70,24 +70,25 @@ internal object XdkImports {
                 .groupBy { it.first.parent }
                 .values
                 .map { it.sortedBy { (_, edit) -> edit.start } }
-        val reorder = groups.mapNotNull { group ->
-            if (
-                group.size < 2 ||
+        val reorder =
+            groups.mapNotNull { group ->
+                if (
+                    group.size < 2 ||
                     group.zipWithNext().any { (a, b) ->
                         text.substring(a.second.end, b.second.start).any { !it.isWhitespace() }
                     }
-            ) {
-                return@mapNotNull null
+                ) {
+                    return@mapNotNull null
+                }
+                val written = group.map { (_, edit) -> text.substring(edit.start, edit.end) }
+                val sorted = written.sorted()
+                if (written == sorted) return@mapNotNull null
+                Candidate(
+                    "Organize imports",
+                    CodeActionKind.SOURCE_ORGANIZE_IMPORTS,
+                    group.mapIndexed { index, (_, edit) -> edit.copy(text = sorted[index]) },
+                )
             }
-            val written = group.map { (_, edit) -> text.substring(edit.start, edit.end) }
-            val sorted = written.sorted()
-            if (written == sorted) return@mapNotNull null
-            Candidate(
-                "Organize imports",
-                CodeActionKind.SOURCE_ORGANIZE_IMPORTS,
-                group.mapIndexed { index, (_, edit) -> edit.copy(text = sorted[index]) },
-            )
-        }
         return reorder + removals
     }
 
@@ -103,6 +104,5 @@ internal object XdkImports {
             ),
         )
 
-    private fun nodes(root: AstNode): List<AstNode> =
-        listOf(root) + root.childNodes().flatMap(::nodes)
+    private fun nodes(root: AstNode): List<AstNode> = listOf(root) + root.childNodes().flatMap(::nodes)
 }

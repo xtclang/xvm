@@ -91,8 +91,7 @@ class SignatureHelpTest : TreeSitterTestBase() {
                     class Person {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             val help =
@@ -322,8 +321,7 @@ class SignatureHelpTest : TreeSitterTestBase() {
                     }
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
 
         private fun greeterSource() =
             """
@@ -337,8 +335,7 @@ class SignatureHelpTest : TreeSitterTestBase() {
                     }
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
 
         private fun clampSource() =
             """
@@ -352,8 +349,7 @@ class SignatureHelpTest : TreeSitterTestBase() {
                     }
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
 
         private fun overloadedFormatSource() =
             """
@@ -370,8 +366,7 @@ class SignatureHelpTest : TreeSitterTestBase() {
                     }
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
 
         private fun nestedCallSource() =
             """
@@ -388,8 +383,7 @@ class SignatureHelpTest : TreeSitterTestBase() {
                     }
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
 
         private fun crossMethodSource() =
             """
@@ -403,8 +397,7 @@ class SignatureHelpTest : TreeSitterTestBase() {
                     }
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
 
         private fun fiveParamSource() =
             """
@@ -418,8 +411,7 @@ class SignatureHelpTest : TreeSitterTestBase() {
                     }
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
 
         private fun unknownMethodSource() =
             """
@@ -430,8 +422,7 @@ class SignatureHelpTest : TreeSitterTestBase() {
                     }
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
     }
 
     // ========================================================================
@@ -461,8 +452,7 @@ class SignatureHelpTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // cursor inside the `(42)` part of `new Box(42)` at line 6, col 20
@@ -490,8 +480,7 @@ class SignatureHelpTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // cursor on 'add' in declaration at line 2, col 12
@@ -519,8 +508,7 @@ class SignatureHelpTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // cursor on 'x' in `Int y = x;` at line 4, col 20

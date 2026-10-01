@@ -9,7 +9,10 @@ plugins {
 }
 
 node {
-    version.set(libs.versions.lang.node.asProvider())
+    version.set(
+        libs.versions.lang.node
+            .asProvider(),
+    )
     download.set(true)
 }
 
@@ -41,7 +44,9 @@ val copyTextMateGrammar =
 // These files live beside build.gradle.kts. A Copy task declares the entire destination
 // directory as output, incorrectly making formatting consume generated task output.
 abstract class CopyExtensionFile : DefaultTask() {
-    @get:InputFile @get:PathSensitive(PathSensitivity.NONE) abstract val source: RegularFileProperty
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
+    abstract val source: RegularFileProperty
 
     @get:OutputFile abstract val destination: RegularFileProperty
 
@@ -60,8 +65,8 @@ val copyLanguageConfig =
             layout.file(
                 textMateGrammar.elements.map { files ->
                     files.single { it.asFile.name == "language-configuration.json" }.asFile
-                }
-            )
+                },
+            ),
         )
         destination.set(layout.projectDirectory.file("language-configuration.json"))
     }
@@ -134,8 +139,8 @@ val npmCompile =
         inputs.file(layout.projectDirectory.file("tsconfig.json"))
         inputs.file(
             rootProject.layout.projectDirectory.file(
-                "test-fixtures/compiler-playbook/scenarios.json"
-            )
+                "test-fixtures/compiler-playbook/scenarios.json",
+            ),
         )
         outputs.dir(layout.projectDirectory.dir("out"))
     }
@@ -186,7 +191,7 @@ val stampVscodeVersion =
             val updated = originalContent.replace(match.value, "\"version\": \"$stamped\"")
             pkgJsonFile.writeText(updated)
             logger.lifecycle(
-                "[vscode-extension] Stamped package.json version: $currentVersion → $stamped"
+                "[vscode-extension] Stamped package.json version: $currentVersion → $stamped",
             )
         }
     }
@@ -278,12 +283,12 @@ tasks.register<NpmTask>("testCompilerPlaybook") {
                     cases.takeIf(String::isNotEmpty)?.let { "--cases=$it" },
                     "--multi-root".takeIf { multipleRoots },
                 )
-        }
+        },
     )
     inputs.dir(layout.projectDirectory.dir("src/test"))
     inputs.file(layout.projectDirectory.file("../doc/manual-test-plan.md"))
     inputs.file(
-        rootProject.layout.projectDirectory.file("test-fixtures/compiler-playbook/scenarios.json")
+        rootProject.layout.projectDirectory.file("test-fixtures/compiler-playbook/scenarios.json"),
     )
     // Test execution is intentional on every invocation; reports are retained per run.
 }
@@ -316,11 +321,19 @@ val runCode =
         dependsOn(assemble)
 
         val extensionPath = layout.projectDirectory.asFile.absolutePath
-        val fixturesPath = layout.projectDirectory.dir("src/test/fixtures").asFile.absolutePath
+        val fixturesPath =
+            layout.projectDirectory
+                .dir("src/test/fixtures")
+                .asFile.absolutePath
         // Capture PATH + OS at config time so the doFirst stays CC-safe (no
         // System.getenv / System.getProperty calls inside the task action).
         val pathEnv = providers.environmentVariable("PATH").orElse("").get()
-        val isWindows = providers.systemProperty("os.name").get().lowercase().contains("windows")
+        val isWindows =
+            providers
+                .systemProperty("os.name")
+                .get()
+                .lowercase()
+                .contains("windows")
         val candidateBinaries = if (isWindows) listOf("code.cmd", "code.exe") else listOf("code")
 
         commandLine("code", "--extensionDevelopmentPath=$extensionPath", fixturesPath)
@@ -348,8 +361,7 @@ val runCode =
                     |Alternative that needs no PATH change: open lang/vscode-extension/
                     |in VS Code and press F5 — that launches the Extension Development Host
                     |directly from the IDE, equivalent to what this task does from the CLI.
-                    """
-                        .trimMargin()
+                    """.trimMargin(),
                 )
             }
         }

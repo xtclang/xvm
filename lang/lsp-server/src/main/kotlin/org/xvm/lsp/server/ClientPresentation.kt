@@ -1,11 +1,11 @@
 package org.xvm.lsp.server
 
-import java.nio.file.Path
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.MarkupContent
 import org.eclipse.lsp4j.MarkupKind
 import org.eclipse.lsp4j.SymbolKind
+import java.nio.file.Path
 
 /** Immutable wire-format choices, independent of compiler semantics and editor preferences. */
 internal data class ClientPresentation(
@@ -25,10 +25,16 @@ internal data class ClientPresentation(
     val pullDiagnosticRelatedInformation: Boolean = false,
 ) {
     fun hover(markdown: String): MarkupContent =
-        if (markdownHover) MarkupContent(MarkupKind.MARKDOWN, markdown)
-        else MarkupContent(MarkupKind.PLAINTEXT, plainText(markdown))
+        if (markdownHover) {
+            MarkupContent(MarkupKind.MARKDOWN, markdown)
+        } else {
+            MarkupContent(MarkupKind.PLAINTEXT, plainText(markdown))
+        }
 
-    fun symbolKind(kind: SymbolKind, workspace: Boolean = false): SymbolKind {
+    fun symbolKind(
+        kind: SymbolKind,
+        workspace: Boolean = false,
+    ): SymbolKind {
         val supported = if (workspace) workspaceKinds else documentKinds
         return kind.takeIf { it in supported }
             ?: SymbolKind.Variable.takeIf { it in supported }
@@ -62,15 +68,29 @@ internal data class ClientPresentation(
                     } == MarkupKind.MARKDOWN,
                 hierarchicalSymbols =
                     text?.documentSymbol?.hierarchicalDocumentSymbolSupport == true,
-                documentKinds = text?.documentSymbol?.symbolKind?.valueSet?.toSet() ?: legacyKinds,
+                documentKinds =
+                    text
+                        ?.documentSymbol
+                        ?.symbolKind
+                        ?.valueSet
+                        ?.toSet() ?: legacyKinds,
                 workspaceKinds =
-                    params.capabilities?.workspace?.symbol?.symbolKind?.valueSet?.toSet()
+                    params.capabilities
+                        ?.workspace
+                        ?.symbol
+                        ?.symbolKind
+                        ?.valueSet
+                        ?.toSet()
                         ?: legacyKinds,
                 diagnosticVersions = text?.publishDiagnostics?.versionSupport == true,
                 diagnosticRelatedInformation = text?.publishDiagnostics?.relatedInformation == true,
                 workspaceConfiguration = params.capabilities?.workspace?.configuration == true,
                 completionKinds =
-                    text?.completion?.completionItemKind?.valueSet?.toSet()
+                    text
+                        ?.completion
+                        ?.completionItemKind
+                        ?.valueSet
+                        ?.toSet()
                         ?: legacyCompletionKinds,
                 actionLiterals = text?.codeAction?.codeActionLiteralSupport != null,
                 preferredActions = text?.codeAction?.isPreferredSupport == true,
@@ -85,8 +105,10 @@ internal data class ClientPresentation(
         /**
          * The empty kind selects everything; unknown client kinds are not invented or broadened.
          */
-        fun matchesActionKind(kind: String, only: List<String>?): Boolean =
-            only == null || only.any { it.isEmpty() || kind == it || kind.startsWith("$it.") }
+        fun matchesActionKind(
+            kind: String,
+            only: List<String>?,
+        ): Boolean = only == null || only.any { it.isEmpty() || kind == it || kind.startsWith("$it.") }
 
         /** Workspace folders take precedence, including an explicitly empty list. */
         fun workspaceUris(params: InitializeParams): List<String> =

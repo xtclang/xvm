@@ -1,7 +1,7 @@
 package org.xvm.lsp.adapter.xdk
 
-import java.util.concurrent.atomic.AtomicReference
 import org.xvm.lsp.model.CompilationResult
+import java.util.concurrent.atomic.AtomicReference
 
 /** Bounded to the current graph. Only detached diagnostics, source inputs and artifacts survive. */
 internal class XdkDiagnosticIndex {
@@ -11,7 +11,11 @@ internal class XdkDiagnosticIndex {
         val dependencies: Map<String, String>,
     )
 
-    data class Build(val key: Key, val result: CompilationResult, val artifact: XdkDependency?)
+    data class Build(
+        val key: Key,
+        val result: CompilationResult,
+        val artifact: XdkDependency?,
+    )
 
     data class Snapshot(
         val revision: String? = null,

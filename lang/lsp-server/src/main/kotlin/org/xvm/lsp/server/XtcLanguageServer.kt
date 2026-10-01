@@ -1,14 +1,5 @@
 package org.xvm.lsp.server
 
-import java.io.IOException
-import java.lang.management.ManagementFactory
-import java.net.URI
-import java.nio.file.Path
-import java.util.Properties
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.atomic.AtomicBoolean
-import java.util.concurrent.atomic.AtomicReference
-import kotlin.time.measureTimedValue
 import org.eclipse.lsp4j.ApplyWorkspaceEditParams
 import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
 import org.eclipse.lsp4j.CodeActionOptions
@@ -83,6 +74,15 @@ import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.toLsp
 import org.xvm.lsp.treesitter.SemanticTokenLegend
 import org.xvm.lsp.util.ExecutionTrace
+import java.io.IOException
+import java.lang.management.ManagementFactory
+import java.net.URI
+import java.nio.file.Path
+import java.util.Properties
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
+import kotlin.time.measureTimedValue
 
 /**
  * Ecstasy Language Server implementation using LSP4J.
@@ -108,7 +108,9 @@ import org.xvm.lsp.util.ExecutionTrace
 class XtcLanguageServer(
     private val adapter: Adapter,
     private val onExit: (Int) -> Unit = {},
-) : LanguageServer, LanguageClientAware, AutoCloseable {
+) : LanguageServer,
+    LanguageClientAware,
+    AutoCloseable {
     private val connectedClient = AtomicReference<LanguageClient?>()
     private val client: LanguageClient?
         get() = connectedClient.get()
@@ -146,20 +148,26 @@ class XtcLanguageServer(
         val title =
             when (method) {
                 "textDocument/references" -> "Ecstasy: finding references"
+
                 "textDocument/rename",
                 "xtc/renameProposal",
-                "workspace/willRenameFiles" -> "Ecstasy: checking rename"
+                "workspace/willRenameFiles",
+                -> "Ecstasy: checking rename"
+
                 "textDocument/codeAction" -> "Ecstasy: checking code actions"
+
                 "workspace/diagnostic" -> "Ecstasy: checking workspace"
+
                 else -> null
             }
-        return if (title != null || params?.workDoneToken != null)
+        return if (title != null || params?.workDoneToken != null) {
             progress.track(title ?: "Ecstasy: $method", params?.workDoneToken, result)
-        else result
+        } else {
+            result
+        }
     }
 
-    override fun cancelProgress(params: WorkDoneProgressCancelParams) =
-        progress.cancel(params.token)
+    override fun cancelProgress(params: WorkDoneProgressCancelParams) = progress.cancel(params.token)
 
     internal val supportsVersionedEdits: Boolean
         get() = editCapabilities.get().versioned
@@ -182,9 +190,7 @@ class XtcLanguageServer(
 
     internal fun refreshDiagnostics() = refresh.request(ClientRefresh.Feature.DIAGNOSTICS)
 
-    internal fun workspaceDiagnostics(
-        params: WorkspaceDiagnosticParams
-    ): CompletableFuture<WorkspaceDiagnosticReport> =
+    internal fun workspaceDiagnostics(params: WorkspaceDiagnosticParams): CompletableFuture<WorkspaceDiagnosticReport> =
         textDocumentService.workspaceDiagnostics(params)
 
     private val textDocumentService = XtcTextDocumentService(this, adapter)
@@ -232,28 +238,23 @@ class XtcLanguageServer(
     internal val resolvesWorkspaceSymbolRange: Boolean
         get() = resolveCapabilities.get().symbolRange
 
-    internal fun applyEdit(
-        params: ApplyWorkspaceEditParams
-    ): CompletableFuture<ApplyWorkspaceEditResponse> {
+    internal fun applyEdit(params: ApplyWorkspaceEditParams): CompletableFuture<ApplyWorkspaceEditResponse> {
         val current =
             client?.takeUnless { compilerSettings.get().closed }
                 ?: return CompletableFuture.failedFuture(
-                    IllegalStateException("Language client disconnected")
+                    IllegalStateException("Language client disconnected"),
                 )
         return current.applyEdit(params)
     }
 
-    internal fun executeCodeAction(params: ExecuteCommandParams): CompletableFuture<Any> =
-        textDocumentService.executeCodeAction(params)
+    internal fun executeCodeAction(params: ExecuteCommandParams): CompletableFuture<Any> = textDocumentService.executeCodeAction(params)
 
     internal fun workspaceSymbols(
-        params: WorkspaceSymbolParams
-    ): CompletableFuture<Either<List<SymbolInformation>, List<WorkspaceSymbol>>> =
-        textDocumentService.workspaceSymbols(params)
+        params: WorkspaceSymbolParams,
+    ): CompletableFuture<Either<List<SymbolInformation>, List<WorkspaceSymbol>>> = textDocumentService.workspaceSymbols(params)
 
-    internal fun resolveWorkspaceSymbol(
-        symbol: WorkspaceSymbol
-    ): CompletableFuture<WorkspaceSymbol> = textDocumentService.resolveWorkspaceSymbol(symbol)
+    internal fun resolveWorkspaceSymbol(symbol: WorkspaceSymbol): CompletableFuture<WorkspaceSymbol> =
+        textDocumentService.resolveWorkspaceSymbol(symbol)
 
     private data class TokenCapabilities(
         val range: Boolean = false,
@@ -265,14 +266,15 @@ class XtcLanguageServer(
 
     internal fun requireSemanticTokenRequest(delta: Boolean) {
         val options = tokenCapabilities.get()
-        if (!(if (delta) options.delta else options.range))
+        if (!(if (delta) options.delta else options.range)) {
             throw ResponseErrorException(
                 ResponseError(
                     ResponseErrorCode.MethodNotFound,
                     "Semantic token operation was not negotiated",
                     null,
-                )
+                ),
             )
+        }
     }
 
     internal fun refreshSemanticFeatures() =
@@ -287,18 +289,19 @@ class XtcLanguageServer(
         AtomicReference<FileOperationsWorkspaceCapabilities?>(null)
 
     internal fun willRenameFiles(params: RenameFilesParams): CompletableFuture<WorkspaceEdit?> =
-        if (fileOperationCapabilities.get()?.willRename == true)
+        if (fileOperationCapabilities.get()?.willRename == true) {
             textDocumentService.renameFiles(params)
-        else
+        } else {
             CompletableFuture.failedFuture(
                 ResponseErrorException(
                     ResponseError(
                         ResponseErrorCode.MethodNotFound,
                         "File rename participation was not negotiated",
                         null,
-                    )
-                )
+                    ),
+                ),
             )
+        }
 
     private val compilerSettings = AtomicReference(CompilerSettings())
 
@@ -319,10 +322,11 @@ class XtcLanguageServer(
     private val version = buildInfo.getProperty("lsp.version", "?")
     private val buildTime = buildInfo.getProperty("lsp.build.time", "?")
     private val semanticTokensEnabled =
-        (System.getProperty(SEMANTIC_TOKENS_SYSTEM_PROPERTY)
+        (
+            System.getProperty(SEMANTIC_TOKENS_SYSTEM_PROPERTY)
                 ?: System.getenv(SEMANTIC_TOKENS_ENV)
-                ?: buildInfo.getProperty("lsp.semanticTokens", "true"))
-            .toBoolean()
+                ?: buildInfo.getProperty("lsp.semanticTokens", "true")
+        ).toBoolean()
 
     /**
      * Editor-provided formatting configuration, received via `workspace/configuration`. This is
@@ -382,13 +386,15 @@ class XtcLanguageServer(
                 try {
                     val raw = CompilerConfiguration.initial(params.initializationOptions)
                     val model = CompilerConfiguration.buildModel(raw)
-                    if (model != null)
+                    if (model != null) {
                         textDocumentService.refreshDependencies {
                             adapter.replaceBuildInputs(model.resolve())
                         }
-                    else
-                        CompilerConfiguration.modules(raw, folders)
+                    } else {
+                        CompilerConfiguration
+                            .modules(raw, folders)
                             ?.let(::replaceCompilerSourceModules)
+                    }
                 } catch (e: IllegalArgumentException) {
                     return CompletableFuture.failedFuture(
                         ResponseErrorException(
@@ -396,8 +402,8 @@ class XtcLanguageServer(
                                 ResponseErrorCode.InvalidParams,
                                 "Invalid ${CompilerConfiguration.SECTION}: ${e.message}",
                                 null,
-                            )
-                        )
+                            ),
+                        ),
                     )
                 }
             }
@@ -408,19 +414,31 @@ class XtcLanguageServer(
             DiagnosticCapabilities(
                 pull,
                 pull &&
-                    params.capabilities?.textDocument?.diagnostic?.relatedDocumentSupport == true,
-                pull && params.capabilities?.workspace?.diagnostics?.refreshSupport == true,
-            )
+                    params.capabilities
+                        ?.textDocument
+                        ?.diagnostic
+                        ?.relatedDocumentSupport == true,
+                pull && params.capabilities
+                    ?.workspace
+                    ?.diagnostics
+                    ?.refreshSupport == true,
+            ),
         )
         val workspaceEdits = params.capabilities?.workspace?.workspaceEdit
         editCapabilities.set(
             EditCapabilities(
                 workspaceEdits?.documentChanges == true,
                 workspaceEdits?.resourceOperations?.contains("rename") == true,
-                params.capabilities?.workspace?.didChangeWatchedFiles?.dynamicRegistration == true,
-                params.capabilities?.workspace?.didChangeWatchedFiles?.relativePatternSupport ==
+                params.capabilities
+                    ?.workspace
+                    ?.didChangeWatchedFiles
+                    ?.dynamicRegistration == true,
+                params.capabilities
+                    ?.workspace
+                    ?.didChangeWatchedFiles
+                    ?.relativePatternSupport ==
                     true,
-            )
+            ),
         )
 
         try {
@@ -428,8 +446,8 @@ class XtcLanguageServer(
         } catch (e: IllegalArgumentException) {
             return CompletableFuture.failedFuture(
                 ResponseErrorException(
-                    ResponseError(ResponseErrorCode.InvalidParams, e.message, null)
-                )
+                    ResponseError(ResponseErrorCode.InvalidParams, e.message, null),
+                ),
             )
         }
         val textCapabilities = params.capabilities?.textDocument
@@ -443,13 +461,19 @@ class XtcLanguageServer(
                     ?.contains("documentation") == true,
                 presentation.actionLiterals &&
                     textCapabilities?.codeAction?.dataSupport == true &&
-                    textCapabilities.codeAction.resolveSupport?.properties?.contains("edit") ==
-                        true,
+                    textCapabilities.codeAction.resolveSupport
+                        ?.properties
+                        ?.contains("edit") ==
+                    true,
                 textCapabilities?.codeLens?.let {
                     it.resolveSupport?.properties?.contains("command") != false
                 } == true,
                 textCapabilities?.documentLink != null,
-                textCapabilities?.inlayHint?.resolveSupport?.properties?.contains("tooltip") ==
+                textCapabilities
+                    ?.inlayHint
+                    ?.resolveSupport
+                    ?.properties
+                    ?.contains("tooltip") ==
                     true,
                 params.capabilities
                     ?.workspace
@@ -457,18 +481,25 @@ class XtcLanguageServer(
                     ?.resolveSupport
                     ?.properties
                     ?.contains("location.range") == true,
-            )
+            ),
         )
         fileOperationCapabilities.set(params.capabilities?.workspace?.fileOperations)
-        val tokenRequests = params.capabilities?.textDocument?.semanticTokens?.requests
+        val tokenRequests =
+            params.capabilities
+                ?.textDocument
+                ?.semanticTokens
+                ?.requests
         val tokens =
             semanticTokensEnabled && AdapterCapability.SEMANTIC_TOKENS in adapter.capabilities
         tokenCapabilities.set(
             TokenCapabilities(
                 tokens && tokenRequests?.range?.let { it.isRight || it.left == true } == true,
                 tokens && tokenRequests?.full?.right?.delta == true,
-                tokens && params.capabilities?.workspace?.semanticTokens?.refreshSupport == true,
-            )
+                tokens && params.capabilities
+                    ?.workspace
+                    ?.semanticTokens
+                    ?.refreshSupport == true,
+            ),
         )
 
         val capabilities = buildServerCapabilities()
@@ -480,20 +511,23 @@ class XtcLanguageServer(
                 if (tokenCapabilities.get().refresh) add(ClientRefresh.Feature.TOKENS)
                 if (
                     workspace?.inlayHint?.refreshSupport == true &&
-                        AdapterCapability.INLAY_HINT in adapter.capabilities
-                )
+                    AdapterCapability.INLAY_HINT in adapter.capabilities
+                ) {
                     add(ClientRefresh.Feature.INLAYS)
+                }
                 if (
                     workspace?.codeLens?.refreshSupport == true &&
-                        AdapterCapability.CODE_LENS in adapter.capabilities
-                )
+                    AdapterCapability.CODE_LENS in adapter.capabilities
+                ) {
                     add(ClientRefresh.Feature.LENSES)
+                }
                 if (
                     workspace?.foldingRange?.refreshSupport == true &&
-                        AdapterCapability.FOLDING_RANGE in adapter.capabilities
-                )
+                    AdapterCapability.FOLDING_RANGE in adapter.capabilities
+                ) {
                     add(ClientRefresh.Feature.FOLDING)
-            }
+                }
+            },
         )
         logger.info("initialize: Ecstasy Language Server initialized")
 
@@ -508,8 +542,7 @@ class XtcLanguageServer(
                     runCatching { Path.of(URI(uri)).toString() }
                         .onFailure {
                             logger.warn("initialize: invalid workspace folder URI: {}", uri)
-                        }
-                        .getOrNull()
+                        }.getOrNull()
                 }
 
             // Extra source roots (XDK source trees, etc.) from init options, sysprop, or env.
@@ -518,12 +551,13 @@ class XtcLanguageServer(
             val folders = (workspaceFolders + extraRoots).distinct()
 
             if (folders.isNotEmpty()) {
-                if (params.workDoneToken != null)
+                if (params.workDoneToken != null) {
                     progress.track("Ecstasy: indexing workspace", params.workDoneToken, indexing)
-                else
+                } else {
                     clientReady.thenRun {
                         progress.track("Ecstasy: indexing workspace", null, indexing)
                     }
+                }
                 try {
                     val scan =
                         adapter.initializeWorkspaceAsync(folders) { message, percent ->
@@ -536,8 +570,11 @@ class XtcLanguageServer(
                         }
                     indexing.whenComplete { _, failure -> if (failure != null) scan.cancel(false) }
                     scan.whenComplete { _, failure ->
-                        if (failure == null) indexing.complete(Unit)
-                        else indexing.completeExceptionally(failure)
+                        if (failure == null) {
+                            indexing.complete(Unit)
+                        } else {
+                            indexing.completeExceptionally(failure)
+                        }
                     }
                 } catch (failure: Throwable) {
                     indexing.completeExceptionally(failure)
@@ -568,8 +605,7 @@ class XtcLanguageServer(
                         fileWatchers = false,
                         resourceWatchers = it.resourceWatchers || it.fileWatchers,
                     )
-                }
-                .fileWatchers
+                }.fileWatchers
         ) {
             registerFileWatcher()
             updateResourceWatchers()
@@ -606,10 +642,9 @@ class XtcLanguageServer(
         currentClient
             .configuration(
                 ConfigurationParams(
-                    listOf(ConfigurationItem().apply { section = CompilerConfiguration.SECTION })
-                )
-            )
-            .thenAccept { values -> applyCompilerConfig(values?.firstOrNull(), settings) }
+                    listOf(ConfigurationItem().apply { section = CompilerConfiguration.SECTION }),
+                ),
+            ).thenAccept { values -> applyCompilerConfig(values?.firstOrNull(), settings) }
             .exceptionally { failure ->
                 logger.warn(
                     "workspace/configuration: compiler settings request failed: {}",
@@ -639,7 +674,8 @@ class XtcLanguageServer(
                     }
                     updateResourceWatchers()
                 } else {
-                    CompilerConfiguration.modules(raw, settings.folders)
+                    CompilerConfiguration
+                        .modules(raw, settings.folders)
                         ?.let(::replaceCompilerSourceModules)
                 }
             } catch (e: IllegalArgumentException) {
@@ -667,7 +703,8 @@ class XtcLanguageServer(
         val c = client ?: return
         val revision = formattingState.request()
         val item = ConfigurationItem().apply { section = "xtc.formatting" }
-        c.configuration(ConfigurationParams(listOf(item)))
+        c
+            .configuration(ConfigurationParams(listOf(item)))
             .thenAccept { results ->
                 if (
                     formattingState.accept(revision, results?.firstOrNull()) {
@@ -679,8 +716,7 @@ class XtcLanguageServer(
                         editorFormattingConfig,
                     )
                 }
-            }
-            .exceptionally { failure ->
+            }.exceptionally { failure ->
                 logger.warn(
                     "Invalid or unavailable formatting configuration; previous values retained: {}",
                     failure.message,
@@ -759,12 +795,13 @@ class XtcLanguageServer(
         ServerCapabilities().apply {
             positionEncoding = "utf-16"
             if (adapter is XdkAdapter) experimental = mapOf("xtcRenameProposal" to 1)
-            if (usesPullDiagnostics)
+            if (usesPullDiagnostics) {
                 diagnosticProvider =
                     DiagnosticRegistrationOptions(true, true).apply {
                         identifier = "xtc"
                         workDoneProgress = true
                     }
+            }
             textDocumentSync = Either.forRight(synchronization.capabilities())
 
             // --- Core navigation (treesitter) ---
@@ -776,9 +813,11 @@ class XtcLanguageServer(
                 }
             definitionProvider = Either.forLeft(true)
             referencesProvider =
-                if (adapter is XdkAdapter)
+                if (adapter is XdkAdapter) {
                     Either.forRight(ReferenceOptions().apply { workDoneProgress = true })
-                else Either.forLeft(true)
+                } else {
+                    Either.forLeft(true)
+                }
             documentSymbolProvider = Either.forLeft(true)
 
             // --- Structural features (treesitter) ---
@@ -792,20 +831,24 @@ class XtcLanguageServer(
                     RenameOptions().apply {
                         prepareProvider = true
                         workDoneProgress = true
-                    }
+                    },
                 )
             codeActionProvider =
-                if (!presentation.codeActions) Either.forLeft(false)
-                else if (resolvesCodeActionEdit)
+                if (!presentation.codeActions) {
+                    Either.forLeft(false)
+                } else if (resolvesCodeActionEdit) {
                     Either.forRight(CodeActionOptions().apply { resolveProvider = true })
-                else Either.forLeft(true)
+                } else {
+                    Either.forLeft(true)
+                }
             if (
                 !presentation.actionLiterals &&
-                    presentation.applyEdit &&
-                    AdapterCapability.CODE_ACTION in adapter.capabilities
-            )
+                presentation.applyEdit &&
+                AdapterCapability.CODE_ACTION in adapter.capabilities
+            ) {
                 executeCommandProvider =
                     ExecuteCommandOptions(listOf(ClientPresentation.APPLY_CODE_ACTION))
+            }
             documentFormattingProvider = Either.forLeft(true)
             documentRangeFormattingProvider =
                 Either.forRight(DocumentRangeFormattingOptions().apply { rangesSupport = true })
@@ -813,13 +856,16 @@ class XtcLanguageServer(
                 DocumentOnTypeFormattingOptions("\n").apply {
                     moreTriggerCharacter = listOf("}", ";", ")")
                 }
-            if (AdapterCapability.INLAY_HINT in adapter.capabilities)
+            if (AdapterCapability.INLAY_HINT in adapter.capabilities) {
                 inlayHintProvider =
-                    if (resolvesInlayHintTooltip)
+                    if (resolvesInlayHintTooltip) {
                         Either.forRight(
-                            InlayHintRegistrationOptions().apply { resolveProvider = true }
+                            InlayHintRegistrationOptions().apply { resolveProvider = true },
                         )
-                    else Either.forLeft(true)
+                    } else {
+                        Either.forLeft(true)
+                    }
+            }
 
             // documentLinkProvider: URLs in comments / string literals.
             // See TreeSitterAdapter.getDocumentLinks for the matcher.
@@ -827,7 +873,7 @@ class XtcLanguageServer(
 
             signatureHelpProvider =
                 SignatureHelpOptions(
-                    if (adapter is XdkAdapter) listOf("(", ",", "[") else listOf("(", ",")
+                    if (adapter is XdkAdapter) listOf("(", ",", "[") else listOf("(", ","),
                 )
 
             // Semantic tokens: enabled by default. Disable with -Plsp.semanticTokens=false if
@@ -855,9 +901,11 @@ class XtcLanguageServer(
                                 SemanticTokenLegend.tokenModifiers,
                             )
                         full =
-                            if (tokenCapabilities.get().delta)
+                            if (tokenCapabilities.get().delta) {
                                 Either.forRight(SemanticTokensServerFull(true))
-                            else Either.forLeft(true)
+                            } else {
+                                Either.forLeft(true)
+                            }
                         if (tokenCapabilities.get().range) range = Either.forLeft(true)
                     }
             } else {
@@ -875,8 +923,11 @@ class XtcLanguageServer(
 
             // --- Workspace features ---
             workspaceSymbolProvider =
-                if (resolvesWorkspaceSymbolRange) Either.forRight(WorkspaceSymbolOptions(true))
-                else Either.forLeft(true)
+                if (resolvesWorkspaceSymbolRange) {
+                    Either.forRight(WorkspaceSymbolOptions(true))
+                } else {
+                    Either.forLeft(true)
+                }
             if (adapter is XdkAdapter) {
                 workspace =
                     WorkspaceServerCapabilities().apply {
@@ -895,11 +946,12 @@ class XtcLanguageServer(
                                                 },
                                                 "file",
                                             ),
-                                        )
+                                        ),
                                     )
                                 val client = fileOperationCapabilities.get()
-                                if (client?.willRename == true && supportsVersionedEdits)
+                                if (client?.willRename == true && supportsVersionedEdits) {
                                     willRename = filters
+                                }
                                 if (client?.willCreate == true) willCreate = filters
                                 if (client?.willDelete == true) willDelete = filters
                                 if (client?.didRename == true) didRename = filters
@@ -926,48 +978,64 @@ class XtcLanguageServer(
             if (AdapterCapability.COMPLETION !in adapter.capabilities) completionProvider = null
             if (AdapterCapability.DEFINITION !in adapter.capabilities) definitionProvider = null
             if (AdapterCapability.REFERENCES !in adapter.capabilities) referencesProvider = null
-            if (AdapterCapability.DOCUMENT_SYMBOL !in adapter.capabilities)
+            if (AdapterCapability.DOCUMENT_SYMBOL !in adapter.capabilities) {
                 documentSymbolProvider = null
-            if (AdapterCapability.DOCUMENT_HIGHLIGHT !in adapter.capabilities)
+            }
+            if (AdapterCapability.DOCUMENT_HIGHLIGHT !in adapter.capabilities) {
                 documentHighlightProvider = null
-            if (AdapterCapability.SELECTION_RANGE !in adapter.capabilities)
+            }
+            if (AdapterCapability.SELECTION_RANGE !in adapter.capabilities) {
                 selectionRangeProvider = null
-            if (AdapterCapability.FOLDING_RANGE !in adapter.capabilities)
+            }
+            if (AdapterCapability.FOLDING_RANGE !in adapter.capabilities) {
                 foldingRangeProvider = null
+            }
             if (
                 AdapterCapability.RENAME !in adapter.capabilities ||
-                    (adapter is XdkAdapter && !supportsVersionedEdits)
+                (adapter is XdkAdapter && !supportsVersionedEdits)
             ) {
                 renameProvider = null
             }
             if (AdapterCapability.CODE_ACTION !in adapter.capabilities) codeActionProvider = null
-            if (AdapterCapability.FORMATTING !in adapter.capabilities)
+            if (AdapterCapability.FORMATTING !in adapter.capabilities) {
                 documentFormattingProvider = null
-            if (AdapterCapability.RANGE_FORMATTING !in adapter.capabilities)
+            }
+            if (AdapterCapability.RANGE_FORMATTING !in adapter.capabilities) {
                 documentRangeFormattingProvider = null
-            if (AdapterCapability.ON_TYPE_FORMATTING !in adapter.capabilities)
+            }
+            if (AdapterCapability.ON_TYPE_FORMATTING !in adapter.capabilities) {
                 documentOnTypeFormattingProvider = null
-            if (AdapterCapability.DOCUMENT_LINK !in adapter.capabilities)
+            }
+            if (AdapterCapability.DOCUMENT_LINK !in adapter.capabilities) {
                 documentLinkProvider = null
-            if (AdapterCapability.SIGNATURE_HELP !in adapter.capabilities)
+            }
+            if (AdapterCapability.SIGNATURE_HELP !in adapter.capabilities) {
                 signatureHelpProvider = null
-            if (AdapterCapability.WORKSPACE_SYMBOL !in adapter.capabilities)
+            }
+            if (AdapterCapability.WORKSPACE_SYMBOL !in adapter.capabilities) {
                 workspaceSymbolProvider = null
+            }
             if (AdapterCapability.CODE_LENS !in adapter.capabilities) codeLensProvider = null
-            if (AdapterCapability.LINKED_EDITING !in adapter.capabilities)
+            if (AdapterCapability.LINKED_EDITING !in adapter.capabilities) {
                 linkedEditingRangeProvider = null
+            }
 
             // Compiler semantic navigation.
-            if (AdapterCapability.TYPE_DEFINITION in adapter.capabilities)
+            if (AdapterCapability.TYPE_DEFINITION in adapter.capabilities) {
                 typeDefinitionProvider = Either.forLeft(true)
-            if (AdapterCapability.DECLARATION in adapter.capabilities)
+            }
+            if (AdapterCapability.DECLARATION in adapter.capabilities) {
                 declarationProvider = Either.forLeft(true)
-            if (AdapterCapability.IMPLEMENTATION in adapter.capabilities)
+            }
+            if (AdapterCapability.IMPLEMENTATION in adapter.capabilities) {
                 implementationProvider = Either.forLeft(true)
-            if (AdapterCapability.TYPE_HIERARCHY in adapter.capabilities)
+            }
+            if (AdapterCapability.TYPE_HIERARCHY in adapter.capabilities) {
                 typeHierarchyProvider = Either.forLeft(true)
-            if (AdapterCapability.CALL_HIERARCHY in adapter.capabilities)
+            }
+            if (AdapterCapability.CALL_HIERARCHY in adapter.capabilities) {
                 callHierarchyProvider = Either.forLeft(true)
+            }
         }
 
     override fun shutdown(): CompletableFuture<Any> {
@@ -1054,8 +1122,7 @@ class XtcLanguageServer(
 
     /** Hosts opting into this extension own persistence and undo of explicit graph replacements. */
     @JsonRequest("xtc/rename")
-    fun renameProposal(params: RenameParams): CompletableFuture<RenameProposal?> =
-        textDocumentService.renameProposal(params)
+    fun renameProposal(params: RenameParams): CompletableFuture<RenameProposal?> = textDocumentService.renameProposal(params)
 
     /**
      * Custom health check method that clients can call to verify the server is working.
@@ -1087,13 +1154,17 @@ class XtcLanguageServer(
                 "saveHookSupported" to synchronization.waitUntil,
                 "formatting" to editorFormattingConfig,
                 "semanticTokens" to
-                    (semanticTokensEnabled &&
-                        AdapterCapability.SEMANTIC_TOKENS in adapter.capabilities),
+                    (
+                        semanticTokensEnabled &&
+                            AdapterCapability.SEMANTIC_TOKENS in adapter.capabilities
+                    ),
                 "capabilities" to buildServerCapabilities(),
                 "bundledXdk" to
-                    if (adapter is XdkAdapter)
+                    if (adapter is XdkAdapter) {
                         mapOf("readOnly" to true, "modules" to XdkLibraries.packagedResources)
-                    else null,
+                    } else {
+                        null
+                    },
                 "compilerQueue" to (adapter as? XdkAdapter)?.compilerQueueSnapshot(),
                 "heap" to
                     ManagementFactory.getMemoryMXBean().heapMemoryUsage.let {
@@ -1103,7 +1174,7 @@ class XtcLanguageServer(
                             "maxBytes" to it.max,
                         )
                     },
-            )
+            ),
         )
 
     @JsonRequest("xtc/healthCheck")
@@ -1137,8 +1208,8 @@ class XtcLanguageServer(
                     FileSystemWatcher(
                         Either.forLeft(if (adapter is XdkAdapter) "**/*" else "**/*.x"),
                         WatchKind.Create + WatchKind.Change + WatchKind.Delete,
-                    )
-                )
+                    ),
+                ),
             )
         val registration =
             Registration(
@@ -1148,7 +1219,8 @@ class XtcLanguageServer(
             )
         currentClient.registerCapability(RegistrationParams(listOf(registration))).whenComplete {
             _,
-            failure ->
+            failure,
+            ->
             if (failure == null) {
                 logger.info("initialized: registered file watcher for **/*.x")
             } else {
@@ -1208,8 +1280,7 @@ class XtcLanguageServer(
                 .inputWatchRoots()
                 .filter { root ->
                     folders.none { root.toPath().startsWith(it) }
-                }
-                .mapTo(linkedSetOf()) { it.toURI().toString() }
+                }.mapTo(linkedSetOf()) { it.toURI().toString() }
         resourceFileWatchers.update(
             currentClient,
             external,
@@ -1242,17 +1313,18 @@ class XtcLanguageServer(
         if (usesPullDiagnostics) return
         val currentClient = client ?: return
         val options = presentation
-        val lspDiagnostics = diagnostics.map {
-            it.toLsp(uri).apply {
-                if (!options.diagnosticRelatedInformation) relatedInformation = null
+        val lspDiagnostics =
+            diagnostics.map {
+                it.toLsp(uri).apply {
+                    if (!options.diagnosticRelatedInformation) relatedInformation = null
+                }
             }
-        }
         currentClient.publishDiagnostics(
             PublishDiagnosticsParams(
                 uri,
                 lspDiagnostics,
                 version.takeIf { options.diagnosticVersions },
-            )
+            ),
         )
     }
 }

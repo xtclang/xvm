@@ -1,6 +1,5 @@
 package org.xvm.lsp.server
 
-import java.util.concurrent.CompletableFuture
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.ClientCapabilities
 import org.eclipse.lsp4j.DidChangeWatchedFilesCapabilities
@@ -17,6 +16,7 @@ import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.xvm.lsp.adapter.mock.MockAdapter
+import java.util.concurrent.CompletableFuture
 
 class StartupRegistrationTest {
     @Test

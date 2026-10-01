@@ -43,10 +43,11 @@ object PlaybookProgress {
     }
 
     @JvmStatic
-    fun text(project: Project): String =
-        (WindowManager.getInstance().getStatusBar(project)?.getWidget(ID) as Widget).label.text
+    fun text(project: Project): String = (WindowManager.getInstance().getStatusBar(project)?.getWidget(ID) as Widget).label.text
 
-    private class Widget(private val frame: JFrame?) : CustomStatusBarWidget {
+    private class Widget(
+        private val frame: JFrame?,
+    ) : CustomStatusBarWidget {
         val label = JLabel("Ecstasy playbook: starting")
         private val originalTitle = frame?.title
         private val titleListener = PropertyChangeListener { updateTitle() }

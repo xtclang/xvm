@@ -1,8 +1,4 @@
 import groovy.json.JsonSlurper
-import java.io.File
-import java.time.Instant
-import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
 import org.gradle.api.file.RegularFileProperty
@@ -12,6 +8,10 @@ import org.gradle.api.tasks.InputFile
 import org.gradle.api.tasks.TaskAction
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
+import java.io.File
+import java.time.Instant
+import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
 
 // Build-classpath security constraints: the IntelliJ Platform Gradle Plugin drags vulnerable
 // transitive dependencies onto this project's build classpath. Force known-patched versions
@@ -52,15 +52,16 @@ val jetbrainsTokenProvider = xdkProperties.string("jetbrains.token", "")
 val jetbrainsPublishSuffixOverrideProvider = xdkProperties.string("jetbrains.publish.suffix", "")
 val utcPublishTimestamp: String =
     DateTimeFormatter.ofPattern("yyyyMMddHHmmss").withZone(ZoneOffset.UTC).format(Instant.now())
-val jetbrainsPublishVersionProvider = providers.provider {
-    val baseVersion = xdkVersionProvider.get()
-    val publishEnabled = enablePublishProvider.get()
-    if (!publishEnabled || !baseVersion.endsWith("-SNAPSHOT")) {
-        return@provider baseVersion
+val jetbrainsPublishVersionProvider =
+    providers.provider {
+        val baseVersion = xdkVersionProvider.get()
+        val publishEnabled = enablePublishProvider.get()
+        if (!publishEnabled || !baseVersion.endsWith("-SNAPSHOT")) {
+            return@provider baseVersion
+        }
+        val suffix = jetbrainsPublishSuffixOverrideProvider.get().ifBlank { utcPublishTimestamp }
+        "$baseVersion.$suffix"
     }
-    val suffix = jetbrainsPublishSuffixOverrideProvider.get().ifBlank { utcPublishTimestamp }
-    "$baseVersion.$suffix"
-}
 val usesGeneratedJetBrainsPublishSuffix: Boolean =
     enablePublish &&
         xdkVersion.endsWith("-SNAPSHOT") &&
@@ -75,8 +76,7 @@ val logLevel: String =
         .stringValue(
             "log",
             System.getenv("XTC_LOG_LEVEL")?.uppercase() ?: "INFO",
-        )
-        .uppercase()
+        ).uppercase()
 
 // Run the branch's full editor path by default: LSP semantic tokens on.
 // Override with -Pxtc.intellij.semanticTokens=false when debugging TextMate-only behavior.
@@ -108,8 +108,7 @@ abstract class PublishCheckTask : DefaultTask() {
                     |Base version: ${xdkVersion.get()}
                     |Publish version: ${publishVersion.get()}
                     |Release channel: ${releaseChannel.get()}
-                    """
-                        .trimMargin()
+                    """.trimMargin(),
                 )
             }
             return
@@ -133,8 +132,7 @@ abstract class PublishCheckTask : DefaultTask() {
             |  JETBRAINS_CERTIFICATE_CHAIN - Base64-encoded certificate chain
             |  JETBRAINS_PRIVATE_KEY - Base64-encoded private key
             |  JETBRAINS_PRIVATE_KEY_PASSWORD - Private key password
-            """
-                .trimMargin()
+            """.trimMargin(),
         )
     }
 }
@@ -155,17 +153,17 @@ abstract class SummarizeSearchableOptionsTask : DefaultTask() {
                 |Run one of:
                 |  ./gradlew -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.buildSearchableOptions=true :lang:intellij-plugin:buildPlugin
                 |  ./gradlew -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.buildSearchableOptions=true :lang:intellij-plugin:buildSearchableOptions
-                """
-                    .trimMargin()
+                """.trimMargin(),
             )
         }
 
         @Suppress("UNCHECKED_CAST")
         val manifest = JsonSlurper().parse(manifestFile) as Map<String, List<Map<String, Any>>>
         val bundleNames = manifest.keys.sorted()
-        val xtcBundles = bundleNames.filter { name ->
-            name.contains("xtc", ignoreCase = true) || name.contains("ecstasy", ignoreCase = true)
-        }
+        val xtcBundles =
+            bundleNames.filter { name ->
+                name.contains("xtc", ignoreCase = true) || name.contains("ecstasy", ignoreCase = true)
+            }
         val bundleFiles =
             manifest.entries
                 .flatMap { (_, records) -> records }
@@ -173,8 +171,7 @@ abstract class SummarizeSearchableOptionsTask : DefaultTask() {
                     val file = record["file"]?.toString() ?: return@mapNotNull null
                     val size = (record["size"] as? Number)?.toLong() ?: 0L
                     file to size
-                }
-                .sortedByDescending { (_, size) -> size }
+                }.sortedByDescending { (_, size) -> size }
 
         logger.lifecycle(
             """
@@ -187,8 +184,7 @@ abstract class SummarizeSearchableOptionsTask : DefaultTask() {
             |
             |[searchable-options] Sample bundle names:
             |${bundleNames.take(20).joinToString("\n") { "  - $it" }}
-            """
-                .trimMargin()
+            """.trimMargin(),
         )
     }
 }
@@ -205,7 +201,9 @@ abstract class SummarizeSearchableOptionsTask : DefaultTask() {
 //   rm -rf lang/.intellijPlatform/ides
 // Then run any task that requires the IDE (e.g. ./gradlew :lang:intellij-plugin:runIde).
 
-val ideVersion = libs.versions.lang.intellij.ide.get()
+val ideVersion =
+    libs.versions.lang.intellij.ide
+        .get()
 
 logger.info("[ide] IntelliJ IDEA $ideVersion (managed by IntelliJ Platform Gradle Plugin)")
 
@@ -281,7 +279,7 @@ val copyLspVersionProperties =
 
 sourceSets.main {
     resources.srcDir(
-        copyLspVersionProperties.map { layout.buildDirectory.dir("generated/resources/lsp") }
+        copyLspVersionProperties.map { layout.buildDirectory.dir("generated/resources/lsp") },
     )
 }
 
@@ -344,11 +342,11 @@ val integrationTestSourceSet =
     }
 
 configurations[integrationTestSourceSet.implementationConfigurationName].extendsFrom(
-    configurations.testImplementation.get()
+    configurations.testImplementation.get(),
 )
 
 configurations[integrationTestSourceSet.runtimeOnlyConfigurationName].extendsFrom(
-    configurations.testRuntimeOnly.get()
+    configurations.testRuntimeOnly.get(),
 )
 
 dependencies {
@@ -376,13 +374,17 @@ dependencies {
     compileOnly(project(":lsp-server"))
 
     intellijPlatform {
-        intellijIdea(libs.versions.lang.intellij.ide.get())
+        intellijIdea(
+            libs.versions.lang.intellij.ide
+                .get(),
+        )
         bundledPlugin("com.intellij.java")
         bundledPlugin("com.intellij.gradle")
         bundledPlugin("org.jetbrains.plugins.textmate")
         plugin(
             "com.redhat.devtools.lsp4ij",
-            libs.versions.lang.intellij.lsp4ij.get(),
+            libs.versions.lang.intellij.lsp4ij
+                .get(),
         )
         pluginVerifier()
         testFramework(
@@ -400,13 +402,16 @@ dependencies {
 // binary verifier (verifyPlugin) catches any future since-build/JBR mismatch.
 
 // Derive sinceBuild from IDE version: "2026.1" -> "261" (last 2 digits of year + major version)
-val intellijIdeVersion: String = libs.versions.lang.intellij.ide.get()
-val intellijSinceBuild: String = run {
-    val parts = intellijIdeVersion.split(".")
-    val year = parts[0].takeLast(2)
-    val major = parts.getOrElse(1) { "0" }
-    "$year$major"
-}
+val intellijIdeVersion: String =
+    libs.versions.lang.intellij.ide
+        .get()
+val intellijSinceBuild: String =
+    run {
+        val parts = intellijIdeVersion.split(".")
+        val year = parts[0].takeLast(2)
+        val major = parts.getOrElse(1) { "0" }
+        "$year$major"
+    }
 
 intellijPlatform {
     caching {
@@ -441,8 +446,7 @@ intellijPlatform {
                 <li>File type support for .x files</li>
                 <li>LSP-based language features</li>
             </ul>
-            """
-                .trimIndent()
+            """.trimIndent()
     }
 
     signing {
@@ -516,7 +520,7 @@ val publishPlugin =
         dependsOn(verifyPlugin)
         if (usesGeneratedJetBrainsPublishSuffix) {
             notCompatibleWithConfigurationCache(
-                "JetBrains snapshot publish version uses a generated UTC timestamp suffix for uniqueness."
+                "JetBrains snapshot publish version uses a generated UTC timestamp suffix for uniqueness.",
             )
         }
     }
@@ -529,8 +533,11 @@ val publishPlugin =
 val buildSearchableOptionsEnabled = xdkProperties.booleanValue("lsp.buildSearchableOptions", false)
 
 val searchableOptionsStatus =
-    if (buildSearchableOptionsEnabled) "enabled"
-    else "disabled (use -Plsp.buildSearchableOptions=true to enable)"
+    if (buildSearchableOptionsEnabled) {
+        "enabled"
+    } else {
+        "disabled (use -Plsp.buildSearchableOptions=true to enable)"
+    }
 
 logger.info("[ide] Searchable options: $searchableOptionsStatus")
 
@@ -568,8 +575,7 @@ val buildPlugin =
                 |[plugin]   1. Open Settings -> Plugins -> gear icon -> Install Plugin from Disk...
                 |[plugin]   2. Select: ${zip.absolutePath}
                 |[plugin]   3. Restart the IDE
-                    """
-                        .trimMargin()
+                    """.trimMargin(),
                 )
             }
         }
@@ -587,9 +593,10 @@ val prepareSandbox = tasks.named<Sync>("prepareSandbox")
 // Derive TextMate destination from prepareSandbox's output (works with any IDE version)
 // prepareSandbox.destinationDir is the plugins/ directory, we need
 // plugins/<plugin-name>/lib/textmate
-val sandboxPluginTextMate: Provider<File> = prepareSandbox.map {
-    it.destinationDir.resolve("intellij-plugin/lib/textmate")
-}
+val sandboxPluginTextMate: Provider<File> =
+    prepareSandbox.map {
+        it.destinationDir.resolve("intellij-plugin/lib/textmate")
+    }
 
 val copyTextMateToSandbox =
     tasks.register<Sync>("copyTextMateToSandbox") {
@@ -616,9 +623,10 @@ val copyTextMateToSandbox =
 //
 // Location: plugins/intellij-plugin/bin/xtc-lsp-server.jar (off classpath)
 
-val sandboxPluginBin: Provider<File> = prepareSandbox.map {
-    it.destinationDir.resolve("intellij-plugin/bin")
-}
+val sandboxPluginBin: Provider<File> =
+    prepareSandbox.map {
+        it.destinationDir.resolve("intellij-plugin/bin")
+    }
 
 val copyLspServerToSandbox =
     tasks.register<Copy>("copyLspServerToSandbox") {
@@ -669,9 +677,10 @@ val prepareJarSearchableOptions =
 // Derive sandbox config dir from prepareSandbox (handles versioned sandbox directories like
 // IU-2025.3.1.1)
 // prepareSandbox.destinationDir is the plugins/ directory, config/ is a sibling
-val sandboxConfigDir: Provider<File> = prepareSandbox.map {
-    it.destinationDir.parentFile.resolve("config")
-}
+val sandboxConfigDir: Provider<File> =
+    prepareSandbox.map {
+        it.destinationDir.parentFile.resolve("config")
+    }
 
 // Plugins to disable in sandbox (Ultimate-only or problematic split-architecture plugins)
 val disabledSandboxPlugins =
@@ -701,7 +710,7 @@ val configureDisabledPlugins =
             disabledPluginsFile.parentFile.mkdirs()
             disabledPluginsFile.writeText(pluginsList.joinToString("\n") + "\n")
             logger.info(
-                "[sandbox] Disabled ${pluginsList.size} Ultimate-only plugins in sandbox config"
+                "[sandbox] Disabled ${pluginsList.size} Ultimate-only plugins in sandbox config",
             )
         }
     }
@@ -728,8 +737,7 @@ val configureSandboxLogging =
                 |<application>
                 |  <component name="Logs.Categories"><![CDATA[{"org.xtclang":"INFO"}]]></component>
                 |</application>
-                """
-                    .trimMargin() + "\n"
+                """.trimMargin() + "\n",
             )
             logger.info("[sandbox] Configured INFO-level logging for org.xtclang")
         }
@@ -756,14 +764,14 @@ val configureSandboxAppearance =
             val text = colorsSchemeFile.readText()
             if ("_@user_" !in text) {
                 logger.info(
-                    "[sandbox] Preserving sandbox color scheme override: ${colorsSchemeFile.absolutePath}"
+                    "[sandbox] Preserving sandbox color scheme override: ${colorsSchemeFile.absolutePath}",
                 )
                 return@doLast
             }
 
             colorsSchemeFile.delete()
             logger.info(
-                "[sandbox] Removed user-derived sandbox color scheme override: ${colorsSchemeFile.absolutePath}"
+                "[sandbox] Removed user-derived sandbox color scheme override: ${colorsSchemeFile.absolutePath}",
             )
         }
     }
@@ -783,7 +791,9 @@ val parentPublishLocal =
 
 val runIdeCapturedIdeVersion = ideVersion
 val runIdeCapturedSinceBuild = intellijSinceBuild
-val runIdeCapturedLsp4ijVersion = libs.versions.lang.intellij.lsp4ij.get()
+val runIdeCapturedLsp4ijVersion =
+    libs.versions.lang.intellij.lsp4ij
+        .get()
 val runIdeCapturedPluginVersion = project.version.toString()
 val runIdeCapturedSemanticTokens = ideLspSemanticTokens
 
@@ -809,14 +819,18 @@ val runIdeInfo =
         this.mavenLocalRoot.set(layout.dir(mavenLocalRoot.map(::File)))
         pluginNames.set(
             sandboxConfigDir.map { configDir ->
-                configDir.parentFile.resolve("plugins").listFiles()?.map { it.name }?.sorted()
+                configDir.parentFile
+                    .resolve("plugins")
+                    .listFiles()
+                    ?.map { it.name }
+                    ?.sorted()
                     ?: emptyList()
-            }
+            },
         )
         lspLogFile.set(
             layout.file(
-                providers.systemProperty("user.home").map { File(it, ".xtc/logs/lsp-server.log") }
-            )
+                providers.systemProperty("user.home").map { File(it, ".xtc/logs/lsp-server.log") },
+            ),
         )
     }
 
@@ -824,8 +838,8 @@ val startLspLogTail =
     tasks.register<StartLogTailTask>("startLspLogTail") {
         logFile.set(
             layout.file(
-                providers.systemProperty("user.home").map { File(it, ".xtc/logs/lsp-server.log") }
-            )
+                providers.systemProperty("user.home").map { File(it, ".xtc/logs/lsp-server.log") },
+            ),
         )
         threadName.set("lsp-log-tailer")
         linePrefix.set("[lsp-server] ")
@@ -919,7 +933,8 @@ intellijPlatformTesting.testIdeUi.register("testCompilerPlaybook") {
         systemProperty("xtc.playbook.ideVersion", ideVersion)
         systemProperty(
             "xtc.playbook.lsp4ijVersion",
-            libs.versions.lang.intellij.lsp4ij.get(),
+            libs.versions.lang.intellij.lsp4ij
+                .get(),
         )
         systemProperty(
             "xtc.playbook.adapter",
@@ -939,18 +954,23 @@ intellijPlatformTesting.testIdeUi.register("testCompilerPlaybook") {
         )
         val scenarios =
             rootProject.layout.projectDirectory.file(
-                "test-fixtures/compiler-playbook/scenarios.json"
+                "test-fixtures/compiler-playbook/scenarios.json",
             )
         inputs.file(scenarios)
         systemProperty("xtc.playbook.scenarios", scenarios.asFile.absolutePath)
         inputs.file(rootProject.layout.projectDirectory.file("doc/manual-test-plan.md"))
         systemProperty(
             "xtc.playbook.manual",
-            rootProject.layout.projectDirectory.file("doc/manual-test-plan.md").asFile.absolutePath,
+            rootProject.layout.projectDirectory
+                .file("doc/manual-test-plan.md")
+                .asFile.absolutePath,
         )
         systemProperty(
             "xtc.playbook.reports",
-            layout.buildDirectory.dir("reports/compiler-playbook").get().asFile.absolutePath,
+            layout.buildDirectory
+                .dir("reports/compiler-playbook")
+                .get()
+                .asFile.absolutePath,
         )
         testLogging.events("passed", "skipped", "failed")
     }

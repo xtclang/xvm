@@ -23,7 +23,8 @@ data class SymbolInfo(
         PROPERTY,
         PARAMETER,
         TYPE_PARAMETER,
-        CONSTRUCTOR;
+        CONSTRUCTOR,
+        ;
 
         companion object
     }

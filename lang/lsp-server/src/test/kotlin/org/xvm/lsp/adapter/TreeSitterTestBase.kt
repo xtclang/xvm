@@ -1,6 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.util.concurrent.atomic.AtomicInteger
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.BeforeAll
@@ -9,6 +8,7 @@ import org.junit.jupiter.api.TestInstance
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.treesitter.TreeSitterAdapter
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Shared base class for all tree-sitter adapter tests.

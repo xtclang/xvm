@@ -1,10 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.io.File
-import java.nio.file.Path
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit.SECONDS
-import java.util.concurrent.atomic.AtomicBoolean
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -14,6 +9,11 @@ import org.xvm.asm.ErrorListener
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSources
 import org.xvm.tool.ModuleInfo
+import java.io.File
+import java.nio.file.Path
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.atomic.AtomicBoolean
 
 class XdkModuleSessionTest {
     @Test
@@ -40,11 +40,10 @@ class XdkModuleSessionTest {
                 }
             assertThat(shifted.location.startLine).isEqualTo(1)
             assertThat(
-                    adapter
-                        .compile(member.toURI().toString(), text.replace("@Atomic ", ""))
-                        .diagnostics
-                )
-                .isEmpty()
+                adapter
+                    .compile(member.toURI().toString(), text.replace("@Atomic ", ""))
+                    .diagnostics,
+            ).isEmpty()
         }
     }
 
@@ -80,13 +79,27 @@ class XdkModuleSessionTest {
                 )
             assertThat(errors.success).isFalse()
             assertThat(errors.documentUris).containsExactlyInAnyOrder(rootUri, alias)
-            assertThat(errors.diagnostics.single { it.code == "COMPILER-38" }.location.uri)
-                .isEqualTo(alias)
+            assertThat(
+                errors.diagnostics
+                    .single { it.code == "COMPILER-38" }
+                    .location.uri,
+            ).isEqualTo(alias)
             val fixed = adapter.compile(alias, member.readText())
             assertThat(fixed.diagnostics).isEmpty()
-            assertThat(adapter.getCachedResult(rootUri)?.symbols?.single()?.name)
-                .isEqualTo("Project")
-            assertThat(adapter.getCachedResult(alias)?.symbols?.single()?.name).isEqualTo("Child")
+            assertThat(
+                adapter
+                    .getCachedResult(rootUri)
+                    ?.symbols
+                    ?.single()
+                    ?.name,
+            ).isEqualTo("Project")
+            assertThat(
+                adapter
+                    .getCachedResult(alias)
+                    ?.symbols
+                    ?.single()
+                    ?.name,
+            ).isEqualTo("Child")
             adapter.closeDocument(alias)
             assertThat(adapter.compile(rootUri, root.readText()).diagnostics).isEmpty()
             adapter.closeDocument(rootUri)
@@ -104,8 +117,12 @@ class XdkModuleSessionTest {
                 adapter.compile(added.toURI().toString(), "class Added extends Base<String> {}")
             assertThat(result.success).describedAs(result.diagnostics.toString()).isTrue()
             assertThat(result.documentUris).contains(added.toURI().toString())
-            assertThat(adapter.findWorkspaceSymbols("Added").single().location.uri)
-                .isEqualTo(added.toURI().toString())
+            assertThat(
+                adapter
+                    .findWorkspaceSymbols("Added")
+                    .single()
+                    .location.uri,
+            ).isEqualTo(added.toURI().toString())
             assertThat(added.exists()).isFalse()
             assertThat(added.parentFile.exists()).isFalse()
         }
@@ -197,7 +214,8 @@ class XdkModuleSessionTest {
         CompilerTestSupport.configure()
         val errors = ErrorList()
         val compilation =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .compileModule(sources, null, ErrorListener.cancellable(errors, cancelled::get))
         assertThat(cancelled.get()).isTrue()
         assertThat(compilation.succeeded()).isFalse()
@@ -214,38 +232,37 @@ class XdkModuleSessionTest {
         val first = AtomicBoolean(true)
         val embedding = EmbeddingSupport.instance()
         XdkAdapter(
-                { source, errors -> embedding.compileModule(source, null, errors) },
-                { sources, errors ->
-                    if (first.getAndSet(false)) {
-                        started.countDown()
-                        check(release.await(10, SECONDS))
-                    }
-                    embedding.compileModule(sources, null, errors)
-                },
-            )
-            .use { adapter ->
-                val old = adapter.compileAsync(root.toURI().toString(), root.readText())
-                try {
-                    check(started.await(10, SECONDS))
-                    val latest =
-                        adapter.compileAsync(
-                            member.toURI().toString(),
-                            member
-                                .readText()
-                                .replace("String answer()", "MissingType missing; String answer()"),
-                        )
-                    assertThat(old.isCancelled).isTrue()
-                    assertThat(adapter.getCachedResult(root.toURI().toString())).isNull()
-                    release.countDown()
-                    assertThat(latest.get(20, SECONDS).diagnostics).anyMatch {
-                        it.code == "COMPILER-38"
-                    }
-                    assertThat(adapter.getCachedResult(member.toURI().toString())?.diagnostics)
-                        .anyMatch { it.code == "COMPILER-38" }
-                } finally {
-                    release.countDown()
+            { source, errors -> embedding.compileModule(source, null, errors) },
+            { sources, errors ->
+                if (first.getAndSet(false)) {
+                    started.countDown()
+                    check(release.await(10, SECONDS))
                 }
+                embedding.compileModule(sources, null, errors)
+            },
+        ).use { adapter ->
+            val old = adapter.compileAsync(root.toURI().toString(), root.readText())
+            try {
+                check(started.await(10, SECONDS))
+                val latest =
+                    adapter.compileAsync(
+                        member.toURI().toString(),
+                        member
+                            .readText()
+                            .replace("String answer()", "MissingType missing; String answer()"),
+                    )
+                assertThat(old.isCancelled).isTrue()
+                assertThat(adapter.getCachedResult(root.toURI().toString())).isNull()
+                release.countDown()
+                assertThat(latest.get(20, SECONDS).diagnostics).anyMatch {
+                    it.code == "COMPILER-38"
+                }
+                assertThat(adapter.getCachedResult(member.toURI().toString())?.diagnostics)
+                    .anyMatch { it.code == "COMPILER-38" }
+            } finally {
+                release.countDown()
             }
+        }
     }
 
     private fun fixture(): Pair<File, File> {
@@ -257,8 +274,7 @@ class XdkModuleSessionTest {
                 class Base<Element> { Element echo(Element value) = value; }
                 String run() { Child child = new Child(); return child.answer() + child.echo("root"); }
             }
-            """
-                .trimIndent()
+            """.trimIndent(),
         )
         val member = directory.resolve("Project/Child.x").toFile()
         member.parentFile.mkdirs()

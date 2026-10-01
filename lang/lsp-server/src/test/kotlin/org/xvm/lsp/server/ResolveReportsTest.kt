@@ -12,14 +12,13 @@ class ResolveReportsTest {
         val handle = reports.remember(7, "entry", "payload", 7)
         assertThat(reports.resolve(JsonPrimitive(handle), 7, "entry")).isEqualTo("payload")
         listOf(
-                { reports.resolve(handle, 8, "entry") },
-                { reports.resolve(handle, 7, "other") },
-                { ResolveReports<String>().resolve(handle, 7, "entry") },
-                { reports.resolve(mapOf("id" to handle), 7, "entry") },
-            )
-            .forEach { request ->
-                assertThatThrownBy { request() }.hasMessageContaining("expired or changed")
-            }
+            { reports.resolve(handle, 8, "entry") },
+            { reports.resolve(handle, 7, "other") },
+            { ResolveReports<String>().resolve(handle, 7, "entry") },
+            { reports.resolve(mapOf("id" to handle), 7, "entry") },
+        ).forEach { request ->
+            assertThatThrownBy { request() }.hasMessageContaining("expired or changed")
+        }
         assertThat(reports.remember(7, "large", "oversized", 21)).isNull()
         assertThat(reports.resolve(handle, 7, "entry")).isEqualTo("payload")
         reports.remember(7, "next", "replacement", 11)

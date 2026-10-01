@@ -13,13 +13,13 @@ internal fun ParityScenarios.graphCases() {
                 data
                     .strings("modules")
                     .map { uri(SharedScenarios.text(data.string("moduleFile"), it)) }
-                    .sorted()
+                    .sorted(),
         )
         check(
             protocol.server().getOpenedDocuments().none {
                 it.getFile().getPath() ==
                     directory.resolve(data.string("closedConsumer")).toString()
-            }
+            },
         )
     }
     case("X60") { data ->
@@ -28,7 +28,7 @@ internal fun ParityScenarios.graphCases() {
             proposedRename(document, document.at(data.string("anchor")), data.string("replaceWith"))
                 .asJsonObject
         check(
-            proposed["changes"].let { it == null || it.isJsonNull || it.asJsonObject.size() == 0 }
+            proposed["changes"].let { it == null || it.isJsonNull || it.asJsonObject.size() == 0 },
         ) {
             proposed.toString()
         }
@@ -50,7 +50,7 @@ internal fun ParityScenarios.graphCases() {
             clean(changed)
             check(
                 changed.text ==
-                    fixture(file).replace(data.pattern("replaceFrom"), data.string("replaceWith"))
+                    fixture(file).replace(data.pattern("replaceFrom"), data.string("replaceWith")),
             )
             check(Files.readString(directory.resolve(file)) == fixture(file)) {
                 "Rename unexpectedly saved $file"
@@ -61,7 +61,7 @@ internal fun ParityScenarios.graphCases() {
         val document = graph()
         check(
             proposedRename(document, document.at(data.string("anchor")), data.string("newName"))
-                .isJsonNull
+                .isJsonNull,
         )
         check(document.text == fixture(data.string("file")))
         clean(document)
@@ -87,11 +87,10 @@ internal fun ParityScenarios.graphCases() {
         check(proposedRename(document, document.at(search), data.string("searchRename")).isJsonNull)
         check(
             proposedRename(
-                    document,
-                    document.at(data.string("descriptionCall")),
-                    data.string("descriptionRename"),
-                )
-                .isJsonNull
+                document,
+                document.at(data.string("descriptionCall")),
+                data.string("descriptionRename"),
+            ).isJsonNull,
         )
     }
     case("X63") { data ->
@@ -104,7 +103,7 @@ internal fun ParityScenarios.graphCases() {
         )
         check(
             graphReferences(document).count { it.string("uri") == consumer.uri } ==
-                data.int("consumerReferenceCount")
+                data.int("consumerReferenceCount"),
         )
         val edit =
             proposedRename(document, document.at(data.string("anchor")), data.string("newName"))
@@ -119,7 +118,7 @@ internal fun ParityScenarios.graphCases() {
         check(graphReferences(document).isEmpty())
         check(
             proposedRename(document, document.at(data.string("anchor")), data.string("newName"))
-                .isJsonNull
+                .isJsonNull,
         )
         clean(document)
         replace(consumer, fixture(consumer.file))
@@ -137,9 +136,8 @@ private fun ParityWorkspace.graph(): ParityWorkspace.Document {
 
 private fun ParityWorkspace.graphReferences(document: ParityWorkspace.Document): List<JsonObject> =
     query(
-            "textDocument/references",
-            document,
-            document.at(common["graph"].asJsonObject.string("referenceAnchor")),
-            mapOf("context" to mapOf("includeDeclaration" to true)),
-        )
-        .rows()
+        "textDocument/references",
+        document,
+        document.at(common["graph"].asJsonObject.string("referenceAnchor")),
+        mapOf("context" to mapOf("includeDeclaration" to true)),
+    ).rows()

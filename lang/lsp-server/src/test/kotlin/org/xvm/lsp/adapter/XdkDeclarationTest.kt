@@ -1,12 +1,12 @@
 package org.xvm.lsp.adapter
 
-import java.net.URI
-import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.model.Location
+import java.net.URI
+import java.nio.file.Path
 
 class XdkDeclarationTest {
     @TempDir lateinit var directory: Path
@@ -48,9 +48,8 @@ class XdkDeclarationTest {
         withSource(text) { adapter, uri ->
             mapOf("aliasUse" to "alias", "localUse" to "local").forEach { (use, declaration) ->
                 assertThat(
-                        adapter.findDeclarations(uri, 0, offset(text, use)).map { it.startColumn }
-                    )
-                    .containsExactly(offset(text, declaration))
+                    adapter.findDeclarations(uri, 0, offset(text, use)).map { it.startColumn },
+                ).containsExactly(offset(text, declaration))
             }
             val library =
                 adapter.findDeclarations(uri, 0, text.indexOf("String /*local*/")).single()
@@ -95,7 +94,13 @@ class XdkDeclarationTest {
         text: String,
         action: (XdkAdapter, String) -> Unit,
     ) {
-        val uri = directory.resolve("Declarations.x").toFile().canonicalFile.toURI().toString()
+        val uri =
+            directory
+                .resolve("Declarations.x")
+                .toFile()
+                .canonicalFile
+                .toURI()
+                .toString()
         XdkAdapter().use { adapter ->
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
             action(adapter, uri)
@@ -108,7 +113,8 @@ class XdkDeclarationTest {
     ): Int = text.indexOf("/*$marker*/") + marker.length + 4
 
     private fun written(location: Location): String =
-        Path.of(URI(location.uri))
+        Path
+            .of(URI(location.uri))
             .toFile()
             .readLines()[location.startLine]
             .substring(location.startColumn, location.endColumn)

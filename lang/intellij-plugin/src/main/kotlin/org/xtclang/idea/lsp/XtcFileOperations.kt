@@ -14,16 +14,21 @@ import java.util.concurrent.CompletableFuture
 /** Shared preflight ownership for the file-tree Rename and Move actions. */
 internal object XtcFileOperations {
     fun isSourcePath(file: VirtualFile): Boolean =
-        if (!file.isDirectory) file.extension == "x"
-        else
+        if (!file.isDirectory) {
+            file.extension == "x"
+        } else {
             file.children.any { !it.isDirectory && it.extension == "x" } ||
                 generateSequence(file) { it.parent }
                     .any { it.parent?.findChild("${it.name}.x")?.isDirectory == false }
+        }
 
     fun server(project: Project): LanguageServerWrapper? =
         LanguageServiceAccessor.getInstance(project).startedServers.singleOrNull {
             it.serverDefinition.id == CompilerSettings.SERVER_ID &&
-                it.serverCapabilitiesSync?.workspace?.fileOperations?.willRename != null
+                it.serverCapabilitiesSync
+                    ?.workspace
+                    ?.fileOperations
+                    ?.willRename != null
         }
 
     fun submit(
@@ -33,28 +38,40 @@ internal object XtcFileOperations {
         completed: () -> Unit = {},
     ) {
         object : Task.Backgroundable(project, title, true) {
-                override fun run(indicator: ProgressIndicator) {
-                    ProgressIndicatorUtils.awaitWithCheckCanceled(future.handle { _, _ -> null })
-                }
-
-                override fun onCancel() {
-                    future.cancel(true)
-                }
+            override fun run(indicator: ProgressIndicator) {
+                ProgressIndicatorUtils.awaitWithCheckCanceled(future.handle { _, _ -> null })
             }
-            .queue()
+
+            override fun onCancel() {
+                future.cancel(true)
+            }
+        }.queue()
         future.whenComplete { edit, error ->
             ApplicationManager.getApplication().invokeLater {
                 if (project.isDisposed || future.isCancelled) return@invokeLater
                 val failure =
                     when {
-                        error != null -> "$title failed: ${error.cause?.message ?: error.message}"
-                        edit == null ->
+                        error != null -> {
+                            "$title failed: ${error.cause?.message ?: error.message}"
+                        }
+
+                        edit == null -> {
                             "The compiler cannot safely apply this operation. No changes were made."
-                        !edit.apply() -> "Sources or paths changed; invoke the operation again."
-                        else -> null
+                        }
+
+                        !edit.apply() -> {
+                            "Sources or paths changed; invoke the operation again."
+                        }
+
+                        else -> {
+                            null
+                        }
                     }
-                if (failure == null) completed()
-                else Messages.showErrorDialog(project, failure, "Ecstasy Refactoring")
+                if (failure == null) {
+                    completed()
+                } else {
+                    Messages.showErrorDialog(project, failure, "Ecstasy Refactoring")
+                }
             }
         }
     }

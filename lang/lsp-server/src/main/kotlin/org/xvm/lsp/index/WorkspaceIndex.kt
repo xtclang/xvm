@@ -1,10 +1,10 @@
 package org.xvm.lsp.index
 
+import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.locks.ReentrantReadWriteLock
 import kotlin.concurrent.read
 import kotlin.concurrent.write
-import org.slf4j.LoggerFactory
 
 /**
  * Workspace-wide symbol index for cross-file lookup.
@@ -88,11 +88,12 @@ class WorkspaceIndex {
     }
 
     /** Exact name lookup (case-insensitive). Returns all symbols with the given name. */
-    fun findByName(name: String): List<IndexedSymbol> = lock.read {
-        val results = byName[name.lowercase()]?.toList() ?: emptyList()
-        logger.info("findByName '{}' -> {} results", name, results.size)
-        results
-    }
+    fun findByName(name: String): List<IndexedSymbol> =
+        lock.read {
+            val results = byName[name.lowercase()]?.toList() ?: emptyList()
+            logger.info("findByName '{}' -> {} results", name, results.size)
+            results
+        }
 
     /**
      * Fuzzy search across all indexed symbols.
@@ -195,13 +196,14 @@ class WorkspaceIndex {
             name: String,
         ): Boolean {
             if (query.isEmpty()) return false
-            val upperChars = buildList {
-                for (i in name.indices) {
-                    if (name[i].isUpperCase() || i == 0) {
-                        add(name[i])
+            val upperChars =
+                buildList {
+                    for (i in name.indices) {
+                        if (name[i].isUpperCase() || i == 0) {
+                            add(name[i])
+                        }
                     }
                 }
-            }
             if (upperChars.size < query.length) return false
 
             var qi = 0

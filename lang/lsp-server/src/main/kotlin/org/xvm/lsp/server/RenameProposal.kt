@@ -23,7 +23,7 @@ data class SourceModuleConfiguration(
     val resourceRoots: List<String>? = null,
 ) {
     internal constructor(
-        module: XdkSourceModule
+        module: XdkSourceModule,
     ) : this(module.name, module.uri, module.dependencies.sorted(), module.resourceRoots)
 }
 

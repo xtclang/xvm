@@ -1,9 +1,9 @@
 import de.undercouch.gradle.tasks.download.Download
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
+import org.apache.commons.compress.compressors.xz.XZCompressorInputStream
 import java.security.MessageDigest
 import java.util.zip.GZIPInputStream
 import kotlin.time.measureTime
-import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
-import org.apache.commons.compress.compressors.xz.XZCompressorInputStream
 
 plugins {
     alias(libs.plugins.xdk.build.properties)
@@ -64,7 +64,9 @@ val nativePlatformDir: String =
 // Directory Layout
 // =============================================================================
 
-val treeSitterCliVersion: String = libs.versions.lang.tree.sitter.cli.get()
+val treeSitterCliVersion: String =
+    libs.versions.lang.tree.sitter.cli
+        .get()
 val treeSitterCliDir: Provider<Directory> = layout.buildDirectory.dir("tree-sitter-cli")
 val generatedDir: Provider<Directory> = layout.buildDirectory.dir("generated")
 val nativeOutputDir: Provider<Directory> = layout.buildDirectory.dir("native")
@@ -90,12 +92,14 @@ val nativeLibCacheDir: File = File(gradleUserHome, "caches/tree-sitter-xtc")
 
 val grammarJsFile: Provider<RegularFile> = generatedDir.map { it.file("grammar.js") }
 val scannerCFile: Provider<RegularFile> = generatedDir.map { it.dir("src").file("scanner.c") }
-val treeSitterCliExe: Provider<String> = treeSitterCliDir.map {
-    it.file("tree-sitter").asFile.absolutePath
-}
-val nativeLibFile: Provider<RegularFile> = nativeOutputDir.map {
-    it.file("libtree-sitter-xtc.$nativeLibExt")
-}
+val treeSitterCliExe: Provider<String> =
+    treeSitterCliDir.map {
+        it.file("tree-sitter").asFile.absolutePath
+    }
+val nativeLibFile: Provider<RegularFile> =
+    nativeOutputDir.map {
+        it.file("libtree-sitter-xtc.$nativeLibExt")
+    }
 
 // =============================================================================
 // Tree-sitter CLI Download
@@ -122,10 +126,14 @@ val downloadTreeSitterCliGz =
         onlyIf { !destGzFile.exists() }
 
         logTimed(
-            "[tree-sitter] Downloading CLI v$version ($platform)...\n[tree-sitter]   URL:  $url\n[tree-sitter]   Dest: $destPath"
+            "[tree-sitter] Downloading CLI v$version ($platform)...\n[tree-sitter]   URL:  $url\n[tree-sitter]   Dest: $destPath",
         ) { elapsed ->
             val size =
-                File(destPath).walkTopDown().filter { it.isFile }.sumOf { it.length() }.humanSize()
+                File(destPath)
+                    .walkTopDown()
+                    .filter { it.isFile }
+                    .sumOf { it.length() }
+                    .humanSize()
             "[tree-sitter] CLI download complete ($size in $elapsed) -> $destPath"
         }
     }
@@ -172,7 +180,9 @@ val extractTreeSitterCli =
 // Download tree-sitter source to build the runtime library (libtree-sitter).
 // This is needed by jtreesitter at runtime in addition to our grammar library.
 
-val treeSitterRuntimeVersion: String = libs.versions.lang.tree.sitter.cli.get()
+val treeSitterRuntimeVersion: String =
+    libs.versions.lang.tree.sitter.cli
+        .get()
 val treeSitterSourceDir: Provider<Directory> = layout.buildDirectory.dir("tree-sitter-source")
 
 /** Download tree-sitter source code for building the runtime library. */
@@ -200,7 +210,7 @@ val downloadTreeSitterSource =
         outputs.file(destFile)
 
         logTimed(
-            "[tree-sitter] Downloading source v$version...\n[tree-sitter]   URL:  $url\n[tree-sitter]   Dest: $destPath"
+            "[tree-sitter] Downloading source v$version...\n[tree-sitter]   URL:  $url\n[tree-sitter]   Dest: $destPath",
         ) { elapsed ->
             val size = File(destPath).length().humanSize()
             "[tree-sitter] Source download complete ($size in $elapsed) -> $destPath"
@@ -213,9 +223,10 @@ val extractTreeSitterSource =
         group = "tree-sitter"
         description = "Extract tree-sitter source"
         dependsOn(downloadTreeSitterSource)
-        val tarGzFile = treeSitterSourceDir.map {
-            it.file("tree-sitter-$treeSitterRuntimeVersion.tar.gz").asFile
-        }
+        val tarGzFile =
+            treeSitterSourceDir.map {
+                it.file("tree-sitter-$treeSitterRuntimeVersion.tar.gz").asFile
+            }
         val outputDir = treeSitterSourceDir.map { it.asFile }
         val version = treeSitterRuntimeVersion
 
@@ -250,9 +261,10 @@ val extractTreeSitterSource =
     }
 
 // Path to extracted tree-sitter source lib directory
-val treeSitterLibSrc: Provider<Directory> = treeSitterSourceDir.map {
-    it.dir("tree-sitter-$treeSitterRuntimeVersion/lib")
-}
+val treeSitterLibSrc: Provider<Directory> =
+    treeSitterSourceDir.map {
+        it.dir("tree-sitter-$treeSitterRuntimeVersion/lib")
+    }
 
 // =============================================================================
 // Zig Compiler Download (for Cross-Compilation)
@@ -260,7 +272,9 @@ val treeSitterLibSrc: Provider<Directory> = treeSitterSourceDir.map {
 // Zig enables building native libraries for ALL platforms from ANY host machine.
 // Download once, build everywhere - no platform-specific toolchains needed.
 
-val zigVersion: String = libs.versions.lang.zig.get()
+val zigVersion: String =
+    libs.versions.lang.zig
+        .get()
 // Use persistent cache directory instead of build directory
 val zigDir: File = File(zigCacheDir, zigVersion)
 
@@ -303,7 +317,7 @@ val downloadZig =
         onlyIf { !destFile.exists() }
 
         logTimed(
-            "[zig] Downloading Zig compiler v$version ($platform)...\n[zig]   URL:  $url\n[zig]   Dest: $destPath"
+            "[zig] Downloading Zig compiler v$version ($platform)...\n[zig]   URL:  $url\n[zig]   Dest: $destPath",
         ) { elapsed ->
             val size = File(destPath).length().humanSize()
             "[zig] Zig download complete ($size in $elapsed) -> $destPath"
@@ -316,71 +330,74 @@ val downloadZig =
  * required.
  */
 abstract class ExtractZigTask
-@Inject
-constructor(
-    private val fsOps: FileSystemOperations,
-    private val archiveOps: ArchiveOperations,
-) : DefaultTask() {
+    @Inject
+    constructor(
+        private val fsOps: FileSystemOperations,
+        private val archiveOps: ArchiveOperations,
+    ) : DefaultTask() {
+        @get:InputFile abstract val archiveFile: RegularFileProperty
 
-    @get:InputFile abstract val archiveFile: RegularFileProperty
+        @get:OutputDirectory abstract val outputDir: DirectoryProperty
 
-    @get:OutputDirectory abstract val outputDir: DirectoryProperty
+        @get:Input abstract val archiveExt: Property<String>
 
-    @get:Input abstract val archiveExt: Property<String>
+        @TaskAction
+        fun extract() {
+            val archive = archiveFile.get().asFile
+            val outDir = outputDir.get().asFile
 
-    @TaskAction
-    fun extract() {
-        val archive = archiveFile.get().asFile
-        val outDir = outputDir.get().asFile
+            logger.info("[zig] Extracting Zig compiler from ${archive.name}...")
+            logger.info("[zig]   Archive: ${archive.absolutePath}")
+            logger.info("[zig]   Target:  ${outDir.absolutePath}")
 
-        logger.info("[zig] Extracting Zig compiler from ${archive.name}...")
-        logger.info("[zig]   Archive: ${archive.absolutePath}")
-        logger.info("[zig]   Target:  ${outDir.absolutePath}")
-
-        val duration = measureTime {
-            if (archiveExt.get() == "zip") {
-                fsOps.copy {
-                    from(archiveOps.zipTree(archive))
-                    into(outDir)
+            val duration =
+                measureTime {
+                    if (archiveExt.get() == "zip") {
+                        fsOps.copy {
+                            from(archiveOps.zipTree(archive))
+                            into(outDir)
+                        }
+                    } else {
+                        // Use Apache Commons Compress for .tar.xz extraction (pure Java)
+                        extractTarXz(archive, outDir)
+                    }
                 }
-            } else {
-                // Use Apache Commons Compress for .tar.xz extraction (pure Java)
-                extractTarXz(archive, outDir)
-            }
+
+            logger.info("[zig] Zig compiler extracted in $duration to: ${outDir.absolutePath}")
         }
 
-        logger.info("[zig] Zig compiler extracted in $duration to: ${outDir.absolutePath}")
-    }
+        private fun extractTarXz(
+            archive: File,
+            outDir: File,
+        ) {
+            outDir.mkdirs()
 
-    private fun extractTarXz(archive: File, outDir: File) {
-        outDir.mkdirs()
+            archive.inputStream().buffered().use { fileIn ->
+                XZCompressorInputStream(fileIn).use { xzIn ->
+                    TarArchiveInputStream(xzIn).use { tarIn ->
+                        var entry = tarIn.nextEntry
+                        while (entry != null) {
+                            val outFile = File(outDir, entry.name)
 
-        archive.inputStream().buffered().use { fileIn ->
-            XZCompressorInputStream(fileIn).use { xzIn ->
-                TarArchiveInputStream(xzIn).use { tarIn ->
-                    var entry = tarIn.nextEntry
-                    while (entry != null) {
-                        val outFile = File(outDir, entry.name)
-
-                        if (entry.isDirectory) {
-                            outFile.mkdirs()
-                        } else {
-                            outFile.parentFile.mkdirs()
-                            outFile.outputStream().buffered().use { out ->
-                                tarIn.copyTo(out)
+                            if (entry.isDirectory) {
+                                outFile.mkdirs()
+                            } else {
+                                outFile.parentFile.mkdirs()
+                                outFile.outputStream().buffered().use { out ->
+                                    tarIn.copyTo(out)
+                                }
+                                // Preserve executable permission
+                                if (entry.mode and 0b001_000_000 != 0) {
+                                    outFile.setExecutable(true)
+                                }
                             }
-                            // Preserve executable permission
-                            if (entry.mode and 0b001_000_000 != 0) {
-                                outFile.setExecutable(true)
-                            }
+                            entry = tarIn.nextEntry
                         }
-                        entry = tarIn.nextEntry
                     }
                 }
             }
         }
     }
-}
 
 val extractZig =
     tasks.register<ExtractZigTask>("extractZig") {
@@ -449,37 +466,35 @@ val generateTreeSitterConfig =
         doLast {
             val configJson =
                 """
-            {
-              "grammars": [
                 {
-                  "name": "xtc",
-                  "camelcase": "XTC",
-                  "scope": "source.xtc",
-                  "path": ".",
-                  "file-types": ["x", "xtc"]
+                  "grammars": [
+                    {
+                      "name": "xtc",
+                      "camelcase": "XTC",
+                      "scope": "source.xtc",
+                      "path": ".",
+                      "file-types": ["x", "xtc"]
+                    }
+                  ],
+                  "metadata": {
+                    "version": "$xdkVersion",
+                    "license": "Apache-2.0",
+                    "description": "XTC (Ecstasy) grammar for tree-sitter",
+                    "links": {
+                      "repository": "https://github.com/xtclang/xvm"
+                    }
+                  }
                 }
-              ],
-              "metadata": {
-                "version": "$xdkVersion",
-                "license": "Apache-2.0",
-                "description": "XTC (Ecstasy) grammar for tree-sitter",
-                "links": {
-                  "repository": "https://github.com/xtclang/xvm"
-                }
-              }
-            }
-        """
-                    .trimIndent()
+                """.trimIndent()
             outputFile.get().asFile.writeText(configJson + "\n")
 
             val workDirPath = workDirPathProvider.get()
             val userConfigJson =
                 """
-            {
-              "parser-directories": ["$workDirPath"]
-            }
-        """
-                    .trimIndent()
+                {
+                  "parser-directories": ["$workDirPath"]
+                }
+                """.trimIndent()
             userConfigFile.get().asFile.writeText(userConfigJson + "\n")
         }
     }
@@ -521,7 +536,10 @@ val validateTreeSitterGrammar =
         val cliExePath = treeSitterCliExe.get()
         val grammarJsPath = grammarJsFile.get().asFile.absolutePath
         val workDirPath = generatedDir.get().asFile.absolutePath
-        val buildDirPath = layout.buildDirectory.get().asFile.absolutePath
+        val buildDirPath =
+            layout.buildDirectory
+                .get()
+                .asFile.absolutePath
 
         doFirst {
             logger.info(
@@ -531,8 +549,7 @@ val validateTreeSitterGrammar =
             |grammar.js:       $grammarJsPath
             |working dir:      $workDirPath
             |====================================================
-            """
-                    .trimMargin()
+                """.trimMargin(),
             )
 
             // Assert we're using the build tree's tree-sitter CLI, not a system installation
@@ -566,212 +583,226 @@ val validateTreeSitterGrammar =
  * Supports filtering via -PtestFiles=pattern to test specific files. Shows timing information
  * sorted by parse time.
  */
-abstract class TreeSitterParseTestTask @Inject constructor(private val execOps: ExecOperations) :
-    DefaultTask() {
+abstract class TreeSitterParseTestTask
+    @Inject
+    constructor(
+        private val execOps: ExecOperations,
+    ) : DefaultTask() {
+        @get:Input abstract val cliPath: Property<String>
 
-    @get:Input abstract val cliPath: Property<String>
+        @get:Input abstract val workDir: Property<File>
 
-    @get:Input abstract val workDir: Property<File>
+        @get:Input abstract val libDirs: ListProperty<File>
 
-    @get:Input abstract val libDirs: ListProperty<File>
+        @get:Input abstract val rootDir: Property<File>
 
-    @get:Input abstract val rootDir: Property<File>
+        @get:Input @get:Optional
+        abstract val fileFilter: Property<String>
 
-    @get:Input @get:Optional abstract val fileFilter: Property<String>
+        @get:Input @get:Optional
+        abstract val showTiming: Property<Boolean>
 
-    @get:Input @get:Optional abstract val showTiming: Property<Boolean>
+        @get:InputFiles abstract val skipListFiles: ConfigurableFileCollection
 
-    @get:InputFiles abstract val skipListFiles: ConfigurableFileCollection
+        data class ParseResult(
+            val relativePath: String,
+            val success: Boolean,
+            val timeMs: Long,
+        )
 
-    data class ParseResult(val relativePath: String, val success: Boolean, val timeMs: Long)
+        @get:Input abstract val buildDirPath: Property<String>
 
-    @get:Input abstract val buildDirPath: Property<String>
+        @TaskAction
+        fun run() {
+            val cliAbsPath = cliPath.get()
+            val workDirAbsPath = workDir.get().absolutePath
+            val buildDir = buildDirPath.get()
 
-    @TaskAction
-    fun run() {
-        val cliAbsPath = cliPath.get()
-        val workDirAbsPath = workDir.get().absolutePath
-        val buildDir = buildDirPath.get()
-
-        // Log paths for debugging build issues
-        logger.info(
-            """
+            // Log paths for debugging build issues
+            logger.info(
+                """
             |========== TREE-SITTER PARSE TEST ==========
             |tree-sitter CLI:  $cliAbsPath
             |working dir:      $workDirAbsPath
             |build dir:        $buildDir
             |=============================================
-            """
-                .trimMargin()
-        )
-
-        // Assert we're using the build tree's tree-sitter CLI
-        require(cliAbsPath.startsWith(buildDir)) {
-            "ASSERTION FAILED: tree-sitter CLI must be from build directory!\n" +
-                "  Expected prefix: $buildDir\n" +
-                "  Actual path:     $cliAbsPath\n" +
-                "  This suggests a system-installed tree-sitter is being used."
-        }
-
-        // Assert working directory is in the build tree (contains grammar.js)
-        require(workDirAbsPath.startsWith(buildDir)) {
-            "ASSERTION FAILED: working directory must be in build directory!\n" +
-                "  Expected prefix: $buildDir\n" +
-                "  Actual path:     $workDirAbsPath\n" +
-                "  This suggests grammar.js from an unexpected location is being used."
-        }
-
-        logger.info("Assertions passed: Using build-local tree-sitter and grammar")
-
-        val filter = fileFilter.orNull
-        val showTimingInfo = showTiming.getOrElse(true)
-
-        var xtcFiles =
-            libDirs.get().flatMap { libDir ->
-                libDir.walkTopDown().filter { it.isFile && it.extension == "x" }.toList()
-            }
-
-        // Apply skip list (paths relative to compositeRoot, with `#` comments).
-        // The skip list is split across two companion files so the real
-        // grammar debt (parked.txt) isn't drowned out by files that are
-        // permanently excluded from the XTC compile (intentional.txt):
-        //   - treeSitterParseSkipList.intentional.txt
-        //   - treeSitterParseSkipList.parked.txt
-        val skipFiles = skipListFiles.files.filter { it.isFile }
-        val skipPaths: Set<String> =
-            skipFiles
-                .flatMap { f ->
-                    f.useLines { lines ->
-                        lines
-                            .map { it.substringBefore('#').trim() }
-                            .filter { it.isNotEmpty() }
-                            .toList()
-                    }
-                }
-                .toSet()
-        if (skipPaths.isNotEmpty()) {
-            val rootPath = rootDir.get()
-            val (toCheck, skipped) =
-                xtcFiles.partition { file ->
-                    file.relativeTo(rootPath).invariantSeparatorsPath !in skipPaths
-                }
-            val skippedPaths =
-                skipped.map { it.relativeTo(rootPath).invariantSeparatorsPath }.toSet()
-            val staleEntries = skipPaths - skippedPaths
-            if (staleEntries.isNotEmpty()) {
-                logger.warn(
-                    "Skip-list contains ${staleEntries.size} stale entries (no matching .x file): " +
-                        staleEntries.sorted().joinToString(", ")
-                )
-            }
-            val sources = skipFiles.joinToString(", ") { it.name }
-            logger.lifecycle(
-                "Tree-sitter parse skip list: ${skipped.size} file(s) excluded (see $sources)"
+                """.trimMargin(),
             )
-            xtcFiles = toCheck
-        }
 
-        // Apply filter if specified
-        if (!filter.isNullOrBlank()) {
-            val patterns = filter.split(",").map { it.trim() }
-            xtcFiles = xtcFiles.filter { file ->
-                val relativePath = file.relativeTo(rootDir.get()).path
-                patterns.any { pattern ->
-                    relativePath.contains(pattern, ignoreCase = true) ||
-                        file.name.contains(pattern, ignoreCase = true)
-                }
+            // Assert we're using the build tree's tree-sitter CLI
+            require(cliAbsPath.startsWith(buildDir)) {
+                "ASSERTION FAILED: tree-sitter CLI must be from build directory!\n" +
+                    "  Expected prefix: $buildDir\n" +
+                    "  Actual path:     $cliAbsPath\n" +
+                    "  This suggests a system-installed tree-sitter is being used."
             }
-            logger.info("Filter '$filter' matched ${xtcFiles.size} files")
-        }
 
-        if (xtcFiles.isEmpty()) {
-            logger.warn("No .x files found matching filter")
-            return
-        }
+            // Assert working directory is in the build tree (contains grammar.js)
+            require(workDirAbsPath.startsWith(buildDir)) {
+                "ASSERTION FAILED: working directory must be in build directory!\n" +
+                    "  Expected prefix: $buildDir\n" +
+                    "  Actual path:     $workDirAbsPath\n" +
+                    "  This suggests grammar.js from an unexpected location is being used."
+            }
 
-        // Warmup: parse the first file once to factor out tree-sitter CLI startup time.
-        // The CLI loads the grammar shared library and initializes internal state on first run,
-        // which adds ~1 second overhead that would skew timing for the first file.
-        // --config-path silences the "no parser directories" warning that would
-        // otherwise spam the log with 4 lines per parse invocation (~3500 lines
-        // for the full corpus on CI).
-        val userConfigPath = workDir.get().resolve("tree-sitter-user-config.json").absolutePath
-        val warmupFile = xtcFiles.first()
-        execOps.exec {
-            workingDir(workDir.get())
-            executable(cliPath.get())
-            args("parse", "--quiet", "--config-path", userConfigPath, warmupFile.absolutePath)
-            isIgnoreExitValue = true
-        }
+            logger.info("Assertions passed: Using build-local tree-sitter and grammar")
 
-        logger.info("Testing tree-sitter parser on ${xtcFiles.size} XTC files...")
+            val filter = fileFilter.orNull
+            val showTimingInfo = showTiming.getOrElse(true)
 
-        val results = xtcFiles.map { file ->
-            val startNanos = System.nanoTime()
-            val result = execOps.exec {
+            var xtcFiles =
+                libDirs.get().flatMap { libDir ->
+                    libDir.walkTopDown().filter { it.isFile && it.extension == "x" }.toList()
+                }
+
+            // Apply skip list (paths relative to compositeRoot, with `#` comments).
+            // The skip list is split across two companion files so the real
+            // grammar debt (parked.txt) isn't drowned out by files that are
+            // permanently excluded from the XTC compile (intentional.txt):
+            //   - treeSitterParseSkipList.intentional.txt
+            //   - treeSitterParseSkipList.parked.txt
+            val skipFiles = skipListFiles.files.filter { it.isFile }
+            val skipPaths: Set<String> =
+                skipFiles
+                    .flatMap { f ->
+                        f.useLines { lines ->
+                            lines
+                                .map { it.substringBefore('#').trim() }
+                                .filter { it.isNotEmpty() }
+                                .toList()
+                        }
+                    }.toSet()
+            if (skipPaths.isNotEmpty()) {
+                val rootPath = rootDir.get()
+                val (toCheck, skipped) =
+                    xtcFiles.partition { file ->
+                        file.relativeTo(rootPath).invariantSeparatorsPath !in skipPaths
+                    }
+                val skippedPaths =
+                    skipped.map { it.relativeTo(rootPath).invariantSeparatorsPath }.toSet()
+                val staleEntries = skipPaths - skippedPaths
+                if (staleEntries.isNotEmpty()) {
+                    logger.warn(
+                        "Skip-list contains ${staleEntries.size} stale entries (no matching .x file): " +
+                            staleEntries.sorted().joinToString(", "),
+                    )
+                }
+                val sources = skipFiles.joinToString(", ") { it.name }
+                logger.lifecycle(
+                    "Tree-sitter parse skip list: ${skipped.size} file(s) excluded (see $sources)",
+                )
+                xtcFiles = toCheck
+            }
+
+            // Apply filter if specified
+            if (!filter.isNullOrBlank()) {
+                val patterns = filter.split(",").map { it.trim() }
+                xtcFiles =
+                    xtcFiles.filter { file ->
+                        val relativePath = file.relativeTo(rootDir.get()).path
+                        patterns.any { pattern ->
+                            relativePath.contains(pattern, ignoreCase = true) ||
+                                file.name.contains(pattern, ignoreCase = true)
+                        }
+                    }
+                logger.info("Filter '$filter' matched ${xtcFiles.size} files")
+            }
+
+            if (xtcFiles.isEmpty()) {
+                logger.warn("No .x files found matching filter")
+                return
+            }
+
+            // Warmup: parse the first file once to factor out tree-sitter CLI startup time.
+            // The CLI loads the grammar shared library and initializes internal state on first run,
+            // which adds ~1 second overhead that would skew timing for the first file.
+            // --config-path silences the "no parser directories" warning that would
+            // otherwise spam the log with 4 lines per parse invocation (~3500 lines
+            // for the full corpus on CI).
+            val userConfigPath = workDir.get().resolve("tree-sitter-user-config.json").absolutePath
+            val warmupFile = xtcFiles.first()
+            execOps.exec {
                 workingDir(workDir.get())
                 executable(cliPath.get())
-                args("parse", "--quiet", "--config-path", userConfigPath, file.absolutePath)
+                args("parse", "--quiet", "--config-path", userConfigPath, warmupFile.absolutePath)
                 isIgnoreExitValue = true
             }
-            val elapsedMs = (System.nanoTime() - startNanos) / 1_000_000
-            val relativePath = file.relativeTo(rootDir.get()).path
-            ParseResult(relativePath, result.exitValue == 0, elapsedMs)
-        }
 
-        val passed = results.count { it.success }
-        val failed = results.size - passed
-        val failures = results.filter { !it.success }.map { it.relativePath }
+            logger.info("Testing tree-sitter parser on ${xtcFiles.size} XTC files...")
 
-        // Log at lifecycle level so the summary appears in CI output without --info,
-        // and so a developer running this task locally sees the result without
-        // having to know about Gradle's logger levels.
-        logger.lifecycle("Tree-sitter parse results: $passed passed, $failed failed")
+            val results =
+                xtcFiles.map { file ->
+                    val startNanos = System.nanoTime()
+                    val result =
+                        execOps.exec {
+                            workingDir(workDir.get())
+                            executable(cliPath.get())
+                            args("parse", "--quiet", "--config-path", userConfigPath, file.absolutePath)
+                            isIgnoreExitValue = true
+                        }
+                    val elapsedMs = (System.nanoTime() - startNanos) / 1_000_000
+                    val relativePath = file.relativeTo(rootDir.get()).path
+                    ParseResult(relativePath, result.exitValue == 0, elapsedMs)
+                }
 
-        if (failures.isNotEmpty()) {
-            val maxFailuresLogged = 20
-            logger.lifecycle("Failed files (first $maxFailuresLogged):")
-            failures.take(maxFailuresLogged).forEach { logger.lifecycle("  - $it") }
-            if (failures.size > maxFailuresLogged) {
-                logger.lifecycle("  ... and ${failures.size - maxFailuresLogged} more")
+            val passed = results.count { it.success }
+            val failed = results.size - passed
+            val failures = results.filter { !it.success }.map { it.relativePath }
+
+            // Log at lifecycle level so the summary appears in CI output without --info,
+            // and so a developer running this task locally sees the result without
+            // having to know about Gradle's logger levels.
+            logger.lifecycle("Tree-sitter parse results: $passed passed, $failed failed")
+
+            if (failures.isNotEmpty()) {
+                val maxFailuresLogged = 20
+                logger.lifecycle("Failed files (first $maxFailuresLogged):")
+                failures.take(maxFailuresLogged).forEach { logger.lifecycle("  - $it") }
+                if (failures.size > maxFailuresLogged) {
+                    logger.lifecycle("  ... and ${failures.size - maxFailuresLogged} more")
+                }
+            }
+
+            // Show timing information if requested or if filter is active (smaller dataset)
+            if (showTimingInfo || (!filter.isNullOrBlank() && xtcFiles.size <= 50)) {
+                logger.info("Parse timing (slowest first):")
+                results
+                    .sortedByDescending { it.timeMs }
+                    .forEach { r ->
+                        val status = if (r.success) "OK" else "FAIL"
+                        logger.info("  %5dms [%4s] %s".format(r.timeMs, status, r.relativePath))
+                    }
+                val totalMs = results.sumOf { it.timeMs }
+                val avgMs = if (results.isNotEmpty()) totalMs / results.size else 0
+                val sortedTimes = results.map { it.timeMs }.sorted()
+                val medianMs =
+                    if (sortedTimes.isNotEmpty()) {
+                        val mid = sortedTimes.size / 2
+                        if (sortedTimes.size % 2 == 0) {
+                            (sortedTimes[mid - 1] + sortedTimes[mid]) / 2
+                        } else {
+                            sortedTimes[mid]
+                        }
+                    } else {
+                        0
+                    }
+                logger.info(
+                    "Total: ${totalMs}ms, Average: ${avgMs}ms, Median: ${medianMs}ms per file (${results.size} files)",
+                )
+            }
+
+            // Fail the task once the full corpus has been processed and reported, so
+            // the build surfaces every parse failure in one pass. Throwing earlier
+            // would cut the failure list off mid-run; logging without throwing (the
+            // previous behaviour) let regressions accumulate silently for months.
+            if (failures.isNotEmpty()) {
+                throw GradleException(
+                    "tree-sitter parse failed for ${failures.size} file(s) out of ${results.size}. " +
+                        "See the lifecycle log above for the full list.",
+                )
             }
         }
-
-        // Show timing information if requested or if filter is active (smaller dataset)
-        if (showTimingInfo || (!filter.isNullOrBlank() && xtcFiles.size <= 50)) {
-            logger.info("Parse timing (slowest first):")
-            results
-                .sortedByDescending { it.timeMs }
-                .forEach { r ->
-                    val status = if (r.success) "OK" else "FAIL"
-                    logger.info("  %5dms [%4s] %s".format(r.timeMs, status, r.relativePath))
-                }
-            val totalMs = results.sumOf { it.timeMs }
-            val avgMs = if (results.isNotEmpty()) totalMs / results.size else 0
-            val sortedTimes = results.map { it.timeMs }.sorted()
-            val medianMs =
-                if (sortedTimes.isNotEmpty()) {
-                    val mid = sortedTimes.size / 2
-                    if (sortedTimes.size % 2 == 0) (sortedTimes[mid - 1] + sortedTimes[mid]) / 2
-                    else sortedTimes[mid]
-                } else 0
-            logger.info(
-                "Total: ${totalMs}ms, Average: ${avgMs}ms, Median: ${medianMs}ms per file (${results.size} files)"
-            )
-        }
-
-        // Fail the task once the full corpus has been processed and reported, so
-        // the build surfaces every parse failure in one pass. Throwing earlier
-        // would cut the failure list off mid-run; logging without throwing (the
-        // previous behaviour) let regressions accumulate silently for months.
-        if (failures.isNotEmpty()) {
-            throw GradleException(
-                "tree-sitter parse failed for ${failures.size} file(s) out of ${results.size}. " +
-                    "See the lifecycle log above for the full list."
-            )
-        }
     }
-}
 
 val testTreeSitterParse =
     tasks.register<TreeSitterParseTestTask>("testTreeSitterParse") {
@@ -807,8 +838,7 @@ val testTreeSitterParse =
             compositeRoot
                 .listFiles { f ->
                     f.isDirectory && f.name.startsWith("lib_")
-                }
-                ?.toList() ?: emptyList()
+                }?.toList() ?: emptyList()
         val manualTestsDir = File(compositeRoot, "manualTests/src/main/x").takeIf { it.isDirectory }
         libDirs.set(xdkLibDirs + listOfNotNull(manualTestsDir))
 
@@ -833,54 +863,57 @@ val testTreeSitterParse =
 // Build native libraries for all platforms from any host using Zig.
 
 /** Task to cross-compile native library using Zig. */
-abstract class ZigCrossCompileTask @Inject constructor(private val execOps: ExecOperations) :
-    DefaultTask() {
+abstract class ZigCrossCompileTask
+    @Inject
+    constructor(
+        private val execOps: ExecOperations,
+    ) : DefaultTask() {
+        @get:Input abstract val zigPath: Property<String>
 
-    @get:Input abstract val zigPath: Property<String>
+        @get:Input abstract val targetTriple: Property<String> // e.g., "aarch64-macos"
 
-    @get:Input abstract val targetTriple: Property<String> // e.g., "aarch64-macos"
+        @get:Input abstract val targetPlatform: Property<String> // e.g., "darwin-arm64"
 
-    @get:Input abstract val targetPlatform: Property<String> // e.g., "darwin-arm64"
+        @get:InputFile abstract val parserC: RegularFileProperty
 
-    @get:InputFile abstract val parserC: RegularFileProperty
+        @get:InputFile abstract val scannerC: RegularFileProperty
 
-    @get:InputFile abstract val scannerC: RegularFileProperty
+        @get:InputDirectory abstract val includeDir: DirectoryProperty
 
-    @get:InputDirectory abstract val includeDir: DirectoryProperty
+        @get:OutputFile abstract val outputLib: RegularFileProperty
 
-    @get:OutputFile abstract val outputLib: RegularFileProperty
+        @TaskAction
+        fun compile() {
+            val outputFile = outputLib.get().asFile
+            outputFile.parentFile.mkdirs()
 
-    @TaskAction
-    fun compile() {
-        val outputFile = outputLib.get().asFile
-        outputFile.parentFile.mkdirs()
+            val platform = targetPlatform.get()
+            val triple = targetTriple.get()
+            logger.info("[zig] Starting cross-compile for $platform ($triple)...")
 
-        val platform = targetPlatform.get()
-        val triple = targetTriple.get()
-        logger.info("[zig] Starting cross-compile for $platform ($triple)...")
+            val duration =
+                measureTime {
+                    execOps.exec {
+                        executable(zigPath.get())
+                        args(
+                            "cc",
+                            "-shared",
+                            "-fPIC",
+                            "-target",
+                            triple,
+                            "-I",
+                            includeDir.get().asFile.absolutePath,
+                            parserC.get().asFile.absolutePath,
+                            scannerC.get().asFile.absolutePath,
+                            "-o",
+                            outputFile.absolutePath,
+                        )
+                    }
+                }
 
-        val duration = measureTime {
-            execOps.exec {
-                executable(zigPath.get())
-                args(
-                    "cc",
-                    "-shared",
-                    "-fPIC",
-                    "-target",
-                    triple,
-                    "-I",
-                    includeDir.get().asFile.absolutePath,
-                    parserC.get().asFile.absolutePath,
-                    scannerC.get().asFile.absolutePath,
-                    "-o",
-                    outputFile.absolutePath,
-                )
-            }
+            logger.info("[zig] Finished $platform in $duration -> ${outputFile.name}")
         }
-
-        logger.info("[zig] Finished $platform in $duration -> ${outputFile.name}")
     }
-}
 
 // Cross-compilation target mapping
 val crossCompileTargets =
@@ -928,60 +961,63 @@ crossCompileTargets.forEach { (platform, zigTarget) ->
 // jtreesitter requires this at runtime alongside our grammar library.
 
 /** Task to cross-compile the tree-sitter runtime library using Zig. */
-abstract class ZigBuildRuntimeTask @Inject constructor(private val execOps: ExecOperations) :
-    DefaultTask() {
+abstract class ZigBuildRuntimeTask
+    @Inject
+    constructor(
+        private val execOps: ExecOperations,
+    ) : DefaultTask() {
+        @get:Input abstract val zigPath: Property<String>
 
-    @get:Input abstract val zigPath: Property<String>
+        @get:Input abstract val targetTriple: Property<String>
 
-    @get:Input abstract val targetTriple: Property<String>
+        @get:Input abstract val targetPlatform: Property<String>
 
-    @get:Input abstract val targetPlatform: Property<String>
+        @get:InputDirectory abstract val libSrcDir: DirectoryProperty
 
-    @get:InputDirectory abstract val libSrcDir: DirectoryProperty
+        @get:OutputFile abstract val outputLib: RegularFileProperty
 
-    @get:OutputFile abstract val outputLib: RegularFileProperty
+        @TaskAction
+        fun compile() {
+            val outputFile = outputLib.get().asFile
+            outputFile.parentFile.mkdirs()
 
-    @TaskAction
-    fun compile() {
-        val outputFile = outputLib.get().asFile
-        outputFile.parentFile.mkdirs()
+            val platform = targetPlatform.get()
+            val triple = targetTriple.get()
+            val libSrc = libSrcDir.get().asFile
 
-        val platform = targetPlatform.get()
-        val triple = targetTriple.get()
-        val libSrc = libSrcDir.get().asFile
+            logger.info("[zig] Building tree-sitter runtime for $platform ($triple)...")
 
-        logger.info("[zig] Building tree-sitter runtime for $platform ($triple)...")
-
-        val libC = File(libSrc, "src/lib.c")
-        if (!libC.exists()) {
-            throw GradleException("tree-sitter lib.c not found at: ${libC.absolutePath}")
-        }
-
-        val duration = measureTime {
-            execOps.exec {
-                executable(zigPath.get())
-                args(
-                    "cc",
-                    "-shared",
-                    "-fPIC",
-                    "-target",
-                    triple,
-                    "-I",
-                    File(libSrc, "include").absolutePath,
-                    "-I",
-                    File(libSrc, "src").absolutePath,
-                    libC.absolutePath,
-                    "-o",
-                    outputFile.absolutePath,
-                )
+            val libC = File(libSrc, "src/lib.c")
+            if (!libC.exists()) {
+                throw GradleException("tree-sitter lib.c not found at: ${libC.absolutePath}")
             }
-        }
 
-        logger.info(
-            "[zig] Finished tree-sitter runtime $platform in $duration -> ${outputFile.name}"
-        )
+            val duration =
+                measureTime {
+                    execOps.exec {
+                        executable(zigPath.get())
+                        args(
+                            "cc",
+                            "-shared",
+                            "-fPIC",
+                            "-target",
+                            triple,
+                            "-I",
+                            File(libSrc, "include").absolutePath,
+                            "-I",
+                            File(libSrc, "src").absolutePath,
+                            libC.absolutePath,
+                            "-o",
+                            outputFile.absolutePath,
+                        )
+                    }
+                }
+
+            logger.info(
+                "[zig] Finished tree-sitter runtime $platform in $duration -> ${outputFile.name}",
+            )
+        }
     }
-}
 
 // Register cross-compile tasks for tree-sitter runtime library
 crossCompileTargets.forEach { (platform, zigTarget) ->
@@ -1057,7 +1093,11 @@ val populateNativeLibraryCache =
 
                 // Copy XTC grammar library to cache
                 val srcGrammarLib =
-                    crossBuildDir.get().dir(platform).file("libtree-sitter-xtc.$ext").asFile
+                    crossBuildDir
+                        .get()
+                        .dir(platform)
+                        .file("libtree-sitter-xtc.$ext")
+                        .asFile
                 val destGrammarLib = File(cacheDir, "libtree-sitter-xtc.$ext")
                 if (srcGrammarLib.exists()) {
                     srcGrammarLib.copyTo(destGrammarLib, overwrite = true)
@@ -1068,7 +1108,11 @@ val populateNativeLibraryCache =
 
                 // Copy tree-sitter runtime library to cache
                 val srcRuntimeLib =
-                    crossBuildDir.get().dir(platform).file("libtree-sitter.$ext").asFile
+                    crossBuildDir
+                        .get()
+                        .dir(platform)
+                        .file("libtree-sitter.$ext")
+                        .asFile
                 val destRuntimeLib = File(cacheDir, "libtree-sitter.$ext")
                 if (srcRuntimeLib.exists()) {
                     srcRuntimeLib.copyTo(destRuntimeLib, overwrite = true)
@@ -1100,133 +1144,134 @@ val populateNativeLibraryCache =
  * cache in ~/.gradle/caches/tree-sitter-xtc/<hash>/<platform>/
  */
 abstract class BuildNativeLibraryOnDemandTask
-@Inject
-constructor(private val execOps: ExecOperations) : DefaultTask() {
+    @Inject
+    constructor(
+        private val execOps: ExecOperations,
+    ) : DefaultTask() {
+        @get:InputFile abstract val grammarFile: RegularFileProperty
 
-    @get:InputFile abstract val grammarFile: RegularFileProperty
+        @get:InputFile abstract val scannerFile: RegularFileProperty
 
-    @get:InputFile abstract val scannerFile: RegularFileProperty
+        @get:InputDirectory abstract val parserSrcDir: DirectoryProperty
 
-    @get:InputDirectory abstract val parserSrcDir: DirectoryProperty
+        @get:Input abstract val cliVersion: Property<String>
 
-    @get:Input abstract val cliVersion: Property<String>
+        @get:Input abstract val zigVersion: Property<String>
 
-    @get:Input abstract val zigVersion: Property<String>
+        @get:Input abstract val platform: Property<String>
 
-    @get:Input abstract val platform: Property<String>
+        @get:Input abstract val zigTarget: Property<String>
 
-    @get:Input abstract val zigTarget: Property<String>
+        @get:Input abstract val libExtension: Property<String>
 
-    @get:Input abstract val libExtension: Property<String>
+        @get:Input abstract val zigExePath: Property<String>
 
-    @get:Input abstract val zigExePath: Property<String>
+        @get:Input abstract val treeSitterLibSrcPath: Property<String>
 
-    @get:Input abstract val treeSitterLibSrcPath: Property<String>
+        @get:Input abstract val cacheDir: Property<String>
 
-    @get:Input abstract val cacheDir: Property<String>
+        @get:OutputFile abstract val grammarLibOutput: RegularFileProperty
 
-    @get:OutputFile abstract val grammarLibOutput: RegularFileProperty
+        @get:OutputFile abstract val runtimeLibOutput: RegularFileProperty
 
-    @get:OutputFile abstract val runtimeLibOutput: RegularFileProperty
-
-    private fun computeHash(): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        digest.update(cliVersion.get().toByteArray())
-        digest.update(zigVersion.get().toByteArray())
-        digest.update(platform.get().toByteArray())
-        listOf(grammarFile.get().asFile, scannerFile.get().asFile).forEach { file ->
-            if (file.exists()) digest.update(file.readBytes())
+        private fun computeHash(): String {
+            val digest = MessageDigest.getInstance("SHA-256")
+            digest.update(cliVersion.get().toByteArray())
+            digest.update(zigVersion.get().toByteArray())
+            digest.update(platform.get().toByteArray())
+            listOf(grammarFile.get().asFile, scannerFile.get().asFile).forEach { file ->
+                if (file.exists()) digest.update(file.readBytes())
+            }
+            return digest.digest().joinToString("") { "%02x".format(it) }
         }
-        return digest.digest().joinToString("") { "%02x".format(it) }
-    }
 
-    @TaskAction
-    fun execute() {
-        val hash = computeHash()
-        val platformDir = platform.get()
-        val ext = libExtension.get()
-        val cacheRoot = File(cacheDir.get())
-        val cachedDir = File(cacheRoot, "$hash/$platformDir")
+        @TaskAction
+        fun execute() {
+            val hash = computeHash()
+            val platformDir = platform.get()
+            val ext = libExtension.get()
+            val cacheRoot = File(cacheDir.get())
+            val cachedDir = File(cacheRoot, "$hash/$platformDir")
 
-        val cachedGrammarLib = File(cachedDir, "libtree-sitter-xtc.$ext")
-        val cachedRuntimeLib = File(cachedDir, "libtree-sitter.$ext")
+            val cachedGrammarLib = File(cachedDir, "libtree-sitter-xtc.$ext")
+            val cachedRuntimeLib = File(cachedDir, "libtree-sitter.$ext")
 
-        val grammarOutput = grammarLibOutput.get().asFile
-        val runtimeOutput = runtimeLibOutput.get().asFile
+            val grammarOutput = grammarLibOutput.get().asFile
+            val runtimeOutput = runtimeLibOutput.get().asFile
 
-        // Check cache
-        if (cachedGrammarLib.exists() && cachedRuntimeLib.exists()) {
-            logger.info("Using cached native libraries (hash: ${hash.take(12)}...)")
+            // Check cache
+            if (cachedGrammarLib.exists() && cachedRuntimeLib.exists()) {
+                logger.info("Using cached native libraries (hash: ${hash.take(12)}...)")
+                grammarOutput.parentFile.mkdirs()
+                cachedGrammarLib.copyTo(grammarOutput, overwrite = true)
+                cachedRuntimeLib.copyTo(runtimeOutput, overwrite = true)
+                return
+            }
+
+            logger.info("Building native libraries (hash: ${hash.take(12)}...)")
+            logger.info(
+                "  This will take ~20s on first build. Libraries will be cached for future builds.",
+            )
+
+            cachedDir.mkdirs()
+
+            // Build grammar library
+            val parserC = File(parserSrcDir.get().asFile, "parser.c")
+            val scannerC = scannerFile.get().asFile
+            val includeDir = parserSrcDir.get().asFile
+
+            logger.info("  Building libtree-sitter-xtc.$ext for $platformDir...")
+            execOps.exec {
+                executable(zigExePath.get())
+                args(
+                    "cc",
+                    "-shared",
+                    "-fPIC",
+                    "-target",
+                    zigTarget.get(),
+                    "-I",
+                    includeDir.absolutePath,
+                    parserC.absolutePath,
+                    scannerC.absolutePath,
+                    "-o",
+                    cachedGrammarLib.absolutePath,
+                )
+            }
+
+            // Build runtime library
+            val treeSitterLibSrc = File(treeSitterLibSrcPath.get())
+            val libC = File(treeSitterLibSrc, "src/lib.c")
+            if (!libC.exists()) {
+                throw GradleException("tree-sitter lib.c not found at: ${libC.absolutePath}")
+            }
+
+            logger.info("  Building libtree-sitter.$ext for $platformDir...")
+            execOps.exec {
+                executable(zigExePath.get())
+                args(
+                    "cc",
+                    "-shared",
+                    "-fPIC",
+                    "-target",
+                    zigTarget.get(),
+                    "-I",
+                    File(treeSitterLibSrc, "include").absolutePath,
+                    "-I",
+                    File(treeSitterLibSrc, "src").absolutePath,
+                    libC.absolutePath,
+                    "-o",
+                    cachedRuntimeLib.absolutePath,
+                )
+            }
+
+            // Copy to output locations
             grammarOutput.parentFile.mkdirs()
             cachedGrammarLib.copyTo(grammarOutput, overwrite = true)
             cachedRuntimeLib.copyTo(runtimeOutput, overwrite = true)
-            return
+
+            logger.info("Native libraries built and cached successfully.")
         }
-
-        logger.info("Building native libraries (hash: ${hash.take(12)}...)")
-        logger.info(
-            "  This will take ~20s on first build. Libraries will be cached for future builds."
-        )
-
-        cachedDir.mkdirs()
-
-        // Build grammar library
-        val parserC = File(parserSrcDir.get().asFile, "parser.c")
-        val scannerC = scannerFile.get().asFile
-        val includeDir = parserSrcDir.get().asFile
-
-        logger.info("  Building libtree-sitter-xtc.$ext for $platformDir...")
-        execOps.exec {
-            executable(zigExePath.get())
-            args(
-                "cc",
-                "-shared",
-                "-fPIC",
-                "-target",
-                zigTarget.get(),
-                "-I",
-                includeDir.absolutePath,
-                parserC.absolutePath,
-                scannerC.absolutePath,
-                "-o",
-                cachedGrammarLib.absolutePath,
-            )
-        }
-
-        // Build runtime library
-        val treeSitterLibSrc = File(treeSitterLibSrcPath.get())
-        val libC = File(treeSitterLibSrc, "src/lib.c")
-        if (!libC.exists()) {
-            throw GradleException("tree-sitter lib.c not found at: ${libC.absolutePath}")
-        }
-
-        logger.info("  Building libtree-sitter.$ext for $platformDir...")
-        execOps.exec {
-            executable(zigExePath.get())
-            args(
-                "cc",
-                "-shared",
-                "-fPIC",
-                "-target",
-                zigTarget.get(),
-                "-I",
-                File(treeSitterLibSrc, "include").absolutePath,
-                "-I",
-                File(treeSitterLibSrc, "src").absolutePath,
-                libC.absolutePath,
-                "-o",
-                cachedRuntimeLib.absolutePath,
-            )
-        }
-
-        // Copy to output locations
-        grammarOutput.parentFile.mkdirs()
-        cachedGrammarLib.copyTo(grammarOutput, overwrite = true)
-        cachedRuntimeLib.copyTo(runtimeOutput, overwrite = true)
-
-        logger.info("Native libraries built and cached successfully.")
     }
-}
 
 // Map platform directory name to Zig target triple
 val currentZigTarget: String = crossCompileTargets[nativePlatformDir] ?: "unsupported"
@@ -1242,150 +1287,151 @@ val currentZigTarget: String = crossCompileTargets[nativePlatformDir] ?: "unsupp
  * cached in ~/.gradle/caches/tree-sitter-xtc/<hash>/<platform>/
  */
 abstract class BuildAllNativeLibrariesOnDemandTask
-@Inject
-constructor(private val execOps: ExecOperations) : DefaultTask() {
+    @Inject
+    constructor(
+        private val execOps: ExecOperations,
+    ) : DefaultTask() {
+        @get:InputFile abstract val grammarFile: RegularFileProperty
 
-    @get:InputFile abstract val grammarFile: RegularFileProperty
+        @get:InputFile abstract val scannerFile: RegularFileProperty
 
-    @get:InputFile abstract val scannerFile: RegularFileProperty
+        @get:InputDirectory abstract val parserSrcDir: DirectoryProperty
 
-    @get:InputDirectory abstract val parserSrcDir: DirectoryProperty
+        @get:Input abstract val cliVersion: Property<String>
 
-    @get:Input abstract val cliVersion: Property<String>
+        @get:Input abstract val zigVersion: Property<String>
 
-    @get:Input abstract val zigVersion: Property<String>
+        @get:Input abstract val zigExePath: Property<String>
 
-    @get:Input abstract val zigExePath: Property<String>
+        @get:Input abstract val treeSitterLibSrcPath: Property<String>
 
-    @get:Input abstract val treeSitterLibSrcPath: Property<String>
+        @get:Input abstract val cacheDir: Property<String>
 
-    @get:Input abstract val cacheDir: Property<String>
+        @get:Input abstract val platforms: MapProperty<String, String> // platform -> zigTarget
 
-    @get:Input abstract val platforms: MapProperty<String, String> // platform -> zigTarget
+        @get:Input abstract val platformExtensions: MapProperty<String, String> // platform -> extension
 
-    @get:Input abstract val platformExtensions: MapProperty<String, String> // platform -> extension
+        @get:OutputDirectory abstract val outputDir: DirectoryProperty
 
-    @get:OutputDirectory abstract val outputDir: DirectoryProperty
-
-    private fun computeHash(platform: String): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        digest.update(cliVersion.get().toByteArray())
-        digest.update(zigVersion.get().toByteArray())
-        digest.update(platform.toByteArray())
-        listOf(grammarFile.get().asFile, scannerFile.get().asFile).forEach { file ->
-            if (file.exists()) digest.update(file.readBytes())
+        private fun computeHash(platform: String): String {
+            val digest = MessageDigest.getInstance("SHA-256")
+            digest.update(cliVersion.get().toByteArray())
+            digest.update(zigVersion.get().toByteArray())
+            digest.update(platform.toByteArray())
+            listOf(grammarFile.get().asFile, scannerFile.get().asFile).forEach { file ->
+                if (file.exists()) digest.update(file.readBytes())
+            }
+            return digest.digest().joinToString("") { "%02x".format(it) }
         }
-        return digest.digest().joinToString("") { "%02x".format(it) }
-    }
 
-    @TaskAction
-    fun execute() {
-        val platformMap = platforms.get()
-        val extMap = platformExtensions.get()
-        val cacheRoot = File(cacheDir.get())
-        val outDir = outputDir.get().asFile
-        val zigPath = zigExePath.get()
-        val treeSitterLibSrc = File(treeSitterLibSrcPath.get())
-        val parserC = File(parserSrcDir.get().asFile, "parser.c")
-        val scannerC = scannerFile.get().asFile
-        val includeDir = parserSrcDir.get().asFile
+        @TaskAction
+        fun execute() {
+            val platformMap = platforms.get()
+            val extMap = platformExtensions.get()
+            val cacheRoot = File(cacheDir.get())
+            val outDir = outputDir.get().asFile
+            val zigPath = zigExePath.get()
+            val treeSitterLibSrc = File(treeSitterLibSrcPath.get())
+            val parserC = File(parserSrcDir.get().asFile, "parser.c")
+            val scannerC = scannerFile.get().asFile
+            val includeDir = parserSrcDir.get().asFile
 
-        logger.info(
-            """
+            logger.info(
+                """
             |[zig] ========== NATIVE LIBRARY CROSS-COMPILATION ==========
             |[zig] Platforms: ${platformMap.keys.joinToString(", ")}
             |[zig] Zig compiler: $zigPath
             |[zig] Cache dir: ${cacheRoot.absolutePath}
-            """
-                .trimMargin()
-        )
+                """.trimMargin(),
+            )
 
-        var cachedCount = 0
-        var builtCount = 0
+            var cachedCount = 0
+            var builtCount = 0
 
-        val totalDuration = measureTime {
-            platformMap.forEach { (platform, zigTarget) ->
-                val ext = extMap[platform] ?: error("No extension for platform: $platform")
-                val hash = computeHash(platform)
-                val cachedDir = File(cacheRoot, "$hash/$platform")
-                val cachedGrammarLib = File(cachedDir, "libtree-sitter-xtc.$ext")
-                val cachedRuntimeLib = File(cachedDir, "libtree-sitter.$ext")
+            val totalDuration =
+                measureTime {
+                    platformMap.forEach { (platform, zigTarget) ->
+                        val ext = extMap[platform] ?: error("No extension for platform: $platform")
+                        val hash = computeHash(platform)
+                        val cachedDir = File(cacheRoot, "$hash/$platform")
+                        val cachedGrammarLib = File(cachedDir, "libtree-sitter-xtc.$ext")
+                        val cachedRuntimeLib = File(cachedDir, "libtree-sitter.$ext")
 
-                val platformOutDir = File(outDir, platform)
-                platformOutDir.mkdirs()
-                val grammarOutput = File(platformOutDir, "libtree-sitter-xtc.$ext")
-                val runtimeOutput = File(platformOutDir, "libtree-sitter.$ext")
+                        val platformOutDir = File(outDir, platform)
+                        platformOutDir.mkdirs()
+                        val grammarOutput = File(platformOutDir, "libtree-sitter-xtc.$ext")
+                        val runtimeOutput = File(platformOutDir, "libtree-sitter.$ext")
 
-                // Check cache
-                if (cachedGrammarLib.exists() && cachedRuntimeLib.exists()) {
-                    logger.info("[zig]   $platform: cache hit (hash: ${hash.take(8)}...)")
-                    cachedGrammarLib.copyTo(grammarOutput, overwrite = true)
-                    cachedRuntimeLib.copyTo(runtimeOutput, overwrite = true)
-                    cachedCount++
-                    return@forEach
+                        // Check cache
+                        if (cachedGrammarLib.exists() && cachedRuntimeLib.exists()) {
+                            logger.info("[zig]   $platform: cache hit (hash: ${hash.take(8)}...)")
+                            cachedGrammarLib.copyTo(grammarOutput, overwrite = true)
+                            cachedRuntimeLib.copyTo(runtimeOutput, overwrite = true)
+                            cachedCount++
+                            return@forEach
+                        }
+
+                        logger.info("[zig]   $platform: BUILDING with Zig ($zigTarget)...")
+                        cachedDir.mkdirs()
+
+                        val duration =
+                            measureTime {
+                                // Build grammar library
+                                execOps.exec {
+                                    executable(zigPath)
+                                    args(
+                                        "cc",
+                                        "-shared",
+                                        "-fPIC",
+                                        "-target",
+                                        zigTarget,
+                                        "-I",
+                                        includeDir.absolutePath,
+                                        parserC.absolutePath,
+                                        scannerC.absolutePath,
+                                        "-o",
+                                        cachedGrammarLib.absolutePath,
+                                    )
+                                }
+
+                                // Build runtime library
+                                val libC = File(treeSitterLibSrc, "src/lib.c")
+                                execOps.exec {
+                                    executable(zigPath)
+                                    args(
+                                        "cc",
+                                        "-shared",
+                                        "-fPIC",
+                                        "-target",
+                                        zigTarget,
+                                        "-I",
+                                        File(treeSitterLibSrc, "include").absolutePath,
+                                        "-I",
+                                        File(treeSitterLibSrc, "src").absolutePath,
+                                        libC.absolutePath,
+                                        "-o",
+                                        cachedRuntimeLib.absolutePath,
+                                    )
+                                }
+                            }
+                        logger.info("[zig]   $platform: compiled in $duration")
+                        builtCount++
+
+                        // Copy to output
+                        cachedGrammarLib.copyTo(grammarOutput, overwrite = true)
+                        cachedRuntimeLib.copyTo(runtimeOutput, overwrite = true)
+                    }
                 }
 
-                logger.info("[zig]   $platform: BUILDING with Zig ($zigTarget)...")
-                cachedDir.mkdirs()
-
-                val duration = measureTime {
-                    // Build grammar library
-                    execOps.exec {
-                        executable(zigPath)
-                        args(
-                            "cc",
-                            "-shared",
-                            "-fPIC",
-                            "-target",
-                            zigTarget,
-                            "-I",
-                            includeDir.absolutePath,
-                            parserC.absolutePath,
-                            scannerC.absolutePath,
-                            "-o",
-                            cachedGrammarLib.absolutePath,
-                        )
-                    }
-
-                    // Build runtime library
-                    val libC = File(treeSitterLibSrc, "src/lib.c")
-                    execOps.exec {
-                        executable(zigPath)
-                        args(
-                            "cc",
-                            "-shared",
-                            "-fPIC",
-                            "-target",
-                            zigTarget,
-                            "-I",
-                            File(treeSitterLibSrc, "include").absolutePath,
-                            "-I",
-                            File(treeSitterLibSrc, "src").absolutePath,
-                            libC.absolutePath,
-                            "-o",
-                            cachedRuntimeLib.absolutePath,
-                        )
-                    }
-                }
-                logger.info("[zig]   $platform: compiled in $duration")
-                builtCount++
-
-                // Copy to output
-                cachedGrammarLib.copyTo(grammarOutput, overwrite = true)
-                cachedRuntimeLib.copyTo(runtimeOutput, overwrite = true)
-            }
-        }
-
-        logger.info(
-            """
+            logger.info(
+                """
             |[zig] ==========================================================
             |[zig] Result: $builtCount built, $cachedCount from cache, total: $totalDuration
             |[zig] ==========================================================
-            """
-                .trimMargin()
-        )
+                """.trimMargin(),
+            )
+        }
     }
-}
 
 // Output directory for all platform libraries
 val nativeLibOutputDir: Provider<Directory> = layout.buildDirectory.dir("native-out")

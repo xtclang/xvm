@@ -4,8 +4,8 @@ import com.intellij.execution.configurations.ConfigurationFactory
 import com.intellij.execution.configurations.ConfigurationType
 import com.intellij.execution.configurations.RunConfiguration
 import com.intellij.openapi.project.Project
-import javax.swing.Icon
 import org.xtclang.idea.XtcIconProvider
+import javax.swing.Icon
 
 /**
  * Run configuration type for Ecstasy applications.
@@ -19,21 +19,20 @@ class XtcRunConfigurationType : ConfigurationType {
 
     override fun getConfigurationTypeDescription() = "Run an Ecstasy application"
 
-    override fun getIcon(): Icon =
-        XtcIconProvider.XTC_ICON ?: com.intellij.icons.AllIcons.FileTypes.Any_type
+    override fun getIcon(): Icon = XtcIconProvider.XTC_ICON ?: com.intellij.icons.AllIcons.FileTypes.Any_type
 
     override fun getId() = "XtcRunConfiguration"
 
-    override fun getConfigurationFactories(): Array<ConfigurationFactory> =
-        arrayOf(XtcConfigurationFactory(this))
+    override fun getConfigurationFactories(): Array<ConfigurationFactory> = arrayOf(XtcConfigurationFactory(this))
 }
 
 /** Factory for creating Ecstasy run configurations. */
-class XtcConfigurationFactory(type: ConfigurationType) : ConfigurationFactory(type) {
+class XtcConfigurationFactory(
+    type: ConfigurationType,
+) : ConfigurationFactory(type) {
     override fun getId() = "XtcConfigurationFactory"
 
     override fun getName() = "Ecstasy Application"
 
-    override fun createTemplateConfiguration(project: Project): RunConfiguration =
-        XtcRunConfiguration(project, this, "Ecstasy Application")
+    override fun createTemplateConfiguration(project: Project): RunConfiguration = XtcRunConfiguration(project, this, "Ecstasy Application")
 }

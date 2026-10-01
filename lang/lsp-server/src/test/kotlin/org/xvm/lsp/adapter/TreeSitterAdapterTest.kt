@@ -60,8 +60,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                 """
                 module myapp {
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -85,8 +84,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                     class Person {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -114,8 +112,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                     class Person {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -137,8 +134,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                     interface Runnable {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -164,8 +160,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -189,8 +184,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                 module myapp {
                     Int val2.get() = 43;
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -213,8 +207,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                         Int val2.get() = 43;
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -241,8 +234,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                         Duration d3 = Duration:30S;
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -270,8 +262,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                         (@Future Int v1, @Future Int v2) = svc.multiReturn(1, 2);
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -300,8 +291,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                         protected Int x = 1;
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -327,8 +317,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                         Base<Int>.Child2<String> c2 = bi.new Child2<String>();
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -371,8 +360,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                         assert new ClassA().eval() == True;
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -404,8 +392,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                         };
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -430,8 +417,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                         @Override construct(String s) = TODO();
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -456,8 +442,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                         Tuple u = (1.toInt(),);
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -485,8 +470,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                         for (@Watch(logger) Int i = 3; i > 0; --i) {}
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -512,8 +496,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                     package other import OtherModule using OtherProvider;
                     package plain import PlainModule;
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -543,8 +526,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                         var _ = r.size;
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -571,8 +553,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                         Directory d  = ./subdir;
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -600,8 +581,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -629,8 +609,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                         assert:arg (Int n, String t) := parse("x");
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -658,8 +637,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                         assert !(Color c2 := c1.next());
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -694,8 +672,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                         Version v7 = v:1.2beta5+123-456.abc;
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -727,8 +704,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                         new Parent().new @Parent.Anno(descr) Parent.Child().test();
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -754,8 +730,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                     void testMethodAnno((@AutoFreezable Freezable)? o = Null) {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -788,8 +763,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                         return False, 0, 0;
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -820,8 +794,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -842,8 +815,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                 """
                 module myapp {
                     class Person {
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -867,8 +839,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                     }
                     class {
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             val result = ts.compile(uri, source)
 
@@ -917,8 +888,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                     class Person {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             val symbol = ts.findSymbolAt(uri, 1, 10)
@@ -959,8 +929,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // cursor inside the method body so findDeclarationAt walks up to method_declaration.
@@ -988,8 +957,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                         String name;
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // cursor on `name` in the property declaration line.
@@ -1022,8 +990,7 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
                     class Person {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             val hover = ts.getHoverInfo(uri, 1, 10)

@@ -1,7 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -25,6 +23,8 @@ import org.xvm.asm.op.Invoke_01
 import org.xvm.asm.op.JumpInt
 import org.xvm.compiler.BuildRepository
 import org.xvm.compiler.Source
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 
 /** Source-level probes for the remaining post-validation TypeInfo consumers. */
 class CompilerEmissionAuditTest {
@@ -40,19 +40,21 @@ class CompilerEmissionAuditTest {
                 "count++",
                 "--count",
                 "count--",
-            ]
+            ],
     )
-    fun `atomic sequential results retain their type in the serialized binary AST`(
-        expression: String
-    ) {
+    fun `atomic sequential results retain their type in the serialized binary AST`(expression: String) {
         val result =
             compile(
                 "module Emission { @Atomic Int count = 1; class Counter<T> { @Atomic Int count = 1; } " +
-                    "Int run(Counter<String> counter) = $expression; }"
+                    "Int run(Counter<String> counter) = $expression; }",
             )
         val method = restoredMethod(result)
         val returned =
-            statements(method.ast).filterIsInstance<ReturnStmtAST>().single().exprs.single()
+            statements(method.ast)
+                .filterIsInstance<ReturnStmtAST>()
+                .single()
+                .exprs
+                .single()
         assertThat(returned).isInstanceOf(InvokeExprAST::class.java)
         assertThat(returned.count).isEqualTo(1)
         assertThat(returned.getType(0)).isEqualTo(method.identityConstant.rawReturns.single())
@@ -60,9 +62,7 @@ class CompilerEmissionAuditTest {
 
     @ParameterizedTest
     @ValueSource(booleans = [false, true])
-    fun `generic atomic operations preserve their warning across source and dependency use`(
-        external: Boolean
-    ) {
+    fun `generic atomic operations preserve their warning across source and dependency use`(external: Boolean) {
         val base = "class Base<T> { @Atomic Int count = 1; }"
         val repository =
             if (external) {
@@ -87,28 +87,34 @@ class CompilerEmissionAuditTest {
         val result =
             compile(
                 "module Emission { class Counter { @Atomic Int count = 1; " +
-                    "class Worker { Int run() = $expression; } } }"
+                    "class Worker { Int run() = $expression; } } }",
             )
         val method = restoredMethod(result, "Counter", "Worker")
         val returned =
-            statements(method.ast).filterIsInstance<ReturnStmtAST>().single().exprs.single()
+            statements(method.ast)
+                .filterIsInstance<ReturnStmtAST>()
+                .single()
+                .exprs
+                .single()
                 as InvokeExprAST
         assertThat(returned.count).isEqualTo(1)
         assertThat(returned.getType(0)).isEqualTo(method.identityConstant.rawReturns.single())
         val property = (returned.target as UnaryOpExprAST).expr as PropertyExprAST
-        assertThat(property.target.getType(0).getSingleUnderlyingClass(true).name)
-            .isEqualTo("Counter")
+        assertThat(
+            property.target
+                .getType(0)
+                .getSingleUnderlyingClass(true)
+                .name,
+        ).isEqualTo("Counter")
     }
 
     @ParameterizedTest
     @ValueSource(strings = ["count += 1", "counter.count += 1", "counter.count <<= 1"])
-    fun `atomic compound assignments retain their concrete target and void result`(
-        statement: String
-    ) {
+    fun `atomic compound assignments retain their concrete target and void result`(statement: String) {
         val result =
             compile(
                 "module Emission { @Atomic Int count = 1; class Counter<T extends IntNumber>(T seed) { @Atomic T count = seed; } " +
-                    "void run(Counter<Int> counter) { $statement; } }"
+                    "void run(Counter<Int> counter) { $statement; } }",
             )
         val method = restoredMethod(result)
         val call = statements(method.ast).filterIsInstance<InvokeExprAST>().single()
@@ -123,11 +129,15 @@ class CompilerEmissionAuditTest {
         val result =
             compile(
                 "module Emission { class Counter<T extends IntNumber>(T seed) { @Atomic T count = seed; } " +
-                    "Int run(Counter<Int> counter) = ++counter.count; }"
+                    "Int run(Counter<Int> counter) = ++counter.count; }",
             )
         val method = restoredMethod(result)
         val returned =
-            statements(method.ast).filterIsInstance<ReturnStmtAST>().single().exprs.single()
+            statements(method.ast)
+                .filterIsInstance<ReturnStmtAST>()
+                .single()
+                .exprs
+                .single()
                 as InvokeExprAST
         assertThat(returned.count).isEqualTo(1)
         assertThat(returned.getType(0)).isEqualTo(method.identityConstant.rawReturns.single())
@@ -153,7 +163,7 @@ class CompilerEmissionAuditTest {
                 "UInt64",
                 "UInt128",
                 "UIntN",
-            ]
+            ],
     )
     fun `dense switches retain conversion metadata and readable artifacts`(type: String) {
         val first =
@@ -175,7 +185,7 @@ class CompilerEmissionAuditTest {
         val result =
             compile(
                 "module Emission { Int run($type value) { switch (value) { " +
-                    "case $first: return 10; case $second: return 20; default: return 30; } } }"
+                    "case $first: return 10; case $second: return 20; default: return 30; } } }",
             )
         val method = restoredMethod(result)
         assertThat(method.ops.filterIsInstance<JumpInt>()).hasSize(1)
@@ -191,7 +201,7 @@ class CompilerEmissionAuditTest {
         val result =
             compile(
                 "module Emission { enum Choice { First, Second } Int run(Choice value) { switch (value) { " +
-                    "case First: return 1; case Second: return 2; } } }"
+                    "case First: return 1; case Second: return 2; } } }",
             )
         val method = restoredMethod(result)
         assertThat(method.ops.filterIsInstance<JumpInt>()).isEmpty()
@@ -225,7 +235,8 @@ class CompilerEmissionAuditTest {
         CompilerTestSupport.configure()
         val errors = ErrorList()
         val result =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .compileModule(Source(source, "file:///Emission.x"), repository, errors)
         assertThat(result.succeeded()).describedAs(errors.errors.toString()).isTrue()
         assertThat(errors.errors.map { it.code }).containsExactlyElementsOf(expectedCodes)
@@ -248,6 +259,5 @@ class CompilerEmissionAuditTest {
         return FileStructure(ByteArrayInputStream(bytes))
     }
 
-    private fun statements(ast: BinaryAST): List<BinaryAST> =
-        if (ast is StmtBlockAST) ast.stmts.flatMap(::statements) else listOf(ast)
+    private fun statements(ast: BinaryAST): List<BinaryAST> = if (ast is StmtBlockAST) ast.stmts.flatMap(::statements) else listOf(ast)
 }

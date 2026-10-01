@@ -32,8 +32,7 @@ object PluginPaths {
      * `PluginManagerCore.getPlugin(PluginId)`, both of which are marked `@ApiStatus.Internal` as of
      * 2026.2 and flagged by the Plugin Verifier.
      */
-    fun selfDescriptor(): PluginDescriptor? =
-        (PluginPaths::class.java.classLoader as? PluginAwareClassLoader)?.pluginDescriptor
+    fun selfDescriptor(): PluginDescriptor? = (PluginPaths::class.java.classLoader as? PluginAwareClassLoader)?.pluginDescriptor
 
     /**
      * Find a server JAR in the plugin's `bin/` directory.
@@ -56,7 +55,7 @@ object PluginPaths {
             }
             logger.warn("$jarName not at expected location: $candidate")
             logger.warn(
-                "Plugin directory contents: ${pluginPath.toFile().listFiles()?.map { it.name }}"
+                "Plugin directory contents: ${pluginPath.toFile().listFiles()?.map { it.name }}",
             )
         }
 
@@ -76,10 +75,10 @@ object PluginPaths {
                 appendLine("$jarName not found. Searched locations:")
                 searchedPaths.forEach { appendLine("  - $it") }
                 appendLine(
-                    "JARs must be in bin/ (NOT lib/) to avoid classloader conflicts with LSP4IJ."
+                    "JARs must be in bin/ (NOT lib/) to avoid classloader conflicts with LSP4IJ.",
                 )
                 append("This is a plugin packaging issue. Please report it.")
-            }
+            },
         )
     }
 

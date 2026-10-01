@@ -1,13 +1,13 @@
 package org.xvm.lsp.adapter.xdk
 
-import java.io.File
-import java.net.URI
-import java.net.URISyntaxException
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.XvmStructure
 import org.xvm.compiler.Source
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
+import java.io.File
+import java.net.URI
+import java.net.URISyntaxException
 import org.xvm.util.Severity as XtcSeverity
 
 /**
@@ -31,13 +31,18 @@ internal fun ErrorListener.ErrorInfo.toDiagnostic(
     return Diagnostic(
         location =
             when (where) {
-                is ErrorListener.Site.In ->
+                is ErrorListener.Site.In -> {
                     sourceUri?.let { spanOf(it, where) } ?: wholeDocument(uri)
+                }
 
-                is ErrorListener.Site.At -> declarations[where.xs()] ?: wholeDocument(uri)
+                is ErrorListener.Site.At -> {
+                    declarations[where.xs()] ?: wholeDocument(uri)
+                }
 
                 // a whole-compilation failure belongs to the document, not to a line in it
-                else -> wholeDocument(uri)
+                else -> {
+                    wholeDocument(uri)
+                }
             },
         severity = severity.toLspSeverity(),
         message =
@@ -80,8 +85,12 @@ private fun wholeDocument(uri: String): Location = Location(uri, 0, 0, 0, 0)
 private fun XtcSeverity.toLspSeverity(): Diagnostic.Severity =
     when (this) {
         XtcSeverity.FATAL,
-        XtcSeverity.ERROR -> Diagnostic.Severity.ERROR
+        XtcSeverity.ERROR,
+        -> Diagnostic.Severity.ERROR
+
         XtcSeverity.WARNING -> Diagnostic.Severity.WARNING
+
         XtcSeverity.INFO -> Diagnostic.Severity.INFORMATION
+
         XtcSeverity.NONE -> Diagnostic.Severity.HINT
     }

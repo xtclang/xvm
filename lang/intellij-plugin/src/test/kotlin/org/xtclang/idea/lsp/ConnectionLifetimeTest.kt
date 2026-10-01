@@ -1,13 +1,13 @@
 package org.xtclang.idea.lsp
 
 import com.redhat.devtools.lsp4ij.server.CannotStartProcessException
+import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
+import org.junit.jupiter.api.Test
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
-import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.assertThatThrownBy
-import org.junit.jupiter.api.Test
 
 class ConnectionLifetimeTest {
     @Test
@@ -59,10 +59,11 @@ class ConnectionLifetimeTest {
         Executors.newVirtualThreadPerTaskExecutor().use { executor ->
             val start = executor.submit { lifetime.start() }
             check(entered.await(10, SECONDS))
-            val stop = executor.submit {
-                stopping.countDown()
-                lifetime.stop()
-            }
+            val stop =
+                executor.submit {
+                    stopping.countDown()
+                    lifetime.stop()
+                }
             try {
                 check(stopping.await(10, SECONDS))
                 assertThat(children.get()).isZero()

@@ -59,13 +59,20 @@ fun JavaExec.configureGenerator(
 
     val outputPath =
         if (outputFileNames.isNotEmpty()) {
-            generatedDir.get().file(outputFileNames.first()).asFile.absolutePath
+            generatedDir
+                .get()
+                .file(outputFileNames.first())
+                .asFile.absolutePath
         } else {
             generatedDir.get().asFile.absolutePath
         }
     args(command, outputPath)
 
-    inputs.files(sourceSets.main.get().kotlin.sourceDirectories)
+    inputs.files(
+        sourceSets.main
+            .get()
+            .kotlin.sourceDirectories,
+    )
     // Declare specific output files to avoid overlapping claims
     outputFileNames.forEach { fileName ->
         outputs.file(generatedDir.map { it.file(fileName) })
@@ -124,8 +131,16 @@ val generateTreeSitter =
         inputs.property("generatorLogLevel", generatorLogLevel)
         // Tree-sitter expects a directory, not a file
         args("tree-sitter", generatedDir.get().asFile.absolutePath)
-        inputs.files(sourceSets.main.get().kotlin.sourceDirectories)
-        inputs.files(sourceSets.main.get().resources.sourceDirectories)
+        inputs.files(
+            sourceSets.main
+                .get()
+                .kotlin.sourceDirectories,
+        )
+        inputs.files(
+            sourceSets.main
+                .get()
+                .resources.sourceDirectories,
+        )
         outputs.files(
             generatedDir.map { it.file("grammar.js") },
             generatedDir.map { it.file("highlights.scm") },
@@ -151,11 +166,17 @@ val generateScannerC =
         args(
             generatedDir
                 .map {
-                    it.dir("src").file("scanner.c").asFile.absolutePath
-                }
-                .get()
+                    it
+                        .dir("src")
+                        .file("scanner.c")
+                        .asFile.absolutePath
+                }.get(),
         )
-        inputs.files(sourceSets.main.get().kotlin.sourceDirectories)
+        inputs.files(
+            sourceSets.main
+                .get()
+                .kotlin.sourceDirectories,
+        )
         outputs.file(generatedDir.map { it.dir("src").file("scanner.c") })
     }
 

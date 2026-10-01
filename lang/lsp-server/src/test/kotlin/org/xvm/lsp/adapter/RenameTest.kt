@@ -37,8 +37,7 @@ class RenameTest : TreeSitterTestBase() {
                     class Person {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             val result = ts.prepareRename(uri, 1, 10)
@@ -64,8 +63,7 @@ class RenameTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             val edit = ts.rename(uri, 1, 10, "Human")
@@ -111,8 +109,7 @@ class RenameTest : TreeSitterTestBase() {
                         count = 3;
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // cursor on `count` usage inside run() -- line 4, col 8
@@ -147,8 +144,7 @@ class RenameTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // cursor on the outer `value` declaration -- line 2, col 12
@@ -176,8 +172,7 @@ class RenameTest : TreeSitterTestBase() {
                     class Person {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // `Person` spans cols 10..16 on line 1; col 16 is the exclusive end

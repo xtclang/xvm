@@ -66,8 +66,7 @@ class CompletionTest : TreeSitterTestBase() {
                     class Person {
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             val completions = ts.getCompletions(uri, 3, 0)
@@ -98,8 +97,7 @@ class CompletionTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             val completions = logged("shouldIncludeMethodNames", ts.getCompletions(uri, 9, 0))
@@ -142,8 +140,7 @@ class CompletionTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             val completions =
@@ -178,8 +175,7 @@ class CompletionTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             val completions =
@@ -194,7 +190,7 @@ class CompletionTest : TreeSitterTestBase() {
 
         @Test
         @DisplayName(
-            "should include module-level @Inject property when completing inside a function body"
+            "should include module-level @Inject property when completing inside a function body",
         )
         fun shouldIncludeModuleLevelInjectPropertyInBodyCompletions() {
             val uri = freshUri()
@@ -208,8 +204,7 @@ class CompletionTest : TreeSitterTestBase() {
                         co
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // Cursor on the `co` line, inside the run() body.
@@ -240,8 +235,7 @@ class CompletionTest : TreeSitterTestBase() {
                         gr
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // Cursor right after the `gr` partial -- line 3, column 10
@@ -266,8 +260,7 @@ class CompletionTest : TreeSitterTestBase() {
                         return amount;
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // Cursor inside the body, line 2, column 8 (start of `return`)
@@ -295,8 +288,7 @@ class CompletionTest : TreeSitterTestBase() {
                         co
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             val completions =
@@ -331,8 +323,7 @@ class CompletionTest : TreeSitterTestBase() {
                         gr
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             val completions = ts.getCompletions(uri, 3, 10)
@@ -379,8 +370,7 @@ class CompletionTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             // Cursor on the `return a;` line, after the local declaration. Line 11, column 19.
@@ -441,8 +431,7 @@ class CompletionTest : TreeSitterTestBase() {
                         }
                     }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
 
             ts.compile(uri, source)
             val completions =

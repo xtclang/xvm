@@ -1,7 +1,6 @@
 package org.xvm.lsp.server
 
 import com.google.gson.JsonObject
-import java.util.concurrent.CompletableFuture
 import org.assertj.core.api.Assertions.assertThat
 import org.eclipse.lsp4j.ConfigurationParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
@@ -26,6 +25,7 @@ import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.treesitter.TreeSitterAdapter
+import java.util.concurrent.CompletableFuture
 
 /**
  * Round-trip test for formatting config flow:
@@ -72,22 +72,20 @@ class FormattingConfigRoundTripTest {
     private fun mockClientWithConfig(config: Map<String, Any>): LanguageClient {
         val client = mock(LanguageClient::class.java)
         `when`(
-                client.configuration(
-                    org.mockito.ArgumentMatchers.any(ConfigurationParams::class.java)
-                )
-            )
-            .thenReturn(CompletableFuture.completedFuture(listOf(config)))
+            client.configuration(
+                org.mockito.ArgumentMatchers.any(ConfigurationParams::class.java),
+            ),
+        ).thenReturn(CompletableFuture.completedFuture(listOf(config)))
         return client
     }
 
     private fun mockClientWithJsonConfig(config: JsonObject): LanguageClient {
         val client = mock(LanguageClient::class.java)
         `when`(
-                client.configuration(
-                    org.mockito.ArgumentMatchers.any(ConfigurationParams::class.java)
-                )
-            )
-            .thenReturn(CompletableFuture.completedFuture(listOf(config)))
+            client.configuration(
+                org.mockito.ArgumentMatchers.any(ConfigurationParams::class.java),
+            ),
+        ).thenReturn(CompletableFuture.completedFuture(listOf(config)))
         return client
     }
 
@@ -98,11 +96,10 @@ class FormattingConfigRoundTripTest {
     private fun mockClientWithoutConfig(): LanguageClient {
         val client = mock(LanguageClient::class.java)
         `when`(
-                client.configuration(
-                    org.mockito.ArgumentMatchers.any(ConfigurationParams::class.java)
-                )
-            )
-            .thenReturn(CompletableFuture.completedFuture(listOf(null)))
+            client.configuration(
+                org.mockito.ArgumentMatchers.any(ConfigurationParams::class.java),
+            ),
+        ).thenReturn(CompletableFuture.completedFuture(listOf(null)))
         return client
     }
 
@@ -121,7 +118,7 @@ class FormattingConfigRoundTripTest {
 
         // Open the document
         server.textDocumentService.didOpen(
-            DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, source))
+            DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, source)),
         )
 
         // Request on-type formatting
@@ -136,7 +133,11 @@ class FormattingConfigRoundTripTest {
         return if (edits.isNullOrEmpty()) {
             -1
         } else {
-            edits.first().newText.substringBefore('\n').length
+            edits
+                .first()
+                .newText
+                .substringBefore('\n')
+                .length
         }
     }
 
@@ -342,10 +343,9 @@ class FormattingConfigRoundTripTest {
                   void foo() {
                       }
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
             server.textDocumentService.didOpen(
-                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, source))
+                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, source)),
             )
 
             val params =
@@ -384,10 +384,9 @@ class FormattingConfigRoundTripTest {
                 module myapp {
                   void foo() {}
                 }
-                """
-                    .trimIndent()
+                """.trimIndent()
             server.textDocumentService.didOpen(
-                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, source))
+                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, source)),
             )
 
             val params =
@@ -424,15 +423,14 @@ class FormattingConfigRoundTripTest {
             var callCount = 0
             val client = mock(LanguageClient::class.java)
             `when`(
-                    client.configuration(
-                        org.mockito.ArgumentMatchers.any(ConfigurationParams::class.java)
-                    )
-                )
-                .thenAnswer {
-                    val idx = callCount.coerceAtMost(configs.size - 1)
-                    callCount++
-                    CompletableFuture.completedFuture(listOf(configs[idx]))
-                }
+                client.configuration(
+                    org.mockito.ArgumentMatchers.any(ConfigurationParams::class.java),
+                ),
+            ).thenAnswer {
+                val idx = callCount.coerceAtMost(configs.size - 1)
+                callCount++
+                CompletableFuture.completedFuture(listOf(configs[idx]))
+            }
 
             val server = XtcLanguageServer(adapter!!)
             server.connect(client)
@@ -445,7 +443,7 @@ class FormattingConfigRoundTripTest {
 
             // Send didChangeConfiguration — server re-requests config, gets second answer
             server.workspaceService.didChangeConfiguration(
-                org.eclipse.lsp4j.DidChangeConfigurationParams(com.google.gson.JsonObject())
+                org.eclipse.lsp4j.DidChangeConfigurationParams(com.google.gson.JsonObject()),
             )
 
             Thread.sleep(100)

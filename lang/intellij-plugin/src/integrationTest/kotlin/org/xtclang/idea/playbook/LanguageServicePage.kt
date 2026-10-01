@@ -12,11 +12,23 @@ interface LanguageServicePage {
 
     fun content(project: Project): String?
 
-    fun restore(project: Project, content: String?)
+    fun restore(
+        project: Project,
+        content: String?,
+    )
 
-    fun transport(project: Project, value: String)
+    fun transport(
+        project: Project,
+        value: String,
+    )
 
-    fun saveFormatting(project: Project, enabled: Boolean): Boolean
+    fun saveFormatting(
+        project: Project,
+        enabled: Boolean,
+    ): Boolean
 
-    fun indent(project: Project, value: Int): Int
+    fun indent(
+        project: Project,
+        value: Int,
+    ): Int
 }

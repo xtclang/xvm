@@ -25,8 +25,7 @@ fun Driver.renameFamily(
     val root = Path.of(singleProject().getBasePath()).resolve(id)
     val files = data.rows("files")
 
-    fun graphContains(name: String): Boolean =
-        utility(CompilerSettingsPage::class).content(singleProject())?.contains(name) == true
+    fun graphContains(name: String): Boolean = utility(CompilerSettingsPage::class).content(singleProject())?.contains(name) == true
 
     fun contents(file: String): String {
         val path = root.resolve(file)
@@ -58,8 +57,10 @@ fun Driver.renameFamily(
             val destination = file["destination"].asString
             Files.exists(root.resolve(destination)) &&
                 contents(destination) == file["expected"].asString &&
-                (destination == file["file"].asString ||
-                    !Files.exists(root.resolve(file["file"].asString)))
+                (
+                    destination == file["file"].asString ||
+                        !Files.exists(root.resolve(file["file"].asString))
+                )
         }
     }
     val renamed = open("$id/${request["destination"].asString}")
@@ -81,8 +82,10 @@ fun Driver.renameFamily(
             val original = file["file"].asString
             Files.exists(root.resolve(original)) &&
                 contents(original) == file["source"].asString &&
-                (original == file["destination"].asString ||
-                    !Files.exists(root.resolve(file["destination"].asString)))
+                (
+                    original == file["destination"].asString ||
+                        !Files.exists(root.resolve(file["destination"].asString))
+                )
         }
     }
     clean(open(data.text("file")))

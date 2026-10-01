@@ -2,7 +2,7 @@ import com.diffplug.gradle.spotless.SpotlessCheck
 import com.diffplug.gradle.spotless.SpotlessExtension
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-/**
+/*
  * Root project for XTC language tooling.
  *
  * Subprojects:
@@ -23,13 +23,16 @@ plugins {
 // =============================================================================
 // Build scripts are owned by the lang root; each Kotlin subproject owns its sources,
 // including tests and integration tests. Generated and synced build outputs stay excluded.
-val ktfmtVersion = libs.versions.lang.ktfmt.get()
+// Match master's Spotless integration; do not restore the separate ktlint Gradle plugin.
+val ktlintVersion =
+    libs.versions.lang.ktlint
+        .get()
 val ci = providers.environmentVariable("CI").isPresent
 
 spotless {
     kotlinGradle {
         target("*.gradle.kts", "*/build.gradle.kts")
-        ktfmt(ktfmtVersion).kotlinlangStyle()
+        ktlint(ktlintVersion)
     }
 }
 
@@ -48,7 +51,7 @@ subprojects {
         configure<SpotlessExtension> {
             kotlin {
                 target("src/**/*.kt", "src/**/*.kts")
-                ktfmt(ktfmtVersion).kotlinlangStyle()
+                ktlint(ktlintVersion)
             }
         }
         val applyFormatting = tasks.named("spotlessApply")
@@ -114,9 +117,17 @@ val updateGeneratedExamples =
 // -PincludeBuildAttachVsCodeExtension=true,
 // or build it directly: ./gradlew :lang:intellij-plugin:buildPlugin
 val attachIntellijPlugin =
-    providers.gradleProperty("includeBuildAttachIntellijPlugin").orElse("false").get().toBoolean()
+    providers
+        .gradleProperty("includeBuildAttachIntellijPlugin")
+        .orElse("false")
+        .get()
+        .toBoolean()
 val attachVsCodeExtension =
-    providers.gradleProperty("includeBuildAttachVsCodeExtension").orElse("false").get().toBoolean()
+    providers
+        .gradleProperty("includeBuildAttachVsCodeExtension")
+        .orElse("false")
+        .get()
+        .toBoolean()
 
 // Projects to aggregate standard lifecycle tasks from
 val coreProjects =

@@ -1,11 +1,5 @@
 package org.xvm.lsp.server
 
-import java.nio.file.Path
-import java.util.concurrent.CompletableFuture
-import java.util.concurrent.CopyOnWriteArrayList
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit.SECONDS
-import java.util.concurrent.atomic.AtomicInteger
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.awaitility.Awaitility.await
@@ -42,6 +36,12 @@ import org.xvm.api.EmbeddingSupport
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import java.nio.file.Path
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CopyOnWriteArrayList
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit.SECONDS
+import java.util.concurrent.atomic.AtomicInteger
 
 class XdkPullDiagnosticsTest {
     @TempDir lateinit var directory: Path
@@ -56,15 +56,16 @@ class XdkPullDiagnosticsTest {
                 "Dormant" to
                     "module Dormant { package api import Contracts; String run(api.Mapper<String> mapper) = mapper.map(\"b\"); }",
             )
-        val uris = sources.mapValues { (name, source) ->
-            directory
-                .resolve("$name.x")
-                .toFile()
-                .apply { writeText(source) }
-                .toPath()
-                .toUri()
-                .toString()
-        }
+        val uris =
+            sources.mapValues { (name, source) ->
+                directory
+                    .resolve("$name.x")
+                    .toFile()
+                    .apply { writeText(source) }
+                    .toPath()
+                    .toUri()
+                    .toString()
+            }
         Session().use { session ->
             session.server.replaceCompilerSourceModules(
                 uris.map { (name, uri) ->
@@ -73,7 +74,7 @@ class XdkPullDiagnosticsTest {
                         uri,
                         if (name == "Contracts") emptySet() else setOf("Contracts"),
                     )
-                }
+                },
             )
             session.open(uris.getValue("Contracts"), sources.getValue("Contracts"), 1)
             assertThat(session.pull(uris.getValue("Contracts")).left.items).isEmpty()
@@ -88,11 +89,10 @@ class XdkPullDiagnosticsTest {
             uris.values.forEach { uri ->
                 assertThat(session.pull(uri).left.items).isEmpty()
                 assertThat(
-                        session.server.textDocumentService
-                            .documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri)))
-                            .get(10, SECONDS)
-                    )
-                    .isNotEmpty()
+                    session.server.textDocumentService
+                        .documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri)))
+                        .get(10, SECONDS),
+                ).isNotEmpty()
             }
         }
     }
@@ -132,21 +132,25 @@ class XdkPullDiagnosticsTest {
         val file = directory.resolve("Pull.x").toFile().apply { writeText(BROKEN) }
         Session().use { session ->
             session.server.replaceCompilerSourceModules(
-                listOf(XdkSourceModule("Pull", file.toURI().toString()))
+                listOf(XdkSourceModule("Pull", file.toURI().toString())),
             )
-            val first = session.workspace().items.single().left
+            val first =
+                session
+                    .workspace()
+                    .items
+                    .single()
+                    .left
             assertThat(first.items).isNotEmpty()
             assertThat(first.version == null).isTrue()
             assertThat(session.adapter.getCachedResult(first.uri)).isNull()
             assertThat(
-                    session
-                        .workspace(listOf(PreviousResultId(first.uri, first.resultId)))
-                        .items
-                        .single()
-                        .right
-                        .resultId
-                )
-                .isEqualTo(first.resultId)
+                session
+                    .workspace(listOf(PreviousResultId(first.uri, first.resultId)))
+                    .items
+                    .single()
+                    .right
+                    .resultId,
+            ).isEqualTo(first.resultId)
             // No watcher notification: a read-only query still recaptures and compares disk inputs.
             file.writeText(VALID)
             val fixed =
@@ -173,14 +177,18 @@ class XdkPullDiagnosticsTest {
 
             fun watched(type: FileChangeType) =
                 session.server.workspaceService.didChangeWatchedFiles(
-                    DidChangeWatchedFilesParams(listOf(FileEvent(uri, type)))
+                    DidChangeWatchedFilesParams(listOf(FileEvent(uri, type))),
                 )
 
             member.writeText("class Bad extends Missing {}")
             watched(FileChangeType.Created)
             val broken = session.pull(uri).left
             assertThat(broken.items).isNotEmpty()
-            assertThat(broken.items.first().range.start.character).isEqualTo(18)
+            assertThat(
+                broken.items
+                    .first()
+                    .range.start.character,
+            ).isEqualTo(18)
             assertThat(session.pull(member.toURI().toString(), broken.resultId).right.resultId)
                 .isEqualTo(broken.resultId)
 
@@ -215,29 +223,26 @@ class XdkPullDiagnosticsTest {
                 listOf(
                     XdkSourceModule("Library", lib.toURI().toString()),
                     XdkSourceModule("Pull", app.toURI().toString(), setOf("Library")),
-                )
+                ),
             )
             session.open(app.toURI().toString(), app.readText(), 7)
             val report = session.pull(app.toURI().toString()).left
             assertThat(report.items.map { it.code.left }).contains("DEPENDENCY-FAILED")
             assertThat(
-                    report.relatedDocuments
-                        .getValue(lib.canonicalFile.toURI().toString())
-                        .left
-                        .items
-                )
-                .isNotEmpty()
+                report.relatedDocuments
+                    .getValue(lib.canonicalFile.toURI().toString())
+                    .left
+                    .items,
+            ).isNotEmpty()
             val workspace = session.workspace().items.map { it.left }
             assertThat(workspace.single { it.uri == app.toURI().toString() }.version).isEqualTo(7)
             assertThat(
-                    workspace.single { it.uri == app.toURI().toString() }.items.map { it.code.left }
-                )
-                .contains("DEPENDENCY-FAILED")
+                workspace.single { it.uri == app.toURI().toString() }.items.map { it.code.left },
+            ).contains("DEPENDENCY-FAILED")
             assertThat(
-                    workspace.single { it.uri == lib.canonicalFile.toURI().toString() }.version ==
-                        null
-                )
-                .isTrue()
+                workspace.single { it.uri == lib.canonicalFile.toURI().toString() }.version ==
+                    null,
+            ).isTrue()
         }
     }
 
@@ -250,11 +255,16 @@ class XdkPullDiagnosticsTest {
             session.open(uri, BROKEN, 3)
             val broken = session.pull(uri).left
             session.server.textDocumentService.didClose(
-                DidCloseTextDocumentParams(TextDocumentIdentifier(uri))
+                DidCloseTextDocumentParams(TextDocumentIdentifier(uri)),
             )
             assertThat(session.pull(uri, broken.resultId).left.items).isEmpty()
             file.writeText(BROKEN)
-            val previous = session.workspace().items.single().left
+            val previous =
+                session
+                    .workspace()
+                    .items
+                    .single()
+                    .left
             session.server.replaceCompilerSourceModules(emptyList())
             val removed =
                 session
@@ -291,11 +301,12 @@ class XdkPullDiagnosticsTest {
         CompilerTestSupport.configure()
         val started = CountDownLatch(1)
         val release = CountDownLatch(1)
-        val adapter = XdkAdapter { source, errors ->
-            started.countDown()
-            check(release.await(20, SECONDS))
-            EmbeddingSupport.instance().compileModule(source, null, errors)
-        }
+        val adapter =
+            XdkAdapter { source, errors ->
+                started.countDown()
+                check(release.await(20, SECONDS))
+                EmbeddingSupport.instance().compileModule(source, null, errors)
+            }
         try {
             Session(adapter = adapter).use { session ->
                 session.open(URI, BROKEN, 1)
@@ -321,12 +332,15 @@ class XdkPullDiagnosticsTest {
         val file = directory.resolve("Pull.x").toFile().apply { writeText(BROKEN) }
         Session().use { session ->
             session.server.replaceCompilerSourceModules(
-                listOf(XdkSourceModule("Pull", file.toURI().toString()))
+                listOf(XdkSourceModule("Pull", file.toURI().toString())),
             )
             val first = session.pull(file.toPath().toUri().toString()).left
             assertThat(first.items).isNotEmpty()
-            assertThat(first.items.first().range.start.character)
-                .isEqualTo(BROKEN.indexOf("missing"))
+            assertThat(
+                first.items
+                    .first()
+                    .range.start.character,
+            ).isEqualTo(BROKEN.indexOf("missing"))
             assertThat(first.items.first().relatedInformation).isNull()
             val second = session.pull(file.canonicalFile.toURI().toString(), first.resultId)
             assertThat(second.right.resultId).isEqualTo(first.resultId)
@@ -346,16 +360,14 @@ class XdkPullDiagnosticsTest {
         init {
             val client = mock(LanguageClient::class.java)
             doAnswer {
-                    published += it.getArgument<PublishDiagnosticsParams>(0)
-                    null
-                }
-                .`when`(client)
+                published += it.getArgument<PublishDiagnosticsParams>(0)
+                null
+            }.`when`(client)
                 .publishDiagnostics(any())
             doAnswer {
-                    refreshes.incrementAndGet()
-                    CompletableFuture.completedFuture<Void>(null)
-                }
-                .`when`(client)
+                refreshes.incrementAndGet()
+                CompletableFuture.completedFuture<Void>(null)
+            }.`when`(client)
                 .refreshDiagnostics()
             server.connect(client)
             capabilities =
@@ -366,11 +378,12 @@ class XdkPullDiagnosticsTest {
                                 ClientCapabilities().apply {
                                     textDocument =
                                         TextDocumentClientCapabilities().apply {
-                                            if (pull)
+                                            if (pull) {
                                                 diagnostic =
                                                     DiagnosticCapabilities().apply {
                                                         relatedDocumentSupport = related
                                                     }
+                                            }
                                         }
                                     workspace =
                                         WorkspaceClientCapabilities().apply {
@@ -380,35 +393,42 @@ class XdkPullDiagnosticsTest {
                                                 }
                                         }
                                 }
-                        }
-                    )
-                    .get(10, SECONDS)
+                        },
+                    ).get(10, SECONDS)
                     .capabilities
             server.initialized(InitializedParams())
         }
 
-        fun open(uri: String, text: String, version: Int) =
-            server.textDocumentService.didOpen(
-                DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", version, text))
-            )
+        fun open(
+            uri: String,
+            text: String,
+            version: Int,
+        ) = server.textDocumentService.didOpen(
+            DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", version, text)),
+        )
 
-        fun change(uri: String, text: String, version: Int) =
-            server.textDocumentService.didChange(
-                DidChangeTextDocumentParams(
-                    VersionedTextDocumentIdentifier(uri, version),
-                    listOf(TextDocumentContentChangeEvent(text)),
-                )
-            )
+        fun change(
+            uri: String,
+            text: String,
+            version: Int,
+        ) = server.textDocumentService.didChange(
+            DidChangeTextDocumentParams(
+                VersionedTextDocumentIdentifier(uri, version),
+                listOf(TextDocumentContentChangeEvent(text)),
+            ),
+        )
 
-        fun pull(uri: String, previous: String? = null, identifier: String? = null) =
-            server.textDocumentService
-                .diagnostic(
-                    DocumentDiagnosticParams(TextDocumentIdentifier(uri)).apply {
-                        previousResultId = previous
-                        this.identifier = identifier
-                    }
-                )
-                .get(30, SECONDS)
+        fun pull(
+            uri: String,
+            previous: String? = null,
+            identifier: String? = null,
+        ) = server.textDocumentService
+            .diagnostic(
+                DocumentDiagnosticParams(TextDocumentIdentifier(uri)).apply {
+                    previousResultId = previous
+                    this.identifier = identifier
+                },
+            ).get(30, SECONDS)
 
         fun workspace(previous: List<PreviousResultId> = emptyList()) =
             server.workspaceService.diagnostic(WorkspaceDiagnosticParams(previous)).get(30, SECONDS)

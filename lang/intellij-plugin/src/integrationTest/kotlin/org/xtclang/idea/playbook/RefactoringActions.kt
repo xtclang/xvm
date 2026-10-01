@@ -26,6 +26,7 @@ fun Driver.rename(
 ) {
     focusEditor(editor)
     withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
+
     fun available() =
         withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
             utility(NativeEditorUi::class).renameAvailable(editor.editor)
@@ -78,8 +79,7 @@ fun Driver.chooseXtcFileRename() {
                     .x {
                         byType("javax.swing.JRadioButton") and
                             byAccessibleName("Rename ecstasy file and references")
-                    }
-                    .component,
+                    }.component,
                 NativeButton::class,
             )
         val accept = cast(chooser.button("OK").component, NativeButton::class)
@@ -190,9 +190,10 @@ fun Driver.partialGraphHierarchy(
     focusEditor(editor)
     withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(at) }
     invokeAction("TypeHierarchy", component = editor.component)
-    val browser = ui.x {
-        byType("com.redhat.devtools.lsp4ij.features.typeHierarchy.LSPTypeHierarchyBrowser")
-    }
+    val browser =
+        ui.x {
+            byType("com.redhat.devtools.lsp4ij.features.typeHierarchy.LSPTypeHierarchyBrowser")
+        }
     awaitUi("native type hierarchy includes $child", 45.seconds) {
         if (!browser.present()) return@awaitUi false
         // The native browser expands its root. Observe it without expandAll's nested ten-second
@@ -208,8 +209,9 @@ fun Driver.partialGraphHierarchy(
     awaitUi("incomplete graph withholds references while retaining local navigation", 45.seconds) {
         withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
             val view = views.getSelectedUsageView()
-            if (view == null || view == previous || view.isSearchInProgress())
+            if (view == null || view == previous || view.isSearchInProgress()) {
                 return@withContext false
+            }
             // LSP4IJ combines definitions, implementations, type definitions and references here.
             // The declaration may remain, but the known extends-use must not masquerade as a
             // complete workspace reference result beside the broken module.

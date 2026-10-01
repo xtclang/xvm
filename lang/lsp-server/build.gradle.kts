@@ -69,11 +69,10 @@ val logLevel: String =
         .stringValue(
             "log",
             System.getenv("XTC_LOG_LEVEL")?.uppercase() ?: "INFO",
-        )
-        .uppercase()
+        ).uppercase()
 
 logger.info(
-    "[lsp] LSP Server adapter: $lspAdapter, semanticTokens: $lspSemanticTokens, logLevel: $logLevel"
+    "[lsp] LSP Server adapter: $lspAdapter, semanticTokens: $lspSemanticTokens, logLevel: $logLevel",
 )
 
 // Generate build info for version verification and adapter selection
@@ -100,15 +99,14 @@ val generateBuildInfo =
                 lsp.version=$projectVersion
                 lsp.adapter=$adapter
                 lsp.semanticTokens=$semanticTokens
-                """
-                    .trimIndent() + "\n"
+                """.trimIndent() + "\n",
             )
         }
     }
 
 sourceSets.main {
     resources.srcDir(
-        generateBuildInfo.map { layout.buildDirectory.dir("generated/resources/buildinfo") }
+        generateBuildInfo.map { layout.buildDirectory.dir("generated/resources/buildinfo") },
     )
 }
 
@@ -237,7 +235,7 @@ val compilerSourceIndex =
 // Add native library resources to source sets
 sourceSets.main {
     resources.srcDir(
-        copyNativeLibToResources.map { layout.buildDirectory.dir("generated/resources") }
+        copyNativeLibToResources.map { layout.buildDirectory.dir("generated/resources") },
     )
 }
 
@@ -260,7 +258,10 @@ val classes = tasks.named("classes")
 tasks.withType<Test>().configureEach {
     systemProperty(
         "xtc.trace.directory",
-        layout.buildDirectory.dir("reports/execution-trace").get().asFile.absolutePath,
+        layout.buildDirectory
+            .dir("reports/execution-trace")
+            .get()
+            .asFile.absolutePath,
     )
 }
 
@@ -355,7 +356,10 @@ val compilerStdioTest =
     tasks.register<Test>("compilerStdioTest") {
         group = "verification"
         description = "Test the packaged compiler LSP over stdio (requires -Plsp.adapter=compiler)"
-        testClassesDirs = sourceSets.test.get().output.classesDirs
+        testClassesDirs =
+            sourceSets.test
+                .get()
+                .output.classesDirs
         classpath = sourceSets.test.get().runtimeClasspath
         useJUnitPlatform { includeTags("compiler-stdio") }
 
@@ -409,9 +413,9 @@ val lspVersionProperties =
             artifact(
                 generateBuildInfo.map {
                     layout.buildDirectory.file(
-                        "generated/resources/buildinfo/lsp-version.properties"
+                        "generated/resources/buildinfo/lsp-version.properties",
                     )
-                }
+                },
             ) {
                 builtBy(generateBuildInfo)
             }

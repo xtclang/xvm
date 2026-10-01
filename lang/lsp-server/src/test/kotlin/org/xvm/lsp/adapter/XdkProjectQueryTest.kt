@@ -1,7 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.io.File
-import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
@@ -15,6 +13,8 @@ import org.xvm.lsp.adapter.xdk.XdkProject
 import org.xvm.lsp.adapter.xdk.XdkProjectQueries
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.toDependency
+import java.io.File
+import java.nio.file.Path
 
 class XdkProjectQueryTest {
     @TempDir lateinit var directory: Path
@@ -36,7 +36,7 @@ class XdkProjectQueryTest {
                     listOf(
                         XdkSourceModule("Library", library.toURI().toString()),
                         XdkSourceModule("Consumer", consumer.toURI().toString(), dependencies),
-                    )
+                    ),
                 ),
                 emptyMap(),
                 XdkDependencies(emptyList()),
@@ -48,14 +48,13 @@ class XdkProjectQueryTest {
 
         val incomplete = graph(emptySet())
         assertThat(
-                incomplete.rename(
-                    library.toURI().toString(),
-                    0,
-                    library.readText().indexOf("pick"),
-                    "choose",
-                )
-            )
-            .isNull()
+            incomplete.rename(
+                library.toURI().toString(),
+                0,
+                library.readText().indexOf("pick"),
+                "choose",
+            ),
+        ).isNull()
         assertThat(incomplete.symbols("run")).isEmpty()
         val configured = graph(setOf("Library"))
         val edit =
@@ -65,7 +64,7 @@ class XdkProjectQueryTest {
                     0,
                     library.readText().indexOf("pick"),
                     "choose",
-                )
+                ),
             )
         assertThat(edit.changes.keys)
             .containsExactlyInAnyOrder(library.toURI().toString(), consumer.toURI().toString())
@@ -99,16 +98,14 @@ class XdkProjectQueryTest {
         assertThat(references.map { it.uri })
             .containsExactlyInAnyOrder(library.toURI().toString(), consumer.toURI().toString())
         assertThat(
-                query
-                    .references(
-                        consumer.toURI().toString(),
-                        0,
-                        consumer.readText().indexOf("pick"),
-                        false,
-                    )
-                    .map { it.uri }
-            )
-            .containsExactly(consumer.toURI().toString())
+            query
+                .references(
+                    consumer.toURI().toString(),
+                    0,
+                    consumer.readText().indexOf("pick"),
+                    false,
+                ).map { it.uri },
+        ).containsExactly(consumer.toURI().toString())
     }
 
     @Test
@@ -136,7 +133,7 @@ class XdkProjectQueryTest {
                         0,
                         library.readText().indexOf("pick"),
                         "choose",
-                    )
+                    ),
             )
         assertThat(edit.versioned).isTrue()
         assertThat(edit.changes.keys)
@@ -166,7 +163,7 @@ class XdkProjectQueryTest {
                         0,
                         consumer.readText().indexOf("pick"),
                         "choose",
-                    )
+                    ),
             )
         assertThat(edit.changes.getValue(library.toURI().toString())).hasSize(1)
         assertThat(edit.changes.getValue(consumer.toURI().toString())).hasSize(3)
@@ -193,7 +190,7 @@ class XdkProjectQueryTest {
                         0,
                         library.readText().indexOf("map("),
                         "convert",
-                    )
+                    ),
             )
         assertThat(edit.changes.getValue(consumer.toURI().toString())).hasSize(3)
         assertThat(apply(consumer, edit))
@@ -221,7 +218,7 @@ class XdkProjectQueryTest {
                         0,
                         library.readText().indexOf("pick"),
                         "choose",
-                    )
+                    ),
             )
         assertThat(apply(consumer, edit))
             .contains("Int choose(Int value) = super(value)", "child.choose(value = 1)")
@@ -241,14 +238,13 @@ class XdkProjectQueryTest {
             )
         val query = query(library, consumer)
         assertThat(
-                query.rename(
-                    library.toURI().toString(),
-                    0,
-                    library.readText().indexOf("pick"),
-                    "choose",
-                )
-            )
-            .isNull()
+            query.rename(
+                library.toURI().toString(),
+                0,
+                library.readText().indexOf("pick"),
+                "choose",
+            ),
+        ).isNull()
         // Success alone is insufficient: the unchanged call now selects the renamed Int overload.
         val changed = artifact("Library", library.readText().replace("pick", "choose"))
         artifact("Consumer", consumer.readText(), changed)
@@ -268,14 +264,13 @@ class XdkProjectQueryTest {
             )
         val query = query(library, consumer)
         assertThat(
-                query.rename(
-                    library.toURI().toString(),
-                    0,
-                    library.readText().indexOf("pick"),
-                    "choose",
-                )
-            )
-            .isNull()
+            query.rename(
+                library.toURI().toString(),
+                0,
+                library.readText().indexOf("pick"),
+                "choose",
+            ),
+        ).isNull()
         val changed = artifact("Library", library.readText().replace("pick", "choose"))
         artifact("Consumer", consumer.readText(), changed)
     }
@@ -293,8 +288,8 @@ class XdkProjectQueryTest {
             XdkProjectQueries(
                 XdkProject(
                     listOf(
-                        XdkSourceModule("Consumer", consumer.toURI().toString(), setOf("Library"))
-                    )
+                        XdkSourceModule("Consumer", consumer.toURI().toString(), setOf("Library")),
+                    ),
                 ),
                 emptyMap(),
                 XdkDependencies(listOf(binary)),
@@ -304,14 +299,13 @@ class XdkProjectQueryTest {
                 { false },
             )
         assertThat(
-                query.rename(
-                    consumer.toURI().toString(),
-                    0,
-                    consumer.readText().indexOf("pick"),
-                    "choose",
-                )
-            )
-            .isNull()
+            query.rename(
+                consumer.toURI().toString(),
+                0,
+                consumer.readText().indexOf("pick"),
+                "choose",
+            ),
+        ).isNull()
     }
 
     @Test
@@ -332,20 +326,19 @@ class XdkProjectQueryTest {
                 listOf(
                     XdkSourceModule("Library", library.toURI().toString()),
                     XdkSourceModule("Consumer", consumer.toURI().toString()),
-                )
+                ),
             )
             for (file in listOf(library, consumer)) {
                 val result = adapter.compile(file.toURI().toString(), file.readText())
                 assertThat(result.success).describedAs(result.diagnostics.toString()).isTrue()
                 val at = file.readText().indexOf("indexOf")
                 assertThat(
-                        adapter
-                            .getSignatureHelp(file.toURI().toString(), 0, at + "indexOf(".length)
-                            ?.signatures
-                            ?.single()
-                            ?.label
-                    )
-                    .contains("indexOf", "Char")
+                    adapter
+                        .getSignatureHelp(file.toURI().toString(), 0, at + "indexOf(".length)
+                        ?.signatures
+                        ?.single()
+                        ?.label,
+                ).contains("indexOf", "Char")
                 assertThat(adapter.prepareRename(file.toURI().toString(), 0, at)).isNull()
                 assertThat(adapter.rename(file.toURI().toString(), 0, at, "locate")).isNull()
             }
@@ -385,7 +378,7 @@ class XdkProjectQueryTest {
             directory.toRealPath().resolve("Consumer/Child.x").toFile().apply {
                 parentFile.mkdirs()
                 writeText(
-                    "class Child extends mid.Middle { @Override Int pick(Int value) = value; }"
+                    "class Child extends mid.Middle { @Override Int pick(Int value) = value; }",
                 )
             }
         CompilerTestSupport.configure()
@@ -396,7 +389,7 @@ class XdkProjectQueryTest {
                         XdkSourceModule("Library", library.toURI().toString()),
                         XdkSourceModule("Bridge", bridge.toURI().toString(), setOf("Library")),
                         XdkSourceModule("Consumer", consumer.toURI().toString(), setOf("Bridge")),
-                    )
+                    ),
                 ),
                 emptyMap(),
                 XdkDependencies(emptyList()),
@@ -406,16 +399,14 @@ class XdkProjectQueryTest {
                 { false },
             )
         assertThat(
-                query
-                    .references(
-                        member.toURI().toString(),
-                        0,
-                        member.readText().indexOf("pick"),
-                        true,
-                    )
-                    .map { it.uri }
-            )
-            .containsExactlyInAnyOrder(member.toURI().toString(), consumer.toURI().toString())
+            query
+                .references(
+                    member.toURI().toString(),
+                    0,
+                    member.readText().indexOf("pick"),
+                    true,
+                ).map { it.uri },
+        ).containsExactlyInAnyOrder(member.toURI().toString(), consumer.toURI().toString())
         val edit =
             requireNotNull(
                 query.rename(
@@ -423,7 +414,7 @@ class XdkProjectQueryTest {
                     0,
                     library.readText().indexOf("pick"),
                     "choose",
-                )
+                ),
             )
         assertThat(edit.changes.keys)
             .containsExactlyInAnyOrder(
@@ -444,37 +435,34 @@ class XdkProjectQueryTest {
             )
         for (name in listOf("return", "bad name", "choose()")) {
             assertThat(
-                    query(library, consumer)
-                        .rename(
-                            library.toURI().toString(),
-                            0,
-                            library.readText().indexOf("pick"),
-                            name,
-                        )
-                )
-                .isNull()
-        }
-        consumer.writeText(consumer.readText().replace("box.pick(1)", "box."))
-        assertThat(
                 query(library, consumer)
                     .rename(
                         library.toURI().toString(),
                         0,
                         library.readText().indexOf("pick"),
-                        "choose",
-                    )
-            )
-            .isNull()
+                        name,
+                    ),
+            ).isNull()
+        }
+        consumer.writeText(consumer.readText().replace("box.pick(1)", "box."))
         assertThat(
-                query(library, consumer)
-                    .references(
-                        library.toURI().toString(),
-                        0,
-                        library.readText().indexOf("pick"),
-                        true,
-                    )
-            )
-            .isEmpty()
+            query(library, consumer)
+                .rename(
+                    library.toURI().toString(),
+                    0,
+                    library.readText().indexOf("pick"),
+                    "choose",
+                ),
+        ).isNull()
+        assertThat(
+            query(library, consumer)
+                .references(
+                    library.toURI().toString(),
+                    0,
+                    library.readText().indexOf("pick"),
+                    true,
+                ),
+        ).isEmpty()
     }
 
     @Test
@@ -496,7 +484,7 @@ class XdkProjectQueryTest {
                         0,
                         library.readText().indexOf("read"),
                         "fetch",
-                    )
+                    ),
             )
         assertThat(apply(library, edit)).contains("Int fetch()")
         assertThat(apply(consumer, edit)).contains("Int fetch()", "value.fetch()")
@@ -510,7 +498,8 @@ class XdkProjectQueryTest {
         CompilerTestSupport.configure()
         val errors = ErrorList()
         val compilation =
-            EmbeddingSupport.instance()
+            EmbeddingSupport
+                .instance()
                 .compileModule(
                     Source(text, "$name.x"),
                     XdkDependencies(dependencies.toList()).open().repository,
@@ -523,18 +512,24 @@ class XdkProjectQueryTest {
     private fun source(
         name: String,
         text: String,
-    ): File = directory.toRealPath().resolve("$name.x").toFile().apply { writeText(text) }
+    ): File =
+        directory
+            .toRealPath()
+            .resolve("$name.x")
+            .toFile()
+            .apply { writeText(text) }
 
     private fun query(vararg files: File): XdkProjectQueries {
         CompilerTestSupport.configure()
-        val modules = files.mapIndexed { index, file ->
-            val dependencies = if (index == 0) emptySet() else setOf(files[0].nameWithoutExtension)
-            XdkSourceModule(
-                file.nameWithoutExtension,
-                file.toURI().toString(),
-                dependencies,
-            )
-        }
+        val modules =
+            files.mapIndexed { index, file ->
+                val dependencies = if (index == 0) emptySet() else setOf(files[0].nameWithoutExtension)
+                XdkSourceModule(
+                    file.nameWithoutExtension,
+                    file.toURI().toString(),
+                    dependencies,
+                )
+            }
         return XdkProjectQueries(
             XdkProject(modules),
             emptyMap(),

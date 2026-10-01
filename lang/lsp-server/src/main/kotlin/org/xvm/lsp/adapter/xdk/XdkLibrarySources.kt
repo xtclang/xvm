@@ -1,11 +1,5 @@
 package org.xvm.lsp.adapter.xdk
 
-import java.nio.file.Files
-import java.security.MessageDigest
-import java.util.HexFormat
-import java.util.Properties
-import java.util.concurrent.ConcurrentHashMap
-import java.util.zip.ZipInputStream
 import org.xvm.asm.ClassStructure
 import org.xvm.asm.ErrorList
 import org.xvm.asm.MethodStructure
@@ -21,6 +15,12 @@ import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.compiler.ast.PropertyDeclarationStatement
 import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.lsp.util.ExecutionTrace
+import java.nio.file.Files
+import java.security.MessageDigest
+import java.util.HexFormat
+import java.util.Properties
+import java.util.concurrent.ConcurrentHashMap
+import java.util.zip.ZipInputStream
 
 /**
  * Matching distribution sources. Parsed declaration ranges and text survive; compiler objects do
@@ -142,43 +142,48 @@ internal object XdkLibrarySources {
             } catch (_: CompilerException) {
                 null
             }
-        val declarations = buildList {
-            fun visit(
-                node: AstNode,
-                parents: List<String>,
-            ) {
-                val token =
-                    when (node) {
-                        is TypeCompositionStatement -> node.nameToken
-                        is MethodDeclarationStatement -> node.nameToken
-                        is PropertyDeclarationStatement -> node.nameToken
-                        else -> null
+        val declarations =
+            buildList {
+                fun visit(
+                    node: AstNode,
+                    parents: List<String>,
+                ) {
+                    val token =
+                        when (node) {
+                            is TypeCompositionStatement -> node.nameToken
+                            is MethodDeclarationStatement -> node.nameToken
+                            is PropertyDeclarationStatement -> node.nameToken
+                            else -> null
+                        }
+                    val module = node is TypeCompositionStatement && node.category.id == Token.Id.MODULE
+                    val names = if (token == null || module) parents else parents + token.valueText
+                    if (token != null) {
+                        fun at(position: Long) =
+                            SemanticModel.Position(
+                                Source.calculateLine(position),
+                                Source.calculateOffset(position),
+                            )
+                        add(
+                            Declaration(
+                                names,
+                                SemanticModel.Range(at(token.startPosition), at(token.endPosition)),
+                                Source.calculateLine(node.startPosition),
+                                Source.calculateLine(node.endPosition),
+                            ),
+                        )
                     }
-                val module = node is TypeCompositionStatement && node.category.id == Token.Id.MODULE
-                val names = if (token == null || module) parents else parents + token.valueText
-                if (token != null) {
-                    fun at(position: Long) =
-                        SemanticModel.Position(
-                            Source.calculateLine(position),
-                            Source.calculateOffset(position),
-                        )
-                    add(
-                        Declaration(
-                            names,
-                            SemanticModel.Range(at(token.startPosition), at(token.endPosition)),
-                            Source.calculateLine(node.startPosition),
-                            Source.calculateLine(node.endPosition),
-                        )
-                    )
+                    node.childNodes().forEach { visit(it, names) }
                 }
-                node.childNodes().forEach { visit(it, names) }
+                if (root != null && !errors.hasSeriousErrors()) {
+                    visit(root, path.substringBeforeLast('/', "").split('/').drop(1))
+                }
             }
-            if (root != null && !errors.hasSeriousErrors()) {
-                visit(root, path.substringBeforeLast('/', "").split('/').drop(1))
-            }
-        }
         return SourceFile(
-            file.toFile().canonicalFile.toURI().toString(),
+            file
+                .toFile()
+                .canonicalFile
+                .toURI()
+                .toString(),
             declarations,
         )
     }

@@ -1,6 +1,10 @@
 package org.xvm.lsp.index
 
 import io.github.treesitter.jtreesitter.Language
+import org.slf4j.LoggerFactory
+import org.xvm.lsp.model.SymbolInfo
+import org.xvm.lsp.treesitter.XtcParser
+import org.xvm.lsp.treesitter.XtcQueryEngine
 import java.io.Closeable
 import java.net.URI
 import java.nio.file.FileVisitResult
@@ -17,10 +21,6 @@ import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.io.path.extension
 import kotlin.io.path.readText
 import kotlin.time.measureTimedValue
-import org.slf4j.LoggerFactory
-import org.xvm.lsp.model.SymbolInfo
-import org.xvm.lsp.treesitter.XtcParser
-import org.xvm.lsp.treesitter.XtcQueryEngine
 
 /**
  * Background workspace scanner that builds and maintains the [WorkspaceIndex].
@@ -59,7 +59,9 @@ class WorkspaceIndexer(
 
     // Owned by parseLock. Identity distinguishes reads across edits, closes and disk events;
     // a later disk read must also supersede an earlier read of the same closed file.
-    private class Revision(val open: Boolean)
+    private class Revision(
+        val open: Boolean,
+    )
 
     private val revisions = mutableMapOf<String, Revision>()
 
@@ -87,7 +89,8 @@ class WorkspaceIndexer(
         progressReporter: ((String, Int) -> Unit)? = null,
     ): CompletableFuture<Unit> {
         val canceled = AtomicBoolean()
-        return CompletableFuture.supplyAsync(
+        return CompletableFuture
+            .supplyAsync(
                 {
                     logger.info("starting workspace scan: {} folders: {}", folders.size, folders)
                     val (_, elapsed) =
@@ -105,15 +108,17 @@ class WorkspaceIndexer(
                             // workers,
                             // and shutdownNow leaves queued CompletableFutures uncompleted.
                             files.forEachIndexed { index, file ->
-                                if (closed.get() || canceled.get())
+                                if (closed.get() || canceled.get()) {
                                     throw CancellationException("Workspace indexing retired")
+                                }
                                 indexFile(file)
                                 val done = index + 1
-                                if (done % 50 == 0 || done == files.size)
+                                if (done % 50 == 0 || done == files.size) {
                                     progressReporter?.invoke(
                                         "Indexing: $done/${files.size} files",
                                         done * 100 / files.size,
                                     )
+                                }
                             }
                             progressReporter?.invoke("Indexing complete", 100)
                         }
@@ -126,8 +131,7 @@ class WorkspaceIndexer(
                     )
                 },
                 threadPool,
-            )
-            .also { result ->
+            ).also { result ->
                 result.whenComplete { _, _ -> if (result.isCancelled) canceled.set(true) }
             }
     }
@@ -180,7 +184,15 @@ class WorkspaceIndexer(
 
     private fun canonicalUri(uri: String): String =
         URI.create(uri).let {
-            if (it.scheme == "file") Path.of(it).normalize().toUri().toString() else uri
+            if (it.scheme == "file") {
+                Path
+                    .of(it)
+                    .normalize()
+                    .toUri()
+                    .toString()
+            } else {
+                uri
+            }
         }
 
     private fun indexFile(path: Path) {
@@ -194,8 +206,11 @@ class WorkspaceIndexer(
             val content = readFile(path)
             synchronized(parseLock) {
                 if (closed.get() || revisions[uri] !== revision) return
-                if (content == null) index.removeSymbolsForUri(uri)
-                else index.addSymbols(uri, parseAndExtractSymbols(uri, content))
+                if (content == null) {
+                    index.removeSymbolsForUri(uri)
+                } else {
+                    index.addSymbols(uri, parseAndExtractSymbols(uri, content))
+                }
             }
         } catch (e: Exception) {
             logger.warn("failed to index {}: {}", path, e.message)
@@ -226,48 +241,50 @@ class WorkspaceIndexer(
         symbols: List<SymbolInfo>,
         uri: String,
         containerName: String?,
-    ): List<IndexedSymbol> = buildList {
-        for (symbol in symbols) {
-            add(IndexedSymbol.fromSymbolInfo(symbol, uri, containerName))
-            if (symbol.children.isNotEmpty()) {
-                addAll(flattenSymbols(symbol.children, uri, symbol.name))
+    ): List<IndexedSymbol> =
+        buildList {
+            for (symbol in symbols) {
+                add(IndexedSymbol.fromSymbolInfo(symbol, uri, containerName))
+                if (symbol.children.isNotEmpty()) {
+                    addAll(flattenSymbols(symbol.children, uri, symbol.name))
+                }
             }
         }
-    }
 
-    private fun collectXtcFiles(folders: List<String>): List<Path> = buildList {
-        for (folder in folders) {
-            val path = Path.of(folder)
-            if (!Files.isDirectory(path)) {
-                logger.warn("not a directory: {}", folder)
-                continue
-            }
-            val countBefore = size
-            Files.walkFileTree(
-                path,
-                object : SimpleFileVisitor<Path>() {
-                    override fun visitFile(
-                        file: Path,
-                        attrs: BasicFileAttributes,
-                    ): FileVisitResult {
-                        if (file.extension == "x") {
-                            add(file)
+    private fun collectXtcFiles(folders: List<String>): List<Path> =
+        buildList {
+            for (folder in folders) {
+                val path = Path.of(folder)
+                if (!Files.isDirectory(path)) {
+                    logger.warn("not a directory: {}", folder)
+                    continue
+                }
+                val countBefore = size
+                Files.walkFileTree(
+                    path,
+                    object : SimpleFileVisitor<Path>() {
+                        override fun visitFile(
+                            file: Path,
+                            attrs: BasicFileAttributes,
+                        ): FileVisitResult {
+                            if (file.extension == "x") {
+                                add(file)
+                            }
+                            return FileVisitResult.CONTINUE
                         }
-                        return FileVisitResult.CONTINUE
-                    }
 
-                    override fun visitFileFailed(
-                        file: Path,
-                        exc: java.io.IOException,
-                    ): FileVisitResult {
-                        logger.warn("cannot visit {}: {}", file, exc.message)
-                        return FileVisitResult.CONTINUE
-                    }
-                },
-            )
-            logger.info("scanned folder {}: {} .x files", folder, size - countBefore)
+                        override fun visitFileFailed(
+                            file: Path,
+                            exc: java.io.IOException,
+                        ): FileVisitResult {
+                            logger.warn("cannot visit {}: {}", file, exc.message)
+                            return FileVisitResult.CONTINUE
+                        }
+                    },
+                )
+                logger.info("scanned folder {}: {} .x files", folder, size - countBefore)
+            }
         }
-    }
 
     override fun close() {
         if (!closed.compareAndSet(false, true)) return

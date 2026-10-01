@@ -1,8 +1,8 @@
 package org.xtclang.idea
 
 import com.intellij.openapi.diagnostic.logger
-import kotlin.io.path.exists
 import org.jetbrains.plugins.textmate.api.TextMateBundleProvider
+import kotlin.io.path.exists
 
 /**
  * Provides TextMate bundle for XTC syntax highlighting. The bundle is located in the plugin's
