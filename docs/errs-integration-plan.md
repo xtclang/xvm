@@ -8517,8 +8517,18 @@ scenario, both driver registrations and catalog/manual updates travel with that 
 
 ### L64 real-source completion continuation (2026-10-01)
 
-Checkpoint `fb0925569` committed the validated empty-name slice before this continuation.
-The following work remains together on errs; no remote operation was requested for this checkpoint.
+These local checkpoints remain together on errs:
+
+| Commit | Scope for future extraction |
+| --- | --- |
+| `5826d831e` | Kotlin syntax names/templates, negotiated snippets, shared X149/X150 and the UP18 client constraint |
+| `fb0925569` | Parser-owned empty property/parameter name slots, partial syntax API and shared X151 |
+| `ea722b18b` | Wrapped names, literal/enclosing-instance arguments, recursive bounds, contextual templates, platform anonymous-body recovery and expanded shared acceptance |
+
+The third commit builds on the first two. Its compiler/API, adapter and editor-test portions must
+be extracted in the groups below and validated independently; the integrated commit is not a
+claim that every portion is independently cherry-pickable. No remote operation was requested
+for this checkpoint.
 
 - Wrapped declaration-name types retain nullable, array, immutable, annotation, function and
   compound syntax without registering an absent name. Kotlin proposes `stringArray`, `fn` or
