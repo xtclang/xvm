@@ -7,7 +7,7 @@ This document describes the XVM project's CI/CD pipeline, workflow architecture,
 1. [Pipeline Overview](#pipeline-overview)
 2. [Architecture: Build Artifacts vs Releases](#architecture-build-artifacts-vs-releases)
 3. [Master Push Flow](#master-push-flow)
-4. [IntelliJ Plugin & Lang Validation Gating](#intellij-plugin--lang-validation-gating)
+4. [Lang Checks & Plugin Gating](#lang-checks--plugin-gating)
 5. [Workflows Reference](#workflows-reference)
 6. [Actions Reference](#actions-reference)
 7. [Testing Publishing on Non-Master Branches](#testing-publishing-on-non-master-branches)
@@ -193,53 +193,69 @@ All workflows support `workflow_dispatch` for manual testing from any branch.
 
 ---
 
-## IntelliJ Plugin & Lang Validation Gating
+## Lang Checks & Plugin Gating
 
-The lang composite build (`lang/`) and the IntelliJ plugin lane are gated separately from the rest of the XDK build, because resolving the IntelliJ plugin dependencies makes Gradle noticeably slower. The gating is driven by the `dorny/paths-filter` step in `commit.yml`, which sets `lang=true` whenever any file under `lang/**` changed.
+The lang composite build (`lang/`) is gated separately from the rest of the XDK build, because resolving it (the IntelliJ plugin in particular) makes Gradle noticeably slower. `commit.yml` runs three kinds of lang checks, each only when a change needs it:
 
-### Plugin: build, verify, publish
+| Check | Runs | Gradle |
+|-------|------|--------|
+| **Lang core** | tree-sitter grammar, XDK corpus parse, native libraries; LSP adapter and DSL tests | `Validate lang` step |
+| **IntelliJ plugin** | the main build with the lang composite attached (all lang `check` tasks), Plugin Verifier | `Build the XDK` step |
+| **VS Code extension** | headless tests, VSIX | `Validate lang` step |
 
-Build, verify, and publish always travel together — they're all gated by the same `effective-publish-intellij` flag computed in `commit.yml`'s `Compute IntelliJ publish flags` step.
+### What each check reads
 
-| # | Event | Branch | `lang/` changed | Workflow inputs | Plugin built & verified | Plugin published (GitHub release ZIP) |
-|---|-------|--------|-----------------|------------------|--------------------------|----------------------------------------|
-| 1 | `push` | `master` | ✓ | — | ✅ yes | ✅ yes (auto on merge) |
-| 2 | `push` | `master` | ✗ | — | ⏭️ no | ⏭️ no |
-| 3 | `pull_request` | any | ✓ or ✗ | n/a | ⏭️ no | ⏭️ no |
-| 4 | `push` | non-master | ✓ or ✗ | n/a | ⏭️ no | ⏭️ no |
-| 5 | `workflow_dispatch` | any | ✓ | `publish-intellij-plugin=true` | ✅ yes | ✅ yes |
-| 6 | `workflow_dispatch` | any | ✗ | `publish-intellij-plugin=true` | ⏭️ no (reason logged) | ⏭️ no |
-| 7 | `workflow_dispatch` | any | ✓ or ✗ | `force-publish-intellij-plugin=true` | ✅ yes (override) | ✅ yes (override) |
-| 8 | `workflow_dispatch` | any | ✓ or ✗ | neither flag set | ⏭️ no | ⏭️ no |
+`.github/scripts/ci-changes.py`, run once by the `changes` job, holds the one definition of what the checks read, inside `lang/` and outside it, and derives from it both which checks a change needs and a fingerprint of each check's inputs. A file belongs to the first group that matches it:
 
-Plain-English summary:
+| Group | Files | Needs |
+|-------|-------|-------|
+| `vscode` | `lang/vscode-extension/README.md`, `LICENSE.md` and `doc/logo/x.jpg` (bundled into the VSIX; vsce validates the README) | VS Code extension |
+| `docs` | any other `*.md`, and the `doc/` tree | nothing |
+| `intellij` | `lang/intellij-plugin/**`, `XtcProjectCreator.java` (synced into the plugin) | IntelliJ plugin |
+| `vscode` | `lang/vscode-extension/**` | VS Code extension |
+| `build` | the rest of `lang/**`, `build-logic/settings-plugins/**`, `build-logic/common-plugins/**`, the Gradle wrapper, root `settings.gradle.kts`, `build.gradle.kts`, `gradle.properties`, `version.properties`, `gradle/gradle-daemon-jvm.properties` | all three |
+| `corpus` | `lib_*/**/*.x`, `manualTests/src/main/x/**/*.x` (parsed by the core checks) | lang core |
 
-- **Default policy**: the plugin only ships when there's a real reason — `lang/` was touched and the change merged to master.
-- **Manual trigger**: `publish-intellij-plugin=true` does the same thing on demand from any branch, still gated on lang changes.
-- **Override**: `force-publish-intellij-plugin=true` is the one escape hatch that ignores the lang-changed gate (useful for emergency re-publish without a code change).
+Version catalog entries belong to the group whose sources use them, found from the `libs.…` accessors and resolved through `version.ref`: `lang-intellij-ide` is an `intellij` entry, `lang-node` a `vscode` entry, and `junit`, used by the lang build and the build-logic it includes, a `build` entry. A catalog entry nothing in lang uses (such as `gson`) needs no lang check.
 
-### Why two `workflow_dispatch` inputs (`publish-intellij-plugin` vs. `force-publish-intellij-plugin`)?
+So a VS Code-only change (such as the weekly Dependabot npm bumps) does not build and verify the IntelliJ plugin with the two IntelliJ distributions (~3 GB) that downloads, an IntelliJ-only change does not run the VS Code tests, and an XDK change runs only the core checks, and only when it touches `.x` sources.
+
+### Documentation-only pull requests
+
+A pull request whose changes are all in the `docs` group needs no build or tests: the `changes` job reports `docs-only=true`, `build-and-test` (and the plugin integration test after it) is skipped, and the required `All builds complete` check reports success. Nothing in CI reads documentation; the markdown files that ship inside the XDK distribution are still built and published by the master push that merges the change. Master pushes and manual dispatches always build.
+
+### Skipping checks a pull request already passed
+
+A pull request re-ran its lang checks on every push while its diff touched lang, even when the push (a rebase, a commit elsewhere) left a check's inputs unchanged. Each check that passes on a pull request saves an empty Actions cache entry, `lang-<check>-passed-<fingerprint>`, and later runs of the pull request with the same fingerprint skip that check. Pull request caches are scoped to the pull request, so markers never cross pull requests. Master pushes and manual dispatches never skip.
+
+### Plugin publishing
+
+Each plugin publishes from its own inputs (a `build` change counts for both):
+
+| # | Event | Plugin inputs changed | Workflow inputs | Plugin checks | Plugin published (GitHub release) |
+|---|-------|-----------------------|-----------------|---------------|-----------------------------------|
+| 1 | `push` to `master` | ✓ | — | ✅ yes | ✅ yes (auto on merge) |
+| 2 | `push` to `master` | ✗ | — | ⏭️ no | ⏭️ no |
+| 3 | `pull_request` | ✓ | n/a | ✅ yes (unless already passed) | ⏭️ no |
+| 4 | `workflow_dispatch` | ✓ | `publish-<plugin>=true` | ✅ yes | ✅ yes |
+| 5 | `workflow_dispatch` | ✗ | `publish-<plugin>=true` | ✅ yes | ⏭️ no (reason logged) |
+| 6 | `workflow_dispatch` | ✓ or ✗ | `force-publish-<plugin>=true` | ✅ yes | ✅ yes (override) |
+| 7 | `workflow_dispatch` | ✓ or ✗ | `include-lang=true` | ✅ yes | ⏭️ no |
+
+`<plugin>` is `intellij-plugin` or `vscode-extension`. A plugin's publish inputs also run the lang core checks, so nothing publishes without its checks.
+
+### Why two `workflow_dispatch` inputs per plugin (`publish-…` vs. `force-publish-…`)?
 
 These two booleans look similar but mean different things; they are not redundant.
 
-| Input | Effect | Respects lang-changed gate? | When to use |
-|-------|--------|------------------------------|-------------|
-| `publish-intellij-plugin=true` | "Publish the plugin **if** there's something new to publish." Treats this manual run the same way a master push does — runs only when `lang/` actually changed. | ✅ Yes — no-op if `lang/` is untouched. | Testing the publication pipeline from a branch when you've made lang changes. |
-| `force-publish-intellij-plugin=true` | "Publish the plugin no matter what." Skips the lang-changed check entirely. | ❌ No — always publishes. | Emergency re-publish without a code change (corrupted artifact, broken JetBrains release, manual version bump, etc.). Intended as an escape hatch, not the default knob. |
+| Input | Effect | Respects the changed-inputs gate? | When to use |
+|-------|--------|-----------------------------------|-------------|
+| `publish-intellij-plugin=true`, `publish-vscode-extension=true` | "Publish the plugin **if** there's something new to publish." Treats this manual run the same way a master push does: publishes only when the plugin's inputs changed. | ✅ Yes — no-op when they are untouched. | Testing the publication pipeline from a branch with plugin changes. |
+| `force-publish-intellij-plugin=true`, `force-publish-vscode-extension=true` | "Publish the plugin no matter what." Skips the changed-inputs check entirely. | ❌ No — always publishes. | Emergency re-publish without a code change (corrupted artifact, broken release, manual version bump, etc.). An escape hatch, not the default knob. |
 
-In short: `publish-intellij-plugin` mirrors the natural master-push policy and is **safe to leave on** — it self-suppresses when there's nothing to publish. `force-publish-intellij-plugin` is the **override** that ignores all gating and should be used sparingly.
+In short: `publish-…` mirrors the natural master-push policy and is **safe to leave on** — it self-suppresses when there's nothing to publish. `force-publish-…` is the **override** that ignores all gating and should be used sparingly.
 
-### LSP / tree-sitter tests (independent of publishing)
-
-The LSP unit tests and tree-sitter grammar/corpus validation run on every event where lang/ was touched, regardless of publish flags. This is the cheap signal for catching regressions on the way in — every PR that edits `lang/` runs the suite, even though no plugin is built.
-
-| # | Event | `lang/` changed | Runner | LSP & tree-sitter tests |
-|---|-------|------------------|--------|--------------------------|
-| 1 | any | ✓ | `ubuntu-latest` | ✅ run (path filter triggers) |
-| 2 | any | ✗ | `ubuntu-latest` | ⏭️ skip (logged as "no changes under lang/") |
-| 3 | any | any | `windows-latest` | ⏭️ skip (Ubuntu-only step) |
-
-The validation step passes `-PincludeBuildLang=true -PincludeBuildAttachLang=true` directly to its `./gradlew` invocations rather than relying on the job-level env, so the lang composite build is included only for those specific commands. The rest of the job continues to run with lang excluded.
+The lang checks run only on `ubuntu-latest`. The `Validate lang` step passes `-PincludeBuildLang=true -PincludeBuildAttachLang=true` directly to its `./gradlew` invocation rather than relying on the job-level env, so the lang composite build is included only for that command.
 
 ### What's published where
 
@@ -247,8 +263,8 @@ The validation step passes `-PincludeBuildLang=true -PincludeBuildAttachLang=tru
 |----------|---------|-------------|
 | XDK Maven snapshots | always on `push` to `master` | Maven Central Snapshots, GitHub Packages |
 | XDK GitHub release (snapshot) | always on `push` to `master` | GitHub Releases |
-| **IntelliJ plugin snapshot ZIP** | per the table above (`effective-publish-intellij=true`) | GitHub Releases (attached to the snapshot release) |
-| **VS Code extension snapshot VSIX** | same lane as the IntelliJ plugin ZIP | GitHub Releases (`vscode-extension-snapshots` prerelease) |
+| **IntelliJ plugin snapshot ZIP** | per the table above (`effective-publish-intellij=true`) | GitHub Releases (`intellij-plugin-snapshots` prerelease) |
+| **VS Code extension snapshot VSIX** | per the table above (`effective-publish-vscode=true`) | GitHub Releases (`vscode-extension-snapshots` prerelease) |
 | IntelliJ Marketplace | **not** by this workflow — release-only via `promote-release.yml` | JetBrains Marketplace |
 
 Note on Marketplace: snapshot CI never pushes to JetBrains Marketplace. That's intentional — Marketplace is for tagged releases, handled by the separate `promote-release.yml` flow.
@@ -275,8 +291,10 @@ Note on Marketplace: snapshot CI never pushes to JetBrains Marketplace. That's i
 **Manual Trigger Inputs**:
 - `publish-snapshots`: Trigger snapshot, Docker, and Homebrew publishing after build (default: false)
   - Set `true` to test the existing snapshot publication pipeline on non-master branches
-- `publish-intellij-plugin`: Trigger IntelliJ plugin snapshot publication after build (default: false)
-  - Requires `include-lang=true` on manual runs
+- `publish-intellij-plugin`, `publish-vscode-extension`: Publish that plugin's snapshot if its inputs changed (default: false)
+- `force-publish-intellij-plugin`, `force-publish-vscode-extension`: Publish that plugin's snapshot regardless (default: false)
+  - See [Lang Checks & Plugin Gating](#lang-checks--plugin-gating)
+- `include-lang`: Run every lang check (default: false)
 - `platforms`: Run on specific platform(s) or all
   - Options: `ubuntu-latest`, `windows-latest`, `all`
   - Default: `ubuntu-latest`
@@ -287,7 +305,7 @@ Note on Marketplace: snapshot CI never pushes to JetBrains Marketplace. That's i
 **Manual Test Configuration**:
 - Set via workflow inputs when manually triggering
 - Inline execution to keep cache hot
-- Tasks: `runXtc`, `runOne`, `runTwoTestsInSequence`, `runAllTestTasks`/`runParallel`
+- Tasks: `runCiTestTasks` (`runXtc`, `runTwoTestsInSequence`, `runSequential`, `runJitTests`, `runSmallFloatsJit`), or `runCiTestTasksParallel` with `runParallel` in place of `runSequential` when `parallel-test-mode=true`
 
 **Example Manual Trigger**:
 ```bash

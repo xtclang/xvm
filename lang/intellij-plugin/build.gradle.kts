@@ -192,14 +192,10 @@ abstract class SummarizeSearchableOptionsTask : DefaultTask() {
 // =============================================================================
 // IntelliJ IDE Resolution
 // =============================================================================
-// IntelliJ Community is downloaded and cached under lang/.intellijPlatform/ides/
-// by the IntelliJ Platform Gradle Plugin. The cached IDE is keyed by version,
-// so changing the version in libs.versions.toml automatically downloads the
-// new version on the next build.
-//
-// To force a fresh re-download, delete the cache directory:
-//   rm -rf lang/.intellijPlatform/ides
-// Then run any task that requires the IDE (e.g. ./gradlew :lang:intellij-plugin:runIde).
+// The IntelliJ Platform Gradle Plugin downloads each IDE (the one the plugin compiles
+// against and the one Plugin Verifier checks) into the Gradle cache, keyed by version,
+// so changing the version in libs.versions.toml downloads the new one on the next build.
+// Where the IDE is extracted is set by `caching.ides` below.
 
 val ideVersion =
     libs.versions.lang.intellij.ide
@@ -383,10 +379,18 @@ val intellijSinceBuild: String =
         "$year$major"
     }
 
+// Locally, IDEs are extracted by a Gradle artifact transform into the Gradle user home: one
+// copy per IDE version shared by every checkout and worktree, extracted under Gradle's
+// cross-process locks and removed by Gradle's cache cleanup once unused. The plugin's own
+// per-checkout cache (lang/.intellijPlatform/ides) kept a ~4 GB copy of every IDE version
+// in each checkout, never pruned. CI keeps that cache: its checkout is thrown away after
+// the run, while transform output would land in the Gradle user home that CI caches.
+val extractIdesIntoCheckout = providers.environmentVariable("CI").isPresent
+
 intellijPlatform {
     caching {
         ides {
-            enabled = true
+            enabled = extractIdesIntoCheckout
             path = rootProject.layout.projectDirectory.dir(".intellijPlatform/ides")
             name = { requested -> "${requested.type}-${requested.version}" }
         }

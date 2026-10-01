@@ -123,7 +123,7 @@ An IntelliJ IDEA plugin providing XTC support:
 - Use `-PintellijLocalPath=/path` to use a local IntelliJ installation instead
 - Plugin bytecode target is Java 25
 - Searchable-options indexing is disabled by default for ordinary builds
-- IntelliJ Platform IDE caching is enabled under `lang/.intellijPlatform/ides`
+- IDEs are extracted into the Gradle user home and shared by all checkouts (CI extracts them under `lang/.intellijPlatform/ides`)
 
 ### 4. VS Code Extension (`lang/vscode-extension/`)
 

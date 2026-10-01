@@ -41,7 +41,17 @@ on:
                 required: false
                 default: false
             force-publish-intellij-plugin:
-                description: 'Force IntelliJ plugin snapshot publishing regardless of publish-intellij-plugin or lang/** changes'
+                description: 'Force IntelliJ plugin snapshot publishing regardless of publish-intellij-plugin or IntelliJ plugin input changes'
+                type: boolean
+                required: false
+                default: false
+            publish-vscode-extension:
+                description: 'Trigger VS Code extension snapshot publishing after build'
+                type: boolean
+                required: false
+                default: false
+            force-publish-vscode-extension:
+                description: 'Force VS Code extension snapshot publishing regardless of publish-vscode-extension or VS Code extension input changes'
                 type: boolean
                 required: false
                 default: false
@@ -132,10 +142,60 @@ concurrency:
     cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 jobs:
-    build-and-test:
+    # What CI this change needs. .github/scripts/ci-changes.py holds the one definition of what
+    # each piece of CI reads and derives every answer from it:
+    #   - docs-only: the change touches only documentation (markdown anywhere, the doc/ tree, apart
+    #     from what the VSIX bundles). A pull request like that skips build-and-test; the required
+    #     "All builds complete" check still reports. Master pushes and manual runs always build.
+    #   - which lang checks the change needs, and a fingerprint of each check's inputs:
+    #       - core (tree-sitter grammar, XDK corpus, native libraries; LSP adapter and DSL tests)
+    #       - IntelliJ plugin (main build with the lang composite attached, Plugin Verifier)
+    #       - VS Code extension (headless tests, VSIX)
+    #     Their inputs live inside lang/ and outside it (build-logic, the Gradle wrapper, XDK sources
+    #     the core checks parse, files the plugins bundle, and the version catalog entries each part
+    #     of the lang build uses). A change to the shared lang build needs every check; a plugin
+    #     change only that plugin's; an XDK source change only the core checks. So a VS Code-only
+    #     change (such as the weekly Dependabot npm bumps) does not build and verify the IntelliJ
+    #     plugin with the two IntelliJ distributions (~3 GB) that downloads, and an XDK-only bump that
+    #     lang does not use runs no lang check.
+    changes:
+        name: Classify changes
+        runs-on: ubuntu-latest
         outputs:
-            lang-changed: ${{ steps.lang-changes.outputs.lang }}
+            docs-only: ${{ steps.classify.outputs.docs-only }}
+            lang: ${{ steps.classify.outputs.lang }}
+            core: ${{ steps.classify.outputs.core }}
+            intellij: ${{ steps.classify.outputs.intellij }}
+            vscode: ${{ steps.classify.outputs.vscode }}
+            reason: ${{ steps.classify.outputs.reason }}
+            core-fingerprint: ${{ steps.classify.outputs.core-fingerprint }}
+            intellij-fingerprint: ${{ steps.classify.outputs.intellij-fingerprint }}
+            vscode-fingerprint: ${{ steps.classify.outputs.vscode-fingerprint }}
+        steps:
+            - name: Fetch Sources
+              uses: actions/checkout@v7
+              with:
+                  fetch-depth: 0  # The comparison base must be in the history
+                  persist-credentials: false
+
+            - name: Classify changes
+              id: classify
+              shell: bash
+              run: |
+                  case "${{ github.event_name }}" in
+                      pull_request) BASE="${{ github.event.pull_request.base.sha }}" ;;
+                      push) BASE="${{ github.event.before }}" ;;
+                      *) BASE=$(git merge-base origin/master HEAD) ;;
+                  esac
+                  python3 .github/scripts/ci-changes.py "$BASE" HEAD | tee -a "$GITHUB_OUTPUT"
+
+    build-and-test:
+        needs: changes
+        if: github.event_name != 'pull_request' || needs.changes.outputs.docs-only != 'true'
+        outputs:
+            lang-changed: ${{ needs.changes.outputs.lang }}
             effective-publish-intellij: ${{ steps.publish-flags.outputs.effective }}
+            effective-publish-vscode: ${{ steps.publish-flags.outputs.effective-vscode }}
         strategy:
             matrix:
                 os: ${{ github.event.inputs.platforms == 'ubuntu-latest' && fromJSON('["ubuntu-latest"]') || github.event.inputs.platforms == 'windows-latest' && fromJSON('["windows-latest"]') || github.event.inputs.platforms == 'all' && fromJSON('["ubuntu-latest", "windows-latest"]') || fromJSON('["ubuntu-latest"]') }}
@@ -146,167 +206,165 @@ jobs:
             - name: Fetch Sources
               uses: actions/checkout@v7
               with:
-                  fetch-depth: 0  # Need full history for path filtering
+                  fetch-depth: 0  # Full history for git version details (palantir git-version in javatools)
                   show-progress: true
                   persist-credentials: false
 
-            - name: Check for lang-related changes
-              id: changes
-              uses: dorny/paths-filter@v4
+            # Cache markers (see the marker steps below) need a file to save.
+            - name: Prepare lang check markers
+              if: github.event_name == 'pull_request' && needs.changes.outputs.lang == 'true'
+              shell: bash
+              run: echo "$GITHUB_SHA" > "$RUNNER_TEMP/lang-ci-marker"
+
+            # A pull request re-ran every lang check on each push while its diff touched lang, even
+            # when the push (a rebase, a commit elsewhere) left a check's inputs as an earlier run of
+            # the pull request had checked them. A check that passes saves a marker under its
+            # fingerprint, and later runs with the same fingerprint skip it. Pull request caches are
+            # scoped to the pull request, so markers never cross pull requests.
+            - name: Look up lang core marker
+              id: core-marker
+              if: github.event_name == 'pull_request' && needs.changes.outputs.core == 'true'
+              uses: actions/cache/restore@v6
               with:
-                  filters: |
-                      lang:
-                        - 'lang/**'
-                        # Sources that live OUTSIDE lang/ but are synced or bundled INTO the
-                        # lang plugin at build time, so a change to any of them changes the
-                        # plugin's output and must trigger a lang build/test (and, on master,
-                        # an IntelliJ plugin republish). Keep this list in sync with
-                        # lang/intellij-plugin/build.gradle.kts (syncXtcProjectCreator copies
-                        # the Java source; syncGradleWrapperResources bundles the wrapper that
-                        # generated projects ship with).
-                        - 'javatools/src/main/java/org/xvm/tool/XtcProjectCreator.java'
-                        - 'gradlew'
-                        - 'gradlew.bat'
-                        - 'gradle/wrapper/**'
-                      # The version catalog also holds XDK dependencies; the next step decides
-                      # whether a catalog change touched a lang entry.
-                      catalog:
-                        - 'gradle/libs.versions.toml'
+                  path: ${{ runner.temp }}/lang-ci-marker
+                  key: lang-core-passed-${{ needs.changes.outputs.core-fingerprint }}
+                  lookup-only: true
 
-            # A catalog change is a lang change only when it touches a lang-* entry (versions,
-            # libraries, plugins: the lang toolchain, Node, the IntelliJ platform, the Jackson
-            # build-classpath floor). XDK-only bumps leave the lang tree and the plugins alone.
-            - name: Check for lang version catalog changes
-              id: lang-changes
-              shell: bash
-              run: |
-                  LANG_CHANGED=false
-                  REASON="no changes under the lang paths or to lang catalog entries"
-                  if [ "${{ steps.changes.outputs.lang }}" = "true" ]; then
-                      LANG_CHANGED=true
-                      REASON="lang paths changed"
-                  elif [ "${{ steps.changes.outputs.catalog }}" = "true" ]; then
-                      case "${{ github.event_name }}" in
-                          pull_request) BASE="${{ github.event.pull_request.base.sha }}" ;;
-                          push) BASE="${{ github.event.before }}" ;;
-                          *) BASE=$(git merge-base origin/master HEAD) ;;
-                      esac
-                      if ! git cat-file -e "${BASE}^{commit}" 2>/dev/null; then
-                          LANG_CHANGED=true
-                          REASON="gradle/libs.versions.toml changed and its comparison base '$BASE' is unavailable"
-                      elif git diff "$BASE"...HEAD -- gradle/libs.versions.toml | grep -q -E '^[+-][[:space:]]*lang[-.]'; then
-                          LANG_CHANGED=true
-                          REASON="lang entries changed in gradle/libs.versions.toml"
-                      else
-                          REASON="gradle/libs.versions.toml changed, but no lang entries"
-                      fi
-                  fi
-                  echo "lang=$LANG_CHANGED" >> "$GITHUB_OUTPUT"
-                  echo "reason=$REASON" >> "$GITHUB_OUTPUT"
-                  echo "🌳 lang changed: $LANG_CHANGED ($REASON)"
+            - name: Look up IntelliJ plugin marker
+              id: intellij-marker
+              if: github.event_name == 'pull_request' && needs.changes.outputs.intellij == 'true'
+              uses: actions/cache/restore@v6
+              with:
+                  path: ${{ runner.temp }}/lang-ci-marker
+                  key: lang-intellij-passed-${{ needs.changes.outputs.intellij-fingerprint }}
+                  lookup-only: true
 
-            - name: 🌳 Lang validation decision
-              shell: bash
-              run: |
-                  LANG_CHANGED="${{ steps.lang-changes.outputs.lang }}"
-                  echo ""
-                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                  if [ "$LANG_CHANGED" = "true" ]; then
-                      echo "🌳 lang/ CHANGED -- WILL build lang composite and run LSP/tree-sitter tests"
-                  else
-                      echo "⏭️ no changes under lang/ -- WILL SKIP lang composite build and LSP/tree-sitter tests"
-                      echo "   (the rest of the build runs without -PincludeBuildLang=true to avoid the IntelliJ plugin resolution cost)"
-                  fi
-                  echo "  📋 lang changed       : ${LANG_CHANGED:-<unset>} (${{ steps.lang-changes.outputs.reason }})"
-                  echo "  📋 runner             : ${{ matrix.os }} (lang validation only runs on ubuntu-latest)"
-                  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                  echo ""
+            - name: Look up VS Code extension marker
+              id: vscode-marker
+              if: github.event_name == 'pull_request' && needs.changes.outputs.vscode == 'true'
+              uses: actions/cache/restore@v6
+              with:
+                  path: ${{ runner.temp }}/lang-ci-marker
+                  key: lang-vscode-passed-${{ needs.changes.outputs.vscode-fingerprint }}
+                  lookup-only: true
 
-            - name: Compute IntelliJ publish flags
+            # Gating policy. Each check runs when the change needs it (changes job) or a manual
+            # override asks for it, unless an earlier run of this pull request passed it on the same
+            # inputs:
+            #   - include-lang=true runs every check
+            #   - publish-/force-publish-intellij-plugin=true runs the core and IntelliJ plugin checks
+            #   - publish-/force-publish-vscode-extension=true runs the core and VS Code extension checks
+            # so nothing publishes without its checks. Each plugin publishes, from its own inputs:
+            #   1. force-publish-<plugin>=true (workflow_dispatch only) -> always publish
+            #   2. push to master with changes to that plugin's inputs -> auto-publish
+            #   3. workflow_dispatch with publish-<plugin>=true and changes to that plugin's inputs -> publish
+            - name: Compute lang check and publish flags
               id: publish-flags
               shell: bash
               run: |
-                  FORCE="${{ github.event.inputs.force-publish-intellij-plugin }}"
-                  REQUESTED="${{ github.event.inputs.publish-intellij-plugin }}"
+                  FORCE_INTELLIJ="${{ github.event.inputs.force-publish-intellij-plugin }}"
+                  REQUESTED_INTELLIJ="${{ github.event.inputs.publish-intellij-plugin }}"
+                  FORCE_VSCODE="${{ github.event.inputs.force-publish-vscode-extension }}"
+                  REQUESTED_VSCODE="${{ github.event.inputs.publish-vscode-extension }}"
                   INCLUDE_LANG="${{ github.event.inputs.include-lang }}"
-                  LANG_CHANGED="${{ steps.lang-changes.outputs.lang }}"
                   EVENT_NAME="${{ github.event_name }}"
                   REF="${{ github.ref }}"
-                  EFFECTIVE=false
-                  REASON=""
-                  # Gating policy:
-                  #   1. force-publish-intellij-plugin=true (workflow_dispatch only) -> always publish
-                  #   2. push to master with lang changes detected -> auto-publish
-                  #   3. workflow_dispatch with publish-intellij-plugin=true and lang changes detected -> publish
-                  # Anything else -> skip, with a reason.
-                  if [ "$FORCE" = "true" ]; then
-                      EFFECTIVE=true
-                      REASON="forced via force-publish-intellij-plugin=true (overrides all other gating)"
-                  elif [ "$EVENT_NAME" = "push" ] && [ "$REF" = "refs/heads/master" ] && [ "$LANG_CHANGED" = "true" ]; then
-                      EFFECTIVE=true
-                      REASON="auto-publish on master merge with changes detected under lang/"
-                  elif [ "$EVENT_NAME" = "push" ] && [ "$REF" = "refs/heads/master" ]; then
-                      REASON="master push but no changes under lang/ -- nothing to publish (use force-publish-intellij-plugin=true via workflow_dispatch to override)"
-                  elif [ "$REQUESTED" = "true" ] && [ "$LANG_CHANGED" = "true" ]; then
-                      EFFECTIVE=true
-                      REASON="manual dispatch with publish-intellij-plugin=true and changes detected under lang/"
-                  elif [ "$REQUESTED" = "true" ]; then
-                      REASON="manual dispatch with publish-intellij-plugin=true but no changes detected under lang/ (set force-publish-intellij-plugin=true to override)"
-                  elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-                      REASON="manual dispatch but neither publish-intellij-plugin nor force-publish-intellij-plugin was enabled"
-                  else
-                      REASON="event=$EVENT_NAME on $REF -- IntelliJ plugin only publishes on master push or manual dispatch"
-                  fi
-                  # Lang validation (tree-sitter + LSP tests + IntelliJ Plugin Verifier)
-                  # runs whenever ANY of these are true:
-                  #   - lang/ paths changed (auto)
-                  #   - workflow_dispatch with include-lang=true (user opted into lang)
-                  #   - workflow_dispatch with publish-intellij-plugin=true (publish path)
-                  #   - workflow_dispatch with force-publish-intellij-plugin=true (forced publish)
-                  # That last group ensures we never publish without first verifying.
-                  VALIDATE_LANG=false
-                  VALIDATE_REASON=""
-                  if [ "$LANG_CHANGED" = "true" ]; then
-                      VALIDATE_LANG=true
-                      VALIDATE_REASON="lang/ paths changed"
-                  elif [ "$FORCE" = "true" ]; then
-                      VALIDATE_LANG=true
-                      VALIDATE_REASON="force-publish-intellij-plugin=true (manual override)"
-                  elif [ "$REQUESTED" = "true" ]; then
-                      VALIDATE_LANG=true
-                      VALIDATE_REASON="publish-intellij-plugin=true (manual dispatch)"
-                  elif [ "$INCLUDE_LANG" = "true" ]; then
-                      VALIDATE_LANG=true
-                      VALIDATE_REASON="include-lang=true (manual dispatch)"
-                  else
-                      VALIDATE_REASON="no lang/ changes and no manual override"
+                  MASTER_PUSH=false
+                  if [ "$EVENT_NAME" = "push" ] && [ "$REF" = "refs/heads/master" ]; then
+                      MASTER_PUSH=true
                   fi
 
-                  echo "effective=$EFFECTIVE" >> $GITHUB_OUTPUT
-                  echo "force=$FORCE" >> $GITHUB_OUTPUT
-                  echo "requested=$REQUESTED" >> $GITHUB_OUTPUT
-                  echo "reason=$REASON" >> $GITHUB_OUTPUT
-                  echo "validate-lang=$VALIDATE_LANG" >> $GITHUB_OUTPUT
-                  echo "validate-lang-reason=$VALIDATE_REASON" >> $GITHUB_OUTPUT
+                  # override INPUT=VALUE...: prints the first input set to true.
+                  override() {
+                      for setting in "$@"; do
+                          if [ "${setting#*=}" = "true" ]; then
+                              echo "${setting%%=*}=true"
+                              return
+                          fi
+                      done
+                  }
+                  INTELLIJ_OVERRIDE=$(override "include-lang=$INCLUDE_LANG" \
+                      "force-publish-intellij-plugin=$FORCE_INTELLIJ" "publish-intellij-plugin=$REQUESTED_INTELLIJ")
+                  VSCODE_OVERRIDE=$(override "include-lang=$INCLUDE_LANG" \
+                      "force-publish-vscode-extension=$FORCE_VSCODE" "publish-vscode-extension=$REQUESTED_VSCODE")
+                  CORE_OVERRIDE=${INTELLIJ_OVERRIDE:-$VSCODE_OVERRIDE}
+
+                  # check NAME NEEDED OVERRIDE MARKER_HIT: prints "true|false<TAB>reason".
+                  check() {
+                      if [ "$2" != "true" ] && [ -z "$3" ]; then
+                          printf 'false\tno changes to %s inputs and no manual override\n' "$1"
+                      elif [ "$EVENT_NAME" = "pull_request" ] && [ "$4" = "true" ]; then
+                          printf 'false\t%s inputs unchanged since an earlier run of this pull request passed its checks\n' "$1"
+                      elif [ "$2" = "true" ]; then
+                          printf 'true\t%s inputs changed\n' "$1"
+                      else
+                          printf 'true\tmanual override: %s\n' "$3"
+                      fi
+                  }
+                  # publish NAME CHANGED FORCE REQUESTED INPUT: prints "true|false<TAB>reason".
+                  publish() {
+                      if [ "$3" = "true" ]; then
+                          printf 'true\tforced via force-%s=true (overrides all other gating)\n' "$5"
+                      elif [ "$MASTER_PUSH" = "true" ] && [ "$2" = "true" ]; then
+                          printf 'true\tauto-publish on master merge with %s input changes\n' "$1"
+                      elif [ "$MASTER_PUSH" = "true" ]; then
+                          printf 'false\tmaster push without %s input changes -- nothing to publish (use force-%s=true via workflow_dispatch to override)\n' "$1" "$5"
+                      elif [ "$4" = "true" ] && [ "$2" = "true" ]; then
+                          printf 'true\tmanual dispatch with %s=true and %s input changes\n' "$5" "$1"
+                      elif [ "$4" = "true" ]; then
+                          printf 'false\tmanual dispatch with %s=true but no %s input changes (set force-%s=true to override)\n' "$5" "$1" "$5"
+                      elif [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+                          printf 'false\tmanual dispatch but neither %s nor force-%s was enabled\n' "$5" "$5"
+                      else
+                          printf 'false\tevent=%s on %s -- plugins only publish on master push or manual dispatch\n' "$EVENT_NAME" "$REF"
+                      fi
+                  }
+
+                  IFS=$'\t' read -r VALIDATE_CORE CORE_REASON < <(check "lang core" \
+                      "${{ needs.changes.outputs.core }}" "$CORE_OVERRIDE" "${{ steps.core-marker.outputs.cache-hit }}")
+                  IFS=$'\t' read -r VERIFY_INTELLIJ VERIFY_REASON < <(check "IntelliJ plugin" \
+                      "${{ needs.changes.outputs.intellij }}" "$INTELLIJ_OVERRIDE" "${{ steps.intellij-marker.outputs.cache-hit }}")
+                  IFS=$'\t' read -r VALIDATE_VSCODE VSCODE_REASON < <(check "VS Code extension" \
+                      "${{ needs.changes.outputs.vscode }}" "$VSCODE_OVERRIDE" "${{ steps.vscode-marker.outputs.cache-hit }}")
+                  IFS=$'\t' read -r EFFECTIVE REASON < <(publish "IntelliJ plugin" \
+                      "${{ needs.changes.outputs.intellij }}" "$FORCE_INTELLIJ" "$REQUESTED_INTELLIJ" "publish-intellij-plugin")
+                  IFS=$'\t' read -r EFFECTIVE_VSCODE VSCODE_PUBLISH_REASON < <(publish "VS Code extension" \
+                      "${{ needs.changes.outputs.vscode }}" "$FORCE_VSCODE" "$REQUESTED_VSCODE" "publish-vscode-extension")
+                  # The lang validation step runs the core and VS Code extension checks.
+                  VALIDATE_LANG=false
+                  if [ "$VALIDATE_CORE" = "true" ] || [ "$VALIDATE_VSCODE" = "true" ]; then
+                      VALIDATE_LANG=true
+                  fi
+
+                  {
+                      echo "effective=$EFFECTIVE"
+                      echo "reason=$REASON"
+                      echo "effective-vscode=$EFFECTIVE_VSCODE"
+                      echo "vscode-reason=$VSCODE_PUBLISH_REASON"
+                      echo "verify-intellij=$VERIFY_INTELLIJ"
+                      echo "verify-intellij-reason=$VERIFY_REASON"
+                      echo "validate-core=$VALIDATE_CORE"
+                      echo "validate-vscode=$VALIDATE_VSCODE"
+                      echo "validate-lang=$VALIDATE_LANG"
+                      echo "validate-lang-reason=lang core: $CORE_REASON; VS Code extension: $VSCODE_REASON"
+                  } >> "$GITHUB_OUTPUT"
+
+                  # show WILL_RUN LABEL REASON
+                  show() {
+                      if [ "$1" = "true" ]; then echo "✅ $2: WILL RUN"; else echo "⏭️ $2: WILL SKIP"; fi
+                      echo "     $3"
+                  }
                   echo ""
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                  if [ "$EFFECTIVE" = "true" ]; then
-                      echo "🔌 IntelliJ plugin: WILL BE BUILT AND PUBLISHED"
-                  else
-                      echo "⏭️ IntelliJ plugin: WILL NOT BE BUILT OR PUBLISHED"
-                  fi
-                  echo "  📋 Reason             : $REASON"
-                  echo "  📋 force-publish-intellij-plugin : ${FORCE:-<unset>}"
-                  echo "  📋 publish-intellij-plugin       : ${REQUESTED:-<unset>}"
-                  echo "  📋 include-lang                  : ${INCLUDE_LANG:-<unset>}"
-                  echo "  📋 lang/ changed                 : ${LANG_CHANGED:-<unset>}"
-                  echo "  📋 event                         : $EVENT_NAME on $REF"
-                  if [ "$VALIDATE_LANG" = "true" ]; then
-                      echo "🌳 Lang validation (tree-sitter + LSP + verifyPlugin + vscode-extension): WILL RUN"
-                  else
-                      echo "⏭️ Lang validation (tree-sitter + LSP + verifyPlugin + vscode-extension): WILL SKIP"
-                  fi
-                  echo "  📋 Validation reason  : $VALIDATE_REASON"
+                  echo "🌳 lang changed: ${{ needs.changes.outputs.lang }} (${{ needs.changes.outputs.reason }})"
+                  echo "  📋 fingerprints: core ${{ needs.changes.outputs.core-fingerprint }}, IntelliJ plugin ${{ needs.changes.outputs.intellij-fingerprint }}, VS Code extension ${{ needs.changes.outputs.vscode-fingerprint }}"
+                  echo "  📋 event: $EVENT_NAME on $REF; runner: ${{ matrix.os }} (lang checks only run on ubuntu-latest)"
+                  echo "  📋 overrides: IntelliJ plugin ${INTELLIJ_OVERRIDE:-<none>}, VS Code extension ${VSCODE_OVERRIDE:-<none>}"
+                  show "$VALIDATE_CORE" "Lang core checks (tree-sitter, XDK corpus, LSP adapter and DSL tests)" "$CORE_REASON"
+                  show "$VERIFY_INTELLIJ" "IntelliJ plugin checks (lang build, Plugin Verifier)" "$VERIFY_REASON"
+                  show "$VALIDATE_VSCODE" "VS Code extension checks (headless tests, VSIX)" "$VSCODE_REASON"
+                  show "$EFFECTIVE" "IntelliJ plugin publication" "$REASON"
+                  show "$EFFECTIVE_VSCODE" "VS Code extension publication" "$VSCODE_PUBLISH_REASON"
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                   echo ""
 
@@ -342,9 +400,11 @@ jobs:
                   if [ "${{ github.event_name }}" = "workflow_dispatch" ] && \
                      { [ "${{ github.event.inputs.publish-snapshots }}" = "true" ] || \
                        [ "${{ github.event.inputs.publish-intellij-plugin }}" = "true" ] || \
-                       [ "${{ github.event.inputs.force-publish-intellij-plugin }}" = "true" ]; }; then
+                       [ "${{ github.event.inputs.force-publish-intellij-plugin }}" = "true" ] || \
+                       [ "${{ github.event.inputs.publish-vscode-extension }}" = "true" ] || \
+                       [ "${{ github.event.inputs.force-publish-vscode-extension }}" = "true" ]; }; then
                       WILL_PUBLISH=true
-                      TRIGGER_REASON="Manual trigger with publish-snapshots/publish-intellij-plugin/force-publish-intellij-plugin enabled"
+                      TRIGGER_REASON="Manual trigger with publish-snapshots or a plugin publish input enabled"
                   fi
 
                   INTELLIJ_REQUESTED=false
@@ -358,6 +418,19 @@ jobs:
                   INTELLIJ_SKIP_REASON=""
                   if [ "$INTELLIJ_REQUESTED" = "true" ] && [ "$INTELLIJ_EFFECTIVE" != "true" ]; then
                       INTELLIJ_SKIP_REASON="${{ steps.publish-flags.outputs.reason }}"
+                  fi
+
+                  VSCODE_REQUESTED=false
+                  if [ "${{ github.event_name }}" = "workflow_dispatch" ] && \
+                     { [ "${{ github.event.inputs.publish-vscode-extension }}" = "true" ] || \
+                       [ "${{ github.event.inputs.force-publish-vscode-extension }}" = "true" ]; }; then
+                      VSCODE_REQUESTED=true
+                  fi
+
+                  VSCODE_EFFECTIVE="${{ steps.publish-flags.outputs.effective-vscode }}"
+                  VSCODE_SKIP_REASON=""
+                  if [ "$VSCODE_REQUESTED" = "true" ] && [ "$VSCODE_EFFECTIVE" != "true" ]; then
+                      VSCODE_SKIP_REASON="${{ steps.publish-flags.outputs.vscode-reason }}"
                   fi
 
                   if [ "$WILL_PUBLISH" = "true" ]; then
@@ -375,6 +448,14 @@ jobs:
                       else
                           echo "  ⏭️ IntelliJ Plugin Snapshot: DISABLED"
                       fi
+                      if [ "$VSCODE_EFFECTIVE" = "true" ]; then
+                          echo "  📦 VS Code Extension Snapshot: ENABLED"
+                      elif [ "$VSCODE_REQUESTED" = "true" ]; then
+                          echo "  ⏭️ VS Code Extension Snapshot: SKIPPED"
+                          echo "  📋 Reason: $VSCODE_SKIP_REASON"
+                      else
+                          echo "  ⏭️ VS Code Extension Snapshot: DISABLED"
+                      fi
                   else
                       echo "::notice::⏭️  PUBLISHING DISABLED: No publishing workflows will be triggered"
                       echo -e "\033[1;33m"
@@ -386,9 +467,14 @@ jobs:
                           echo "  📋 publish-snapshots: ${{ github.event.inputs.publish-snapshots }}"
                           echo "  📋 publish-intellij-plugin: ${{ github.event.inputs.publish-intellij-plugin }}"
                           echo "  📋 force-publish-intellij-plugin: ${{ github.event.inputs.force-publish-intellij-plugin }}"
+                          echo "  📋 publish-vscode-extension: ${{ github.event.inputs.publish-vscode-extension }}"
+                          echo "  📋 force-publish-vscode-extension: ${{ github.event.inputs.force-publish-vscode-extension }}"
                           echo "  📋 include-lang: ${{ github.event.inputs.include-lang }}"
                           if [ "$INTELLIJ_REQUESTED" = "true" ] && [ "$INTELLIJ_EFFECTIVE" != "true" ]; then
                               echo "  📋 IntelliJ skip reason: $INTELLIJ_SKIP_REASON"
+                          fi
+                          if [ "$VSCODE_REQUESTED" = "true" ] && [ "$VSCODE_EFFECTIVE" != "true" ]; then
+                              echo "  📋 VS Code skip reason: $VSCODE_SKIP_REASON"
                           fi
                       fi
                   fi
@@ -457,7 +543,7 @@ jobs:
               env:
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
                   ENABLE_INTELLIJ_RELEASE_BUILD: ${{ matrix.os == 'ubuntu-latest' && steps.publish-flags.outputs.effective == 'true' }}
-                  ENABLE_INTELLIJ_VERIFY: ${{ matrix.os == 'ubuntu-latest' && steps.publish-flags.outputs.validate-lang == 'true' }}
+                  ENABLE_INTELLIJ_VERIFY: ${{ matrix.os == 'ubuntu-latest' && steps.publish-flags.outputs.verify-intellij == 'true' }}
                   ENABLE_SNAPSHOT_BUNDLE_BUILD: ${{ matrix.os == 'ubuntu-latest' && ((github.ref == 'refs/heads/master' && github.event_name == 'push') || (github.event_name == 'workflow_dispatch' && (github.event.inputs.publish-snapshots == true || github.event.inputs.publish-snapshots == 'true'))) }}
                   ORG_GRADLE_PROJECT_githubUsername: ${{ github.actor }}
                   ORG_GRADLE_PROJECT_githubPassword: ${{ secrets.GITHUB_TOKEN }}
@@ -519,12 +605,12 @@ jobs:
                     BUILD_PROPS="$BUILD_PROPS -PincludeBuildLang=true -PincludeBuildAttachLang=true -PenablePublish=true -Pjetbrains.publish.suffix=${{ steps.intellij-version.outputs.suffix }} -Plsp.buildSearchableOptions=true"
                 elif [ "${ENABLE_INTELLIJ_VERIFY}" = "true" ]; then
                     echo "🔌 Running IntelliJ plugin verifier in main CI build (no Marketplace publication for this run)"
-                    echo "   Reason: ${{ steps.publish-flags.outputs.validate-lang-reason }}"
+                    echo "   Reason: ${{ steps.publish-flags.outputs.verify-intellij-reason }}"
                     BUILD_TASKS="$BUILD_TASKS :lang:intellij-plugin:verifyPlugin"
                     BUILD_PROPS="$BUILD_PROPS -PincludeBuildLang=true -PincludeBuildAttachLang=true"
                 elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
                     echo "⏭️ Not building or verifying IntelliJ plugin"
-                    echo "   Reason: ${{ steps.publish-flags.outputs.reason }}"
+                    echo "   Reason: ${{ steps.publish-flags.outputs.verify-intellij-reason }}"
                 fi
 
                 ./gradlew $GRADLE_OPTIONS $BUILD_JVM_ARGS $BUILD_PROPS $BUILD_TASKS
@@ -554,20 +640,31 @@ jobs:
                 else
                     manual_task_main=$( [ "${{ env.run_manual_tests_parallel }}" = "true" ] && echo "runCiTestTasksParallel" || echo "runCiTestTasks" )
                     echo "Running manual tests (main task: $manual_task_main)"
-                    ./gradlew $GRADLE_OPTIONS manualTests:runXtc manualTests:runOne -PtestName=TestMisc manualTests:runTwoTestsInSequence
                     ./gradlew $GRADLE_OPTIONS "manualTests:$manual_task_main"
                 fi
                 echo "🧾 Manual test logs captured under manualTests/build/logs and uploaded as CI artifacts."
                 inspect_gradle_cache "after manual tests"
                 echo "✅ Manual tests completed"
 
-            - name: Skip lang validation (no lang/ changes)
+            # The main build ran the IntelliJ plugin checks (the lang composite attached, the Plugin
+            # Verifier) and passed; later runs of this pull request on the same inputs skip them.
+            - name: Record IntelliJ plugin checks pass
+              if: |
+                  success() &&
+                  github.event_name == 'pull_request' &&
+                  steps.publish-flags.outputs.verify-intellij == 'true'
+              uses: actions/cache/save@v6
+              with:
+                  path: ${{ runner.temp }}/lang-ci-marker
+                  key: lang-intellij-passed-${{ needs.changes.outputs.intellij-fingerprint }}
+
+            - name: Skip lang validation
               if: |
                   success() &&
                   matrix.os == 'ubuntu-latest' &&
                   steps.publish-flags.outputs.validate-lang != 'true'
               run: |
-                  echo "⏭️ Skipping Tree-sitter validation"
+                  echo "⏭️ Skipping lang validation"
                   echo "Reason: ${{ steps.publish-flags.outputs.validate-lang-reason }}"
 
             - name: Validate lang (tree-sitter grammar, LSP adapters, VS Code extension)
@@ -578,6 +675,8 @@ jobs:
               shell: bash
               env:
                   GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+                  VALIDATE_CORE: ${{ steps.publish-flags.outputs.validate-core }}
+                  VALIDATE_VSCODE: ${{ steps.publish-flags.outputs.validate-vscode }}
               run: |
                   GRADLE_OPTIONS="${{ steps.versions.outputs.gradle-options }}"
                   # Enable the lang composite build only for these lang/LSP-targeted invocations.
@@ -585,54 +684,84 @@ jobs:
                   # paying the IntelliJ-plugin resolution cost on every CI run.
                   LANG_OPTS="-PincludeBuildLang=true -PincludeBuildAttachLang=true"
 
-                  # @vscode/test-electron launches a real Electron build inside
-                  # the Linux runner. Without a virtual framebuffer it has no
-                  # display to draw on, so we install xvfb if it is not already
-                  # present. ubuntu-latest images ship with it sometimes but
-                  # not always; the `command -v` guard is cheap either way.
-                  # scripts/run-vscode-tests.cjs auto-detects Linux + no DISPLAY
-                  # + xvfb-run on PATH and wraps the test runner accordingly.
-                  if ! command -v xvfb-run >/dev/null 2>&1; then
-                      echo "📋 Installing xvfb for headless Electron..."
-                      sudo apt-get update -qq
-                      sudo apt-get install -y -qq xvfb
+                  # One Gradle invocation for the core and VS Code extension checks that run: each
+                  # separate invocation paid its own configuration pass for the lang composite.
+                  # Gradle stops at the first failing task and names it in the output.
+                  # - core: tree-sitter grammar compiles (tree-sitter generate), parser handles the
+                  #   XDK corpus, native libraries build for all platforms (cached by content
+                  #   hash); LSP adapter tests with the tree-sitter adapter; DSL tests, which also
+                  #   read the XDK corpus
+                  # - VS Code extension: headless integration tests, then bundle and package the VSIX
+                  LANG_TASKS=""
+                  if [ "$VALIDATE_CORE" = "true" ]; then
+                      LANG_TASKS="$LANG_TASKS :lang:tree-sitter:validateTreeSitterGrammar :lang:tree-sitter:testTreeSitterParse"
+                      LANG_TASKS="$LANG_TASKS :lang:tree-sitter:buildAllNativeLibrariesOnDemand :lang:lsp-server:test :lang:dsl:test"
+                  fi
+                  if [ "$VALIDATE_VSCODE" = "true" ]; then
+                      # @vscode/test-electron launches a real Electron build inside
+                      # the Linux runner. Without a virtual framebuffer it has no
+                      # display to draw on, so we install xvfb if it is not already
+                      # present. ubuntu-latest images ship with it sometimes but
+                      # not always; the `command -v` guard is cheap either way.
+                      # scripts/run-vscode-tests.cjs auto-detects Linux + no DISPLAY
+                      # + xvfb-run on PATH and wraps the test runner accordingly.
+                      if ! command -v xvfb-run >/dev/null 2>&1; then
+                          echo "📋 Installing xvfb for headless Electron..."
+                          sudo apt-get update -qq
+                          sudo apt-get install -y -qq xvfb
+                      fi
+                      LANG_TASKS="$LANG_TASKS :lang:vscode-extension:testVscodeExtension :lang:vscode-extension:packageExtension"
                   fi
 
-                  # One Gradle invocation for all lang validation: each separate invocation paid
-                  # its own configuration pass for the lang composite. Gradle stops at the first
-                  # failing task and names it in the output.
-                  # - tree-sitter: grammar compiles (tree-sitter generate), parser handles the XDK
-                  #   corpus, native libraries build for all platforms (cached by content hash)
-                  # - LSP adapter tests with the tree-sitter adapter (the mock adapter is retired)
-                  # - VS Code extension: headless integration tests, then bundle and package the VSIX
                   echo ""
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                  echo "🌳 LANG VALIDATION: tree-sitter, LSP adapters, VS Code extension"
+                  echo "🌳 LANG VALIDATION: core $VALIDATE_CORE, VS Code extension $VALIDATE_VSCODE"
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                  ./gradlew $GRADLE_OPTIONS $LANG_OPTS -Plsp.adapter=treesitter \
-                      :lang:tree-sitter:validateTreeSitterGrammar \
-                      :lang:tree-sitter:testTreeSitterParse \
-                      :lang:tree-sitter:buildAllNativeLibrariesOnDemand \
-                      :lang:lsp-server:test \
-                      :lang:vscode-extension:testVscodeExtension \
-                      :lang:vscode-extension:packageExtension
+                  ./gradlew $GRADLE_OPTIONS $LANG_OPTS -Plsp.adapter=treesitter $LANG_TASKS
 
                   echo ""
-                  echo "✅ Grammar: VALID"
-                  echo "✅ Corpus parsing: PASSED"
-                  echo "✅ Native libraries: BUILT"
-                  echo "✅ Tree-sitter adapter tests: PASSED"
-                  echo "✅ VS Code extension tests: PASSED"
-                  echo "✅ VS Code extension packaged: $(ls lang/vscode-extension/build/distributions/*.vsix)"
+                  if [ "$VALIDATE_CORE" = "true" ]; then
+                      echo "✅ Grammar: VALID"
+                      echo "✅ Corpus parsing: PASSED"
+                      echo "✅ Native libraries: BUILT"
+                      echo "✅ Tree-sitter adapter tests: PASSED"
+                      echo "✅ DSL tests: PASSED"
+                  fi
+                  if [ "$VALIDATE_VSCODE" = "true" ]; then
+                      echo "✅ VS Code extension tests: PASSED"
+                      echo "✅ VS Code extension packaged: $(ls lang/vscode-extension/build/distributions/*.vsix)"
+                  fi
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                   echo "🎉 ALL LANG VALIDATION COMPLETE"
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+
+            # The checks that lang validation ran passed; later runs of this pull request on the
+            # same inputs skip them.
+            - name: Record lang core checks pass
+              if: |
+                  success() &&
+                  github.event_name == 'pull_request' &&
+                  steps.publish-flags.outputs.validate-core == 'true'
+              uses: actions/cache/save@v6
+              with:
+                  path: ${{ runner.temp }}/lang-ci-marker
+                  key: lang-core-passed-${{ needs.changes.outputs.core-fingerprint }}
+
+            - name: Record VS Code extension checks pass
+              if: |
+                  success() &&
+                  github.event_name == 'pull_request' &&
+                  steps.publish-flags.outputs.validate-vscode == 'true'
+              uses: actions/cache/save@v6
+              with:
+                  path: ${{ runner.temp }}/lang-ci-marker
+                  key: lang-vscode-passed-${{ needs.changes.outputs.vscode-fingerprint }}
 
             - name: Upload VS Code extension
               if: |
                   success() &&
                   matrix.os == 'ubuntu-latest' &&
-                  steps.publish-flags.outputs.validate-lang == 'true'
+                  steps.publish-flags.outputs.validate-vscode == 'true'
               uses: actions/upload-artifact@v7
               with:
                   name: vscode-extension-${{ env.ARTIFACT_SHA }}
@@ -644,7 +773,7 @@ jobs:
               if: |
                   always() &&
                   matrix.os == 'ubuntu-latest' &&
-                  steps.publish-flags.outputs.validate-lang == 'true'
+                  steps.publish-flags.outputs.verify-intellij == 'true'
               uses: actions/upload-artifact@v7
               with:
                   name: plugin-verifier-reports-${{ env.ARTIFACT_SHA }}
@@ -1015,16 +1144,27 @@ jobs:
     # required check covers the full PR-blocking surface.
     build-complete:
         name: All builds complete
-        needs: [build-and-test, integration-test]
+        needs: [changes, build-and-test, integration-test]
         runs-on: ubuntu-latest
         if: always()
         steps:
             - name: Check build status
               run: |
+                  CHANGES_RESULT="${{ needs.changes.result }}"
                   BUILD_RESULT="${{ needs.build-and-test.result }}"
                   INTEGRATION_RESULT="${{ needs.integration-test.result }}"
+                  echo "changes           : $CHANGES_RESULT (docs-only: ${{ needs.changes.outputs.docs-only }})"
                   echo "build-and-test    : $BUILD_RESULT"
                   echo "integration-test  : $INTEGRATION_RESULT"
+                  if [ "$CHANGES_RESULT" != "success" ]; then
+                    echo "❌ classifying the changes failed or was cancelled"
+                    exit 1
+                  fi
+                  if [ "${{ github.event_name }}" = "pull_request" ] && \
+                     [ "${{ needs.changes.outputs.docs-only }}" = "true" ] && [ "$BUILD_RESULT" = "skipped" ]; then
+                    echo "✅ Documentation-only change: no build or tests needed"
+                    exit 0
+                  fi
                   if [ "$BUILD_RESULT" != "success" ]; then
                     echo "❌ build-and-test failed or was cancelled"
                     exit 1
@@ -1147,7 +1287,7 @@ jobs:
     # Trigger publishing workflows for snapshots
     # Runs when:
     # 1. Push to master (automatic snapshot publishing) - BUT NOT for release merges or Dependabot merges
-    # 2. Manual trigger with publish-snapshots=true and/or publish-intellij-plugin=true
+    # 2. Manual trigger with publish-snapshots=true and/or a plugin publish input set
     #
     # Release merges are handled by promote-release.yml workflow instead
     # Dependabot merges are skipped to avoid permission issues
@@ -1168,6 +1308,10 @@ jobs:
                      (github.event.inputs.publish-intellij-plugin == true || github.event.inputs.publish-intellij-plugin == 'true')
                      ||
                      (github.event.inputs.force-publish-intellij-plugin == true || github.event.inputs.force-publish-intellij-plugin == 'true')
+                     ||
+                     (github.event.inputs.publish-vscode-extension == true || github.event.inputs.publish-vscode-extension == 'true')
+                     ||
+                     (github.event.inputs.force-publish-vscode-extension == true || github.event.inputs.force-publish-vscode-extension == 'true')
                  ))
             )
 
@@ -1201,6 +1345,7 @@ jobs:
               run: |
                   PUBLISH_XDK_SNAPSHOTS=false
                   PUBLISH_INTELLIJ_PLUGIN=false
+                  PUBLISH_VSCODE_EXTENSION=false
 
                   if [ "${{ github.ref }}" = "refs/heads/master" ] && [ "${{ github.event_name }}" = "push" ]; then
                       PUBLISH_XDK_SNAPSHOTS=true
@@ -1215,11 +1360,17 @@ jobs:
                   else
                       echo "⏭️ IntelliJ plugin publish lane: DISABLED (effective-publish-intellij=false from build-and-test)"
                   fi
-                  # The VS Code extension follows the same lang plugin lane: whenever that lane is
-                  # effective, lang validation ran and uploaded the vscode-extension-<sha> VSIX.
-                  PUBLISH_VSCODE_EXTENSION=$PUBLISH_INTELLIJ_PLUGIN
+                  # Whenever the VS Code extension lane is effective, its checks ran and uploaded the
+                  # vscode-extension-<sha> VSIX.
+                  if [ "${{ needs.build-and-test.outputs.effective-publish-vscode }}" = "true" ]; then
+                      PUBLISH_VSCODE_EXTENSION=true
+                      echo "🧩 VS Code extension publish lane: ENABLED (effective-publish-vscode=true from build-and-test)"
+                  else
+                      echo "⏭️ VS Code extension publish lane: DISABLED (effective-publish-vscode=false from build-and-test)"
+                  fi
 
-                  if [ "$PUBLISH_XDK_SNAPSHOTS" != "true" ] && [ "$PUBLISH_INTELLIJ_PLUGIN" != "true" ]; then
+                  if [ "$PUBLISH_XDK_SNAPSHOTS" != "true" ] && [ "$PUBLISH_INTELLIJ_PLUGIN" != "true" ] && \
+                     [ "$PUBLISH_VSCODE_EXTENSION" != "true" ]; then
                       echo "⏭️ No effective snapshot publication lanes remain after gating; skipping publish-snapshot.yml dispatch"
                       exit 0
                   fi
@@ -1290,6 +1441,11 @@ jobs:
                       echo "- ✅ IntelliJ plugin snapshot publishing" >> $GITHUB_STEP_SUMMARY
                   else
                       echo "- ⏭️ IntelliJ plugin snapshot publishing (not enabled for this run)" >> $GITHUB_STEP_SUMMARY
+                  fi
+                  if [ "${{ needs.build-and-test.outputs.effective-publish-vscode }}" = "true" ]; then
+                      echo "- ✅ VS Code extension snapshot publishing" >> $GITHUB_STEP_SUMMARY
+                  else
+                      echo "- ⏭️ VS Code extension snapshot publishing (not enabled for this run)" >> $GITHUB_STEP_SUMMARY
                   fi
                   echo "" >> $GITHUB_STEP_SUMMARY
                   echo "Check the [Actions tab](https://github.com/${{ github.repository }}/actions) for workflow status." >> $GITHUB_STEP_SUMMARY
