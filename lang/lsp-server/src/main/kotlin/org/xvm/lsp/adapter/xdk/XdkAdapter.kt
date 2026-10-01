@@ -662,22 +662,27 @@ class XdkAdapter
                 val cursor = cursorPosition(source, request.position, errors)
                 val facts =
                     cursor?.let {
-                        val syntax =
-                            if (request.key.kind == CursorKind.COMPLETION) {
-                                XdkSyntaxCompletions.complete(source.toRawString(), request.position) { isStale(request) }
-                            } else {
-                                emptyList()
-                            }
                         val sources = captureSources(request.compilation) { isStale(request) }
                         val dependencies =
                             (
                                 completed[request.compilation.scope]?.inputs
                                     ?: request.compilation.dependencies
                             ).open()
-                        compiler
-                            .analyzeCursor(source, sources, it, dependencies.repository, errors)
-                            .semanticSnapshot(errors)
-                            .withSyntaxCompletions(syntax)
+                        val model =
+                            compiler
+                                .analyzeCursor(source, sources, it, dependencies.repository, errors)
+                                .semanticSnapshot(errors)
+                        val syntax =
+                            if (request.key.kind == CursorKind.COMPLETION) {
+                                XdkSyntaxCompletions.complete(
+                                    source.toRawString(),
+                                    request.position,
+                                    model.sites.singleOrNull()?.declarationNameType,
+                                ) { isStale(request) }
+                            } else {
+                                emptyList()
+                            }
+                        model.withSyntaxCompletions(syntax)
                     }
                 synchronized(lifecycle) {
                     if (isStale(request)) throw CancellationException()
