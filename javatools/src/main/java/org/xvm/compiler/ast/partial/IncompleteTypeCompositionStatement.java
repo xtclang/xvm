@@ -101,7 +101,7 @@ public final class IncompleteTypeCompositionStatement extends TypeCompositionSta
         var bindings = mgr.getCursorBindings();
         cursors.forEach(site -> {
             bindings.begin(site);
-            if (bindings.isEnabled() && !errs.isAbortDesired()) {
+            if (site.isTypeCompletion() && bindings.isEnabled() && !errs.isAbortDesired()) {
                 PartialQueries.declarationBinding(site, isComponentNode() ? this : getParent(), formals, errs)
                         .ifPresent(binding -> bindings.record(site, binding));
             }

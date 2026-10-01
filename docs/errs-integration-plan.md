@@ -7737,7 +7737,7 @@ reproducible, and reconcile completed versus remaining scope. Validation is batc
    | --- | --- | --- |
    | L62 rename | Recorded source families, primary/ordinary parameter slots, lambdas, escaped method values, packages/modules/companions and guarded graph replacement | Cross-package qualification rewrites and explicit graph relocation; characterize additional refused composition routes with reproductions before extending proof. External consumers omitted from the configured graph remain an explicit unknown boundary. |
    | L63 semantic actions | Import fixes and compiler-proven implement/override, including bundled contracts | Exact-selection literal-return extraction is implemented in the continuation below. General extract local, missing-declaration fixes, extract method, inline and safe delete remain separate transformations. Each needs its own side-effect/capture/caller-closure design and positive/refusal tests. |
-   | L64 completion/signatures | Recorded cursor recovery, generic/formal constraints, bounded literal values, documentation and ranking | Import-producing completion and the bounded declaration-name/keyword/template contexts are implemented in the continuations below. Missing declaration names and broader keyword/snippet contexts; arbitrary enclosing-instance enumeration; additional literal/callable/damaged-bound forms. Earlier claims that all literal synthesis or documentation were absent are superseded by the L64 receipt. |
+   | L64 completion/signatures | Recorded cursor recovery, generic/formal constraints, bounded literal values, documentation and ranking | Import-producing completion and the bounded declaration-name/keyword/template contexts are implemented in the continuations below. Empty property/parameter names are covered by the next continuation; ambiguous local-name recovery and broader keyword/snippet contexts; arbitrary enclosing-instance enumeration; additional literal/callable/damaged-bound forms. Earlier claims that all literal synthesis or documentation were absent are superseded by the L64 receipt. |
    | L65 navigation/classification | Source/bundled navigation, recorded hierarchy/composition relations and resolved tokens | Conditional/synthetic/native/redirect routes and ambiguous binary source metadata need individual fixtures. Runtime function targets cannot be invented by a static hierarchy. |
    | L66 editing/structure | Token-preserving indentation, URL links, local linked editing, recorded damaged-source structure | Expression wrapping and comment/string layout, import/source links, broader proven linked scopes and remaining damaged constructs. A full pretty-printer is not implemented. |
    | L67 scale | Live graph discovery/overlays, dependencies and detached per-root caches | Use the platform workload to establish budgets and locate bottlenecks before choosing incremental or persistent indexing; neither exists merely because incremental text transport does. |
@@ -8472,3 +8472,44 @@ UP18 has a searchable `TODO LSP4IJ:` and an explicit removal gate in errs-upstre
 The new cases are accepted; the whole L64 family remains open. Remaining work includes missing
 declaration-name recovery, arbitrary enclosing-instance enumeration, additional callable/literal
 forms and damaged recursive-bound contexts.
+
+
+### L64 empty declaration-name recovery (2026-10-01)
+
+Continuation of the declaration/template checkpoint `5826d831e`. Explicit cursor parsing now retains
+an absent name after a complete named type in a property, method/ordinary-constructor parameter or
+primary-constructor parameter. Qualified and parameterized named types retain their final type
+spelling. Slots before initializers, commas, closing delimiters and EOF preserve the full original
+source and following declarations; EOF ranges include whitespace up to the cursor.
+
+The existing `partial.IncompleteStatement` owns the written type child and cursor position. Its new
+factory/accessor derive the missing-name classification without adding fields, a fabricated name
+token or a clone-reset rule. Existing incomplete declaration/type nodes skip semantic binding for
+these sites. Their parameters, signatures and properties remain unregistered and cannot emit code.
+The Kotlin snapshot copies a distinct DECLARATION_NAME kind and type spelling; the existing syntax
+proposal policy chooses a name and an empty-range edit. This does not claim type resolution, rename
+support or an inferred type. No source repair/reparse or host-side grammar is introduced.
+
+Ordinary parsing continues to report the missing name. Error budgets, cancellation and parser
+speculation keep their existing behavior. Name suggestions reuse the conservative document-wide
+collision check from `5826d831e`. Existing written names, comments/literals, missing type delimiters
+and ambiguous bare local expressions do not acquire an empty declaration slot. Empty names after
+compound/decorated/inferred types and missing method/type declaration names remain follow-ups.
+
+Tests cover ordinary/partial parsing, original source and sibling retention, independent clone
+ownership, error-listener stopping, non-emission, exact UTF-16/CRLF insertion coordinates, unchanged
+cached diagnostics and successful compilation after accepting supported suggestions. Shared X151
+covers collision/property, ordinary parameter and generic primary-constructor cases in both editors,
+including exact source and native Undo.
+
+Validation passes: **42 Java parser tests and 148 LSP adapter/protocol tests**, zero failures/errors/
+skips. Root and LSP/IntelliJ Spotless, IntelliJ integration-harness compilation, TypeScript
+compilation and the ordered **156-case** shared/manual catalog audit also pass. Selected X151 passes
+in VS Code `run-oIIFhk` (2.3s, zero recorded extension errors) and IntelliJ
+`run-13747944655313090541` (4.9s after START, zero IDE failures). The VS Code driver uses the installed
+completion provider and editor edit/Undo; IntelliJ uses native completion acceptance. No full
+playbook rerun is claimed. The slice needed no corrections after its first combined test run.
+
+Future extraction: keep the parser and three `ast.partial` changes together with the Java recovery
+tests; layer the copied Kotlin syntax fact, completion policy and protocol tests on top. The shared
+scenario, both driver registrations and catalog/manual updates travel with that adapter slice.

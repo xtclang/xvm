@@ -4581,6 +4581,37 @@
         "limitations": []
       }
     },
+    "X151": {
+      "title": "missing property and parameter names insert without replacing written types",
+      "manual": [],
+      "values": {
+        "file": "MissingNames.x",
+        "variants": [
+          {
+            "source": "module MissingNames {\n    String string = \"\";\n    String  = \"\";\n}",
+            "anchor": "module MissingNames {\n    String string = \"\";\n    String ",
+            "label": "string1",
+            "expected": "module MissingNames {\n    String string = \"\";\n    String string1 = \"\";\n}"
+          },
+          {
+            "source": "module MissingNames {\n    void run(String ) {}\n}",
+            "anchor": "module MissingNames {\n    void run(String ",
+            "label": "string",
+            "expected": "module MissingNames {\n    void run(String string) {}\n}"
+          },
+          {
+            "source": "module MissingNames {\n    class Item(List<String> ) {}\n}",
+            "anchor": "module MissingNames {\n    class Item(List<String> ",
+            "label": "list",
+            "expected": "module MissingNames {\n    class Item(List<String> list) {}\n}"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],

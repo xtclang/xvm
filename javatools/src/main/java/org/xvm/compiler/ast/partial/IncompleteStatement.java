@@ -63,6 +63,19 @@ public final class IncompleteStatement extends Statement {
         return new IncompleteStatement(type, name, List.of(), List.of(), cursor, Parser.INCOMPLETE_EXPRESSION, name);
     }
 
+    /** A missing declaration name after a complete written type; never fabricate a name token. */
+    public static IncompleteStatement forDeclarationName(NamedTypeExpression type, long cursor) {
+        return new IncompleteStatement(type, type.getNameToken(), List.of(), List.of(), cursor,
+                Parser.INCOMPLETE_EXPRESSION, null);
+    }
+
+    /** The written type's final name, for syntax suggestions only, not a resolved type or binding. */
+    public Optional<Token> getDeclarationNameType() {
+        return target instanceof NamedTypeExpression type && cursorName == null
+                && operator == type.getNameToken() && type.getEndPosition() < endPosition
+                ? Optional.of(type.getNameToken()) : Optional.empty();
+    }
+
     /** A call whose last written name is a named argument awaiting its value. */
     public static IncompleteStatement forNamedArgument(Expression callee, Token open,
             List<Expression> arguments, List<Token> separators, long cursor, Token name) {
@@ -154,18 +167,19 @@ public final class IncompleteStatement extends Statement {
     }
 
     public boolean isNameCompletion() {
-        return operator.getId() == Id.IDENTIFIER;
+        return operator.getId() == Id.IDENTIFIER && getDeclarationNameType().isEmpty();
     }
 
     /** A type query in an unfinished declaration, with no value or parameter-name completion. */
     public boolean isTypeCompletion() {
-        return getParent() instanceof IncompleteDeclarationStatement
-                || getParent() instanceof IncompleteTypeCompositionStatement;
+        return getDeclarationNameType().isEmpty()
+                && (getParent() instanceof IncompleteDeclarationStatement
+                        || getParent() instanceof IncompleteTypeCompositionStatement);
     }
 
     /** Explicit receiver only; an unqualified call does not invent an implicit receiver. */
     public Optional<Expression> getReceiver() {
-        if (isNameCompletion()) {
+        if (isNameCompletion() || getDeclarationNameType().isPresent()) {
             return Optional.empty();
         }
         return isCall()
@@ -213,6 +227,9 @@ public final class IncompleteStatement extends Statement {
 
     @Override
     public String toString() {
+        if (getDeclarationNameType().isPresent()) {
+            return target + " <missing declaration name>";
+        }
         String syntax = isNameCompletion() ? getMemberName().map(Token::getValueText).orElse("")
                 : target + (isCall() ? (operator.getId() == Id.L_SQUARE ? "[" : "(") + arguments
                         : "." + getMemberName().map(Token::getValueText).orElse(""));
