@@ -1,5 +1,6 @@
 package org.xvm.lsp.adapter.xdk
 
+import org.xvm.lsp.adapter.CompletionItem
 import org.xvm.lsp.adapter.xdk.SemanticModel.Position
 import org.xvm.lsp.adapter.xdk.SemanticModel.Range
 import org.xvm.lsp.adapter.xdk.SemanticModel.Signature
@@ -15,6 +16,7 @@ class PartialSemanticModel
     internal constructor(
         val semantics: SemanticModel,
         sites: List<Site>,
+        syntaxCompletions: List<CompletionItem> = emptyList(),
     ) {
         enum class Kind {
             NAME,
@@ -156,4 +158,7 @@ class PartialSemanticModel
             }
 
         val sites: List<Site> = immutableList(sites)
+        internal val syntaxCompletions: List<CompletionItem> = immutableList(syntaxCompletions)
+
+        internal fun withSyntaxCompletions(items: List<CompletionItem>) = PartialSemanticModel(semantics, sites, items)
     }

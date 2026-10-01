@@ -1484,3 +1484,12 @@ are derived from existing register metadata; no mutable builder field or AST sup
 The restored build passes the 188-test regression gate, followed by 34 lookup/dispatch and 28
 lifecycle/protocol tests. Both editor additions pass in selected runs. See the functionality
 checkpoint map in errs-integration-plan.md for commits, failed development attempts and receipts.
+
+
+L64 syntax completion stays entirely on the Kotlin side: Java lexer/parser ranges and block ownership
+produce detached naming/keyword/template suggestions. No compiler AST change or public embedding API
+is needed. Snippet insertion and indentation are negotiated independently from semantic completion;
+new X149/X150 pass in both editor drivers. The 142-test regression gate, final 25-test focused gate
+and four IntelliJ capability tests pass without skips. Native testing exposed LSP4IJ's ignored AsIs
+snippet mode; UP18 records the capability constraint and its removal gate. Validation receipts and
+remaining L64 boundaries are tracked in errs-integration-plan.md.
