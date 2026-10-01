@@ -493,3 +493,15 @@ Final native acceptance passes all 150 IntelliJ scenarios plus startup in one un
 with zero IDE errors. The full VS Code catalog passes 149/150; X130 remains failed on a host
 Explorer repaint exception despite successful Move/Undo/Redo/resource assertions. The canonical
 feature matrix and integration plan retain that distinction and the remaining manual checks.
+
+
+Reliability follow-up (2026-10-01): shared X146/X147 bring the catalog to 152. Both editors pass
+untouched-consumer dependency refresh and controlled late-report ownership; IntelliJ's corrected
+settings guard includes service-only overrides and restarts during the EDT handoff. This adds no
+language capability. The packaged eleven-module platform baseline passes 30 overlay/cancellation
+cycles across three self-terminating processes, recording queue identities, compiler API timings
+and sampled heap. It establishes local measurements, not prolonged soak or release budgets.
+X130 passes the selected VS Code attempt but remains intermittently unresolved; the extension-free
+probe records `not-reproduced`. See the
+[validation receipt](../../../docs/errs-integration-plan.md#reliability-validation-receipt-2026-10-01)
+for exact scope and the concrete remaining L62–L82 tasks.

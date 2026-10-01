@@ -1301,14 +1301,29 @@ real reply until a newer report/settings/restart has completed, then verifies th
 without publishing. The old client's close callback must not restart it.
 
 IntelliJ already had a request/disposal revision guard. It now also captures the settings content,
-and its asynchronous module reader rejects a retired server connection. The real settings component
+and its publication guard rejects a retired server connection. The real settings component
 is driven with controlled report futures; each assertion waits for an EDT barrier after publication,
 so it cannot pass before the stale callback runs. Its injected reader is a UI data boundary, not a
 new compiler API or mutable AST field. X146 observes actual provider refresh after a dependency edit
-and checks the untouched consumer's inferred type in both hosts. Execution remains pending until
-the four-checkpoint batch is complete.
+and checks the untouched consumer's inferred type in both hosts. Both scenarios now pass in each
+editor; the integration plan preserves the initial native failure and focused correction receipt.
 
 The platform workload uses only unsaved overlays and asserts source hashes remain unchanged.
 Heap sampling comes from the JVM management bean in the nonblocking service-status response;
 queue metadata remains copied under its existing lock. The sampler does not submit compiler jobs,
 force GC or alter scheduling. Sampled peak heap is not a retained-memory or RSS measurement.
+
+
+Native X147 exposed that `CompilerSettings.content` can retain global graph ownership after a
+service-only project setting changes. Capture effective language-service settings as well as graph
+settings. Capture connection identities at request start and recheck them at EDT publication; checking
+only when a reply arrives leaves a second restart window. X147 exercises both windows with the real
+server, a controlled report future and an EDT barrier. The correction passes X136/X137/X147 plus
+startup with no IDE errors. No additional mutable field or compiler API is introduced.
+
+The packaged platform baseline passes 30 cycles/cancellations across three server processes, with
+source hashes unchanged and no forced termination. Trace aggregation records compiler API timings
+and readable queued jobs in addition to periodic heap/queue samples. All observed compiler API
+calls remain serialized. Exact measurements and their sampling limits are in the integration plan.
+X130 passes the selected VS Code run, while the corrected extension-free probe records
+`not-reproduced`; the earlier full-run repaint failure remains unresolved.
