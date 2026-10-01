@@ -33,6 +33,8 @@ class CompilerPlaybookTest {
 
     @Test fun focusRecovery() = runPlaybook(PlaybookMode.FOCUS_RECOVERY)
 
+    @Test fun projectLifecycle() = runPlaybook(PlaybookMode.PROJECT_LIFECYCLE)
+
     @Test
     @EnabledIfSystemProperty(named = "xtc.playbook.largeFileProbe", matches = "true")
     fun largeFileEditing() = runPlaybook(PlaybookMode.LARGE_FILE)
@@ -241,6 +243,7 @@ class CompilerPlaybookTest {
                             PlaybookMode.STARTUP -> setOf("STARTUP")
                             PlaybookMode.FOCUS_RECOVERY -> setOf("START_FOCUS")
                             PlaybookMode.LARGE_FILE -> setOf("START_LARGE_FILE")
+                            PlaybookMode.PROJECT_LIFECYCLE -> setOf("START_PROJECTS")
                         },
                     "sharedScenarios" to
                         mapOf(
