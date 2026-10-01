@@ -123,14 +123,17 @@ private fun TypeInfo.delegateType(
     }
 }
 
-private fun TypeInfo.methodImplementation(
+/** Worker-only lookup of an existing written body; never generate an optimized call chain. */
+internal fun TypeInfo.methodImplementation(
     method: MethodInfo,
     errors: ErrorListener,
     visited: List<Pair<TypeConstant, MethodInfo>> = emptyList(),
 ): IdentityConstant? {
     val key = type to method
     if (errors.isAbortDesired || visited.any { it.first == type && it.second === method } || visited.size >= 64) return null
-    val body = method.chain.firstOrNull { !it.isAbstract } ?: return null
+    // FromInto is abstract as a composition entry, even when its constraint has a written body.
+    // Follow that metadata; an abstract constraint still returns no executable implementation.
+    val body = method.chain.firstOrNull { !it.isAbstract || it.implementation == Implementation.FromInto } ?: return null
     return when (body.implementation) {
         Implementation.Explicit,
         Implementation.Default,
