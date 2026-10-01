@@ -7736,8 +7736,8 @@ reproducible, and reconcile completed versus remaining scope. Validation is batc
    | Scope | Implemented and proven | Concrete remaining work |
    | --- | --- | --- |
    | L62 rename | Recorded source families, primary/ordinary parameter slots, lambdas, escaped method values, packages/modules/companions and guarded graph replacement | Cross-package qualification rewrites and explicit graph relocation; characterize additional refused composition routes with reproductions before extending proof. External consumers omitted from the configured graph remain an explicit unknown boundary. |
-   | L63 semantic actions | Import fixes and compiler-proven implement/override, including bundled contracts | Missing-declaration fixes, extract local, extract method, inline and safe delete are distinct unimplemented transformations. Each needs its own side-effect/capture/caller-closure design and positive/refusal tests. |
-   | L64 completion/signatures | Recorded cursor recovery, generic/formal constraints, bounded literal values, documentation and ranking | Declaration-name and keyword/snippet contexts; import-producing completion edits; arbitrary enclosing-instance enumeration; additional literal/callable/damaged-bound forms. Earlier claims that all literal synthesis or documentation were absent are superseded by the L64 receipt. |
+   | L63 semantic actions | Import fixes and compiler-proven implement/override, including bundled contracts | Exact-selection literal-return extraction is implemented in the continuation below. General extract local, missing-declaration fixes, extract method, inline and safe delete remain separate transformations. Each needs its own side-effect/capture/caller-closure design and positive/refusal tests. |
+   | L64 completion/signatures | Recorded cursor recovery, generic/formal constraints, bounded literal values, documentation and ranking | Import-producing completion is implemented in the continuation below. Declaration-name and keyword/snippet contexts; arbitrary enclosing-instance enumeration; additional literal/callable/damaged-bound forms. Earlier claims that all literal synthesis or documentation were absent are superseded by the L64 receipt. |
    | L65 navigation/classification | Source/bundled navigation, recorded hierarchy/composition relations and resolved tokens | Conditional/synthetic/native/redirect routes and ambiguous binary source metadata need individual fixtures. Runtime function targets cannot be invented by a static hierarchy. |
    | L66 editing/structure | Token-preserving indentation, URL links, local linked editing, recorded damaged-source structure | Expression wrapping and comment/string layout, import/source links, broader proven linked scopes and remaining damaged constructs. A full pretty-printer is not implemented. |
    | L67 scale | Live graph discovery/overlays, dependencies and detached per-root caches | Use the platform workload to establish budgets and locate bottlenecks before choosing incremental or persistent indexing; neither exists merely because incremental text transport does. |
@@ -8331,8 +8331,8 @@ L64 exclusions remain open; this is not a whole-family completion claim.
 Tests added: atomic bundled import, middle-token/CRLF/UTF-16 edits, ambiguous source choices,
 private and undeclared-dependency refusals, unrelated-error/member-site refusals, protocol edits,
 and cancellation before/during/after the second stage. Shared X105 and both drivers now also
-accept bundled/source import completions. Their older receipts cover quick fixes only; execution
-of the new variants is pending the combined gate.
+accept bundled/source import completions. Their older receipts cover quick fixes only; the new
+variants now have the selected editor receipts below.
 
 ### Functionality continuation: L65 redirect lookup
 
@@ -8349,7 +8349,7 @@ Method families now copy written contracts from the same compiler dispatch trave
 call provenance, rather than treating raw capped/into identities as editable declarations. The
 complete-graph before/after proof and binary/unknown-route refusals remain mandatory. Tests reuse
 manual mixin and conditional-mixin programs for covariant family rename/reverse rename, unrelated
-composition preservation and binary-contract collision refusal. No compiler API addition. These
+composition preservation and existing-default collision refusal. No compiler API addition. These
 tests and the existing composition/refactoring regressions run in the combined gate.
 
 ### Functionality continuation: L63 literal extraction
@@ -8366,5 +8366,51 @@ separate tasks requiring their own evaluation-order/capture/caller-closure proof
 
 Tests cover primitive literal forms, Unicode/CRLF, fresh-name collisions, unchanged disk sources,
 unsupported expressions and broken known neighbors. New shared X148 and both editor drivers
-exercise the action, exact resulting source, diagnostics and native Undo/Redo. Coverage is written;
-execution is pending the combined gate, not inferred from older playbook receipts.
+exercise the action, exact resulting source, diagnostics and native Undo/Redo. Both clients pass
+the selected acceptance recorded below.
+
+The first combined gate exposed two real proof gaps in those manual modules: predefined `this`
+registers lacked stable receiver identity, and conditional incorporation formals were mistaken for
+new declarations. Receiver proof now derives class/access identity from existing registers;
+conditional names refer to the incorporated mixin's registered property. This also repairs Go to
+Definition on the conditional formal. No compiler/AST change or new mutable builder field.
+
+Functionality checkpoint map (local, not pushed):
+
+| Slice | Commits | Validated scope |
+| --- | --- | --- |
+| L64 imports | `4d511f9d2`, `a21c1ae20`; X105 portions of `83a2e5b02` | Atomic public source/bundled imports, exact replacement, explicit-graph/access/error refusals, cancellation and originating-compilation guards; both editors accept the new X105 variants. |
+| L65 redirects | `54e657755`, `7c3a6eecc` | Real manual-module lookups plus direct FromInto/capped route assertions and existing lookup refusals. |
+| L62 composition | `1343d71df`, `23d15a1ea` | Covariant/conditional manual-module renames, reverse edits, conditional-formal navigation and a genuine colliding-default refusal; wider rename/member-action regressions. |
+| L63 literal extraction | `ef2bbb22e`; extraction/catalog portions of `83a2e5b02` | Eleven positive/refusal tests and X148 acceptance/Undo/Redo in both editors. |
+
+`83a2e5b02` is a shared acceptance correction: retain its X105 expected-import-document changes
+with L64, and its X148 ordering/catalog/selection tests and parser block-class correction with L63.
+The first implementation commits alone are not independently validated PRs; extract each complete
+slice with its corrections, then rerun its own gate.
+
+The combined regression gate passed **188 tests, zero failures/errors/skips**, plus IntelliJ
+integration-harness compilation and LSP/IntelliJ Spotless checks. A subsequent **34-test**
+lookup/dispatch gate covers the FromInto fix: a composition entry can be abstract while its
+constraint supplies a written body. The final **28-test** lifecycle/protocol gate covers completion
+proof retirement by edit, close, configuration change and cancellation. All passed without skips.
+VS Code TypeScript compilation and the ordered **153-case** shared/manual catalog audit pass.
+These focused runs supersede the failed development attempts; they do not claim a new full suite.
+
+Editor receipts:
+
+- VS Code `run-mWdgTG`: X105 and X148 pass (5.4s and 0.5s case execution). This exercises the
+  installed extension providers, application of additional edits, and native Undo/Redo.
+- VS Code `run-Gw4RBe`: final X105 replay passes (5.2s), including exact expected documents
+  with the originating-compilation guard in place. Zero failures or extension errors.
+- IntelliJ `run-8199814129240125831`: X148 passes (4.5s). X105 exposed the harness's old assumption
+  that completion only replaces the prefix. It actually replaces the full token and inserts imports.
+- IntelliJ `run-4498968462723872053`: corrected X105 passes (9.6s), with zero IDE failures. Both
+  drivers now share exact expected post-completion documents. The failed X105 receipt remains
+  recorded and is superseded only for that case.
+
+The four unintentionally deleted IntelliJ project files were restored from HEAD at the user's
+request; those deletions are not part of any commit. No embedding/AST changes or new mutable
+builder fields were needed for this batch. Broader declaration/snippet completion, dynamic or
+unsupported composition routes and general semantic transformations remain on the task list;
+none of L62–L65 is marked wholly complete. Performance/heap work remains deferred.
