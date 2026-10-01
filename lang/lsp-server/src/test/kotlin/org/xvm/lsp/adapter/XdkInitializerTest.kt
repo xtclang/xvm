@@ -1,18 +1,18 @@
 package org.xvm.lsp.adapter
 
-import java.nio.file.Files
-import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.treesitter.SemanticTokenLegend
+import java.nio.file.Files
+import java.nio.file.Path
 
 class XdkInitializerTest {
     @Test
     fun `folded initializer participates in hover navigation references tokens and complete rename`(
-        @TempDir directory: Path
+        @TempDir directory: Path,
     ) {
         val source = "module Folded { Int value = 1; Int copy = value; Int run() = value; }"
         val path = directory.resolve("Folded.x")
@@ -35,8 +35,7 @@ class XdkInitializerTest {
                             previous[0] + delta[0],
                             if (delta[0] == 0) previous[1] + delta[1] else delta[1],
                         ) + delta.drop(2)
-                    }
-                    .drop(1)
+                    }.drop(1)
             val reference = tokens.single { it[0] == 0 && it[1] == offset }
             assertThat(SemanticTokenLegend.tokenTypes[reference[3]]).isEqualTo("property")
             assertThat(adapter.prepareRename(uri, 0, offset)).isNotNull()
@@ -57,9 +56,8 @@ class XdkInitializerTest {
             assertThat(adapter.compile(uri, renamed).success).isTrue()
             adapter.closeDocument(uri)
             assertThat(
-                    adapter.compile(uri, source.replace("copy = value", "copy = missing")).success
-                )
-                .isFalse()
+                adapter.compile(uri, source.replace("copy = value", "copy = missing")).success,
+            ).isFalse()
             assertThat(adapter.prepareRename(uri, 0, offset)).isNull()
         }
     }

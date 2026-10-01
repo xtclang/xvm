@@ -21,7 +21,7 @@ internal class ConnectionLifetime(
             when (state.get()) {
                 State.STOPPED -> {
                     throw CannotStartProcessException(
-                        "Ecstasy LSP connection was stopped before startup completed"
+                        "Ecstasy LSP connection was stopped before startup completed",
                     )
                 }
 

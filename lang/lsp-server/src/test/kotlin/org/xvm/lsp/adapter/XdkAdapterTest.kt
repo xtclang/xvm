@@ -1,11 +1,11 @@
 package org.xvm.lsp.adapter
 
-import java.util.concurrent.CancellationException
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.SymbolInfo
+import java.util.concurrent.CancellationException
 
 /**
  * What an editor is told when the XTC compiler itself analyses a document.
@@ -93,8 +93,7 @@ class XdkAdapterTest {
                     .parallelStream()
                     .map { n ->
                         xdk.compile("file:///Doc$n.x", MISSING_SEMICOLON)
-                    }
-                    .toList()
+                    }.toList()
 
             assertThat(results).hasSize(8)
             results.forEachIndexed { i, r ->
@@ -124,8 +123,7 @@ class XdkAdapterTest {
                         } catch (_: CancellationException) {
                             null
                         }
-                    }
-                    .toList()
+                    }.toList()
 
             assertThat(results).hasSize(6)
             assertThat(results.filterNotNull()).isNotEmpty().allSatisfy { r ->
@@ -403,8 +401,7 @@ class XdkAdapterTest {
                 }
                 void helper() {}
             }
-            """
-                .trimIndent()
+            """.trimIndent()
 
         val CLEAN =
             """
@@ -414,8 +411,7 @@ class XdkAdapterTest {
                     console.print("hello");
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
 
         val MISSING_SEMICOLON =
             """
@@ -425,8 +421,7 @@ class XdkAdapterTest {
                     console.print("no semicolon above");
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
 
         val UNRESOLVABLE_NAME =
             """
@@ -435,8 +430,7 @@ class XdkAdapterTest {
                     NoSuchTypeAnywhere x = 1;
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
 
         /** `count` is written twice on the fourth line, both times as a use. */
         val USES =
@@ -447,8 +441,7 @@ class XdkAdapterTest {
                     Int total = count + count;
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
 
         /**
          * Two properties called `x` on different classes, a local used twice, and a type used where
@@ -475,8 +468,7 @@ class XdkAdapterTest {
                     Int s = p.sum();
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
 
         /** Redeclares an annotation the base property already has: VERIFY-75, a warning. */
         val DUPLICATE_ANNOTATION =
@@ -489,7 +481,6 @@ class XdkAdapterTest {
                     @Atomic @Override Int x = 2;
                 }
             }
-            """
-                .trimIndent()
+            """.trimIndent()
     }
 }

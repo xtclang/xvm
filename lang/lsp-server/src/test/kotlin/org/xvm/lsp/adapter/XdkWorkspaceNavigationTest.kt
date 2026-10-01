@@ -1,10 +1,10 @@
 package org.xvm.lsp.adapter
 
-import java.nio.file.Path
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import java.nio.file.Path
 
 class XdkWorkspaceNavigationTest {
     @TempDir lateinit var directory: Path
@@ -29,20 +29,27 @@ class XdkWorkspaceNavigationTest {
             assertThat(child.name).isEqualTo("Child")
             assertThat(adapter.getSupertypes(child).single().uri).isEqualTo(library)
             assertThat(
-                    adapter.findImplementation(library, 0, libraryText.indexOf("pick")).map {
-                        it.uri
-                    }
-                )
-                .contains(consumer)
+                adapter.findImplementation(library, 0, libraryText.indexOf("pick")).map {
+                    it.uri
+                },
+            ).contains(consumer)
                 .doesNotContain(directory.resolve("Unrelated.x").toUri().toString())
             val method =
                 adapter.prepareCallHierarchy(library, 0, libraryText.indexOf("pick")).single()
             val incoming = adapter.getIncomingCalls(method).single()
             assertThat(incoming.from.uri).isEqualTo(consumer)
             assertThat(incoming.from.name).isEqualTo("run")
-            assertThat(incoming.fromRanges.single().start.column)
-                .isEqualTo(consumerText.lastIndexOf("box.pick"))
-            assertThat(adapter.getOutgoingCalls(incoming.from).single().to.uri).isEqualTo(library)
+            assertThat(
+                incoming.fromRanges
+                    .single()
+                    .start.column,
+            ).isEqualTo(consumerText.lastIndexOf("box.pick"))
+            assertThat(
+                adapter
+                    .getOutgoingCalls(incoming.from)
+                    .single()
+                    .to.uri,
+            ).isEqualTo(library)
             val other =
                 adapter.prepareCallHierarchy(library, 0, libraryText.lastIndexOf("pick")).single()
             assertThat(adapter.getIncomingCalls(other)).isEmpty()
@@ -62,7 +69,12 @@ class XdkWorkspaceNavigationTest {
         )
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
-            val alias = directory.toFile().canonicalFile.toURI().toString() + "./Library.x"
+            val alias =
+                directory
+                    .toFile()
+                    .canonicalFile
+                    .toURI()
+                    .toString() + "./Library.x"
             assertThat(alias).isNotEqualTo(library)
             val item = adapter.prepareTypeHierarchy(alias, 0, libraryText.indexOf("Base")).single()
             assertThat(adapter.getSubtypes(item)).hasSize(1)

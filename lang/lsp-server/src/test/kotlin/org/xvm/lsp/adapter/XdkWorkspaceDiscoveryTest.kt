@@ -1,7 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.nio.file.Path
-import java.util.concurrent.CancellationException
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -9,6 +7,8 @@ import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import org.xvm.lsp.adapter.xdk.XdkWorkspaceDiscovery
+import java.nio.file.Path
+import java.util.concurrent.CancellationException
 
 class XdkWorkspaceDiscoveryTest {
     @TempDir lateinit var directory: Path
@@ -37,9 +37,8 @@ class XdkWorkspaceDiscoveryTest {
             }
         assertThat(edited.first().dependencies).isEmpty()
         assertThatThrownBy {
-                XdkWorkspaceDiscovery.scan(listOf(directory.toFile()), emptyMap(), modules) { true }
-            }
-            .isInstanceOf(CancellationException::class.java)
+            XdkWorkspaceDiscovery.scan(listOf(directory.toFile()), emptyMap(), modules) { true }
+        }.isInstanceOf(CancellationException::class.java)
     }
 
     @Test
@@ -50,14 +49,23 @@ class XdkWorkspaceDiscoveryTest {
         source("Broken.x", "module Broken { Missing value; }")
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
-            assertThat(adapter.findWorkspaceSymbols("answer").single().location.uri).isEqualTo(base)
+            assertThat(
+                adapter
+                    .findWorkspaceSymbols("answer")
+                    .single()
+                    .location.uri,
+            ).isEqualTo(base)
             assertThat(adapter.compile(app, appText).diagnostics).isEmpty()
             assertThat(adapter.findDefinition(app, 0, appText.indexOf("answer"))!!.uri)
                 .isEqualTo(base)
             val added = source("Added.x", "module Added { class AddedType {} }")
             adapter.refreshDiscoveredSources()
-            assertThat(adapter.findWorkspaceSymbols("AddedType").single().location.uri)
-                .isEqualTo(added)
+            assertThat(
+                adapter
+                    .findWorkspaceSymbols("AddedType")
+                    .single()
+                    .location.uri,
+            ).isEqualTo(added)
             directory.resolve("Added.x").toFile().delete()
             adapter.refreshDiscoveredSources()
             assertThat(adapter.findWorkspaceSymbols("AddedType")).isEmpty()
@@ -74,8 +82,12 @@ class XdkWorkspaceDiscoveryTest {
                 .isInstanceOf(IllegalArgumentException::class.java)
             val other = source("Other.x", "module Other { class OtherBox {} }")
             adapter.refreshDiscoveredSources()
-            assertThat(adapter.findWorkspaceSymbols("OtherBox").single().location.uri)
-                .isEqualTo(other)
+            assertThat(
+                adapter
+                    .findWorkspaceSymbols("OtherBox")
+                    .single()
+                    .location.uri,
+            ).isEqualTo(other)
             adapter.replaceSourceModules(emptyList())
             adapter.refreshDiscoveredSources()
             assertThat(adapter.findWorkspaceSymbols("Box")).isEmpty()

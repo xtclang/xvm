@@ -74,19 +74,20 @@ internal object XdkSymbols {
         uri: String,
         node: AstNode,
         source: Source?,
-    ): List<SymbolInfo> = buildList {
-        node.childNodes().forEach { child ->
-            // Recovered syntax has no compilation parentage yet; an absent source inherits the
-            // enclosing syntax tree's source. An explicitly different source is a module member.
-            if (child.source != null && child.source !== source) return@forEach
-            val symbol = symbolOf(uri, child)
-            if (symbol == null) {
-                addAll(declarationsIn(uri, child, source))
-            } else {
-                add(symbol.withChildren(declarationsIn(uri, child, source)))
+    ): List<SymbolInfo> =
+        buildList {
+            node.childNodes().forEach { child ->
+                // Recovered syntax has no compilation parentage yet; an absent source inherits the
+                // enclosing syntax tree's source. An explicitly different source is a module member.
+                if (child.source != null && child.source !== source) return@forEach
+                val symbol = symbolOf(uri, child)
+                if (symbol == null) {
+                    addAll(declarationsIn(uri, child, source))
+                } else {
+                    add(symbol.withChildren(declarationsIn(uri, child, source)))
+                }
             }
         }
-    }
 
     private fun symbolOf(
         uri: String,
@@ -108,9 +109,11 @@ internal object XdkSymbols {
             is IncompleteDeclarationStatement -> {
                 node.nameToken.orElse(null)?.let {
                     val kind =
-                        if (node.kind == IncompleteDeclarationStatement.Kind.METHOD)
+                        if (node.kind == IncompleteDeclarationStatement.Kind.METHOD) {
                             SymbolKind.METHOD
-                        else SymbolKind.PROPERTY
+                        } else {
+                            SymbolKind.PROPERTY
+                        }
                     SymbolInfo.of(it.valueText, kind, rangeOf(uri, node))
                 }
             }
@@ -127,13 +130,21 @@ internal object XdkSymbols {
     private fun kindOf(node: TypeCompositionStatement): SymbolKind =
         when (node.category.id) {
             Token.Id.MODULE -> SymbolKind.MODULE
+
             Token.Id.PACKAGE -> SymbolKind.PACKAGE
+
             Token.Id.INTERFACE -> SymbolKind.INTERFACE
+
             Token.Id.MIXIN,
-            Token.Id.ANNOTATION -> SymbolKind.MIXIN
+            Token.Id.ANNOTATION,
+            -> SymbolKind.MIXIN
+
             Token.Id.SERVICE -> SymbolKind.SERVICE
+
             Token.Id.CONST -> SymbolKind.CONST
+
             Token.Id.ENUM -> SymbolKind.ENUM
+
             else -> SymbolKind.CLASS
         }
 

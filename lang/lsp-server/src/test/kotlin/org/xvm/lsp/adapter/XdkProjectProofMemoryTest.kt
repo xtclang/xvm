@@ -1,10 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.lang.ref.WeakReference
-import java.nio.file.Path
-import java.time.Duration
-import java.util.concurrent.CancellationException
-import java.util.concurrent.atomic.AtomicBoolean
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.awaitility.Awaitility.await
@@ -16,6 +11,11 @@ import org.xvm.lsp.adapter.xdk.XdkDependencies
 import org.xvm.lsp.adapter.xdk.XdkProject
 import org.xvm.lsp.adapter.xdk.XdkProjectQueries
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import java.lang.ref.WeakReference
+import java.nio.file.Path
+import java.time.Duration
+import java.util.concurrent.CancellationException
+import java.util.concurrent.atomic.AtomicBoolean
 
 /** A bounded graph proof workload, independent of editor focus and client-side caches. */
 class XdkProjectProofMemoryTest {
@@ -38,7 +38,7 @@ class XdkProjectProofMemoryTest {
             (0 until 24).map { index ->
                 val file = directory.toRealPath().resolve("Root$index.x").toFile()
                 file.writeText(
-                    "module Root$index { class Box { Int number = 1; Int read() = number; } }"
+                    "module Root$index { class Box { Int number = 1; Int read() = number; } }",
                 )
                 XdkSourceModule("Root$index", file.toURI().toString())
             }
@@ -51,8 +51,7 @@ class XdkProjectProofMemoryTest {
                     // No configured root imports another: the proof must not deserialize preceding
                     // roots just to leave their declarations and pools unused in this compilation.
                     assertThat(repository?.moduleNames).isEmpty()
-                    EmbeddingSupport.instance().compileModule(sources, repository, errors).also {
-                        compilation ->
+                    EmbeddingSupport.instance().compileModule(sources, repository, errors).also { compilation ->
                         observed += WeakReference(compilation)
                         compilation.pool()?.let { observed += WeakReference(it) }
                         compilation.sourceTrees().forEach { observed += WeakReference(it) }
@@ -99,7 +98,7 @@ class XdkProjectProofMemoryTest {
                 .isZero()
         }
         println(
-            "24-root $outcome property proof: compiler objects released=${observed.size}, heap budget=${Runtime.getRuntime().maxMemory()} bytes"
+            "24-root $outcome property proof: compiler objects released=${observed.size}, heap budget=${Runtime.getRuntime().maxMemory()} bytes",
         )
     }
 }

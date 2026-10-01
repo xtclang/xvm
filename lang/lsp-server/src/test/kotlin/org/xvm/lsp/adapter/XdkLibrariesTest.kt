@@ -1,9 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.net.URI
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.attribute.PosixFilePermission
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
@@ -13,6 +9,10 @@ import org.xvm.lsp.adapter.xdk.XdkDependencies
 import org.xvm.lsp.adapter.xdk.XdkDependency
 import org.xvm.lsp.adapter.xdk.XdkLibraries
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import java.net.URI
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.attribute.PosixFilePermission
 
 class XdkLibrariesTest {
     @TempDir lateinit var directory: Path
@@ -21,32 +21,31 @@ class XdkLibrariesTest {
     fun `the production bundle resolves the complete distribution library set`() {
         val names =
             listOf(
-                    "aggregate",
-                    "cli",
-                    "collections",
-                    "convert",
-                    "crypto",
-                    "ecstasy",
-                    "json",
-                    "jsondb",
-                    "metrics",
-                    "net",
-                    "oodb",
-                    "runner",
-                    "runner_client",
-                    "sec",
-                    "web",
-                    "webauth",
-                    "webcli",
-                    "xenia",
-                    "xml",
-                    "xunit",
-                    "xunit_db",
-                    "xunit_engine",
-                    "mack",
-                    "_native",
-                )
-                .map { "$it.xtclang.org" }
+                "aggregate",
+                "cli",
+                "collections",
+                "convert",
+                "crypto",
+                "ecstasy",
+                "json",
+                "jsondb",
+                "metrics",
+                "net",
+                "oodb",
+                "runner",
+                "runner_client",
+                "sec",
+                "web",
+                "webauth",
+                "webcli",
+                "xenia",
+                "xml",
+                "xunit",
+                "xunit_db",
+                "xunit_engine",
+                "mack",
+                "_native",
+            ).map { "$it.xtclang.org" }
         assertThat(XdkLibraries.moduleNames).containsExactlyInAnyOrderElementsOf(names)
         val imports =
             names
@@ -83,13 +82,12 @@ class XdkLibrariesTest {
             assertThat(adapter.rename(target.uri, target.startLine, target.startColumn, "Renamed"))
                 .isNull()
             assertThat(
-                    adapter.formatDocument(
-                        target.uri,
-                        Files.readString(path),
-                        FormattingOptions(4, true),
-                    )
-                )
-                .isEmpty()
+                adapter.formatDocument(
+                    target.uri,
+                    Files.readString(path),
+                    FormattingOptions(4, true),
+                ),
+            ).isEmpty()
         }
         assertThatThrownBy { XdkSourceModule("xml.xtclang.org", uri) }
             .isInstanceOf(IllegalArgumentException::class.java)

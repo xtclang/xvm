@@ -1,8 +1,5 @@
 package org.xvm.lsp.server
 
-import java.io.File
-import java.net.URI
-import java.util.UUID
 import org.eclipse.lsp4j.DocumentDiagnosticReport
 import org.eclipse.lsp4j.FullDocumentDiagnosticReport
 import org.eclipse.lsp4j.RelatedFullDocumentDiagnosticReport
@@ -16,20 +13,31 @@ import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.toLsp
+import java.io.File
+import java.net.URI
+import java.util.UUID
 
 /** Called under the document lifecycle lock. IDs belong to this server and one document's items. */
 internal class DiagnosticReports {
-    private data class Entry(val id: String, val diagnostics: List<Diagnostic>)
+    private data class Entry(
+        val id: String,
+        val diagnostics: List<Diagnostic>,
+    )
 
     private val entries = mutableMapOf<String, Entry>()
 
-    fun record(uri: String, diagnostics: List<Diagnostic>) {
+    fun record(
+        uri: String,
+        diagnostics: List<Diagnostic>,
+    ) {
         val key = identity(uri)
-        val items = diagnostics.map {
-            it.copy(location = it.location.copy(uri = identity(it.location.uri)))
-        }
-        if (entries[key]?.diagnostics != items)
+        val items =
+            diagnostics.map {
+                it.copy(location = it.location.copy(uri = identity(it.location.uri)))
+            }
+        if (entries[key]?.diagnostics != items) {
             entries[key] = Entry(UUID.randomUUID().toString(), items)
+        }
     }
 
     fun record(results: List<CompilationResult>): Set<String> {
@@ -43,8 +51,7 @@ internal class DiagnosticReports {
                             it.location.uri == uri ||
                                 (uri == result.uri && it.location.uri !in result.documentUris)
                         }
-                    }
-                    .distinct(),
+                    }.distinct(),
             )
         }
         return uris
@@ -64,31 +71,28 @@ internal class DiagnosticReports {
                 .associateWith { other ->
                     Either.forLeft<FullDocumentDiagnosticReport, UnchangedDocumentDiagnosticReport>(
                         FullDocumentDiagnosticReport(
-                                entries.getValue(identity(other)).diagnostics.map {
-                                    it.present(other, relatedInformation)
-                                }
-                            )
-                            .apply {
-                                resultId = entries.getValue(identity(other)).id
-                            }
+                            entries.getValue(identity(other)).diagnostics.map {
+                                it.present(other, relatedInformation)
+                            },
+                        ).apply {
+                            resultId = entries.getValue(identity(other)).id
+                        },
                     )
-                }
-                .takeIf { it.isNotEmpty() }
+                }.takeIf { it.isNotEmpty() }
         return if (previous == entry.id) {
             DocumentDiagnosticReport(
                 RelatedUnchangedDocumentDiagnosticReport(entry.id).apply {
                     relatedDocuments = others
-                }
+                },
             )
         } else {
             DocumentDiagnosticReport(
                 RelatedFullDocumentDiagnosticReport(
-                        entry.diagnostics.map { it.present(uri, relatedInformation) }
-                    )
-                    .apply {
-                        resultId = entry.id
-                        relatedDocuments = others
-                    }
+                    entry.diagnostics.map { it.present(uri, relatedInformation) },
+                ).apply {
+                    resultId = entry.id
+                    relatedDocuments = others
+                },
             )
         }
     }
@@ -117,19 +121,18 @@ internal class DiagnosticReports {
                                 entry.id,
                                 uri,
                                 documentVersions[identity(uri)],
-                            )
+                            ),
                         )
                     } else {
                         WorkspaceDocumentDiagnosticReport(
                             WorkspaceFullDocumentDiagnosticReport(
-                                    entry.diagnostics.map { it.present(uri, relatedInformation) },
-                                    uri,
-                                    documentVersions[identity(uri)],
-                                )
-                                .apply { resultId = entry.id }
+                                entry.diagnostics.map { it.present(uri, relatedInformation) },
+                                uri,
+                                documentVersions[identity(uri)],
+                            ).apply { resultId = entry.id },
                         )
                     }
-                }
+                },
             )
         entries.keys.retainAll(currentUris.keys)
         return result
@@ -139,21 +142,30 @@ internal class DiagnosticReports {
         if (identity(uri) !in entries) record(uri, emptyList())
     }
 
-    fun includes(uris: Set<String>, uri: String): Boolean = uris.any {
-        identity(it) == identity(uri)
-    }
+    fun includes(
+        uris: Set<String>,
+        uri: String,
+    ): Boolean =
+        uris.any {
+            identity(it) == identity(uri)
+        }
 
-    private fun Diagnostic.present(uri: String, relatedInformation: Boolean) =
-        (if (location.uri == identity(uri)) copy(location = location.copy(uri = uri)) else this)
-            .toLsp(uri)
-            .apply { if (!relatedInformation) this.relatedInformation = null }
+    private fun Diagnostic.present(
+        uri: String,
+        relatedInformation: Boolean,
+    ) = (if (location.uri == identity(uri)) copy(location = location.copy(uri = uri)) else this)
+        .toLsp(uri)
+        .apply { if (!relatedInformation) this.relatedInformation = null }
 
-    private fun identity(uri: String): String = runCatching {
-        val parsed = URI(uri).normalize()
-        if (parsed.scheme == "file") File(parsed).canonicalFile.toURI().toString()
-        else parsed.toString()
-    }
-        .getOrDefault(uri)
+    private fun identity(uri: String): String =
+        runCatching {
+            val parsed = URI(uri).normalize()
+            if (parsed.scheme == "file") {
+                File(parsed).canonicalFile.toURI().toString()
+            } else {
+                parsed.toString()
+            }
+        }.getOrDefault(uri)
 
     fun clear() = entries.clear()
 }
