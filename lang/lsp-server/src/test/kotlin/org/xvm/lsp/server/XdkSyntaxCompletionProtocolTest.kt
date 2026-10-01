@@ -79,6 +79,24 @@ class XdkSyntaxCompletionProtocolTest {
     }
 
     @Test
+    fun `lambda templates negotiate a selected body or plain text without placeholder leakage`() {
+        listOf(false, true).forEach { snippets ->
+            XtcLanguageServer(XdkAdapter()).use { server ->
+                server.connect(mock(LanguageClient::class.java))
+                server.initialize(params(snippets)).get(30, SECONDS)
+                val text = "module Editing { void take(function Int(Int) action) {} void run() { take(); } }"
+                val service = server.textDocumentService
+                service.didOpen(DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", 1, text)))
+                val item = service.completion(CompletionParams(TextDocumentIdentifier(URI), Position(0, text.lastIndexOf("take(") + 5)))
+                    .get(30, SECONDS).left.single { it.label == "(arg1) -> TODO()" }
+                assertThat(item.insertTextFormat).isEqualTo(if (snippets) InsertTextFormat.Snippet else InsertTextFormat.PlainText)
+                assertThat(item.textEdit.left.newText).isEqualTo(item.insertText)
+                assertThat(item.insertText).isEqualTo(if (snippets) "(arg1) -> ${'$'}{1:TODO()}${'$'}0" else "(arg1) -> TODO()")
+            }
+        }
+    }
+
+    @Test
     fun `clients that only adjust indentation receive relative template bodies`() {
         val initialize =
             params(false).apply {
