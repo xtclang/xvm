@@ -1169,7 +1169,7 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 | L68 pull diagnostics | Negotiated pull/push, result IDs, related/closed documents and invalidation pass backend, stdio and selected acceptance in both editors. PLAT1's source-location crash is fixed. | Retain broader workload coverage rather than treating the selected fixtures as universal proof. |
 | L69 token range/delta | Negotiated range/delta and bounded result history pass backend/protocol and X126 in both hosts. | Measure representative workspace payload/cache costs under L82. |
 | L70 lazy resolve | All six resolve endpoints have detached revision guards; backend and X105/X122/X127/X131 checks pass. IntelliJ has a selected-action bridge preserving normal Undo/Redo. | Preserve eager fallback for clients without the relevant capabilities; broaden stale-application acceptance under L80/L82. |
-| L71 file operations | Six negotiated pre/post hooks and compiler-proven file/package/container operations; backend and selected X128/X130 checks pass in both editors. | Cross-package qualification rewrites and explicit graph relocation remain unsupported. Retain the VS Code file-operation refusal limitation. |
+| L71 file operations | Six negotiated pre/post hooks and compiler-proven file/package/container operations; backend and selected X128/X130 checks pass in both editors. | Bounded same-module type moves now rewrite package qualifications; X161 Move/Undo/Redo passes in both editors. Explicit graph relocation remains unsupported. Retain the VS Code file-operation refusal limitation. |
 | L72 save/sync/formatting | Negotiated save hooks, opt-in incremental patches and multiple-range formatting pass backend and selected X132/X137–X139 checks; Full remains default. | Broaden workspace/save ownership coverage; IntelliJ uses native save formatting because LSP4IJ lacks `willSaveWaitUntil`. Save edits remain version guarded and independent of compilation. |
 | L73 server commands | Run lenses invoke client commands; negotiated legacy code actions have a bounded one-use resolve/apply command. | Broader server commands and embedded Run remain separate scopes; define typed commands, edit failure handling and cancellation. Embedded execution depends on the accepted R2–R5 service design, not another command-line assembly path. |
 | L74 monikers | Compiler/graph identities exist but are not cross-project identifiers. | Define module/artifact-version identity, import/export relationships and matches across source and binary consumers. |
@@ -8939,11 +8939,13 @@ Shared X159/X160 pass in both editors; the receipt below retains the first block
 
 Remaining implementation work in L62:
 
-- [ ] Cross-package type/file moves: derive old/new ownership from compiler identities, rewrite
-  qualified references/imports, and prove the complete proposed graph. Add negative cases for
-  private access, ambiguous imports, name collisions and resource dependencies, then native Undo/Redo
-  in both editors. Current file-move support can relocate a container without changing semantic
-  ownership; that does not establish this case.
+- [x] Bounded cross-package type/file moves: derive old/new ownership from compiler identities,
+  rewrite qualified references/imports, and prove the complete proposed graph. Preserve companion
+  sources/resources, aliases, closed consumers and old-package sibling type references.
+- [x] Accept shared X161 Move/Undo/Redo in both editors; see the implementation receipt below.
+- [ ] Extend relocation beyond same-name class files and compiler-proven destination namespaces:
+  simultaneous move plus rename, unproven empty namespaces, token-preserving qualified names with
+  comments, and interacting batch qualifications remain outside this slice.
 - [ ] Explicit graph relocation: return and persist the replacement source/resource roots through
   the existing host proposal protocol, with version checks and editor Undo/Redo. Standard
   `willRenameFiles` cannot persist host settings by itself.
@@ -8973,3 +8975,69 @@ Validation and extraction receipt for `30fa27215`:
 Keep the tests, shared scenarios and driver registration together when extracting this L62 audit
 commit. It depends on the earlier conditional/bodyless proof corrections; it adds coverage, not
 new compiler API. These are selected acceptance runs, not a new full-catalog receipt.
+
+
+### L62 cross-package type relocation (2026-10-02)
+
+A same-name class file can move between compiler-proven package namespaces within its source
+module, including back to the module namespace. The existing `willRenameFiles` pipeline now
+rewrites qualified type names, import clauses, constructor/static calls and old-package sibling
+type references in the moved source tree. Explicit aliases retain their written names. Closed
+configured consumers participate; omitted consumers remain outside the graph. The companion
+directory moves with the type, including nested source files and resources.
+
+`CompilerTypeNames` reads existing Java AST accessors while the attempt owns its constant pool.
+The retained records contain source spans, strings and detached proof identities only. No Java
+AST accessor, field, clone hook or embedding API is added. `XdkTypeMoves` uses compiler namespace
+ownership to plan prefix edits. The proof may discard only static namespace/type occurrences
+inside those explicit prefix edits; all retained type/member bindings, constructor and method
+calls, import targets and dispatch chains must match the before graph after source remapping.
+Successful compilation alone is insufficient: a regression moves a class between packages whose
+same-named static methods both compile, and requires refusal when its bare call changes target.
+
+Both existing editor paths consume the same result; no additional production editor move protocol
+is needed. IntelliJ preflights its registered native Move action before applying a global undo
+command. VS Code's existing file-operation participation adds the compiler edit to the host's
+workspace move. A null LSP pre-operation reply still cannot veto arbitrary VS Code file moves.
+Shared X161 checks an explicit two-module graph, a closed consumer, an explicit import alias,
+constructor/static calls, old-package sibling references, companion sources/resources, Undo and
+Redo. Both editor drivers pass selected acceptance.
+
+Backend validation: 66 tests across nine suites pass without failures/errors/skips; both editor
+drivers compile and LSP/IntelliJ formatting checks pass. Two initial edge-case fixtures failed
+before any move because they omitted required `static` modifiers; corrected fixtures pass.
+The final 66-test gate also covers module aliases when selecting the destination namespace.
+The broader rename/proof gate passes **118 tests across 17 suites**, zero failures/errors/skips,
+plus root/LSP/IntelliJ Spotless checks. It exposed an over-broad import comparison: organize imports
+intentionally removes unused clauses, so `2ad97134f` restricts import-target preservation to file
+relocation. The existing `XdkRenameServerTest` caught the regression and now passes. The editor
+receipts below precede this correction; their relocation path and results are unchanged.
+
+Limits remain explicit: this slice preserves the file/type basename and module. It requires a
+compiler-proven destination namespace and refuses existing destination/companion collisions,
+unsupported qualification syntax and conflicting edit plans. Proposed compilation checks access,
+imports and resources; proof checks identities even when the proposed graph compiles. Explicit
+source-graph relocation and union/generated/cyclic callable target-set proof remain separate L62
+work. This is not a declaration that L62 or general Move refactoring is complete.
+
+
+Selected editor acceptance and extraction map:
+
+- `03c4494a1` + `2ad97134f`: detached compiler type/namespace facts, cross-package move planning, narrow
+  qualification/import binding proof, companion relocation and backend regressions. This slice
+  belongs with the graph proof/file-operation backend work; it adds no Java API dependency.
+- `a1f5b4097`: shared X161, both drivers, catalog registration and the manual playbook row.
+  Keep the catalog's ASCII escape restoration in the following receipt commit with this change;
+  it removes serialization-only noise and changes no scenario values.
+- VS Code 1.140.0 `run-KieFUI`: **X161 passes** in 2,460 ms; zero extension errors. This is native
+  workspace file-operation participation and editor Undo/Redo, not an Explorer Cut/Paste run and
+  not evidence that the separate X130/UP16 Explorer issue is resolved.
+- IntelliJ 2026.2.3 / LSP4IJ 0.21.0 `run-15583928886685829346`: **START and X161 pass**; X161 takes
+  4,789 ms, with zero recorded IDE errors and Ultimate disabled. JUnit confirms one passing suite
+  test, zero failures/errors/skips. The driver invokes the actual Move dialog and global Undo/Redo.
+- Both use the same **166-case** catalog, SHA-256
+  `36d257c300986d7e4efed0eeb7173542266c9f02b4f9165e8a46a09534866cd3`.
+
+These are selected acceptance runs, not new full-catalog receipts. The next independent L62 slice
+is explicit source-graph relocation through the host proposal/persistence/Undo path, followed by
+richer static callable identities. The bounded relocation follow-ups listed above remain tracked.
