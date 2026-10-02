@@ -1915,6 +1915,7 @@ public class BuildContext {
 
             case "Primitive->Specific",
                  "Primitive->Widened",
+                 "XvmPrimitive->Specific",
                  "XvmPrimitive->Widened":
                 Builder.box(code, typeFrom);
                 break;
@@ -1941,10 +1942,6 @@ public class BuildContext {
                  "NullableXvmPrimitive->XvmPrimitive":
                 // the boolean and the value(s) are on the Java stack; just pop the boolean
                 code.pop();
-                break;
-
-            case "XvmPrimitive->Specific":
-                Builder.box(code, typeTo);
                 break;
 
             default:

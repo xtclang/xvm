@@ -4481,8 +4481,6 @@ public class CommonBuilder
         Map.entry("org.xtclang.ecstasy.maps.Map",
             Set.of("removeAll")), // TODO: IP_ADD cannot find add (+) on Array<Map.Key>
         Map.entry("org.xtclang.ecstasy.Timeout",
-            Set.of("construct")), // TODO: invokes nService with invokeinterface although nService is a Java class
-        Map.entry("org.xtclang.ecstasy.numbers.Number",
-            Set.of("converterTo")) // TODO: converterTo's lambda checkcasts an unboxed int
+            Set.of("construct")) // TODO: invokes nService with invokeinterface although nService is a Java class
     );
 }

@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.lang.classfile.CodeBuilder;
 import java.lang.classfile.Label;
 
+import java.lang.constant.MethodTypeDesc;
+
 import java.util.List;
 
 import org.xvm.asm.Argument;
@@ -30,8 +32,13 @@ import org.xvm.runtime.ObjectHandle;
 import org.xvm.runtime.template.xBoolean;
 import org.xvm.runtime.template.xOrdered;
 
+import static java.lang.constant.ConstantDescs.CD_Object;
+import static java.lang.constant.ConstantDescs.CD_boolean;
+
 import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nObject;
+import static org.xvm.javajit.Builder.CD_nType;
+import static org.xvm.javajit.Builder.DataType;
 import static org.xvm.javajit.Builder.MD_TypeIsA;
 import static org.xvm.javajit.Builder.MD_xvmType;
 
@@ -409,7 +416,7 @@ public abstract class OpSwitch
     }
 
     /**
-     * Build the check for a type case: o.is(_)
+     * Build the check for a type case: o.is(_), or an equals ladder for Type values.
      *
      * @param bctx       the current build context
      * @param code       the CodeBuilder
@@ -424,7 +431,16 @@ public abstract class OpSwitch
         typeConst = typeConst.getParamType(0);
 
         TypeConstant type = reg.type();
-        if (type.isJavaPrimitive()) {
+        if (type.isTypeOfType()) {
+            reg.load(code);
+            if (!reg.cd().equals(CD_nType)) {
+                code.checkcast(CD_nType);
+            }
+            code.getfield(CD_nType, DataType, CD_TypeConstant);
+            bctx.loadTypeConstant(code, typeConst);
+            code.invokevirtual(CD_TypeConstant, "equals", MethodTypeDesc.of(CD_boolean, CD_Object))
+                .ifne(label);
+        } else if (type.isJavaPrimitive()) {
             // we can statically compute the result
             if (type.isA(typeConst)) {
                 code.ifne(label);

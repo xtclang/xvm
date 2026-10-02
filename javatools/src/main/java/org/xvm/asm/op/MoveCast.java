@@ -131,9 +131,22 @@ public class MoveCast
         TypeConstant typeTo   = bctx.getTypeConstant(m_nToType);
         TypeConstant typeCast = typeFrom.combine(bctx.pool(), typeTo);
 
+        // checkcast requires a reference even when the source uses an optimized representation
+        if (regFrom.flavor().isOptimized) {
+            if (regFrom.flavor().isNullablePrimitive()) {
+                Builder.boxNullable(code, typeFrom);
+            } else {
+                Builder.box(code, typeFrom);
+            }
+        }
         bctx.builder.generateCheckCast(code, typeCast, bctx.ctxSlot(code));
-        if (typeTo.isJitPrimitive() && !regFrom.flavor().isOptimized) {
-            Builder.unbox(code, typeTo);
+        if (typeTo.isJitPrimitive()) {
+            if (typeTo.isNullable()) {
+                Builder.unboxNullable(code, typeTo,
+                        bctx.builder.ensureClassDesc(typeTo.removeNullable()));
+            } else {
+                Builder.unbox(code, typeTo);
+            }
         }
         bctx.storeValue(code, m_nToValue, typeTo);
         return -1;
