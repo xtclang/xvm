@@ -1545,3 +1545,13 @@ skips, plus LSP/IntelliJ formatting checks. X155–X158 pass in VS Code `run-Um9
 `run-13592235693442712133` (START also passes, zero IDE errors). These selected receipts supersede
 the pending editor notes above; broader feature and release gates remain open in the integration
 plan. No Java AST changes were introduced by this continuation.
+
+The subsequent L62 boundary audit adds real compiler regressions for conditional members without
+formal host declarations, closed consumers, separate conditional families, compiling-but-unsafe
+contract merges and nested generic method/property delegates. Shared X159/X160 use the existing
+rename drivers to check cross-file changes and Undo. No compiler or AST API extension was needed
+for these cases; they were missing coverage. All 78 tests across 11 audit suites pass without
+failures/errors/skips; both drivers compile and formatting checks pass. X159/X160 editor execution
+is pending. Cross-package qualification
+rewrites, explicit graph relocation and richer union/generated/cyclic callable identities remain
+implementation tasks in the integration plan.

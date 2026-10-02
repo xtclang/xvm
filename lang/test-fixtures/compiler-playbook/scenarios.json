@@ -5107,6 +5107,60 @@
         "limitations": []
       }
     },
+    "X159": {
+      "title": "conditional member rename updates a closed consumer without a formal host contract",
+      "manual": [],
+      "values": {
+        "file": "Library.x",
+        "anchor": "measure()",
+        "replacement": "width",
+        "files": [
+          {
+            "file": "Library.x",
+            "source": "module Library {\n    class Box<T>(T value) incorporates conditional Textual<T extends String> {}\n    static mixin Textual<T extends String> into Box<T> { Int measure() = value.size; }\n}",
+            "destination": "Library.x",
+            "expected": "module Library {\n    class Box<T>(T value) incorporates conditional Textual<T extends String> {}\n    static mixin Textual<T extends String> into Box<T> { Int width() = value.size; }\n}"
+          },
+          {
+            "file": "Consumer.x",
+            "source": "module Consumer {\n    package lib import Library;\n    Int read(lib.Box<String> text) = text.measure();\n    Int unrelated(lib.Box<Int> number) = number.value;\n}",
+            "destination": "Consumer.x",
+            "expected": "module Consumer {\n    package lib import Library;\n    Int read(lib.Box<String> text) = text.width();\n    Int unrelated(lib.Box<Int> number) = number.value;\n}"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X160": {
+      "title": "nested generic delegation joins property contracts and closed consumer uses during rename",
+      "manual": [],
+      "values": {
+        "file": "Library.x",
+        "anchor": "value;",
+        "replacement": "content",
+        "files": [
+          {
+            "file": "Library.x",
+            "source": "module Library {\n    interface Api<T> { T value; T read(); }\n}",
+            "destination": "Library.x",
+            "expected": "module Library {\n    interface Api<T> { T content; T read(); }\n}"
+          },
+          {
+            "file": "Consumer.x",
+            "source": "module Consumer {\n    package lib import Library;\n    class Engine implements lib.Api<String> {\n        @Override String value = \"text\";\n        @Override String read() = value;\n    }\n    class Forward(Engine target) delegates lib.Api<String>(target) {}\n    class Outer(Forward target) delegates lib.Api<String>(target) {}\n    String use(Outer box) = box.read() + box.value;\n}",
+            "destination": "Consumer.x",
+            "expected": "module Consumer {\n    package lib import Library;\n    class Engine implements lib.Api<String> {\n        @Override String content = \"text\";\n        @Override String read() = content;\n    }\n    class Forward(Engine target) delegates lib.Api<String>(target) {}\n    class Outer(Forward target) delegates lib.Api<String>(target) {}\n    String use(Outer box) = box.read() + box.content;\n}"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
