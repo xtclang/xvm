@@ -1551,7 +1551,9 @@ formal host declarations, closed consumers, separate conditional families, compi
 contract merges and nested generic method/property delegates. Shared X159/X160 use the existing
 rename drivers to check cross-file changes and Undo. No compiler or AST API extension was needed
 for these cases; they were missing coverage. All 78 tests across 11 audit suites pass without
-failures/errors/skips; both drivers compile and formatting checks pass. X159/X160 editor execution
-is pending. Cross-package qualification
+failures/errors/skips; both drivers compile and formatting checks pass. X159/X160 pass in both
+editors (VS Code `run-RGeVCM`; IntelliJ `run-17726972701009018455`, including START and no recorded
+IDE errors). The earlier IntelliJ timeout was blocked by macOS permission dialogs visible in its
+saved screenshot; no permission choice was made and no completed edit was replayed. Cross-package qualification
 rewrites, explicit graph relocation and richer union/generated/cyclic callable identities remain
 implementation tasks in the integration plan.
