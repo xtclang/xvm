@@ -8779,7 +8779,7 @@ remain separate from functionality implementation.
 - [x] Write method/property fact regressions, declaration/call-site rename and reverse rename,
   concrete-host collision refusal, and shared X155 in both drivers.
 - [x] Run the new L62 regressions with existing rename, implementation and semantic action tests: 122 tests pass, zero failures/errors/skips; both editor drivers compile.
-- [ ] Validate the L62 composition and workspace boundary audit below; broader resource relocation
+- [x] Validate the L62 composition and workspace boundary audit below; broader resource relocation
   and unsupported dispatch identities remain separate implementation work.
 - [x] L63 whole-return-expression extraction and adjacent single-use typed returned-local inline,
   with relocation/type/binding proof and positive/refusal tests.
@@ -8923,7 +8923,7 @@ This checkpoint tests the remaining composition questions against the existing p
 assuming a missing playbook case implies missing compiler support. No production or Java AST change
 has been needed for the cases below. All 78 tests across 11 audit suites pass with zero
 failures/errors/skips; both editor drivers compile and LSP/IntelliJ Spotless checks pass.
-Selected X159/X160 editor execution is pending.
+Shared X159/X160 pass in both editors; the receipt below retains the first blocked IntelliJ attempt.
 
 | Boundary | Implementation and evidence |
 |---|---|
@@ -8955,3 +8955,21 @@ Remaining implementation work in L62:
 Omitted consumers are an explicit project configuration boundary, not a feature that can be
 completed by guessing other repositories. Binary contracts remain read-only by design. The audit
 does not close the broader L62 task or the existing editor stability/release gates.
+
+Validation and extraction receipt for `30fa27215`:
+
+- Backend: **78 tests across 11 suites**, zero failures/errors/skips. Both editor drivers compile;
+  LSP/IntelliJ Spotless checks pass.
+- VS Code `run-RGeVCM`: **X159/X160 pass**, zero extension errors (1.8 s and 1.2 s).
+- IntelliJ `run-14936839178671622673`: START passed, X159 failed waiting for its native Rename
+  dialog, and X160 was not reached. The saved screenshot shows macOS local-network permission
+  dialogs covering the editor despite Java reporting editor focus. No edit had been submitted.
+- Fresh IntelliJ `run-17726972701009018455`: **START/X159/X160 pass**, zero recorded IDE errors;
+  X159 took 3.0 s and X160 1.8 s. The system prompt did not recur and no permission choice was made.
+  JUnit confirms one passing suite test without failures/errors/skips.
+- Both editors used the same **165-case** catalog, SHA-256
+  `a4f584905f27342771bcc73ce553c14cd3260e8ab6ef51fbcc8baa9c6cdcb5e1`.
+
+Keep the tests, shared scenarios and driver registration together when extracting this L62 audit
+commit. It depends on the earlier conditional/bodyless proof corrections; it adds coverage, not
+new compiler API. These are selected acceptance runs, not a new full-catalog receipt.
