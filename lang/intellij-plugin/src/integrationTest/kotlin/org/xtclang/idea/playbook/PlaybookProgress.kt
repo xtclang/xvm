@@ -10,6 +10,7 @@ internal interface PlaybookProgress {
     fun update(
         project: Project,
         text: String,
+        detail: String,
     )
 
     fun focus(

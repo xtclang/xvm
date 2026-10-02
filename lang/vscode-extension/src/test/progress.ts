@@ -16,8 +16,13 @@ export function showTestProgress(runner: Mocha.Runner, title: string, label: (te
         progress.accessibilityInformation = { label: `${summary}. ${detail}` };
         progress.show();
     };
+    // Keep the ID and a useful description visible; the tooltip retains the complete title.
+    const caption = (test: Mocha.Test) => {
+        const text = label(test);
+        return text.length > 90 ? `${text.slice(0, 87).trimEnd()}…` : text;
+    };
     show('starting', `Starting ${title}`);
-    runner.on('test', test => show(`${label(test)} running`, test.fullTitle()));
-    runner.on('test end', test => show(`${label(test)} ${test.state ?? 'skipped'}`, test.fullTitle()));
+    runner.on('test', test => show(`${caption(test)} — running`, test.fullTitle()));
+    runner.on('test end', test => show(`${caption(test)} — ${test.state ?? 'skipped'}`, test.fullTitle()));
     runner.once('end', () => progress.dispose());
 }
