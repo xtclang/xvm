@@ -3,6 +3,8 @@ package org.xvm.lsp.adapter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
 
@@ -61,6 +63,49 @@ class XdkManualCompositionRenameTest {
             assertThat(directory.resolve("mixinTests.x").toFile().readText()).isEqualTo(text)
         }
     }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["Int size()", "text.size()"])
+    fun `conditional source composition renames from declaration and concrete receiver`(anchor: String) {
+        val text = conditionalSource()
+        val uri = source("Conditional", text)
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
+            val at = text.positionOf(anchor, "size")
+            val edit = requireNotNull(adapter.rename(uri, at.line, at.column, "width"))
+            val changed = apply(text, edit.changes.getValue(uri))
+            assertThat(changed).isEqualTo(text.replace("Int size()", "Int width()").replace("text.size()", "text.width()"))
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+            val renamed = changed.positionOf("text.width()", "width")
+            val reverse = requireNotNull(adapter.rename(uri, renamed.line, renamed.column, "size"))
+            assertThat(apply(changed, reverse.changes.getValue(uri))).isEqualTo(text)
+            assertThat(directory.resolve("Conditional.x").toFile().readText()).isEqualTo(text)
+        }
+    }
+
+    @Test
+    fun `conditional composition rename refuses a concrete host collision`() {
+        val text = conditionalSource("Int width() = 0;")
+        val uri = source("Conditional", text)
+        XdkAdapter().use { adapter ->
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
+            val at = text.positionOf("Int size()", "size")
+            assertThat(adapter.rename(uri, at.line, at.column, "width")).isNull()
+            assertThat(directory.resolve("Conditional.x").toFile().readText()).isEqualTo(text)
+        }
+    }
+
+    private fun conditionalSource(body: String = ""): String =
+        """
+        module Conditional {
+            class Box<T>(T value) incorporates conditional Textual<T extends String> { $body }
+            static mixin Textual<T extends String> into Box<T> { Int size() = value.size; }
+            Int read(Box<String> text) = text.size();
+            Int unrelated(Box<Int> number) = number.value;
+        }
+        """.trimIndent()
 
     private fun source(
         name: String,

@@ -5028,6 +5028,27 @@
         "limitations": []
       }
     },
+    "X155": {
+      "title": "conditional source composition rename follows concrete generic receivers",
+      "manual": [],
+      "values": {
+        "file": "Conditional.x",
+        "anchor": "size()",
+        "replacement": "width",
+        "files": [
+          {
+            "file": "Conditional.x",
+            "source": "module Conditional {\n    class Box<T>(T value) incorporates conditional Textual<T extends String> {}\n    static mixin Textual<T extends String> into Box<T> { Int size() = value.size; }\n    Int read(Box<String> text) = text.size();\n    Int unrelated(Box<Int> number) = number.value;\n}",
+            "destination": "Conditional.x",
+            "expected": "module Conditional {\n    class Box<T>(T value) incorporates conditional Textual<T extends String> {}\n    static mixin Textual<T extends String> into Box<T> { Int width() = value.size; }\n    Int read(Box<String> text) = text.width();\n    Int unrelated(Box<Int> number) = number.value;\n}"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
