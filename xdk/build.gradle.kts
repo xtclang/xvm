@@ -1,4 +1,4 @@
-import XdkDistribution.Companion.JAVATOOLS_PREFIX_PATTERN
+import XdkDistribution.Companion.JAVATOOLS_MODULE_PATTERNS
 import XdkDistribution.Companion.XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE
 import com.vanniktech.maven.publish.JavaLibrary
 import com.vanniktech.maven.publish.JavadocJar
@@ -363,14 +363,17 @@ distributions {
                 includeEmptyDirs = false
             }
 
-            // XTC modules
+            // XTC modules. The build keeps the compiler's output names; the two runtime system modules
+            // get their distribution names here, which the launchers expect next to javatools.jar.
             from(configurations.xtcModule) {
                 into("lib")
-                exclude(JAVATOOLS_PREFIX_PATTERN) // *.xtc, but not javatools_*.xtc
+                exclude(JAVATOOLS_MODULE_PATTERNS)
             }
             from(configurations.xtcModule) {
                 into("javatools")
-                include(JAVATOOLS_PREFIX_PATTERN) // only javatools_*.xtc
+                include(JAVATOOLS_MODULE_PATTERNS)
+                rename("^mack\\.xtc$", "javatools_turtle.xtc")
+                rename("^_native\\.xtc$", "javatools_bridge.xtc")
             }
 
             // Java tools (strip version from jar names)

@@ -22,6 +22,9 @@ dependencies {
     xtcModule(libs.xdk.web)
 }
 
-val compileXtc = tasks.named<XtcCompileTask>("compileXtc") {
-    outputFilename("_native.xtc" to "javatools_bridge.xtc")
+tasks.named<XtcCompileTask>("compileXtc") {
+    // Older builds renamed _native.xtc to javatools_bridge.xtc here; the distribution does that now. Delete such a
+    // leftover so the output directory, and every module path built from it, holds a single copy of the module.
+    val leftover = outputDirectory.map { it.file("javatools_bridge.xtc") }
+    doFirst { leftover.get().asFile.delete() }
 }

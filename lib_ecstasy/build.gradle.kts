@@ -52,8 +52,11 @@ dependencies {
     xdkTurtleConsumer(libs.javatools.turtle) // A dependency declaration like this works equally well if we are working with an included build/project or with an artifact. This is exactly what we want.
 }
 
-val compileXtc = tasks.named<XtcCompileTask>("compileXtc") {
-    outputFilename("mack.xtc" to "javatools_turtle.xtc")
+tasks.named<XtcCompileTask>("compileXtc") {
+    // Older builds renamed mack.xtc to javatools_turtle.xtc here; the distribution does that now. Delete such a
+    // leftover so the output directory, and every module path built from it, holds a single copy of the module.
+    val leftover = outputDirectory.map { it.file("javatools_turtle.xtc") }
+    doFirst { leftover.get().asFile.delete() }
 }
 
 /**
