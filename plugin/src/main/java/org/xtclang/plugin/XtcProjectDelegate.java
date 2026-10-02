@@ -465,6 +465,11 @@ public class XtcProjectDelegate {
             task.dependsOn(configs.getByName(XDK_CONFIG_NAME_JAVATOOLS_INCOMING));
             task.setSource(sourceSet.getExtensions().getByType(XtcSourceDirectorySet.class));
 
+            // Without compiler inputs, cached outputs may have been produced by an older compiler;
+            // retain local up-to-date checks, but never load or store those outputs in the build cache.
+            task.getOutputs().doNotCacheIf("Compiler inputs are not tracked when rebuild is disabled",
+                candidate -> !((XtcCompileTask) candidate).getRebuild().get());
+
             // Test source set should depend on main source set compilation
             // This mirrors Java's behavior where testCompileJava depends on compileJava
             if (SourceSet.TEST_SOURCE_SET_NAME.equals(sourceSet.getName())) {
