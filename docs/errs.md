@@ -2651,3 +2651,12 @@ skips, plus LSP/IntelliJ formatting checks. X155–X158 pass in VS Code `run-Um9
 `run-13592235693442712133` (START also passes, zero IDE errors). These selected receipts supersede
 the pending editor notes above; broader feature and release gates remain open in the integration
 plan. No Java AST changes were introduced by this continuation.
+
+The subsequent L62 boundary audit (`30fa27215`) adds eight compiler regressions and shared
+X159/X160 for conditional members without host contracts and nested generic delegates across
+closed source consumers. The existing compiler proof already handles these cases; no new AST or
+embedding API is required. All 78 audit tests pass without failures/errors/skips, and X159/X160
+pass in both editors. The first IntelliJ attempt was blocked by macOS permission dialogs and is
+retained as a failed receipt. The integration plan now separates the remaining implementation
+work: cross-package qualification rewrites, explicit graph relocation, and richer static identities
+for union/generated/cyclic callable routes.

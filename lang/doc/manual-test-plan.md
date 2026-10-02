@@ -1,6 +1,10 @@
 # Ecstasy Language Server - Manual Test Plan
 
 The current catalog has **165 scenarios**: X1–X160, CFG1–CFG3 and 7a.8/7a.9.
+X159/X160 pass in VS Code `run-RGeVCM` and IntelliJ `run-17726972701009018455` (START also
+passes, no recorded IDE errors): conditional members with closed consumers and nested generic
+property delegates, including cross-file edits and Undo. An earlier IntelliJ attempt timed out
+behind macOS local-network permission dialogs; it remains a failed receipt, not a compiler failure.
 X155–X158 pass in both editors: conditional/bodyless rename, whole-return-expression extraction,
 adjacent returned-local inline and import source links/alias linked editing. VS Code `run-Um9auo`
 and IntelliJ `run-13592235693442712133` record no selected failures; IntelliJ also passes START
@@ -1395,6 +1399,10 @@ use the mouse. Readiness polling is 100 ms; operation deadlines remain unchanged
 The disposable profile disables autosave and automatic completion/sole-candidate insertion;
 personal settings and shipped plugin defaults are unchanged. Cleanup closes the IDE after a
 failed check; the recorded failures were not IDE crashes.
+System permission dialogs can still block native actions while Java reports the editor as focused.
+If a native dialog never appears, inspect the saved screenshot before changing request deadlines
+or replaying an action. A fresh selected workspace can retry an unapplied operation; do not replay
+an already accepted rename. The X159 October 2 first attempt recorded this macOS prompt condition.
 CFG2 deliberately submits a cyclic dependency graph and expects an error notification while the
 last valid graph remains usable. That notification is an expected negative test; until its scoped
 cleanup is implemented it may remain visible over later cases.
@@ -3034,8 +3042,8 @@ L65 closure additions (execution pending):
 | X157 | Place the cursor on `value` in the shared Extract.x local and apply “Inline returned local variable”. | The initializer replaces the sole adjacent return read, its declaration disappears, diagnostics stay clear and Undo/Redo/Undo restore exact source. Both drivers pass this case in the October 2 selected receipts. |
 
 | X158 | Open the shared ImportLinks.x with LinkLibrary.x. Inspect module/type import links and linked editing at `Crate`. | Link ranges name `LinkLibrary` and `Crate`, both target the actual library source, and the alias links only its three written occurrences. Both drivers resolve links, check ranges and open the target source. Both drivers pass in the October 2 selected receipts; modifier-click appearance remains a manual observation. |
-| X159 | Open the scenario's Library.x, leaving Consumer.x closed. Rename the conditional `Textual.measure` method to `width`, inspect both files, then Undo once. | The mixin declaration and closed `Box<String>` consumer call change together even though `Box<T>` has no written method contract. `String.size` and `Box<Int>.value` stay unchanged. Undo restores both files exactly. Both drivers implement the case; execution is pending. |
-| X160 | Open the scenario's Library.x, leaving Consumer.x closed. Rename `Api.value` to `content`, inspect the Engine/Forward/Outer consumer, then Undo once. | The interface property, concrete implementation, internal read and delegated read change together across two generic delegation layers. Method names and delegate receiver properties stay unchanged. Undo restores both files exactly. Both drivers implement the case; execution is pending. |
+| X159 | Open the scenario's Library.x, leaving Consumer.x closed. Rename the conditional `Textual.measure` method to `width`, inspect both files, then Undo once. | The mixin declaration and closed `Box<String>` consumer call change together even though `Box<T>` has no written method contract. `String.size` and `Box<Int>.value` stay unchanged. Undo restores both files exactly. Passes in both editors; see the current selected receipt above. |
+| X160 | Open the scenario's Library.x, leaving Consumer.x closed. Rename `Api.value` to `content`, inspect the Engine/Forward/Outer consumer, then Undo once. | The interface property, concrete implementation, internal read and delegated read change together across two generic delegation layers. Method names and delegate receiver properties stay unchanged. Undo restores both files exactly. Passes in both editors; see the current selected receipt above. |
 
 L67 index replacement check: with an unopened consumer, navigate a member from a host-indexed
 binary. Replace its source index with another source location, remove the index while retaining
