@@ -1404,7 +1404,22 @@ class XdkAdapter
         override fun getDocumentLinks(
             uri: String,
             content: String,
-        ): List<DocumentLink> = XdkLexical.links(content)
+        ): List<DocumentLink> {
+            val module = module(uri)
+            val document = module?.document(uri)
+            val links =
+                document
+                    ?.takeIf { it.ast?.source?.toRawString() == content }
+                    ?.semantics
+                    ?.sourceLinks
+                    .orEmpty()
+                    .mapNotNull { link ->
+                        module?.sourceUri(link.target.sourceName)?.let { target ->
+                            DocumentLink(link.range.toRange(), target, "Open imported source")
+                        }
+                    }
+            return (XdkLexical.links(content) + links).distinctBy { it.range }.sortedBy { it.range.start.line }
+        }
 
         override fun getCodeLenses(uri: String): List<CodeLens> =
             analysis(uri)
@@ -1434,6 +1449,10 @@ class XdkAdapter
             val model =
                 analysis(uri)?.semantics?.takeIf { it.status == SemanticModel.Status.COMPLETE }
                     ?: return null
+            model.importAt(line, column)?.let { alias ->
+                val ranges = (listOf(alias.declaration) + alias.uses).distinct().sortedBy { it.start }
+                return ranges.takeIf { it.size > 1 }?.let { LinkedEditingRanges(it.map { range -> range.toRange() }) }
+            }
             val symbol =
                 model.symbolAt(line, column)?.takeIf {
                     it.renameable && it.kind == SemanticModel.SymbolKind.VARIABLE

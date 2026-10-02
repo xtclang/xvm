@@ -5079,6 +5079,34 @@
         "limitations": []
       }
     },
+    "X158": {
+      "title": "resolve import source links and link only explicit alias names",
+      "manual": [
+        "Modifier-click the displayed import link to inspect its target in the editor."
+      ],
+      "values": {
+        "file": "ImportLinks.x",
+        "module": "ImportLinks",
+        "source": "module ImportLinks {\n    package lib import LinkLibrary;\n    import lib.Box as Crate;\n    Crate value = new Crate();\n}",
+        "libraryFile": "LinkLibrary.x",
+        "libraryModule": "LinkLibrary",
+        "library": "module LinkLibrary { class Box {} }",
+        "alias": "Crate",
+        "linkNames": [
+          "LinkLibrary",
+          "Crate"
+        ],
+        "aliasUses": [
+          "Crate;",
+          "Crate value",
+          "Crate()"
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
