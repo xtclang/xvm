@@ -1,6 +1,10 @@
 # Ecstasy Language Server - Manual Test Plan
 
 The current catalog has **166 scenarios**: X1–X161, CFG1–CFG3 and 7a.8/7a.9.
+X161 passes in VS Code `run-KieFUI` and IntelliJ `run-15583928886685829346` (START also passes,
+no IDE errors): cross-package type Move, closed-consumer qualification edits, companion resources,
+and one Undo/Redo. The final related backend gate passes 118 tests with no failures/errors/skips.
+This does not rerun or close the separate X130 Explorer Cut/Paste issue.
 X159/X160 pass in VS Code `run-RGeVCM` and IntelliJ `run-17726972701009018455` (START also
 passes, no recorded IDE errors): conditional members with closed consumers and nested generic
 property delegates, including cross-file edits and Undo. An earlier IntelliJ attempt timed out
@@ -3044,7 +3048,7 @@ L65 closure additions (execution pending):
 | X158 | Open the shared ImportLinks.x with LinkLibrary.x. Inspect module/type import links and linked editing at `Crate`. | Link ranges name `LinkLibrary` and `Crate`, both target the actual library source, and the alias links only its three written occurrences. Both drivers resolve links, check ranges and open the target source. Both drivers pass in the October 2 selected receipts; modifier-click appearance remains a manual observation. |
 | X159 | Open the scenario's Library.x, leaving Consumer.x closed. Rename the conditional `Textual.measure` method to `width`, inspect both files, then Undo once. | The mixin declaration and closed `Box<String>` consumer call change together even though `Box<T>` has no written method contract. `String.size` and `Box<Int>.value` stay unchanged. Undo restores both files exactly. Passes in both editors; see the current selected receipt above. |
 | X160 | Open the scenario's Library.x, leaving Consumer.x closed. Rename `Api.value` to `content`, inspect the Engine/Forward/Outer consumer, then Undo once. | The interface property, concrete implementation, internal read and delegated read change together across two generic delegation layers. Method names and delegate receiver properties stay unchanged. Undo restores both files exactly. Passes in both editors; see the current selected receipt above. |
-| X161 | Move `App/tools/Box.x` to `App/util/Box.x` using native Move in IntelliJ or a VS Code workspace file move. Keep Consumer.x closed. Inspect the import alias, constructor/static calls, old-package Helper references, companion Part.x and data.txt. Undo once, then Redo once. | One transaction rewrites qualified references, preserves Crate and all selected declarations/calls, and moves the companion tree. Undo restores all text and paths; Redo reapplies them. Native validation pending for this slice. |
+| X161 | Move `App/tools/Box.x` to `App/util/Box.x` using native Move in IntelliJ or a VS Code workspace file move. Keep Consumer.x closed. Inspect the import alias, constructor/static calls, old-package Helper references, companion Part.x and data.txt. Undo once, then Redo once. | One transaction rewrites qualified references, preserves Crate and all selected declarations/calls, and moves the companion tree. Undo restores all text and paths; Redo reapplies them. Passes in both editors; see the selected receipts above. |
 
 L67 index replacement check: with an unopened consumer, navigate a member from a host-indexed
 binary. Replace its source index with another source location, remove the index while retaining
