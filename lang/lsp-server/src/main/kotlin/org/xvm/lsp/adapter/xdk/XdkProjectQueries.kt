@@ -769,13 +769,18 @@ internal class XdkProjectQueries(
             }
         val extraction =
             if (complete) {
-                XdkLiteralExtraction.edits(text, range)?.let { edits ->
+                XdkLocalExtraction.candidate(text, range)?.let { candidate ->
                     checkCurrent()
-                    val plan = XdkRename.Plan(texts, mapOf(source to edits))
+                    val plan =
+                        XdkRename.Plan(
+                            texts,
+                            mapOf(source to candidate.edits),
+                            relocations = mapOf(source to listOf(candidate.relocation)),
+                        )
                     val after = compile(plan.proposed) ?: return@let null
                     if (!XdkRename.preservesKnownBindings(before, after, plan)) return@let null
                     CodeAction(
-                        "Extract literal to local variable",
+                        candidate.title,
                         CodeAction.CodeActionKind.REFACTOR_EXTRACT,
                         edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
                     )
