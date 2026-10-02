@@ -5064,6 +5064,21 @@
         "limitations": []
       }
     },
+    "X157": {
+      "title": "inline an adjacent returned local without duplicating evaluation or changing bindings",
+      "manual": [],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    Int step() = 1;\n    Int read(Int input) {\n        Int value = input + step();\n        return value;\n    }\n}",
+        "selected": "value",
+        "title": "Inline returned local variable",
+        "expected": "module Extract {\n    Int step() = 1;\n    Int read(Int input) {\n        return input + step();\n    }\n}"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
