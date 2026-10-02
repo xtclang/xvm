@@ -1231,6 +1231,9 @@ public class MethodInfo
                         break;
                     }
                     // fall through
+                case Capped:
+                    // TODO CP: similarly to the comment in computeJitDesc(), this shouldn't happen
+                    //          remove this case when the other is fixed
                 case Implicit:
                 case Declared:
                 case Abstract:
@@ -1307,7 +1310,6 @@ public class MethodInfo
                     }
                     break;
 
-                case Capped:
                 default:
                     throw new IllegalStateException();
                 }

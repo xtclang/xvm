@@ -128,7 +128,7 @@ public class BuildContext {
         this.typeInfo      = typeInfo;
         this.thisType      = typeInfo.getType();
         this.jitType       = thisType.getJitCCType();
-        this.callChain     = methodInfo.getChain();
+        this.callChain     = methodInfo.ensureOptimizedMethodChain(typeInfo);
         this.methodStruct  = callChain[0].getMethodStructure();
         this.callDepth     = 0;
         this.methodDesc    = jmd;

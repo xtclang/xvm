@@ -4348,6 +4348,11 @@ public class CommonBuilder
             flags |= ClassFile.ACC_STATIC;
         }
 
+        if (method.isAbstract()) {
+            classBuilder.withMethod(jitName, md, flags, ignored -> {});
+            return;
+        }
+
         BuildContext bctx = new BuildContext(this,
                 method.isCtorOrValidator() ? structInfo : typeInfo, method, jmd);
         doAssembleMethod(classBuilder, bctx, method, jitName, md, flags);
