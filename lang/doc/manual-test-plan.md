@@ -1,6 +1,6 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **162 scenarios**: X1–X157, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **163 scenarios**: X1–X158, CFG1–CFG3 and 7a.8/7a.9.
 X155 adds conditional generic composition rename and Undo; its editor execution is pending.
 X156 adds whole-return-expression extraction and Undo/Redo; its editor execution is pending.
 Both editor runners show the current scenario ID and description beside the completed/remaining
@@ -3030,3 +3030,5 @@ L65 closure additions (execution pending):
 | X156 | Select the complete `input + step()` return expression in shared Extract.x and apply “Extract expression to local variable”. | An explicitly typed local is inserted immediately before the return. The selected expression appears once, the return reads the new local, and diagnostics remain clear. Undo/Redo/Undo restore the exact expected sources. Both drivers implement the case; this batch has not executed it yet. |
 
 | X157 | Place the cursor on `value` in the shared Extract.x local and apply “Inline returned local variable”. | The initializer replaces the sole adjacent return read, its declaration disappears, diagnostics stay clear and Undo/Redo/Undo restore exact source. Both drivers implement this case; editor execution is pending. |
+
+| X158 | Open the shared ImportLinks.x with LinkLibrary.x. Inspect module/type import links and linked editing at `Crate`. | Link ranges name `LinkLibrary` and `Crate`, both target the actual library source, and the alias links only its three written occurrences. Both drivers resolve links, check ranges and open the target source. Modifier-click appearance remains a manual observation; automated execution is pending. |
