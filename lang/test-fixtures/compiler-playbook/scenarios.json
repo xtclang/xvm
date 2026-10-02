@@ -2078,6 +2078,12 @@
             "suffix": " {}",
             "selected": "MaxValue",
             "terminator": ")"
+          },
+          {
+            "prefix": "class Holder(Int size = \"x\".si",
+            "suffix": " {}",
+            "selected": "size",
+            "terminator": ")"
           }
         ],
         "replaceFrom": {
