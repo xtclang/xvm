@@ -1539,3 +1539,9 @@ preserves them and tests binary source-index/source-graph replacement. No Java A
 needed. L66's 15 focused tests and L67's 20 lifecycle/dependency/navigation tests passed without skips.
 The replacement regression exposed and fixed missing host-indexed binary source URIs for unopened
 workspace navigation. Module navigation already carried those URIs; both now use the same conversion.
+
+October 2 validation receipt: the combined continuation passes 204 LSP tests, zero failures/errors/
+skips, plus LSP/IntelliJ formatting checks. X155–X158 pass in VS Code `run-Um9auo` and IntelliJ
+`run-13592235693442712133` (START also passes, zero IDE errors). These selected receipts supersede
+the pending editor notes above; broader feature and release gates remain open in the integration
+plan. No Java AST changes were introduced by this continuation.

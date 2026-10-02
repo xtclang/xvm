@@ -1055,3 +1055,12 @@ comments, intervening statements and unproven cases are refused. 31 focused back
 both drivers compile, and shared X156/X157 implement action/diagnostics/Undo/Redo acceptance.
 Those editor cases have not yet run. General extract/inline, extract method, missing declarations
 and safe delete remain open.
+
+October 2 continuation validation: 204 combined backend tests pass without failures or skips.
+Shared X155–X158 pass in both editors (VS Code `run-Um9auo`; IntelliJ
+`run-13592235693442712133`, including START, zero IDE errors, Ultimate disabled). This validates
+the new conditional/bodyless rename, returned-expression extraction/inline and import source-link/
+alias-editing behavior. Earlier pending notes above record the implementation checkpoint, not the
+current acceptance state. Binary source-index replacement tests also fixed missing source URIs in
+unopened graph navigation; binary-only metadata remains usable without invented source locations.
+Broader transformation, formatting, graph-scale and release-gate tasks remain open.

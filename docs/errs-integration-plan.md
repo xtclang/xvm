@@ -8774,15 +8774,20 @@ remain separate from functionality implementation.
   concrete-host collision refusal, and shared X155 in both drivers.
 - [x] Run the new L62 regressions with existing rename, implementation and semantic action tests: 122 tests pass, zero failures/errors/skips; both editor drivers compile.
 - [ ] Audit the remaining L62 composition exclusions and workspace boundaries before closure.
-- [ ] L63 general expression extraction and independent semantic transformations, each with
-  evaluation-order/type/binding proof and refusal tests; no blanket completion claim.
-- [ ] L66 source links, proven linked-edit scopes and damaged structure; agree formatter behavior
-  before introducing wrapping or changing comment/string layout.
-- [ ] L67 source/binary replacement and graph/index lifecycle coverage; use recorded measurements
-  to justify caching changes instead of introducing a persistent index speculatively.
+- [x] L63 whole-return-expression extraction and adjacent single-use typed returned-local inline,
+  with relocation/type/binding proof and positive/refusal tests.
+- [ ] L63 remaining transformations: wider extraction contexts, extract method, broader inline,
+  safe delete and missing declarations; each needs its own semantic proof.
+- [x] L66 resolved module/type import source links and explicit lexical alias linked editing.
+- [ ] L66 remaining damaged structure, wildcard/conditional links and broader linked scopes; agree
+  formatter behavior before introducing wrapping or changing comment/string layout.
+- [x] L67 bounded source/binary replacement and graph/index lifecycle regression; fix lost host
+  binary source URIs and lambda facts. Twenty backend tests pass.
+- [ ] L67 scale closure: use recorded measurements to justify caching changes instead of
+  introducing a persistent index speculatively.
 
-The shared catalog now contains 160 cases. Earlier 159-case receipts remain historical evidence;
-X155 has been implemented in both drivers but has not yet run.
+The shared catalog now contains 163 cases (X1–X158 and five existing CFG/warning cases).
+Earlier 159-case receipts remain historical evidence; X155–X158 now pass in both editors (receipt below).
 
 
 L62 validation correction (October 2): formal interface declarations require
@@ -8877,4 +8882,30 @@ Extraction map for this continuation:
 | IDE scenario descriptions | `72bfc3b9c` | Both drivers compile; X IDs/filtering stay unchanged. |
 | L63 returned-expression extraction and inline | `3a4c03fd9` + `c35a7c031` | Shared relocation proof; 31 backend tests passed. X156/X157 editor runs pending. |
 | L66 import sources and lexical aliases | `eb045abec` | 15 backend tests passed, both drivers compile. X158 editor run pending. |
-| L67 snapshot join/replacement | Current follow-up | Dedicated regression; include the L66 source-link field when extracting together. |
+| L67 snapshot join/replacement | `e1c6731b8` | Dedicated regression; include the L66 source-link field when extracting together. |
+
+### L62/L63/L66/L67 continuation acceptance (2026-10-02)
+
+Implementation checkpoint `e1c6731b8` passes the combined 204-test LSP regression gate: 20 suites,
+zero failures/errors/skips. This includes dispatch/rename, extraction/inline/capture proof,
+import/source links, detached semantic models and graph/dependency replacement. LSP and IntelliJ
+Spotless checks pass. Both editor drivers compile.
+
+Both selected editor runs use the same 163-case catalog, SHA-256
+`299ebd0d214e35f7f9ff14bbb8de7e9c0203481c9ed4e14187819930d039addc`:
+
+- VS Code `run-Um9auo`: X155–X158 all pass, no selected failures. The interrupted earlier
+  `run-A634WV` has no results file and is not counted as evidence.
+- IntelliJ `run-13592235693442712133`: START and X155–X158 all pass, no IDE errors;
+  JUnit reports one passing suite test without skips. IDEA 2026.2.3, LSP4IJ 0.21.0,
+  Ultimate features disabled.
+
+X155 proves conditional/bodyless rename plus Undo; X156 and X157 apply extraction/inline and
+check exact source, clear diagnostics and Undo/Redo/Undo; X158 resolves import links, checks lexical
+alias ranges and opens the target source. Both running harnesses now use shared scenario titles
+in progress text/tooltips while preserving X IDs and selection syntax. Pixel-level appearance and
+modifier-click presentation remain manual checks, not claims made from provider assertions.
+
+This is selected new-feature acceptance, not another full 163-case run. The existing X105 popup
+stability, VS Code X130 upstream failure and L82 release gates remain open. The checklist above
+continues to distinguish the completed bounded slices from broader L62/L63/L66/L67 scope.
