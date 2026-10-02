@@ -788,7 +788,30 @@ internal class XdkProjectQueries(
             } else {
                 null
             }
-        return if (isCurrent()) actions + members + listOfNotNull(extraction) else emptyList()
+        val inline =
+            if (complete) {
+                before.models.singleOrNull { it.sourceName == source }?.let { model ->
+                    XdkLocalInline.candidate(text, range, model)?.let { candidate ->
+                        checkCurrent()
+                        val plan =
+                            XdkRename.Plan(
+                                texts,
+                                mapOf(source to candidate.edits),
+                                relocations = mapOf(source to listOf(candidate.relocation)),
+                            )
+                        val after = compile(plan.proposed) ?: return@let null
+                        if (!XdkRename.preservesLocalRemoval(before, after, plan, candidate.removed)) return@let null
+                        CodeAction(
+                            "Inline returned local variable",
+                            CodeAction.CodeActionKind.REFACTOR_INLINE,
+                            edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+                        )
+                    }
+                }
+            } else {
+                null
+            }
+        return if (isCurrent()) actions + members + listOfNotNull(extraction, inline) else emptyList()
     }
 
     private fun autoImports(
