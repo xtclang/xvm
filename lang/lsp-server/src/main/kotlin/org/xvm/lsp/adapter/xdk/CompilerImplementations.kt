@@ -44,7 +44,7 @@ internal fun compilerImplementationTargets(
             .filterIsInstance<Expression>()
             .filter { it.isValidated && it.typeFit.isFit }
             .mapNotNull { it.type }
-            .filter { it.isSingleUnderlyingClass(false) && it.getSingleUnderlyingClass(false) in classes }
+            .filter { !it.isFormalType && it.isSingleUnderlyingClass(false) && it.getSingleUnderlyingClass(false) in classes }
     val types = (classes.values.map { it.formalType } + instantiated).map { it.ensureAccess(Access.PRIVATE) }.distinct()
     for (type in types) {
         if (inspection.isAbortDesired) return emptyMap()
