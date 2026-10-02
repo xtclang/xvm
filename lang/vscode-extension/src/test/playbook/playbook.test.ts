@@ -19,6 +19,7 @@ import { renameFamilyCases } from './renameFamilies';
 import { editScenario, scenarioOffset, scenarioText, shared } from './shared';
 import { semanticCases, semanticClosureCases } from './semantics';
 import { syntaxCompletionCases } from './syntaxCompletion';
+import { typeMoveCases } from './typeMoves';
 import { client, diagnosticCode, diagnostics, eventually, fixture, loadFixtures, nextProblem, noErrors, playbook } from './support';
 
 suite('XdkAdapter playbook', function () {
@@ -58,6 +59,7 @@ suite('XdkAdapter playbook', function () {
     localRefactoringCases(['X156', 'X157']);
     editingClosureCases();
     renameFamilyCases(['X159', 'X160']);
+    typeMoveCases();
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {
