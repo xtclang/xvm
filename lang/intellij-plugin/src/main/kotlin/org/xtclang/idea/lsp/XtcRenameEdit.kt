@@ -219,6 +219,10 @@ class XtcRenameEdit
                     if (!FileMoveTargets.valid(requested.mapKeys { Path.of(it.key.path) })) {
                         return@computeBlocking CompletableFuture.completedFuture(null)
                     }
+                    val projectRoot = wrapper.project.basePath?.let(Path::of)
+                    if (projectRoot != null && requested.keys.any { projectRoot.startsWith(Path.of(it.path)) }) {
+                        return@computeBlocking CompletableFuture.completedFuture(null)
+                    }
                     val moves =
                         requested.map { (file, target) ->
                             FileMove(file, file.url, file.modificationStamp, target)
@@ -234,37 +238,42 @@ class XtcRenameEdit
                                     .toString(),
                             )
                         }
+                    val graph = SourceGraphEdit.capture(wrapper.project, wrapper.serverDefinition.id)
                     val cancellation = CancellationSupport()
                     val result =
                         snapshot
                             .flush()
                             .thenCompose {
                                 cancellation.checkCanceled()
+                                val server = snapshot.server
                                 cancellation.execute(
-                                    snapshot.server.workspaceService.willRenameFiles(
-                                        RenameFilesParams(operations),
-                                    ),
-                                )
-                            }.thenApply { edit ->
-                                edit?.let {
-                                    check(it.changes.isNullOrEmpty()) {
-                                        "File operations require versioned edits"
-                                    }
-                                    val combined =
-                                        WorkspaceEdit().apply {
-                                            documentChanges =
-                                                buildList {
-                                                    addAll(it.documentChanges.orEmpty())
-                                                    addAll(
-                                                        operations.map { move ->
-                                                            Either.forRight(
-                                                                RenameFile(move.oldUri, move.newUri),
-                                                            )
-                                                        },
-                                                    )
-                                                }
+                                    if (server is XtcLanguageServer) {
+                                        server.renameFilesProposal(RenameFilesParams(operations))
+                                    } else {
+                                        server.workspaceService.willRenameFiles(RenameFilesParams(operations)).thenApply { edit ->
+                                            edit?.let {
+                                                check(it.changes.isNullOrEmpty()) { "File operations require versioned edits" }
+                                                RenameProposal(
+                                                    WorkspaceEdit().apply {
+                                                        documentChanges =
+                                                            buildList {
+                                                                addAll(it.documentChanges.orEmpty())
+                                                                addAll(
+                                                                    operations.map { move ->
+                                                                        Either.forRight(RenameFile(move.oldUri, move.newUri))
+                                                                    },
+                                                                )
+                                                            }
+                                                    },
+                                                )
+                                            }
                                         }
-                                    XtcRenameEdit(snapshot, combined, command = command)
+                                    },
+                                )
+                            }.thenApply { proposal ->
+                                proposal?.let {
+                                    check(it.edit.changes.isNullOrEmpty()) { "File operations require versioned edits" }
+                                    XtcRenameEdit(snapshot, it.edit, it.graph?.let(graph::replacement), command)
                                 }
                             }
                     result.whenComplete { _, _ -> if (result.isCancelled) cancellation.cancel() }
