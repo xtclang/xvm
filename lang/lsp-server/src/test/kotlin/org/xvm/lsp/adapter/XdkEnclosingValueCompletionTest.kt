@@ -1,10 +1,42 @@
 package org.xvm.lsp.adapter
 
+import com.google.gson.JsonParser
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import java.nio.file.Path
 
 class XdkEnclosingValueCompletionTest {
+    @Test
+    fun `shared enclosing fixtures accept their exact edits and compile`() {
+        val scenarios = Path.of(System.getProperty("xtc.composite.root"), "lang/test-fixtures/compiler-playbook/scenarios.json")
+        val data =
+            JsonParser
+                .parseString(scenarios.toFile().readText())
+                .asJsonObject
+                .getAsJsonObject("cases")
+                .getAsJsonObject("X152")
+                .getAsJsonObject("values")
+        val uri = "file:///${data["file"].asString}"
+        XdkAdapter().use { adapter ->
+            data.getAsJsonArray("variants").forEach { row ->
+                val variant = row.asJsonObject
+                val source = variant["source"].asString
+                val anchor = variant["anchor"].asString
+                val before = source.substring(0, source.indexOf(anchor) + anchor.length)
+                val at = Position(before.count { it == '\n' }, before.substringAfterLast('\n').length)
+                adapter.compile(uri, source)
+                val item = adapter.getCompletions(uri, at.line, at.column).single { it.label == variant["label"].asString }
+                val edit = requireNotNull(item.textEdit)
+
+                fun offset(position: Position) = source.lineSequence().take(position.line).sumOf { it.length + 1 } + position.column
+                val accepted = source.replaceRange(offset(edit.range.start), offset(edit.range.end), edit.newText)
+                assertThat(accepted).isEqualTo(variant["expected"].asString)
+                assertThat(adapter.compile(uri, accepted).diagnostics).describedAs(accepted).isEmpty()
+            }
+        }
+    }
+
     @Test
     fun `enclosing instances fit ordinary named and qualified argument slots`() {
         listOf("§" to "this.Outer", "value = §" to "this.Outer", "this.Ou§" to "Outer").forEach { (argument, expected) ->
