@@ -177,7 +177,9 @@ internal object XdkRename {
             } ?: return false
         val actual = edges(after, plan.proposed, ignored = afterPrefixes) { _, offset -> offset } ?: return false
         if (expected != actual) return false
-        if (!preservesImports(before, after, plan)) return false
+        // Relocation must retain import targets in the new lexical owner. Ordinary source
+        // actions may intentionally remove unused imports; their remaining bindings suffice.
+        if (plan.moves.isNotEmpty() && !preservesImports(before, after, plan)) return false
         val expectedDispatch =
             dispatch(before, plan.original, plan::sourceAfter) { source, offset ->
                 plan.map(source, offset)
