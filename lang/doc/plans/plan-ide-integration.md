@@ -12,7 +12,7 @@ and refactoring proofs still fail closed. This adds no AST state or compiler lis
 See [scope, ownership and validation](../../../docs/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
 
 
-> **Last Updated**: 2026-10-01 (L64/L65 closure implementation; full editor acceptance pending)
+> **Last Updated**: 2026-10-02 (bounded L64/L65 closure and combined full-catalog receipts)
 
 The P1–P4 compiler organization checkpoint moves the four incomplete-syntax nodes into
 `org.xvm.compiler.ast.partial` and updates the adapter's imports. It changes no advertised LSP
@@ -29,8 +29,8 @@ This document describes the language tooling implemented in the `lang/` director
 The L64 closure batch adds ordinary enclosing-instance proposals, useful inferred-local names and
 compiler-fitted lambda argument snippets. L65 follows property redirects and conditional mixin
 bodies on validated concrete source types, while refusing non-written targets and ambiguous binary
-source spans. Shared X150–X154 carry the new native checks. Backend gates pass; full editor
-acceptance and exact remaining boundaries are tracked in
+source spans. Shared X150–X154 carry the new native checks. Backend gates and all L64/L65 shared cases pass. The full-catalog runs retain VS Code X130 and
+intermittent IntelliJ X105 acceptance issues; exact receipts and remaining boundaries are tracked in
 [the closure record](../../../docs/errs-integration-plan.md#l64-closure-audit-and-acceptance-gate).
 
 The accepted [embedded Run and debugging plan](plan-embedded-execution.md) defines the shared
@@ -183,7 +183,7 @@ See the [L83 task and ownership record](../../../docs/errs-integration-plan.md#p
 | Go-to-definition (cross-file) | - | Via workspace index | **Done** - resolved identities within a module, across the complete discovered/configured source graph and into dependencies with host-supplied source indices |
 | Find references (same file) | Decl only | By name | **Done** - by identity, not by name |
 | Find references (cross-file) | - | - | **Done** - exact identities across the current module or the complete configured source graph, including unopened consumers and binary-member uses |
-| Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Partial** - visible locals/parameters, narrowed types, implicit members, imported/enclosing types and static functions/constants; qualified dot/prefix and bare-name/empty statement completion with exact token edits; compiler-fitted locals/parameters and implicit properties/constants in empty final positional and pending named argument slots, including qualified/grouped values and slots before later arguments; member/return and parameter-header type prefixes use the enclosing compiler scope; flat and parameterized qualifiers use visible nested types with substituted aliases; registered formals and empty generic slots complete; mid-token edits replace the entire final identifier, including generic base names before written type arguments; import-producing completion for public source/bundled types uses whole-graph proof and atomic additional edits (backend/protocol tests and the new X105 variants pass in both editors); syntax name suggestions for written explicit-type declarations and contextual keywords/eleven templates now have passing backend and shared X149/X150 coverage in both editors; empty property/parameter names after complete named types, including primary constructors and EOF, have passing backend/protocol coverage and shared X151 acceptance in both editors; latest additions include ordinary enclosing-instance values, inferred-local naming clues and compiler-fitted lambda templates, with backend validation and expanded shared X150–X152 awaiting the full editor gate |
+| Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Partial** - visible locals/parameters, narrowed types, implicit members, imported/enclosing types and static functions/constants; qualified dot/prefix and bare-name/empty statement completion with exact token edits; compiler-fitted locals/parameters and implicit properties/constants in empty final positional and pending named argument slots, including qualified/grouped values and slots before later arguments; member/return and parameter-header type prefixes use the enclosing compiler scope; flat and parameterized qualifiers use visible nested types with substituted aliases; registered formals and empty generic slots complete; mid-token edits replace the entire final identifier, including generic base names before written type arguments; import-producing completion for public source/bundled types uses whole-graph proof and atomic additional edits (backend/protocol tests and the new X105 variants pass in both editors); syntax name suggestions for written explicit-type declarations and contextual keywords/eleven templates now have passing backend and shared X149/X150 coverage in both editors; empty property/parameter names after complete named types, including primary constructors and EOF, have passing backend/protocol coverage and shared X151 acceptance in both editors; latest additions include ordinary enclosing-instance values, inferred-local naming clues and compiler-fitted lambda templates, with passing backend and expanded shared X150–X152 receipts in both editors |
 | Syntax errors | Markers | Full | **Done** - the compiler's own codes and spans |
 | Semantic errors | - | - | **Done** - the reason this adapter exists |
 | Hover (signature) | Basic | Basic | **Done** - declaration plus the resolved type |
@@ -1023,12 +1023,11 @@ for arbitrary damaged syntax and inferred declaration names.
 The L64 closure batch extends enclosing-instance completion to ordinary expressions, inferred
 local naming to useful written initializer clues, and lambda argument snippets to arities accepted
 by the whole-call fitter. Empty collections continue to use compiler-validated plain values.
-The shared playbook and both native drivers include the additions; final combined acceptance is
-pending. Ambiguous local syntax and arbitrary nested value/body synthesis remain explicit limits.
+The shared playbook and both native drivers include the additions, with passing receipts in both editors. Ambiguous local syntax and arbitrary nested value/body synthesis remain explicit limits.
 
 L65 adds property-accessor redirect traversal and explicit non-written implementation refusals.
 Shared X153 covers covariant/conditional targets and runtime-only delegation; X154 covers more
 read/write classification. Binary-source overload selection refuses absent or ambiguous metadata.
 The L65 backend gate passes 78 tests without failures or skips. Concrete validated source types
-now contribute conditional-mixin implementations. Full native acceptance remains pending; no
-runtime target enumeration is claimed.
+now contribute conditional-mixin implementations. X153/X154 pass in both editors; no runtime target enumeration is claimed. Full-catalog
+acceptance issues and combined receipts are recorded in the integration plan.

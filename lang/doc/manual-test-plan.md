@@ -1,12 +1,18 @@
 # Ecstasy Language Server - Manual Test Plan
 
 The current catalog has **159 scenarios**: X1–X154, CFG1–CFG3 and 7a.8/7a.9.
-X150/X151/X152 now include fitted lambda arguments, inferred local names and ordinary enclosing
-values. X153 adds implementation dispatch checks and X154 adds mutation classification. X87 now also
-checks member completion in a primary-constructor default with its missing closing delimiter.
-The new L64/L65 backend gates pass 68 Java plus 418 and 78 LSP tests without failures or skips;
-full editor acceptance for these additions is pending.
-The latest L64 run passes X97/X108/X150/X151/X152 in both editors: 63 variants covering argument
+X150/X151/X152 include fitted lambda arguments, inferred local names and ordinary enclosing
+values. X153 checks implementation dispatch and X154 mutation classification. X87 also checks
+member completion in a primary-constructor default with its missing closing delimiter.
+
+The current full VS Code attempt passes **157/159**; corrected X152 passes separately, giving
+**158/159** across receipts. X130 still fails on the tracked upstream Explorer Cut cleanup error.
+IntelliJ's full attempt and continuation together pass **all 159 scenarios plus START**, with
+zero IDE errors; the full attempt's X105 popup timeout remains a stability follow-up despite two
+selected passes. These are combined receipts, not single clean full runs. See
+[the current acceptance record](../../docs/errs-integration-plan.md#l64l65-full-editor-acceptance-2026-10-02).
+
+The preceding selected L64 run passes X97/X108/X150/X151/X152 in both editors: 63 variants covering argument
 values, recursive bounds, templates, declaration names and enclosing instances. VS Code
 `run-C2gpLR` and IntelliJ `run-16005944962074733631` record zero editor errors. The backend
 gate passes 65 Java and 410 LSP tests with no failures or skips. See the
