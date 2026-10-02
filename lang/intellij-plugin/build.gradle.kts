@@ -871,6 +871,8 @@ val test =
 intellijPlatformTesting.testIdeUi.register("testCompilerPlaybook") {
     task {
         description = "Run the compiler playbook's IntelliJ acceptance cases in an isolated IDE"
+        // Starter uses JNA for native process/window integration in this test JVM.
+        jvmArgs("--enable-native-access=ALL-UNNAMED")
         testClassesDirs = integrationTestSourceSet.output.classesDirs
         classpath = integrationTestSourceSet.runtimeClasspath
         // IDE-side probes load only inside the sandbox plugin classloader, not Starter's JVM.
