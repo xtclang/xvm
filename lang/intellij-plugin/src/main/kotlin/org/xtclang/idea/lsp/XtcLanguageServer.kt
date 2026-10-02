@@ -1,5 +1,6 @@
 package org.xtclang.idea.lsp
 
+import org.eclipse.lsp4j.RenameFilesParams
 import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.WorkspaceEdit
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
@@ -16,6 +17,9 @@ interface XtcLanguageServer : LanguageServer {
 
     @JsonRequest("xtc/rename")
     fun renameProposal(params: RenameParams): CompletableFuture<RenameProposal?>
+
+    @JsonRequest("xtc/renameFiles")
+    fun renameFilesProposal(params: RenameFilesParams): CompletableFuture<RenameProposal?>
 }
 
 data class RenameProposal(
