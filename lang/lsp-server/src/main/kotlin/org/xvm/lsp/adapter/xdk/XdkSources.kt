@@ -24,9 +24,10 @@ internal class XdkSources
         private val aliases: Map<File, String>,
         private val resources: XdkResources,
         private val configuredResourceRoots: List<File>?,
+        resourceMoves: XdkResourceMoves? = null,
     ) : ModuleInfo(root, moduleName(root, text.getValue(root))) {
         private val text = immutableMap(text)
-        private val resourceDirectory = resources.directory()
+        private val resourceDirectory = resourceMoves?.directory(resources) ?: resources.directory()
 
         /** Cache identity contains only immutable input values, never a parsed ModuleInfo tree. */
         val inputs = Inputs(this.text, immutableSet(directories), immutableMap(aliases), resources)
@@ -103,12 +104,13 @@ internal class XdkSources
                     } ?: root.nameWithoutExtension
                 }
 
-            /** Replay an exact snapshot with proposed edits; never read or write the filesystem. */
+            /** Replay captured source text; resources use the captured paths without filesystem writes. */
             fun replay(
                 root: File,
                 inputs: Inputs,
                 text: Map<String, String>,
                 moves: Map<String, String> = emptyMap(),
+                resourceMoves: XdkResourceMoves? = null,
             ): XdkSources =
                 XdkSources(
                     File(moves[root.path] ?: root.path),
@@ -120,6 +122,7 @@ internal class XdkSources
                     inputs.aliases.filterKeys { it.path !in moves },
                     inputs.resources,
                     inputs.resources.roots,
+                    resourceMoves,
                 )
 
             /** Convert an actual indexed Source name, never an unresolved import spelling. */
