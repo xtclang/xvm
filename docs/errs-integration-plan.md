@@ -8851,3 +8851,30 @@ import, including separately shadowed alias names. No Java AST accessor or mutab
 Shared X158 resolves links, checks exact ranges/alias uses and opens the target source in both
 editor drivers. Wildcard/conditional links, broader linked scopes and formatter wrapping/layout
 remain open. Validation: 15 source-link/editing/import completion tests pass, zero failures/errors/skips; both editor drivers compile. X158 editor execution is pending.
+
+### L67 detached graph retention and replacement audit (2026-10-02)
+
+The graph-view join dropped `lambdas` when reconstructing each immutable SemanticModel. It now
+preserves that per-document list alongside imports, source links, expressions and function calls.
+A real compiler snapshot regression checks every one of those copied fields. No shared compiler
+objects or new mutable cache state were introduced.
+
+The replacement regression walks one live adapter through indexed binary source v1, source index
+v2, binary-only metadata, explicit source authority for the same module, and an empty graph. It
+checks fresh definition destinations and refuses old call-hierarchy handles at every transition.
+It exposed a real gap: unopened workspace navigation discarded host-supplied binary source URIs,
+although navigation from a compiled editor snapshot retained them. The graph view now captures
+the same indexed source mapping; binary-only artifacts still expose no guessed location.
+Existing dependency, live graph and closed-file navigation tests accompany it: 20 tests passed,
+zero failures/errors/skips. Large-graph budgets, avoiding redundant cold graph
+compilation and the evidence-based choice of incremental/persistent indexing remain open.
+
+Extraction map for this continuation:
+
+| Slice | Local commits | Validation boundary |
+|---|---|---|
+| L62 concrete conditional/bodyless families | `8630dde4b` + `83f7fb434` | Keep together; the latter fixes interface-owner and SansCode handling. 122 backend tests passed. |
+| IDE scenario descriptions | `72bfc3b9c` | Both drivers compile; X IDs/filtering stay unchanged. |
+| L63 returned-expression extraction and inline | `3a4c03fd9` + `c35a7c031` | Shared relocation proof; 31 backend tests passed. X156/X157 editor runs pending. |
+| L66 import sources and lexical aliases | `eb045abec` | 15 backend tests passed, both drivers compile. X158 editor run pending. |
+| L67 snapshot join/replacement | Current follow-up | Dedicated regression; include the L66 source-link field when extracting together. |

@@ -14,6 +14,7 @@ internal class XdkWorkspaceNavigation(
     private val views: Map<String, SemanticModel>,
     private val revision: String,
     private val complete: Boolean,
+    private val dependencySources: Map<String, String>,
 ) {
     private val hierarchy = XdkHierarchy(views)
     private val calls = XdkCalls(views)
@@ -175,6 +176,7 @@ internal class XdkWorkspaceNavigation(
             .mapNotNull { target ->
                 (
                     views.entries.firstOrNull { it.value.sourceName == target.sourceName }?.key
+                        ?: dependencySources[target.sourceName]
                         ?: XdkLibrarySources.sourceUri(target.sourceName)
                 )?.let { uri ->
                     val range =
