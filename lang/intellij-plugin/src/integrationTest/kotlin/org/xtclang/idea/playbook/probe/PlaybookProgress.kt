@@ -26,10 +26,11 @@ object PlaybookProgress {
     fun update(
         project: Project,
         text: String,
+        detail: String,
     ) {
         ApplicationManager.getApplication().assertIsDispatchThread()
         val status = requireNotNull(WindowManager.getInstance().getStatusBar(project))
-        (status.getWidget(ID) as Widget).show(text)
+        (status.getWidget(ID) as Widget).show(text, detail)
         status.updateWidget(ID)
     }
 
@@ -38,8 +39,9 @@ object PlaybookProgress {
         project: Project,
         restoring: Boolean,
     ) {
-        val text = text(project).substringBefore(" [focus:")
-        update(project, text + if (restoring) " [focus: restoring]" else "")
+        val widget = WindowManager.getInstance().getStatusBar(project)?.getWidget(ID) as Widget
+        val text = widget.label.text.substringBefore(" [focus:")
+        update(project, text + if (restoring) " [focus: restoring]" else "", widget.label.toolTipText)
     }
 
     @JvmStatic
@@ -48,7 +50,7 @@ object PlaybookProgress {
     private class Widget(
         private val frame: JFrame?,
     ) : CustomStatusBarWidget {
-        val label = JLabel("Ecstasy playbook: starting")
+        val label = JLabel("Ecstasy playbook: starting").apply { toolTipText = text }
         private val originalTitle = frame?.title
         private val titleListener = PropertyChangeListener { updateTitle() }
 
@@ -57,9 +59,12 @@ object PlaybookProgress {
             updateTitle()
         }
 
-        fun show(text: String) {
+        fun show(
+            text: String,
+            detail: String,
+        ) {
             label.text = text
-            label.toolTipText = text
+            label.toolTipText = detail
             updateTitle()
         }
 
