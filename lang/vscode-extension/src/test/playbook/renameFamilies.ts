@@ -67,8 +67,10 @@ async function configurationGuards(document: vscode.TextDocument, at: vscode.Pos
     }
 }
 
-export function renameFamilyCases(): void {
-    for (const id of ['X109', 'X110', 'X111', 'X112', 'X113', 'X114', 'X115', 'X116', 'X117', 'X118', 'X119', 'X120', 'X121'] as const) {
+const renameCases = ['X109', 'X110', 'X111', 'X112', 'X113', 'X114', 'X115', 'X116', 'X117', 'X118', 'X119', 'X120', 'X121'] as const;
+
+export function renameFamilyCases(ids: readonly (typeof renameCases[number] | 'X155')[] = renameCases): void {
+    for (const id of ids) {
         playbook(id, async (workspace, data) => {
             for (const file of data.files) await workspace.write(file.file, file.source);
             await discovered(workspace, async () => {

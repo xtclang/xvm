@@ -1031,3 +1031,10 @@ read/write classification. Binary-source overload selection refuses absent or am
 The L65 backend gate passes 78 tests without failures or skips. Concrete validated source types
 now contribute conditional-mixin implementations. X153/X154 pass in both editors; no runtime target enumeration is claimed. Full-catalog
 acceptance issues and combined receipts are recorded in the integration plan.
+
+
+October 2 L62 continuation: compiler rename method/property families now include validated concrete
+source types, sharing L65's source-type enumeration. Conditional generic adoption is checked by the
+same before/after graph proof. Shared X155 adds rename/Undo coverage to both editor drivers; execution
+is pending. Existing union/runtime/binary and configured-consumer boundaries remain explicit. This
+adds no advertised LSP capability and does not close L62 or the editor stability follow-ups.

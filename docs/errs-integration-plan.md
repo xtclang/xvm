@@ -405,6 +405,9 @@ VS Code receipts above.
      disabling that policy refuses the proposal before changing sources or settings.
   L62 remains open for the conservative exclusions, additional composition routes, unknown
   external consumers and broader editor configuration coverage. The `construct` keyword is never renamed.
+  The October 2 continuation inspects validated concrete source types as well as formal declarations
+  when collecting method/property families. Conditional adoption therefore participates in rename
+  proof; X155 exercises source rename and Undo in both editor drivers. Validation is pending below.
 - [ ] **L63 — Semantic quick fixes and refactorings.** Individual and all-required-member
   implement/override actions are implemented at a class name for inherited source and read-only
   binary/XDK contracts. Compiler-selected signatures include generic/conditional/multiple returns,
@@ -8754,3 +8757,29 @@ Keep the fixture, registration and native Undo-focus corrections with their L64/
 slices when extracting PRs. The cursor-identity correction is `162d2f8d1`; the formal-type fix is
 `474bad3d5`. Neither the integration branch nor these receipts establish independently green
 extracted PRs.
+
+
+### Depth-first functionality continuation (2026-10-02)
+
+Requested order: L62, L63, L66, then L67, with reviewable implementation commits and batched
+validation. A compiler or editor boundary is not closed merely by adding a scenario or documenting
+its refusal. The existing X105 popup stability, VS Code X130 host failure and L82 release gates
+remain separate from functionality implementation.
+
+- [x] L62 concrete composition inspection: reuse the successful-source type enumeration from L65
+  for method and property rename relations. Conditional bodies present only after validated generic
+  substitution now enter the complete-graph proof. The helper remains in the Kotlin compiler
+  adapter; no AST fields or Java API are added.
+- [x] Write method/property fact regressions, declaration/call-site rename and reverse rename,
+  concrete-host collision refusal, and shared X155 in both drivers.
+- [ ] Run the new L62 regressions with existing rename, implementation and semantic action tests.
+- [ ] Audit the remaining L62 composition exclusions and workspace boundaries before closure.
+- [ ] L63 general expression extraction and independent semantic transformations, each with
+  evaluation-order/type/binding proof and refusal tests; no blanket completion claim.
+- [ ] L66 source links, proven linked-edit scopes and damaged structure; agree formatter behavior
+  before introducing wrapping or changing comment/string layout.
+- [ ] L67 source/binary replacement and graph/index lifecycle coverage; use recorded measurements
+  to justify caching changes instead of introducing a persistent index speculatively.
+
+The shared catalog now contains 160 cases. Earlier 159-case receipts remain historical evidence;
+X155 has been implemented in both drivers but has not yet run.
