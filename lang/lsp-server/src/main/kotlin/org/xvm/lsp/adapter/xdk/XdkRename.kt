@@ -18,11 +18,11 @@ internal object XdkRename {
         val text: String,
     )
 
-    /** Exact source text moved into an insertion; old references must follow it during proof. */
+    /** Exact source text moved into an edit; old references must follow it during proof. */
     data class Relocation(
         val start: Int,
         val end: Int,
-        val insertion: Edit,
+        val destination: Edit,
         val contentOffset: Int,
     )
 
@@ -35,8 +35,8 @@ internal object XdkRename {
         init {
             relocations.forEach { (source, moved) ->
                 moved.forEach { relocation ->
-                    val insertion = relocation.insertion
-                    require(insertion in edits[source].orEmpty() && insertion.start == insertion.end)
+                    val insertion = relocation.destination
+                    require(insertion in edits[source].orEmpty())
                     require(relocation.start < relocation.end)
                     require(
                         original.getValue(source).substring(relocation.start, relocation.end) ==
@@ -69,8 +69,8 @@ internal object XdkRename {
         ): Int? {
             val edits = edits[source].orEmpty()
             relocations[source].orEmpty().firstOrNull { offset in it.start..it.end }?.let { moved ->
-                val preceding = edits.filter { it != moved.insertion && it.end <= moved.insertion.start }
-                return moved.insertion.start + preceding.sumOf { it.text.length - (it.end - it.start) } +
+                val preceding = edits.filter { it != moved.destination && it.end <= moved.destination.start }
+                return moved.destination.start + preceding.sumOf { it.text.length - (it.end - it.start) } +
                     moved.contentOffset + offset - moved.start
             }
             if (edits.any { offset > it.start && offset < it.end }) return null
@@ -188,6 +188,22 @@ internal object XdkRename {
                 ?: return false
         val actualDispatch = dispatch(after, plan.proposed) { _, offset -> offset } ?: return false
         return actualDispatch.containsAll(knownDispatch)
+    }
+
+    /** Removing a local may remove its declaration, written type and sole read, but no other edges. */
+    fun preservesLocalRemoval(
+        before: CompilerRenameFacts,
+        after: CompilerRenameFacts,
+        plan: Plan,
+        removed: Set<SemanticModel.SourceLocation>,
+    ): Boolean {
+        if (after.models.any { it.status != SemanticModel.Status.COMPLETE }) return false
+        val expected = edges(before, plan.original, ignored = removed, translate = plan::map) ?: return false
+        val actual = edges(after, plan.proposed) { _, offset -> offset } ?: return false
+        if (expected != actual) return false
+        val expectedDispatch = dispatch(before, plan.original, translate = plan::map) ?: return false
+        val actualDispatch = dispatch(after, plan.proposed) { _, offset -> offset } ?: return false
+        return expectedDispatch == actualDispatch
     }
 
     /**
@@ -633,6 +649,7 @@ internal object XdkRename {
         moved: (String) -> String = { it },
         allowUnresolved: Boolean = false,
         sourceParameters: Boolean = false,
+        ignored: Set<SemanticModel.SourceLocation> = emptySet(),
         translate: (String, Int) -> Int?,
     ): Map<Site, Target>? {
         val declarations =
@@ -702,7 +719,9 @@ internal object XdkRename {
             .forEach { model ->
                 val source = model.sourceName ?: return null
                 model.occurrences.forEach { occurrence ->
-                    if (!allowUnresolved || occurrence.symbol != null) {
+                    if (SemanticModel.SourceLocation(source, occurrence.range) !in ignored &&
+                        (!allowUnresolved || occurrence.symbol != null)
+                    ) {
                         result[site(source, occurrence.range) ?: return null] =
                             target(model, occurrence.symbol) ?: return null
                     }
