@@ -145,6 +145,7 @@ internal fun EmbeddingSupport.Compilation.projectRenameFacts(
                 if (includeMembers) builder.memberActions(this, errors) else emptyList(),
                 builder.receiverBindings(),
                 builder.typeNames(this),
+                builder.resourceValues(this),
             )
         }
     }
@@ -1836,6 +1837,9 @@ private class SemanticModelBuilder(
             }
         }.distinct()
     }
+
+    fun resourceValues(compilation: EmbeddingSupport.Compilation): Map<SourceLocation, String?> =
+        compilerResourceValues(nodesIn(requireNotNull(compilation.parsed())))
 
     fun typeNames(compilation: EmbeddingSupport.Compilation): List<CompilerTypeName> =
         compilerTypeNames(nodesIn(requireNotNull(compilation.parsed())))
