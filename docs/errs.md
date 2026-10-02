@@ -2643,7 +2643,7 @@ extraction and adjacent typed single-use returned-local inline, and L66 resolved
 lexical alias linked editing are implemented. Focused backend receipts are in the integration
 plan. L67 fixes dropped lambda signatures when joining detached graph views and adds replacement
 lifecycle regressions, including a fix for lost binary source URIs in unopened workspace navigation.
-All 20 L67 backend tests passed; shared X155–X158 editor runs remain pending. These additions
+All 20 L67 backend tests passed; the selected X155–X158 editor receipt follows below. These additions
 do not close the broader L62/L63/L66/L67 task families.
 
 October 2 validation receipt: the combined continuation passes 204 LSP tests, zero failures/errors/

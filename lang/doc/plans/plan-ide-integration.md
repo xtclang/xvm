@@ -627,6 +627,11 @@ Full tree-sitter support for fast, incremental parsing:
 8. **Refactoring support (cross-file)**
    - Compiler rename already covers bounded locals/private parameters and graph-backed source types, static members, ordinary method/property families and aliases, including simple member-file moves
    - Extend target/resource scope and harden large-graph proof memory (L55/L62)
+   - The October 2 L62 audit adds conditional members without host contracts, closed-consumer
+     source identities, independent conditional families and nested generic method/property delegation
+     to regression coverage. Shared X159/X160 cover cross-file rename and Undo in both drivers;
+     execution is pending. Cross-package qualification rewrites, explicit graph relocation and
+     union/generated/cyclic callable identities remain open; binary contracts remain read-only
    - Whole-return-expression extraction and adjacent single-use typed returned-local inline are implemented with binding proof; X156/X157 pass in both editors
    - Wider extraction, extract method, broader inline and safe delete remain unimplemented (L63)
 
