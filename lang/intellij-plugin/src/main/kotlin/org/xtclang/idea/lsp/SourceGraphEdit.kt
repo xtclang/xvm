@@ -72,7 +72,7 @@ internal class SourceGraphEdit
             fun replacement(graph: SourceGraphReplacement): SourceGraphEdit {
                 SourceGraphConfiguration.replace(
                     requireNotNull(content) {
-                        "Module rename requires explicit LSP4IJ compiler settings"
+                        "Graph refactoring requires explicit LSP4IJ compiler settings"
                     },
                     graph.before,
                     graph.after,
