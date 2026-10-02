@@ -1726,7 +1726,16 @@ class XdkAdapter
         /**
          * Compiler-proven edits for IDE file-tree operations; no filesystem or configuration writes.
          */
-        fun renameFilesAsync(files: Map<String, String>): CompletableFuture<WorkspaceEdit?> {
+        fun renameFilesAsync(files: Map<String, String>): CompletableFuture<WorkspaceEdit?> =
+            renameFilesProposalAsync(files).mapCancellable { proposal ->
+                proposal?.takeIf { it.sourceModules == null }?.edit?.let { edit ->
+                    val originals = files.keys.mapNotNull(XdkSources::file).toSet()
+                    edit.copy(renames = edit.renames.filterKeys { XdkSources.file(it) !in originals })
+                }
+            }
+
+        /** Full file-move transaction with an optional host-owned source graph replacement. */
+        fun renameFilesProposalAsync(files: Map<String, String>): CompletableFuture<XdkRenameProposal?> {
             // Refuse links before canonicalization loses the requested file identity or captures a
             // source snapshot for an alias. The compiler proof below performs the remaining checks.
             if (
@@ -1748,7 +1757,7 @@ class XdkAdapter
                     }
                 } ?: return CompletableFuture.completedFuture(null)
             return projectQuery(ProjectQueryKey(scope, ProjectQueryKind.FILE_RENAME), null) {
-                it.renameFiles(files)
+                it.renameFilesProposal(files)
             }
         }
 

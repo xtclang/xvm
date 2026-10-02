@@ -30,6 +30,7 @@ import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito.mock
 import org.xvm.api.EmbeddingSupport
@@ -45,8 +46,11 @@ class XdkRenameServerTest {
     @TempDir lateinit var directory: Path
 
     @ParameterizedTest
-    @ValueSource(booleans = [false, true])
-    fun `late watched creation preserves a rename proof only while its inputs are unchanged`(changed: Boolean) {
+    @CsvSource("false,false", "false,true", "true,false", "true,true")
+    fun `late watched creation preserves a rename proof only while its inputs are unchanged`(
+        changed: Boolean,
+        proposal: Boolean,
+    ) {
         CompilerTestSupport.configure()
         directory = directory.toRealPath()
         val root =
@@ -96,17 +100,16 @@ class XdkRenameServerTest {
                 .documentSymbol(DocumentSymbolParams(TextDocumentIdentifier(uri)))
                 .get(30, SECONDS)
             hold.set(true)
-            val proof =
-                server.willRenameFiles(
-                    RenameFilesParams(
-                        listOf(
-                            FileRename(
-                                member.toURI().toString(),
-                                directory.resolve("App/Crate.x").toUri().toString(),
-                            ),
+            val params =
+                RenameFilesParams(
+                    listOf(
+                        FileRename(
+                            member.toURI().toString(),
+                            directory.resolve("App/Crate.x").toUri().toString(),
                         ),
                     ),
                 )
+            val proof = if (proposal) server.renameFilesProposal(params).thenApply { it?.edit } else server.willRenameFiles(params)
             assertThat(entered.await(20, SECONDS)).isTrue()
             if (changed) member.writeText("class Box { Int extra = 1; }")
             server.workspaceService.didChangeWatchedFiles(
@@ -126,6 +129,73 @@ class XdkRenameServerTest {
             assertThat(root.readText()).contains("new Box()")
         } finally {
             release.countDown()
+            server.shutdown().get(20, SECONDS)
+        }
+    }
+
+    @Test
+    fun `file move proposal includes the configured graph and all resource operations without applying them`() {
+        directory = directory.toRealPath()
+        val root =
+            directory.resolve("old/App.x").toFile().apply {
+                parentFile.mkdirs()
+                writeText("module App {}")
+            }
+        val target = directory.resolve("moved").toFile()
+        val server = XtcLanguageServer(XdkAdapter())
+        server.connect(mock(LanguageClient::class.java))
+        try {
+            server
+                .initialize(
+                    parameters().apply {
+                        capabilities.workspace.workspaceEdit.resourceOperations = listOf("rename")
+                        capabilities.workspace.fileOperations = FileOperationsWorkspaceCapabilities().apply { willRename = true }
+                    },
+                ).get(20, SECONDS)
+            server.replaceCompilerSourceModules(listOf(XdkSourceModule("App", root.toURI().toString(), resourceRoots = emptyList())))
+            val params = RenameFilesParams(listOf(FileRename(root.parentFile.toURI().toString(), target.toURI().toString())))
+            assertThat(server.willRenameFiles(params).get(30, SECONDS)).isNull()
+            val proposal = requireNotNull(server.renameFilesProposal(params).get(30, SECONDS))
+            assertThat(
+                proposal.graph!!
+                    .before
+                    .single()
+                    .uri,
+            ).isEqualTo(root.toURI().toString())
+            assertThat(
+                proposal.graph!!
+                    .after
+                    .single()
+                    .uri,
+            ).isEqualTo(
+                directory
+                    .resolve("moved/App.x")
+                    .toFile()
+                    .toURI()
+                    .toString(),
+            )
+            assertThat(
+                proposal.graph!!
+                    .after
+                    .single()
+                    .resourceRoots,
+            ).isEmpty()
+            assertThat(
+                proposal.edit.documentChanges
+                    .single()
+                    .right,
+            ).isInstanceOf(RenameFile::class.java)
+            assertThat(proposal.scope!!.boundary).isEqualTo("CONFIGURED_GRAPH")
+            assertThat(root).exists()
+            assertThat(target).doesNotExist()
+            assertThat(
+                server
+                    .compilerSourceModules()
+                    .get(30, SECONDS)
+                    .single()
+                    .uri,
+            ).isEqualTo(root.toURI().toString())
+        } finally {
             server.shutdown().get(20, SECONDS)
         }
     }
