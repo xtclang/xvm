@@ -1,6 +1,6 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **166 scenarios**: X1–X161, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **168 scenarios**: X1–X163, CFG1–CFG3 and 7a.8/7a.9.
 X161 passes in VS Code `run-KieFUI` and IntelliJ `run-15583928886685829346` (START also passes,
 no IDE errors): cross-package type Move, closed-consumer qualification edits, companion resources,
 and one Undo/Redo. The final related backend gate passes 118 tests with no failures/errors/skips.
@@ -199,10 +199,10 @@ or Undo against an already modified fixture.
 | External source changes | Put `Library.x` outside the workspace, configure Library and a local Consumer explicitly, open only Consumer, then change Library's return type on disk from Int to String and back. Problems must appear/clear and Definition must still find Library. Repeat after deleting/recreating the external source directory. | X134 passes in both drivers for unopened external source edit, delete and recreation. Directory deletion/recreation remains an additional manual check. |
 | Watch ownership and idle work | Configure two modules sharing an external root. Remove one, verify the other still updates; replace the last reference, then edit the retired root. Close/reopen the project and restart the server. Verify no obsolete diagnostic publication, duplicate subscription, growing server-process count or repeated idle compiler jobs. | Lease/coalescing/disposal unit tests; manual lifecycle/idle observation still required. A scheduled VFS refresh is not itself a compilation. |
 | Batch container move | Run X130: select both module containers, move them into `destination`, keep members/resources closed, verify the consumer, then Undo once and Redo once. All paths and bytes must match the shared fixture in each state. | X130 passes in both drivers; IntelliJ drives native Move with project Undo/Redo and VS Code drives Explorer batch Cut/Paste with its Undo/Redo. Explorer drag/drop is a separate manual check. |
-| Single-file and package moves | Run X128's file/package Rename and X118's explicit-graph module rename. Also move one source to an existing sibling directory through native Move; verify references, resources and one Undo/Redo. | X118/X128/X161 shared; X161 includes package qualification, closed consumers and companion resources. |
+| Single-file and package moves | Run X128's file/package Rename and X118's explicit-graph module rename. Also move one source to an existing sibling directory through native Move; verify references, resources and one Undo/Redo. | X118/X128/X161–X163 shared; type qualification, closed consumers, companion resources and persisted graph paths. |
 | Collision and invalid destinations | Repeat Move with an existing file, existing directory, missing destination parent, target inside its own source, overlapping parent/child selection and duplicate target names. Cancel the dialog. Each rejected/canceled operation must leave every source, setting and path unchanged. | `FileMoveTargetsTest` covers filesystem validation; dialog/error presentation and cancellation still need manual checks. |
 | Source changes during proof | Start a move/rename on a larger fixture, edit an affected open buffer or create a destination collision while proof is pending, or cancel the operation. A stale result must not overwrite the new text/path. The next fresh operation must work. | Existing snapshot/epoch regressions and X57/X118; move-specific concurrent timing is not claimed by X130. Use tracing or deterministic backend barriers when the race cannot be reproduced manually. |
-| Deliberately refused operations | Try explicit-graph module relocation and a type move into another module; also try a read-only bundled-library declaration. Verify the reason, unchanged files/settings and responsive IDE. | Existing refusal tests/X101 and manual checks. Normal LSP null responses cannot veto arbitrary host file moves; compiler preflight claims apply to registered native actions. |
+| Deliberately refused operations | Try moving and renaming a module root simultaneously and a type move into another module; also try a read-only bundled-library declaration. Verify the reason, unchanged files/settings and responsive IDE. | Existing refusal tests/X101 and manual checks. Normal LSP null responses cannot veto arbitrary host file moves; compiler preflight claims apply to registered native actions. |
 | Lazy action listing and application | Run X105, X122 and X127. Opening/canceling intentions or resolving an action must not edit the document. Selecting the import/cleanup action must clear the intended diagnostic; one Undo and Redo must restore exact text and Problems. | Shared cases pass in both installed clients, including IntelliJ lazy-action application and Undo/Redo. |
 | Other lazy resolvers | Run X131, then inspect the native Run lens, comment URL, inferred type/parameter inlays and workspace symbol navigation. Initial/deferred properties must agree, positions and command arguments survive, and source edits invalidate old handles. | X131 is protocol acceptance. Existing feature UI scenarios cover presentation; it is not evidence that a tooltip/popup was displayed for every resolved property. |
 | Resolver lifetime | Resolve handles after a dependency/configuration change, close/reopen or server restart; send a foreign/evicted handle through a protocol test. Require a stale/invalid response, no stale edit and no leaked graph retained by handles. Eager clients must still receive complete payloads. | Resolve-store/service regressions; X127/X131 cover source-edit expiration only. Inspect test coverage before counting the other transitions complete. |
@@ -1293,7 +1293,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X145 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X163 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -3049,6 +3049,8 @@ L65 closure additions (execution pending):
 | X159 | Open the scenario's Library.x, leaving Consumer.x closed. Rename the conditional `Textual.measure` method to `width`, inspect both files, then Undo once. | The mixin declaration and closed `Box<String>` consumer call change together even though `Box<T>` has no written method contract. `String.size` and `Box<Int>.value` stay unchanged. Undo restores both files exactly. Passes in both editors; see the current selected receipt above. |
 | X160 | Open the scenario's Library.x, leaving Consumer.x closed. Rename `Api.value` to `content`, inspect the Engine/Forward/Outer consumer, then Undo once. | The interface property, concrete implementation, internal read and delegated read change together across two generic delegation layers. Method names and delegate receiver properties stay unchanged. Undo restores both files exactly. Passes in both editors; see the current selected receipt above. |
 | X161 | Move `App/tools/Box.x` to `App/util/Box.x` using native Move in IntelliJ or a VS Code workspace file move. Keep Consumer.x closed. Inspect the import alias, constructor/static calls, old-package Helper references, companion Part.x and data.txt. Undo once, then Redo once. | One transaction rewrites qualified references, preserves Crate and all selected declarations/calls, and moves the companion tree. Undo restores all text and paths; Redo reapplies them. Passes in both editors; see the selected receipts above. |
+| X162 | Configure App at `old/App.x` with resource roots `old/assets`, then `fallback`; keep Consumer closed and its resources disabled (`[]`). Move `old` into `target` through native Move. Inspect compiler settings, reopen both modules, Undo once and Redo once. | Source and resource paths move together; resource precedence, dependency names and `[]` are retained. One Undo/Redo restores/reapplies files and settings, with clean diagnostics. |
+| X163 | Configure App at `old/App.x` without resource overrides and keep Consumer closed. Move just `App.x` into `target`. Inspect its companion directory, `old/data.txt` and compiler settings, then Undo/Redo. | The companion follows the source. Default resources left behind become an explicit `old` root; the resource bytes remain available. Undo restores the absent override; Redo restores the pinned root. |
 
 L67 index replacement check: with an unopened consumer, navigate a member from a host-indexed
 binary. Replace its source index with another source location, remove the index while retaining
@@ -3059,3 +3061,9 @@ one adapter (alongside graph removal); this is backend coverage, not a new edito
 
 The October 2 X155–X158 receipts supersede pending-execution notes at earlier implementation
 checkpoints. These are four selected cases; existing full-suite stability findings remain open.
+
+
+X162/X163 use the shared fixture catalog in both drivers. Their selected acceptance receipt is
+recorded in the integration plan. VS Code exercises file-operation participation through a native
+workspace edit and uses the settings editor as the Undo context; this does not claim Explorer
+Cut/Paste stability or that a refused participation reply can veto a host move.
