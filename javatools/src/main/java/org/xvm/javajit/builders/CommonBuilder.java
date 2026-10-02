@@ -4459,29 +4459,28 @@ public class CommonBuilder
 
     private static final Map<String, Set<String>> NO_JIT_METHODS = Map.ofEntries(
         Map.entry("org.xtclang.ecstasy.collections.deferred.DeferredCollection",
-            Set.of("calc")), // TODO: applied @Lazy property state is not available on the host
+            Set.of("calc")),         // TODO: need support for @Lazy
         Map.entry("org.xtclang.ecstasy.collections.deferred.DistinctCollection",
-            Set.of("calc",        // TODO: applied @Lazy property state is not available on the host
-                   "evaluateInto")), // TODO: MapSet.addAll super return and SkiplistSet copy-constructor cap
+            Set.of("calc",           // TODO: need support for @Lazy
+                   "evaluateInto")), // TODO: MapSet's capped constructor has no reserved native name
         Map.entry("org.xtclang.ecstasy.maps.DiscreteEntry",
-            Set.of("construct")),  // TODO: specialized return is incompatible with a conditional mixin
+            Set.of("construct")), // TODO: verify specialized constructor return with a conditional mixin; Int/String probe fails first in freeze
         Map.entry("org.xtclang.ecstasy.maps.HashMap",
-            Set.of("clear",       // TODO: virtual construction result is incompatible with ReplicableCopier
-                   "duplicate")), // TODO: virtual constructor lookup returns no MethodInfo
+            Set.of("clear",       // TODO: NEWV_0 cannot find MethodInfo for the virtual constructor
+                   "duplicate")), // TODO: NEWV_0 cannot find MethodInfo for the virtual constructor
         Map.entry("org.xtclang.ecstasy.maps.HasherMap",
-            Set.of("duplicate")), // TODO: virtual constructor lookup returns no MethodInfo
+            Set.of("duplicate")), // TODO: NEWV_N cannot find MethodInfo for the virtual constructor
         Map.entry("org.xtclang.ecstasy.maps.ListMap",
-            Set.of("duplicate",  // TODO: virtual constructor lookup returns no MethodInfo
+            Set.of("duplicate",  // TODO: NEWV_0 cannot find MethodInfo for the virtual constructor
                    "ensurePersistent")), // TODO: private access requested on a nullable array union
         Map.entry("org.xtclang.ecstasy.maps.Map",
-            Set.of("defaultCollector", // TODO: virtual constructor method constant
-                   "map",              // TODO: incompatible formal result types in TypeMatrix
-                   "removeAll")),      // TODO: key's formal type is tracked as Object
+            Set.of("removeAll")), // TODO: IP_ADD cannot find add (+) on Array<Map.Key>
         Map.entry("org.xtclang.ecstasy.maps.deferred.DeferredMap",
-            Set.of("fromEntry")),      // TODO: A_SUPER argument for a virtual construction
+            Set.of("fromEntry")),      // TODO: virtual child construction passes A_SUPER; re-test is blocked by ListMap.makeImmutable verification
         Map.entry("org.xtclang.ecstasy.Timeout",
-            Set.of("construct")), // TODO: native Service is a Java class, but the call expects an interface
+            Set.of("construct")), // TODO: invokes nService with invokeinterface although nService is a Java class
         Map.entry("org.xtclang.ecstasy.numbers.Number",
-            Set.of("converterFor", "converterTo"))
+            Set.of("converterFor", // TODO: CALL_N1 passes a null method to createTypeResolver during return-type resolution
+                   "converterTo")) // TODO: converterTo's lambda checkcasts an unboxed int
     );
 }

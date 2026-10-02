@@ -857,7 +857,11 @@ public class ParameterizedTypeConstant
         TypeConstant typeResolved = typeOrig.getJitCCType();
         boolean      fTrivial     = true;
 
-        TypeConstant[] aconstOriginal  = m_atypeParams;
+        // we need to normalize the parameters, since omitted defaults must produce the same JCC as
+        // the normalized type; take for example MapCollector's declaration:
+        //      MapCollector<Key, Value, Result extends Map<Key, Value>>
+        // naturally JCC for MC<Int, Object> must be identical to MC<Int, Object, Map<Int, Object>>
+        TypeConstant[] aconstOriginal  = normalizeParameters().getParamTypesArray();
         TypeConstant[] aconstCanonical = aconstOriginal;
         for (int i = 0, c = aconstOriginal.length; i < c; ++i) {
             TypeConstant typeParamOriginal = aconstOriginal[i];
@@ -904,7 +908,7 @@ public class ParameterizedTypeConstant
 
         return m_typeJitCallable = fTrivial
                 ? typeResolved // TerminalTypeConstant
-                : typeResolved == typeOrig && aconstCanonical == aconstOriginal
+                : typeResolved == typeOrig && aconstCanonical == m_atypeParams
                     ? this
                     : pool.ensureParameterizedTypeConstant(typeResolved, aconstCanonical);
     }
