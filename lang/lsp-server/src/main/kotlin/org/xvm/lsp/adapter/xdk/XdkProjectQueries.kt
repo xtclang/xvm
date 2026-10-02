@@ -586,6 +586,13 @@ internal class XdkProjectQueries(
             return null
         }
         val resources = allMoves.toMap()
+        if (resources.keys.any { parent ->
+                resources.keys.any { child -> child != parent && child.toPath().startsWith(parent.toPath()) } ||
+                    resources.values.any { it.toPath().startsWith(parent.toPath()) }
+            }
+        ) {
+            return null
+        }
         val paths =
             (texts.keys.map(::File) + directories)
                 .mapNotNull { file ->
@@ -1103,6 +1110,18 @@ internal class XdkProjectQueries(
                         sources.entries
                             .single { it.value === source }
                             .key.root
+                    // A snapshot belongs to one root and its companion tree. Interacting moves
+                    // must not leave its members outside that tree (nor invent cross-module ownership).
+                    val boundary = File(module.root.parentFile, module.root.nameWithoutExtension).toPath()
+                    if ((
+                            source.inputs.text.keys
+                                .filter { it != originalRoot } + source.inputs.directories
+                        ).any {
+                            !File(moves[it.path] ?: it.path).toPath().startsWith(boundary)
+                        }
+                    ) {
+                        return null
+                    }
                     val compilation =
                         try {
                             compileTree(
