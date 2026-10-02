@@ -12,7 +12,7 @@ and refactoring proofs still fail closed. This adds no AST state or compiler lis
 See [scope, ownership and validation](../../../docs/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
 
 
-> **Last Updated**: 2026-09-30 (native edit ownership, progress/cancellation and full editor acceptance)
+> **Last Updated**: 2026-10-01 (L64/L65 closure implementation; full editor acceptance pending)
 
 The P1–P4 compiler organization checkpoint moves the four incomplete-syntax nodes into
 `org.xvm.compiler.ast.partial` and updates the adapter's imports. It changes no advertised LSP
@@ -26,11 +26,12 @@ in the existing compiler helpers, preserving the adapter's public results. Their
 
 This document describes the language tooling implemented in the `lang/` directory and what remains to be done.
 
-The current L64 batch adds syntax-labelled recursive formal completion, compiler-validated argument
-literals, copied candidate documentation and stable completion/signature ordering. Shared X97/X108
-contain the corresponding editor assertions. The batch passes 337 backend/protocol tests and all
-37 selected variants in both editors; IntelliJ also passes START with zero IDE errors. This is a
-bounded extension, not closure of L64's remaining snippets, imports and callable/recovery contexts.
+The L64 closure batch adds ordinary enclosing-instance proposals, useful inferred-local names and
+compiler-fitted lambda argument snippets. L65 follows property redirects and conditional mixin
+bodies on validated concrete source types, while refusing non-written targets and ambiguous binary
+source spans. Shared X150–X154 carry the new native checks. Backend gates pass; full editor
+acceptance and exact remaining boundaries are tracked in
+[the closure record](../../../docs/errs-integration-plan.md#l64-closure-audit-and-acceptance-gate).
 
 The accepted [embedded Run and debugging plan](plan-embedded-execution.md) defines the shared
 compile/build and execution contracts for both clients, a persistent execution worker and fresh
@@ -182,11 +183,11 @@ See the [L83 task and ownership record](../../../docs/errs-integration-plan.md#p
 | Go-to-definition (cross-file) | - | Via workspace index | **Done** - resolved identities within a module, across the complete discovered/configured source graph and into dependencies with host-supplied source indices |
 | Find references (same file) | Decl only | By name | **Done** - by identity, not by name |
 | Find references (cross-file) | - | - | **Done** - exact identities across the current module or the complete configured source graph, including unopened consumers and binary-member uses |
-| Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Partial** - visible locals/parameters, narrowed types, implicit members, imported/enclosing types and static functions/constants; qualified dot/prefix and bare-name/empty statement completion with exact token edits; compiler-fitted locals/parameters and implicit properties/constants in empty final positional and pending named argument slots, including qualified/grouped values and slots before later arguments; member/return and parameter-header type prefixes use the enclosing compiler scope; flat and parameterized qualifiers use visible nested types with substituted aliases; registered formals and empty generic slots complete; mid-token edits replace the entire final identifier, including generic base names before written type arguments; import-producing completion for public source/bundled types uses whole-graph proof and atomic additional edits (backend/protocol tests and the new X105 variants pass in both editors); syntax name suggestions for written explicit-type declarations and contextual keywords/eleven templates now have passing backend and shared X149/X150 coverage in both editors; empty property/parameter names after complete named types, including primary constructors and EOF, have passing backend/protocol coverage and shared X151 acceptance in both editors |
+| Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Partial** - visible locals/parameters, narrowed types, implicit members, imported/enclosing types and static functions/constants; qualified dot/prefix and bare-name/empty statement completion with exact token edits; compiler-fitted locals/parameters and implicit properties/constants in empty final positional and pending named argument slots, including qualified/grouped values and slots before later arguments; member/return and parameter-header type prefixes use the enclosing compiler scope; flat and parameterized qualifiers use visible nested types with substituted aliases; registered formals and empty generic slots complete; mid-token edits replace the entire final identifier, including generic base names before written type arguments; import-producing completion for public source/bundled types uses whole-graph proof and atomic additional edits (backend/protocol tests and the new X105 variants pass in both editors); syntax name suggestions for written explicit-type declarations and contextual keywords/eleven templates now have passing backend and shared X149/X150 coverage in both editors; empty property/parameter names after complete named types, including primary constructors and EOF, have passing backend/protocol coverage and shared X151 acceptance in both editors; latest additions include ordinary enclosing-instance values, inferred-local naming clues and compiler-fitted lambda templates, with backend validation and expanded shared X150–X152 awaiting the full editor gate |
 | Syntax errors | Markers | Full | **Done** - the compiler's own codes and spans |
 | Semantic errors | - | - | **Done** - the reason this adapter exists |
 | Hover (signature) | Basic | Basic | **Done** - declaration plus the resolved type |
-| Document highlights | Text match | AST identifiers with READ/WRITE distinction | **Done** - by resolved identity; READ/WRITE distinguished, compound targets shown as WRITE |
+| Document highlights | Text match | AST identifiers with READ/WRITE distinction | **Done** - by resolved identity; READ/WRITE distinguished, compound/destructured targets shown as WRITE; indexed receivers and indices remain READ (X154) |
 | Selection ranges | - | AST walk-up | **Done** - AST walk-up; zero-width cursor range if no AST is available |
 | Folding ranges | Braces | AST nodes | **Done** - blocks and declarations; exact closing-brace columns prevent swallowing following declarations |
 | Document links | Regex | AST nodes + best-effort import targets | **Partial** - HTTP(S) URLs inside Java-lexer comments/literals; no guessed import targets |
@@ -458,15 +459,17 @@ size cursors with real constructor fitting, original-token replacement, active s
 bracket recovery. A written supplier after the cursor is parsed but is not validated by that prefix
 query. Normal compilation still checks suppliers and element defaults. Compiler mode advertises `[` as
 a signature-help trigger. X91–X96 add the bounded declaration-header recovery described above.
-Multidimensional construction, unfinished declaration names, missing map entries and
+Multidimensional construction, ambiguous empty local declarations, missing map entries and
 unterminated literal contents remain unsupported. Explicit cursor queries now recover missing
 value operands within call arguments.
-Remaining limits: non-type cursors inside identifiers, further member/call syntax after a typed
-prefix and arbitrary enclosing-instance enumeration. Qualified/grouped/compound arguments and
+Remaining limits include non-type cursors inside identifiers and further member/call syntax after a typed
+prefix. Qualified/grouped/compound arguments and
 slots before later written arguments use full compiler validation. Type-valued receiver functions
 and receiver-to-argument rewrites retain visible signature mappings. Lexical enclosing/imported
 property candidates require ordinary readable-value validation and argument fitting. Argument
-completion does not synthesize literals or enumerate arbitrary enclosing instances.
+completion includes compiler-fitted scalar/empty collection literals, lexical enclosing instances
+and lambda arity templates. Ordinary enclosing-instance completion uses the same compiler checks.
+Arbitrary nested values and generated lambda bodies remain outside this boundary.
 
 The snapshot records resolved types, type parameters, declaration/use ranges (including captures),
 declared and selected-call signatures, written argument mappings and direct inheritance edges. The
@@ -480,7 +483,9 @@ refresh membership and clear removed-file diagnostics.
 Definitions and references share identities across one module compilation. Hierarchy items carry a
 compilation token; items from before an edit return no results. Hierarchy includes declared `extends` and `implements` across the discovered/configured source
 graph, with digest-bound handles for unopened files. It does not discover binary library sources
-or infer conditional-mixin hierarchy edges. Implementation lookup uses compiler composition facts.
+or infer conditional-mixin hierarchy edges. Implementation lookup uses compiler composition facts, including method/property redirects and
+conditional bodies activated on validated concrete source types. Native/synthetic bodies and
+unresolved runtime delegation do not acquire invented source targets (X153).
 
 Module-root discovery follows the source-file/same-name-directory layout. Non-file URIs remain
 single-source inputs. Workspace folders supply a discovered module/dependency graph; explicit
