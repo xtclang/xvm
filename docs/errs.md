@@ -2645,3 +2645,9 @@ plan. L67 fixes dropped lambda signatures when joining detached graph views and 
 lifecycle regressions, including a fix for lost binary source URIs in unopened workspace navigation.
 All 20 L67 backend tests passed; shared X155–X158 editor runs remain pending. These additions
 do not close the broader L62/L63/L66/L67 task families.
+
+October 2 validation receipt: the combined continuation passes 204 LSP tests, zero failures/errors/
+skips, plus LSP/IntelliJ formatting checks. X155–X158 pass in VS Code `run-Um9auo` and IntelliJ
+`run-13592235693442712133` (START also passes, zero IDE errors). These selected receipts supersede
+the pending editor notes above; broader feature and release gates remain open in the integration
+plan. No Java AST changes were introduced by this continuation.
