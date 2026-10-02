@@ -499,6 +499,7 @@ class SemanticModel
                         },
                         model.functionCalls,
                         model.imports,
+                        lambdas = model.lambdas,
                         sourceLinks = model.sourceLinks,
                     )
                 }

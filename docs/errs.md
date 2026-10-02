@@ -2637,3 +2637,11 @@ or public compiler accessors were needed. Exact source relocations are tracked b
 plan, and compiler facts verify preserved bindings/dispatch after recompilation. The adversarial
 same-spelling/different-parameter relocation is rejected. The focused extraction/inline/proof
 batch passed 31 tests without skips; shared X156/X157 editor execution remains pending.
+
+October 2 continuation: L62 conditional/bodyless rename proofs, L63 complete returned-expression
+extraction and adjacent typed single-use returned-local inline, and L66 resolved import links plus
+lexical alias linked editing are implemented. Focused backend receipts are in the integration
+plan. L67 fixes dropped lambda signatures when joining detached graph views and adds replacement
+lifecycle regressions, including a fix for lost binary source URIs in unopened workspace navigation.
+All 20 L67 backend tests passed; shared X155–X158 editor runs remain pending. These additions
+do not close the broader L62/L63/L66/L67 task families.

@@ -1234,9 +1234,7 @@ class XdkAdapter
                 dependencies.declarations.values
                     .mapNotNull { declaration ->
                         val name = declaration.location.sourceName ?: return@mapNotNull null
-                        val uri =
-                            runCatching { URI(name).takeIf { it.isAbsolute }?.toString() }.getOrNull()
-                                ?: XdkSources.file(name)?.toURI()?.toString()
+                        val uri = XdkSources.sourceUri(name)
                         uri?.let { name to it }
                     }.toMap()
             val artifact =
