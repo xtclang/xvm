@@ -18,18 +18,21 @@ class NumberTests {
         testAbs();
         testAbsMinValue();
         testNarrowed(7, UInt64.MaxValue, 1.5);
-// TODO: JIT calls $hasOptMethod() with a null nFunction context
-//        testConverterFor();
+        testConverterFor();
     }
 
-//    void testConverterFor() {
-//        function Byte(Int) toByte = Number.converterFor(Int, Byte);
-//        assert toByte(3) == 3;
-//        assert toByte(45) == 45;
-//
-//        function Float64(Int) toFloat64 = Number.converterFor(Int, Float64);
-//        assert toFloat64(42) == 42.0;
-//    }
+    void testConverterFor() {
+        function Byte(Int) toByte = Number.converterFor(Int, Byte);
+        assert toByte(3) == 3;
+        assert toByte(45) == 45;
+
+        function Float64(Int) toFloat64 = Number.converterFor(Int, Float64);
+        assert toFloat64(42) == 42.0;
+
+        function Int128(Int) toInt128 = Number.converterFor(Int, Int128);
+        Int128 converted = toInt128(3);
+        assert converted == 3;
+    }
 
     void testBitLength() {
         assert Dec32.one().bitLength == 32;
