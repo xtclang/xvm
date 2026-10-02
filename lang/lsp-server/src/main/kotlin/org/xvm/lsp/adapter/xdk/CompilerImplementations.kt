@@ -1,7 +1,5 @@
 package org.xvm.lsp.adapter.xdk
 
-import org.xvm.asm.ClassStructure
-import org.xvm.asm.Component.Format
 import org.xvm.asm.Constants.Access
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.constants.IdentityConstant
@@ -13,8 +11,6 @@ import org.xvm.asm.constants.PropertyInfo
 import org.xvm.asm.constants.TypeConstant
 import org.xvm.asm.constants.TypeInfo
 import org.xvm.compiler.ast.AstNode
-import org.xvm.compiler.ast.Expression
-import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.lsp.util.ExecutionTrace
 
 /**
@@ -29,24 +25,8 @@ internal fun compilerImplementationTargets(
     val targets = linkedMapOf<IdentityConstant, MutableSet<IdentityConstant>>()
     val inspection =
         ErrorListener.cancellable(ErrorListener.collecting(errors::log), errors::isAbortDesired)
-    val classes =
-        nodes
-            .filterIsInstance<TypeCompositionStatement>()
-            .mapNotNull { it.component as? ClassStructure }
-            // A mixin's into type is a constraint, not an adopting host.
-            .filter { it.format != Format.MIXIN }
-            .associateBy { it.identityConstant }
-    // Formal declarations omit conditionally incorporated bodies whose constraint is satisfied
-    // only after substitution. Include actual validated source types (for example Box<String>),
-    // without inventing instantiations or treating an unadopted mixin as an implementation.
-    val instantiated =
-        nodes
-            .filterIsInstance<Expression>()
-            .filter { it.isValidated && it.typeFit.isFit }
-            .mapNotNull { it.type }
-            .filter { !it.isFormalType && it.isSingleUnderlyingClass(false) && it.getSingleUnderlyingClass(false) in classes }
-    val types = (classes.values.map { it.formalType } + instantiated).map { it.ensureAccess(Access.PRIVATE) }.distinct()
-    for (type in types) {
+    // A mixin's into type is a constraint, not an adopting host.
+    for (type in compilerSourceTypes(nodes, includeMixins = false)) {
         if (inspection.isAbortDesired) return emptyMap()
         val info =
             ExecutionTrace.api("TypeConstant.ensureTypeInfo(implementation)") {

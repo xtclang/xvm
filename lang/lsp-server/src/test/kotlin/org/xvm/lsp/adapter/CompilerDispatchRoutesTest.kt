@@ -10,11 +10,54 @@ import org.xvm.asm.ErrorList
 import org.xvm.asm.constants.MethodBody.Implementation
 import org.xvm.asm.constants.TypeInfo
 import org.xvm.compiler.Source
+import org.xvm.compiler.ast.AstNode
+import org.xvm.lsp.adapter.xdk.compilerMethodRelations
+import org.xvm.lsp.adapter.xdk.compilerPropertyRelations
+import org.xvm.lsp.adapter.xdk.compilerSourceTypes
 import org.xvm.lsp.adapter.xdk.dispatch
 import org.xvm.lsp.adapter.xdk.methodImplementation
 
 /** Real compiler chains: a body category alone must never manufacture an editable declaration. */
 class CompilerDispatchRoutesTest {
+    @Test
+    fun `rename relations inspect conditional methods and properties on validated concrete hosts`() {
+        CompilerTestSupport.configure()
+        val text =
+            """
+            module Routes {
+                class Box<T>(T value) incorporates conditional Textual<T extends String> {}
+                static mixin Textual<T extends String> into Box<T> {
+                    Int size() = value.size;
+                    Int length.get() = value.size;
+                }
+                Int read(Box<String> text) = text.size() + text.length;
+                Int unrelated(Box<Int> number) = number.value;
+            }
+            """.trimIndent()
+        val errors = ErrorList()
+        val compilation = EmbeddingSupport.instance().compileModule(Source(text, "Routes.x"), null, errors)
+        assertThat(compilation.succeeded()).describedAs(errors.errors.toString()).isTrue()
+
+        fun nodes(node: AstNode): List<AstNode> = listOf(node) + node.childNodes().flatMap(::nodes)
+        val nodes = nodes(requireNotNull(compilation.parsed()))
+        ConstantPool.withPool(compilation.pool()).use {
+            val methods = compilerMethodRelations(nodes, errors).chains.filter { it.owner.name == "Box" }
+            assertThat(methods).anySatisfy { chain ->
+                assertThat(chain.supported).isTrue()
+                assertThat(chain.methods.map { it.namespace.name to it.name }).contains("Textual" to "size")
+            }
+            val properties = compilerPropertyRelations(nodes, errors).chains.filter { it.owner.name == "Box" }
+            assertThat(properties).anySatisfy { chain ->
+                assertThat(chain.supported).isTrue()
+                assertThat(chain.properties.map { it.parentConstant.name to it.name }).contains("Textual" to "length")
+            }
+            val types = compilerSourceTypes(nodes)
+            assertThat(types).doesNotHaveDuplicates()
+            assertThat(types).noneMatch { it.isFormalType }
+        }
+        assertThat(errors.hasSeriousErrors()).describedAs(errors.errors.toString()).isFalse()
+    }
+
     @Test
     fun `capped implementation lookup follows the compiler narrowing method`() {
         inspect(

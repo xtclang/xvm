@@ -113,8 +113,7 @@ class CompilerPlaybookTest {
             val data = shared.scenarios.getValue(id)
             fixture("$id/${data.text("file")}", data.rows("variants").first()["source"].asString)
         }
-        (109..121).forEach { number ->
-            val id = "X$number"
+        ((109..121).map { "X$it" } + "X155").forEach { id ->
             shared.scenarios.getValue(id).rows("files").forEach { file ->
                 fixture("$id/${file["file"].asString}", file["source"].asString)
             }
