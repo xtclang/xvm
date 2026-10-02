@@ -18,11 +18,38 @@ internal object XdkRename {
         val text: String,
     )
 
+    /** Exact source text moved into an insertion; old references must follow it during proof. */
+    data class Relocation(
+        val start: Int,
+        val end: Int,
+        val insertion: Edit,
+        val contentOffset: Int,
+    )
+
     class Plan(
         val original: Map<String, String>,
         val edits: Map<String, List<Edit>>,
         val moves: Map<String, String> = emptyMap(),
+        private val relocations: Map<String, List<Relocation>> = emptyMap(),
     ) {
+        init {
+            relocations.forEach { (source, moved) ->
+                moved.forEach { relocation ->
+                    val insertion = relocation.insertion
+                    require(insertion in edits[source].orEmpty() && insertion.start == insertion.end)
+                    require(relocation.start < relocation.end)
+                    require(
+                        original.getValue(source).substring(relocation.start, relocation.end) ==
+                            insertion.text.substring(
+                                relocation.contentOffset,
+                                relocation.contentOffset + relocation.end - relocation.start,
+                            ),
+                    ) { "A relocation must preserve the exact original text" }
+                }
+                require(moved.sortedBy { it.start }.zipWithNext().all { (first, next) -> first.end < next.start })
+            }
+        }
+
         val proposed =
             original.entries.associate { (source, text) ->
                 sourceAfter(source) to
@@ -41,6 +68,11 @@ internal object XdkRename {
             offset: Int,
         ): Int? {
             val edits = edits[source].orEmpty()
+            relocations[source].orEmpty().firstOrNull { offset in it.start..it.end }?.let { moved ->
+                val preceding = edits.filter { it != moved.insertion && it.end <= moved.insertion.start }
+                return moved.insertion.start + preceding.sumOf { it.text.length - (it.end - it.start) } +
+                    moved.contentOffset + offset - moved.start
+            }
             if (edits.any { offset > it.start && offset < it.end }) return null
             return offset +
                 edits.filter { it.end <= offset }.sumOf { it.text.length - (it.end - it.start) }
