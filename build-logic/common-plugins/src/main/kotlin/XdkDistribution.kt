@@ -14,7 +14,10 @@ class XdkDistribution(
 ) {
     companion object {
         const val DISTRIBUTION_TASK_GROUP = "distribution"
-        const val JAVATOOLS_PREFIX_PATTERN = "**/javatools*"
+
+        // Runtime system modules mack.xtclang.org and _native.xtclang.org, under the compiler's output names. They
+        // ship next to javatools.jar instead of in lib/, renamed to javatools_turtle.xtc and javatools_bridge.xtc.
+        val JAVATOOLS_MODULE_PATTERNS = listOf("**/mack.xtc", "**/_native.xtc")
 
         // Artifact type constants for Gradle configurations
         const val XDK_ARTIFACT_NAME_DISTRIBUTION_ARCHIVE = "xdk-distribution-archive"
