@@ -1,6 +1,6 @@
 # Upstream issues affecting Ecstasy language support
 
-This is the upstream dependency register for `lagergren/errs`, audited on 2026-10-01.
+This is the upstream dependency register for `lagergren/errs`, updated on 2026-10-02.
 It complements the [implementation plan](errs-integration-plan.md) and
 [manual playbook](../lang/doc/manual-test-plan.md). Local fixes do not mean an upstream
 release contains the repair. The entries below record the branch's source inspection,
@@ -51,6 +51,36 @@ not a claim that every referenced suite was rerun for this documentation change.
 | **UP16 — VS Code — open** | Paste repaints obsolete Cut tree nodes after an Explorer refresh; cleanup throws and skips resetting move/copy state. | [Isolated reproduction and traces](errs-integration-plan.md#x130-isolated-host-defect-and-harness-focus-correction-2026-10-01), [probe](../lang/vscode-extension/src/test/explorer-move.ts) and X130. Reproduced without Ecstasy or an LSP server. No host patch or exception suppression. | Upstream reconciles/guards stale repaint targets and always resets cleanup state. Both the controlled standalone reproduction and native X130 must pass on the repaired release. |
 | **UP17 — IntelliJ Platform — open** | Removing many ranges in one document edit repeatedly traverses temporarily invalid interval subtrees on the EDT. Large-file replacement freezes the UI. | [Isolated marker probe](../lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/probe/LargeFileProbe.kt), [native driver](../lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/LargeFileEditing.kt) and [measurements](errs-integration-plan.md#l82-large-file-intellij-freeze-investigation-2026-10-01). Reproduced with unattached platform documents; bulk-update mode does not remove the cost. No production tree patch or discarded highlights. | A platform repair passes the plain-marker scaling control and actual decorated-editor replacement, preserving marker validity and UI responsiveness. A smaller workload or replacement before highlights arrive does not satisfy this gate. |
 | **UP18 — LSP4IJ — constrained** | Native snippet expansion adds source indentation even when the completion requests `InsertTextMode.AsIs`, despite advertising both modes. | [XtcClientFeatures](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcClientFeatures.kt) advertises AdjustIndentation as its default and sole supported mode. The server supplies relative template indentation. X150's first native trace (`run-9591212347662100514`) records the original capabilities, AsIs reply and doubled indentation; no IDE errors occurred. With the constraint, final native X150 passes (`run-10874571275660252562`), including exact text, snippet stops and insertion Undo. | Upstream passes the insertion mode through snippet construction/expansion. Remove the constraint only after X150 preserves exact source, placeholder navigation and Undo without it. |
+| **UP19 — LSP4IJ — bridged** | Moving/renaming a directory leaves its open descendants connected under their old URIs. Undo can leave two opened-document entries referring to the same VirtualFile. | [DirectoryDocumentMoves](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/DirectoryDocumentMoves.kt) retires affected connections before paths change and asynchronously reconnects current editor buffers. X162 originally timed out after Undo; X118/X161/X162/X163 now pass, including post-Redo unsaved edits. Details below. | Upstream reconnects open descendants on directory Move/Rename/Undo/Redo, preserving unsaved text and one current synchronizer. Remove the bridge only after X162 and connection lifecycle tests pass without it. |
+
+## UP19: directory moves retain old document connections
+
+LSP4IJ 0.21.0's [LSPFileListener.onFileRenameAfter](https://github.com/redhat-developer/lsp4ij/blob/0.21.0/src/main/java/com/redhat/devtools/lsp4ij/LSPFileListener.java)
+disconnects/reconnects the event's exact file. A directory move changes descendant VirtualFile paths
+without generating corresponding per-file events. The old synchronizer still owns its old URI;
+opening the moved source creates another connection. On Undo both entries refer to the same
+restored VirtualFile. This is separate from UP03's preflight and resource-edit problems.
+
+In `run-12819902949651520401`, X162 restored paths and settings correctly but timed out waiting
+45 seconds for a unique document connection. The server trace had no `didClose` for the original
+source on Move and no `didOpen` after Undo. This was a connection bookkeeping failure, not compiler
+analysis taking 45 seconds.
+
+The client-scoped VFS listener captures open descendants before paths change. It calls the wrapper's
+own `disconnect(URI, boolean)` with server shutdown disabled, retaining upstream synchronizer
+disposal, `didClose` and diagnostic cleanup. That method is package-private with no public
+equivalent in the pinned release, so a single cached reflective method is isolated here; no internal
+maps or locks are accessed. A compatibility test fails on a changed/inaccessible signature.
+Reconnection uses the public `LanguageServiceAccessor` after the VFS transaction, current unsaved
+buffers and current paths. It never waits for transport or compilation under the IDE write lock.
+Callbacks check disposal, subsequent moves and closed tabs before retaining a connection.
+
+Four unit tests cover the pinned method, overlapping directory events, unrelated paths/properties
+and leaving individual-file events to upstream. Selected native run `run-16019291377503835349`
+passes START and X118/X161/X162/X163 with no recorded IDE errors or internal compiler errors.
+X162 completes in 5,851 ms; its trace now closes/opens the source at every Move/Undo/Redo and
+sends the subsequent unsaved changes to the final URI. X163 also verifies continued editing.
+This receipt does not establish exhaustive rapid-edit/multi-window lifecycle acceptance.
 
 ## UP15: malformed parameters are not malformed JSON
 
