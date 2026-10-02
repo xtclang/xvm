@@ -407,7 +407,8 @@ VS Code receipts above.
   external consumers and broader editor configuration coverage. The `construct` keyword is never renamed.
   The October 2 continuation inspects validated concrete source types as well as formal declarations
   when collecting method/property families. Conditional adoption therefore participates in rename
-  proof; X155 exercises source rename and Undo in both editor drivers. Validation is pending below.
+  proof; X155 passes source rename and Undo in both editor drivers. The October 2 continuation
+  acceptance receipt below records the combined backend and selected editor validation.
 - [ ] **L63 — Semantic quick fixes and refactorings.** Individual and all-required-member
   implement/override actions are implemented at a class name for inherited source and read-only
   binary/XDK contracts. Compiler-selected signatures include generic/conditional/multiple returns,
@@ -419,9 +420,10 @@ VS Code receipts above.
   intended call/descendant changes while preserving unrelated bindings. Bodies use `TODO()`.
   Shared X122 now has eleven variants; the latest implementation/validation status is recorded in
   the [library and complete-repair batch](#l63-library-and-complete-repair-batch). Older seven-variant
-  receipts do not establish the new coverage. Whole-return-expression extraction now preserves
-  the written expected type and relocated bindings (October 2 continuation; validation pending); general extraction,
-  missing declarations, inline and safe delete remain unimplemented. Record supported XTC forms per action; doc-comment
+  receipts do not establish the new coverage. Whole-return-expression extraction and adjacent
+  single-use typed returned-local inline preserve the written expected type and relocated bindings;
+  X156/X157 pass in both editors. Wider extraction, extract method, missing declarations, broader
+  inline and safe delete remain unimplemented. Record supported XTC forms per action; doc-comment
   generation and reference/test lenses are separate subfeatures. Semantic transformations require
   compiler evidence and versioned multi-file edit validation.
 - [x] **L64 — Completion/signature breadth and presentation, bounded closure.** Supported recursive
@@ -436,14 +438,18 @@ VS Code receipts above.
   call boundaries and binary source ambiguity. X153/X154 pass in both editors. Runtime target
   enumeration and inferred conditional type-hierarchy edges remain explicit static-model limits;
   no executable target or source location is invented.
-- [ ] **L66 — Structural and editing breadth.** Extend token-preserving indentation to the
-  agreed formatter style, expression wrapping and comment/string layout; add import/source
-  links and broader proven linked-editing scopes. Audit outline/selection/folding recovery
+- [ ] **L66 — Structural and editing breadth.** Resolved module/type import source links and
+  explicit lexical alias linked editing are implemented; X158 passes in both editors. Extend
+  token-preserving indentation to the agreed formatter style, expression wrapping and
+  comment/string layout; cover wildcard/conditional import links and broader proven
+  linked-editing scopes. Audit outline/selection/folding recovery
   across remaining damaged constructs. Preserve literal contents, CRLF and Unicode positions.
 - [ ] **L67 — Workspace indexing and dependencies at scale.** Extend the on-demand detached
   graph cache with measured incremental/persistent indexing where needed; cover large graphs,
-  source/binary replacement, ambiguous source indices and library source availability. Live
-  unsaved import edges and workspace-folder refresh are already implemented. Complete-graph
+  ambiguous source indices and library source availability. The October 2 backend regressions cover
+  binary source-index replacement, binary-only fallback, source authority and graph removal, including
+  stale hierarchy handles and detached lambda facts. Live unsaved import edges and workspace-folder
+  refresh are already implemented. Complete-graph
   references/refactorings must retain their proof requirements beside broken neighbors.
 
 ### L12, project settings and L62–L68 hardening batch (2026-09-29)

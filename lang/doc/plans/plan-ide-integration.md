@@ -627,7 +627,8 @@ Full tree-sitter support for fast, incremental parsing:
 8. **Refactoring support (cross-file)**
    - Compiler rename already covers bounded locals/private parameters and graph-backed source types, static members, ordinary method/property families and aliases, including simple member-file moves
    - Extend target/resource scope and harden large-graph proof memory (L55/L62)
-   - Extract method/variable, inline and safe delete have no implementation (L63)
+   - Whole-return-expression extraction and adjacent single-use typed returned-local inline are implemented with binding proof; X156/X157 pass in both editors
+   - Wider extraction, extract method, broader inline and safe delete remain unimplemented (L63)
 
 9. **Code actions (semantic)**
    - Organize imports is implemented in Tree-sitter and bounded by compiler proof in XdkAdapter
@@ -635,7 +636,7 @@ Full tree-sitter support for fast, incremental parsing:
    - ~~Generate doc comment~~ ✅ COMPLETE (tree-sitter)
    - XdkAdapter generates individual/all-required inherited methods from source and read-only XDK/binary contracts at a class name, with compiler-selected generic/conditional, qualified and compound signatures, atomic imports and safe defaults; whole-graph proof permits the intended call/descendant changes and preserves other bindings; generated bodies use `TODO()`. Both actions use `refactor.rewrite`, so they appear as class intentions without requiring a diagnostic at that location
    - Unvalidated computed/named defaults, unsupported constant kinds and annotated/unrenderable type spellings remain withheld; missing implementations use fresh declaration analysis, never failed-compilation TypeInfo. The current batch validation is recorded separately from previous X122 receipts
-   - Broader semantic fixes, doc generation and extract/inline/safe-delete remain unimplemented (L63)
+   - Broader semantic fixes, compiler doc generation and the remaining extraction/inline/safe-delete scope remain unimplemented (L63)
 
 9. **Debugging (DAP)**
    - Debug Adapter Protocol integration
