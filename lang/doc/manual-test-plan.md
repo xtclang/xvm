@@ -3032,3 +3032,10 @@ L65 closure additions (execution pending):
 | X157 | Place the cursor on `value` in the shared Extract.x local and apply “Inline returned local variable”. | The initializer replaces the sole adjacent return read, its declaration disappears, diagnostics stay clear and Undo/Redo/Undo restore exact source. Both drivers implement this case; editor execution is pending. |
 
 | X158 | Open the shared ImportLinks.x with LinkLibrary.x. Inspect module/type import links and linked editing at `Crate`. | Link ranges name `LinkLibrary` and `Crate`, both target the actual library source, and the alias links only its three written occurrences. Both drivers resolve links, check ranges and open the target source. Modifier-click appearance remains a manual observation; automated execution is pending. |
+
+L67 index replacement check: with an unopened consumer, navigate a member from a host-indexed
+binary. Replace its source index with another source location, remove the index while retaining
+the binary, then configure editable source for that module. Navigation must follow the replacement,
+be absent without an index, and prefer the configured source. Previously prepared hierarchy
+handles must expire at each change. `XdkIndexLifecycleTest` now exercises this sequence through
+one adapter (alongside graph removal); this is backend coverage, not a new editor receipt.
