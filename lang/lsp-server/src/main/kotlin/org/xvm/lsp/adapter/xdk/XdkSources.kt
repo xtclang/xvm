@@ -122,6 +122,11 @@ internal class XdkSources
                     inputs.resources.roots,
                 )
 
+            /** Convert an actual indexed Source name, never an unresolved import spelling. */
+            fun sourceUri(name: String): String? =
+                runCatching { URI(name).takeIf { it.isAbsolute }?.toString() }.getOrNull()
+                    ?: file(name)?.toURI()?.toString()
+
             /** Canonical paths join editor URIs, compiler source names and filesystem notifications. */
             fun file(name: String): File? =
                 runCatching {
