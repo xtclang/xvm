@@ -96,6 +96,7 @@ internal class CompilerRenameFacts(
     val memberActions: List<XdkMemberActions.Candidate> = emptyList(),
     val typeNames: List<TypeName> = emptyList(),
     val typePaths: List<TypePath> = emptyList(),
+    val resourceValues: Map<SemanticModel.SourceLocation, String?> = emptyMap(),
 ) {
     /** Unchanged independent modules cannot acquire new bindings from a source edit elsewhere. */
     fun within(scopes: Set<String>): CompilerRenameFacts = merge(modules.filterKeys(scopes::contains))
@@ -119,6 +120,7 @@ internal class CompilerRenameFacts(
                 attempts.flatMap { it.memberActions },
                 attempts.flatMap { it.typeNames }.distinct(),
                 attempts.flatMap { it.typePaths }.distinct(),
+                attempts.flatMap { it.resourceValues.entries }.associate { it.toPair() },
             )
         }
     }
@@ -136,6 +138,7 @@ internal fun captureRenameFacts(
     members: List<CompilerMemberAction> = emptyList(),
     receivers: Map<SemanticModel.SymbolId, CompilerReceiver> = emptyMap(),
     typeNames: List<CompilerTypeName> = emptyList(),
+    resourceValues: Map<SemanticModel.SourceLocation, String?> = emptyMap(),
 ): CompilerRenameFacts {
     val declarations =
         models
@@ -367,5 +370,6 @@ internal fun captureRenameFacts(
                     it.format in setOf(Constant.Format.Module, Constant.Format.Package, Constant.Format.Class, Constant.Format.Typedef)
                 }.distinct()
                 .map { TypePath(identity(it), it.moduleConstant.name, path(it)) },
+        resourceValues = resourceValues,
     )
 }

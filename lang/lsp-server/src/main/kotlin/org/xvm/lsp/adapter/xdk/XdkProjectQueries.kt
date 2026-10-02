@@ -451,18 +451,19 @@ internal class XdkProjectQueries(
         )
     }
 
-    /** File-tree operations use the same compiler proof as symbol rename, before touching disk. */
-    fun renameFiles(requested: Map<String, String>): WorkspaceEdit? {
+    /** Complete transaction for hosts that persist the graph with the requested resource moves. */
+    fun renameFilesProposal(requested: Map<String, String>): XdkRenameProposal? {
         val operations =
             requested.entries
                 .associate { (from, to) ->
                     (XdkSources.file(from) ?: return null) to (XdkSources.file(to) ?: return null)
                 }.filter { (from, to) -> from != to }
-        if (operations.isEmpty()) return WorkspaceEdit(emptyMap(), versioned = true)
+        if (operations.isEmpty()) return XdkRenameProposal(WorkspaceEdit(emptyMap(), versioned = true))
         if (
             operations.values.distinct().size != operations.size ||
             operations.any { (from, to) ->
                 !from.exists() ||
+                    !to.parentFile.isDirectory ||
                     to.exists() ||
                     Files.isSymbolicLink(from.toPath()) ||
                     (
@@ -484,6 +485,17 @@ internal class XdkProjectQueries(
         }
         val before = compile(texts) ?: return null
         val directories = sources.values.flatMap { it.inputs.directories }.toSet()
+        val rootMoves =
+            operations
+                .filter { (from, to) ->
+                    from.parentFile != to.parentFile && project.modules.values.any { it.root == from }
+                }.map { (from, to) ->
+                    // Changing a root's name and ownership together needs a combined symbol proof.
+                    if (from.name != to.name || !to.parentFile.isDirectory) return null
+                    // Discovery cannot persist resource roots left outside the moved companion tree.
+                    if (discoverImports) return null
+                    XdkSourceMoves.plan(from, to, texts, directories) ?: return null
+                }
         val typeMoves =
             operations
                 .filter { (from, to) ->
@@ -551,7 +563,6 @@ internal class XdkProjectQueries(
                             selected.second.column,
                             name,
                         ) ?: return null
-                    if (proposal.sourceModules != null) return null
                     if (
                         proposal.edit.renames.none { (old, new) ->
                             XdkSources.file(old) == from && XdkSources.file(new) == to
@@ -559,20 +570,18 @@ internal class XdkProjectQueries(
                     ) {
                         return null
                     }
-                    proposal.edit
+                    proposal
                 }.filterNotNull()
-        if (operations.size == 1 && proposals.size == 1 && typeMoves.isEmpty()) {
-            return proposals.single().let { edit ->
-                edit.copy(renames = edit.renames.filterKeys { XdkSources.file(it) !in operations })
-            }
-        }
         val allMoves =
             operations.entries.map { it.key to it.value } +
                 proposals
-                    .flatMap { it.renames.entries }
+                    .flatMap { it.edit.renames.entries }
                     .map { (from, to) ->
                         requireNotNull(XdkSources.file(from)) to requireNotNull(XdkSources.file(to))
-                    } + typeMoves.flatMap { it.resources.entries }.map { File(it.key) to File(it.value) }
+                    } +
+                (typeMoves.map { it.resources } + rootMoves.map { it.resources })
+                    .flatMap { it.entries }
+                    .map { File(it.key) to File(it.value) }
         if (allMoves.groupBy({ it.first }, { it.second }).values.any { it.distinct().size > 1 }) {
             return null
         }
@@ -612,7 +621,11 @@ internal class XdkProjectQueries(
                         names.getValue(module.name),
                         File(paths[module.root.path] ?: module.root.path).toURI().toString(),
                         module.dependencies.mapTo(linkedSetOf()) { names[it] ?: it },
-                        module.resourceFiles?.map { resource ->
+                        (
+                            module.resourceFiles ?: sources[module]?.inputs?.resources?.roots?.takeIf {
+                                File(paths[module.root.path] ?: module.root.path).parentFile != module.root.parentFile
+                            }
+                        )?.map { resource ->
                             val move =
                                 resources.entries.firstOrNull {
                                     resource.toPath().startsWith(it.key.toPath())
@@ -629,10 +642,9 @@ internal class XdkProjectQueries(
                     )
                 },
             )
-        if (!discoverImports && !project.sameConfiguration(graph)) return null
         val renamed =
             proposals
-                .flatMap { it.changes.entries }
+                .flatMap { it.edit.changes.entries }
                 .groupBy({ requireNotNull(XdkSources.file(it.key)).path }, { it.value })
                 .mapValues { (path, changes) ->
                     val text = texts[path] ?: return null
@@ -684,26 +696,26 @@ internal class XdkProjectQueries(
             return null
         }
         val plan = XdkRename.Plan(texts, edits, paths, qualifications = qualifications)
-        val after = compile(plan.proposed, moves = paths, graph = graph) ?: return null
+        val resourceMoves = XdkResourceMoves(resources.mapKeys { it.key.path }.mapValues { it.value.path }, edits.keys)
+        val after = compile(plan.proposed, moves = paths, graph = graph, resourceMoves = resourceMoves) ?: return null
         if (!preservesBindings(before, after, plan) || !isCurrent()) return null
-        return WorkspaceEdit(
-            edits.keys.associate { uris.getValue(it) to plan.textEdits(it) },
-            versioned = true,
-            // The host already owns the requested moves. Return only required companion moves.
-            renames =
-                resources
-                    .filterKeys { it !in operations }
-                    .mapKeys {
-                        it.key
-                            .toURI()
-                            .toString()
-                            .removeSuffix("/")
-                    }.mapValues {
-                        it.value
-                            .toURI()
-                            .toString()
-                            .removeSuffix("/")
+        val replacement = !discoverImports && !project.sameConfiguration(graph)
+        return XdkRenameProposal(
+            WorkspaceEdit(
+                edits.keys.associate { uris.getValue(it) to plan.textEdits(it) },
+                versioned = true,
+                renames =
+                    resources.entries.associate { (from, to) ->
+                        from.toURI().toString().removeSuffix("/") to to.toURI().toString().removeSuffix("/")
                     },
+            ),
+            graph.modules.values
+                .toList()
+                .takeIf { replacement },
+            project.modules.values
+                .toList()
+                .takeIf { replacement },
+            renameScope(),
         )
     }
 
@@ -737,7 +749,10 @@ internal class XdkProjectQueries(
                 val path = requireNotNull(XdkSources.file(scope)).path
                 File(plan.moves[path] ?: path).toURI().toString()
             }
-        return XdkRename.preservesBindings(before.within(affected), after.within(movedScopes), plan)
+        // Independent source graphs may share resources, so compare resource values across every
+        // module even when their declaration/dispatch proof can stay scoped to source consumers.
+        return (plan.moves.isEmpty() || XdkRename.preservesResources(before, after, plan)) &&
+            XdkRename.preservesBindings(before.within(affected), after.within(movedScopes), plan)
     }
 
     /**
@@ -1047,6 +1062,7 @@ internal class XdkProjectQueries(
         proof: Proof = Proof.COMPLETE,
         moves: Map<String, String> = emptyMap(),
         graph: XdkProject = project,
+        resourceMoves: XdkResourceMoves? = null,
     ): CompilerRenameFacts? {
         checkCurrent()
         if (proof == Proof.COMPLETE && sources.size != graph.modules.size) return null
@@ -1088,11 +1104,15 @@ internal class XdkProjectQueries(
                             .single { it.value === source }
                             .key.root
                     val compilation =
-                        compileTree(
-                            XdkSources.replay(originalRoot, source.inputs, text, moves),
-                            open.repository,
-                            errors,
-                        )
+                        try {
+                            compileTree(
+                                XdkSources.replay(originalRoot, source.inputs, text, moves, resourceMoves),
+                                open.repository,
+                                errors,
+                            )
+                        } catch (_: XdkResourceMoves.UnprovenResource) {
+                            return null
+                        }
                     checkCurrent()
                     if (
                         !compilation.succeeded() ||
