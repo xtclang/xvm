@@ -2630,3 +2630,10 @@ its generated property getter can reference the same incomplete cursor. Embeddin
 publishes each surviving cursor identity once; it does not choose a different validation scope or
 add AST fields. The existing binding remains keyed by that identity. Backend and shared X87
 regressions check completion without emission or cached-compilation mutation.
+
+October 2 L63 proof update: returned-expression extraction and adjacent single-use returned-local
+inline use the existing Java parser/AST read APIs and detached semantic graph. No new AST fields
+or public compiler accessors were needed. Exact source relocations are tracked by the Kotlin edit
+plan, and compiler facts verify preserved bindings/dispatch after recompilation. The adversarial
+same-spelling/different-parameter relocation is rejected. The focused extraction/inline/proof
+batch passed 31 tests without skips; shared X156/X157 editor execution remains pending.

@@ -84,18 +84,7 @@ internal object XdkLocalExtraction {
             if (literal) {
                 "val"
             } else {
-                val method = selected.method?.takeUnless { it.isReturnConditional } ?: return null
-                val name = method.nameToken ?: return null
-                val result =
-                    method
-                        .childNodes()
-                        .filterIsInstance<Parameter>()
-                        .filter { it.endPosition <= name.startPosition }
-                        .singleOrNull()
-                        ?: return null
-                val from = offset(result.type.startPosition) ?: return null
-                val to = offset(result.type.endPosition) ?: return null
-                text.substring(from, to)
+                writtenReturnType(text, selected.method) ?: return null
             }
         val insertion = offset(selected.statement.startPosition) ?: return null
         val lineStart = maxOf(text.lastIndexOf('\n', insertion - 1), text.lastIndexOf('\r', insertion - 1)) + 1
@@ -119,6 +108,30 @@ internal object XdkLocalExtraction {
             if (literal) "Extract literal to local variable" else "Extract expression to local variable",
             listOf(declaration, XdkRename.Edit(start, end, name)),
             XdkRename.Relocation(start, end, declaration, prefix.length),
+        )
+    }
+
+    fun writtenReturnType(
+        text: String,
+        declaration: MethodDeclarationStatement?,
+    ): String? {
+        val method = declaration?.takeUnless { it.isReturnConditional } ?: return null
+        val name = method.nameToken ?: return null
+        val result =
+            method
+                .childNodes()
+                .filterIsInstance<Parameter>()
+                .filter { it.endPosition <= name.startPosition }
+                .singleOrNull() ?: return null
+
+        fun offset(position: Long) =
+            XdkRename.offset(
+                text,
+                SemanticModel.Position(Source.calculateLine(position), Source.calculateOffset(position)),
+            )
+        return text.substring(
+            offset(result.type.startPosition) ?: return null,
+            offset(result.type.endPosition) ?: return null,
         )
     }
 }

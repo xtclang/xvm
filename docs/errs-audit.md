@@ -1523,3 +1523,10 @@ types; accessor redirects and binary debug-span refusals have direct regressions
 the corresponding native navigation/classification behavior. L64/L65 shared cases have passing receipts in both editors. Full VS Code still exposes UP16/X130;
 IntelliJ covers all cases across a full attempt and continuation, retaining the first run's X105
 popup timeout as a stability follow-up. See errs-integration-plan.md for exact hashes and receipts.
+
+October 2 L63 proof update: returned-expression extraction and adjacent single-use returned-local
+inline use the existing Java parser/AST read APIs and detached semantic graph. No new AST fields
+or public compiler accessors were needed. Exact source relocations are tracked by the Kotlin edit
+plan, and compiler facts verify preserved bindings/dispatch after recompilation. The adversarial
+same-spelling/different-parameter relocation is rejected. The focused extraction/inline/proof
+batch passed 31 tests without skips; shared X156/X157 editor execution remains pending.
