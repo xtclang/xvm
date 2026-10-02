@@ -179,7 +179,7 @@ internal object XdkRename {
         if (expected != actual) return false
         // Relocation must retain import targets in the new lexical owner. Ordinary source
         // actions may intentionally remove unused imports; their remaining bindings suffice.
-        if (plan.moves.isNotEmpty() && !preservesImports(before, after, plan)) return false
+        if (plan.moves.isNotEmpty() && (!preservesImports(before, after, plan) || !preservesResources(before, after, plan))) return false
         val expectedDispatch =
             dispatch(before, plan.original, plan::sourceAfter) { source, offset ->
                 plan.map(source, offset)
@@ -214,6 +214,28 @@ internal object XdkRename {
                 }
             }
         }
+
+    fun preservesResources(
+        before: CompilerRenameFacts,
+        after: CompilerRenameFacts,
+        plan: Plan,
+    ): Boolean {
+        fun values(
+            facts: CompilerRenameFacts,
+            texts: Map<String, String>,
+            moved: (String) -> String,
+            translate: (String, Int) -> Int?,
+        ): Map<Site, String>? =
+            facts.resourceValues.entries.associate { (location, value) ->
+                val source = location.sourceName ?: return null
+                val text = texts[source] ?: return null
+                val start = offset(text, location.range.start)?.let { translate(source, it) } ?: return null
+                val end = offset(text, location.range.end)?.let { translate(source, it) } ?: return null
+                Site(moved(source), start, end) to (value ?: return null)
+            }
+        val expected = values(before, plan.original, plan::sourceAfter, plan::map) ?: return false
+        return expected == values(after, plan.proposed, { it }) { _, offset -> offset }
+    }
 
     private fun preservesImports(
         before: CompilerRenameFacts,

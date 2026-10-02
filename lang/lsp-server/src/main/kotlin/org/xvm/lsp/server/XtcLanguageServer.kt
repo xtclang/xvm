@@ -152,7 +152,8 @@ class XtcLanguageServer(
                 "textDocument/references" -> "Finding references"
 
                 "textDocument/rename",
-                "xtc/renameProposal",
+                "xtc/rename",
+                "xtc/renameFiles",
                 "workspace/willRenameFiles",
                 -> "Checking rename"
 
@@ -807,7 +808,7 @@ class XtcLanguageServer(
     private fun buildServerCapabilities(): ServerCapabilities =
         ServerCapabilities().apply {
             positionEncoding = "utf-16"
-            if (adapter is XdkAdapter) experimental = mapOf("xtcRenameProposal" to 1)
+            if (adapter is XdkAdapter) experimental = mapOf("xtcRenameProposal" to 1, "xtcFileMoveProposal" to 1)
             if (usesPullDiagnostics) {
                 diagnosticProvider =
                     DiagnosticRegistrationOptions(true, true).apply {
@@ -1136,6 +1137,9 @@ class XtcLanguageServer(
     /** Hosts opting into this extension own persistence and undo of explicit graph replacements. */
     @JsonRequest("xtc/rename")
     fun renameProposal(params: RenameParams): CompletableFuture<RenameProposal?> = textDocumentService.renameProposal(params)
+
+    @JsonRequest("xtc/renameFiles")
+    fun renameFilesProposal(params: RenameFilesParams): CompletableFuture<RenameProposal?> = textDocumentService.renameFilesProposal(params)
 
     /**
      * Custom health check method that clients can call to verify the server is working.
