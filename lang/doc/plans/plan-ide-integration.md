@@ -233,7 +233,7 @@ local or import-alias declarations and inherited written member contracts, prese
 | Pull document/workspace diagnostics | Implemented for negotiated compiler clients: result IDs, related/closed documents, refresh and removal reports. Shared X123 and updated X76/X118 pass in both editors; push remains for other clients. PLAT1's source-location crash is fixed. The native demo also corrected a closed standalone-member pull gap; X27/X123 pass after that correction. | L68 implemented; demo receipts and nine pull-diagnostic tests |
 | Semantic-token range/delta requests | Negotiated range/delta with bounded result history; backend/protocol and both host checks pass | L69 / X126 |
 | Completion/action/lens/link/inlay/workspace-symbol resolve requests | All six endpoints implemented with bounded revision guards. IntelliJ selects and applies lazy actions through its undo-aware bridge. Backend/protocol and selected acceptance pass in both editors. | L70 / X127, X131 |
-| File-operation pre-edit requests; explicit create/delete notifications | All six hooks pass backend/protocol checks; native file/package Rename passes. Batch native Move/Undo/Redo and resource assertions pass X130, but the current full VS Code run fails that case on the host's post-Paste Explorer repaint. IntelliJ passes. Cross-package qualification and explicit graph replacement remain refused. | L71 / X128, X130 |
+| File-operation pre-edit requests; explicit create/delete notifications | All six hooks pass backend/protocol checks; native file/package Rename passes. Batch native Move/Undo/Redo and resource assertions pass X130, but the current full VS Code run fails that case on the host's post-Paste Explorer repaint. IntelliJ passes. Bounded cross-package qualification passes X161; explicit graph replacement now uses `xtc/renameFiles` and shared X162/X163. | L71 / X128, X130 |
 | Save-time edits, incremental sync, multiple-range formatting | Negotiated save hooks, opt-in incremental UTF-16 updates and multiple-range formatting implemented; default Full/no save edits preserved. Backend/packaged transport and selected X132 pass in both editors. | L72 / X132 |
 | Server-side `workspace/executeCommand` | Module Run lenses invoke an existing client command | L73 |
 | Cross-project monikers | Detached identities scoped to compiler snapshots/graphs | L74 |
@@ -631,7 +631,7 @@ Full tree-sitter support for fast, incremental parsing:
      source identities, independent conditional families and nested generic method/property delegation
      to regression coverage. Shared X159/X160 cover cross-file rename and Undo in both drivers;
      both pass in VS Code `run-RGeVCM` and IntelliJ `run-17726972701009018455`, alongside 78 passing
-     backend audit tests. Bounded cross-package type moves now rewrite qualifications (X161 passes in both editors). Explicit graph relocation and
+     backend audit tests. Bounded cross-package type moves now rewrite qualifications (X161 passes in both editors). Explicit graph relocation is implemented through the host settings transaction;
      union/generated/cyclic callable identities remain open; binary contracts remain read-only
    - Whole-return-expression extraction and adjacent single-use typed returned-local inline are implemented with binding proof; X156/X157 pass in both editors
    - Wider extraction, extract method, broader inline and safe delete remain unimplemented (L63)
@@ -829,7 +829,7 @@ handlers preflight before disk mutation and apply references/paths in one global
 raw VFS changes still cannot promise reference updates. X128 and X130 drive the real host actions.
 Same-name type files can now move across compiler-proven package namespaces with qualification
 rewrites, companion resources and binding proof; X161 Move/Undo/Redo passes in both editors. Explicit
-source-graph relocation remains refused.
+source-graph relocation now uses the guarded host proposal/settings path (X162/X163).
 Ordinary LSP pre-operation null replies cannot veto arbitrary host file moves.
 
 PLAT2c/L67 now imports the evaluated Gradle model in both hosts and exposes effective source/resource
@@ -852,8 +852,7 @@ source/container moves before disk mutation. Parent changes are applied through 
 LSP4IJ 0.21 only applies the new basename. References and paths share a global undo command.
 Shared X130 covers two discovered module containers and embedded resources with Undo/Redo;
 selected acceptance passes in both editors. The October 2 X161 continuation adds bounded type
-relocation with qualification rewriting; selected Move/Undo/Redo acceptance passes in both editors. Explicit-graph relocation
-remains a refusal. Search `// TODO LSP4IJ:` in the plugin for removable upstream compatibility bridges.
+relocation with qualification rewriting; selected Move/Undo/Redo acceptance passes in both editors. Explicit-graph relocation now has a host-persisted proposal and X162/X163 Undo/Redo coverage. Search `// TODO LSP4IJ:` in the plugin for removable upstream compatibility bridges.
 
 L70 follow-up (2026-09-30, selected acceptance passed): codeLens/documentLink/inlayHint/workspaceSymbol
 resolve endpoints now preserve stable identities and reject obsolete detached handles. Inlay
@@ -1074,3 +1073,18 @@ alias-editing behavior. Earlier pending notes above record the implementation ch
 current acceptance state. Binary source-index replacement tests also fixed missing source URIs in
 unopened graph navigation; binary-only metadata remains usable without invented source locations.
 Broader transformation, formatting, graph-scale and release-gate tasks remain open.
+
+
+L62 graph relocation follow-up: compiler mode advertises `xtcFileMoveProposal: 1` for complete
+file-move proposals with source/resource graph replacement. Both hosts persist settings and paths
+through their existing guarded Undo/Redo logic. Containers and same-name module roots are supported;
+root-only moves pin resolved default resources left behind. Resource value proof includes lowered
+string/byte literals and every configured resource consumer. X162/X163 share these assertions in
+both drivers; selected receipts are in the
+[integration plan](../../../docs/errs-integration-plan.md#l62-explicit-source-graph-relocation-2026-10-02).
+Standard `willRenameFiles` cannot save settings and still refuses graph changes. VS Code cannot veto
+an arbitrary host move with an empty participation reply. Combined root rename/move, resource-only
+relocation and moving workspace configuration ownership remain unsupported. No AST API changes.
+Selected X118/X161/X162/X163 passes in both hosts. IntelliJ required UP19's descendant-connection
+bridge for directory Move/Undo/Redo; post-Redo unsaved edits also pass without stale synchronizers.
+The bridge and its removal gate are recorded in the [upstream register](../../../docs/errs-upstream-issues.md).

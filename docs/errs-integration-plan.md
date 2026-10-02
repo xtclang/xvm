@@ -25,8 +25,8 @@ master's dependencies and passes 455 tests (three existing skips), including all
 regressions. [PR #653](https://github.com/xtclang/xvm/pull/653) targets `master`, with review
 requested from `ggleyzer`; see the diagnosis for the exact size and checks.
 
-Current inventory: 2026-09-28, following the native/tracing checkpoint `86fc15348` and the
-L55/L61/L62 implementation and validation batch recorded below. This is the active task list;
+Current inventory: updated 2026-10-02, extending the native/tracing checkpoint `86fc15348` and the
+L55/L61/L62 implementation and validation batches recorded below. This is the active task list;
 dated records retain their historical scope and results. Checkboxes distinguish completed acceptance from
 implemented-but-unverified work and planned features. Compiler API changes get separate C-series
 extraction boundaries when their implementations establish what is required.
@@ -409,6 +409,11 @@ VS Code receipts above.
   when collecting method/property families. Conditional adoption therefore participates in rename
   proof; X155 passes source rename and Undo in both editor drivers. The October 2 continuation
   acceptance receipt below records the combined backend and selected editor validation.
+  X161–X163 subsequently add bounded cross-package type moves and explicit source/resource graph
+  relocation with persisted Undo/Redo; all pass selected acceptance in both editors. The
+  [graph-relocation receipt](#l62-explicit-source-graph-relocation-2026-10-02) records the exact
+  boundaries and UP19 connection repair. Union/generated/cyclic callable target-set proof,
+  combined rename/move and interacting qualification plans remain implementation work.
 - [ ] **L63 — Semantic quick fixes and refactorings.** Individual and all-required-member
   implement/override actions are implemented at a class name for inherited source and read-only
   binary/XDK contracts. Compiler-selected signatures include generic/conditional/multiple returns,
@@ -1169,7 +1174,7 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 | L68 pull diagnostics | Negotiated pull/push, result IDs, related/closed documents and invalidation pass backend, stdio and selected acceptance in both editors. PLAT1's source-location crash is fixed. | Retain broader workload coverage rather than treating the selected fixtures as universal proof. |
 | L69 token range/delta | Negotiated range/delta and bounded result history pass backend/protocol and X126 in both hosts. | Measure representative workspace payload/cache costs under L82. |
 | L70 lazy resolve | All six resolve endpoints have detached revision guards; backend and X105/X122/X127/X131 checks pass. IntelliJ has a selected-action bridge preserving normal Undo/Redo. | Preserve eager fallback for clients without the relevant capabilities; broaden stale-application acceptance under L80/L82. |
-| L71 file operations | Six negotiated pre/post hooks and compiler-proven file/package/container operations; backend and selected X128/X130 checks pass in both editors. | Bounded same-module type moves now rewrite package qualifications; X161 Move/Undo/Redo passes in both editors. Explicit graph relocation remains unsupported. Retain the VS Code file-operation refusal limitation. |
+| L71 file operations | Six negotiated pre/post hooks and compiler-proven file/package/container operations; backend and selected X128/X130 checks pass in both editors. | Bounded same-module type moves now rewrite package qualifications; X161 Move/Undo/Redo passes in both editors. Explicit graph relocation now uses the host proposal/persistence path (X162/X163). Retain the VS Code file-operation refusal limitation. |
 | L72 save/sync/formatting | Negotiated save hooks, opt-in incremental patches and multiple-range formatting pass backend and selected X132/X137–X139 checks; Full remains default. | Broaden workspace/save ownership coverage; IntelliJ uses native save formatting because LSP4IJ lacks `willSaveWaitUntil`. Save edits remain version guarded and independent of compilation. |
 | L73 server commands | Run lenses invoke client commands; negotiated legacy code actions have a bounded one-use resolve/apply command. | Broader server commands and embedded Run remain separate scopes; define typed commands, edit failure handling and cancellation. Embedded execution depends on the accepted R2–R5 service design, not another command-line assembly path. |
 | L74 monikers | Compiler/graph identities exist but are not cross-project identifiers. | Define module/artifact-version identity, import/export relationships and matches across source and binary consumers. |
@@ -1208,8 +1213,8 @@ and debugging. Neither feature counts nor a selected passing playbook establish 
   All six hooks negotiate independently. Native IntelliJ Rename and batch Move preflight before
   mutation, then apply references and VFS moves in one undo command. Backend/protocol and selected
   X118/X128/X130 acceptance pass in both editors, including native dispatch and project Undo fixes.
-  Cross-package qualification rewriting and explicit source-graph relocation remain refused;
-  ordinary LSP null replies cannot veto moves.
+  Bounded cross-package qualification rewriting (X161) and explicit source-graph relocation
+  (X162/X163) are implemented; ordinary LSP null replies cannot veto moves.
 - [x] **L72 — Save hooks, incremental sync and multiple-range formatting.**
   Negotiated `willSave`/`willSaveWaitUntil` and `textDocument/rangesFormatting` are implemented.
   Initialization options `xtcDocumentSync: {incremental: true, formatOnSave: true}` opt into those
@@ -7746,7 +7751,7 @@ reproducible, and reconcile completed versus remaining scope. Validation is batc
 
    | Scope | Implemented and proven | Concrete remaining work |
    | --- | --- | --- |
-   | L62 rename | Recorded source families, primary/ordinary parameter slots, lambdas, escaped method values, packages/modules/companions and guarded graph replacement | Cross-package qualification rewrites and explicit graph relocation; characterize additional refused composition routes with reproductions before extending proof. External consumers omitted from the configured graph remain an explicit unknown boundary. |
+   | L62 rename | Recorded source families, primary/ordinary parameter slots, lambdas, escaped method values, packages/modules/companions, bounded cross-package qualification and host-persisted graph relocation | Combined root rename/move, unsupported qualification syntax, interacting move plans and union/generated/cyclic callable identities; characterize each refused route before extending proof. External consumers omitted from the configured graph remain an explicit unknown boundary. |
    | L63 semantic actions | Import fixes and compiler-proven implement/override, including bundled contracts | Whole-return-expression extraction and adjacent single-use returned-local inline are implemented in the continuations below. General statement/context extraction, missing-declaration fixes, extract method, broader inline and safe delete remain separate transformations. Each needs its own side-effect/capture/caller-closure design and positive/refusal tests. |
    | L64 completion/signatures | Import edits, syntax names/templates, guarded bounds and compiler-fitted literals/values; latest continuation adds wrapped names, enclosing-instance arguments and real platform anonymous-body recovery | Latest continuation below gives the exact supported forms, evidence and conservative exclusions. Remaining expansion includes inferred/ambiguous local names, arbitrary value synthesis and general special-this enumeration outside calls; these are not counted as implemented. |
    | L65 navigation/classification | Source/bundled navigation, recorded hierarchy/composition relations and resolved tokens | Conditional/synthetic/native/redirect routes and ambiguous binary source metadata need individual fixtures. Runtime function targets cannot be invented by a static hierarchy. |
@@ -8946,9 +8951,9 @@ Remaining implementation work in L62:
 - [ ] Extend relocation beyond same-name class files and compiler-proven destination namespaces:
   simultaneous move plus rename, unproven empty namespaces, token-preserving qualified names with
   comments, and interacting batch qualifications remain outside this slice.
-- [ ] Explicit graph relocation: return and persist the replacement source/resource roots through
-  the existing host proposal protocol, with version checks and editor Undo/Redo. Standard
-  `willRenameFiles` cannot persist host settings by itself.
+- [x] Implement explicit graph relocation through `xtc/renameFiles`, with source/resource roots,
+  version checks and persisted editor Undo/Redo (X162/X163). Selected acceptance is recorded below.
+  Standard `willRenameFiles` still refuses a host configuration change.
 - [ ] Union/generated/cyclic callable identities: preserve proven static target sets and receiver
   provenance before offering rename. `MethodBody` already exposes union legs; merely following those
   legs is insufficient while the detached proof represents a call as one identity. Keep the refusal
@@ -9017,8 +9022,8 @@ Limits remain explicit: this slice preserves the file/type basename and module. 
 compiler-proven destination namespace and refuses existing destination/companion collisions,
 unsupported qualification syntax and conflicting edit plans. Proposed compilation checks access,
 imports and resources; proof checks identities even when the proposed graph compiles. Explicit
-source-graph relocation and union/generated/cyclic callable target-set proof remain separate L62
-work. This is not a declaration that L62 or general Move refactoring is complete.
+source-graph relocation is implemented in the following checkpoint; union/generated/cyclic
+callable target-set proof remains separate L62 work. This is not a declaration that L62 or general Move refactoring is complete.
 
 
 Selected editor acceptance and extraction map:
@@ -9038,6 +9043,97 @@ Selected editor acceptance and extraction map:
 - Both use the same **166-case** catalog, SHA-256
   `36d257c300986d7e4efed0eeb7173542266c9f02b4f9165e8a46a09534866cd3`.
 
-These are selected acceptance runs, not new full-catalog receipts. The next independent L62 slice
-is explicit source-graph relocation through the host proposal/persistence/Undo path, followed by
-richer static callable identities. The bounded relocation follow-ups listed above remain tracked.
+These are selected acceptance runs, not new full-catalog receipts. The following checkpoint adds
+explicit source-graph relocation through the host proposal/persistence/Undo path. Richer static
+callable identities and the bounded relocation follow-ups listed above remain tracked.
+
+
+### L62 explicit source-graph relocation (2026-10-02)
+
+The custom `xtc/renameFiles` request returns a complete move proposal: versioned text edits,
+requested and companion file operations, graph before/after values and the existing proof scope.
+Compiler mode advertises `xtcFileMoveProposal: 1`. Ordinary `workspace/willRenameFiles` continues
+to return only additional edits and refuses transactions requiring settings changes. The server
+never installs proposal settings or writes source files itself.
+
+IntelliJ's native Move command captures settings and source versions before requesting the proof,
+then persists settings and file operations in its existing guarded global Undo command. VS Code's
+file-operation middleware uses the same proposal, adds a JSON settings edit, and removes the
+requested operations from its reply because the editor already owns those moves. Settings scopes,
+source versions and workspace topology are checked across asynchronous conversion. Moving the
+workspace itself or its settings container is outside this transaction.
+
+Module containers and same-basename module roots can move within the explicit graph. Companion
+trees move with their root file. Ordered custom resource roots follow moved directories; `[]`
+stays disabled. If only a module root moves, resolved default resource roots left behind are
+materialized as explicit paths so the new location does not change resource lookup. Dependency
+names and unrelated settings are preserved, and the graph before value enables exact Undo.
+
+Resource proof uses a proposed-path view over the captured original files. It does not write
+scratch trees or mutate compiler ASTs. Detached hashes compare embedded strings/bytes and
+File/Directory/FileStore contents and names before/after the move; timestamp metadata is excluded.
+The parser lowers `$path`/`#path` into literal nodes, so those includes are checked as well as
+`FileExpression`. Shared resource consumers are checked across all configured modules, even when
+there is no source-dependency edge. A regression caught the initially missing lowered-literal
+case: both programs compiled while the new lookup selected different fallback bytes.
+
+The proof refuses uncaptured incoming resources, embedded source files whose text is being edited,
+collisions, overlapping requests (including implicit companions) and existing unsafe bindings.
+Before replay, every source member must still belong to its proposed module companion tree.
+The initial VS Code selection passed all four assertions but its log exposed a nested companion-only
+request that violated this invariant and threw from `XdkSources`; the added regression now requires
+safe refusal before construction. That run is not counted as clean acceptance. No Java AST accessor, mutable
+field, cloning responsibility or embedding API change is needed.
+
+Shared X162 covers an explicit two-module container move, ordered resource roots, a closed
+consumer and disabled resources. X163 covers a root-file move, its companion and default resources
+left behind. Both drivers assert source/resource contents, persisted paths, clean diagnostics and
+one Undo/Redo. X118 and X161 are included in selected regression acceptance for the shared settings
+and existing type-move paths. This is a focused gate, not a full-catalog rerun.
+
+Still outside this slice: combined root rename plus parent change, discovered root-file moves
+that need host-persisted resources, standalone resource-only graph relocation, moving workspace
+settings ownership, and richer union/generated/cyclic callable identities. Omitted consumers and
+binary contracts retain their existing boundaries. VS Code participation cannot veto arbitrary
+host moves when the compiler refuses; X130/UP16 remains a separate upstream Explorer issue.
+
+Local extraction map (keep dependent slices in this order):
+
+- `827638a44`: proposal protocol/capability, graph relocation, resource overlay and detached
+  value proof, backend/protocol regressions. No Java API changes.
+- `3ad6d2121`: IntelliJ and VS Code graph persistence, source/settings guards and Undo integration.
+- `8e42559e9`: shared X162/X163, both editor drivers, catalog registration and manual steps.
+- `3cab52e7b`: module-ownership/overlap guards and regression for nested companion requests.
+  Extract this correction with the backend slice, not as optional editor cleanup.
+- `9145781c0`: IntelliJ descendant document lifecycle repair (UP19), pinned API/event-selection
+  tests and post-Redo editing acceptance. Keep this with the IntelliJ graph-move integration.
+
+Validation: **80 backend tests across seven suites**, **15 IntelliJ unit tests across three suites**,
+zero failures/errors/skips. Both driver compilations and root/LSP/IntelliJ Spotless checks pass.
+VS Code 1.140.0 `run-WvHL3O` passes **X118/X161/X162/X163** (2,820 / 1,676 / 1,666 / 1,772 ms),
+with zero reported extension errors and no compiler internal errors in the saved server log.
+The earlier `run-cuY1mp` also passed its assertions, but logged the corrected companion-request
+exception; it is deliberately not the clean receipt. The report's `errors` array contains test
+failures, so the separate server-log check matters.
+The catalog contains **168 scenarios**, SHA-256
+`69810cbc5be843deafa7a4be8b058b94b1028baa72ad717b148509eed59b248a`.
+IntelliJ 2026.2.3 / LSP4IJ 0.21.0 `run-16019291377503835349` passes **START and
+X118/X161/X162/X163** (21,487 / 6,660 / 3,267 / 5,851 / 6,215 ms). JUnit confirms one passing
+suite test, zero failures/errors/skips; the report has zero IDE failures, and the saved IDE/server
+logs contain no internal errors. Ultimate remains disabled.
+
+The initial IntelliJ run `run-12819902949651520401` passed the other three cases but timed out
+after X162's Undo: LSP4IJ retained descendant connections under the old directory URI. UP19's
+client-scoped bridge now retires those connections before the path changes and reconnects current
+buffers asynchronously through the public API. Only the package-private disconnect operation
+requires reflection; map/lock internals are untouched. The current trace closes/opens App.x on
+every Move/Undo/Redo and delivers post-Redo unsaved edits to the final URI. Both graph-move cases
+also verify that an introduced error appears and clears when the original source is restored.
+See [the upstream register](errs-upstream-issues.md#up19-directory-moves-retain-old-document-connections)
+for the implementation boundary and removal gate. This does not close broad rapid-edit/multi-window
+lifecycle acceptance or L62 as a whole.
+
+Next L62 implementation step: characterize union/generated/cyclic callable routes with compiler
+fixtures, then extend detached target-set proof only where static receiver and dispatch identities
+can be preserved. Do not infer runtime callable targets. Keep combined rename/move, unsupported
+qualification syntax and interacting batch plans as separately tracked relocation extensions.
