@@ -14,6 +14,14 @@ import org.xvm.lsp.adapter.xdk.projectRenameFacts
 /** A compiling relocation can silently capture names; its original edges must be compared. */
 class CompilerRelocationProofTest {
     @Test
+    fun `static qualification changes must preserve the final type even when both programs compile`() {
+        val text = "module Extract { package tools { class Box {} } package util { class Box {} } tools.Box make() = new tools.Box(); }"
+        val edits = Regex("tools\\.").findAll(text).map { XdkRename.Edit(it.range.first, it.range.last + 1, "util.") }.toList()
+        val plan = XdkRename.Plan(mapOf(SOURCE to text), mapOf(SOURCE to edits), qualifications = mapOf(SOURCE to edits))
+        assertThat(XdkRename.preservesBindings(facts(text), facts(plan.proposed.getValue(SOURCE)), plan)).isFalse()
+    }
+
+    @Test
     fun `expression relocation preserves its parameter binding only in the original scope`() {
         val text =
             """

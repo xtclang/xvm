@@ -31,8 +31,10 @@ internal object XdkRename {
         val edits: Map<String, List<Edit>>,
         val moves: Map<String, String> = emptyMap(),
         private val relocations: Map<String, List<Relocation>> = emptyMap(),
+        val qualifications: Map<String, List<Edit>> = emptyMap(),
     ) {
         init {
+            require(qualifications.all { (source, changes) -> changes.all { it in edits[source].orEmpty() } })
             relocations.forEach { (source, moved) ->
                 moved.forEach { relocation ->
                     val insertion = relocation.destination
@@ -83,6 +85,14 @@ internal object XdkRename {
                 val text = original.getValue(source)
                 TextEdit(Range(position(text, edit.start), position(text, edit.end)), edit.text)
             }
+
+        fun callStart(
+            source: String,
+            offset: Int,
+        ): Int? =
+            map(source, offset)?.minus(
+                qualifications[source].orEmpty().filter { it.start == offset && it.start == it.end }.sumOf { it.text.length },
+            )
     }
 
     fun plan(
@@ -151,18 +161,79 @@ internal object XdkRename {
         plan: Plan,
     ): Boolean {
         if (after.models.any { it.status != SemanticModel.Status.COMPLETE }) return false
+        val beforePrefixes = qualificationSites(before, plan.original, plan.qualifications) ?: return false
+        val afterQualifications =
+            plan.qualifications.entries.associate { (source, edits) ->
+                plan.sourceAfter(source) to
+                    edits.map { edit ->
+                        val start = plan.map(source, edit.start)?.minus(if (edit.start == edit.end) edit.text.length else 0) ?: return false
+                        Edit(start, start + edit.text.length, edit.text)
+                    }
+            }
+        val afterPrefixes = qualificationSites(after, plan.proposed, afterQualifications) ?: return false
         val expected =
-            edges(before, plan.original, plan::sourceAfter) { source, offset ->
+            edges(before, plan.original, plan::sourceAfter, ignored = beforePrefixes, callStart = plan::callStart) { source, offset ->
                 plan.map(source, offset)
             } ?: return false
-        val actual = edges(after, plan.proposed) { _, offset -> offset } ?: return false
+        val actual = edges(after, plan.proposed, ignored = afterPrefixes) { _, offset -> offset } ?: return false
         if (expected != actual) return false
+        if (!preservesImports(before, after, plan)) return false
         val expectedDispatch =
             dispatch(before, plan.original, plan::sourceAfter) { source, offset ->
                 plan.map(source, offset)
             } ?: return false
         val actualDispatch = dispatch(after, plan.proposed) { _, offset -> offset } ?: return false
         return expectedDispatch == actualDispatch
+    }
+
+    /** Only static namespace/type prefixes may disappear; terminal bindings and calls still match. */
+    private fun qualificationSites(
+        facts: CompilerRenameFacts,
+        texts: Map<String, String>,
+        qualifications: Map<String, List<Edit>>,
+    ): Set<SemanticModel.SourceLocation>? =
+        buildSet {
+            facts.models.forEach { model ->
+                val source = model.sourceName ?: return@forEach
+                if (source !in qualifications) return@forEach
+                val text = texts[source] ?: return null
+                model.occurrences.forEach { occurrence ->
+                    val start = offset(text, occurrence.range.start) ?: return null
+                    val end = offset(text, occurrence.range.end) ?: return null
+                    if (qualifications[source].orEmpty().any { start >= it.start && end <= it.end }) {
+                        val symbol = occurrence.symbol?.let(model::symbol) ?: return null
+                        if (symbol.kind !in
+                            setOf(SemanticModel.SymbolKind.MODULE, SemanticModel.SymbolKind.PACKAGE, SemanticModel.SymbolKind.TYPE)
+                        ) {
+                            return null
+                        }
+                        add(SemanticModel.SourceLocation(source, occurrence.range))
+                    }
+                }
+            }
+        }
+
+    private fun preservesImports(
+        before: CompilerRenameFacts,
+        after: CompilerRenameFacts,
+        plan: Plan,
+    ): Boolean {
+        fun imported(
+            facts: CompilerRenameFacts,
+            texts: Map<String, String>,
+            moved: (String) -> String,
+            translate: (String, Int) -> Int?,
+        ): Map<Site, Target>? =
+            facts.typeNames.filter { it.imported }.associate { name ->
+                val source = name.location.sourceName ?: return null
+                val text = texts[source] ?: return null
+                val start = offset(text, name.terminal.start)?.let { translate(source, it) } ?: return null
+                val end = offset(text, name.terminal.end)?.let { translate(source, it) } ?: return null
+                Site(moved(source), start, end) to (composedTarget(name.target, texts, moved, translate) ?: return null)
+            }
+        val expected = imported(before, plan.original, plan::sourceAfter, plan::map) ?: return false
+        val actual = imported(after, plan.proposed, { it }) { _, offset -> offset } ?: return false
+        return expected == actual
     }
 
     /** A repair may bind unresolved names, but cannot change any binding already established. */
@@ -650,6 +721,7 @@ internal object XdkRename {
         allowUnresolved: Boolean = false,
         sourceParameters: Boolean = false,
         ignored: Set<SemanticModel.SourceLocation> = emptySet(),
+        callStart: ((String, Int) -> Int?)? = null,
         translate: (String, Int) -> Int?,
     ): Map<Site, Target>? {
         val declarations =
@@ -665,7 +737,9 @@ internal object XdkRename {
             call: Boolean = false,
         ): Site? {
             val text = texts[source] ?: return null
-            val start = offset(text, range.start)?.let { translate(source, it) } ?: return null
+            val start =
+                offset(text, range.start)?.let { (if (call) callStart else null)?.invoke(source, it) ?: translate(source, it) }
+                    ?: return null
             val end = offset(text, range.end)?.let { translate(source, it) } ?: return null
             return Site(moved(source), start, end, call)
         }
