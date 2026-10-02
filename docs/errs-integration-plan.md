@@ -420,16 +420,18 @@ VS Code receipts above.
   missing declarations, inline and safe delete remain unimplemented. Record supported XTC forms per action; doc-comment
   generation and reference/test lenses are separate subfeatures. Semantic transformations require
   compiler evidence and versioned multi-file edit validation.
-- [ ] **L64 — Completion/signature breadth and presentation.** After L57/L58, cover unfinished
-  self-referential bounds, literal synthesis and arbitrary enclosing-instance enumeration, plus remaining
-  declaration-name, keyword/snippet and callable contexts, candidate documentation/ranking,
-  import-producing edits, and overload/active-argument displays. Test exact token replacement,
-  named/default arguments, inaccessible candidates and supported client edit formats.
-- [ ] **L65 — Navigation, hierarchy and semantic classification.** Audit remaining conditional
-  mixin/composition edges, synthetic/native/redirect bodies, dynamic/function-valued call
-  relationships and ambiguous or missing binary source metadata. Extend resolved token kinds,
-  modifiers and read/write classification where facts exist. Never invent executable targets
-  or source locations; document runtime relationships that static analysis cannot enumerate.
+- [x] **L64 — Completion/signature breadth and presentation, bounded closure.** Supported recursive
+  bounds, fitted scalar/collection/lambda values, enclosing instances, declaration names,
+  contextual templates, imports and callable/signature presentation are implemented and audited.
+  The [closure table](#l64-closure-audit-and-acceptance-gate) records supported forms and deliberate
+  exclusions; arbitrary value/body synthesis and ambiguous local syntax are not claimed. All
+  associated shared cases have passing receipts in both editors. The intermittent native X105
+  popup timeout remains an acceptance-stability follow-up below.
+- [x] **L65 — Navigation, hierarchy and semantic classification, bounded closure.** Audited
+  conditional composition, accessor/method redirects, native/synthetic refusals, static/dynamic
+  call boundaries and binary source ambiguity. X153/X154 pass in both editors. Runtime target
+  enumeration and inferred conditional type-hierarchy edges remain explicit static-model limits;
+  no executable target or source location is invented.
 - [ ] **L66 — Structural and editing breadth.** Extend token-preserving indentation to the
   agreed formatter style, expression wrapping and comment/string layout; add import/source
   links and broader proven linked-editing scopes. Audit outline/selection/folding recovery
@@ -8706,3 +8708,49 @@ both editor drivers compile. L65's formal-type correction is `474bad3d5`; it bel
 `e82a13e5ec307a6613c2dd465ba2c9d8e49951fb19cedc8f31178bb4a41af808`.
 Full GUI acceptance follows; no passing full-current-revision backend receipt is implied by the
 focused correction gate.
+
+
+### L64/L65 full editor acceptance (2026-10-02)
+
+- VS Code `run-DVOyyh` stopped before cases: the new semantic cases were registered beside older
+  related cases instead of in shared catalog order. Registration was split without duplicating
+  assertions or relaxing the order guard.
+- Full VS Code `run-qsTyyb`: **157/159 passed**, zero extension errors. X130 reproduced UP16
+  after Move/Undo/Redo/resource assertions. X152 exposed literal backslash-n sequences in the two
+  new ordinary-enclosing fixtures. X87, X150/X151 and X153/X154 all passed.
+- Shared X152 sources now contain real newlines. A backend test consumes all five actual shared
+  variants, asserts exact edits and compiles each accepted result; all five enclosing-value tests
+  pass. The first selected rerun `run-uvN3g8` failed native Undo focus. The driver now explicitly
+  selects the tested document before its one Undo command; it never replays an edit or Undo.
+- VS Code `run-nQpXCs`: **X152 passed**, all five variants, zero extension errors. Across the full
+  and selected receipts, **158/159** pass; X130 remains failed. This is not a single clean full run.
+- Full IntelliJ `run-8615971651239916856`: **78 scenarios plus START passed**, X105 failed and
+  80 cases were not reached; zero IDE errors. The trace returned the correct Document import
+  action in 324 ms, but the native intention list never appeared. Do not classify this as a
+  compiler action failure or dismiss it as harmless.
+- Isolated IntelliJ `run-3538437822704380758`: START and X105 pass, zero IDE errors.
+- IntelliJ continuation `run-6888630689085749199`: **81 selected scenarios plus START pass**,
+  zero IDE errors, covering X105 again and every case not reached in the full attempt. The union
+  contains **all 159 shared scenarios plus START**. No completed edit/rename was replayed in place;
+  the continuation used a fresh isolated workspace. This is complete combined coverage, not a
+  single uninterrupted full pass.
+
+The JNA warning comes from the Starter test JVM's intentional native integration. The GUI test task
+now explicitly enables native access (`ad5e0b2ce`, a separate harness configuration slice). A real X105 run with `--info` shows the JVM option, no
+restricted-native warning and successful configuration-cache storage. The continuation also has
+no warning. The IDE/server JVM policies and dependency versions are unchanged.
+
+L64/L65's bounded implementation and shared acceptance scope is complete. Remaining acceptance work:
+- [ ] UP16: repair/report the independent VS Code Explorer Cut cleanup defect; X130 stays failed
+  whenever it reproduces.
+- [ ] Reproduce the full-run IntelliJ X105 intention-popup timeout with its preceding UI state.
+  Two selected passes do not establish that the intermittent host/harness behavior is fixed.
+- [ ] Obtain one uninterrupted full IntelliJ receipt after that stability work. The combined
+  receipts above already cover every case, but do not establish a single clean run.
+
+The current shared catalog still has 159 cases; its SHA-256 is
+`76d95695cf5a515d9122cd7b38f0fb4da4a7704560ef2fec99c311fde0878b0a`.
+Keep the fixture, registration and native Undo-focus corrections with their L64/L65 acceptance
+slices when extracting PRs. The cursor-identity correction is `162d2f8d1`; the formal-type fix is
+`474bad3d5`. Neither the integration branch nor these receipts establish independently green
+extracted PRs.
