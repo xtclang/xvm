@@ -1,6 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **159 scenarios**: X1–X154, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **160 scenarios**: X1–X155, CFG1–CFG3 and 7a.8/7a.9.
+X155 adds conditional generic composition rename and Undo; its editor execution is pending.
 X150/X151/X152 include fitted lambda arguments, inferred local names and ordinary enclosing
 values. X153 checks implementation dispatch and X154 mutation classification. X87 also checks
 member completion in a primary-constructor default with its missing closing delimiter.
@@ -3016,3 +3017,8 @@ L65 closure additions (execution pending):
 | --- | --- | --- |
 | X153 | Open each shared Dispatch.x variant. Use Go to Implementation on `box.value`, then `text.size()`, then the interface-valued delegate call. | The covariant property reaches its written getter; the conditional mixin reaches its written method. A runtime-only delegate has no guessed target. Both drivers check exact source positions; IntelliJ follows the native navigation action. |
 | X154 | Open shared Access.x. Inspect tokens and highlight usages of the destructured `left`/`right`, incremented `box.value` and `values[index]` assignment. | Destructured variables and the incremented property are writes. The receiver and index expressions remain reads. Both drivers check exact positions and modification flags; IntelliJ also checks native token consumption and highlights. |
+
+
+| Case | Manual action | Expected result |
+| --- | --- | --- |
+| X155 | Open shared Conditional.x. Rename the conditional Textual.size method to width, then Undo once. | The declaration and Box<String> call change together. String.size and Box<Int>.value stay unchanged. The source remains free of diagnostics, and Undo restores the exact original source. Both drivers implement the case; the current batch has not run yet. |

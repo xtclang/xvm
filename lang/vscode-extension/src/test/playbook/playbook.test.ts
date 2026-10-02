@@ -53,6 +53,7 @@ suite('XdkAdapter playbook', function () {
     literalExtractionCases();
     syntaxCompletionCases();
     semanticClosureCases();
+    renameFamilyCases(['X155']);
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {
