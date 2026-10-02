@@ -1038,3 +1038,5 @@ source types, sharing L65's source-type enumeration. Conditional generic adoptio
 same before/after graph proof. Shared X155 adds rename/Undo coverage to both editor drivers; execution
 is pending. Existing union/runtime/binary and configured-consumer boundaries remain explicit. This
 adds no advertised LSP capability and does not close L62 or the editor stability follow-ups.
+
+L62 follow-up also supports written, non-synthetic bodyless class method contracts (`SansCode`) for rename family proof. Such declarations still have no executable implementation target. The 122-test rename/action/lookup regression batch and both driver compilations pass; X155 editor execution is pending.

@@ -1769,8 +1769,7 @@ Remaining rename work:
   keep native/binary contracts read-only.
 - [ ] Support VS Code edited-file resource history with refactoring auto-save disabled, or retain
   the documented pre-edit refusal (the current policy).
-- [ ] Add native multi-root workspace/override/racing-settings acceptance beyond the pure settings
-  regressions and the shared single-workspace X118 Undo/Redo case.
+- [x] Add saved multi-root workspace, folder-override refusal and in-flight settings-change acceptance: September 29 X118/CFG1–CFG3 receipts below. Intervening configuration edits during native Undo/Redo remain separate history stress coverage.
 - [ ] Define optional host discovery/indexing of external repositories if automatic enumeration
   beyond explicit sourceModules is required. The configured boundary itself is implemented.
 
@@ -8772,7 +8771,7 @@ remain separate from functionality implementation.
   adapter; no AST fields or Java API are added.
 - [x] Write method/property fact regressions, declaration/call-site rename and reverse rename,
   concrete-host collision refusal, and shared X155 in both drivers.
-- [ ] Run the new L62 regressions with existing rename, implementation and semantic action tests.
+- [x] Run the new L62 regressions with existing rename, implementation and semantic action tests: 122 tests pass, zero failures/errors/skips; both editor drivers compile.
 - [ ] Audit the remaining L62 composition exclusions and workspace boundaries before closure.
 - [ ] L63 general expression extraction and independent semantic transformations, each with
   evaluation-order/type/binding proof and refusal tests; no blanket completion claim.
@@ -8783,3 +8782,21 @@ remain separate from functionality implementation.
 
 The shared catalog now contains 160 cases. Earlier 159-case receipts remain historical evidence;
 X155 has been implemented in both drivers but has not yet run.
+
+
+L62 validation correction (October 2): formal interface declarations require
+`getSingleUnderlyingClass(true)` when identifying their owner; the first concrete-inspection
+batch mistakenly used the class-only variant. Existing interface rename/member-action regressions
+caught it. After correction, all **122** selected compiler-adapter tests pass with zero
+failures/errors/skips. IntelliJ integration-driver compilation and VS Code TypeScript compilation
+also pass. No editor UI run is claimed yet.
+
+The same audit enables written, non-synthetic `SansCode` method contracts in dispatch provenance:
+a class method without a body is a valid source declaration even though implementation lookup
+must not fabricate executable code for it. Real compiler tests verify that distinction and rename
+its override family. X155 now combines a bodyless generic host contract with a conditionally adopted
+implementation. Generated/implicit accessor identities, union targets and native/binary contracts
+retain their separate proof/refusal policies. Extract these corrections with `8630dde4b`.
+
+`72bfc3b9c` independently adds scenario descriptions beside IDs in both editor progress displays,
+with complete tooltip text and unchanged ID-based selection. It belongs to playbook infrastructure.
