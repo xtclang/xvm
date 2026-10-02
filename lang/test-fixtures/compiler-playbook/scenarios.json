@@ -5049,6 +5049,21 @@
         "limitations": []
       }
     },
+    "X156": {
+      "title": "extract a returned expression while preserving parameter and call bindings",
+      "manual": [],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    Int step() = 1;\n    Int read(Int input) {\n        return input + step();\n    }\n}",
+        "selected": "input + step()",
+        "title": "Extract expression to local variable",
+        "expected": "module Extract {\n    Int step() = 1;\n    Int read(Int input) {\n        Int extractedValue = input + step();\n        return extractedValue;\n    }\n}"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],

@@ -1,7 +1,8 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **160 scenarios**: X1–X155, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **161 scenarios**: X1–X156, CFG1–CFG3 and 7a.8/7a.9.
 X155 adds conditional generic composition rename and Undo; its editor execution is pending.
+X156 adds whole-return-expression extraction and Undo/Redo; its editor execution is pending.
 Both editor runners show the current scenario ID and description beside the completed/remaining
 counts. Long descriptions are shortened in the status bar; hovering shows the full description.
 IntelliJ also includes it in the test window title. Subset selection still uses unchanged X IDs.
@@ -3025,3 +3026,5 @@ L65 closure additions (execution pending):
 | Case | Manual action | Expected result |
 | --- | --- | --- |
 | X155 | Open shared Conditional.x. Rename the conditional Textual.size method to width, then Undo once. | The declaration and Box<String> call change together. String.size and Box<Int>.value stay unchanged. The source remains free of diagnostics, and Undo restores the exact original source. Both drivers implement the case; the current batch has not run yet. |
+
+| X156 | Select the complete `input + step()` return expression in shared Extract.x and apply “Extract expression to local variable”. | An explicitly typed local is inserted immediately before the return. The selected expression appears once, the return reads the new local, and diagnostics remain clear. Undo/Redo/Undo restore the exact expected sources. Both drivers implement the case; this batch has not executed it yet. |
