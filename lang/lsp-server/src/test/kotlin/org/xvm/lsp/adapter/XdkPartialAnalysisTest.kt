@@ -24,6 +24,7 @@ import org.xvm.compiler.ast.Parameter
 import org.xvm.compiler.ast.ReturnStatement
 import org.xvm.compiler.ast.partial.IncompleteExpression
 import org.xvm.compiler.ast.partial.IncompleteStatement
+import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.semanticSnapshot
 import org.xvm.tool.ModuleInfo
 import java.io.File
@@ -420,8 +421,6 @@ class XdkPartialAnalysisTest {
         (prefix, suffix) in
         listOf(
             "module Editing { void run(String value) { value." to "size; } }",
-            "module Editing { void run(String value) { value.si" to "ze; } }",
-            "module Editing { void run(String value) { value.ind" to "exOf(); } }",
             "module Editing { void run(String value) { value.indexOf(" to "\"x\"); } }",
             "module Editing { void run(String value) { value." to " } void broken( { }",
         )
@@ -431,9 +430,26 @@ class XdkPartialAnalysisTest {
                 EmbeddingSupport
                     .instance()
                     .analyzeIncomplete(Source(prefix + suffix, URI), position(prefix), null, errors)
-            assertThat(analysis.pool()).isEmpty()
+            assertThat(analysis.pool()).describedAs("%s|%s", prefix, suffix).isEmpty()
             assertThat(analysis.sites()).isEmpty()
             assertThat(errors.errors.map { it.code }).doesNotContain("EMB-5")
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["si|ze", "ind|exOf(\"x\")"])
+    fun `mid token member cursors replace the complete existing name`(member: String) {
+        val prefix = "module Editing { void run(String value) { value." + member.substringBefore('|')
+        val source = prefix + member.substringAfter('|') + "; } }"
+        val name = member.replace("|", "").substringBefore('(')
+        XdkAdapter().use { adapter ->
+            adapter.compile(URI, source)
+            val completions = adapter.getCompletions(URI, 0, prefix.length).filter { it.label == name }
+            val start = prefix.length - member.substringBefore('|').length
+            assertThat(completions).isNotEmpty()
+            assertThat(completions.map { it.textEdit }).containsOnly(
+                TextEdit(Range(Position(0, start), Position(0, start + name.length)), name),
+            )
         }
     }
 
