@@ -85,15 +85,13 @@ class XdkLiteralRecoveryTest {
                 .describedAs("%s: %s", declaration, errors.errors.map { it.code })
                 .isNotEmpty()
             assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
-            assertThat(
-                analysis
-                    .sites()
-                    .single()
-                    .source
-                    .toRawString(),
-            ).isEqualTo(source.toRawString())
+            // The same default cursor is reachable through both parameter and property syntax.
+            // Publication must preserve its identity once, with its actual validation binding.
+            val site = analysis.sites().single()
+            assertThat(analysis.cursorBindings()).containsKey(site)
+            assertThat(site.source.toRawString()).isEqualTo(source.toRawString())
             val owner =
-                generateSequence(analysis.sites().single().parent) { it.parent }
+                generateSequence(site.parent) { it.parent }
                     .filterIsInstance<MethodDeclarationStatement>()
                     .firstOrNull()
             if (owner != null) assertThat((owner.component as MethodStructure).ast).isNull()

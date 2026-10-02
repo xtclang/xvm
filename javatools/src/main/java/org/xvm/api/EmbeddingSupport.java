@@ -759,7 +759,7 @@ public class EmbeddingSupport {
         if (parsed.root() == null) {
             return new PartialAnalysis(parsed.sources(), List.of(), Optional.empty());
         }
-        var sites = incompleteSites(parsed.root()).toList();
+        var sites = incompleteSites(parsed.root()).distinct().toList();
         if (sites.size() != 1 || syntaxErrors.getErrors().stream().anyMatch(error ->
                 error.getSeverity().isAtLeast(ERROR) && !error.getCode().equals(boundaryCode))) {
             return new PartialAnalysis(parsed.sources(), List.of(), Optional.empty());
@@ -769,7 +769,9 @@ public class EmbeddingSupport {
         Compilation attempt = compileModule(listener -> parsed, input, host, cursors);
         // Anonymous construction can replace its deferred body with an owned class/validation
         // clone. Publish only surviving syntax, never the pre-validation cursor identity.
-        var surviving = incompleteSites(parsed.root()).toList();
+        // Primary-constructor defaults can expose the same surviving node through both the
+        // written parameter and generated property getter. Publish each identity only once.
+        var surviving = incompleteSites(parsed.root()).distinct().toList();
         return new PartialAnalysis(parsed.sources(), surviving, Optional.ofNullable(attempt.pool()),
                 attempt.callBindings(), cursors.finish(parsed.sources()), attempt.functionBindings());
     }
