@@ -7741,7 +7741,7 @@ reproducible, and reconcile completed versus remaining scope. Validation is batc
    | Scope | Implemented and proven | Concrete remaining work |
    | --- | --- | --- |
    | L62 rename | Recorded source families, primary/ordinary parameter slots, lambdas, escaped method values, packages/modules/companions and guarded graph replacement | Cross-package qualification rewrites and explicit graph relocation; characterize additional refused composition routes with reproductions before extending proof. External consumers omitted from the configured graph remain an explicit unknown boundary. |
-   | L63 semantic actions | Import fixes and compiler-proven implement/override, including bundled contracts | Exact-selection literal-return extraction is implemented in the continuation below. General extract local, missing-declaration fixes, extract method, inline and safe delete remain separate transformations. Each needs its own side-effect/capture/caller-closure design and positive/refusal tests. |
+   | L63 semantic actions | Import fixes and compiler-proven implement/override, including bundled contracts | Whole-return-expression extraction and adjacent single-use returned-local inline are implemented in the continuations below. General statement/context extraction, missing-declaration fixes, extract method, broader inline and safe delete remain separate transformations. Each needs its own side-effect/capture/caller-closure design and positive/refusal tests. |
    | L64 completion/signatures | Import edits, syntax names/templates, guarded bounds and compiler-fitted literals/values; latest continuation adds wrapped names, enclosing-instance arguments and real platform anonymous-body recovery | Latest continuation below gives the exact supported forms, evidence and conservative exclusions. Remaining expansion includes inferred/ambiguous local names, arbitrary value synthesis and general special-this enumeration outside calls; these are not counted as implemented. |
    | L65 navigation/classification | Source/bundled navigation, recorded hierarchy/composition relations and resolved tokens | Conditional/synthetic/native/redirect routes and ambiguous binary source metadata need individual fixtures. Runtime function targets cannot be invented by a static hierarchy. |
    | L66 editing/structure | Token-preserving indentation, URL links, local linked editing, recorded damaged-source structure | Expression wrapping and comment/string layout, import/source links, broader proven linked scopes and remaining damaged constructs. A full pretty-printer is not implemented. |
@@ -8825,3 +8825,18 @@ Shared X156 in both drivers checks exact applied source, diagnostics and Undo/Re
 open for other expression contexts, extract method, missing declarations, inline and safe delete.
 Compilation/execution of this continuation is pending; the earlier 122-test L62 receipt does not
 validate these changes.
+
+### L63 adjacent returned-local inline (2026-10-02)
+
+A typed local immediately followed by its sole `return local` use can now be inlined. The written
+local and return types must match; the initializer keeps its exact text, evaluation count and order.
+The proposed complete graph must preserve every binding and dispatch chain except the deliberately
+removed declaration/type/read sites. The relocation proof handles replacement destinations as well
+as extraction insertions. Repeated reads, intervening writes/statements, comments, same-line returns,
+inferred locals and different expected types are refused. No compiler AST API or mutable AST state
+was added. General inline, extract method, missing declarations and safe delete remain open.
+
+Validation: 31 real compiler tests passed, zero failures/errors/skips: 16 extraction, 14 inline and
+one adversarial relocation/capture proof. Both editor drivers compile. Shared X157 checks the actual
+action, exact source, diagnostics and Undo/Redo/Undo in both editors; X155–X157 editor execution is
+still pending. This also validates returned-expression extraction commit `3a4c03fd9`.
