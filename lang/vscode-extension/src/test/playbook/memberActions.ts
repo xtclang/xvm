@@ -45,8 +45,8 @@ export function memberActionCases(): void {
     });
 }
 
-export function literalExtractionCases(): void {
-    playbook('X148', async (workspace, data) => {
+export function extractionCases(ids: readonly ('X148' | 'X156')[] = ['X148']): void {
+    for (const id of ids) playbook(id, async (workspace, data) => {
         await workspace.write(data.file, data.source);
         await discovered(workspace, async () => {
             const document = await workspace.open(data.file);
@@ -66,7 +66,7 @@ export function literalExtractionCases(): void {
                 await focusTestWindow();
                 await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
                 await vscode.commands.executeCommand(command);
-                await eventually(async () => document.getText(), text => text === expected, `${command} literal extraction`);
+                await eventually(async () => document.getText(), text => text === expected, `${command} extraction`);
                 await noErrors(document.uri);
             }
         });
