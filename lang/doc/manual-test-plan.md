@@ -2,6 +2,9 @@
 
 The current catalog has **160 scenarios**: X1–X155, CFG1–CFG3 and 7a.8/7a.9.
 X155 adds conditional generic composition rename and Undo; its editor execution is pending.
+Both editor runners show the current scenario ID and description beside the completed/remaining
+counts. Long descriptions are shortened in the status bar; hovering shows the full description.
+IntelliJ also includes it in the test window title. Subset selection still uses unchanged X IDs.
 X150/X151/X152 include fitted lambda arguments, inferred local names and ordinary enclosing
 values. X153 checks implementation dispatch and X154 mutation classification. X87 also checks
 member completion in a primary-constructor default with its missing closing delimiter.

@@ -1327,7 +1327,7 @@ class CompilerPlaybook(
         check(completed.none { it.id == id }) { "Duplicate native case $id" }
         val start = TimeSource.Monotonic.markNow()
         println("IntelliJ playbook $id: $description")
-        if (id != "START") progress(id, "running")
+        if (id != "START") progress(id, "running", description)
         try {
             action()
             check(!isPluginLoaded("com.intellij.modules.ultimate")) {
@@ -1336,7 +1336,7 @@ class CompilerPlaybook(
             completed +=
                 Result(id, description, "passed", start.elapsedNow().inWholeMilliseconds)
                     .also(onResult)
-            progress(id, "passed")
+            progress(id, "passed", description)
         } catch (failure: Throwable) {
             runCatching {
                 ClientTrace(this)
@@ -1355,7 +1355,7 @@ class CompilerPlaybook(
                     start.elapsedNow().inWholeMilliseconds,
                     failure.stackTraceToString(),
                 ).also(onResult)
-            runCatching { progress(id, "failed") }.onFailure(failure::addSuppressed)
+            runCatching { progress(id, "failed", description) }.onFailure(failure::addSuppressed)
             if (
                 !continueAfterFailure ||
                 failure is InterruptedException ||
@@ -1369,6 +1369,7 @@ class CompilerPlaybook(
     private fun Driver.progress(
         id: String,
         status: String,
+        description: String,
     ) {
         val total = if (mode == PlaybookMode.FEATURES) selectedIds.size else 1
         val done = completed.count { it.id != "START" }
@@ -1376,8 +1377,9 @@ class CompilerPlaybook(
         val text =
             "Ecstasy playbook: $done/$total completed, ${total - done} left | $id $status" +
                 if (failed > 0) " | $failed failed" else ""
+        val shortDescription = if (description.length > 80) description.take(77).trimEnd() + "…" else description
         withContext(OnDispatcher.EDT) {
-            utility(PlaybookProgress::class).update(singleProject(), text)
+            utility(PlaybookProgress::class).update(singleProject(), "$text — $shortDescription", "$text — $description")
         }
     }
 
