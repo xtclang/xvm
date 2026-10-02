@@ -90,3 +90,8 @@ The branch's own progress-creation deadline fix is not an upstream defect: our f
 `orTimeout` completed the transport future and lost the opportunity to retire a late successful
 client registration. Likewise, broad multi-window, performance and prolonged lifecycle acceptance
 remain our test obligations; they should not be filed as upstream bugs without evidence.
+
+
+UP16 reproduces again in full VS Code 1.140.0 playbook `run-qsTyyb` (2026-10-02).
+X130's Move/Undo/Redo/resource assertions completed, but Explorer Cut cleanup raised the same
+stale-tree-node error. The case remains failed. This receipt does not establish an upstream repair.

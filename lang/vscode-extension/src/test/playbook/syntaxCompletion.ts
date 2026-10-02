@@ -36,7 +36,9 @@ export function syntaxCompletionCases(): void {
                     }
                     await noErrors(document.uri);
                     await focusTestWindow();
+                    await vscode.window.showTextDocument(document, { preview: false, preserveFocus: false });
                     await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
+                    assert.strictEqual(vscode.window.activeTextEditor?.document, document, 'Undo targets the completed document');
                     await vscode.commands.executeCommand('undo');
                     await eventually(async () => document.getText(), text => text === variant.source, 'One undo restores the completion prefix');
                 }

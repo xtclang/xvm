@@ -1520,5 +1520,6 @@ minimal/rich-client snippets. X150/X151/X152 are extended in the common catalog 
 The L64 gate passes 68 Java and 418 LSP tests; the L65 gate passes 78 tests, all without failures
 or skips. L65 found and fixed missing conditional implementations on concrete validated source
 types; accessor redirects and binary debug-span refusals have direct regressions. X153/X154 cover
-the corresponding native navigation/classification behavior. Full editor acceptance is pending;
-see errs-integration-plan.md for checkpoint hashes and receipts.
+the corresponding native navigation/classification behavior. L64/L65 shared cases have passing receipts in both editors. Full VS Code still exposes UP16/X130;
+IntelliJ covers all cases across a full attempt and continuation, retaining the first run's X105
+popup timeout as a stability follow-up. See errs-integration-plan.md for exact hashes and receipts.
