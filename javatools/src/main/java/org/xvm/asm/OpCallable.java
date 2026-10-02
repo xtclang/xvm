@@ -639,8 +639,14 @@ public abstract class OpCallable extends Op {
             TypeConstant type = atypeResult[i];
             if (type.containsTypeParameter(true)) {
                 if (resolver == null) {
-                    resolver = bctx.createTypeResolver(
-                            (MethodStructure) idMethod.getComponent(), anArgValue);
+                    MethodStructure method = (MethodStructure) idMethod.getComponent();
+                    if (method == null && idMethod.getNamespace() instanceof FormalConstant idFormal) {
+                        // a call on a formal type; transform to a call on the constraint type
+                        TypeInfo   infoConstraint = bctx.getTypeInfo(idFormal.getConstraintType());
+                        MethodInfo methodInfo     = infoConstraint.getMethodBySignature(sig);
+                        method = methodInfo.getTopmostMethodStructure(infoConstraint);
+                    }
+                    resolver = bctx.createTypeResolver(method, anArgValue);
                     atypeResult = atypeResult.clone();
                 }
                 atypeResult[i] = type.resolveGenerics(bctx.pool(), resolver);
