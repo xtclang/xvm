@@ -103,6 +103,7 @@ import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.CodeLensCommand
 import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.XdkRenameProposal
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.SymbolInfo
@@ -1203,30 +1204,43 @@ class XtcTextDocumentService(
                 )
             },
             workspace = true,
-        ) { proposal ->
-            proposal?.let {
-                protocolEdit(it.edit)?.let { edit ->
-                    RenameProposal(
-                        edit,
-                        it.sourceModules?.let { modules ->
-                            SourceGraphReplacement(
-                                requireNotNull(it.previousSourceModules)
-                                    .map(::SourceModuleConfiguration),
-                                modules.map(::SourceModuleConfiguration),
-                            )
-                        },
-                        it.scope?.let { scope ->
-                            RenameScope(
-                                scope.boundary.name,
-                                scope.modules.map(::SourceModuleConfiguration),
-                                scope.sourceUris,
-                                scope.revision,
-                            )
-                        },
+        ) { proposal -> proposal?.let(::protocolProposal) }
+    }
+
+    private fun protocolProposal(proposal: XdkRenameProposal): RenameProposal? =
+        protocolEdit(proposal.edit)?.let { edit ->
+            RenameProposal(
+                edit,
+                proposal.sourceModules?.let { modules ->
+                    SourceGraphReplacement(
+                        requireNotNull(proposal.previousSourceModules).map(::SourceModuleConfiguration),
+                        modules.map(::SourceModuleConfiguration),
                     )
-                }
-            }
+                },
+                proposal.scope?.let { scope ->
+                    RenameScope(scope.boundary.name, scope.modules.map(::SourceModuleConfiguration), scope.sourceUris, scope.revision)
+                },
+            )
         }
+
+    /** Unlike willRenameFiles, this proposal includes the requested moves and host graph update. */
+    internal fun renameFilesProposal(params: RenameFilesParams): CompletableFuture<RenameProposal?> {
+        val compiler = adapter as? XdkAdapter ?: return CompletableFuture.completedFuture(null)
+        val first = params.files.firstOrNull() ?: return CompletableFuture.completedFuture(null)
+        if (!server.supportsVersionedEdits || !server.supportsFileRenames ||
+            params.files
+                .map { it.oldUri }
+                .distinct()
+                .size != params.files.size
+        ) {
+            return CompletableFuture.completedFuture(null)
+        }
+        return queryAsync(
+            "xtc/renameFiles",
+            first.oldUri,
+            { compiler.renameFilesProposalAsync(params.files.associate { it.oldUri to it.newUri }) },
+            workspace = true,
+        ) { proposal -> proposal?.let(::protocolProposal) }
     }
 
     internal fun renameFiles(params: RenameFilesParams): CompletableFuture<WorkspaceEdit?> {
