@@ -1185,6 +1185,8 @@ public class BuildContext {
 
         return switch (argId) {
             case Op.A_THIS,
+                 Op.A_PROTECTED,
+                 Op.A_PRIVATE,
                  Op.A_STRUCT -> typeMatrix.getType(Op.A_THIS, currOpAddr);
             case Op.A_SUPER  -> {
                 TypeConstant typeSuper = callChain[callDepth + 1].getIdentity().getType();
@@ -1535,6 +1537,8 @@ public class BuildContext {
             return reg.load(code);
 
         case Op.A_THIS:
+        case Op.A_PROTECTED:
+        case Op.A_PRIVATE:
             return loadThis(code);
 
         case Op.A_STRUCT: {
