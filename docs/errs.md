@@ -2623,3 +2623,10 @@ partial-query helpers own disposable enclosing-instance and lambda validation be
 operations require package-level Context/inference access. `CursorBinding` adds immutable
 ordinary-expression and argument-template lists with previous constructors preserved; record
 patterns migrate. No new mutable fields are added to ordinary AST nodes.
+
+
+The L64 broad gate also checks primary-constructor default publication. The written parameter and
+its generated property getter can reference the same incomplete cursor. EmbeddingSupport now
+publishes each surviving cursor identity once; it does not choose a different validation scope or
+add AST fields. The existing binding remains keyed by that identity. Backend and shared X87
+regressions check completion without emission or cached-compilation mutation.
