@@ -398,21 +398,6 @@ public abstract class XvmStructure
     }
 
     /**
-     * Determine if this XVM Structure is resolved. An XVM Structure is considered resolved if it
-     * not subject to variation from conditional inclusion.
-     *
-     * <p>TODO CP: this method is not currently used and the name is ambiguous and confusing
-     *
-     * @return true iff the XVM Structure is not subject to conditional inclusion
-     *
-     * @see ConditionalConstant
-     */
-    public boolean isResolved() {
-        return getCondition() == null
-                && stream(getContained()).allMatch(XvmStructure::isResolved);
-    }
-
-    /**
      * Use the specified context to evaluate and thus eliminate conditional inclusion within this
      * XVM Structure.
      *

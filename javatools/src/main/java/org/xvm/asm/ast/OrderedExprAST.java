@@ -19,7 +19,7 @@ public class OrderedExprAST
 
     private final NodeType nodeType;
     private final Operator op;
-    private transient TypeConstant booleanType;  // TODO CP remove
+    private transient TypeConstant booleanType;
 
     public enum Operator {
         Less   (NodeType.Less),

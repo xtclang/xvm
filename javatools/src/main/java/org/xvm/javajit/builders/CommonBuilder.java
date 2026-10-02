@@ -2282,7 +2282,7 @@ public class CommonBuilder
                 }
 
                 case XvmPrimitive: {
-                    assert optDesc.index != -1; // TODO CP -1 == thi$
+                    assert optDesc.index != -1;
                     int[] optIndexes = jmd.getAllOptimizedReturnIndexes(optDesc.index);
                     optIx -= optIndexes.length - 1; // skip the Opt returns we will process
                     idx =  optDesc.index == 0 ? 1 : 0;
@@ -2306,7 +2306,7 @@ public class CommonBuilder
                     Label ifNull = code.newLabel();
                     Label endIf  = code.newLabel();
 
-                    assert optDesc.index != -1; // TODO CP -1 == thi$
+                    assert optDesc.index != -1;
                     int[] optIndexes = jmd.getAllOptimizedReturnIndexes(optDesc.index);
                     optIx -= optIndexes.length - 2; // skip the Opt returns we will process
                     optExt = optReturns[optIndexes[optIndexes.length - 1]];
@@ -3659,7 +3659,7 @@ public class CommonBuilder
             JitParamDesc[] dstParams = jmdDst.standardParams;
             for (int i = 0, c = srcParams.length; i < c; i++) {
                 JitParamDesc srcPd        = srcParams[i];
-                assert srcPd.index != -1; // TODO CP -1 == thi$
+                assert srcPd.index != -1;
                 int          srcParamSlot = code.parameterSlot(extraCount + srcPd.index);
                 TypeConstant srcParamType = srcPd.type;
                 JitParamDesc dstPd        = dstParams[i];
@@ -3899,7 +3899,7 @@ public class CommonBuilder
                         int     index    = doReturn ? i + 1 : i;
                         while (index < dstReturns.length
                                && dstReturns[index].index == dstPd.index) {
-                            assert dstPd.index != -1; // TODO CP -1 == thi$
+                            assert dstPd.index != -1;
                             loadFromContext(code, dstReturns[index].cd,
                                     dstReturns[index].altIndex, ctxSlot);
                             index++;

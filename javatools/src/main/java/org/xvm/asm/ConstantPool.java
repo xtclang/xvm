@@ -2214,7 +2214,6 @@ public class ConstantPool
     public ClassConstant     clzTransient()      {ClassConstant     c = m_clzTransient;      if (c == null) {m_clzTransient      = c = (ClassConstant) getImplicitlyImportedIdentity("Transient"       );} return c;}
     public ClassConstant     clzUnassigned()     {ClassConstant     c = m_clzUnassigned;     if (c == null) {m_clzUnassigned     = c = (ClassConstant) getImplicitlyImportedIdentity("Unassigned"      );} return c;}
     public ClassConstant     clzVolatile()       {ClassConstant     c = m_clzVolatile;       if (c == null) {m_clzVolatile       = c = (ClassConstant) getImplicitlyImportedIdentity("Volatile"        );} return c;}
-    public ClassConstant     clzTest()           {ClassConstant     c = m_clzTest;           if (c == null) {m_clzTest           = c = (ClassConstant) getImplicitlyImportedIdentity("Test"            );} return c;}
 
     public TypeConstant      typeComparable()    {TypeConstant      c = m_typeComparable;    if (c == null) {m_typeComparable    = c = ensureTerminalTypeConstant(clzComparable()                      );} return c;}
     public TypeConstant      typeObject()        {TypeConstant      c = m_typeObject;        if (c == null) {m_typeObject        = c = ensureTerminalTypeConstant(clzObject()                          );} return c;}
@@ -2330,7 +2329,6 @@ public class ConstantPool
     public TypeConstant      typeInjector()      {TypeConstant      c = m_typeInjector;      if (c == null) {m_typeInjector      = c = ensureTerminalTypeConstant(clzInjector()                        );} return c;}
     public TypeConstant      typeRounding()      {TypeConstant      c = m_typeRounding;      if (c == null) {m_typeRounding      = c = ensureTerminalTypeConstant(clzRounding()                        );} return c;}
     public TypeConstant      typeAppender()      {TypeConstant      c = m_typeAppender;      if (c == null) {m_typeAppender      = c = ensureTerminalTypeConstant(clzAppender()                        );} return c;}
-    public TypeConstant      typeUniformIndexed(){ /* Just an alias */ return typeIndexed();                                                                                                                  }
 
     public IntConstant       val0()              {IntConstant       c = m_val0;              if (c == null) {m_val0              = c = ensureIntConstant(0)                                             ;} return c;}
     public SingletonConstant valFalse()          {SingletonConstant c = m_valFalse;          if (c == null) {m_valFalse          = c = ensureSingletonConstConstant(clzFalse()                         );} return c;}
@@ -2520,11 +2518,11 @@ public class ConstantPool
         //   - List.copyOf(m_listConst): snapshots at call time, so newly-registered
         //     constants are silently dropped from the traversal. Passes unit tests but is a
         //     semantic regression — visible only when the resulting artifact is later used.
-        //   - Collections.unmodifiableList(m_listConst): does not snapshot, but its
+        //   - Collections.unmodifiableList(m_listConst): does not create snapshot, but its
         //     spliterator delegates to ArrayList's strict modCount-checking spliterator and
         //     throws ConcurrentModificationException the moment the recursion appends.
         //
-        // This is somewhat problematic: getContained()'s javadoc says "the caller should
+        // This is somewhat problematic: getContained()'s Javadoc says "the caller should
         // treat the return value as if it were immutable", but correctness here also depends
         // on an unstated invariant that an internal callback path may grow the source list
         // during iteration. A cleaner approach would decouple validate() from register()
@@ -2576,11 +2574,6 @@ public class ConstantPool
 
     @Override
     public boolean isPresent(LinkerContext ctx) {
-        return true;
-    }
-
-    @Override
-    public boolean isResolved() {
         return true;
     }
 
@@ -3536,7 +3529,6 @@ public class ConstantPool
         m_clzFuture         = null;
         m_clzOverride       = null;
         m_clzLazy           = null;
-        m_clzTest           = null;
         m_clzTransient      = null;
         m_clzUnassigned     = null;
         m_clzVolatile       = null;
@@ -3873,7 +3865,6 @@ public class ConstantPool
     private transient ClassConstant     m_clzFuture;
     private transient ClassConstant     m_clzOverride;
     private transient ClassConstant     m_clzLazy;
-    private transient ClassConstant     m_clzTest;
     private transient ClassConstant     m_clzTransient;
     private transient ClassConstant     m_clzUnassigned;
     private transient ClassConstant     m_clzVolatile;

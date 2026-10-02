@@ -537,7 +537,7 @@ public class MethodBody {
         if (isUnion()) {
             PropertyConstant propLeft  = getUnionLeft().getHead().getPropertyConstant();
             PropertyConstant propRight = getUnionRight().getHead().getPropertyConstant();
-            return propLeft != null && propRight != null && propLeft.equals(propRight) ? propLeft : null;
+            return propLeft != null && propLeft.equals(propRight) ? propLeft : null;
         }
 
         return m_impl == Implementation.Delegating || m_impl == Implementation.Field
