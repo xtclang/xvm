@@ -174,6 +174,24 @@ class XdkGraphMoveTest {
     }
 
     @Test
+    fun `interacting companion moves and directories outside module ownership refuse before replay`() {
+        write("old/App.x", "module App { tools.Box make() = new tools.Box(); }")
+        write("old/App/tools/Box.x", "class Box {}")
+        write("old/App/util/Marker.x", "class Marker {}")
+        Files.createDirectories(directory.resolve("target"))
+        session { adapter ->
+            adapter.replaceSourceModules(listOf(XdkSourceModule("App", uri("old/App.x"))))
+            listOf(
+                mapOf(uri("old/App.x") to uri("target/App.x"), uri("old/App/tools/Box.x") to uri("old/App/util/Box.x")),
+                mapOf(uri("old/App/tools") to uri("target/tools")),
+                // VS Code participates again when applying the first proposal's companion move.
+                mapOf(uri("old/App") to uri("target/App")),
+            ).forEach { moves -> assertThat(adapter.renameFilesProposalAsync(moves).get(30, SECONDS)).isNull() }
+            assertThat(directory.resolve("old/App/tools/Box.x")).exists()
+        }
+    }
+
+    @Test
     fun `existing destination and overlapping requests refuse a graph transaction`() {
         write("old/App.x", "module App {}")
         write("taken/Keep.x", "module Keep {}")
