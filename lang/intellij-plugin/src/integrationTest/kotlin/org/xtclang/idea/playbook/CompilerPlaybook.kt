@@ -1574,7 +1574,7 @@ class CompilerPlaybook(
                 restore(data.text("file"))
             }
         }
-        listOf("X148", "X156").forEach { id ->
+        listOf("X148", "X156", "X157").forEach { id ->
             scenario(id) {
                 discovered(id) { data ->
                     val editor = open(data.text("file"))
@@ -1583,12 +1583,12 @@ class CompilerPlaybook(
                     editor.awaitDiagnostics(emptyList())
                     val at = original.indexOf(data.text("selected"))
                     quickFix(editor, at, data.text("title"), at + data.text("selected").length)
-                    awaitUi("extraction matches shared source", 45.seconds) { editor.text == data.text("expected") }
+                    awaitUi("local refactoring matches shared source", 45.seconds) { editor.text == data.text("expected") }
                     editor.awaitDiagnostics(emptyList())
                     listOf("\$Undo" to original, "\$Redo" to data.text("expected"), "\$Undo" to original).forEach { (action, expected) ->
                         focusEditor(editor)
                         invokeAction(action, now = false, component = editor.component)
-                        awaitUi("$action extraction", 45.seconds) { editor.text == expected }
+                        awaitUi("$action local refactoring", 45.seconds) { editor.text == expected }
                         editor.awaitDiagnostics(emptyList())
                     }
                 }
