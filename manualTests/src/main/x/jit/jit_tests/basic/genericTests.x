@@ -1,15 +1,13 @@
 package genericTests {
 
-    @Inject Console console;
-
     void run() {
 
         TestBase t0 = new TestBase(5);
-        console.print(t0);
+        assert t0.toString() == "org.examples.jit_tests.basic.genericTests.TestBase";
         assert t0.augment() == t0.x + 1;
 
         TestBase t1 = new TestDerived(6);
-        console.print(t1);
+        assert t1.toString() == "org.examples.jit_tests.basic.genericTests.TestDerived";
         assert t1.augment() == (t1.x + 1) * t1.x;
 
         TestFormal<String> ts = new TestFormal("hello");
@@ -24,7 +22,7 @@ package genericTests {
         ti.testType();
 
         TestFormal<TestBase> to = new TestFormal(t1);
-        console.print(to.value);
+        assert to.value.toString() == "org.examples.jit_tests.basic.genericTests.TestDerived";
 
         function Int128(Boolean) transform = value -> value ? 42 : 0;
         Int128 result = apply(transform, True);
@@ -102,19 +100,19 @@ package genericTests {
 
         void testType() {
             if (Int i := value.is(Int)) {
-                console.print($"it's an Int; next is {++i}");
+                assert ++i == 10;
             }
             if (String s := value.is(String)) {
-                console.print($"it's a String; size is {"5"}");
+                assert s.size == 5;
             } else {
-                console.print("Not a String");
+                assert value.is(Int);
             }
 
             Element value = this.value;
             if (value.is(Int)) {
-                console.print(++value);
+                assert ++value == 10;
             } else {
-                console.print("Not an Int");
+                assert value.is(String);
             }
 
             if (value.is(String), value.size > 0) {

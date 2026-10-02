@@ -1,5 +1,6 @@
 package condMixinTests {
-    @Inject Console console;
+    // TODO GG: the 'static' modifier should not be necessary
+    static TestConsole console = new TestConsole();
 
     void run() {
 
@@ -10,24 +11,41 @@ package condMixinTests {
     void test1() {
         import t1.*;
 
+        console.reset();
         Test<String> ts = new Test("hello");
         assert ts.size() == 5;
-        console.print($"1a) Element={ts.Element}");
+        assert ts.Element.is(Type<String>);
+        assert console.output() == \|MixS
+                                    |
+                                    ;
 
         Test<Int> ti = new Test(42);
-        console.print($"1b) Element={ti.Element}");
+        assert ti.Element.is(Type<Int>);
+        assert console.output() == \|MixS
+                                    |MixN
+                                    |MixS
+                                    |
+                                    ;
         assert ti.value() == 42;
     }
 
     void test2() {
         import t2.*;
 
+        console.reset();
         Test<String> ts = new Test("hello");
-        console.print($"2a) Element={ts.Element}");
+        assert ts.Element.is(Type<String>);
+        assert console.output() == \|MixS
+                                    |
+                                    ;
         assert ts.size() == 5;
 
         Test<Int> ti = new Test(42);
-        console.print($"2b) Element={ti.Element}");
+        assert ti.Element.is(Type<Int>);
+        assert console.output() == \|MixS
+                                    |MixN
+                                    |
+                                    ;
         assert ti.value() == 42;
     }
 
@@ -40,7 +58,7 @@ package condMixinTests {
         static mixin MixS<Element extends Stringable>
                 into Test<Element> {
             construct() {
-                console.print("In t1.MixS");
+                console.print("MixS");
             }
 
             Int size() = el.estimateStringLength();
@@ -49,7 +67,7 @@ package condMixinTests {
         static mixin MixN<Element extends Number>
                 into Test<Element> {
             construct() {
-                console.print("In t1.MixN");
+                console.print("MixN");
             }
 
             Int value() {
@@ -70,7 +88,7 @@ package condMixinTests {
         static mixin MixS<Element extends String>
                 into Test<Element> {
             construct() {
-                console.print("In t2.MixS");
+                console.print("MixS");
             }
 
             Int size() = el.size;
@@ -79,7 +97,7 @@ package condMixinTests {
         static mixin MixN<Element extends Int>
                 into Test<Element> {
             construct() {
-                console.print("In t2.MixN");
+                console.print("MixN");
             }
 
             Int value() = el;

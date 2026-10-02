@@ -1,8 +1,6 @@
 import ecstasy.collections.Aggregator;
 
 package arrayTests {
-    @Inject Console console;
-
     void run() {
 
         testStringAsArray();
@@ -28,11 +26,11 @@ package arrayTests {
     void testStringArray() {
         String[] strings = new Array<String>(3);
         strings.add("hello");
-        console.print(strings[0]);
+        assert strings[0] == "hello";
 
         strings.add("?");
         strings[1] = "world";
-        console.print(strings[1]);
+        assert strings[1] == "world";
 
         strings = strings.delete(0);
         assert strings[0] == "world";

@@ -1,8 +1,7 @@
 package lambdaTests {
-    @Inject Console console;
+    static TestConsole console = new TestConsole();
 
     void run() {
-
         test1();
         test2();
         test3();
@@ -14,6 +13,7 @@ package lambdaTests {
     }
 
     void test1() {
+        console.reset();
         // lambda
         /* This should generate the following:
             a) a synthetic lambda method:
@@ -31,7 +31,6 @@ package lambdaTests {
                 f1 = new nFunction(ctx, stdHandle, null, true);
          */
         function void() f1 = () -> {
-            @Inject Console console;
             console.print("test1_lambda1");
         };
 
@@ -60,7 +59,6 @@ package lambdaTests {
         f2();
 
         static void test1_static_inner() {
-            @Inject Console console;
             console.print("test1_static_inner");
         }
 
@@ -72,13 +70,19 @@ package lambdaTests {
         f3();
 
         void test1_instance_inner() {
-            @Inject Console console;
             console.print("test1_instance_inner");
         }
+
+        assert console.output() == \|test1_lambda1
+                                    |test1_static_inner
+                                    |test1_static_outer
+                                    |test1_instance_outer
+                                    |test1_instance_inner
+                                    |
+                                    ;
     }
 
     static void test1_static_outer() {
-        @Inject Console console;
         console.print("test1_static_outer");
     }
 
@@ -131,7 +135,6 @@ package lambdaTests {
         assert f3() == 46;
 
         Int test2_instance_inner() {
-            console.print("test2_instance_inner");
             return 46;
         }
     }
@@ -139,17 +142,23 @@ package lambdaTests {
     static Int test2_static_outer() = 43;
 
     Int test2_instance_outer() {
-        console.print("test2_instance_outer");
         return 45;
     }
 
     void test3() {
+        console.reset();
         Base d = new Derived();
         d.testSuper();
+        assert console.output() == \|Derived.test
+                                    |Base.test
+                                    |
+                                    ;
     }
 
     class Base() {
-        void testSuper() = console.print("Base.test");
+        void testSuper() {
+            console.print("Base.test");
+        }
     }
 
     class Derived() extends Base {
@@ -169,8 +178,13 @@ package lambdaTests {
         f = mul(_, 1);
         assert f(2) == 4;
 
+        console.reset();
         function Int(String) log = log(2, _);
         assert log("twice") == -1;
+        assert console.output() == \|twice
+                                    |twice
+                                    |
+                                    ;
 
         static Int mul(Int x, Int y) = x + 2*y;
 

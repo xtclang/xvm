@@ -3,13 +3,11 @@ package enumTests {
     import ecstasy.io.IOException;
 
     void run() {
-        @Inject Console console;
-
         Color c = Blue;
         assert c.ordinal == 2;
         assert c.text == "B";
         assert c.rgb == 65_025;
-        console.print(c);
+        assert c.toString() == "Blue";
 
         assert c != Green;
         assert c > Green;
