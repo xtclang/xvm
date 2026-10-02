@@ -4475,8 +4475,6 @@ public class CommonBuilder
                    "ensurePersistent")), // TODO: private access requested on a nullable array union
         Map.entry("org.xtclang.ecstasy.maps.Map",
             Set.of("removeAll")), // TODO: IP_ADD cannot find add (+) on Array<Map.Key>
-        Map.entry("org.xtclang.ecstasy.maps.deferred.DeferredMap",
-            Set.of("fromEntry")),      // TODO: virtual child construction passes A_SUPER; re-test is blocked by ListMap.makeImmutable verification
         Map.entry("org.xtclang.ecstasy.Timeout",
             Set.of("construct")), // TODO: invokes nService with invokeinterface although nService is a Java class
         Map.entry("org.xtclang.ecstasy.numbers.Number",

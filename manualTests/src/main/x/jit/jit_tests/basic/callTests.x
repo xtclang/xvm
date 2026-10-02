@@ -81,6 +81,7 @@ package callTests {
         testWidenedPrimitiveArguments();
         testWidenedNullableArguments();
         testSpecializedCapRouting();
+        testPrivateThis();
     }
 
     Int testStandardWithDefault(Int i, Int j = 2) = i + j;
@@ -335,5 +336,19 @@ package callTests {
 
         (Int count, String value) = transformer.transformMany("many", 3);
         assert count == 3 && value == "many";
+    }
+
+    void testPrivateThis() {
+        assert new Box(42).read() == 42;
+
+        class Box(Int value) {
+            private Int value;
+
+            Int read() = new Carrier(this:private).value();
+        }
+
+        class Carrier((private Box) parent) {
+            Int value() = parent.value;
+        }
     }
 }
