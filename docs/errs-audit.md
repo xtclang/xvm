@@ -1530,3 +1530,12 @@ or public compiler accessors were needed. Exact source relocations are tracked b
 plan, and compiler facts verify preserved bindings/dispatch after recompilation. The adversarial
 same-spelling/different-parameter relocation is rejected. The focused extraction/inline/proof
 batch passed 31 tests without skips; shared X156/X157 editor execution remains pending.
+
+October 2 L66/L67 continuation: resolved import source links are copied into immutable Kotlin
+semantic views while the compiler worker owns the attempt; stale text and absent source indices
+produce no guessed link. Explicit aliases reuse the compiler-proven lexical ownership facts.
+The graph join audit also found that reconstructed views dropped lambda signatures; the follow-up
+preserves them and tests binary source-index/source-graph replacement. No Java AST changes were
+needed. L66's 15 focused tests and L67's 20 lifecycle/dependency/navigation tests passed without skips.
+The replacement regression exposed and fixed missing host-indexed binary source URIs for unopened
+workspace navigation. Module navigation already carried those URIs; both now use the same conversion.
