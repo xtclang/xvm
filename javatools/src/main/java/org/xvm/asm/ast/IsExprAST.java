@@ -16,8 +16,8 @@ import static org.xvm.util.Handy.writePackedLong;
 public class IsExprAST
         extends BiExprAST {
 
-    private TypeConstant typeOfType;   // could be null (TODO CP remove)
-    private transient TypeConstant booleanType;  // TODO CP remove
+    private TypeConstant typeOfType;
+    private transient TypeConstant booleanType;
 
     IsExprAST() {}
 

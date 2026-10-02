@@ -120,16 +120,6 @@ public class AccessTypeConstant
         return true;
     }
 
-// TODO CP - this appears to be an incorrect assumption (this change is from November)
-//
-//    @Override
-//    public Category getCategory() {
-//        return switch (super.getCategory()) {
-//            case CLASS, IFACE -> Category.IFACE;
-//            default -> Category.OTHER;
-//        };
-//    }
-
     @Override
     public TypeConstant asImplementable() {
         TypeConstant typeOrig = getUnderlyingType();

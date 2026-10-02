@@ -496,11 +496,6 @@ public abstract class Constant
     }
 
     @Override
-    public boolean isResolved() {
-        return true;
-    }
-
-    @Override
     protected void disassemble(DataInput in) {
         // constants are fully assembled during the construction/resolveConstants() cycle
         throw new IllegalStateException();
