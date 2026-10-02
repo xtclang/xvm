@@ -7,10 +7,12 @@ import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VirtualFile
+import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.psi.PsiManager
 import com.intellij.psi.codeStyle.CodeStyleSettingsListener
 import com.intellij.util.concurrency.SequentialTaskExecutor
 import com.redhat.devtools.lsp4ij.LSPFileSupport
+import com.redhat.devtools.lsp4ij.LanguageServerWrapper
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
 import com.redhat.devtools.lsp4ij.settings.LanguageServerSettingsListener
@@ -85,6 +87,15 @@ class XtcLanguageClient(
         settingsStores.forEach { it.removeSettingsListener(settingsListener) }
         compilerWatches.dispose()
         super.dispose()
+    }
+
+    override fun setServerWrapper(wrapper: LanguageServerWrapper) {
+        super.setServerWrapper(wrapper)
+        ApplicationManager
+            .getApplication()
+            .messageBus
+            .connect(this)
+            .subscribe(VirtualFileManager.VFS_CHANGES, DirectoryDocumentMoves(wrapper) { isDisposed })
     }
 
     override fun applyEdit(params: ApplyWorkspaceEditParams): CompletableFuture<ApplyWorkspaceEditResponse> =
