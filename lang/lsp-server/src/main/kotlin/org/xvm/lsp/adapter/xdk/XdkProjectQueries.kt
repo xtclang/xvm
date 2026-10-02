@@ -200,7 +200,14 @@ internal class XdkProjectQueries(
             project.modules.values.all { module ->
                 models.any { it.sourceName == module.root.path }
             }
-        return XdkWorkspaceNavigation(views, revision, complete).also {
+        val dependencySources =
+            dependencies.modules.values
+                .flatMap { it.declarations.values }
+                .mapNotNull { it.sourceName }
+                .distinct()
+                .mapNotNull { name -> XdkSources.sourceUri(name)?.let { name to it } }
+                .toMap()
+        return XdkWorkspaceNavigation(views, revision, complete, dependencySources).also {
             cache.set(mapOf(revision to it))
         }
     }
