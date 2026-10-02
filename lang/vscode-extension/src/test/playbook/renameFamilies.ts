@@ -58,7 +58,7 @@ async function configurationGuards(document: vscode.TextDocument, at: vscode.Pos
             }
         }, value => value !== undefined, 'Rename proposal survives fixture watcher delivery');
         assert.ok(outcome && 'error' in outcome, 'Conversion must refuse the intervening settings edit');
-        assert.match(String(outcome.error), /changed while converting Rename/);
+        assert.match(String(outcome.error), /changed while converting the refactoring/);
     } finally {
         const restore = new vscode.WorkspaceEdit();
         restore.replace(settings.uri, new vscode.Range(settings.positionAt(0), settings.positionAt(settings.getText().length)), original);
