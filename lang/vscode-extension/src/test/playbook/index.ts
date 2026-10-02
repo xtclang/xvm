@@ -33,7 +33,7 @@ export async function run(): Promise<void> {
     const results: { id: string; title: string; status: string; durationMs?: number; error?: string }[] = [];
     const failures = await new Promise<number>(resolve => {
         const runner = mocha.run(resolve);
-        showTestProgress(runner, 'Ecstasy playbook', test => test.title.split(':')[0]);
+        showTestProgress(runner, 'Ecstasy playbook', test => test.title);
         runner.on('pass', test => {
             results.push({ id: test.title.split(':')[0], title: test.title, status: 'passed', durationMs: test.duration });
         });
