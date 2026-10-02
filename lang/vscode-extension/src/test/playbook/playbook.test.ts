@@ -6,7 +6,7 @@ import { completionCases } from './completion';
 import { configurationCases, dependencyCases } from './dependencies';
 import { graphCases } from './graph';
 import { liveWorkspaceCases } from './liveWorkspace';
-import { literalExtractionCases, memberActionCases } from './memberActions';
+import { extractionCases, memberActionCases } from './memberActions';
 import { moduleCases } from './modules';
 import { navigationCases } from './navigation';
 import { platformCases } from './platform';
@@ -50,10 +50,11 @@ suite('XdkAdapter playbook', function () {
     platformCases();
     progressCases();
     reliabilityCases();
-    literalExtractionCases();
+    extractionCases();
     syntaxCompletionCases();
     semanticClosureCases();
     renameFamilyCases(['X155']);
+    extractionCases(['X156']);
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {

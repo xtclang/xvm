@@ -419,7 +419,8 @@ VS Code receipts above.
   intended call/descendant changes while preserving unrelated bindings. Bodies use `TODO()`.
   Shared X122 now has eleven variants; the latest implementation/validation status is recorded in
   the [library and complete-repair batch](#l63-library-and-complete-repair-batch). Older seven-variant
-  receipts do not establish the new coverage. Literal-return extract local has a bounded implementation recorded below; general extraction,
+  receipts do not establish the new coverage. Whole-return-expression extraction now preserves
+  the written expected type and relocated bindings (October 2 continuation; validation pending); general extraction,
   missing declarations, inline and safe delete remain unimplemented. Record supported XTC forms per action; doc-comment
   generation and reference/test lenses are separate subfeatures. Semantic transformations require
   compiler evidence and versioned multi-file edit validation.
@@ -8800,3 +8801,27 @@ retain their separate proof/refusal policies. Extract these corrections with `86
 
 `72bfc3b9c` independently adds scenario descriptions beside IDs in both editor progress displays,
 with complete tooltip text and unchanged ID-based selection. It belongs to playbook infrastructure.
+
+
+### L63 returned-expression extraction (2026-10-02)
+
+`XdkLocalExtraction` extends the literal-only action to exactly selected complete return
+expressions in statement blocks. For calls, compound expressions and closures it copies the
+method's written single return type into the new local declaration, preserving contextual typing.
+The expression remains exact source text and is evaluated once, immediately before the original
+return. Conditional/multiple returns, inferred lambda-body return types, partial expressions,
+expression-bodied methods and same-line siblings remain refused.
+
+`XdkRename.Plan` can describe exact text relocated into an insertion. Binding proof translates
+references, declarations and call sites through that relocation before comparing them with the
+recompiled graph. It verifies that the inserted substring is exactly the old substring. This is
+necessary because an unchanged expression can bind to different names after a move; a dedicated
+compiler test moves the same text into another method's parameter scope and requires refusal even
+though both programs compile. No compiler/AST API or mutable AST state is added.
+
+New tests cover calls/compound values, contextual numeric/function types, repeated parameter
+references, captures, short-circuit expressions and rejected conditional/partial selections.
+Shared X156 in both drivers checks exact applied source, diagnostics and Undo/Redo. L63 remains
+open for other expression contexts, extract method, missing declarations, inline and safe delete.
+Compilation/execution of this continuation is pending; the earlier 122-test L62 receipt does not
+validate these changes.

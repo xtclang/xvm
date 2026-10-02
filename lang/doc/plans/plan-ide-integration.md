@@ -1040,3 +1040,10 @@ is pending. Existing union/runtime/binary and configured-consumer boundaries rem
 adds no advertised LSP capability and does not close L62 or the editor stability follow-ups.
 
 L62 follow-up also supports written, non-synthetic bodyless class method contracts (`SansCode`) for rename family proof. Such declarations still have no executable implementation target. The 122-test rename/action/lookup regression batch and both driver compilations pass; X155 editor execution is pending.
+
+
+October 2 L63 continuation: extract local accepts complete return expressions with a written single
+expected return type, in addition to primitive literals. Compiler proof tracks the original bindings
+and calls through exact text relocation; arbitrary subexpressions and conditional/multiple returns
+remain refused. X156 is implemented in both drivers with exact edits and Undo/Redo. Execution of
+this continuation is pending; general extraction and the other semantic transformations remain open.
