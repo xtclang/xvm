@@ -42,10 +42,16 @@ internal class XdkSourceMoves(
             name: String,
             texts: Map<String, String>,
             directories: Set<File>,
+        ): XdkSourceMoves? = plan(source, File(source.parentFile, "$name.x"), texts, directories)
+
+        fun plan(
+            source: File,
+            destination: File,
+            texts: Map<String, String>,
+            directories: Set<File>,
         ): XdkSourceMoves? {
-            val destination = File(source.parentFile, "$name.x")
             val companion = File(source.parentFile, source.nameWithoutExtension)
-            val movedCompanion = File(source.parentFile, name)
+            val movedCompanion = File(destination.parentFile, destination.nameWithoutExtension)
             if (
                 destination.exists() ||
                 destination.path in texts ||
