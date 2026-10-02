@@ -291,15 +291,11 @@ public class TypeMatrix {
             currType = inferredType.getBaseType();
         }
 
-        // use CastTypeConstant to remember the original type
-        assert assignType.isA(currType.removeImmutable()) ||
-               assignType.containsFormalType(true) ||
-               currType.containsFormalType(true);
-
         if (assignType.equals(currType)) {
             return assignType;
         }
 
+        // use CastTypeConstant to remember the original type;
         if (assignType instanceof CastTypeConstant inferredType) {
             TypeConstant baseType = inferredType.getBaseType();
             if (baseType.equals(currType)) {

@@ -1267,7 +1267,12 @@ public class BuildContext {
                 return reg;
             }
 
-            assert mtxType.isA(regType);
+            // while it seems natural to assume the following invariant here:
+            //      assert mtxType.isA(regType);
+            // it may not work for pure consumer types; for example, after Key.is(Type<Orderable>),
+            //      function Ordered(Object, Object)
+            // becomes
+            //      function Ordered(Orderable, Orderable)
 
             // keep the register's canonical representation; the narrowed view is only used by the
             // current op to select and invoke the appropriate boxed implementation
