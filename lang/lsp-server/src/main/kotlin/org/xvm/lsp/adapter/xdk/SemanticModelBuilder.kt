@@ -144,6 +144,7 @@ internal fun EmbeddingSupport.Compilation.projectRenameFacts(
                 builder.superBindings(),
                 if (includeMembers) builder.memberActions(this, errors) else emptyList(),
                 builder.receiverBindings(),
+                builder.typeNames(this),
             )
         }
     }
@@ -1835,6 +1836,9 @@ private class SemanticModelBuilder(
             }
         }.distinct()
     }
+
+    fun typeNames(compilation: EmbeddingSupport.Compilation): List<CompilerTypeName> =
+        compilerTypeNames(nodesIn(requireNotNull(compilation.parsed())))
 
     private fun nodesIn(root: AstNode): List<AstNode> = nodesIn(listOf(root))
 

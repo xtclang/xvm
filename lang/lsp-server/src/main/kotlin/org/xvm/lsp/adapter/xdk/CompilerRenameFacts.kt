@@ -94,6 +94,8 @@ internal class CompilerRenameFacts(
     val imports: List<XdkAutoImports.Target> = emptyList(),
     private val modules: Map<String, CompilerRenameFacts> = emptyMap(),
     val memberActions: List<XdkMemberActions.Candidate> = emptyList(),
+    val typeNames: List<TypeName> = emptyList(),
+    val typePaths: List<TypePath> = emptyList(),
 ) {
     /** Unchanged independent modules cannot acquire new bindings from a source edit elsewhere. */
     fun within(scopes: Set<String>): CompilerRenameFacts = merge(modules.filterKeys(scopes::contains))
@@ -115,6 +117,8 @@ internal class CompilerRenameFacts(
                 attempts.flatMap { it.imports }.distinct(),
                 modules,
                 attempts.flatMap { it.memberActions },
+                attempts.flatMap { it.typeNames }.distinct(),
+                attempts.flatMap { it.typePaths }.distinct(),
             )
         }
     }
@@ -131,6 +135,7 @@ internal fun captureRenameFacts(
     supers: Map<SemanticModel.SymbolId, MethodConstant> = emptyMap(),
     members: List<CompilerMemberAction> = emptyList(),
     receivers: Map<SemanticModel.SymbolId, CompilerReceiver> = emptyMap(),
+    typeNames: List<CompilerTypeName> = emptyList(),
 ): CompilerRenameFacts {
     val declarations =
         models
@@ -292,6 +297,9 @@ internal fun captureRenameFacts(
                 }
             }
         }
+
+    fun path(value: IdentityConstant): List<String> = value.path.filter { it.format != Constant.Format.Module }.map { it.name }
+
     return CompilerRenameFacts(
         models,
         constants.mapValues { identity(it.value) } +
@@ -348,5 +356,16 @@ internal fun captureRenameFacts(
                     member.imports,
                 )
             },
+        typeNames =
+            typeNames.map {
+                TypeName(it.location, it.terminal, identity(it.target), it.target.moduleConstant.name, path(it.target), it.imported)
+            },
+        typePaths =
+            (constants.values.filterIsInstance<IdentityConstant>() + typeNames.map { it.target })
+                .flatMap { it.path }
+                .filter {
+                    it.format in setOf(Constant.Format.Module, Constant.Format.Package, Constant.Format.Class, Constant.Format.Typedef)
+                }.distinct()
+                .map { TypePath(identity(it), it.moduleConstant.name, path(it)) },
     )
 }

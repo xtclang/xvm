@@ -484,6 +484,14 @@ internal class XdkProjectQueries(
         }
         val before = compile(texts) ?: return null
         val directories = sources.values.flatMap { it.inputs.directories }.toSet()
+        val typeMoves =
+            operations
+                .filter { (from, to) ->
+                    from.isFile && from.parentFile != to.parentFile && from.path in texts &&
+                        project.modules.values.none { it.root == from }
+                }.map { (from, to) ->
+                    XdkTypeMoves.plan(before, from, to, texts, directories, project) ?: return null
+                }
         val proposals =
             operations
                 .map { (from, to) ->
@@ -553,7 +561,7 @@ internal class XdkProjectQueries(
                     }
                     proposal.edit
                 }.filterNotNull()
-        if (operations.size == 1 && proposals.size == 1) {
+        if (operations.size == 1 && proposals.size == 1 && typeMoves.isEmpty()) {
             return proposals.single().let { edit ->
                 edit.copy(renames = edit.renames.filterKeys { XdkSources.file(it) !in operations })
             }
@@ -564,7 +572,7 @@ internal class XdkProjectQueries(
                     .flatMap { it.renames.entries }
                     .map { (from, to) ->
                         requireNotNull(XdkSources.file(from)) to requireNotNull(XdkSources.file(to))
-                    }
+                    } + typeMoves.flatMap { it.resources.entries }.map { File(it.key) to File(it.value) }
         if (allMoves.groupBy({ it.first }, { it.second }).values.any { it.distinct().size > 1 }) {
             return null
         }
@@ -622,7 +630,7 @@ internal class XdkProjectQueries(
                 },
             )
         if (!discoverImports && !project.sameConfiguration(graph)) return null
-        val edits =
+        val renamed =
             proposals
                 .flatMap { it.changes.entries }
                 .groupBy({ requireNotNull(XdkSources.file(it.key)).path }, { it.value })
@@ -660,7 +668,22 @@ internal class XdkProjectQueries(
                             }
                         }
                 }
-        val plan = XdkRename.Plan(texts, edits, paths)
+        val qualifications =
+            typeMoves
+                .flatMap { it.edits.entries }
+                .groupBy({ it.key }, { it.value })
+                .mapValues { (_, edits) -> edits.flatten().distinct() }
+        val edits =
+            (renamed.entries + qualifications.entries)
+                .groupBy({ it.key }, { it.value })
+                .mapValues { (_, edits) -> edits.flatten().distinct().sortedBy { it.start } }
+        if (edits.values.any { changes ->
+                changes.zipWithNext().any { (first, next) -> first.end > next.start || first.start == next.start }
+            }
+        ) {
+            return null
+        }
+        val plan = XdkRename.Plan(texts, edits, paths, qualifications = qualifications)
         val after = compile(plan.proposed, moves = paths, graph = graph) ?: return null
         if (!preservesBindings(before, after, plan) || !isCurrent()) return null
         return WorkspaceEdit(
