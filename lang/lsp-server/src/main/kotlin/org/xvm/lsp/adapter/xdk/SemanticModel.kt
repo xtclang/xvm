@@ -22,6 +22,7 @@ class SemanticModel
         functionCalls: List<FunctionCallSite> = emptyList(),
         imports: List<ImportAlias> = emptyList(),
         lambdas: List<LambdaSite> = emptyList(),
+        sourceLinks: List<SourceLink> = emptyList(),
     ) {
         enum class Status {
             UNAVAILABLE,
@@ -113,6 +114,14 @@ class SemanticModel
             val sourceName: String?,
             val range: Range,
         )
+
+        /** A written import and its resolved source declaration; targets may be read-only libraries. */
+        data class SourceLink(
+            val range: Range,
+            val target: SourceLocation,
+        )
+
+        val sourceLinks: List<SourceLink> = immutableList(sourceLinks)
 
         /**
          * Arguments are generic arguments; underlying types are a modifier's base or a relational
@@ -490,6 +499,7 @@ class SemanticModel
                         },
                         model.functionCalls,
                         model.imports,
+                        sourceLinks = model.sourceLinks,
                     )
                 }
             }

@@ -637,6 +637,15 @@ private class SemanticModelBuilder(
         declarations: Map<IdentityConstant, Set<IdentityConstant>> = emptyMap(),
     ): List<SemanticModel> {
         val hierarchy = if (complete) hierarchy(nodes) else emptyMap()
+        val sourceLinks =
+            if (complete) {
+                compilerSourceLinks(nodes) { identity ->
+                    val target = symbol(identity, identity.name, kind(identity))?.let(symbols::get)
+                    target?.declaration?.let { SourceLocation(target.declarationSource, it) }
+                }
+            } else {
+                emptyMap()
+            }
         val parameterSlots =
             parameters.entries
                 .filter { it.key.second >= 0 }
@@ -722,6 +731,7 @@ private class SemanticModelBuilder(
                             } else {
                                 emptyList()
                             },
+                        sourceLinks = sourceLinks[source].orEmpty(),
                     )
                 },
         )
