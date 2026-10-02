@@ -635,14 +635,15 @@ public class CommonBuilder
 
             assembleField(classBuilder, prop);
 
+            if (initializer != null && extraMethods.add(initializer)) {
+                MethodInfo methodInfo = typeInfo.getMethodById(initializer);
+                assert methodInfo != null;
+                assembleMethod(classBuilder, methodInfo,
+                        initializer.ensureJitMethodName(typeSystem), methodInfo.getJitDesc(this));
+            }
+
             if (prop.isConstant()) {
                 constProperties = lazyAdd(constProperties, prop);
-
-                if (initializer != null && extraMethods.add(initializer)) {
-                    MethodInfo methodInfo = typeInfo.getMethodById(initializer);
-                    assembleMethod(classBuilder, methodInfo,
-                            initializer.ensureJitMethodName(typeSystem), methodInfo.getJitDesc(this));
-                }
             } else if (prop.isInitialized() ||
                       !prop.isImplicitlyAssigned() && prop.getType().getDefaultValue() != null) {
                 initProps = lazyAdd(initProps, prop);
@@ -1073,33 +1074,72 @@ public class CommonBuilder
         ClassDesc CD_this = art.CD();
 
         for (PropertyInfo prop : props) {
-            if (prop.getInitializer() != null) {
-                throw new UnsupportedOperationException("Field initializer");
+            TypeConstant   type        = prop.getType();
+            TypeConstant   baseType    = type.removeNullable();
+            ClassDesc      cdProp      = type.getCallableClassDesc(typeSystem);
+            String         jitName     = prop.getIdentity().ensureJitPropertyName(typeSystem);
+            MethodConstant initializer = prop.getInitializer();
+            Label          doneLbl     = null;
+            RegisterInfo   valueReg;
+
+            if (initializer == null) {
+                Constant initValue = prop.getInitialValue();
+                if (initValue == null) {
+                    initValue = type.getDefaultValue();
+                    assert initValue != null;
+                }
+                code.aload(0);
+                valueReg = loadConstant(code, initValue);
+            } else {
+                // call the instance property initializer
+                MethodInfo methodInfo = typeInfo.getMethodById(initializer);
+                assert methodInfo != null;
+
+                JitMethodDesc jmd = methodInfo.getJitDesc(this);
+                assert !jmd.isStandardStatic;
+
+                code.aload(0)
+                    .dup()
+                    .aload(code.parameterSlot(0))
+                    .invokevirtual(CD_this, initializer.ensureJitMethodName(typeSystem), jmd.standardMD);
+
+                JitFlavor flavor = type.getJitDesc(this).flavor;
+                if (flavor == NullablePrimitive || flavor == NullableXvmPrimitive) {
+                    Label nonNull = code.newLabel();
+                    doneLbl = code.newLabel();
+
+                    code.dup();
+                    loadNull(code);
+                    code.if_acmpne(nonNull)
+                        .pop()
+                        .iconst_1()
+                        .putfield(CD_this, jitName + EXT, CD_boolean)
+                        .goto_(doneLbl)
+                        .labelBinding(nonNull);
+                }
+
+                if (baseType.isJitPrimitive()) {
+                    code.checkcast(ensureClassDesc(baseType));
+                    unbox(code, baseType);
+                    valueReg = baseType.isJavaPrimitive()
+                            ? new SingleSlot(baseType, JitFlavor.Primitive,
+                                    JitTypeDesc.requireJavaPrimitive(baseType), "")
+                            : new MultiSlot(JitFlavor.XvmPrimitive, baseType, ensureClassDesc(baseType),
+                                    JitTypeDesc.getXvmPrimitiveClasses(baseType));
+                } else {
+                    valueReg = new SingleSlot(type, JitFlavor.Specific, jmd.standardMD.returnType(), "");
+                }
             }
 
-            code.aload(0); // Stack: { this }
-
-            TypeConstant type      = prop.getType();
-            TypeConstant baseType  = type.removeNullable();
-            ClassDesc    cdProp    = type.getCallableClassDesc(typeSystem);
-            Constant     initValue = prop.getInitialValue();
-
-            if (initValue == null) {
-                initValue = type.getDefaultValue();
-                assert initValue != null;
-            }
-
-            RegisterInfo reg        = loadConstant(code, initValue);
-            String       jitName    = prop.getIdentity().ensureJitPropertyName(typeSystem);
-            JitFlavor    regFlavor  = reg.flavor();
-            JitFlavor    propFlavor = baseType.isJavaPrimitive()
+            JitFlavor regFlavor  = valueReg.flavor();
+            JitFlavor propFlavor = baseType.isJavaPrimitive()
                                         ? JitFlavor.Primitive
                                         : baseType.isXvmPrimitive()
                                             ? JitFlavor.XvmPrimitive
                                             : JitFlavor.Specific;
 
-            // Switch on the register flavor (the value being set into the property)
-            // and then switch on the property flavor
+            // switch on the register flavor (the value being set into the property)
+            // and then switch on the property flavor:
             //
             // Specific     -> Specific     e.g. String s = "Foo" or String? s = Null
             // Specific     -> Primitive    must be setting primitive property to Null
@@ -1110,12 +1150,17 @@ public class CommonBuilder
             // XvmPrimitive -> Specific     e.g. Int128 | String is = 100
 
             switch (regFlavor.name() + "->" + propFlavor.name()) {
-            case "Specific->Specific" ->
+            case "Specific->Specific" -> {
+                // stack: (this, value)
+                if (initializer != null && !valueReg.cd().equals(cdProp)) {
+                    code.checkcast(cdProp);
+                }
                 code.putfield(CD_this, jitName, cdProp);
+            }
 
             case "Specific->Primitive" -> {
-                // must be setting a primitive to Null
-                assert reg.type().isOnlyNullable();
+                // stack: (this, Null)
+                assert valueReg.type().isOnlyNullable();
                 code.pop();
                 ClassDesc cd = JitTypeDesc.requirePrimitiveFieldClass(baseType);
                 Builder.defaultLoad(code, cd);
@@ -1126,8 +1171,8 @@ public class CommonBuilder
             }
 
             case "Specific->XvmPrimitive" -> {
-                // must be setting a XVM primitive to Null
-                assert reg.type().isOnlyNullable();
+                // stack: (this, Null)
+                assert valueReg.type().isOnlyNullable();
                 code.pop();
                 ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(baseType);
                 for (int i = 0; i < cds.length; i++) {
@@ -1140,27 +1185,39 @@ public class CommonBuilder
             }
 
             case "Primitive->Primitive" ->
+                // stack: (this, primitive value)
                 code.putfield(CD_this, jitName, JitTypeDesc.requirePrimitiveFieldClass(baseType));
 
             case "Primitive->Specific", "XvmPrimitive->Specific" -> {
-                Builder.box(code, reg);
+                // stack: (this, primitive value) or (this, v0, ..., vN)
+                Builder.box(code, valueReg);
                 code.putfield(CD_this, jitName, cdProp);
             }
 
             case "XvmPrimitive->XvmPrimitive" -> {
-                ClassDesc[] cds = reg.slotCds();
+                // stack: (this, v0, ..., vN)
+                ClassDesc[] cds   = valueReg.slotCds();
+                int[]       slots = new int[cds.length];
                 for (int i = cds.length - 1; i >= 0; i--) {
-                    code.aload(0) // Stack: { this }
-                        .dup_x2()
-                        .pop()
-                        .putfield(CD_this, jitName + "$" + i, cds[i]);
+                    slots[i] = code.allocateLocal(toTypeKind(cds[i]));
+                    store(code, cds[i], slots[i]);
                 }
-                code.pop(); // pop the extra "aload(0)" from the stack
+                for (int i = 0; i < cds.length; i++) {
+                    if (i > 0) {
+                        code.aload(0);
+                    }
+                    load(code, cds[i], slots[i]);
+                    code.putfield(CD_this, jitName + "$" + i, cds[i]);
+                }
             }
 
             default ->
                 throw new IllegalStateException("Invalid register flavor: " + regFlavor +
                     " for property: " + propFlavor);
+            }
+
+            if (doneLbl != null) {
+                code.labelBinding(doneLbl);
             }
         }
     }
@@ -1169,19 +1226,18 @@ public class CommonBuilder
      * Assemble the super class constructor call.
      */
     protected void callSuperInitializer(CodeBuilder code) {
-        // super($ctx);
+        // super($ctx) or super($ctx, outer)
         code.aload(0)
             .aload(code.parameterSlot(0));
 
         TypeConstant superType = typeInfo.getExtends();
-        boolean superHasOuter = superType != null &&
+        boolean      hasOuter  = superType != null &&
                 superType.getSingleUnderlyingClass(true).getComponent()
                         instanceof ClassStructure superClass && superClass.isInstanceChild();
-        if (superHasOuter) {
+        if (hasOuter) {
             code.aload(code.parameterSlot(1));
         }
-        code.invokespecial(getSuperCD(), INIT_NAME,
-                superHasOuter ? MD_xvmOuterVoid : MD_xvmVoid);
+        code.invokespecial(getSuperCD(), INIT_NAME, hasOuter ? MD_xvmOuterVoid : MD_xvmVoid);
     }
 
     /**
@@ -4281,8 +4337,7 @@ public class CommonBuilder
             md = jmd.standardMD;
         }
 
-        if (method.isFunction() || method.isCtorOrValidator() ||
-                method.getHead().getMethodStructure().isPropertyInitializer()) {
+        if (jmd.isStandardStatic) {
             if (isInterface && method.isVirtualConstructor()) {
                 // virtual constructors only generate the "new$" virtual method declarations
                 return;
