@@ -1557,3 +1557,14 @@ IDE errors). The earlier IntelliJ timeout was blocked by macOS permission dialog
 saved screenshot; no permission choice was made and no completed edit was replayed. Cross-package qualification
 rewrites, explicit graph relocation and richer union/generated/cyclic callable identities remain
 implementation tasks in the integration plan.
+
+
+October 2 L62 type relocation follow-up: same-name class files can now move between compiler-proven
+packages in one module. Detached compiler name/namespace facts drive import and qualification
+edits, including closed consumers and old-package sibling references. Companion sources/resources
+follow the move. Prefix changes have a narrow proof allowance; retained bindings, calls, import
+targets and dispatch must remain equivalent. No Java AST or embedding API changes were needed.
+The final 118-test backend gate passes (17 suites, zero failures/errors/skips), including the
+organize-import regression corrected by `2ad97134f`; X161 Move/Undo/Redo passes in VS Code `run-KieFUI` and IntelliJ
+`run-15583928886685829346` (including START, no IDE errors). Explicit graph relocation, interacting batch qualifications and richer
+union/generated/cyclic callable identities remain open; see `errs-integration-plan.md` for limits.
