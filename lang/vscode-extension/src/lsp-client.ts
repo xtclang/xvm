@@ -17,7 +17,7 @@ import { synchronizationOptions } from './service-settings';
 import { compilerBuildModels } from './compiler-paths';
 import { BuildModel } from './build-model';
 import { buildJvmArgs, findJavaExecutable } from './java';
-import { compilerSourceModules, renameWithConfiguration } from './rename-proposal';
+import { compilerSourceModules, moveWithConfiguration, renameWithConfiguration } from './rename-proposal';
 import { updateStatusBar } from './status-bar';
 
 let client: LanguageClient | undefined;
@@ -131,6 +131,11 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
                     : next(document, position, name, token);
             },
             workspace: {
+                willRenameFiles: (event, next) => {
+                    if (client !== connection) return Promise.resolve(null);
+                    return connection.initializeResult?.capabilities.experimental?.xtcFileMoveProposal === 1
+                        ? moveWithConfiguration(connection, event) : next(event);
+                },
                 configuration: (params: ConfigurationParams) => {
                     return params.items.map(item => {
                         if (item.section === 'xtc.compiler') {
