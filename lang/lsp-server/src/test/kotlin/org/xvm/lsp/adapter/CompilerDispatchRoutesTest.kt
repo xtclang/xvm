@@ -99,6 +99,19 @@ class CompilerDispatchRoutesTest {
     }
 
     @Test
+    fun `bodyless written class methods retain source contracts without executable targets`() {
+        inspect("class Base { Int read(); } class Actual extends Base { @Override Int read() = 1; }") { module, errors ->
+            val owner = type(module, "Base", errors)
+            val method = owner.methods.values.single { it.identity.name == "read" }
+            assertThat(method.chain.map { it.implementation }).contains(Implementation.SansCode)
+            val route = owner.dispatch(method, errors)
+            assertThat(route.supported).isTrue()
+            assertThat(route.methods.map { it.namespace.name to it.name }).containsExactly("Base" to "read")
+            assertThat(owner.methodImplementation(method, errors)).isNull()
+        }
+    }
+
+    @Test
     fun `delegate provenance retains receiver and written interface and implementation`() {
         inspect(
             "interface Api { Int read(); } class Actual implements Api { @Override Int read() = 1; } " +

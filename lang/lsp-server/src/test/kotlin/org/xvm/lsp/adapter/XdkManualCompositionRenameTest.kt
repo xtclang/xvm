@@ -100,8 +100,8 @@ class XdkManualCompositionRenameTest {
     private fun conditionalSource(body: String = ""): String =
         """
         module Conditional {
-            class Box<T>(T value) incorporates conditional Textual<T extends String> { $body }
-            static mixin Textual<T extends String> into Box<T> { Int size() = value.size; }
+            class Box<T>(T value) incorporates conditional Textual<T extends String> { Int size(); $body }
+            static mixin Textual<T extends String> into Box<T> { @Override Int size() = value.size; }
             Int read(Box<String> text) = text.size();
             Int unrelated(Box<Int> number) = number.value;
         }
