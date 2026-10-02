@@ -52,7 +52,7 @@ class CapabilityContractTest {
                 .containsExactlyInAnyOrderElementsOf(
                     (adapter.capabilities - AdapterCapability.RENAME).map(::provider),
                 )
-            assertThat(capabilities.experimental).isEqualTo(mapOf("xtcRenameProposal" to 1))
+            assertThat(capabilities.experimental).isEqualTo(mapOf("xtcRenameProposal" to 1, "xtcFileMoveProposal" to 1))
             assertThat(capabilities.workspace.workspaceFolders.supported).isTrue()
             assertThat(capabilities.workspace.fileOperations).hasAllNullFieldsOrProperties()
             assertThat(capabilities.notebookDocumentSync).isNull()
