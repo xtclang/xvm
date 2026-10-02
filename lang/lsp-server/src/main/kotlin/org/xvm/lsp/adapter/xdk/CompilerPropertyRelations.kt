@@ -1,7 +1,5 @@
 package org.xvm.lsp.adapter.xdk
 
-import org.xvm.asm.ClassStructure
-import org.xvm.asm.Constants.Access
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.PropertyStructure
 import org.xvm.asm.constants.IdentityConstant
@@ -41,31 +39,31 @@ internal fun compilerPropertyRelations(
             .filterNot { it.isStatic || it.isSynthetic }
             .mapTo(linkedSetOf()) { it.identityConstant } + primaryProperties
     val chains =
-        nodes.filterIsInstance<TypeCompositionStatement>().flatMap { node ->
-            if (errors.isAbortDesired) return@flatMap emptyList()
-            val structure = node.component as? ClassStructure ?: return@flatMap emptyList()
-            val info =
-                ExecutionTrace.api("TypeConstant.ensureTypeInfo(property-relations)") {
-                    structure.formalType.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors)
-                }
-            info.properties.values
-                .filter { property -> property.propertyBodies.any { it.identity in declarations } }
-                .map { property ->
-                    CompilerPropertyRelations.Chain(
-                        structure.identityConstant,
-                        property.propertyBodies.map { it.identity },
-                        property.propertyBodies.all {
-                            it.implementation in
-                                setOf(
-                                    Implementation.Explicit,
-                                    Implementation.Declared,
-                                    Implementation.Default,
-                                    Implementation.FromInto,
-                                    Implementation.Delegating,
-                                )
-                        },
-                    )
-                }
-        }
+        compilerSourceTypes(nodes)
+            .flatMap { type ->
+                if (errors.isAbortDesired) return@flatMap emptyList()
+                val info =
+                    ExecutionTrace.api("TypeConstant.ensureTypeInfo(property-relations)") {
+                        type.ensureTypeInfo(errors)
+                    }
+                info.properties.values
+                    .filter { property -> property.propertyBodies.any { it.identity in declarations } }
+                    .map { property ->
+                        CompilerPropertyRelations.Chain(
+                            type.getSingleUnderlyingClass(false),
+                            property.propertyBodies.map { it.identity },
+                            property.propertyBodies.all {
+                                it.implementation in
+                                    setOf(
+                                        Implementation.Explicit,
+                                        Implementation.Declared,
+                                        Implementation.Default,
+                                        Implementation.FromInto,
+                                        Implementation.Delegating,
+                                    )
+                            },
+                        )
+                    }
+            }.distinct()
     return CompilerPropertyRelations(declarations, chains)
 }
