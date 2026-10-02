@@ -52,6 +52,22 @@ class XdkRenameBoundaryTest {
     }
 
     @Test
+    fun `bodyless source class contract renames together with its concrete implementation`() {
+        val text =
+            "module App { class Base { Int read(); } class Actual extends Base { @Override Int read() = 1; } " +
+                "Int use(Base target) = target.read(); }"
+        workspace(text) { adapter, uri ->
+            val edit = requireNotNull(adapter.rename(uri, 0, text.indexOf("read"), "fetch"))
+            val changed =
+                edit.changes.getValue(uri).sortedByDescending { it.range.start.column }.fold(text) { value, change ->
+                    value.replaceRange(change.range.start.column, change.range.end.column, change.newText)
+                }
+            assertThat(changed).isEqualTo(text.replace("read", "fetch"))
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+        }
+    }
+
+    @Test
     fun `an explicit graph does not claim or edit omitted consumers`() {
         directory = directory.toRealPath()
         val text = "module App { class Box { Int pick(Int input) = input; } }"

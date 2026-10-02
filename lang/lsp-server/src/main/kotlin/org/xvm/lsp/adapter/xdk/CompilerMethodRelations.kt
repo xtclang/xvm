@@ -44,7 +44,7 @@ internal fun compilerMethodRelations(
                     .map { method ->
                         val route = info.dispatch(method, errors)
                         CompilerMethodRelations.Chain(
-                            type.getSingleUnderlyingClass(false),
+                            type.getSingleUnderlyingClass(true),
                             // Rename families use written contracts behind redirects, just like call
                             // provenance. Generated cap/into identities are not editable declarations.
                             route.methods,

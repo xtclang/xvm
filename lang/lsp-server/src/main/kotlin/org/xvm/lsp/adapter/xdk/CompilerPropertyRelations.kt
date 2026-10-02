@@ -50,7 +50,7 @@ internal fun compilerPropertyRelations(
                     .filter { property -> property.propertyBodies.any { it.identity in declarations } }
                     .map { property ->
                         CompilerPropertyRelations.Chain(
-                            type.getSingleUnderlyingClass(false),
+                            type.getSingleUnderlyingClass(true),
                             property.propertyBodies.map { it.identity },
                             property.propertyBodies.all {
                                 it.implementation in
