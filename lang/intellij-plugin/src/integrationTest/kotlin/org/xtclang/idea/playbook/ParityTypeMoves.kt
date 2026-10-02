@@ -118,6 +118,16 @@ internal fun ParityScenarios.typeMoveCases() {
                     }
                     verify(moved)
                 }
+                if (data.has("afterModules")) {
+                    // Directory Move/Undo/Redo must retire the old synchronizer as well as move
+                    // files/settings. A later unsaved edit must reach the current URI exactly once.
+                    val moved = open(data.string("afterRoot"))
+                    val source = moved.text
+                    replace(moved, source.replaceFirst("{", "{\n    Int relocationProbe = missingRelocationValue;"))
+                    errors(moved)
+                    replace(moved, source)
+                    clean(moved)
+                }
             }
         }
     }
