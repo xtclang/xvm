@@ -1047,3 +1047,11 @@ expected return type, in addition to primitive literals. Compiler proof tracks t
 and calls through exact text relocation; arbitrary subexpressions and conditional/multiple returns
 remain refused. X156 is implemented in both drivers with exact edits and Undo/Redo. Execution of
 this continuation is pending; general extraction and the other semantic transformations remain open.
+
+October 2 L63 continuation: whole-return-expression extraction and adjacent returned-local inline
+are implemented. Both preserve written expected types and compiler-proven relocated bindings.
+Inline requires one read, the next statement to be that return, and matching written types;
+comments, intervening statements and unproven cases are refused. 31 focused backend tests pass,
+both drivers compile, and shared X156/X157 implement action/diagnostics/Undo/Redo acceptance.
+Those editor cases have not yet run. General extract/inline, extract method, missing declarations
+and safe delete remain open.
