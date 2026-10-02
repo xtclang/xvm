@@ -7744,7 +7744,7 @@ reproducible, and reconcile completed versus remaining scope. Validation is batc
    | L63 semantic actions | Import fixes and compiler-proven implement/override, including bundled contracts | Whole-return-expression extraction and adjacent single-use returned-local inline are implemented in the continuations below. General statement/context extraction, missing-declaration fixes, extract method, broader inline and safe delete remain separate transformations. Each needs its own side-effect/capture/caller-closure design and positive/refusal tests. |
    | L64 completion/signatures | Import edits, syntax names/templates, guarded bounds and compiler-fitted literals/values; latest continuation adds wrapped names, enclosing-instance arguments and real platform anonymous-body recovery | Latest continuation below gives the exact supported forms, evidence and conservative exclusions. Remaining expansion includes inferred/ambiguous local names, arbitrary value synthesis and general special-this enumeration outside calls; these are not counted as implemented. |
    | L65 navigation/classification | Source/bundled navigation, recorded hierarchy/composition relations and resolved tokens | Conditional/synthetic/native/redirect routes and ambiguous binary source metadata need individual fixtures. Runtime function targets cannot be invented by a static hierarchy. |
-   | L66 editing/structure | Token-preserving indentation, URL links, local linked editing, recorded damaged-source structure | Expression wrapping and comment/string layout, import/source links, broader proven linked scopes and remaining damaged constructs. A full pretty-printer is not implemented. |
+   | L66 editing/structure | Token-preserving indentation, URL links, local linked editing, recorded damaged-source structure | Expression wrapping and comment/string layout, wildcard/conditional import links, broader proven linked scopes and remaining damaged constructs. Resolved module/type/alias source links and lexical alias linked editing are implemented below. A full pretty-printer is not implemented. |
    | L67 scale | Live graph discovery/overlays, dependencies and detached per-root caches | Use the platform workload to establish budgets and locate bottlenecks before choosing incremental or persistent indexing; neither exists merely because incremental text transport does. |
    | L80 capability contract | Current method/producer inventory completed on 2026-10-01; optional presentation gates corrected, with exhaustive adapter-provider and rich/reduced-client checks | Revisit negotiation when a producer adds snippets, location links, tags or other optional fields. Generic native resource/snippet/confirmation edits remain deliberately refused. L81/L82 manual/release evidence is separate. |
    | L81 lifecycle | Trace, owned progress/cancel, partial results, refresh, shutdown, X145 pending restart and X146/X147 refresh/report ownership | Physical Cancel-button selection and broader per-provider visual/multiple-window interactions remain manual acceptance rather than absent server implementations. See the following validation receipt. |
@@ -8840,3 +8840,14 @@ Validation: 31 real compiler tests passed, zero failures/errors/skips: 16 extrac
 one adversarial relocation/capture proof. Both editor drivers compile. Shared X157 checks the actual
 action, exact source, diagnostics and Undo/Redo/Undo in both editors; X155–X157 editor execution is
 still pending. This also validates returned-expression extraction commit `3a4c03fd9`.
+
+### L66 resolved import sources and lexical alias editing (2026-10-02)
+
+The worker now copies resolved source destinations for package/module imports and non-wildcard,
+non-conditional explicit imports. XdkAdapter returns those links only for matching source text;
+missing/binary-only declarations cannot acquire a guessed path. Matching bundled sources remain
+read-only. Explicit import aliases link only the uses already proven to belong to that lexical
+import, including separately shadowed alias names. No Java AST accessor or mutable field was added.
+Shared X158 resolves links, checks exact ranges/alias uses and opens the target source in both
+editor drivers. Wildcard/conditional links, broader linked scopes and formatter wrapping/layout
+remain open. Validation: 15 source-link/editing/import completion tests pass, zero failures/errors/skips; both editor drivers compile. X158 editor execution is pending.
