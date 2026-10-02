@@ -1,8 +1,10 @@
 # Ecstasy Language Server - Manual Test Plan
 
 The current catalog has **163 scenarios**: X1–X158, CFG1–CFG3 and 7a.8/7a.9.
-X155 adds conditional generic composition rename and Undo; its editor execution is pending.
-X156 adds whole-return-expression extraction and Undo/Redo; its editor execution is pending.
+X155–X158 pass in both editors: conditional/bodyless rename, whole-return-expression extraction,
+adjacent returned-local inline and import source links/alias linked editing. VS Code `run-Um9auo`
+and IntelliJ `run-13592235693442712133` record no selected failures; IntelliJ also passes START
+with no IDE errors. The combined backend gate passes 204 tests without failures or skips.
 Both editor runners show the current scenario ID and description beside the completed/remaining
 counts. Long descriptions are shortened in the status bar; hovering shows the full description.
 IntelliJ also includes it in the test window title. Subset selection still uses unchanged X IDs.
@@ -1335,7 +1337,7 @@ are compiler-output checks that the editor UI cannot establish. To run them with
 ```
 
 The Starter/Driver suite launches the packaged plugin in IDEA 2026.2.3 with Ultimate features
-disabled. The catalog now has 128 scenarios. The preceding 113-case suite has a clean full-run
+disabled. The catalog now has 163 scenarios; the following paragraph records the earlier 128-case checkpoint. The preceding 113-case suite has a clean full-run
 receipt; the [current demo record](../../docs/errs-integration-plan.md#native-intellij-demo-continuation-2026-09-29)
 distinguishes resumed coverage from an uninterrupted full run. Native
 completion checks now keep sole candidates visible in the disposable test profile, verify exact
@@ -3027,11 +3029,11 @@ L65 closure additions (execution pending):
 | --- | --- | --- |
 | X155 | Open shared Conditional.x. Rename the conditional Textual.size method to width, then Undo once. | The declaration and Box<String> call change together. String.size and Box<Int>.value stay unchanged. The source remains free of diagnostics, and Undo restores the exact original source. Both drivers implement the case; the current batch has not run yet. |
 
-| X156 | Select the complete `input + step()` return expression in shared Extract.x and apply “Extract expression to local variable”. | An explicitly typed local is inserted immediately before the return. The selected expression appears once, the return reads the new local, and diagnostics remain clear. Undo/Redo/Undo restore the exact expected sources. Both drivers implement the case; this batch has not executed it yet. |
+| X156 | Select the complete `input + step()` return expression in shared Extract.x and apply “Extract expression to local variable”. | An explicitly typed local is inserted immediately before the return. The selected expression appears once, the return reads the new local, and diagnostics remain clear. Undo/Redo/Undo restore the exact expected sources. Both drivers pass the case in the October 2 selected receipts at the top of this playbook. |
 
-| X157 | Place the cursor on `value` in the shared Extract.x local and apply “Inline returned local variable”. | The initializer replaces the sole adjacent return read, its declaration disappears, diagnostics stay clear and Undo/Redo/Undo restore exact source. Both drivers implement this case; editor execution is pending. |
+| X157 | Place the cursor on `value` in the shared Extract.x local and apply “Inline returned local variable”. | The initializer replaces the sole adjacent return read, its declaration disappears, diagnostics stay clear and Undo/Redo/Undo restore exact source. Both drivers pass this case in the October 2 selected receipts. |
 
-| X158 | Open the shared ImportLinks.x with LinkLibrary.x. Inspect module/type import links and linked editing at `Crate`. | Link ranges name `LinkLibrary` and `Crate`, both target the actual library source, and the alias links only its three written occurrences. Both drivers resolve links, check ranges and open the target source. Modifier-click appearance remains a manual observation; automated execution is pending. |
+| X158 | Open the shared ImportLinks.x with LinkLibrary.x. Inspect module/type import links and linked editing at `Crate`. | Link ranges name `LinkLibrary` and `Crate`, both target the actual library source, and the alias links only its three written occurrences. Both drivers resolve links, check ranges and open the target source. Both drivers pass in the October 2 selected receipts; modifier-click appearance remains a manual observation. |
 
 L67 index replacement check: with an unopened consumer, navigate a member from a host-indexed
 binary. Replace its source index with another source location, remove the index while retaining
@@ -3039,3 +3041,6 @@ the binary, then configure editable source for that module. Navigation must foll
 be absent without an index, and prefer the configured source. Previously prepared hierarchy
 handles must expire at each change. `XdkIndexLifecycleTest` now exercises this sequence through
 one adapter (alongside graph removal); this is backend coverage, not a new editor receipt.
+
+The October 2 X155–X158 receipts supersede pending-execution notes at earlier implementation
+checkpoints. These are four selected cases; existing full-suite stability findings remain open.
