@@ -1382,8 +1382,7 @@ class CompilerPlaybook(
     }
 
     private fun Driver.workspaceScenarios() {
-        (109..121).forEach { number ->
-            val id = "X$number"
+        ((109..121).map { "X$it" } + "X155").forEach { id ->
             scenario(id) {
                 withContext(OnDispatcher.EDT) {
                     val manager = service<FileEditorManager>(singleProject())
