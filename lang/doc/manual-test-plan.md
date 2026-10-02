@@ -1,6 +1,6 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **163 scenarios**: X1–X158, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **165 scenarios**: X1–X160, CFG1–CFG3 and 7a.8/7a.9.
 X155–X158 pass in both editors: conditional/bodyless rename, whole-return-expression extraction,
 adjacent returned-local inline and import source links/alias linked editing. VS Code `run-Um9auo`
 and IntelliJ `run-13592235693442712133` record no selected failures; IntelliJ also passes START
@@ -3034,6 +3034,8 @@ L65 closure additions (execution pending):
 | X157 | Place the cursor on `value` in the shared Extract.x local and apply “Inline returned local variable”. | The initializer replaces the sole adjacent return read, its declaration disappears, diagnostics stay clear and Undo/Redo/Undo restore exact source. Both drivers pass this case in the October 2 selected receipts. |
 
 | X158 | Open the shared ImportLinks.x with LinkLibrary.x. Inspect module/type import links and linked editing at `Crate`. | Link ranges name `LinkLibrary` and `Crate`, both target the actual library source, and the alias links only its three written occurrences. Both drivers resolve links, check ranges and open the target source. Both drivers pass in the October 2 selected receipts; modifier-click appearance remains a manual observation. |
+| X159 | Open the scenario's Library.x, leaving Consumer.x closed. Rename the conditional `Textual.measure` method to `width`, inspect both files, then Undo once. | The mixin declaration and closed `Box<String>` consumer call change together even though `Box<T>` has no written method contract. `String.size` and `Box<Int>.value` stay unchanged. Undo restores both files exactly. Both drivers implement the case; execution is pending. |
+| X160 | Open the scenario's Library.x, leaving Consumer.x closed. Rename `Api.value` to `content`, inspect the Engine/Forward/Outer consumer, then Undo once. | The interface property, concrete implementation, internal read and delegated read change together across two generic delegation layers. Method names and delegate receiver properties stay unchanged. Undo restores both files exactly. Both drivers implement the case; execution is pending. |
 
 L67 index replacement check: with an unopened consumer, navigate a member from a host-indexed
 binary. Replace its source index with another source location, remove the index while retaining
