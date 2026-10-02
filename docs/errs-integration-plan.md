@@ -8779,7 +8779,8 @@ remain separate from functionality implementation.
 - [x] Write method/property fact regressions, declaration/call-site rename and reverse rename,
   concrete-host collision refusal, and shared X155 in both drivers.
 - [x] Run the new L62 regressions with existing rename, implementation and semantic action tests: 122 tests pass, zero failures/errors/skips; both editor drivers compile.
-- [ ] Audit the remaining L62 composition exclusions and workspace boundaries before closure.
+- [ ] Validate the L62 composition and workspace boundary audit below; broader resource relocation
+  and unsupported dispatch identities remain separate implementation work.
 - [x] L63 whole-return-expression extraction and adjacent single-use typed returned-local inline,
   with relocation/type/binding proof and positive/refusal tests.
 - [ ] L63 remaining transformations: wider extraction contexts, extract method, broader inline,
@@ -8915,3 +8916,42 @@ modifier-click presentation remain manual checks, not claims made from provider 
 This is selected new-feature acceptance, not another full 163-case run. The existing X105 popup
 stability, VS Code X130 upstream failure and L82 release gates remain open. The checklist above
 continues to distinguish the completed bounded slices from broader L62/L63/L66/L67 scope.
+
+### L62 composition and workspace boundary audit (2026-10-02)
+
+This checkpoint tests the remaining composition questions against the existing proof instead of
+assuming a missing playbook case implies missing compiler support. No production or Java AST change
+has been needed for the cases below. All 78 tests across 11 audit suites pass with zero
+failures/errors/skips; both editor drivers compile and LSP/IntelliJ Spotless checks pass.
+Selected X159/X160 editor execution is pending.
+
+| Boundary | Implementation and evidence |
+|---|---|
+| Conditional member without a formal host declaration | New `XdkConditionalRenameTest` covers methods and properties from a concrete receiver, both in one module and instantiated only in a closed consumer. The dependency source index preserves the selected written mixin identity; a synthetic host declaration is unnecessary. Shared X159 adds cross-file rename and Undo. |
+| Mutually exclusive conditional families | New regression renames the String-constrained method while preserving the same-named Number-constrained method and its call. Joining by spelling or generic host alone would be incorrect. |
+| Conditional composition collision | New regression requires refusal when renaming one interface method would merge distinct contracts in a conditional composition. It separately compiles the proposed graph, so compilation success cannot stand in for dispatch equivalence. |
+| Nested generic delegation | New `XdkDelegatedRenameTest` covers methods and properties through two delegate layers across source modules. All written interface/implementation declarations and uses join the family. Shared X160 adds closed-consumer property rename and Undo. |
+| Capped, into, default, bodyless, annotated and ordinary delegate routes | Existing `CompilerDispatchRoutesTest`, `XdkManualCompositionRenameTest`, `XdkResourceRenameTest` and `XdkParameterRenameTest` remain in the audit gate. Written identities come from compiler metadata, never method names. |
+| Constructor and primary property parameters | Existing parameter/primary-parameter/resource regressions cover named labels and type uses. `construct` itself is a keyword, not a user-renameable method name. |
+| External consumers and current source membership | `XdkExternalRenameTest` covers configured external roots, unsaved consumers, missing registered roots, intervening disk edits and discovery scope receipts. `XdkRenameBoundaryTest` confirms that omitted consumers remain outside the declared graph. |
+| Read-only and unsupported identities | Existing tests refuse binary/XDK contracts and union method calls. Generated accessor/runtime/native method bodies do not independently establish editable written callable contracts. These refusals are not full support for those identities. |
+| Resource operations | Existing file/resource tests cover companion directories, implicit packages, discovered container relocation, collisions, symlinks and overlapping operations. Explicit root relocation and moves that change package qualification remain open. |
+
+Remaining implementation work in L62:
+
+- [ ] Cross-package type/file moves: derive old/new ownership from compiler identities, rewrite
+  qualified references/imports, and prove the complete proposed graph. Add negative cases for
+  private access, ambiguous imports, name collisions and resource dependencies, then native Undo/Redo
+  in both editors. Current file-move support can relocate a container without changing semantic
+  ownership; that does not establish this case.
+- [ ] Explicit graph relocation: return and persist the replacement source/resource roots through
+  the existing host proposal protocol, with version checks and editor Undo/Redo. Standard
+  `willRenameFiles` cannot persist host settings by itself.
+- [ ] Union/generated/cyclic callable identities: preserve proven static target sets and receiver
+  provenance before offering rename. `MethodBody` already exposes union legs; merely following those
+  legs is insufficient while the detached proof represents a call as one identity. Keep the refusal
+  until occurrence-level targets and their before/after equivalence are represented and tested.
+
+Omitted consumers are an explicit project configuration boundary, not a feature that can be
+completed by guessing other repositories. Binary contracts remain read-only by design. The audit
+does not close the broader L62 task or the existing editor stability/release gates.
