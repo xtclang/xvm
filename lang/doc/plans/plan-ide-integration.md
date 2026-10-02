@@ -631,7 +631,7 @@ Full tree-sitter support for fast, incremental parsing:
      source identities, independent conditional families and nested generic method/property delegation
      to regression coverage. Shared X159/X160 cover cross-file rename and Undo in both drivers;
      both pass in VS Code `run-RGeVCM` and IntelliJ `run-17726972701009018455`, alongside 78 passing
-     backend audit tests. Cross-package qualification rewrites, explicit graph relocation and
+     backend audit tests. Bounded cross-package type moves now rewrite qualifications (X161 passes in both editors). Explicit graph relocation and
      union/generated/cyclic callable identities remain open; binary contracts remain read-only
    - Whole-return-expression extraction and adjacent single-use typed returned-local inline are implemented with binding proof; X156/X157 pass in both editors
    - Wider extraction, extract method, broader inline and safe delete remain unimplemented (L63)
@@ -827,7 +827,9 @@ L71 pre/post file-operation handlers negotiate independently. Compiler proof cov
 member/package renames, combined batches and safe container moves. IntelliJ's Rename/Move
 handlers preflight before disk mutation and apply references/paths in one global undo command;
 raw VFS changes still cannot promise reference updates. X128 and X130 drive the real host actions.
-Cross-package qualification rewrites and explicit source-graph relocation remain refused.
+Same-name type files can now move across compiler-proven package namespaces with qualification
+rewrites, companion resources and binding proof; X161 Move/Undo/Redo passes in both editors. Explicit
+source-graph relocation remains refused.
 Ordinary LSP pre-operation null replies cannot veto arbitrary host file moves.
 
 PLAT2c/L67 now imports the evaluated Gradle model in both hosts and exposes effective source/resource
@@ -849,8 +851,9 @@ L71 native Move follow-up (2026-09-30): the Community Move delegate preflights o
 source/container moves before disk mutation. Parent changes are applied through VFS because
 LSP4IJ 0.21 only applies the new basename. References and paths share a global undo command.
 Shared X130 covers two discovered module containers and embedded resources with Undo/Redo;
-selected acceptance passes in both editors. Explicit-graph relocation and cross-package
-qualification rewriting remain refusals. Search `// TODO LSP4IJ:` in the plugin for removable upstream compatibility bridges.
+selected acceptance passes in both editors. The October 2 X161 continuation adds bounded type
+relocation with qualification rewriting; selected Move/Undo/Redo acceptance passes in both editors. Explicit-graph relocation
+remains a refusal. Search `// TODO LSP4IJ:` in the plugin for removable upstream compatibility bridges.
 
 L70 follow-up (2026-09-30, selected acceptance passed): codeLens/documentLink/inlayHint/workspaceSymbol
 resolve endpoints now preserve stable identities and reject obsolete detached handles. Inlay
