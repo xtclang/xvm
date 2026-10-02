@@ -2,12 +2,23 @@ package tryTests {
 
     import ecstasy.io.IOException;
 
-    @Inject Console console;
+    static TestConsole console = new TestConsole();
 
     void run() {
-
         testTry1();
-        console.print(testTry2());
+        assert console.output() == \|IOException caught
+                                    |no exception
+                                    |
+                                    ;
+        console.reset();
+        assert testTry2() == 11;
+        assert console.output() == \|IOException caught
+                                    |Finally: 0
+                                    |Unsupported caught
+                                    |Finally: 1
+                                    |Done
+                                    |
+                                    ;
         testAssert1(False);
         testAssert2(False);
         testUsing();
@@ -20,12 +31,16 @@ package tryTests {
         try {
             testThrow(0);
         } catch (IOException e) {
-            console.print("1) IOException caught");
+            assert e.text == "Test IO";
+            console.print("IOException caught");
         } catch (Unsupported e) {
-            console.print("1) Unsupported caught");
             throw e;
         } finally {
-            console.print($"1) Finally: {TRY.exception?.text : "no exception"}");
+            if (TRY.exception == Null) {
+                console.print("no exception");
+            } else {
+                console.print("exception");
+            }
         }
     }
 
@@ -35,13 +50,15 @@ package tryTests {
                 try {
                     testThrow(i);
                 } catch (IOException e) {
-                    console.print("2) IOException caught");
+                    assert e.text == "Test IO";
+                    console.print("IOException caught");
                     continue;
                 } catch (Unsupported e) {
-                    console.print("2) Unsupported caught");
+                    assert e.text == "Test Unsupported";
+                    console.print("Unsupported caught");
                     return i + 10;
                 } finally {
-                    console.print($"2) Finally: {i}");
+                    console.print($"Finally: {i}");
                     if (i == 2) {
                         return i + 40;
                     }
@@ -49,7 +66,7 @@ package tryTests {
             }
             return -1;
         } finally {
-            console.print("2) Done");
+            console.print("Done");
         }
     }
 
@@ -70,16 +87,20 @@ package tryTests {
         try {
             assert flag as "Flag is not set";
         } catch (IllegalState e) {
-            console.print($"Assert 1) {e.text}");
+            assert e.text == "Flag is not set";
+            return;
         }
+        assert as "Assertion did not fail";
     }
 
     void testAssert2(Boolean flag) {
         try {
             assert Int i := next(flag), Int j := next(flag);
         } catch (Exception e) {
-            console.print($"Assert 2) {e.text}");
+            assert e.text == "\"Int i := next(flag)\": flag=False";
+            return;
         }
+        assert as "Assertion did not fail";
     }
 
     conditional Int next(Boolean flag) = False;
