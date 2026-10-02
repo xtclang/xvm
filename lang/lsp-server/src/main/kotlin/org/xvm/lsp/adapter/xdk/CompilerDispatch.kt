@@ -39,6 +39,7 @@ internal fun TypeInfo.dispatch(
                 Implementation.Default,
                 Implementation.Declared,
                 Implementation.Abstract,
+                Implementation.SansCode,
                 -> {
                     val declaration = body.methodStructure
                     CompilerDispatch(
@@ -77,7 +78,6 @@ internal fun TypeInfo.dispatch(
 
                 Implementation.Implicit,
                 Implementation.Union,
-                Implementation.SansCode,
                 Implementation.Field,
                 Implementation.Native,
                 -> {
