@@ -2,7 +2,8 @@
 
 The current catalog has **159 scenarios**: X1–X154, CFG1–CFG3 and 7a.8/7a.9.
 X150/X151/X152 now include fitted lambda arguments, inferred local names and ordinary enclosing
-values. X153 adds implementation dispatch checks and X154 adds mutation classification.
+values. X153 adds implementation dispatch checks and X154 adds mutation classification. X87 now also
+checks member completion in a primary-constructor default with its missing closing delimiter.
 The new L64/L65 backend gates pass 68 Java plus 418 and 78 LSP tests without failures or skips;
 full editor acceptance for these additions is pending.
 The latest L64 run passes X97/X108/X150/X151/X152 in both editors: 63 variants covering argument

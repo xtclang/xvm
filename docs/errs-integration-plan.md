@@ -8678,3 +8678,31 @@ LSP/IntelliJ Spotless checks pass. The new shared catalog has **159 cases** with
 `37a901c8879ab18e63e8ce5322bbdeb8f2c762e409585deb16fe790f911087b9`.
 Keep `23d439232` together with this validation/fix checkpoint when extracting L65. Full native
 acceptance follows this checkpoint; it is not yet a passing receipt.
+
+
+### L64/L65 broad-gate corrections (2026-10-02)
+
+The first full LSP gate ran 1,626 tests and found three failures; it prevented either GUI suite
+from starting. Three pre-existing disabled Tree-sitter tests are separate from those failures.
+The corrections are:
+
+- Exclude a bare formal type parameter from concrete-source implementation inspection. Its
+  underlying constraint is a class, but adding private accessibility to the formal itself produces
+  VERIFY-29. Parameterized source classes still use their validated substitutions.
+- Deduplicate incomplete sites by AST identity before and after compiler validation. A primary
+  constructor's written default and generated property getter can expose the same cursor twice.
+  Publication previously made the single-cursor adapter refuse completion. No new AST state or
+  clone-selection policy is needed; the original identity and its binding are preserved.
+- Replace an obsolete rejection expectation for mid-token member completion with exact whole-name
+  replacement assertions, including every overload of the matching method.
+
+The primary-constructor default is now the fourth shared X87 variant in both editor drivers.
+The regression checks original source text, one bound surviving cursor, no method emission,
+completion and unchanged cached compilation. This is an embedding publication correction, so keep
+it with the L64 surviving-cursor/recovery slice rather than the unrelated L65 dispatch changes.
+The correction gate passes **61 Java tests and 105 LSP tests**, zero failures/errors/skips;
+both editor drivers compile. L65's formal-type correction is `474bad3d5`; it belongs with
+`23d439232` and `bf2a46e14` on extraction. The updated 159-case shared catalog SHA-256 is
+`e82a13e5ec307a6613c2dd465ba2c9d8e49951fb19cedc8f31178bb4a41af808`.
+Full GUI acceptance follows; no passing full-current-revision backend receipt is implied by the
+focused correction gate.
