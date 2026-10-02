@@ -5233,6 +5233,179 @@
         "limitations": []
       }
     },
+    "X162": {
+      "title": "configured container Move persists ordered source/resource roots with closed consumers and Undo/Redo",
+      "manual": [],
+      "values": {
+        "root": "old/App.x",
+        "afterRoot": "target/old/App.x",
+        "consumer": "Consumer.x",
+        "from": "old",
+        "to": "target/old",
+        "destination": "target",
+        "modules": [
+          {
+            "name": "App",
+            "uri": "old/App.x",
+            "dependencies": [],
+            "resourceRoots": [
+              "old/assets",
+              "fallback"
+            ]
+          },
+          {
+            "name": "Consumer",
+            "uri": "Consumer.x",
+            "dependencies": [
+              "App"
+            ],
+            "resourceRoots": []
+          }
+        ],
+        "afterModules": [
+          {
+            "name": "App",
+            "uri": "target/old/App.x",
+            "dependencies": [],
+            "resourceRoots": [
+              "target/old/assets",
+              "fallback"
+            ]
+          },
+          {
+            "name": "Consumer",
+            "uri": "Consumer.x",
+            "dependencies": [
+              "App"
+            ],
+            "resourceRoots": []
+          }
+        ],
+        "files": [
+          {
+            "file": "old/App.x",
+            "destination": "target/old/App.x",
+            "source": "module App { Box make() = new Box(); static String text() = $./data.txt; }",
+            "expected": "module App { Box make() = new Box(); static String text() = $./data.txt; }"
+          },
+          {
+            "file": "old/App/Box.x",
+            "destination": "target/old/App/Box.x",
+            "source": "class Box {}",
+            "expected": "class Box {}"
+          },
+          {
+            "file": "old/assets/data.txt",
+            "destination": "target/old/assets/data.txt",
+            "source": "first resource root",
+            "expected": "first resource root"
+          },
+          {
+            "file": "fallback/data.txt",
+            "destination": "fallback/data.txt",
+            "source": "fallback resource",
+            "expected": "fallback resource"
+          },
+          {
+            "file": "Consumer.x",
+            "destination": "Consumer.x",
+            "source": "module Consumer { package app import App; app.Box make() = new app.Box(); String read() = app.text(); }",
+            "expected": "module Consumer { package app import App; app.Box make() = new app.Box(); String read() = app.text(); }"
+          },
+          {
+            "file": "target/Keep.txt",
+            "destination": "target/Keep.txt",
+            "source": "existing destination",
+            "expected": "existing destination"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X163": {
+      "title": "module-root Move carries its companion and pins default resources left behind through Undo/Redo",
+      "manual": [],
+      "values": {
+        "root": "old/App.x",
+        "afterRoot": "target/App.x",
+        "consumer": "Consumer.x",
+        "from": "old/App.x",
+        "to": "target/App.x",
+        "destination": "target",
+        "modules": [
+          {
+            "name": "App",
+            "uri": "old/App.x",
+            "dependencies": []
+          },
+          {
+            "name": "Consumer",
+            "uri": "Consumer.x",
+            "dependencies": [
+              "App"
+            ],
+            "resourceRoots": []
+          }
+        ],
+        "afterModules": [
+          {
+            "name": "App",
+            "uri": "target/App.x",
+            "dependencies": [],
+            "resourceRoots": [
+              "old"
+            ]
+          },
+          {
+            "name": "Consumer",
+            "uri": "Consumer.x",
+            "dependencies": [
+              "App"
+            ],
+            "resourceRoots": []
+          }
+        ],
+        "files": [
+          {
+            "file": "old/App.x",
+            "destination": "target/App.x",
+            "source": "module App { Box make() = new Box(); static String text() = $./data.txt; }",
+            "expected": "module App { Box make() = new Box(); static String text() = $./data.txt; }"
+          },
+          {
+            "file": "old/App/Box.x",
+            "destination": "target/App/Box.x",
+            "source": "class Box {}",
+            "expected": "class Box {}"
+          },
+          {
+            "file": "old/data.txt",
+            "destination": "old/data.txt",
+            "source": "resource stays at original path",
+            "expected": "resource stays at original path"
+          },
+          {
+            "file": "Consumer.x",
+            "destination": "Consumer.x",
+            "source": "module Consumer { package app import App; app.Box make() = new app.Box(); String read() = app.text(); }",
+            "expected": "module Consumer { package app import App; app.Box make() = new app.Box(); String read() = app.text(); }"
+          },
+          {
+            "file": "target/Keep.txt",
+            "destination": "target/Keep.txt",
+            "source": "existing destination",
+            "expected": "existing destination"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
