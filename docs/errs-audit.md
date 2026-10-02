@@ -1566,5 +1566,18 @@ follow the move. Prefix changes have a narrow proof allowance; retained bindings
 targets and dispatch must remain equivalent. No Java AST or embedding API changes were needed.
 The final 118-test backend gate passes (17 suites, zero failures/errors/skips), including the
 organize-import regression corrected by `2ad97134f`; X161 Move/Undo/Redo passes in VS Code `run-KieFUI` and IntelliJ
-`run-15583928886685829346` (including START, no IDE errors). Explicit graph relocation, interacting batch qualifications and richer
-union/generated/cyclic callable identities remain open; see `errs-integration-plan.md` for limits.
+`run-15583928886685829346` (including START, no IDE errors). The following graph-relocation checkpoint extends this scope. Interacting batch qualifications
+and richer union/generated/cyclic callable identities remain open; see `errs-integration-plan.md` for limits.
+
+October 2 L62 graph relocation follow-up: `xtc/renameFiles` carries complete move operations and
+source/resource graph before/after values. Both editor integrations persist the replacement using
+the existing guarded Undo/Redo transaction. Module-root moves preserve companion trees and pin
+default resource paths left behind; custom roots retain order and `[]` semantics. Proposed-path
+resource lookup and detached embedded-value hashes reject changed fallback contents, including
+consumers without source-dependency edges. The parser's lowered string/byte includes are covered.
+Shared X162/X163 cover these paths; selected validation and remaining refusals are recorded in
+[the relocation receipt](errs-integration-plan.md#l62-explicit-source-graph-relocation-2026-10-02).
+No Java AST/embedding change is added. Broader L62 and the VS Code non-veto/Explorer limits remain.
+The gate passes 80 backend and 15 IntelliJ unit tests, with zero failures/errors/skips, plus selected
+X118/X161/X162/X163 in both editors. IntelliJ's UP19 descendant-connection repair also verifies
+post-Redo unsaved typing and diagnostic recovery; its fix and removal gate are documented separately.
