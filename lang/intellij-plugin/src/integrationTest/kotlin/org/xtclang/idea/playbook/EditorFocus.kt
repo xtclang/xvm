@@ -5,7 +5,6 @@ import com.intellij.driver.client.Remote
 import com.intellij.driver.client.service
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Editor
-import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.components.common.ideFrame
 import com.intellij.driver.sdk.ui.remote.Window
@@ -67,26 +66,27 @@ fun Driver.focusEditor(editor: JEditorUiComponent) {
  * Restore application focus without replaying the action that opened a dialog or applied an edit.
  */
 internal fun Driver.restorePopupFocus(editor: Editor): Boolean {
-    fun focused() = withContext(OnDispatcher.EDT) { utility(NativeEditorUi::class).hasFocus(editor) }
+    // TODO LSP4IJ: UP20 (IntelliJ Driver) captures modality before posting its EDT call.
+    // A dialog can open between those steps. Use the probe's bounded Swing dispatch until
+    // Driver makes observation/focus calls safe across a modal transition.
+    fun focused() = withContext(OnDispatcher.DEFAULT) { utility(NativeEditorUi::class).hasFocus(editor) }
     if (focused()) return false
-    val window = cast(ideFrame().component, Window::class)
-    withContext(OnDispatcher.EDT) {
-        utility(PlaybookProgress::class).focus(singleProject(), true)
-        utility(NativeAppFocus::class).getInstance().activate(window)
+    withContext(OnDispatcher.DEFAULT) {
+        utility(NativeEditorUi::class).popupFocus(editor, true)
     }
     try {
         awaitUi(
             "restored native IDE focus",
             10.seconds,
             errorMessage = {
-                withContext(OnDispatcher.EDT) { utility(NativeEditorUi::class).focusState(editor) }
+                withContext(OnDispatcher.DEFAULT) { utility(NativeEditorUi::class).focusState(editor) }
             },
         ) {
             focused()
         }
     } finally {
-        withContext(OnDispatcher.EDT) {
-            utility(PlaybookProgress::class).focus(singleProject(), false)
+        withContext(OnDispatcher.DEFAULT) {
+            utility(NativeEditorUi::class).popupFocus(editor, false)
         }
     }
     println("IntelliJ playbook: restored IDE focus without pointer input")
@@ -150,6 +150,11 @@ internal interface NativeEditorUi {
     fun closeCompletion(editor: Editor)
 
     fun hasFocus(editor: Editor): Boolean
+
+    fun popupFocus(
+        editor: Editor,
+        restoring: Boolean,
+    )
 
     fun scrollToCaret(editor: Editor)
 }
