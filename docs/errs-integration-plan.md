@@ -415,8 +415,9 @@ VS Code receipts above.
   boundaries and UP19 connection repair. The October 3 continuation adds bounded union alternatives
   and recursive written contracts at callable sites (X164/X165). The next slice adds bounded
   generic/formal/annotated operands and nested union delegation (X166–X168); see its receipt below.
-  Unsupported annotation constants/type shapes, wider generated routes, combined rename/move and
-  interacting qualification plans remain open.
+  The combined-relocation continuation below adds simultaneous type/module rename and move plus
+  interacting type moves. Unsupported annotation constants/type shapes, wider generated routes,
+  empty/unproven namespaces, commented qualification syntax and overlapping move trees remain open.
 - [ ] **L63 — Semantic quick fixes and refactorings.** Individual and all-required-member
   implement/override actions are implemented at a class name for inherited source and read-only
   binary/XDK contracts. Compiler-selected signatures include generic/conditional/multiple returns,
@@ -7754,7 +7755,7 @@ reproducible, and reconcile completed versus remaining scope. Validation is batc
 
    | Scope | Implemented and proven | Concrete remaining work |
    | --- | --- | --- |
-   | L62 rename | Recorded source families, primary/ordinary parameter slots, lambdas, escaped method values, packages/modules/companions, bounded cross-package qualification, host-persisted graph relocation and bounded union/cyclic callable-site proof | Combined root rename/move, unsupported qualification syntax, interacting move plans, unsupported annotation constants/type shapes and wider generated routes; characterize each refused route before extending proof. External consumers omitted from the configured graph remain an explicit unknown boundary. |
+   | L62 rename | Recorded source families, primary/ordinary parameter slots, lambdas, escaped method values, packages/modules/companions, bounded cross-package qualification, host-persisted graph relocation and bounded union/cyclic callable-site proof | Unsupported qualification syntax, unproven empty namespaces, overlapping move trees, unsupported annotation constants/type shapes and wider generated routes; characterize each refused route before extending proof. External consumers omitted from the configured graph remain an explicit unknown boundary. |
    | L63 semantic actions | Import fixes and compiler-proven implement/override, including bundled contracts | Whole-return-expression extraction and adjacent single-use returned-local inline are implemented in the continuations below. General statement/context extraction, missing-declaration fixes, extract method, broader inline and safe delete remain separate transformations. Each needs its own side-effect/capture/caller-closure design and positive/refusal tests. |
    | L64 completion/signatures | Import edits, syntax names/templates, guarded bounds and compiler-fitted literals/values; latest continuation adds wrapped names, enclosing-instance arguments and real platform anonymous-body recovery | Latest continuation below gives the exact supported forms, evidence and conservative exclusions. Remaining expansion includes inferred/ambiguous local names, arbitrary value synthesis and general special-this enumeration outside calls; these are not counted as implemented. |
    | L65 navigation/classification | Source/bundled navigation, recorded hierarchy/composition relations and resolved tokens | Conditional/synthetic/native/redirect routes and ambiguous binary source metadata need individual fixtures. Runtime function targets cannot be invented by a static hierarchy. |
@@ -8951,9 +8952,11 @@ Remaining implementation work in L62:
   rewrite qualified references/imports, and prove the complete proposed graph. Preserve companion
   sources/resources, aliases, closed consumers and old-package sibling type references.
 - [x] Accept shared X161 Move/Undo/Redo in both editors; see the implementation receipt below.
-- [ ] Extend relocation beyond same-name class files and compiler-proven destination namespaces:
-  simultaneous move plus rename, unproven empty namespaces, token-preserving qualified names with
-  comments, and interacting batch qualifications remain outside this slice.
+- [x] Implement simultaneous type/module rename plus move and interacting type qualifications
+  against the complete requested batch; see the combined-relocation continuation for validation.
+- [ ] Extend relocation to unproven empty namespaces and token-preserving qualified names with
+  comments. Overlapping parent/child/companion operations and cross-module type ownership changes
+  remain refused; they need a separate final-ownership design.
 - [x] Implement explicit graph relocation through `xtc/renameFiles`, with source/resource roots,
   version checks and persisted editor Undo/Redo (X162/X163). Selected acceptance is recorded below.
   Standard `willRenameFiles` still refuses a host configuration change.
@@ -9281,21 +9284,21 @@ Both runs have no reported IDE failures or internal-error markers in saved IDE/s
 Root/LSP/IntelliJ formatting checks pass after the harness repair. No compiler behavior changed
 after the 228-test backend gate.
 
-The current catalog has **173 scenarios**, SHA-256
+That checkpoint had **173 scenarios**, SHA-256
 `fa2c3d1f8dd1cf3161ed561723af9af46462b0752e05c06b7492f738a6638e1e`.
 This is selected validation, not complete L62 or full-catalog acceptance.
 
 
 ### L62 combined rename and relocation (2026-10-03)
 
-Four local implementation checkpoints precede one combined validation gate:
+Four local implementation checkpoints preceded the combined validation gate:
 
 | Slice | Commit | Scope |
 | --- | --- | --- |
 | Type rename plus move | `679bb8269` | Combine source-identity rename with namespace prefix edits, companion paths and final-graph proof. Prefix insertion/token replacement remain separate for proof and coalesce for editor application. |
 | Module-root rename plus relocation | `c61003890` | Rename declarations/imports and graph dependency names together, retain domain suffixes and preserve default/custom/disabled resources. |
 | Interacting batch moves | `345c32b87` | Compute final type qualifications against all requested destinations together; preserve mutual references, require disjoint edits and reject the whole batch on failure. |
-| Editor acceptance | Current checkpoint | Single-file New name field in IntelliJ Move, shared X169–X172, both drivers and manual steps. |
+| Editor acceptance | `88df8e6db` | Single-file New name field in IntelliJ Move, shared X169–X172, both drivers and manual steps. |
 
 This extends the same-module, compiler-proven destination namespace path. It does not create a
 namespace from a guessed directory or rename the `construct` keyword. Existing-source/destination
@@ -9309,4 +9312,66 @@ with individually renamed entries. X172 checks refusal on each installed client 
 applying a host move; VS Code's inability to veto arbitrary Explorer moves is unchanged.
 
 No Java AST field, accessor or embedding API is added. Larger new test fixtures use raw multiline
-Kotlin strings. Regression and native validation are pending; prior receipts do not cover this batch.
+Kotlin strings. Validation and the required corrections are recorded below; prior receipts do not
+cover this batch.
+
+Validation uncovered [compiler issue #667](https://github.com/xtclang/xvm/issues/667): an inline
+`util.Taken` plus `App/util/Taken.x` crashes the ordinary compiler on master `7a4e29e57`, without
+any LSP involved. `Component` permits conditional siblings; source registration failed to reject
+two unconditional declarations, and `NamedTypeExpression.calculateDefaultType()` subsequently
+cast their `CompositeComponent` to `ClassStructure`.
+
+The independent compiler fix reports existing `Compiler.DUPLICATE_NAME` (`COMPILER-148`) at the
+new name token during registration and defers the invalid subtree. The assembler's conditional
+sibling mechanism is unchanged. `CompilerDuplicateTypeTest` fails its two duplicate cases on
+unmodified master and passes all four cases after the fix, including same-named nested types in
+different scopes and complementary conditional declarations with nested children. These tests
+need no XDK artifacts and skip nothing. Master plus the local fix passes 108 selected Java tests;
+its CLI now emits `COMPILER-148` instead of a stack trace. Wider overlapping conditional cases
+are not claimed fixed. Keep this compiler repair/test separate from the LSP move guard when
+extracting PRs; no master fix PR has been opened.
+
+The LSP guard independently checks compiler-resolved destination children before replay, so an
+inline collision refuses the complete move proposal without requiring an invalid compilation.
+The combined regression gate passes 222 backend and seven IntelliJ unit tests with zero
+failures/errors/skips; both drivers compile. After the compiler repair, nine targeted Java and
+46 affected LSP tests pass. Selected editor acceptance is recorded below.
+
+Validation also corrected declaring-model selection across consumer snapshots, preserved explicit
+import aliases while renaming their imported targets, and coalesced same-position qualification
+insertions/name replacements for clients. The fresh reverse-refactoring test keeps the existing
+uncaptured-resource refusal: moving a root back into its pinned resource directory is not proven
+when that incoming tree was outside the resource snapshot. Host Undo instead restores the stored
+transaction, including the original resource policy, and is tested separately in X170.
+
+Final selected acceptance for this continuation:
+
+- VS Code `run-TjE279`: X161/X163/X169–X172 all pass, zero extension errors and no compiler
+  internal-error markers in the saved language-server log.
+- IntelliJ `run-14394987299477639656`: START and those six cases all pass; one JUnit test,
+  zero failures/errors/skips and no IDE failures. The saved server/IDE logs contain no internal
+  error markers. Closed source/resource contents are checked on disk after Move, Undo and Redo.
+- Both runs use shared catalog SHA-256
+  `dbd180cf17d9cde7e5e9820bf4277c9caaa1874af314aec89e9ee62b47414c73` (177 scenarios total).
+  These six selected cases do not establish full-catalog acceptance.
+- The first IntelliJ run, `run-8269964736389146880`, failed X169 with stale closed-file contents;
+  five other selected cases passed. Preserve it as the UP21 failure receipt, not a successful gate.
+- Root, LSP and IntelliJ read-only Spotless checks pass. All tested changes remain local on errs.
+
+Required correction/extraction map:
+
+| Commit | Keep with | Reason |
+| --- | --- | --- |
+| `494a18f6c` | `679bb8269`, `c61003890`, `345c32b87` and X169 data | Canonical declaration selection, explicit/implicit imports, inline collision guard, canonical resource assertions and the documented reverse-resource refusal. |
+| `2ce6029cf` | IntelliJ portions of `88df8e6db` | Fix the New name field's Swing name collision; UP21 persistence for only affected closed documents, ordered Undo/Redo, and stronger native disk assertions. |
+| `2793efdd9` | Independent compiler fix for issue #667 | Eleven-line structure-registration guard plus `CompilerDuplicateTypeTest`; validated directly on master and on errs. No LSP or embedding API dependency. |
+
+The only Java AST change in this continuation is the independent duplicate-declaration repair.
+Structure registration is its natural home: it rejects invalid declarations before ambiguous
+assembler siblings reach name/type resolution. It adds no AST fields, accessors, partial/LSP hooks,
+cloning responsibilities or embedding API. The relocation and host repairs remain Kotlin-side.
+
+L62 remains open for unproven empty namespaces, cross-module type ownership moves,
+commented/specialized qualifications, overlapping companion operations, uncaptured incoming
+resources, unsupported annotation/type/callable routes and unconfigured consumers. Binary
+contracts remain read-only; compiler refusal cannot veto arbitrary VS Code Explorer moves.

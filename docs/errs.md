@@ -2721,3 +2721,31 @@ required proof correction and separately extractable harness repair.
 L62 stays partial: unsupported annotation constants/type shapes, whole-relational annotations,
 wider escaped/generated transformations and broader relocation remain open. Binary contracts
 remain read-only; unconfigured consumers remain unknown.
+
+
+October 3 L62 combined-relocation continuation: compiler mode can rename a type while moving it
+between proven namespaces in one module, relocate and rename explicit module roots with their
+dependency/resource settings, and plan interacting type moves against one final graph. Explicit
+import aliases keep their names; imported targets, bare uses, constructors and closed consumers
+follow the renamed identity. Inline collisions refuse before compilation. Shared X169–X172 and
+both native drivers cover these paths, companion resources and Undo/Redo.
+
+The combined gate passes 222 backend and seven IntelliJ unit tests, without failures/errors/skips.
+VS Code `run-TjE279` and IntelliJ `run-14394987299477639656` pass X161/X163/X169–X172 (plus
+IntelliJ START), with no editor/internal-error log markers. Initial IntelliJ X169 failed because
+LSP4IJ left edited closed buffers unsaved; UP21 now persists only affected closed documents at the
+end of apply/Undo/Redo. Assertions check disk contents and diagnostics, not only editor buffers.
+Formatting checks pass. This is selected acceptance, not a full-catalog run or complete L62.
+
+The same validation exposed [compiler issue #667](https://github.com/xtclang/xvm/issues/667),
+reproduced through the CLI on clean master `7a4e29e57`. Unconditional duplicate type declarations
+became an ambiguous CompositeComponent and crashed a ClassStructure cast. Separate commit
+`2793efdd9` reports existing COMPILER-148 during structure registration; it adds no LSP/partial
+AST hooks or embedding API. The unit test has two failing cases on master and all four pass with
+the fix, including conditional and distinct-scope controls; 108 selected master Java tests pass.
+Nine targeted Java and 46 affected LSP tests also pass on errs after this compiler repair.
+
+The integration plan maps the four implementation checkpoints, required correction `494a18f6c`
+and IntelliJ correction `2ce6029cf` for future PR extraction. Broader L62 exclusions remain
+explicit, including uncaptured incoming resources: a fresh reverse refactoring can refuse while
+Undo still restores its previously proven transaction. No changes have been pushed in this batch.
