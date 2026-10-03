@@ -413,8 +413,10 @@ VS Code receipts above.
   relocation with persisted Undo/Redo; all pass selected acceptance in both editors. The
   [graph-relocation receipt](#l62-explicit-source-graph-relocation-2026-10-02) records the exact
   boundaries and UP19 connection repair. The October 3 continuation adds bounded union alternatives
-  and recursive written contracts at callable sites (X164/X165). Generic/annotated alternatives,
-  wider generated routes, combined rename/move and interacting qualification plans remain open.
+  and recursive written contracts at callable sites (X164/X165). The next slice adds bounded
+  generic/formal/annotated operands and nested union delegation (X166–X168); see its receipt below.
+  Unsupported annotation constants/type shapes, wider generated routes, combined rename/move and
+  interacting qualification plans remain open.
 - [ ] **L63 — Semantic quick fixes and refactorings.** Individual and all-required-member
   implement/override actions are implemented at a class name for inherited source and read-only
   binary/XDK contracts. Compiler-selected signatures include generic/conditional/multiple returns,
@@ -7752,7 +7754,7 @@ reproducible, and reconcile completed versus remaining scope. Validation is batc
 
    | Scope | Implemented and proven | Concrete remaining work |
    | --- | --- | --- |
-   | L62 rename | Recorded source families, primary/ordinary parameter slots, lambdas, escaped method values, packages/modules/companions, bounded cross-package qualification, host-persisted graph relocation and bounded union/cyclic callable-site proof | Combined root rename/move, unsupported qualification syntax, interacting move plans, generic/annotated union receivers and wider generated routes; characterize each refused route before extending proof. External consumers omitted from the configured graph remain an explicit unknown boundary. |
+   | L62 rename | Recorded source families, primary/ordinary parameter slots, lambdas, escaped method values, packages/modules/companions, bounded cross-package qualification, host-persisted graph relocation and bounded union/cyclic callable-site proof | Combined root rename/move, unsupported qualification syntax, interacting move plans, unsupported annotation constants/type shapes and wider generated routes; characterize each refused route before extending proof. External consumers omitted from the configured graph remain an explicit unknown boundary. |
    | L63 semantic actions | Import fixes and compiler-proven implement/override, including bundled contracts | Whole-return-expression extraction and adjacent single-use returned-local inline are implemented in the continuations below. General statement/context extraction, missing-declaration fixes, extract method, broader inline and safe delete remain separate transformations. Each needs its own side-effect/capture/caller-closure design and positive/refusal tests. |
    | L64 completion/signatures | Import edits, syntax names/templates, guarded bounds and compiler-fitted literals/values; latest continuation adds wrapped names, enclosing-instance arguments and real platform anonymous-body recovery | Latest continuation below gives the exact supported forms, evidence and conservative exclusions. Remaining expansion includes inferred/ambiguous local names, arbitrary value synthesis and general special-this enumeration outside calls; these are not counted as implemented. |
    | L65 navigation/classification | Source/bundled navigation, recorded hierarchy/composition relations and resolved tokens | Conditional/synthetic/native/redirect routes and ambiguous binary source metadata need individual fixtures. Runtime function targets cannot be invented by a static hierarchy. |
@@ -8959,9 +8961,12 @@ Remaining implementation work in L62:
   including receiver/delegate provenance and finite back edges. Validation is recorded in the
   October 3 continuation below. Generated constructors remain construction identities, not new
   editable method declarations.
-- [ ] Extend callable proof to parameterized/formal/annotated union receivers and union dispatch
-  nested under generated delegation. Preserve substitutions and every alternative before removing
-  those refusals; do not infer runtime-only implementations.
+- [x] Extend callable proof to bounded parameterized/formal/annotated union operands and union
+  dispatch nested under generated delegation. Preserve substitutions and every alternative; do not
+  infer runtime-only implementations. See the substituted-receiver receipt below.
+- [ ] Characterize unsupported annotation constant kinds, dependent/dynamic type shapes and
+  annotations around whole relational types before extending their proof. Wider escaped-value and
+  generated accessor/constructor transformations remain separate audits.
 
 Omitted consumers are an explicit project configuration boundary, not a feature that can be
 completed by guessing other repositories. Binary contracts remain read-only by design. The audit
@@ -9167,8 +9172,9 @@ without a `MethodStructure`; the audit verifies its original declaration identit
 `construct` is syntax, not a user-selected name. Existing primary-property/named-label, lambda and
 escaped-value support remains attached to written
 identities (shared X119/X120/X121). Native methods and generated field accessors do not gain
-invented editable bodies. Flat dispatch continues to reject union routes: alternatives belong in
-the site proof, not in one override chain.
+invented editable bodies. At this checkpoint flat dispatch rejected union routes. The substituted-receiver continuation
+below replaces that restriction with structured branches shared by site and declaration proofs;
+it still does not flatten alternatives into one override chain.
 
 Shared X164 renames independent methods coupled by a closed cross-module union consumer. Shared
 X165 renames a written interface contract through mutual delegation. Both drivers check exact
@@ -9178,9 +9184,11 @@ proofs (lost alternative, changed receiver, missing source, removed delegate/bac
 
 Remaining L62 callable boundaries:
 
-- [ ] Parameterized, formal and annotated union receivers require detached substitution/type proof.
-- [ ] Union dispatch below generated delegation requires nested alternative-route proof.
-- [ ] Audit implicit receiver and wider escaped-value compositions before claiming those shapes.
+- [x] Bounded parameterized/formal/annotated union operands now have detached substitution/type
+  proof; see the substituted-receiver continuation below for supported shapes and validation.
+- [x] Union dispatch below generated delegation retains nested alternative routes.
+- [ ] Audit wider escaped-value compositions; implicit calls through a generated delegate are
+  covered by the continuation, not every implicit receiver shape.
 - [ ] Broader generated accessor/constructor transformations need written source semantics; merely
   exposing generated runtime bodies is not sufficient.
 - Binary/XDK contracts remain read-only; consumers outside the configured graph are not inferred.
@@ -9209,3 +9217,70 @@ or internal-error markers in the saved IDE/server logs. Root/LSP/IntelliJ Spotle
 The current catalog has **170 scenarios**, SHA-256
 `82824c412b3e5636a0ce2335de726d0e6f6021bb1db1b4dd75e85c09b59fa555`.
 No full-catalog or complete-L62 acceptance is claimed.
+
+
+### L62 substituted receivers and nested union delegation (2026-10-03)
+
+Implementation checkpoints, followed by one combined regression gate:
+
+| Slice | Commit | Scope |
+| --- | --- | --- |
+| Receiver type proof | `f68f5df1e` | Detach generic arguments, nested type shapes, annotations and supported annotation values; translate source identities inside types during edits. |
+| Nested union routes | `edc139e96` | Keep branch receivers and dispatch separately through delegate layers, in both callable-site and declaration dispatch proofs. |
+| Readable fixtures | `7b0756e5c` | Multiline Kotlin raw-string fixtures; caret lookup and edit application use real line/column coordinates. |
+| Shared acceptance | `89d6af021` | X166 generic union, X167 annotated union and X168 nested union delegation; both editor drivers, closed consumers and Undo. |
+| Validation correction | `d57d5a215` | Required with both implementation slices: selected identities with nested substitutions, relational delegate access and typed cycle anchors; valid annotation fixtures and fresh-pool regressions. |
+| Native harness repair | `61a95d9ee` | Test-only modal-safe focus dispatch; retain UP20 evidence and focused native acceptance. Independently extractable from the compiler proofs. |
+
+The compiler's existing type/annotation and MethodBody APIs provide the required facts. No Java
+AST field or public embedding accessor is added. Detached type structure records parameter order,
+source/binary declaration identities and annotation constructor values; a printed type name is
+not an equivalence key. Source type renames translate nested declaration anchors through the same
+edit plan as ordinary name uses. Relational union/intersection operands compare as alternatives;
+difference operands retain order. Unsupported type shapes or annotation constants remain unproven.
+
+Dispatch now carries union branches alongside the written contract set. That contract set joins
+rename families, while the branches independently preserve each receiver, delegated property path
+and recursive closing edge. The shared dispatcher is no longer a flat-chain-only API. Member
+generation cannot erase a branch via its ordinary composed-member bridge. Go to Implementation
+continues to require a written executable target; this does not infer runtime targets.
+
+The backend additions cover generic and annotated receiver rename, nested substitutions, source
+type argument rename, formal arguments, two delegate layers, generic delegates, implicit calls,
+a recursive alternative and a colliding branch. Adversarial facts remove/change type arguments,
+annotation values, alternative targets and delegated receivers, requiring proof rejection. Large
+source fixtures use `"""...""".trimIndent()`; no line-zero assumptions remain in these three suites.
+
+Validation found three additional boundaries: a relational receiver cannot be wrapped in a
+private class-access view; a method declaration can retain a formal return even when its receiver
+has a concrete signature; and a delegation cycle can close on a union, not only a class. The fixes
+retain the relational view, resolve the selected method by compiler identity in receiver context,
+and preserve a typed cycle anchor. Closing-contract inspection walks only the finite MethodBody
+tree. There is no name-only lookup or repeated traversal around a delegate cycle.
+
+Remaining refusals include unsupported annotation constants (for example aggregate/floating
+values), dependent/dynamic type shapes and uncharacterized annotations around whole relational
+types. Wider escaped-value and generated accessor/constructor transformations remain open.
+Binary contracts stay read-only and omitted source consumers remain unknown.
+
+The combined gate passes **228 tests across 21 suites**, with zero failures/errors/skips, and both
+editor drivers compile. Root/LSP/IntelliJ Spotless checks pass. VS Code 1.140.0 `run-oSVuMJ`
+passes **X164–X168** (1,985 / 1,064 / 1,011 / 1,042 / 1,127 ms), with zero reported extension
+errors and no compiler internal-error markers in the saved log.
+
+The first IntelliJ attempt, `run-6126665495647161203`, passed START and X164, then stalled at
+X165's unsubmitted Rename dialog. Live thread evidence identified the Driver's two-step modality
+race during a focus observation; the compiler was idle and preparation took about 1 ms. The test
+IDE was stopped after capturing evidence, so this is a failed receipt. The test-only repair is
+tracked as [UP20](errs-upstream-issues.md#up20-test-driver-focus-calls-race-with-a-newly-opened-modal-dialog).
+Repaired IntelliJ 2026.2.3 / LSP4IJ 0.21.0 `run-907034856191389577` passes **START and
+X164–X168** (20,510 / 3,726 / 1,642 / 1,651 / 1,592 / 1,707 ms), with Ultimate disabled.
+Dedicated focus/replay regression `run-7549109475022481665` passes START and START_FOCUS
+(20,372 / 6,578 ms). JUnit reports **two passing suite tests**, zero failures/errors/skips.
+Both runs have no reported IDE failures or internal-error markers in saved IDE/server logs.
+Root/LSP/IntelliJ formatting checks pass after the harness repair. No compiler behavior changed
+after the 228-test backend gate.
+
+The current catalog has **173 scenarios**, SHA-256
+`fa2c3d1f8dd1cf3161ed561723af9af46462b0752e05c06b7492f738a6638e1e`.
+This is selected validation, not complete L62 or full-catalog acceptance.

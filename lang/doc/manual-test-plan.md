@@ -1,11 +1,18 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **170 scenarios**: X1–X165, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **173 scenarios**: X1–X168, CFG1–CFG3 and 7a.8/7a.9.
+The latest selected gate passes **X164–X168** in VS Code `run-oSVuMJ` and IntelliJ
+`run-907034856191389577` (START also passes), including generic/annotated receivers and nested
+union delegation. Both exercise exact cross-file rename, closed consumers and Undo. The combined
+backend gate passes 228 tests without failures/errors/skips. IntelliJ's earlier X165 stall was a
+test Driver modality race (UP20); the repaired dedicated focus/replay test also passes in
+`run-7549109475022481665`. Successful editor runs report no IDE/compiler internal errors.
+These are selected receipts, not a full 173-case run.
 X119/X120/X121/X164/X165 pass in VS Code `run-VqFiDW` and IntelliJ
 `run-12344641320847299097` (START also passes, zero IDE errors). These cover primary-header
 properties, lambda/escaped-method parameters and the new union/cyclic callable renames with
 closed consumers and Undo. The related backend gate passes 202 tests without failures/errors/skips.
-This is selected acceptance, not a full 170-case run.
+That earlier receipt was selected acceptance, not a full then-170-case run.
 X161 passes in VS Code `run-KieFUI` and IntelliJ `run-15583928886685829346` (START also passes,
 no IDE errors): cross-package type Move, closed-consumer qualification edits, companion resources,
 and one Undo/Redo. The final related backend gate passes 118 tests with no failures/errors/skips.
@@ -1298,7 +1305,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X165 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X168 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -3086,3 +3093,18 @@ The October 3 selected gate covers X119/X120/X121/X164/X165 to check existing ge
 lambda and escaped-method cases alongside the new callable proofs. All five pass in VS Code
 `run-VqFiDW` and IntelliJ `run-12344641320847299097` (including START, no IDE errors). Exact
 receipts, the catalog hash and remaining L62 exclusions are in the integration plan.
+
+
+| Case | Manual action | Expected result |
+| --- | --- | --- |
+| X166 | Open the shared Library.x, keep Consumer.x closed and rename `First<T>.read` to `fetch`. Inspect both generic declarations and the `First<Int> \| Second<Int>` consumer, then Undo. | Both written methods and the call change; concrete type arguments remain unchanged, diagnostics clear and one Undo restores both files exactly. |
+| X167 | Open shared Library.x and rename `First.read` to `fetch`, keeping the annotated Consumer.x closed. Inspect its `@lib.Mark("one")` and `@lib.Mark("two")` receiver types, then Undo. | Both methods and the union call change; annotation identities/arguments stay unchanged. Diagnostics clear and Undo restores both files. |
+| X168 | Open shared Library.x and rename `Api.read` to `fetch`, keeping Consumer.x closed. Inspect First/Second and the call through Outer/Forward, then Undo. | The interface, both implementations and delegated call change together. Delegate receiver names/types remain unchanged, diagnostics clear and Undo restores both files. |
+
+X166–X168 have shared fixtures and implementations in both drivers. All three pass alongside
+X164/X165 in the latest selected runs recorded at the top of this file. Exact receipts, the shared
+catalog hash, proof boundaries and the failed/repaired IntelliJ UP20 evidence are in the
+[integration plan](../../docs/errs-integration-plan.md#l62-substituted-receivers-and-nested-union-delegation-2026-10-03).
+For manual focus coverage, switch away while Rename is opening, return to its dialog and submit
+once; inspect the exact edits and Undo once. The native harness now observes focus while the
+dialog is open without blocking on its modality or replaying the Rename action.
