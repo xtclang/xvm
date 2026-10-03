@@ -1595,3 +1595,26 @@ across both drivers, alongside existing X119/X120/X121 regression coverage. The 
 five selected cases pass in VS Code `run-VqFiDW` and IntelliJ `run-12344641320847299097` (START
 also passes; no IDE failures or internal-error log markers). See the October 3 integration-plan
 section for commit dependencies and remaining generic/generated-route boundaries. L62 remains open.
+
+
+October 3 L62 substituted-receiver continuation: detached callable facts now retain ordered
+generic arguments, source formals, annotation identities and supported annotation values. Nested
+union delegation preserves each branch's receiver/contract/property route and typed cycle anchors.
+The adapter uses existing compiler APIs; no Java AST state or embedding API is added. Validation
+corrected identity lookup for concrete nested substitutions, access handling on relational delegate
+receivers and cycles closing on a union. Large fixtures use multiline Kotlin raw strings with
+line-aware caret/edit helpers.
+
+The combined gate passes 228 backend tests across 21 suites with zero failures/errors/skips; both
+drivers compile and formatting checks pass. X164–X168 pass in VS Code `run-oSVuMJ`. IntelliJ's
+first selected attempt stalled in the test Driver's focus call while Rename was open; compiler
+preparation had already finished and the worker was idle. The test-only modal dispatch repair and
+its acceptance are tracked under UP20 in `errs-upstream-issues.md`. Repaired IntelliJ
+`run-907034856191389577` passes START and X164–X168; `run-7549109475022481665` passes
+the dedicated focus/replay guard test. JUnit confirms two passing tests without failures/errors/skips;
+IDE/server logs contain no internal-error markers. The integration plan maps the local checkpoints,
+required proof correction and separately extractable harness repair.
+
+L62 stays partial: unsupported annotation constants/type shapes, whole-relational annotations,
+wider escaped/generated transformations and broader relocation remain open. Binary contracts
+remain read-only; unconfigured consumers remain unknown.
