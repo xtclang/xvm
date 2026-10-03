@@ -9284,3 +9284,29 @@ after the 228-test backend gate.
 The current catalog has **173 scenarios**, SHA-256
 `fa2c3d1f8dd1cf3161ed561723af9af46462b0752e05c06b7492f738a6638e1e`.
 This is selected validation, not complete L62 or full-catalog acceptance.
+
+
+### L62 combined rename and relocation (2026-10-03)
+
+Four local implementation checkpoints precede one combined validation gate:
+
+| Slice | Commit | Scope |
+| --- | --- | --- |
+| Type rename plus move | `679bb8269` | Combine source-identity rename with namespace prefix edits, companion paths and final-graph proof. Prefix insertion/token replacement remain separate for proof and coalesce for editor application. |
+| Module-root rename plus relocation | `c61003890` | Rename declarations/imports and graph dependency names together, retain domain suffixes and preserve default/custom/disabled resources. |
+| Interacting batch moves | `345c32b87` | Compute final type qualifications against all requested destinations together; preserve mutual references, require disjoint edits and reject the whole batch on failure. |
+| Editor acceptance | Current checkpoint | Single-file New name field in IntelliJ Move, shared X169–X172, both drivers and manual steps. |
+
+This extends the same-module, compiler-proven destination namespace path. It does not create a
+namespace from a guessed directory or rename the `construct` keyword. Existing-source/destination
+collisions, symlinks and overlapping companion/parent-child operations remain refusals. All known
+source consumers participate in compilation and binding/dispatch proof; unconfigured consumers
+remain unknown. Explicit module graph replacement still requires a host that persists the proposal.
+
+Both editors share the existing `xtc/renameFiles` protocol. IntelliJ exposes a new basename for one
+selected source; its batch Move preserves individual basenames. The protocol can express a batch
+with individually renamed entries. X172 checks refusal on each installed client connection without
+applying a host move; VS Code's inability to veto arbitrary Explorer moves is unchanged.
+
+No Java AST field, accessor or embedding API is added. Larger new test fixtures use raw multiline
+Kotlin strings. Regression and native validation are pending; prior receipts do not cover this batch.

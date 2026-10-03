@@ -2,6 +2,7 @@ package org.xtclang.idea.playbook
 
 import com.google.gson.JsonElement
 import com.google.gson.JsonParser
+import com.intellij.driver.client.Remote
 import com.intellij.driver.client.service
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.FileEditorManager
@@ -16,7 +17,7 @@ import java.nio.file.Path
 import kotlin.time.Duration.Companion.seconds
 
 internal fun ParityScenarios.typeMoveCases() {
-    listOf("X161", "X162", "X163").forEach { id ->
+    listOf("X161", "X162", "X163", "X169", "X170", "X171", "X172").forEach { id ->
         case(id) { data ->
             val files = data["files"].rows()
             files.forEach { write(it.string("file"), it.string("source")) }
@@ -34,18 +35,51 @@ internal fun ParityScenarios.typeMoveCases() {
                     }
                 }
             }
+            val moves =
+                if (data.has("moves")) {
+                    data["moves"].rows().map { it.string("from") to it.string("to") }
+                } else {
+                    listOf(data.string("from") to data.string("to"))
+                }
+            if (data["refused"]?.asBoolean == true) {
+                val protocol = ClientProtocol(driver)
+                val beforeGraph = driver.utility(CompilerSettingsPage::class).content(driver.singleProject())
+                val proposal =
+                    protocol.query(
+                        "xtc/renameFiles",
+                        mapOf(
+                            "files" to
+                                moves.map { (from, to) ->
+                                    mapOf(
+                                        "oldUri" to directory.resolve(from).toUri().toString(),
+                                        "newUri" to directory.resolve(to).toUri().toString(),
+                                    )
+                                },
+                        ),
+                    )
+                check(proposal.isJsonNull) { "A colliding member must reject the entire proposal" }
+                files.forEach { check(Files.readString(directory.resolve(it.string("file"))) == it.string("source")) }
+                moves.forEach { (_, to) -> check(!Files.exists(directory.resolve(to))) }
+                check(driver.utility(CompilerSettingsPage::class).content(driver.singleProject()) == beforeGraph)
+                clean(document)
+                return@case
+            }
             val target = directory.resolve(data.string("destination"))
             refresh(target)
             with(driver) {
                 withContext(OnDispatcher.EDT) {
                     utility(FileTreeOperations::class).move(
                         singleProject(),
-                        listOf(directory.resolve(data.string("from")).toString()),
+                        moves.map { directory.resolve(it.first).toString() },
                         target.toString(),
                     )
                 }
                 val dialog = ui.dialog(title = "Move Ecstasy Sources")
                 awaitUi("source Move dialog", 45.seconds) { dialog.present() }
+                if (data.has("newName")) {
+                    val field = cast(dialog.x { byAccessibleName("New name") }.component, MoveNameField::class)
+                    withContext(OnDispatcher.EDT) { field.setText(data.string("newName")) }
+                }
                 withContext(OnDispatcher.EDT) { cast(dialog.button("Refactor").component, NativeButton::class).doClick() }
 
                 fun verify(moved: Boolean) {
@@ -131,4 +165,9 @@ internal fun ParityScenarios.typeMoveCases() {
             }
         }
     }
+}
+
+@Remote("javax.swing.JTextField")
+private interface MoveNameField {
+    fun setText(text: String)
 }
