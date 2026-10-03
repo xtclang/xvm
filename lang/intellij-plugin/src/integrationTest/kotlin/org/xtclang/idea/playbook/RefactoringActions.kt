@@ -47,6 +47,8 @@ fun Driver.rename(
         restorePopupFocus(editor.editor)
         false
     }
+    // Exercise the focus observation with the actual modal dialog already open as well.
+    restorePopupFocus(editor.editor)
     fillRenameDialog(replacement)
 }
 
