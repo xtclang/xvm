@@ -8,6 +8,7 @@ internal object XdkTypeMoves {
     data class Proposal(
         val edits: Map<String, List<XdkRename.Edit>>,
         val resources: Map<String, String>,
+        val qualifications: Map<String, List<XdkRename.Edit>>,
     )
 
     fun plan(
@@ -18,7 +19,7 @@ internal object XdkTypeMoves {
         directories: Set<File>,
         project: XdkProject,
     ): Proposal? {
-        if (source.name != destination.name || source.extension != "x" || !destination.parentFile.isDirectory) return null
+        if (source.extension != "x" || destination.extension != "x" || !destination.parentFile.isDirectory) return null
         val owner =
             facts.typePaths.singleOrNull {
                 val target = it.target as? ProofIdentity.Source
@@ -31,7 +32,9 @@ internal object XdkTypeMoves {
             } ?: return null
         val movedPath = namespace.path + source.nameWithoutExtension
         val moves = XdkSourceMoves.plan(source, destination, texts, directories) ?: return null
-        val edits =
+        val rename =
+            XdkRename.fileNamePlan(facts, texts, source.path, source.nameWithoutExtension, destination.nameWithoutExtension) ?: return null
+        val qualifications =
             facts.typeNames
                 .mapNotNull { name ->
                     val file = name.location.sourceName ?: return@mapNotNull null
@@ -85,8 +88,12 @@ internal object XdkTypeMoves {
                     file to XdkRename.Edit(start, prefixEnd, prefix)
                 }.groupBy({ it.first }, { it.second })
                 .mapValues { (_, value) -> value.distinct().sortedBy { it.start } }
-        if (edits.values.any { changes -> changes.zipWithNext().any { (a, b) -> a.end > b.start || a.start == b.start } }) return null
-        return Proposal(edits, moves.resources)
+        val edits =
+            (qualifications.entries + rename.edits.entries)
+                .groupBy({ it.key }, { it.value })
+                .mapValues { (_, changes) -> changes.flatten().distinct().sortedWith(compareBy({ it.start }, { it.end })) }
+        if (edits.values.any { !XdkRename.disjoint(it) }) return null
+        return Proposal(edits, moves.resources, qualifications)
     }
 
     private fun directory(identity: ProofIdentity): File? =

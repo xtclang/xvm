@@ -691,17 +691,14 @@ internal class XdkProjectQueries(
                 }
         val qualifications =
             typeMoves
-                .flatMap { it.edits.entries }
+                .flatMap { it.qualifications.entries }
                 .groupBy({ it.key }, { it.value })
                 .mapValues { (_, edits) -> edits.flatten().distinct() }
         val edits =
-            (renamed.entries + qualifications.entries)
+            (renamed.entries + typeMoves.flatMap { it.edits.entries })
                 .groupBy({ it.key }, { it.value })
-                .mapValues { (_, edits) -> edits.flatten().distinct().sortedBy { it.start } }
-        if (edits.values.any { changes ->
-                changes.zipWithNext().any { (first, next) -> first.end > next.start || first.start == next.start }
-            }
-        ) {
+                .mapValues { (_, edits) -> edits.flatten().distinct().sortedWith(compareBy({ it.start }, { it.end })) }
+        if (edits.values.any { !XdkRename.disjoint(it) }) {
             return null
         }
         val plan = XdkRename.Plan(texts, edits, paths, qualifications = qualifications)
