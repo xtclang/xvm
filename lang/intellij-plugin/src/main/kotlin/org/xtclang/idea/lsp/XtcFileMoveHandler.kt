@@ -81,7 +81,7 @@ class XtcFileMoveHandler : MoveHandlerDelegate() {
                 )
             }
 
-        private val name =
+        private val nameField =
             JBTextField(files.first().name).apply {
                 accessibleContext.accessibleName = "New name"
                 document.addDocumentListener(
@@ -102,7 +102,7 @@ class XtcFileMoveHandler : MoveHandlerDelegate() {
                 add(destination)
                 if (files.size == 1) {
                     add(JLabel("New name:"))
-                    add(name)
+                    add(nameField)
                 }
             }
 
@@ -115,7 +115,7 @@ class XtcFileMoveHandler : MoveHandlerDelegate() {
         private fun targets(): Map<Path, Path>? =
             runCatching {
                 val directory = Path.of(destination.text).toAbsolutePath().normalize()
-                FileMoveTargets.inDirectory(files.map { Path.of(it.path) }, directory, name.text.takeIf { files.size == 1 })
+                FileMoveTargets.inDirectory(files.map { Path.of(it.path) }, directory, nameField.text.takeIf { files.size == 1 })
             }.getOrNull()
 
         override fun doAction() {
