@@ -5503,9 +5503,9 @@
         "files": [
           {
             "file": "Library.x",
-            "source": "module Library {\n    class First { Int read() = 1; }\n    class Second { Int read() = 2; }\n    mixin Mark(String label) into Object {}\n}",
+            "source": "module Library {\n    class First { Int read() = 1; }\n    class Second { Int read() = 2; }\n    annotation Mark(String label) into Object {}\n}",
             "destination": "Library.x",
-            "expected": "module Library {\n    class First { Int fetch() = 1; }\n    class Second { Int fetch() = 2; }\n    mixin Mark(String label) into Object {}\n}"
+            "expected": "module Library {\n    class First { Int fetch() = 1; }\n    class Second { Int fetch() = 2; }\n    annotation Mark(String label) into Object {}\n}"
           },
           {
             "file": "Consumer.x",

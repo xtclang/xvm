@@ -252,7 +252,7 @@ class XdkUnionRenameTest {
                 module App {
                     class First { Int read() = 1; }
                     class Second { Int read() = 2; }
-                    mixin Mark(String label) into Object {}
+                    annotation Mark(String label) into Object {}
                     Int use((@Mark("one") First) | (@Mark("two") Second) target) = target.read();
                 }
                 """.trimIndent(),
@@ -260,7 +260,7 @@ class XdkUnionRenameTest {
                 module App {
                     class First { Int read() = 1; }
                     class Second { Int read() = 2; }
-                    mixin Loud into First { @Override Int read() = super() + 1; }
+                    annotation Loud into First { @Override Int read() = super() + 1; }
                     Int use((@Loud First) | Second target) = target.read();
                 }
                 """.trimIndent(),

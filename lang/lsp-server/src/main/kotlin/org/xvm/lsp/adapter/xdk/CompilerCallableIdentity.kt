@@ -21,7 +21,11 @@ internal fun callableIdentity(
     if (errors.isAbortDesired || receiver.isFormalType || receiver.containsUnresolved()) return null
     val union = receiver.resolveTypedefs().removeAccess() is UnionTypeConstant
     val info = ExecutionTrace.api("TypeConstant.ensureTypeInfo(rename-callable)") { receiver.ensureTypeInfo(errors) }
-    val selected = info.getMethodBySignature(method.signature) ?: return if (union) ProofIdentity.Unproven() else null
+    // The declaration can still have a formal return (First.T). Resolve its nested identity
+    // against this receiver before comparing concrete signatures.
+    val selected =
+        info.getMethodById(method) ?: info.getMethodBySignature(method.signature)
+            ?: return if (union) ProofIdentity.Unproven() else null
     val dispatch = info.dispatch(selected, errors)
     if (union) {
         if (!dispatch.supported) return ProofIdentity.Unproven()
@@ -42,7 +46,13 @@ internal fun CompilerDispatch.proof(
         owner,
         methods.map(identity),
         delegates.map(identity),
-        cycles.map { ProofIdentity.Composed(identity(it.owner), it.contracts.map(identity), emptyList()) },
+        cycles.map {
+            ProofIdentity.Composed(
+                receiverIdentity(it.receiver, identity) ?: ProofIdentity.Unproven(),
+                it.contracts.map(identity),
+                emptyList(),
+            )
+        },
         alternatives.map { it.proof(identity) },
     )
 }

@@ -163,7 +163,7 @@ class CompilerDispatchRoutesTest {
             assertThat(route.methods.map { it.namespace.name to it.name }).containsExactly("Api" to "read")
             assertThat(route.delegates.map { it.name }).containsExactly("next")
             val cycle = route.cycles.single()
-            assertThat(cycle.owner.name).isEqualTo("Loop")
+            assertThat(cycle.receiver.getSingleUnderlyingClass(false).name).isEqualTo("Loop")
             assertThat(cycle.contracts.map { it.namespace.name to it.name }).containsExactly("Api" to "read")
             assertThat(owner.methodImplementation(method, errors)).isNull()
         }
