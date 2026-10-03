@@ -6,22 +6,21 @@ import org.xvm.asm.constants.ClassConstant
 import org.xvm.asm.constants.MethodBody.Implementation
 import org.xvm.asm.constants.MethodConstant
 import org.xvm.asm.constants.MethodInfo
-import org.xvm.asm.constants.PureIdentityConstant
 import org.xvm.asm.constants.TypeConstant
 import org.xvm.asm.constants.UnionTypeConstant
 import org.xvm.lsp.util.ExecutionTrace
 
 /**
- * A union has alternative receiver/dispatch chains, not one override chain. Copy the compiler's
- * selected legs before releasing its pool; never pick a leg by name or invent a runtime target.
+ * Preserve alternative receivers and recursive dispatch at the call site. A method constant can
+ * identify one written contract shared by different receivers; it cannot prove the site's route.
+ * Copy the compiler's selected legs before releasing its pool, without inventing runtime targets.
  */
-internal fun unionMethodIdentity(
+internal fun callableIdentity(
+    receiver: TypeConstant,
     method: MethodConstant,
     errors: ErrorListener,
     identity: (Constant) -> ProofIdentity,
 ): ProofIdentity? {
-    val owner = method.namespace as? PureIdentityConstant ?: return null
-
     fun route(
         receiver: TypeConstant,
         selected: MethodInfo,
@@ -40,7 +39,7 @@ internal fun unionMethodIdentity(
         // Keep that boundary explicit instead of collapsing e.g. Box<String> and Box<Int>.
         if (type.format != Constant.Format.TerminalType) return null
         val receiverClass = type.definingConstant as? ClassConstant ?: return null
-        val info = ExecutionTrace.api("TypeConstant.ensureTypeInfo(rename-union-leg)") { receiver.ensureTypeInfo(errors) }
+        val info = ExecutionTrace.api("TypeConstant.ensureTypeInfo(rename-callable-leg)") { receiver.ensureTypeInfo(errors) }
         val dispatch = info.dispatch(selected, errors)
         if (!dispatch.supported || dispatch.methods.isEmpty()) return null
         return ProofIdentity.Composed(
@@ -53,7 +52,12 @@ internal fun unionMethodIdentity(
         )
     }
 
-    val info = ExecutionTrace.api("TypeConstant.ensureTypeInfo(rename-union)") { owner.type.ensureTypeInfo(errors) }
-    val selected = info.getMethodById(method) ?: return null
-    return route(owner.type, selected, 0)
+    if (errors.isAbortDesired || receiver.isFormalType || receiver.containsUnresolved()) return null
+    val union = receiver.resolveTypedefs().removeAccess() is UnionTypeConstant
+    val info = ExecutionTrace.api("TypeConstant.ensureTypeInfo(rename-callable)") { receiver.ensureTypeInfo(errors) }
+    val selected = info.getMethodBySignature(method.signature) ?: return if (union) ProofIdentity.Unproven() else null
+    if (union) return route(receiver, selected, 0) ?: ProofIdentity.Unproven()
+    val dispatch = info.dispatch(selected, errors)
+    if (dispatch.cycles.isEmpty()) return null
+    return route(receiver, selected, 0) ?: ProofIdentity.Unproven()
 }
