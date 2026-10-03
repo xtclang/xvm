@@ -679,6 +679,10 @@ internal object XdkRename {
             val members: List<Target>,
             val delegates: List<Target>,
         ) : Target
+
+        data class Alternatives(
+            val targets: Set<Target>,
+        ) : Target
     }
 
     private fun composedTarget(
@@ -688,6 +692,12 @@ internal object XdkRename {
         translate: (String, Int) -> Int?,
     ): Target? {
         return when (identity) {
+            is ProofIdentity.Alternatives -> {
+                Target.Alternatives(identity.targets.mapTo(linkedSetOf()) {
+                    composedTarget(it, texts, moved, translate) ?: return null
+                })
+            }
+
             is ProofIdentity.Parameter -> {
                 composedTarget(identity.method, texts, moved, translate)?.let {
                     Target.Parameter(it, identity.index)
@@ -796,6 +806,7 @@ internal object XdkRename {
             if (identity is ProofIdentity.Directory) return Target.Directory(moved(identity.path))
             if (
                 identity is ProofIdentity.Composed ||
+                identity is ProofIdentity.Alternatives ||
                 identity is ProofIdentity.Super ||
                 identity is ProofIdentity.Receiver ||
                 identity is ProofIdentity.PrimaryConstructor ||
