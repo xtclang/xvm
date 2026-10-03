@@ -2,7 +2,6 @@ package org.xvm.lsp.adapter.xdk
 
 import org.xvm.asm.Constant
 import org.xvm.asm.ErrorListener
-import org.xvm.asm.constants.ClassConstant
 import org.xvm.asm.constants.MethodBody.Implementation
 import org.xvm.asm.constants.MethodConstant
 import org.xvm.asm.constants.MethodInfo
@@ -35,15 +34,12 @@ internal fun callableIdentity(
             val right = route(type.underlyingType2, union.unionRight, depth + 1) ?: return null
             return ProofIdentity.Alternatives(setOf(left, right))
         }
-        // Parameterized/formal/annotated receiver identity needs its own detached type proof.
-        // Keep that boundary explicit instead of collapsing e.g. Box<String> and Box<Int>.
-        if (type.format != Constant.Format.TerminalType) return null
-        val receiverClass = type.definingConstant as? ClassConstant ?: return null
+        val receiverProof = receiverIdentity(receiver, identity) ?: return null
         val info = ExecutionTrace.api("TypeConstant.ensureTypeInfo(rename-callable-leg)") { receiver.ensureTypeInfo(errors) }
         val dispatch = info.dispatch(selected, errors)
         if (!dispatch.supported || dispatch.methods.isEmpty()) return null
         return ProofIdentity.Composed(
-            identity(receiverClass),
+            receiverProof,
             dispatch.methods.map(identity),
             dispatch.delegates.map(identity),
             dispatch.cycles.map { cycle ->
