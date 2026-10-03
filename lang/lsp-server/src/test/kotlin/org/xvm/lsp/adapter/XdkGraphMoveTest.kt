@@ -295,6 +295,40 @@ class XdkGraphMoveTest {
         }
     }
 
+    @Test
+    fun `several relocated module renames update interdependent imports in one proposal`() {
+        write("old/Library.x", "module Library { class Item {} }")
+        write(
+            "old/Consumer.x",
+            """
+            module Consumer {
+                package lib import Library;
+                lib.Item make() = new lib.Item();
+            }
+            """.trimIndent(),
+        )
+        Files.createDirectories(directory.resolve("target"))
+        session { adapter ->
+            adapter.replaceSourceModules(
+                listOf(
+                    XdkSourceModule("Library", uri("old/Library.x")),
+                    XdkSourceModule("Consumer", uri("old/Consumer.x"), setOf("Library")),
+                ),
+            )
+            val moves = mapOf(uri("old/Library.x") to uri("target/Api.x"), uri("old/Consumer.x") to uri("target/Client.x"))
+            val proposal = requireNotNull(adapter.renameFilesProposalAsync(moves).get(30, SECONDS))
+            val graph = requireNotNull(proposal.sourceModules)
+            assertThat(graph.map { it.name }).containsExactlyInAnyOrder("Api", "Client")
+            assertThat(graph.single { it.name == "Client" }.dependencies).containsExactly("Api")
+            apply(proposal.edit)
+            adapter.replaceSourceModules(graph)
+            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(
+                Files.readString(directory.resolve("target/Client.x")),
+            ).contains("module Client", "package lib import Api", "lib.Item")
+        }
+    }
+
     private fun session(body: (XdkAdapter) -> Unit) {
         CompilerTestSupport.configure()
         directory = directory.toRealPath()
