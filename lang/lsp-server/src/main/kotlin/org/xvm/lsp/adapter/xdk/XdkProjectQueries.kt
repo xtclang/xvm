@@ -502,14 +502,13 @@ internal class XdkProjectQueries(
                 if (discoverImports) return null
                 XdkSourceMoves.plan(from, to, texts, directories) ?: return null
             }
-        val typeMoves =
+        val typeOperations =
             operations
                 .filter { (from, to) ->
                     from.isFile && from.parentFile != to.parentFile && from.path in texts &&
                         project.modules.values.none { it.root == from }
-                }.map { (from, to) ->
-                    XdkTypeMoves.plan(before, from, to, texts, directories, project) ?: return null
                 }
+        val typeMove = XdkTypeMoves.plan(before, typeOperations, texts, directories, project) ?: return null
         val proposals =
             operations
                 .map { (from, to) ->
@@ -585,7 +584,7 @@ internal class XdkProjectQueries(
                     .map { (from, to) ->
                         requireNotNull(XdkSources.file(from)) to requireNotNull(XdkSources.file(to))
                     } +
-                (typeMoves.map { it.resources } + rootMoves.map { it.resources })
+                (listOf(typeMove.resources) + rootMoves.map { it.resources })
                     .flatMap { it.entries }
                     .map { File(it.key) to File(it.value) }
         if (allMoves.groupBy({ it.first }, { it.second }).values.any { it.distinct().size > 1 }) {
@@ -698,13 +697,9 @@ internal class XdkProjectQueries(
                             }
                         }
                 }
-        val qualifications =
-            typeMoves
-                .flatMap { it.qualifications.entries }
-                .groupBy({ it.key }, { it.value })
-                .mapValues { (_, edits) -> edits.flatten().distinct() }
+        val qualifications = typeMove.qualifications
         val edits =
-            (renamed.entries + rootRenames.flatMap { it.edits.entries } + typeMoves.flatMap { it.edits.entries })
+            (renamed.entries + rootRenames.flatMap { it.edits.entries } + typeMove.edits.entries)
                 .groupBy({ it.key }, { it.value })
                 .mapValues { (_, edits) -> edits.flatten().distinct().sortedWith(compareBy({ it.start }, { it.end })) }
         if (edits.values.any { !XdkRename.disjoint(it) }) {

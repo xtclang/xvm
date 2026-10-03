@@ -249,6 +249,61 @@ class XdkTypeMoveTest {
         }
     }
 
+    @Test
+    fun `interacting type moves are planned together independently of request order`() {
+        write(
+            "App.x",
+            """
+            module App {
+                left.First first() = new left.First();
+                right.Second second() = new right.Second();
+            }
+            """.trimIndent(),
+        )
+        write("App/left/First.x", "class First { right.Second next() = new right.Second(); }")
+        write("App/right/Second.x", "class Second { left.First next() = new left.First(); }")
+        write("App/util/Marker.x", "class Marker {}")
+        write(
+            "Consumer.x",
+            """
+            module Consumer {
+                package app import App;
+                app.left.First first() = new app.left.First();
+                app.right.Second second() = new app.right.Second();
+            }
+            """.trimIndent(),
+        )
+        session { adapter ->
+            val requested = mapOf(uri("App/left/First.x") to uri("App/util/Alpha.x"), uri("App/right/Second.x") to uri("App/util/Beta.x"))
+            val first = requireNotNull(adapter.renameFilesAsync(requested).get(30, SECONDS))
+            val reversed = requireNotNull(adapter.renameFilesAsync(requested.entries.reversed().associate { it.toPair() }).get(30, SECONDS))
+            assertThat(first.changes).isEqualTo(reversed.changes)
+            assertThat(first.renames).isEqualTo(reversed.renames)
+            apply(first, requested)
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(read("App/util/Alpha.x")).contains("class Alpha", "util.Beta next() = new util.Beta()")
+            assertThat(read("App/util/Beta.x")).contains("class Beta", "util.Alpha next() = new util.Alpha()")
+            assertThat(read("Consumer.x")).contains("app.util.Alpha", "app.util.Beta").doesNotContain("app.left", "app.right")
+        }
+    }
+
+    @Test
+    fun `one invalid type destination refuses the entire interacting batch`() {
+        write("App.x", "module App { left.First first() = new left.First(); right.Second second() = new right.Second(); }")
+        write("App/left/First.x", "class First {}")
+        write("App/right/Second.x", "class Second {}")
+        write("App/util.x", "package util { class Taken {} }")
+        write("App/util/Marker.x", "class Marker {}")
+        val original = sourceTexts()
+        session { adapter ->
+            val requested = mapOf(uri("App/left/First.x") to uri("App/util/Alpha.x"), uri("App/right/Second.x") to uri("App/util/Taken.x"))
+            assertThat(adapter.renameFilesAsync(requested).get(30, SECONDS)).isNull()
+            assertThat(sourceTexts()).isEqualTo(original)
+            assertThat(directory.resolve("App/util/Alpha.x")).doesNotExist()
+        }
+    }
+
     private fun sourceTexts(): Map<String, String> =
         directory
             .toFile()
