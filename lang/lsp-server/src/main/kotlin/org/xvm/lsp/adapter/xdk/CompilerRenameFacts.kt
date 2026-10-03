@@ -325,7 +325,12 @@ internal fun captureRenameFacts(
 
     fun path(value: IdentityConstant): List<String> = value.path.filter { it.format != Constant.Format.Module }.map { it.name }
 
-    fun cycle(cycle: CompilerDispatch.Cycle) = ProofIdentity.Composed(identity(cycle.owner), cycle.contracts.map(::identity), emptyList())
+    fun cycle(cycle: CompilerDispatch.Cycle) =
+        ProofIdentity.Composed(
+            receiverIdentity(cycle.receiver, ::identity) ?: ProofIdentity.Unproven(),
+            cycle.contracts.map(::identity),
+            emptyList(),
+        )
 
     val routedOwners = methods.chains.filter { it.cycles.isNotEmpty() || it.alternatives.isNotEmpty() }.mapTo(hashSetOf()) { it.owner }
     val callableIdentities =
