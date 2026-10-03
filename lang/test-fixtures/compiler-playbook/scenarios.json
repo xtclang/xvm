@@ -5547,6 +5547,313 @@
         "limitations": []
       }
     },
+    "X169": {
+      "title": "rename and move a type together with aliases closed consumers companions and Undo/Redo",
+      "manual": [],
+      "values": {
+        "root": "App.x",
+        "from": "App/tools/Box.x",
+        "to": "App/util/Parcel.x",
+        "destination": "App/util",
+        "modules": [
+          {
+            "name": "App",
+            "uri": "App.x",
+            "dependencies": []
+          },
+          {
+            "name": "Consumer",
+            "uri": "Consumer.x",
+            "dependencies": [
+              "App"
+            ]
+          }
+        ],
+        "files": [
+          {
+            "file": "App.x",
+            "source": "module App { import tools.Box as Crate; Crate make() = new Crate(); }",
+            "destination": "App.x",
+            "expected": "module App { import util.Parcel as Crate; Crate make() = new Crate(); }"
+          },
+          {
+            "file": "App/tools/Box.x",
+            "source": "class Box { Helper make() = new Helper(); static Int number() = 1; }",
+            "destination": "App/util/Parcel.x",
+            "expected": "class Parcel { tools.Helper make() = new tools.Helper(); static Int number() = 1; }"
+          },
+          {
+            "file": "App/tools/Helper.x",
+            "source": "class Helper {}",
+            "destination": "App/tools/Helper.x",
+            "expected": "class Helper {}"
+          },
+          {
+            "file": "App/tools/Box/Part.x",
+            "source": "class Part {}",
+            "destination": "App/util/Parcel/Part.x",
+            "expected": "class Part {}"
+          },
+          {
+            "file": "App/tools/Box/data.txt",
+            "source": "keep this resource",
+            "destination": "App/util/Parcel/data.txt",
+            "expected": "keep this resource"
+          },
+          {
+            "file": "App/util/Marker.x",
+            "source": "class Marker {}",
+            "destination": "App/util/Marker.x",
+            "expected": "class Marker {}"
+          },
+          {
+            "file": "Consumer.x",
+            "source": "module Consumer { package app import App; app.tools.Box make() = new app.tools.Box(); Int read() = app.tools.Box.number(); }",
+            "destination": "Consumer.x",
+            "expected": "module Consumer { package app import App; app.util.Parcel make() = new app.util.Parcel(); Int read() = app.util.Parcel.number(); }"
+          }
+        ],
+        "newName": "Parcel.x",
+        "consumer": "Consumer.x"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X170": {
+      "title": "rename and relocate a module root while preserving dependencies resources and Undo/Redo",
+      "manual": [],
+      "values": {
+        "root": "old/App.x",
+        "afterRoot": "target/Renamed.x",
+        "consumer": "Consumer.x",
+        "from": "old/App.x",
+        "to": "target/Renamed.x",
+        "destination": "target",
+        "modules": [
+          {
+            "name": "App",
+            "uri": "old/App.x",
+            "dependencies": []
+          },
+          {
+            "name": "Consumer",
+            "uri": "Consumer.x",
+            "dependencies": [
+              "App"
+            ],
+            "resourceRoots": []
+          }
+        ],
+        "afterModules": [
+          {
+            "name": "Renamed",
+            "uri": "target/Renamed.x",
+            "dependencies": [],
+            "resourceRoots": [
+              "old"
+            ]
+          },
+          {
+            "name": "Consumer",
+            "uri": "Consumer.x",
+            "dependencies": [
+              "Renamed"
+            ],
+            "resourceRoots": []
+          }
+        ],
+        "files": [
+          {
+            "file": "old/App.x",
+            "destination": "target/Renamed.x",
+            "source": "module App { Box make() = new Box(); static String text() = $./data.txt; }",
+            "expected": "module Renamed { Box make() = new Box(); static String text() = $./data.txt; }"
+          },
+          {
+            "file": "old/App/Box.x",
+            "destination": "target/Renamed/Box.x",
+            "source": "class Box {}",
+            "expected": "class Box {}"
+          },
+          {
+            "file": "old/data.txt",
+            "destination": "old/data.txt",
+            "source": "resource stays at original path",
+            "expected": "resource stays at original path"
+          },
+          {
+            "file": "Consumer.x",
+            "destination": "Consumer.x",
+            "source": "module Consumer { package app import App; app.Box make() = new app.Box(); String read() = app.text(); }",
+            "expected": "module Consumer { package app import Renamed; app.Box make() = new app.Box(); String read() = app.text(); }"
+          },
+          {
+            "file": "target/Keep.txt",
+            "destination": "target/Keep.txt",
+            "source": "existing destination",
+            "expected": "existing destination"
+          }
+        ],
+        "newName": "Renamed.x"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X171": {
+      "title": "interacting type moves preserve mutual references and closed consumers in one Undo/Redo transaction",
+      "manual": [],
+      "values": {
+        "root": "App.x",
+        "consumer": "Consumer.x",
+        "from": "App/left/First.x",
+        "to": "App/util/First.x",
+        "destination": "App/util",
+        "moves": [
+          {
+            "from": "App/left/First.x",
+            "to": "App/util/First.x"
+          },
+          {
+            "from": "App/right/Second.x",
+            "to": "App/util/Second.x"
+          }
+        ],
+        "modules": [
+          {
+            "name": "App",
+            "uri": "App.x",
+            "dependencies": []
+          },
+          {
+            "name": "Consumer",
+            "uri": "Consumer.x",
+            "dependencies": [
+              "App"
+            ]
+          }
+        ],
+        "files": [
+          {
+            "file": "App.x",
+            "destination": "App.x",
+            "source": "module App {\n    left.First first() = new left.First();\n    right.Second second() = new right.Second();\n}",
+            "expected": "module App {\n    util.First first() = new util.First();\n    util.Second second() = new util.Second();\n}"
+          },
+          {
+            "file": "App/left/First.x",
+            "destination": "App/util/First.x",
+            "source": "class First { right.Second next() = new right.Second(); }",
+            "expected": "class First { util.Second next() = new util.Second(); }"
+          },
+          {
+            "file": "App/right/Second.x",
+            "destination": "App/util/Second.x",
+            "source": "class Second { left.First next() = new left.First(); }",
+            "expected": "class Second { util.First next() = new util.First(); }"
+          },
+          {
+            "file": "App/util/Marker.x",
+            "destination": "App/util/Marker.x",
+            "source": "class Marker {}",
+            "expected": "class Marker {}"
+          },
+          {
+            "file": "Consumer.x",
+            "destination": "Consumer.x",
+            "source": "module Consumer {\n    package app import App;\n    app.left.First make() = new app.left.First();\n}",
+            "expected": "module Consumer {\n    package app import App;\n    app.util.First make() = new app.util.First();\n}"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X172": {
+      "title": "installed compiler proposal refuses an entire move batch with one colliding declaration",
+      "manual": [
+        "This checks the installed proposal response without applying a move. VS Code cannot veto arbitrary Explorer moves when participation returns no edits."
+      ],
+      "values": {
+        "root": "App.x",
+        "consumer": "Consumer.x",
+        "from": "App/left/First.x",
+        "to": "App/util/First.x",
+        "destination": "App/util",
+        "moves": [
+          {
+            "from": "App/left/First.x",
+            "to": "App/util/First.x"
+          },
+          {
+            "from": "App/right/Second.x",
+            "to": "App/util/Taken.x"
+          }
+        ],
+        "modules": [
+          {
+            "name": "App",
+            "uri": "App.x",
+            "dependencies": []
+          },
+          {
+            "name": "Consumer",
+            "uri": "Consumer.x",
+            "dependencies": [
+              "App"
+            ]
+          }
+        ],
+        "files": [
+          {
+            "file": "App.x",
+            "destination": "App.x",
+            "source": "module App {\n    left.First first() = new left.First();\n    right.Second second() = new right.Second();\n}",
+            "expected": "module App {\n    left.First first() = new left.First();\n    right.Second second() = new right.Second();\n}"
+          },
+          {
+            "file": "App/left/First.x",
+            "destination": "App/left/First.x",
+            "source": "class First { right.Second next() = new right.Second(); }",
+            "expected": "class First { right.Second next() = new right.Second(); }"
+          },
+          {
+            "file": "App/right/Second.x",
+            "destination": "App/right/Second.x",
+            "source": "class Second { left.First next() = new left.First(); }",
+            "expected": "class Second { left.First next() = new left.First(); }"
+          },
+          {
+            "file": "App/util/Marker.x",
+            "destination": "App/util/Marker.x",
+            "source": "class Marker {}",
+            "expected": "class Marker {}"
+          },
+          {
+            "file": "Consumer.x",
+            "destination": "Consumer.x",
+            "source": "module Consumer {\n    package app import App;\n    app.left.First make() = new app.left.First();\n}",
+            "expected": "module Consumer {\n    package app import App;\n    app.left.First make() = new app.left.First();\n}"
+          },
+          {
+            "file": "App/util.x",
+            "destination": "App/util.x",
+            "source": "package util { class Taken {} }",
+            "expected": "package util { class Taken {} }"
+          }
+        ],
+        "refused": true
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
