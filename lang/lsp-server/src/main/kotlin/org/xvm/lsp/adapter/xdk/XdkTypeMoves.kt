@@ -31,6 +31,15 @@ internal object XdkTypeMoves {
                     facts.typePaths.singleOrNull {
                         it.module == owner.module && directory(it.target) == destination.parentFile
                     } ?: return null
+                // An inline declaration can occupy the destination without a file of its own.
+                // Reject before replay rather than presenting a duplicate component to the compiler.
+                if (facts.typePaths.any {
+                        it.module == owner.module && it.path == namespace.path + destination.nameWithoutExtension &&
+                            it.target != owner.target
+                    }
+                ) {
+                    return null
+                }
                 val files = XdkSourceMoves.plan(source, destination, texts, directories) ?: return null
                 val rename =
                     XdkRename.fileNamePlan(facts, texts, source.path, source.nameWithoutExtension, destination.nameWithoutExtension)

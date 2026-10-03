@@ -157,6 +157,35 @@ class XdkTypeMoveTest {
     }
 
     @Test
+    fun `same package file rename preserves explicit aliases and updates implicit imports`() {
+        write(
+            "App.x",
+            """
+            module App {
+                import tools.Box as Kept;
+                Kept make() = new Kept();
+            }
+            """.trimIndent(),
+        )
+        write("App/tools/Box.x", "class Box {}")
+        write(
+            "Consumer.x",
+            """
+            module Consumer {
+                package app import App;
+                import app.tools.Box;
+                Box make() = new Box();
+            }
+            """.trimIndent(),
+        )
+        session { adapter ->
+            move(adapter, mapOf(uri("App/tools/Box.x") to uri("App/tools/Crate.x")))
+            assertThat(read("App.x")).contains("import tools.Crate as Kept", "Kept make() = new Kept()")
+            assertThat(read("Consumer.x")).contains("import app.tools.Crate", "Crate make() = new Crate()")
+        }
+    }
+
+    @Test
     fun `rename and package move preserve aliases bare names companions and closed consumers together`() {
         write(
             "App.x",

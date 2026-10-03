@@ -115,8 +115,10 @@ internal object XdkRename {
     ): Plan? {
         if (!identifier(newName)) return null
         if (oldName == newName) return Plan(texts, emptyMap())
+        // Consumer snapshots carry their own symbol IDs for this same declaration. Select the
+        // declaring model here, then collect all equivalent consumer identities below.
         val symbol =
-            facts.models.flatMap { it.symbols }.distinctBy { it.id }.singleOrNull {
+            facts.models.singleOrNull { it.sourceName == source }?.symbols?.singleOrNull {
                 it.declarationSource == source && it.name == oldName && it.declaration != null &&
                     it.kind in setOf(SemanticModel.SymbolKind.TYPE, SemanticModel.SymbolKind.MODULE)
             } ?: return null
@@ -162,30 +164,44 @@ internal object XdkRename {
         ) {
             return Plan(texts, emptyMap())
         }
+        val identities =
+            facts.constants
+                .filterKeys(selected::contains)
+                .values
+                .toSet()
+        val imports = facts.typeNames.filter { it.imported && it.target in identities }.groupBy { it.location.sourceName }
         val edits =
             facts.models
                 .filter { it.sourceName != null }
                 .associate { view ->
                     val sourceName = view.sourceName ?: return null
                     val text = texts[sourceName] ?: return null
+                    val aliases = view.imports.flatMap { it.uses + it.declaration }.toSet()
+                    val imported = imports[sourceName].orEmpty().map { it.terminal }
                     sourceName to
-                        view.occurrences
-                            .filter {
-                                it.symbol in selected &&
-                                    it.name != "super" &&
-                                    // Package aliases resolve to the imported module identity too;
-                                    // renaming that module must leave the caller's local alias
-                                    // intact.
-                                    (
-                                        target.kind != SemanticModel.SymbolKind.MODULE ||
-                                            it.name == target.name
-                                    )
-                            }.map { occurrence ->
-                                val start = offset(text, occurrence.range.start) ?: return null
-                                val end = offset(text, occurrence.range.end) ?: return null
-                                if (text.substring(start, end) != occurrence.name) return null
-                                Edit(start, end, name)
-                            }
+                        (
+                            view.occurrences
+                                .filter {
+                                    it.symbol in selected &&
+                                        it.range !in aliases &&
+                                        it.name != "super" &&
+                                        // Package aliases resolve to the imported module identity too;
+                                        // renaming that module must leave the caller's local alias
+                                        // intact.
+                                        (
+                                            target.kind != SemanticModel.SymbolKind.MODULE ||
+                                                it.name == target.name
+                                        )
+                                }.map { occurrence ->
+                                    val start = offset(text, occurrence.range.start) ?: return null
+                                    val end = offset(text, occurrence.range.end) ?: return null
+                                    if (text.substring(start, end) != occurrence.name) return null
+                                    Edit(start, end, name)
+                                } +
+                                imported.map { range ->
+                                    Edit(offset(text, range.start) ?: return null, offset(text, range.end) ?: return null, name)
+                                }
+                        ).distinct()
                 }.filterValues { it.isNotEmpty() }
         return Plan(texts, edits)
     }
