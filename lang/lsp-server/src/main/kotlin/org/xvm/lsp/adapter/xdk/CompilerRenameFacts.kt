@@ -59,6 +59,7 @@ internal sealed interface ProofIdentity {
         val members: List<ProofIdentity>,
         val delegates: List<ProofIdentity>,
         val cycles: List<Composed> = emptyList(),
+        val alternatives: List<ProofIdentity> = emptyList(),
     ) : ProofIdentity
 
     /** Unordered alternatives, each retaining its receiver, ordered contracts and delegates. */
@@ -103,6 +104,7 @@ internal class ProofRelations(
         val members: List<ProofIdentity>,
         val supported: Boolean,
         val cycles: List<ProofIdentity.Composed> = emptyList(),
+        val alternatives: List<ProofIdentity> = emptyList(),
     )
 }
 
@@ -246,14 +248,7 @@ internal fun captureRenameFacts(
                     ) {
                         ProofIdentity.Unproven()
                     } else {
-                        ProofIdentity.Composed(
-                            identity(requireNotNull(host)),
-                            route.methods.map(::identity),
-                            route.delegates.map(::identity),
-                            route.cycles.map { cycle ->
-                                ProofIdentity.Composed(identity(cycle.owner), cycle.contracts.map(::identity), emptyList())
-                            },
-                        )
+                        route.proof(identity(requireNotNull(host)), ::identity)
                     }
                 }
 
@@ -332,7 +327,7 @@ internal fun captureRenameFacts(
 
     fun cycle(cycle: CompilerDispatch.Cycle) = ProofIdentity.Composed(identity(cycle.owner), cycle.contracts.map(::identity), emptyList())
 
-    val cyclicOwners = methods.chains.filter { it.cycles.isNotEmpty() }.mapTo(hashSetOf()) { it.owner }
+    val routedOwners = methods.chains.filter { it.cycles.isNotEmpty() || it.alternatives.isNotEmpty() }.mapTo(hashSetOf()) { it.owner }
     val callableIdentities =
         if (errors == null) {
             emptyMap()
@@ -341,7 +336,7 @@ internal fun captureRenameFacts(
                 .distinct()
                 .filter { (receiver, _) ->
                     receiver.resolveTypedefs().removeAccess() is UnionTypeConstant ||
-                        (receiver.isSingleUnderlyingClass(false) && receiver.getSingleUnderlyingClass(false) in cyclicOwners)
+                        (receiver.isSingleUnderlyingClass(false) && receiver.getSingleUnderlyingClass(false) in routedOwners)
                 }.associateWith { (receiver, method) -> callableIdentity(receiver, method, errors, ::identity) }
         }
 
@@ -362,7 +357,13 @@ internal fun captureRenameFacts(
         ProofRelations(
             methods.declarations.mapTo(linkedSetOf(), ::identity),
             methods.chains.map {
-                ProofRelations.Chain(identity(it.owner), it.methods.map(::identity), it.supported, it.cycles.map(::cycle))
+                ProofRelations.Chain(
+                    identity(it.owner),
+                    it.methods.map(::identity),
+                    it.supported,
+                    it.cycles.map(::cycle),
+                    it.alternatives.map { choice -> choice.proof(::identity) },
+                )
             },
         ),
         ProofRelations(

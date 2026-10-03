@@ -64,6 +64,28 @@ class CompilerCallableProofTest {
     ) = CompilerRenameFacts(facts.models, facts.constants, facts.methods, facts.properties, callables = facts.callables + (at to identity))
 
     @Test
+    fun `nested delegate alternatives remain part of the call and declaration dispatch proofs`() {
+        val text =
+            "module App { interface Api { Int read(); } " +
+                "class First implements Api { @Override Int read() = 1; } class Second implements Api { @Override Int read() = 2; } " +
+                "class Forward(First | Second target) delegates Api(target) {} Int use(Forward value) = value.read(); }"
+        val before = facts(text)
+        val after = facts(text)
+        val plan = XdkRename.Plan(mapOf(SOURCE to text), emptyMap())
+        assertThat(XdkRename.preservesBindings(before, after, plan)).isTrue()
+        val at = SourceLocation(SOURCE, requireNotNull(after.models.single().occurrenceAt(0, text.lastIndexOf("read"))).range)
+        val route = after.callables.getValue(at) as ProofIdentity.Composed
+        val choice = route.alternatives.single() as ProofIdentity.Alternatives
+        assertThat(choice.targets).hasSize(2)
+        assertThat(route.delegates).isNotEmpty()
+        assertThat(after.methods.chains.any { it.alternatives.isNotEmpty() }).isTrue()
+        val lost = route.copy(alternatives = listOf(choice.copy(targets = setOf(choice.targets.first()))))
+        listOf(lost, route.copy(delegates = emptyList()), route.copy(alternatives = emptyList())).forEach { changed ->
+            assertThat(XdkRename.preservesBindings(before, replacing(after, at, changed), plan)).isFalse()
+        }
+    }
+
+    @Test
     fun `a changed generic argument cannot preserve the callable proof`() {
         val text =
             "module App { class First<T>(T value) { T read() = value; } class Second<T>(T value) { T read() = value; } " +
