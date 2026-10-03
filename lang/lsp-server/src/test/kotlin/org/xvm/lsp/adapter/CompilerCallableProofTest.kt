@@ -2,6 +2,8 @@ package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.compiler.Source
@@ -106,9 +108,9 @@ class CompilerCallableProofTest {
         val text =
             """
             module App {
-                class First<T>(T value) { T read() = value; }
-                class Second<T>(T value) { T read() = value; }
-                Object use(First<Int> | Second<String> target) = target.read();
+                class First<T>(T value) { Int read() = 1; }
+                class Second<T>(T value) { Int read() = 2; }
+                Int use(First<Int> | Second<String> target) = target.read();
             }
             """.trimIndent()
         val before = facts(text)
@@ -133,7 +135,7 @@ class CompilerCallableProofTest {
             module App {
                 class First { Int read() = 1; }
                 class Second { Int read() = 2; }
-                mixin Mark(String label) into Object {}
+                annotation Mark(String label) into Object {}
                 Int use((@Mark("one") First) | (@Mark("two") Second) target) = target.read();
             }
             """.trimIndent()
@@ -149,6 +151,25 @@ class CompilerCallableProofTest {
         val changedOwner = owner.copy(components = owner.components.dropLast(1) + argument.copy(value = "changed"))
         val changed = choice.copy(targets = setOf(branches.first().copy(owner = changedOwner), branches.last()))
         assertThat(XdkRename.preservesBindings(before, replacing(after, at, changed), plan)).isFalse()
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["List<String>", "Map<String, Int>"])
+    fun `nested type arguments remain equivalent across fresh pools`(argument: String) {
+        val text =
+            """
+            module App {
+                class First<T>(T value) { T read() = value; }
+                class Second<T>(T value) { T read() = value; }
+                $argument use(First<$argument> | Second<$argument> target) = target.read();
+            }
+            """.trimIndent()
+        val before = facts(text)
+        val after = facts(text)
+        val plan = XdkRename.Plan(mapOf(SOURCE to text), emptyMap())
+        assertThat(XdkRename.preservesBindings(before, after, plan))
+            .describedAs(after.callables.toString())
+            .isTrue()
     }
 
     private fun readSite(
