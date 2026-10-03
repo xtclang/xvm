@@ -5498,6 +5498,66 @@
         "coverage": "full",
         "limitations": []
       }
+    },
+    "X164": {
+      "title": "union method rename joins both source contracts and a closed cross-module consumer with Undo",
+      "manual": [],
+      "values": {
+        "file": "First.x",
+        "anchor": "read()",
+        "replacement": "fetch",
+        "files": [
+          {
+            "file": "First.x",
+            "source": "module First {\n    class Box { Int read() = 1; }\n}",
+            "destination": "First.x",
+            "expected": "module First {\n    class Box { Int fetch() = 1; }\n}"
+          },
+          {
+            "file": "Second.x",
+            "source": "module Second {\n    class Box { Int read() = 2; }\n}",
+            "destination": "Second.x",
+            "expected": "module Second {\n    class Box { Int fetch() = 2; }\n}"
+          },
+          {
+            "file": "Consumer.x",
+            "source": "module Consumer {\n    package one import First;\n    package two import Second;\n    Int use(one.Box | two.Box target) = target.read();\n}",
+            "destination": "Consumer.x",
+            "expected": "module Consumer {\n    package one import First;\n    package two import Second;\n    Int use(one.Box | two.Box target) = target.fetch();\n}"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X165": {
+      "title": "cyclic delegation renames its written contract and closed consumer without inventing a runtime target",
+      "manual": [],
+      "values": {
+        "file": "Library.x",
+        "anchor": "read()",
+        "replacement": "fetch",
+        "files": [
+          {
+            "file": "Library.x",
+            "source": "module Library {\n    interface Api { Int read(); }\n}",
+            "destination": "Library.x",
+            "expected": "module Library {\n    interface Api { Int fetch(); }\n}"
+          },
+          {
+            "file": "Consumer.x",
+            "source": "module Consumer {\n    package lib import Library;\n    class First(Second next) delegates lib.Api(next) {}\n    class Second(First next) delegates lib.Api(next) {}\n    Int use(First target) = target.read();\n}",
+            "destination": "Consumer.x",
+            "expected": "module Consumer {\n    package lib import Library;\n    class First(Second next) delegates lib.Api(next) {}\n    class Second(First next) delegates lib.Api(next) {}\n    Int use(First target) = target.fetch();\n}"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
     }
   }
 }
