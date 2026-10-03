@@ -54,6 +54,8 @@ not a claim that every referenced suite was rerun for this documentation change.
 | **UP19 — LSP4IJ — bridged** | Moving/renaming a directory leaves its open descendants connected under their old URIs. Undo can leave two opened-document entries referring to the same VirtualFile. | [DirectoryDocumentMoves](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/DirectoryDocumentMoves.kt) retires affected connections before paths change and asynchronously reconnects current editor buffers. X162 originally timed out after Undo; X118/X161/X162/X163 now pass, including post-Redo unsaved edits. Details below. | Upstream reconnects open descendants on directory Move/Rename/Undo/Redo, preserving unsaved text and one current synchronizer. Remove the bridge only after X162 and connection lifecycle tests pass without it. |
 | **UP20 — IntelliJ test Driver — bridged** | An EDT remote call captures modality, then posts its actual call separately; a newly opened modal dialog can indefinitely defer that call. | Test-only popup focus observations/activation use a bounded Swing dispatch from the default remote dispatcher. X165 stalled before submission while the compiler was idle; saved thread dumps identify `Invoker.invoke`/`LaterInvocator` and `restorePopupFocus`. Native rename now also observes focus after its dialog opens. Details below. | Driver dispatch survives a modal transition between its state capture and invocation; selected native Rename and focus-recovery cases pass without the bridge. |
 
+| **UP21 — LSP4IJ — bridged** | WorkspaceEdit changes closed document buffers without saving or synchronizing them to the server. Compiler queries continue reading the old disk contents. | `ClosedRefactoringDocuments` saves only edited, closed buffers after the transaction and native Undo/Redo; pre-existing unsaved closed buffers refuse before application. X169 exposed the problem while X161's unchanged class name concealed it. | Upstream keeps closed-file content visible to the server across apply/Undo/Redo without our bridge; X169 verifies exact disk text and current diagnostics. |
+
 ## UP19: directory moves retain old document connections
 
 LSP4IJ 0.21.0's [LSPFileListener.onFileRenameAfter](https://github.com/redhat-developer/lsp4ij/blob/0.21.0/src/main/java/com/redhat/devtools/lsp4ij/LSPFileListener.java)
@@ -156,3 +158,23 @@ JUnit reports two passing suite tests, zero failures/errors/skips. Both runs rep
 and their saved IDE/server logs contain no internal-error markers. Formatting checks pass.
 This covers the repaired focus path; it does not establish that every Driver EDT call is immune
 to modality races.
+
+## UP21: closed refactoring documents are invisible to the compiler
+
+IntelliJ `run-8269964736389146880` passed X161/X163/X170/X171/X172 but failed X169 after
+applying the correct document edits. `App.x` imported `util.Parcel`, while the closed class file
+still had `class Box` on disk. No server document connection supplied its edited buffer. The
+visible diagnostic stayed at `COMPILER-36`; successful document-text assertions alone missed it.
+
+Inspection of the pinned LSP4IJ 0.21.0 `LSPIJUtils.applyWorkspaceEdit` confirms it calls
+`applyEdits(null, document, edits, false)`, disabling document persistence. The local bridge is
+scoped to the affected closed documents in the guarded refactoring transaction. It refuses
+pre-existing unsaved closed buffers that the server could not have included in its proof, leaves
+open editor buffers under ordinary LSP synchronization, and records persistence at the final
+step of each Undo/Redo direction. It never performs Save All. Native move assertions now inspect
+closed files on disk as well as IntelliJ documents and compiler diagnostics.
+
+Repaired IntelliJ `run-14394987299477639656` passes START and all six selected move cases
+(X161/X163/X169–X172), including exact closed-file disk content, clean diagnostics and native
+Undo/Redo. JUnit reports one passing test without failures/errors/skips; the IDE has zero failures
+or internal-error log markers. This upstream integration workaround is separate from Ecstasy compiler issue [#667](https://github.com/xtclang/xvm/issues/667).
