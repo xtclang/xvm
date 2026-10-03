@@ -42,12 +42,13 @@ class XdkRenameBoundaryTest {
     }
 
     @Test
-    fun `union receiver dispatch does not become a guessed method family`() {
+    fun `union receiver dispatch renames all compiler proven alternatives`() {
         val text =
             "module App { class First { Int read() = 1; } class Second { Int read() = 2; } " +
                 "Int use(First | Second target) = target.read(); }"
         workspace(text) { adapter, uri ->
-            assertThat(adapter.rename(uri, 0, text.indexOf("read"), "fetch")).isNull()
+            val edit = requireNotNull(adapter.rename(uri, 0, text.indexOf("read"), "fetch"))
+            assertThat(edit.changes.getValue(uri)).hasSize(3).allMatch { it.newText == "fetch" }
         }
     }
 
