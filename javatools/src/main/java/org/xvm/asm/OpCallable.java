@@ -51,6 +51,7 @@ import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_Class;
 import static org.xvm.javajit.Builder.CD_Ctx;
+import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nFunction;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.md;
@@ -979,16 +980,24 @@ public abstract class OpCallable extends Op {
      * Support for NEW_V ops.
      */
     protected int buildNewV(BuildContext bctx, CodeBuilder code, int nTypeArg, int[] anArgValue) {
-        // find the virtual origin of the concrete constructor recorded by the op, then invoke the
-        // corresponding "$new" method on the runtime class-of-class through that origin interface
-        MethodConstant idCtor        = bctx.getConstant(m_nFunctionId, MethodConstant.class);
-        TypeConstant   typeTarget    = idCtor.getNamespace().getType();
-        TypeInfo       infoTarget    = bctx.getTypeInfo(typeTarget);
-        MethodInfo     infoCtor      = infoTarget.findVirtualConstructor(idCtor.getSignature());
-        MethodBody     bodyCtor      = infoCtor.getVirtualConstructor();
-        TypeConstant   typeInterface = bodyCtor.getIdentity().getNamespace().getType();
-        TypeInfo       infoInterface = bctx.getTypeInfo(typeInterface);
-        ClassDesc      cdInterface   = bctx.builder.ensureClassDesc(typeInterface);
+        MethodConstant idCtor  = bctx.getConstant(m_nFunctionId, MethodConstant.class);
+        TypeConstant   typeArg = bctx.getArgumentType(nTypeArg);
+        assert typeArg.isTypeOfType();
+
+        // similar to getTypeConstructor(), resolve the constructor against the type being
+        // instantiated; find its virtual origin and invoke the corresponding "$new" method on the
+        // runtime class-of-class through that origin's interface
+        TypeConstant typeTarget = typeArg.getParamType(0);
+        TypeInfo     infoTarget = bctx.getTypeInfo(typeTarget);
+        MethodInfo   infoCtor   = infoTarget.getMethodBySignature(idCtor.getSignature(), true);
+        if (infoCtor == null || !infoCtor.containsVirtualConstructor()) {
+            throw new IllegalStateException("No virtual constructor for " + idCtor + " in " +
+                    typeTarget);
+        }
+        MethodBody   bodyCtor      = infoCtor.getVirtualConstructor();
+        TypeConstant typeInterface = bodyCtor.getIdentity().getNamespace().getType();
+        TypeInfo     infoInterface = bctx.getTypeInfo(typeInterface);
+        ClassDesc    cdInterface   = bctx.builder.ensureClassDesc(typeInterface);
 
         JitMethodDesc jmdNew = Builder.convertConstructToNew(infoInterface, cdInterface,
                 (JitCtorDesc) bodyCtor.getJitDesc(bctx.builder, typeInterface));
@@ -1011,6 +1020,11 @@ public abstract class OpCallable extends Op {
         code.invokevirtual(CD_nType, "$xvmClass", md(CD_Class, CD_Ctx))
             .checkcast(cdInterface);
         bctx.loadCtx(code);
+
+        if (infoInterface.hasGenericTypes()) {
+            bctx.loadArgument(code, nTypeArg);
+            code.getfield(CD_nType, Builder.DataType, CD_TypeConstant);
+        }
         bctx.loadCallArguments(code, jmdNew, anArgValue);
         code.invokeinterface(cdInterface, jitName, mdNew);
 
