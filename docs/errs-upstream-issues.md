@@ -1,6 +1,6 @@
 # Upstream issues affecting Ecstasy language support
 
-This is the upstream dependency register for `lagergren/errs`, updated on 2026-10-02.
+This is the upstream dependency register for `lagergren/errs`, updated on 2026-10-03.
 It complements the [implementation plan](errs-integration-plan.md) and
 [manual playbook](../lang/doc/manual-test-plan.md). Local fixes do not mean an upstream
 release contains the repair. The entries below record the branch's source inspection,
@@ -52,6 +52,7 @@ not a claim that every referenced suite was rerun for this documentation change.
 | **UP17 — IntelliJ Platform — open** | Removing many ranges in one document edit repeatedly traverses temporarily invalid interval subtrees on the EDT. Large-file replacement freezes the UI. | [Isolated marker probe](../lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/probe/LargeFileProbe.kt), [native driver](../lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/LargeFileEditing.kt) and [measurements](errs-integration-plan.md#l82-large-file-intellij-freeze-investigation-2026-10-01). Reproduced with unattached platform documents; bulk-update mode does not remove the cost. No production tree patch or discarded highlights. | A platform repair passes the plain-marker scaling control and actual decorated-editor replacement, preserving marker validity and UI responsiveness. A smaller workload or replacement before highlights arrive does not satisfy this gate. |
 | **UP18 — LSP4IJ — constrained** | Native snippet expansion adds source indentation even when the completion requests `InsertTextMode.AsIs`, despite advertising both modes. | [XtcClientFeatures](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcClientFeatures.kt) advertises AdjustIndentation as its default and sole supported mode. The server supplies relative template indentation. X150's first native trace (`run-9591212347662100514`) records the original capabilities, AsIs reply and doubled indentation; no IDE errors occurred. With the constraint, final native X150 passes (`run-10874571275660252562`), including exact text, snippet stops and insertion Undo. | Upstream passes the insertion mode through snippet construction/expansion. Remove the constraint only after X150 preserves exact source, placeholder navigation and Undo without it. |
 | **UP19 — LSP4IJ — bridged** | Moving/renaming a directory leaves its open descendants connected under their old URIs. Undo can leave two opened-document entries referring to the same VirtualFile. | [DirectoryDocumentMoves](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/DirectoryDocumentMoves.kt) retires affected connections before paths change and asynchronously reconnects current editor buffers. X162 originally timed out after Undo; X118/X161/X162/X163 now pass, including post-Redo unsaved edits. Details below. | Upstream reconnects open descendants on directory Move/Rename/Undo/Redo, preserving unsaved text and one current synchronizer. Remove the bridge only after X162 and connection lifecycle tests pass without it. |
+| **UP20 — IntelliJ test Driver — bridged** | An EDT remote call captures modality, then posts its actual call separately; a newly opened modal dialog can indefinitely defer that call. | Test-only popup focus observations/activation use a bounded Swing dispatch from the default remote dispatcher. X165 stalled before submission while the compiler was idle; saved thread dumps identify `Invoker.invoke`/`LaterInvocator` and `restorePopupFocus`. Native rename now also observes focus after its dialog opens. Details below. | Driver dispatch survives a modal transition between its state capture and invocation; selected native Rename and focus-recovery cases pass without the bridge. |
 
 ## UP19: directory moves retain old document connections
 
@@ -125,3 +126,33 @@ remain our test obligations; they should not be filed as upstream bugs without e
 UP16 reproduces again in full VS Code 1.140.0 playbook `run-qsTyyb` (2026-10-02).
 X130's Move/Undo/Redo/resource assertions completed, but Explorer Cut cleanup raised the same
 stale-tree-node error. The case remains failed. This receipt does not establish an upstream repair.
+
+
+## UP20: test Driver focus calls race with a newly opened modal dialog
+
+IntelliJ 2026.2.3 / Driver 262.10968.63 run `run-6126665495647161203` passed START and
+X164, then stopped at X165's Rename dialog before changing its name. Prepare Rename took about
+1 ms. Live `jcmd` dumps showed the compiler worker waiting on an empty job queue, the IDE EDT
+pumping modal events, the test worker waiting in `restorePopupFocus` → `hasFocus`, and the IDE's
+RMI thread waiting in `Invoker.invoke` → `ApplicationImpl.invokeAndWaitRelaxed` → `LaterInvocator`.
+The saved `rename-ide-threads.txt` belongs to that failed run. The test IDE was terminated after
+capturing evidence; the failed suite is not accepted coverage.
+
+Inspection of the pinned Driver bytecode shows two dispatches: Swing `invokeAndWait` captures
+`ModalityState.current()`, then an IntelliJ `invokeAndWaitRelaxed` queues the operation with that
+state. A dialog opening between them makes the operation wait until it closes. The driver cannot
+submit the dialog while waiting for that same operation. This is a test Driver race, not an LSP4IJ
+rename deadlock or a compiler queue stall.
+
+The test-only probe performs focus reads and activation as one bounded Swing task, called through
+Driver's default dispatcher. These operations do not edit documents or access PSI. Timeout cancels
+an unstarted task; completion returns immediately rather than sleeping for the timeout. Native
+Rename also checks focus with its real modal dialog open. No mouse input, automatic cancellation
+or replay of the rename is introduced. The requested `TODO LSP4IJ: UP20` marker identifies the
+actual IntelliJ Driver owner. Repaired `run-907034856191389577` passes START and X164–X168;
+X165 finishes in 1,642 ms. Dedicated `run-7549109475022481665` passes START and START_FOCUS
+(completion/signature focus recovery and guards against replaying completed insertion/rename).
+JUnit reports two passing suite tests, zero failures/errors/skips. Both runs report no IDE failures
+and their saved IDE/server logs contain no internal-error markers. Formatting checks pass.
+This covers the repaired focus path; it does not establish that every Driver EDT call is immune
+to modality races.
