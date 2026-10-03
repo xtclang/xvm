@@ -484,6 +484,17 @@ public class TypeCompositionStatement
 
         case CLASS, INTERFACE, SERVICE, CONST, ENUM, ENUM_VAL, ANNOTATION, MIXIN:
             if (container != null && container.isClassContainer()) {
+                // The assembler supports conditional siblings, so createClass() can accept two
+                // unconditional declarations too. Reject that source conflict before name
+                // resolution can mistake their CompositeComponent for a ClassStructure.
+                if (constCond == null && container.getCondition() == null &&
+                        container.getChild(sName) instanceof ClassStructure sibling &&
+                        sibling.getCondition() == null) {
+                    name.log(errs, getSource(), Severity.ERROR, Compiler.DUPLICATE_NAME, sName);
+                    mgr.deferChildren();
+                    return;
+                }
+
                 Format format = switch (category.getId()) {
                     case CLASS     -> Format.CLASS;
                     case INTERFACE -> Format.INTERFACE;
