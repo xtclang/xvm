@@ -156,15 +156,118 @@ class XdkTypeMoveTest {
         }
     }
 
+    @Test
+    fun `rename and package move preserve aliases bare names companions and closed consumers together`() {
+        write(
+            "App.x",
+            """
+            module App {
+                import tools.Box as Kept;
+                Kept make() = new Kept();
+                tools.Box.Part part() = new tools.Box.Part();
+            }
+            """.trimIndent(),
+        )
+        write(
+            "App/tools/Box.x",
+            """
+            class Box {
+                static Int number() = 1;
+                Helper make() = new Helper();
+            }
+            """.trimIndent(),
+        )
+        write("App/tools/Box/Part.x", "static class Part {}")
+        write("App/tools/Box/data.txt", "preserved resource")
+        write("App/tools/Helper.x", "class Helper {}")
+        write("App/tools/Factory.x", "class Factory { Box make() = new Box(); }")
+        write("App/tools/Crate.x", "class Crate {}")
+        write("App/util/Marker.x", "class Marker {}")
+        write(
+            "Consumer.x",
+            """
+            module Consumer {
+                package app import App;
+                import app.tools.Box;
+                Box make() = new Box();
+                Int value() = app.tools.Box.number();
+            }
+            """.trimIndent(),
+        )
+        val original = sourceTexts()
+        session { adapter ->
+            val requested = mapOf(uri("App/tools/Box.x") to uri("App/util/Crate.x"))
+            val edit = move(adapter, requested)
+            assertThat(edit.renames).containsEntry(uri("App/tools/Box"), uri("App/util/Crate"))
+            assertThat(read("App.x")).contains("import util.Crate as Kept", "Kept make() = new Kept()", "util.Crate.Part")
+            assertThat(read("App/tools/Factory.x")).contains("util.Crate make() = new util.Crate()")
+            assertThat(read("App/util/Crate.x")).contains("class Crate", "tools.Helper make() = new tools.Helper()")
+            assertThat(read("Consumer.x")).contains("import app.util.Crate", "Crate make() = new Crate()", "app.util.Crate.number()")
+            assertThat(read("App/tools/Crate.x")).isEqualTo("class Crate {}")
+            assertThat(read("App/util/Crate/data.txt")).isEqualTo("preserved resource")
+            assertThat(read("App/util/Crate/Part.x")).isEqualTo("static class Part {}")
+            move(adapter, requested.entries.associate { (from, to) -> to to from })
+            // Reverse refactoring need not restore the original shortest spelling (Undo does).
+            assertThat(sourceTexts().keys).containsExactlyInAnyOrderElementsOf(original.keys)
+            assertThat(read("App/tools/Box.x")).contains("class Box")
+            assertThat(read("Consumer.x")).contains("app.tools.Box")
+        }
+    }
+
+    @Test
+    fun `combined move refuses collisions and invalid names without partial edits`() {
+        write("App.x", "module App { tools.Box make() = new tools.Box(); }")
+        write("App/tools/Box.x", "class Box {}")
+        write("App/util.x", "package util { class Taken {} }")
+        write("App/util/Marker.x", "class Marker {}")
+        val original = sourceTexts()
+        session { adapter ->
+            listOf("Taken", "not-a-name").forEach { name ->
+                val requested = mapOf(uri("App/tools/Box.x") to uri("App/util/$name.x"))
+                assertThat(adapter.renameFilesAsync(requested).get(30, SECONDS)).isNull()
+            }
+            assertThat(sourceTexts()).isEqualTo(original)
+        }
+    }
+
+    @Test
+    fun `combined move refuses a changed unqualified method target even when final sources compile`() {
+        write("App.x", "module App { tools.Box make() = new tools.Box(); }")
+        write("App/tools.x", "package tools { static Int number() = 1; }")
+        write("App/tools/Box.x", "class Box { Int read() = number(); }")
+        write("App/util.x", "package util { static Int number() = 2; }")
+        write("App/util/Marker.x", "class Marker {}")
+        session { adapter ->
+            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            val requested = mapOf(uri("App/tools/Box.x") to uri("App/util/Crate.x"))
+            assertThat(adapter.renameFilesAsync(requested).get(30, SECONDS)).isNull()
+            write("App.x", read("App.x").replace("tools.Box", "util.Crate"))
+            write("App/tools/Box.x", read("App/tools/Box.x").replace("class Box", "class Crate"))
+            Files.move(directory.resolve("App/tools/Box.x"), directory.resolve("App/util/Crate.x"))
+            adapter.initializeWorkspace(listOf(directory.toString()))
+            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+        }
+    }
+
+    private fun sourceTexts(): Map<String, String> =
+        directory
+            .toFile()
+            .walkTopDown()
+            .filter { it.isFile }
+            .associate { it.relativeTo(directory.toFile()).path to it.readText() }
+
     private fun request() = mapOf(uri("App/tools/Box.x") to uri("App/util/Box.x"))
 
     private fun read(file: String) = Files.readString(directory.resolve(file))
 
-    private fun move(adapter: XdkAdapter): WorkspaceEdit {
+    private fun move(
+        adapter: XdkAdapter,
+        requested: Map<String, String> = request(),
+    ): WorkspaceEdit {
         assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
-        val edit = requireNotNull(adapter.renameFilesAsync(request()).get(30, SECONDS))
+        val edit = requireNotNull(adapter.renameFilesAsync(requested).get(30, SECONDS))
         assertThat(edit.versioned).isTrue()
-        apply(edit, request())
+        apply(edit, requested)
         adapter.initializeWorkspace(listOf(directory.toString()))
         assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
         return edit
