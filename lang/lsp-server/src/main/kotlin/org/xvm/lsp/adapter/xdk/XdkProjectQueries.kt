@@ -305,7 +305,9 @@ internal class XdkProjectQueries(
             )
         }
         val selected = model.symbolAt(line, column) ?: return null
-        val target = before.constants[selected.id] ?: return null
+        val occurrence = model.occurrenceAt(line, column) ?: return null
+        val target =
+            before.callables[SemanticModel.SourceLocation(source, occurrence.range)] ?: before.constants[selected.id] ?: return null
         val symbol =
             before.models
                 .asSequence()
@@ -1005,7 +1007,8 @@ internal class XdkProjectQueries(
                 }
             // A written union call couples otherwise independent contracts: renaming only one
             // leg would remove that call from the union's common method set.
-            facts.constants.values.filterIsInstance<ProofIdentity.Alternatives>()
+            (facts.constants.values + facts.callables.values)
+                .filterIsInstance<ProofIdentity.Alternatives>()
                 .map(::members)
                 .filter { it.any(family::contains) }
                 .forEach { family += it }

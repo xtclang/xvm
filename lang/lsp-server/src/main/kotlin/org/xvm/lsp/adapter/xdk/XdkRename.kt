@@ -585,6 +585,7 @@ internal object XdkRename {
         val owner: Target,
         val members: List<Target>,
         val supported: Boolean,
+        val cycles: List<Target> = emptyList(),
     )
 
     /** A compiling rename can add an override without changing any written name or call binding. */
@@ -619,6 +620,7 @@ internal object XdkRename {
                 target(chain.owner) ?: return null,
                 chain.members.map { target(it) ?: return null },
                 chain.supported,
+                chain.cycles.map { composedTarget(it, texts, moved, translate) ?: return null },
             )
         } +
             facts.properties.chains.map { chain ->
@@ -694,9 +696,11 @@ internal object XdkRename {
     ): Target? {
         return when (identity) {
             is ProofIdentity.Alternatives -> {
-                Target.Alternatives(identity.targets.mapTo(linkedSetOf()) {
-                    composedTarget(it, texts, moved, translate) ?: return null
-                })
+                Target.Alternatives(
+                    identity.targets.mapTo(linkedSetOf()) {
+                        composedTarget(it, texts, moved, translate) ?: return null
+                    },
+                )
             }
 
             is ProofIdentity.Parameter -> {
@@ -833,13 +837,23 @@ internal object XdkRename {
                     if (SemanticModel.SourceLocation(source, occurrence.range) !in ignored &&
                         (!allowUnresolved || occurrence.symbol != null)
                     ) {
+                        val callable = facts.callables[SemanticModel.SourceLocation(source, occurrence.range)]
                         result[site(source, occurrence.range) ?: return null] =
-                            target(model, occurrence.symbol) ?: return null
+                            if (callable != null) {
+                                composedTarget(callable, texts, moved, translate) ?: return null
+                            } else {
+                                target(model, occurrence.symbol) ?: return null
+                            }
                     }
                 }
                 model.calls.forEach { call ->
+                    val callable = facts.callables[SemanticModel.SourceLocation(source, call.callee)]
                     result[site(source, call.callee, true) ?: return null] =
-                        target(model, call.method) ?: return null
+                        if (callable != null) {
+                            composedTarget(callable, texts, moved, translate) ?: return null
+                        } else {
+                            target(model, call.method) ?: return null
+                        }
                 }
             }
         return result
