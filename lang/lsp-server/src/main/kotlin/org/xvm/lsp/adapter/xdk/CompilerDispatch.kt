@@ -9,6 +9,7 @@ import org.xvm.asm.constants.MethodInfo
 import org.xvm.asm.constants.PropertyConstant
 import org.xvm.asm.constants.TypeConstant
 import org.xvm.asm.constants.TypeInfo
+import org.xvm.asm.constants.UnionTypeConstant
 import org.xvm.lsp.util.ExecutionTrace
 
 /** Written contracts and receiver properties behind a compiler-composed method. Worker-only. */
@@ -17,7 +18,18 @@ internal data class CompilerDispatch(
     val delegates: List<PropertyConstant> = emptyList(),
     val supported: Boolean = true,
     val cycles: List<Cycle> = emptyList(),
+    val alternatives: List<Alternatives> = emptyList(),
 ) {
+    /** Branches stay separate even when their contracts share the same written declaration. */
+    data class Alternatives(
+        val branches: List<Branch>,
+    )
+
+    data class Branch(
+        val receiver: TypeConstant,
+        val dispatch: CompilerDispatch,
+    )
+
     /** A finite back edge to written contracts; it does not identify an executable body. */
     data class Cycle(
         val owner: IdentityConstant,
@@ -112,13 +124,34 @@ internal fun TypeInfo.dispatch(
                     }
                 }
 
+                Implementation.Union -> {
+                    val union = type.resolveTypedefs().removeAccess() as? UnionTypeConstant
+                    if (union == null) {
+                        CompilerDispatch(listOf(body.identity), supported = false)
+                    } else {
+                        val branches =
+                            listOf(union.underlyingType to body.unionLeft, union.underlyingType2 to body.unionRight)
+                                .map { (receiver, selected) ->
+                                    val info =
+                                        ExecutionTrace.api("TypeConstant.ensureTypeInfo(rename-union-leg)") {
+                                            receiver.ensureTypeInfo(errors)
+                                        }
+                                    CompilerDispatch.Branch(receiver, info.dispatch(selected, errors, seen))
+                                }
+                        CompilerDispatch(
+                            branches.flatMap { it.dispatch.methods }.distinct(),
+                            supported = branches.all { it.dispatch.supported },
+                            alternatives = listOf(CompilerDispatch.Alternatives(branches)),
+                        )
+                    }
+                }
+
                 Implementation.Implicit,
-                Implementation.Union,
                 Implementation.Field,
                 Implementation.Native,
                 -> {
                     // These bodies do not independently identify a written callable contract:
-                    // assumed/multi-target dispatch, generated accessors or runtime
+                    // assumed dispatch, generated accessors or runtime
                     // implementations.
                     CompilerDispatch(listOf(body.identity), supported = false)
                 }
@@ -133,5 +166,6 @@ internal fun TypeInfo.dispatch(
         bodies.flatMap { it.delegates }.distinct(),
         bodies.all { it.supported } && !errors.hasSeriousErrors() && !errors.isAbortDesired,
         bodies.flatMap { it.cycles }.distinct(),
+        bodies.flatMap { it.alternatives }.distinct(),
     )
 }
