@@ -83,14 +83,18 @@ internal object XdkRename {
         fun textEdits(source: String): List<TextEdit> =
             // Keep prefix insertions separate for binding translation, but combine an insertion
             // and a renamed token at the same position for clients requiring disjoint edits.
-            edits[source].orEmpty().groupBy { it.start }.values.map { sameStart ->
-                val ordered = sameStart.sortedBy { it.end }
-                require(ordered.dropLast(1).all { it.start == it.end })
-                Edit(ordered.first().start, ordered.last().end, ordered.joinToString("") { it.text })
-            }.map { edit ->
-                val text = original.getValue(source)
-                TextEdit(Range(position(text, edit.start), position(text, edit.end)), edit.text)
-            }
+            edits[source]
+                .orEmpty()
+                .groupBy { it.start }
+                .values
+                .map { sameStart ->
+                    val ordered = sameStart.sortedBy { it.end }
+                    require(ordered.dropLast(1).all { it.start == it.end })
+                    Edit(ordered.first().start, ordered.last().end, ordered.joinToString("") { it.text })
+                }.map { edit ->
+                    val text = original.getValue(source)
+                    TextEdit(Range(position(text, edit.start), position(text, edit.end)), edit.text)
+                }
 
         fun callStart(
             source: String,
@@ -111,10 +115,11 @@ internal object XdkRename {
     ): Plan? {
         if (!identifier(newName)) return null
         if (oldName == newName) return Plan(texts, emptyMap())
-        val symbol = facts.models.flatMap { it.symbols }.distinctBy { it.id }.singleOrNull {
-            it.declarationSource == source && it.name == oldName && it.declaration != null &&
-                it.kind in setOf(SemanticModel.SymbolKind.TYPE, SemanticModel.SymbolKind.MODULE)
-        } ?: return null
+        val symbol =
+            facts.models.flatMap { it.symbols }.distinctBy { it.id }.singleOrNull {
+                it.declarationSource == source && it.name == oldName && it.declaration != null &&
+                    it.kind in setOf(SemanticModel.SymbolKind.TYPE, SemanticModel.SymbolKind.MODULE)
+            } ?: return null
         val target = facts.constants[symbol.id] ?: return null
         val at = requireNotNull(symbol.declaration).start
         return plan(facts, texts, source, at.line, at.column, newName, facts.constants.filterValues { it == target }.keys)

@@ -13,8 +13,9 @@ import com.intellij.refactoring.move.MoveCallback
 import com.intellij.refactoring.move.MoveHandlerDelegate
 import com.intellij.refactoring.ui.RefactoringDialog
 import com.intellij.ui.DocumentAdapter
+import com.intellij.ui.components.JBTextField
 import com.redhat.devtools.lsp4ij.internal.CancellationSupport
-import java.awt.BorderLayout
+import java.awt.GridLayout
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import javax.swing.JComponent
@@ -80,15 +81,29 @@ class XtcFileMoveHandler : MoveHandlerDelegate() {
                 )
             }
 
+        private val name =
+            JBTextField(files.first().name).apply {
+                accessibleContext.accessibleName = "New name"
+                document.addDocumentListener(
+                    object : DocumentAdapter() {
+                        override fun textChanged(event: DocumentEvent) = validateButtons()
+                    },
+                )
+            }
+
         init {
             title = "Move Ecstasy Sources"
             init()
         }
 
         override fun createCenterPanel(): JComponent =
-            JPanel(BorderLayout()).apply {
-                add(JLabel("Destination directory:"), BorderLayout.NORTH)
-                add(destination, BorderLayout.CENTER)
+            JPanel(GridLayout(0, 1, 0, 4)).apply {
+                add(JLabel("Destination directory:"))
+                add(destination)
+                if (files.size == 1) {
+                    add(JLabel("New name:"))
+                    add(name)
+                }
             }
 
         override fun getPreferredFocusedComponent(): JComponent = destination.textField
@@ -100,7 +115,7 @@ class XtcFileMoveHandler : MoveHandlerDelegate() {
         private fun targets(): Map<Path, Path>? =
             runCatching {
                 val directory = Path.of(destination.text).toAbsolutePath().normalize()
-                files.associate { Path.of(it.path) to directory.resolve(it.name) }
+                FileMoveTargets.inDirectory(files.map { Path.of(it.path) }, directory, name.text.takeIf { files.size == 1 })
             }.getOrNull()
 
         override fun doAction() {

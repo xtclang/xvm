@@ -4,10 +4,10 @@ import * as vscode from 'vscode';
 import { compilerSettingsLocation, compilerSourceModules } from '../../rename-proposal';
 import { SourceModule, sourceGraphKey } from '../../source-graph-configuration';
 import { focusTestWindow } from '../native-focus';
-import { eventually, noErrors, playbook, symbols } from './support';
+import { client, eventually, noErrors, playbook, symbols } from './support';
 
-export function typeMoveCases(): void {
-    (['X161', 'X162', 'X163'] as const).forEach(id => playbook(id, async (workspace, data) => {
+export function typeMoveCases(ids: readonly ('X161' | 'X162' | 'X163' | 'X169' | 'X170' | 'X171' | 'X172')[] = ['X161', 'X162', 'X163']): void {
+    ids.forEach(id => playbook(id, async (workspace, data) => {
         for (const file of data.files) await workspace.write(file.file, file.source);
         const graph = (modules: SourceModule[]) => modules.map(module => ({
             ...module, uri: workspace.uri(module.uri).toString(),
@@ -21,8 +21,21 @@ export function typeMoveCases(): void {
             assert.ok(!vscode.window.tabGroups.all.flatMap(group => group.tabs).some(tab =>
                 tab.input instanceof vscode.TabInputText && tab.input.uri.toString() === workspace.uri(data.consumer).toString()), 'Consumer stays closed before Move');
         }
+        const moves = 'moves' in data ? data.moves : [{ from: data.from, to: data.to }];
+        if ('refused' in data && data.refused) {
+            const beforeGraph = sourceGraphKey(compilerSourceModules());
+            const proposal = await client().sendRequest('xtc/renameFiles', { files: moves.map(move => ({
+                oldUri: workspace.uri(move.from).toString(), newUri: workspace.uri(move.to).toString()
+            })) });
+            assert.strictEqual(proposal, null, 'A colliding member rejects the complete proposal');
+            for (const file of data.files) assert.strictEqual(await fs.readFile(workspace.uri(file.file).fsPath, 'utf8'), file.source);
+            for (const move of moves) assert.strictEqual(await fs.stat(workspace.uri(move.to).fsPath).catch(() => null), null);
+            assert.strictEqual(sourceGraphKey(compilerSourceModules()), beforeGraph);
+            await noErrors(document.uri);
+            return;
+        }
         const move = new vscode.WorkspaceEdit();
-        move.renameFile(workspace.uri(data.from), workspace.uri(data.to), { overwrite: false });
+        for (const item of moves) move.renameFile(workspace.uri(item.from), workspace.uri(item.to), { overwrite: false });
         assert.ok(await vscode.workspace.applyEdit(move, { isRefactoring: true }));
 
         const verify = async (moved: boolean) => {
@@ -47,7 +60,7 @@ export function typeMoveCases(): void {
         };
         await verify(true);
         for (const [action, moved] of [['undo', false], ['redo', true]] as const) {
-            // These moves edit settings but leave source text unchanged. Use the settings editor
+            // Graph moves also edit settings. Use the settings editor
             // as the undo context so the native transaction includes its file operations as well.
             if ('afterModules' in data) {
                 await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(compilerSettingsLocation()!.uri), { preview: false });

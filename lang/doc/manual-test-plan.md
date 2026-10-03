@@ -1,6 +1,6 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **173 scenarios**: X1–X168, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **177 scenarios**: X1–X172, CFG1–CFG3 and 7a.8/7a.9.
 The latest selected gate passes **X164–X168** in VS Code `run-oSVuMJ` and IntelliJ
 `run-907034856191389577` (START also passes), including generic/annotated receivers and nested
 union delegation. Both exercise exact cross-file rename, closed consumers and Undo. The combined
@@ -1305,7 +1305,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X168 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X172 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -3108,3 +3108,15 @@ catalog hash, proof boundaries and the failed/repaired IntelliJ UP20 evidence ar
 For manual focus coverage, switch away while Rename is opening, return to its dialog and submit
 once; inspect the exact edits and Undo once. The native harness now observes focus while the
 dialog is open without blocking on its modality or replaying the Rename action.
+
+
+| Case | Manual action | Expected result |
+| --- | --- | --- |
+| X169 | Move `App/tools/Box.x` into `App/util`, setting **New name** to `Parcel.x` in IntelliJ. In VS Code apply the equivalent file move. Keep Consumer closed; inspect all files, Undo once and Redo once. | Declaration, constructors and qualified uses become Parcel; the explicit Crate alias stays unchanged. Companion sources/resources follow the renamed type. Old-package Helper references retain their target. All changes undo/redo together. |
+| X170 | Move `old/App.x` into `target` with **New name** `Renamed.x`. Keep Consumer closed, inspect compiler settings, then Undo/Redo. Add and repair an unsaved error in the moved module. | The module declaration/import and dependency names change together with source paths. Companion files move; default resources left under old stay available through an explicit resource root. Consumer resources remain disabled. Undo/Redo restores exact settings and paths; later diagnostics follow the current file. |
+| X171 | Select First.x and Second.x from their separate packages and move both to `App/util` in one action. Keep Consumer closed, then Undo/Redo. | Mutual class references and the closed consumer use the final util namespace. One Undo/Redo restores/reapplies both moves and all text. |
+| X172 | Request the shared two-file proposal, with one destination colliding with an inline Taken declaration. Inspect files and compiler settings afterward. | The installed compiler connection returns no proposal; neither file nor graph changes. This is a protocol refusal check in both drivers. It does not claim that VS Code can veto an arbitrary Explorer move. |
+
+X169–X172 are implemented in both drivers; validation is pending for this batch. IntelliJ's native
+Move dialog now permits a new basename for a single selected file. Batch moves retain each selected
+basename; the compiler proposal API additionally supports individually renamed batch entries.
