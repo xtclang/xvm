@@ -32,6 +32,22 @@ class FileMoveTargetsTest {
     }
 
     @Test
+    fun `single source move accepts a new basename while batches preserve names`() {
+        val source = Files.writeString(root.resolve("Old.x"), "class Old {}")
+        val other = Files.writeString(root.resolve("Other.x"), "class Other {}")
+        val destination = Files.createDirectory(root.resolve("target"))
+        assertThat(FileMoveTargets.inDirectory(listOf(source), destination, "New.x"))
+            .containsExactlyEntriesOf(mapOf(source to destination.resolve("New.x")))
+        assertThat(FileMoveTargets.inDirectory(listOf(source, other), destination))
+            .containsExactlyEntriesOf(mapOf(source to destination.resolve("Old.x"), other to destination.resolve("Other.x")))
+        listOf("", " ", "../escape.x", "sub/File.x", "sub\\File.x", ".", "..").forEach { name ->
+            assertThat(FileMoveTargets.inDirectory(listOf(source), destination, name)).isNull()
+        }
+        assertThat(FileMoveTargets.inDirectory(listOf(source, other), destination, "New.x")).isNull()
+        assertThat(destination.resolve("New.x")).doesNotExist()
+    }
+
+    @Test
     fun `rechecking catches destination created while compiler proof is pending`() {
         val source = Files.writeString(root.resolve("A.x"), "class A {}")
         val target = root.resolve("B.x")
