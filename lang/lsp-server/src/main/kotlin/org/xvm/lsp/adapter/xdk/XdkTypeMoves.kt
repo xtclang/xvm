@@ -13,35 +13,40 @@ internal object XdkTypeMoves {
 
     fun plan(
         facts: CompilerRenameFacts,
-        source: File,
-        destination: File,
+        operations: Map<File, File>,
         texts: Map<String, String>,
         directories: Set<File>,
         project: XdkProject,
     ): Proposal? {
-        if (source.extension != "x" || destination.extension != "x" || !destination.parentFile.isDirectory) return null
-        val owner =
-            facts.typePaths.singleOrNull {
-                val target = it.target as? ProofIdentity.Source
-                target?.location?.sourceName == source.path && target.name == source.nameWithoutExtension &&
-                    target.format == Constant.Format.Class
-            } ?: return null
-        val namespace =
-            facts.typePaths.singleOrNull {
-                it.module == owner.module && directory(it.target) == destination.parentFile
-            } ?: return null
-        val movedPath = namespace.path + source.nameWithoutExtension
-        val moves = XdkSourceMoves.plan(source, destination, texts, directories) ?: return null
-        val rename =
-            XdkRename.fileNamePlan(facts, texts, source.path, source.nameWithoutExtension, destination.nameWithoutExtension) ?: return null
+        val moves =
+            operations.map { (source, destination) ->
+                if (source.extension != "x" || destination.extension != "x" || !destination.parentFile.isDirectory) return null
+                val owner =
+                    facts.typePaths.singleOrNull {
+                        val target = it.target as? ProofIdentity.Source
+                        target?.location?.sourceName == source.path && target.name == source.nameWithoutExtension &&
+                            target.format == Constant.Format.Class
+                    } ?: return null
+                val namespace =
+                    facts.typePaths.singleOrNull {
+                        it.module == owner.module && directory(it.target) == destination.parentFile
+                    } ?: return null
+                val files = XdkSourceMoves.plan(source, destination, texts, directories) ?: return null
+                val rename =
+                    XdkRename.fileNamePlan(facts, texts, source.path, source.nameWithoutExtension, destination.nameWithoutExtension)
+                        ?: return null
+                Move(owner, namespace.path + source.nameWithoutExtension, files, rename)
+            }
         val qualifications =
             facts.typeNames
                 .mapNotNull { name ->
                     val file = name.location.sourceName ?: return@mapNotNull null
                     val text = texts[file] ?: return null
-                    val movedTarget = name.module == owner.module && name.path.take(owner.path.size) == owner.path
-                    val movedUse = file in moves.paths
-                    if (!movedTarget && !movedUse) return@mapNotNull null
+                    val owners = moves.filter { name.module == it.owner.module && name.path.take(it.owner.path.size) == it.owner.path }
+                    if (owners.size > 1) return null
+                    val movedTarget = owners.singleOrNull()
+                    val movedUse = moves.any { file in it.files.paths }
+                    if (movedTarget == null && !movedUse) return@mapNotNull null
                     val start = XdkRename.offset(text, name.location.range.start) ?: return null
                     val end = XdkRename.offset(text, name.location.range.end) ?: return null
                     val spelling = text.substring(start, end)
@@ -58,7 +63,7 @@ internal object XdkTypeMoves {
                             .any { candidate -> candidate.uses.any { it.start == name.location.range.start } }
                     if (!name.imported && alias) return@mapNotNull null
                     if (written.last() != name.path.last()) return@mapNotNull null
-                    val desired = if (movedTarget) movedPath + name.path.drop(owner.path.size) else name.path
+                    val desired = movedTarget?.let { it.path + name.path.drop(it.owner.path.size) } ?: name.path
                     val localModule =
                         project.modules.values
                             .singleOrNull { it.uri == project.scope(file) }
@@ -89,12 +94,21 @@ internal object XdkTypeMoves {
                 }.groupBy({ it.first }, { it.second })
                 .mapValues { (_, value) -> value.distinct().sortedBy { it.start } }
         val edits =
-            (qualifications.entries + rename.edits.entries)
+            (qualifications.entries + moves.flatMap { it.rename.edits.entries })
                 .groupBy({ it.key }, { it.value })
                 .mapValues { (_, changes) -> changes.flatten().distinct().sortedWith(compareBy({ it.start }, { it.end })) }
         if (edits.values.any { !XdkRename.disjoint(it) }) return null
-        return Proposal(edits, moves.resources, qualifications)
+        val resources = moves.flatMap { it.files.resources.entries }.groupBy({ it.key }, { it.value })
+        if (resources.values.any { it.distinct().size != 1 }) return null
+        return Proposal(edits, resources.mapValues { it.value.first() }, qualifications)
     }
+
+    private data class Move(
+        val owner: TypePath,
+        val path: List<String>,
+        val files: XdkSourceMoves,
+        val rename: XdkRename.Plan,
+    )
 
     private fun directory(identity: ProofIdentity): File? =
         when (identity) {
