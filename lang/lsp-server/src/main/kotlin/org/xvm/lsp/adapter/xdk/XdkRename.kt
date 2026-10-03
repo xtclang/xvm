@@ -686,6 +686,11 @@ internal object XdkRename {
         data class Alternatives(
             val targets: Set<Target>,
         ) : Target
+
+        data class TypeShape(
+            val format: Constant.Format,
+            val components: List<Target>,
+        ) : Target
     }
 
     private fun composedTarget(
@@ -695,6 +700,10 @@ internal object XdkRename {
         translate: (String, Int) -> Int?,
     ): Target? {
         return when (identity) {
+            is ProofIdentity.TypeShape -> {
+                Target.TypeShape(identity.format, identity.components.map { composedTarget(it, texts, moved, translate) ?: return null })
+            }
+
             is ProofIdentity.Alternatives -> {
                 Target.Alternatives(
                     identity.targets.mapTo(linkedSetOf()) {
