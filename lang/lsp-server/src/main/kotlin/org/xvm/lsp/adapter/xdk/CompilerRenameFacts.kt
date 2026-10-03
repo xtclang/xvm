@@ -8,7 +8,8 @@ import org.xvm.asm.MethodStructure
 import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.MethodConstant
 import org.xvm.asm.constants.PackageConstant
-import org.xvm.asm.constants.PureIdentityConstant
+import org.xvm.asm.constants.TypeConstant
+import org.xvm.asm.constants.UnionTypeConstant
 import org.xvm.lsp.util.ExecutionTrace
 import java.io.File
 import java.util.UUID
@@ -89,6 +90,7 @@ internal class ProofRelations(
         val owner: ProofIdentity,
         val members: List<ProofIdentity>,
         val supported: Boolean,
+        val cycles: List<ProofIdentity.Composed> = emptyList(),
     )
 }
 
@@ -104,6 +106,7 @@ internal class CompilerRenameFacts(
     val typeNames: List<TypeName> = emptyList(),
     val typePaths: List<TypePath> = emptyList(),
     val resourceValues: Map<SemanticModel.SourceLocation, String?> = emptyMap(),
+    val callables: Map<SemanticModel.SourceLocation, ProofIdentity> = emptyMap(),
 ) {
     /** Unchanged independent modules cannot acquire new bindings from a source edit elsewhere. */
     fun within(scopes: Set<String>): CompilerRenameFacts = merge(modules.filterKeys(scopes::contains))
@@ -128,6 +131,7 @@ internal class CompilerRenameFacts(
                 attempts.flatMap { it.typeNames }.distinct(),
                 attempts.flatMap { it.typePaths }.distinct(),
                 attempts.flatMap { it.resourceValues.entries }.associate { it.toPair() },
+                attempts.flatMap { it.callables.entries }.associate { it.toPair() },
             )
         }
     }
@@ -146,6 +150,7 @@ internal fun captureRenameFacts(
     receivers: Map<SemanticModel.SymbolId, CompilerReceiver> = emptyMap(),
     typeNames: List<CompilerTypeName> = emptyList(),
     resourceValues: Map<SemanticModel.SourceLocation, String?> = emptyMap(),
+    callables: Map<SemanticModel.SourceLocation, Pair<TypeConstant, MethodConstant>> = emptyMap(),
 ): CompilerRenameFacts {
     val declarations =
         models
@@ -170,10 +175,6 @@ internal fun captureRenameFacts(
                     (host in declarations || dependencies?.declarations?.containsKey(host) == true)
             val packageParent = (constant as? PackageConstant)?.let { identity(it.parentConstant) }
             when {
-                constant is MethodConstant && host is PureIdentityConstant && errors != null -> {
-                    unionMethodIdentity(constant, errors, ::identity) ?: ProofIdentity.Unproven()
-                }
-
                 // Bundled source navigation must use the same artifact identity as binary-only
                 // views.
                 location != null && module !in XdkLibraries.moduleNames -> {
@@ -317,6 +318,21 @@ internal fun captureRenameFacts(
 
     fun path(value: IdentityConstant): List<String> = value.path.filter { it.format != Constant.Format.Module }.map { it.name }
 
+    fun cycle(cycle: CompilerDispatch.Cycle) = ProofIdentity.Composed(identity(cycle.owner), cycle.contracts.map(::identity), emptyList())
+
+    val cyclicOwners = methods.chains.filter { it.cycles.isNotEmpty() }.mapTo(hashSetOf()) { it.owner }
+    val callableIdentities =
+        if (errors == null) {
+            emptyMap()
+        } else {
+            callables.values
+                .distinct()
+                .filter { (receiver, _) ->
+                    receiver.resolveTypedefs().removeAccess() is UnionTypeConstant ||
+                        (receiver.isSingleUnderlyingClass(false) && receiver.getSingleUnderlyingClass(false) in cyclicOwners)
+                }.associateWith { (receiver, method) -> callableIdentity(receiver, method, errors, ::identity) }
+        }
+
     return CompilerRenameFacts(
         models,
         constants.mapValues { identity(it.value) } +
@@ -334,7 +350,7 @@ internal fun captureRenameFacts(
         ProofRelations(
             methods.declarations.mapTo(linkedSetOf(), ::identity),
             methods.chains.map {
-                ProofRelations.Chain(identity(it.owner), it.methods.map(::identity), it.supported)
+                ProofRelations.Chain(identity(it.owner), it.methods.map(::identity), it.supported, it.cycles.map(::cycle))
             },
         ),
         ProofRelations(
@@ -385,5 +401,10 @@ internal fun captureRenameFacts(
                 }.distinct()
                 .map { TypePath(identity(it), it.moduleConstant.name, path(it)) },
         resourceValues = resourceValues,
+        callables =
+            callables
+                .mapNotNull { (site, selected) ->
+                    callableIdentities[selected]?.let { site to it }
+                }.toMap(),
     )
 }
