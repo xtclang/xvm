@@ -487,17 +487,21 @@ internal class XdkProjectQueries(
         }
         val before = compile(texts) ?: return null
         val directories = sources.values.flatMap { it.inputs.directories }.toSet()
+        val rootOperations =
+            operations.filter { (from, to) ->
+                from.parentFile != to.parentFile && project.modules.values.any { it.root == from }
+            }
+        val rootRenames =
+            rootOperations.map { (from, to) ->
+                if (to.extension != "x") return null
+                XdkRename.fileNamePlan(before, texts, from.path, from.nameWithoutExtension, to.nameWithoutExtension) ?: return null
+            }
         val rootMoves =
-            operations
-                .filter { (from, to) ->
-                    from.parentFile != to.parentFile && project.modules.values.any { it.root == from }
-                }.map { (from, to) ->
-                    // Changing a root's name and ownership together needs a combined symbol proof.
-                    if (from.name != to.name || !to.parentFile.isDirectory) return null
-                    // Discovery cannot persist resource roots left outside the moved companion tree.
-                    if (discoverImports) return null
-                    XdkSourceMoves.plan(from, to, texts, directories) ?: return null
-                }
+            rootOperations.map { (from, to) ->
+                // Discovery cannot persist resource roots left outside the moved companion tree.
+                if (discoverImports) return null
+                XdkSourceMoves.plan(from, to, texts, directories) ?: return null
+            }
         val typeMoves =
             operations
                 .filter { (from, to) ->
@@ -623,6 +627,11 @@ internal class XdkProjectQueries(
                         module.name
                     }
             }
+        if (names.values.distinct().size != names.size ||
+            names.any { (before, after) -> before != after && after in XdkLibraries.moduleNames }
+        ) {
+            return null
+        }
         val graph =
             XdkProject(
                 project.buildOrder().map { module ->
@@ -695,7 +704,7 @@ internal class XdkProjectQueries(
                 .groupBy({ it.key }, { it.value })
                 .mapValues { (_, edits) -> edits.flatten().distinct() }
         val edits =
-            (renamed.entries + typeMoves.flatMap { it.edits.entries })
+            (renamed.entries + rootRenames.flatMap { it.edits.entries } + typeMoves.flatMap { it.edits.entries })
                 .groupBy({ it.key }, { it.value })
                 .mapValues { (_, edits) -> edits.flatten().distinct().sortedWith(compareBy({ it.start }, { it.end })) }
         if (edits.values.any { !XdkRename.disjoint(it) }) {

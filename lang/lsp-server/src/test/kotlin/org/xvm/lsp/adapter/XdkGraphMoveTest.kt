@@ -205,6 +205,96 @@ class XdkGraphMoveTest {
         }
     }
 
+    @ParameterizedTest
+    @CsvSource("App,false", "App,true", "App.example.org,false", "App.example.org,true")
+    fun `root rename and move replace dependencies and preserve resource policy`(
+        moduleName: String,
+        customResources: Boolean,
+    ) {
+        write(
+            "old/App.x",
+            """
+            module $moduleName {
+                Box make() = new Box();
+                static String text() = $./data.txt;
+            }
+            """.trimIndent(),
+        )
+        write("old/App/Box.x", "class Box {}")
+        write("old/data.txt", "default resource")
+        write("assets/data.txt", "custom resource")
+        write("fallback/data.txt", "fallback resource")
+        write(
+            "Consumer.x",
+            """
+            module Consumer {
+                package app import $moduleName;
+                app.Box make() = new app.Box();
+                String read() = app.text();
+            }
+            """.trimIndent(),
+        )
+        Files.createDirectories(directory.resolve("target"))
+        val roots = if (customResources) listOf(uri("assets"), uri("fallback")) else null
+        val renamed = "Renamed" + moduleName.removePrefix("App")
+        session { adapter ->
+            val graph =
+                listOf(
+                    XdkSourceModule(moduleName, uri("old/App.x"), resourceRoots = roots),
+                    XdkSourceModule("Consumer", uri("Consumer.x"), setOf(moduleName), emptyList()),
+                )
+            adapter.replaceSourceModules(graph)
+            val requested = mapOf(uri("old/App.x") to uri("target/Renamed.x"))
+            assertThat(adapter.renameFilesAsync(requested).get(30, SECONDS)).isNull()
+            val proposal = requireNotNull(adapter.renameFilesProposalAsync(requested).get(30, SECONDS))
+            val after = requireNotNull(proposal.sourceModules)
+            assertThat(proposal.edit.renames).containsEntry(uri("old/App"), uri("target/Renamed"))
+            assertThat(proposal.previousSourceModules!!.single { it.name == moduleName }.resourceRoots).isEqualTo(roots)
+            assertThat(after.single { it.name == renamed }.root).isEqualTo(directory.resolve("target/Renamed.x").toFile())
+            assertThat(after.single { it.name == renamed }.resourceFiles)
+                .containsExactlyElementsOf(
+                    (if (customResources) listOf("assets", "fallback") else listOf("old")).map { directory.resolve(it).toFile() },
+                )
+            assertThat(after.single { it.name == "Consumer" }.dependencies).containsExactly(renamed)
+            assertThat(after.single { it.name == "Consumer" }.resourceRoots).isEmpty()
+            assertThat(directory.resolve("target/Renamed.x")).doesNotExist()
+            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            apply(proposal.edit)
+            adapter.replaceSourceModules(after)
+            assertThat(Files.readString(directory.resolve("target/Renamed.x"))).contains("module $renamed")
+            assertThat(Files.readString(directory.resolve("Consumer.x"))).contains("package app import $renamed", "app.Box", "app.text()")
+            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            val reverse =
+                requireNotNull(
+                    adapter
+                        .renameFilesProposalAsync(
+                            requested.entries.associate { (from, to) ->
+                                to to from
+                            },
+                        ).get(30, SECONDS),
+                )
+            apply(reverse.edit)
+            adapter.replaceSourceModules(requireNotNull(reverse.sourceModules))
+            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(Files.readString(directory.resolve("Consumer.x"))).contains("package app import $moduleName")
+        }
+    }
+
+    @Test
+    fun `root rename and move refuse a duplicate module identity without touching files or graph`() {
+        write("old/App.x", "module App {}")
+        write("Taken.x", "module Taken {}")
+        Files.createDirectories(directory.resolve("target"))
+        session { adapter ->
+            adapter.replaceSourceModules(listOf(XdkSourceModule("App", uri("old/App.x")), XdkSourceModule("Taken", uri("Taken.x"))))
+            val requested = mapOf(uri("old/App.x") to uri("target/Taken.x"))
+            assertThat(adapter.renameFilesProposalAsync(requested).get(30, SECONDS)).isNull()
+            assertThat(Files.readString(directory.resolve("old/App.x"))).isEqualTo("module App {}")
+            assertThat(directory.resolve("target/Taken.x")).doesNotExist()
+            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+        }
+    }
+
     private fun session(body: (XdkAdapter) -> Unit) {
         CompilerTestSupport.configure()
         directory = directory.toRealPath()
