@@ -4469,15 +4469,9 @@ public class CommonBuilder
             Set.of("calc",           // TODO: need support for @Lazy
                    "evaluateInto")), // TODO: MapSet's capped constructor has no reserved native name
         Map.entry("org.xtclang.ecstasy.maps.DiscreteEntry",
-            Set.of("construct")), // TODO: verify specialized constructor return with a conditional mixin; Int/String probe fails first in freeze
-        Map.entry("org.xtclang.ecstasy.maps.HashMap",
-            Set.of("clear",       // TODO: NEWV_0 cannot find MethodInfo for the virtual constructor
-                   "duplicate")), // TODO: NEWV_0 cannot find MethodInfo for the virtual constructor
-        Map.entry("org.xtclang.ecstasy.maps.HasherMap",
-            Set.of("duplicate")), // TODO: NEWV_N cannot find MethodInfo for the virtual constructor
+            Set.of("construct")), // TODO: verify specialized constructor return with a conditional mixin
         Map.entry("org.xtclang.ecstasy.maps.ListMap",
-            Set.of("duplicate",  // TODO: NEWV_0 cannot find MethodInfo for the virtual constructor
-                   "ensurePersistent")), // TODO: private access requested on a nullable array union
+            Set.of("ensurePersistent")), // TODO: private access requested on a nullable array union
         Map.entry("org.xtclang.ecstasy.maps.Map",
             Set.of("removeAll")), // TODO: IP_ADD cannot find add (+) on Array<Map.Key>
         Map.entry("org.xtclang.ecstasy.Timeout",
