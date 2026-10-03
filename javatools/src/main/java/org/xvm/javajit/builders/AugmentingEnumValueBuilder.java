@@ -1,6 +1,8 @@
 package org.xvm.javajit.builders;
 
 import java.lang.classfile.ClassBuilder;
+
+import java.lang.classfile.ClassModel;
 import java.lang.classfile.CodeBuilder;
 
 import java.lang.constant.ClassDesc;
@@ -12,23 +14,25 @@ import org.xvm.javajit.TypeSystem;
 import org.xvm.javajit.TypeSystem.Artifact;
 
 /**
- * The builder for Enum value types.
+ * The augmenting builder for native Enum value types.
  *
- * <p>It overrides the {@link CommonBuilder} to do the following:
+ * <p>It overrides the {@link AugmentingBuilder} to do the following:
  *   - create a synthetic "$name" field to hold the enum value name
  *   - supply the "ordinal" and "name" properties
  */
-public class EnumValueBuilder
-        extends CommonBuilder
+public class AugmentingEnumValueBuilder
+        extends AugmentingBuilder
         implements EnumValueBuilderSupport {
     /**
-     * Create an {@link EnumValueBuilder}.
+     * Create an {@link AugmentingEnumValueBuilder}.
      *
-     * @param typeSystem the {@link TypeSystem}
-     * @param art        the {@link Artifact} to build
+     * @param typeSystem  the {@link TypeSystem}
+     * @param art         the {@link Artifact}
+     * @param model       the {@link ClassModel} to augment, if {@code null} an empty model will
+     *                    be used
      */
-    public EnumValueBuilder(TypeSystem typeSystem, Artifact art) {
-        super(typeSystem, art);
+    public AugmentingEnumValueBuilder(TypeSystem typeSystem, Artifact art, ClassModel model) {
+        super(typeSystem, art, model);
         ClassStructure enumStruct = (ClassStructure) classStruct.getParent();
         assert enumStruct.getFormat() == Component.Format.ENUM;
         ClassStructure[] enumValues = EnumerationBuilderSupport.getEnumValues(enumStruct);

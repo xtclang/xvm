@@ -1928,6 +1928,11 @@ public class TerminalTypeConstant
 
     @Override
     public boolean isJavaPrimitive() {
+        if (isEnumValue()) {
+            TypeConstant enumType = getSingleUnderlyingClass(false)
+                                        .getParentConstant().getType();
+            return enumType.isJavaPrimitive();
+        }
         if (isAutoNarrowing()) {
             return removeAutoNarrowing().isJavaPrimitive();
         }

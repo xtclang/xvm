@@ -1,10 +1,6 @@
 package org.xtclang.ecstasy;
 
-import org.xtclang.ecstasy.reflect.Enumeration;
 import org.xtclang.ecstasy.text.String;
-
-import org.xvm.asm.ConstantPool;
-import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
 
@@ -15,29 +11,18 @@ public class Ordered
         extends nEnum {
     private Ordered(long ordinal, String name, String symbol) {
         super(null);
-        $ordinal = ordinal;
-        $name    = name;
-        $symbol  = symbol;
+        $ordinal    = ordinal;
+        $name       = name;
+        this.symbol = symbol;
     }
 
     public final long   $ordinal;
     public final String $name;
-    public final String $symbol;
+    public final String symbol;
 
-    @Override public TypeConstant $xvmType(Ctx ctx) {
-        ConstantPool pool = ctx.pool();
-        return switch ((int) $ordinal) {
-            case 0  -> pool.valLesser() .getType();
-            case 1  -> pool.valEqual()  .getType();
-            case 2  -> pool.valGreater().getType();
-            default -> throw new IllegalStateException();
-        };
-    }
-
-    public Enumeration enumeration$get(Ctx ctx) {
-        return eBoolean.$INSTANCE;
-    }
-
+    /**
+     * The native implementation of the reversed property getter.
+     */
     public Ordered reversed$get(Ctx ctx) {
         return switch ((int) $ordinal) {
             case 0 -> Greater.$INSTANCE;

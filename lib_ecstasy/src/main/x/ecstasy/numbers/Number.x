@@ -51,10 +51,21 @@
     /**
      * Signum represents the sign of the number, whether zero, negative or positive.
      */
-    enum Signum(String prefix, IntLiteral factor, Ordered ordered) {
-        Negative("-", -1, Lesser ),
-        Zero    ("" ,  0, Equal  ),
-        Positive("+", +1, Greater)
+    enum Signum(String prefix, Ordered ordered) {
+        Negative("-", Lesser) {
+            @Override
+            IntLiteral factor.get() = new IntLiteral("-1");
+        },
+        Zero("", Equal) {
+            @Override
+            IntLiteral factor.get() = new IntLiteral("0");
+        },
+        Positive("+", Greater) {
+            @Override
+            IntLiteral factor.get() = new IntLiteral("+1");
+        };
+
+        @Abstract IntLiteral factor;
     }
 
     /**

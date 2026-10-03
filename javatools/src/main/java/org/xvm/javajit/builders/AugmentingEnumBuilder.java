@@ -2,29 +2,33 @@ package org.xvm.javajit.builders;
 
 import java.lang.classfile.ClassBuilder;
 
+import java.lang.classfile.ClassModel;
+
 import java.lang.constant.ClassDesc;
 
 import org.xvm.javajit.TypeSystem;
 import org.xvm.javajit.TypeSystem.Artifact;
 
 /**
- * The builder for Enum base types.
+ * The augmenting builder for native Enum base types.
  *
- * <p>It overrides the CommonBuilder to do the following:
+ * <p>It overrides the {@link AugmentingBuilder} to do the following:
  *   - supply the xEnum class as a super class
  *   - implement the "enumeration" property
  */
-public class EnumBuilder
-        extends CommonBuilder
+public class AugmentingEnumBuilder
+        extends AugmentingBuilder
         implements EnumBuilderSupport {
     /**
-     * Create an {@link EnumBuilder}.
+     * Create an {@link AugmentingEnumBuilder}.
      *
      * @param typeSystem  the {@link TypeSystem}
      * @param art         the {@link Artifact}
+     * @param model       the {@link ClassModel} to augment, if {@code null} an empty model will
+     *                    be used
      */
-    public EnumBuilder(TypeSystem typeSystem, Artifact art) {
-        super(typeSystem, art);
+    public AugmentingEnumBuilder(TypeSystem typeSystem, Artifact art, ClassModel model) {
+        super(typeSystem, art, model);
     }
 
     @Override

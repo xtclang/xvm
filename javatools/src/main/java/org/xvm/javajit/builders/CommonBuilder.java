@@ -650,7 +650,7 @@ public class CommonBuilder
             }
         }
 
-        if (typeInfo.isSingleton()) {
+        if (typeInfo.isSingleton() && !isNativeField(Instance)) {
             // public static final $INSTANCE;
             ClassDesc cd = isContainerScoped(thisType) ? CD_MethodHandle : art.CD();
             classBuilder.withField(Instance, cd,
@@ -945,7 +945,7 @@ public class CommonBuilder
                 }
             }
 
-            if (typeInfo.isSingleton()) {
+            if (typeInfo.isSingleton() && !isNativeField(Instance)) {
                 if (isScoped) {
                     // store the singleton construction handle; each container computes its instance
                     code.ldc(MethodHandleDesc.ofMethod(
@@ -1848,7 +1848,7 @@ public class CommonBuilder
     protected void assembleXvmType(ClassBuilder classBuilder) {
         boolean hasType = typeInfo.hasGenericTypes();
 
-        if (hasType && !isNativeField("$type", CD_TypeConstant)) {
+        if (hasType && !isNativeField("$type")) {
             classBuilder.withField("$type", CD_TypeConstant, ClassFile.ACC_PUBLIC);
         }
 
@@ -2388,7 +2388,7 @@ public class CommonBuilder
      *
      * @return {@code true} if the specified field exists for the native (augmented) class
      */
-    protected boolean isNativeField(String jitName, ClassDesc cd) {
+    protected boolean isNativeField(String jitName) {
         return false;
     }
 

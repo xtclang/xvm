@@ -1,7 +1,5 @@
 package org.xtclang.ecstasy;
 
-import org.xtclang.ecstasy.reflect.Enumeration;
-
 import org.xtclang.ecstasy.text.String;
 
 import org.xvm.asm.constants.TypeConstant;
@@ -25,7 +23,6 @@ public abstract class nEnum
         throw new UnsupportedOperationException("Must be generated");
     }
 
-    abstract public Enumeration enumeration$get(Ctx ctx);
     abstract public String name$get(Ctx ctx);
     abstract public long ordinal$get$p(Ctx ctx);
 
@@ -46,9 +43,6 @@ public abstract class nEnum
     static public long compare$p(Ctx ctx, nType CompileType, nEnum o1, nEnum o2) {
         return o1.ordinal$get$p(ctx) - o2.ordinal$get$p(ctx);
     }
-
-    // TODO since we're not augmenting this class (being nEnum), we need to make sure that
-    //      prev()/next() are gen'd on actual enums
 
     /**
      * Native implementation of Enum.x
@@ -73,5 +67,34 @@ public abstract class nEnum
     @Override
     public java.lang.String toString() {
         return name$get(null).toString();
+    }
+
+    /**
+     * A helper method for the Enum skip method for int JIT primitive enums.
+     */
+    public static int $skip(int thi$, Ctx ctx, long steps, int valueCount) {
+        if (steps == 0) {
+            return thi$;
+        }
+        long result = (long) thi$ + steps;
+        if (result < 0L || result >= (long) valueCount) {
+            throw Exception.$oob(ctx, "steps is out of bounds");
+        }
+        return (int) result;
+    }
+
+    /**
+     * A helper method for the Enum skip method Enums based on the Int64 ordinal and also for long
+     * JIT primitive enums.
+     */
+    public static long $skip(long thi$, Ctx ctx, long steps, int valueCount) {
+        if (steps == 0) {
+            return thi$;
+        }
+        long result = thi$ + steps;
+        if (result < 0L || result >= (long) valueCount) {
+            throw Exception.$oob(ctx, "steps is out of bounds");
+        }
+        return result;
     }
 }

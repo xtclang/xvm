@@ -38,6 +38,9 @@ import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.builders.ArrayBuilder;
 import org.xvm.javajit.builders.AugmentingBuilder;
+import org.xvm.javajit.builders.AugmentingEnumBuilder;
+import org.xvm.javajit.builders.AugmentingEnumValueBuilder;
+import org.xvm.javajit.builders.AugmentingEnumerationBuilder;
 import org.xvm.javajit.builders.NumberBuilder;
 
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
@@ -168,7 +171,6 @@ public class NativeTypeSystem
                 String simpleName = name.substring(name.lastIndexOf('.') + 1);
                        simpleName = simpleName.substring(simpleName.lastIndexOf('$') + 1);
                 if (simpleName.codePointAt(0) == NO_MOD
-                        || isEnumerationClass(simpleName)
                         || className.equals(Builder.N_Function)) {
                     // by convention the classes that start with the NO_MOD character are
                     // "no-modification" classes that we use "as is" (they must not be augmented)
@@ -218,14 +220,25 @@ public class NativeTypeSystem
     private byte[] augmentNativeClass(ClassModel model, String className, TypeConstant type) {
         nativeModels.put(model.thisClass().asSymbol(), model);
 
-        IdentityConstant id      = type.getSingleUnderlyingClass(true);
-        ClassStructure   struct  = (ClassStructure) id.getComponent();
-        Artifact         art     = new Artifact(type, struct, ClassfileShape.Impl, className);
-        Builder          builder = type.isArray()
-                                    ? new ArrayBuilder(this, art, model)
-                                    : type.isA(pool().typeNumber())
-                                        ? NumberBuilder.builderFor(this, art, model)
-                                        : new AugmentingBuilder(this, art, model);
+        IdentityConstant id     = type.getSingleUnderlyingClass(true);
+        ClassStructure   struct = (ClassStructure) id.getComponent();
+        Artifact         art    = new Artifact(type, struct, ClassfileShape.Impl, className);
+        ConstantPool     pool   = pool();
+
+        Builder builder;
+        if (type.isArray()) {
+            builder = new ArrayBuilder(this, art, model);
+        } else if (type.isA(pool.typeNumber())) {
+            builder = NumberBuilder.builderFor(this, art, model);
+        } else if (type.isA(pool.typeEnumeration())) {
+            builder = new AugmentingEnumerationBuilder(this, art, model);
+        } else if (type.isEnum()) {
+            builder = new AugmentingEnumBuilder(this, art, model);
+        } else if (type.isEnumValue()) {
+            builder = new AugmentingEnumValueBuilder(this, art, model);
+        } else {
+            builder = new AugmentingBuilder(this, art, model);
+        }
 
         ClassFile classFile = ClassFile.of(
                 ClassFile.ClassHierarchyResolverOption.of(createClassHierarchyResolver()),
@@ -242,9 +255,7 @@ public class NativeTypeSystem
                 return;
             }
 
-            // ignore native enum values; we are not generating any code for them
-            if (!type.isEnumValue() &&
-                    element instanceof MethodModel methodModel &&
+            if (element instanceof MethodModel methodModel &&
                     methodModel.methodName().stringValue().equals(ConstantDescs.CLASS_INIT_NAME)) {
                 // skip the static initializer for now; we will re-incorporate it later;
                 // see AugmentingBuilder.prependCLInit()

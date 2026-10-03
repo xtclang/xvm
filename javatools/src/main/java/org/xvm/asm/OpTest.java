@@ -295,6 +295,8 @@ public abstract class OpTest
             typeCmp = typeCmp.removeNullable();
         }
 
+        assert !typeCmp.isEnumValue() : "TODO GG fix the compiler";
+
         typeCmp.buildCompare(bctx, code, nOp, reg1, reg2, /*lblTrue*/ null);
 
         code.labelBinding(lblEnd);

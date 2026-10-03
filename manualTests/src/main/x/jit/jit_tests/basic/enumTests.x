@@ -106,10 +106,9 @@ package enumTests {
     }
 
     void testBooleanValues() {
-// TODO eBoolean.java values$get(Ctx ctx) must return ArrayᐸBooleanᐳ
-//        assert Boolean.values.size == 2;
-//        assert Boolean.values[0] == False;
-//        assert Boolean.values[1] == True;
+        assert Boolean.values.size == 2;
+        assert Boolean.values[0] == False;
+        assert Boolean.values[1] == True;
     }
 
     void testNullableCount() {
