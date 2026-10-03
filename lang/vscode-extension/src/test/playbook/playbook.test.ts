@@ -60,7 +60,7 @@ suite('XdkAdapter playbook', function () {
     editingClosureCases();
     renameFamilyCases(['X159', 'X160']);
     typeMoveCases();
-    renameFamilyCases(['X164', 'X165']);
+    renameFamilyCases(['X164', 'X165', 'X166', 'X167', 'X168']);
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {
