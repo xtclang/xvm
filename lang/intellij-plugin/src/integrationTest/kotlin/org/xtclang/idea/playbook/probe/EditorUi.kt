@@ -16,6 +16,8 @@ import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import org.xtclang.idea.lsp.XtcRenameHandler
 import java.awt.KeyboardFocusManager
 import java.awt.Window
+import java.util.concurrent.FutureTask
+import java.util.concurrent.TimeUnit.SECONDS
 import javax.swing.JFrame
 import javax.swing.JLabel
 import javax.swing.SwingUtilities
@@ -67,16 +69,17 @@ object EditorUi {
                 .getData(CommonDataKeys.EDITOR) === editor
 
     @JvmStatic
-    fun focusState(editor: Editor): String {
-        ApplicationManager.getApplication().assertIsDispatchThread()
-        val window = SwingUtilities.getWindowAncestor(editor.contentComponent)
-        val manager = KeyboardFocusManager.getCurrentKeyboardFocusManager()
-        return "editorDisposed=${editor.isDisposed}, window=${window?.javaClass?.simpleName}, " +
-            "windowFocused=${window?.isFocused}, active=${manager.activeWindow?.javaClass?.simpleName}, " +
-            "focused=${manager.focusedWindow?.javaClass?.simpleName}, owner=${manager.focusOwner?.javaClass?.name}, " +
-            "editorFocused=${editor.contentComponent.isFocusOwner}, " +
-            "activeToolWindow=${editor.project?.let { ToolWindowManager.getInstance(it).activeToolWindowId}}"
-    }
+    fun focusState(editor: Editor): String =
+        onSwing {
+            ApplicationManager.getApplication().assertIsDispatchThread()
+            val window = SwingUtilities.getWindowAncestor(editor.contentComponent)
+            val manager = KeyboardFocusManager.getCurrentKeyboardFocusManager()
+            "editorDisposed=${editor.isDisposed}, window=${window?.javaClass?.simpleName}, " +
+                "windowFocused=${window?.isFocused}, active=${manager.activeWindow?.javaClass?.simpleName}, " +
+                "focused=${manager.focusedWindow?.javaClass?.simpleName}, owner=${manager.focusOwner?.javaClass?.name}, " +
+                "editorFocused=${editor.contentComponent.isFocusOwner}, " +
+                "activeToolWindow=${editor.project?.let { ToolWindowManager.getInstance(it).activeToolWindowId}}"
+        }
 
     /** A disposable, unowned window exercises real focus loss without touching another app. */
     @JvmStatic
@@ -102,12 +105,38 @@ object EditorUi {
     }
 
     @JvmStatic
-    fun hasFocus(editor: Editor): Boolean {
-        ApplicationManager.getApplication().assertIsDispatchThread()
-        val frame = SwingUtilities.getWindowAncestor(editor.contentComponent) ?: return false
-        val manager = KeyboardFocusManager.getCurrentKeyboardFocusManager()
-        return sequenceOf(manager.activeWindow, manager.focusedWindow).filterNotNull().any { active ->
-            generateSequence(active) { it.owner }.any { it === frame }
+    fun hasFocus(editor: Editor): Boolean =
+        onSwing {
+            ApplicationManager.getApplication().assertIsDispatchThread()
+            val frame = SwingUtilities.getWindowAncestor(editor.contentComponent) ?: return@onSwing false
+            val manager = KeyboardFocusManager.getCurrentKeyboardFocusManager()
+            sequenceOf(manager.activeWindow, manager.focusedWindow).filterNotNull().any { active ->
+                generateSequence(active) { it.owner }.any { it === frame }
+            }
+        }
+
+    @JvmStatic
+    fun popupFocus(
+        editor: Editor,
+        restoring: Boolean,
+    ) = onSwing {
+        editor.project?.let { PlaybookProgress.focus(it, restoring) }
+        if (restoring) {
+            val frame = SwingUtilities.getWindowAncestor(editor.contentComponent)
+            AppIcon.getInstance().requestFocus(frame)
+            AppIcon.getInstance().requestFocus()
+        }
+    }
+
+    /** UI observation/focus only: never run document or PSI changes through this path. */
+    private fun <T> onSwing(action: () -> T): T {
+        if (SwingUtilities.isEventDispatchThread()) return action()
+        val task = FutureTask(action)
+        SwingUtilities.invokeLater(task)
+        return try {
+            task.get(10, SECONDS)
+        } finally {
+            task.cancel(false)
         }
     }
 
