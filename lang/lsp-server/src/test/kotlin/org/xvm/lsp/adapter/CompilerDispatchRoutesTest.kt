@@ -158,6 +158,32 @@ class CompilerDispatchRoutesTest {
     }
 
     @Test
+    fun `generated shorthand constructors do not become independently editable methods`() {
+        inspect("class Box(Int value = 1) {} Box make() = new Box(value = 2);") { module, errors ->
+            val owner = type(module, "Box", errors)
+            val constructors = owner.methods.values.filter {
+                it.isCtorOrValidator && it.chain.any { body -> body.isSynthetic }
+            }
+            assertThat(constructors).isNotEmpty()
+            constructors.forEach { assertThat(owner.dispatch(it, errors).supported).isFalse() }
+        }
+    }
+
+    @Test
+    fun `implicit virtual child constructors remain construction contracts rather than renameable methods`() {
+        inspect("class Base { class Child { construct(Int value) {} } } class Derived extends Base { class Child {} }") { module, errors ->
+            val child = (module.getChild("Derived") as ClassStructure).getChild("Child") as ClassStructure
+            val owner = child.formalType.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors)
+            val implicit = owner.methods.values.filter { it.chain.any { body -> body.implementation == Implementation.Implicit } }
+            assertThat(implicit).isNotEmpty()
+            implicit.forEach {
+                assertThat(it.isCtorOrValidator).isTrue()
+                assertThat(owner.dispatch(it, errors).supported).isFalse()
+            }
+        }
+    }
+
+    @Test
     fun `native binary methods do not acquire written executable implementation targets`() {
         inspect("") { module, errors ->
             val info = module.constantPool.typeString().ensureTypeInfo(errors)
