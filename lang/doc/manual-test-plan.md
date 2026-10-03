@@ -1,6 +1,11 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **168 scenarios**: X1–X163, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **170 scenarios**: X1–X165, CFG1–CFG3 and 7a.8/7a.9.
+X119/X120/X121/X164/X165 pass in VS Code `run-VqFiDW` and IntelliJ
+`run-12344641320847299097` (START also passes, zero IDE errors). These cover primary-header
+properties, lambda/escaped-method parameters and the new union/cyclic callable renames with
+closed consumers and Undo. The related backend gate passes 202 tests without failures/errors/skips.
+This is selected acceptance, not a full 170-case run.
 X161 passes in VS Code `run-KieFUI` and IntelliJ `run-15583928886685829346` (START also passes,
 no IDE errors): cross-package type Move, closed-consumer qualification edits, companion resources,
 and one Undo/Redo. The final related backend gate passes 118 tests with no failures/errors/skips.
@@ -1293,7 +1298,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X163 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X165 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -3070,3 +3075,14 @@ automated in IntelliJ and remains a manual follow-up in VS Code. Full receipts a
 recorded in the integration plan. VS Code exercises file-operation participation through a native
 workspace edit and uses the settings editor as the Undo context; this does not claim Explorer
 Cut/Paste stability or that a refused participation reply can veto a host move.
+
+
+| Case | Manual action | Expected result |
+| --- | --- | --- |
+| X164 | Open the shared First.x and leave Second.x/Consumer.x closed. Rename `First.Box.read` to `fetch`; inspect both declarations and the union receiver call, then Undo once. | Both otherwise independent written methods and the closed consumer change together. Diagnostics remain clear; Undo restores all three files exactly. |
+| X165 | Open the shared Library.x with Api and leave Consumer.x closed. Rename `Api.read` to `fetch`; inspect First/Second's mutual delegation and the call, then Undo once. | The interface declaration and delegated call change together, with receiver properties unchanged and clear diagnostics. Undo restores both files. Go to Implementation must not invent a terminal body for the cycle. |
+
+The October 3 selected gate covers X119/X120/X121/X164/X165 to check existing generated-property,
+lambda and escaped-method cases alongside the new callable proofs. All five pass in VS Code
+`run-VqFiDW` and IntelliJ `run-12344641320847299097` (including START, no IDE errors). Exact
+receipts, the catalog hash and remaining L62 exclusions are in the integration plan.

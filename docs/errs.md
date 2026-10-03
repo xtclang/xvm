@@ -2684,3 +2684,17 @@ No Java AST/embedding change is added. Broader L62 and the VS Code non-veto/Expl
 The gate passes 80 backend and 15 IntelliJ unit tests, with zero failures/errors/skips, plus selected
 X118/X161/X162/X163 in both editors. IntelliJ's UP19 descendant-connection repair also verifies
 post-Redo unsaved typing and diagnostic recovery; its fix and removal gate are documented separately.
+
+
+October 3 L62 callable continuation: existing `NameExpression` receiver and selected-method APIs
+now supply per-site detached union/cyclic dispatch facts in Kotlin. Method constants alone can
+name only one written contract and therefore cannot preserve a union target set. Proof retains
+receiver identities, ordered contracts/delegate properties and finite recursive back edges;
+untranslatable facts refuse the edit. No Java AST field or public embedding API was added.
+Generated shorthand/implicit virtual constructors stay construction contracts; runtime-only
+implementation lookup remains conservative. X164/X165 share closed-consumer rename and Undo
+across both drivers, alongside existing X119/X120/X121 regression coverage. The final gate passes
+202 backend tests (zero failures/errors/skips), both driver compilations and formatting checks. All
+five selected cases pass in VS Code `run-VqFiDW` and IntelliJ `run-12344641320847299097` (START
+also passes; no IDE failures or internal-error log markers). See the October 3 integration-plan
+section for commit dependencies and remaining generic/generated-route boundaries. L62 remains open.
