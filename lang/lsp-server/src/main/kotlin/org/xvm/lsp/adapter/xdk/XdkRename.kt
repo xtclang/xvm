@@ -507,7 +507,7 @@ internal object XdkRename {
         chains: Set<Dispatch>,
     ): List<Target>? {
         val owner = (target.owner as? Target.SourceProof)?.site ?: return null
-        if (target.delegates.isNotEmpty() || target.cycles.isNotEmpty()) return null
+        if (target.delegates.isNotEmpty() || target.cycles.isNotEmpty() || target.alternatives.isNotEmpty()) return null
         val written =
             target.members.map {
                 when (it) {
@@ -586,6 +586,7 @@ internal object XdkRename {
         val members: List<Target>,
         val supported: Boolean,
         val cycles: List<Target> = emptyList(),
+        val alternatives: List<Target> = emptyList(),
     )
 
     /** A compiling rename can add an override without changing any written name or call binding. */
@@ -621,6 +622,7 @@ internal object XdkRename {
                 chain.members.map { target(it) ?: return null },
                 chain.supported,
                 chain.cycles.map { composedTarget(it, texts, moved, translate) ?: return null },
+                chain.alternatives.map { composedTarget(it, texts, moved, translate) ?: return null },
             )
         } +
             facts.properties.chains.map { chain ->
@@ -681,6 +683,7 @@ internal object XdkRename {
             val members: List<Target>,
             val delegates: List<Target>,
             val cycles: List<Target>,
+            val alternatives: List<Target>,
         ) : Target
 
         data class Alternatives(
@@ -742,7 +745,8 @@ internal object XdkRename {
                         composedTarget(it, texts, moved, translate) ?: return null
                     }
                 val cycles = identity.cycles.map { composedTarget(it, texts, moved, translate) ?: return null }
-                Target.Composed(owner, members, delegates, cycles)
+                val alternatives = identity.alternatives.map { composedTarget(it, texts, moved, translate) ?: return null }
+                Target.Composed(owner, members, delegates, cycles, alternatives)
             }
 
             is ProofIdentity.Source -> {

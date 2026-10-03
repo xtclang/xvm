@@ -143,6 +143,17 @@ class XdkUnionRenameTest {
         }
     }
 
+    @Test
+    fun `source formal arguments retain their declaration identity`() {
+        val text = "module App { class First<T>(T value) { T read() = value; } class Second<T>(T value) { T read() = value; } " +
+            "class Consumer<T>(First<T> | Second<T> target) { T use() = target.read(); } }"
+        workspace(text) { adapter, uri, _ ->
+            val changed = apply(text, requireNotNull(adapter.rename(uri, 0, text.indexOf("read"), "fetch")).changes.getValue(uri))
+            assertThat(changed).isEqualTo(text.replace("read", "fetch"))
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+        }
+    }
+
     private fun workspace(
         text: String,
         check: (XdkAdapter, String, String) -> Unit,
