@@ -5589,6 +5589,12 @@
             "expected": "class Helper {}"
           },
           {
+            "file": "App/tools/Factory.x",
+            "destination": "App/tools/Factory.x",
+            "source": "class Factory { Box make() = new Box(); }",
+            "expected": "class Factory { util.Parcel make() = new util.Parcel(); }"
+          },
+          {
             "file": "App/tools/Box/Part.x",
             "source": "class Part {}",
             "destination": "App/util/Parcel/Part.x",
