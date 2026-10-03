@@ -17,6 +17,7 @@ internal class CompilerMethodRelations(
         val owner: IdentityConstant,
         val methods: List<MethodConstant>,
         val supported: Boolean,
+        val cycles: List<CompilerDispatch.Cycle> = emptyList(),
     )
 }
 
@@ -49,6 +50,7 @@ internal fun compilerMethodRelations(
                             // provenance. Generated cap/into identities are not editable declarations.
                             route.methods,
                             route.supported,
+                            route.cycles,
                         )
                     }
             }.distinct()
