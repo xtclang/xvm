@@ -507,7 +507,7 @@ internal object XdkRename {
         chains: Set<Dispatch>,
     ): List<Target>? {
         val owner = (target.owner as? Target.SourceProof)?.site ?: return null
-        if (target.delegates.isNotEmpty()) return null
+        if (target.delegates.isNotEmpty() || target.cycles.isNotEmpty()) return null
         val written =
             target.members.map {
                 when (it) {
@@ -678,6 +678,7 @@ internal object XdkRename {
             val owner: Target,
             val members: List<Target>,
             val delegates: List<Target>,
+            val cycles: List<Target>,
         ) : Target
 
         data class Alternatives(
@@ -727,7 +728,8 @@ internal object XdkRename {
                     identity.delegates.map {
                         composedTarget(it, texts, moved, translate) ?: return null
                     }
-                Target.Composed(owner, members, delegates)
+                val cycles = identity.cycles.map { composedTarget(it, texts, moved, translate) ?: return null }
+                Target.Composed(owner, members, delegates, cycles)
             }
 
             is ProofIdentity.Source -> {
