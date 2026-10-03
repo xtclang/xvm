@@ -129,7 +129,7 @@ class CompilerDispatchRoutesTest {
     }
 
     @Test
-    fun `union type has multiple callable contracts and cannot be flattened into one chain`() {
+    fun `union type retains separate receiver routes alongside its written contracts`() {
         inspect("class First { Int read() = 1; } class Second { Int read() = 2; }") { module, errors ->
             val first = (module.getChild("First") as ClassStructure).formalType
             val second = (module.getChild("Second") as ClassStructure).formalType
@@ -137,7 +137,19 @@ class CompilerDispatchRoutesTest {
                 module.constantPool.ensureUnionTypeConstant(first, second).ensureTypeInfo(errors)
             val method = owner.methods.values.single { it.identity.name == "read" }
             assertThat(method.chain.map { it.implementation }).contains(Implementation.Union)
-            assertThat(owner.dispatch(method, errors).supported).isFalse()
+            val dispatch = owner.dispatch(method, errors)
+            assertThat(dispatch.supported).isTrue()
+            assertThat(dispatch.methods.map { it.namespace.name }).containsExactlyInAnyOrder("First", "Second")
+            val branches = dispatch.alternatives.single().branches
+            assertThat(branches.map { it.receiver }).containsExactlyInAnyOrder(first, second)
+            branches.forEach { branch ->
+                assertThat(branch.dispatch.supported).isTrue()
+                assertThat(
+                    branch.dispatch.methods
+                        .single()
+                        .namespace,
+                ).isEqualTo(branch.receiver.definingConstant)
+            }
         }
     }
 
