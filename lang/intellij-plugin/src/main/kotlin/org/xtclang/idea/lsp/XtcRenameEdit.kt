@@ -75,6 +75,8 @@ class XtcRenameEdit
                     ) {
                         false
                     } else {
+                        val closed = ClosedRefactoringDocuments.capture(project, edit) ?: return@compute false
+                        closed.beforeApply()
                         graph?.beforeApply()
                         // TODO LSP4IJ: UP03 — 0.21 only renames the basename, ignoring a changed parent URI.
                         // Apply resource moves through VFS inside this same undo command.
@@ -93,6 +95,7 @@ class XtcRenameEdit
                         }
                         if (edit.documentChanges == null) LSPIJUtils.applyWorkspaceEdit(edit)
                         graph?.apply()
+                        closed.afterApply()
                         true
                     }
                 }
