@@ -412,8 +412,9 @@ VS Code receipts above.
   X161–X163 subsequently add bounded cross-package type moves and explicit source/resource graph
   relocation with persisted Undo/Redo; all pass selected acceptance in both editors. The
   [graph-relocation receipt](#l62-explicit-source-graph-relocation-2026-10-02) records the exact
-  boundaries and UP19 connection repair. Union/generated/cyclic callable target-set proof,
-  combined rename/move and interacting qualification plans remain implementation work.
+  boundaries and UP19 connection repair. The October 3 continuation adds bounded union alternatives
+  and recursive written contracts at callable sites (X164/X165). Generic/annotated alternatives,
+  wider generated routes, combined rename/move and interacting qualification plans remain open.
 - [ ] **L63 — Semantic quick fixes and refactorings.** Individual and all-required-member
   implement/override actions are implemented at a class name for inherited source and read-only
   binary/XDK contracts. Compiler-selected signatures include generic/conditional/multiple returns,
@@ -7751,7 +7752,7 @@ reproducible, and reconcile completed versus remaining scope. Validation is batc
 
    | Scope | Implemented and proven | Concrete remaining work |
    | --- | --- | --- |
-   | L62 rename | Recorded source families, primary/ordinary parameter slots, lambdas, escaped method values, packages/modules/companions, bounded cross-package qualification and host-persisted graph relocation | Combined root rename/move, unsupported qualification syntax, interacting move plans and union/generated/cyclic callable identities; characterize each refused route before extending proof. External consumers omitted from the configured graph remain an explicit unknown boundary. |
+   | L62 rename | Recorded source families, primary/ordinary parameter slots, lambdas, escaped method values, packages/modules/companions, bounded cross-package qualification, host-persisted graph relocation and bounded union/cyclic callable-site proof | Combined root rename/move, unsupported qualification syntax, interacting move plans, generic/annotated union receivers and wider generated routes; characterize each refused route before extending proof. External consumers omitted from the configured graph remain an explicit unknown boundary. |
    | L63 semantic actions | Import fixes and compiler-proven implement/override, including bundled contracts | Whole-return-expression extraction and adjacent single-use returned-local inline are implemented in the continuations below. General statement/context extraction, missing-declaration fixes, extract method, broader inline and safe delete remain separate transformations. Each needs its own side-effect/capture/caller-closure design and positive/refusal tests. |
    | L64 completion/signatures | Import edits, syntax names/templates, guarded bounds and compiler-fitted literals/values; latest continuation adds wrapped names, enclosing-instance arguments and real platform anonymous-body recovery | Latest continuation below gives the exact supported forms, evidence and conservative exclusions. Remaining expansion includes inferred/ambiguous local names, arbitrary value synthesis and general special-this enumeration outside calls; these are not counted as implemented. |
    | L65 navigation/classification | Source/bundled navigation, recorded hierarchy/composition relations and resolved tokens | Conditional/synthetic/native/redirect routes and ambiguous binary source metadata need individual fixtures. Runtime function targets cannot be invented by a static hierarchy. |
@@ -8939,7 +8940,7 @@ Shared X159/X160 pass in both editors; the receipt below retains the first block
 | Capped, into, default, bodyless, annotated and ordinary delegate routes | Existing `CompilerDispatchRoutesTest`, `XdkManualCompositionRenameTest`, `XdkResourceRenameTest` and `XdkParameterRenameTest` remain in the audit gate. Written identities come from compiler metadata, never method names. |
 | Constructor and primary property parameters | Existing parameter/primary-parameter/resource regressions cover named labels and type uses. `construct` itself is a keyword, not a user-renameable method name. |
 | External consumers and current source membership | `XdkExternalRenameTest` covers configured external roots, unsaved consumers, missing registered roots, intervening disk edits and discovery scope receipts. `XdkRenameBoundaryTest` confirms that omitted consumers remain outside the declared graph. |
-| Read-only and unsupported identities | Existing tests refuse binary/XDK contracts and union method calls. Generated accessor/runtime/native method bodies do not independently establish editable written callable contracts. These refusals are not full support for those identities. |
+| Read-only and unsupported identities | Binary/XDK contracts remain read-only. The October 3 continuation below proves bounded union calls and recursive written contracts; generated accessor/runtime/native bodies still do not independently establish editable written callable contracts. |
 | Resource operations | Existing file/resource tests cover companion directories, implicit packages, discovered container relocation, collisions, symlinks and overlapping operations. Explicit root relocation and moves that change package qualification remain open. |
 
 Remaining implementation work in L62:
@@ -8954,10 +8955,13 @@ Remaining implementation work in L62:
 - [x] Implement explicit graph relocation through `xtc/renameFiles`, with source/resource roots,
   version checks and persisted editor Undo/Redo (X162/X163). Selected acceptance is recorded below.
   Standard `willRenameFiles` still refuses a host configuration change.
-- [ ] Union/generated/cyclic callable identities: preserve proven static target sets and receiver
-  provenance before offering rename. `MethodBody` already exposes union legs; merely following those
-  legs is insufficient while the detached proof represents a call as one identity. Keep the refusal
-  until occurrence-level targets and their before/after equivalence are represented and tested.
+- [x] Represent bounded union alternatives and recursive written contracts at each callable site,
+  including receiver/delegate provenance and finite back edges. Validation is recorded in the
+  October 3 continuation below. Generated constructors remain construction identities, not new
+  editable method declarations.
+- [ ] Extend callable proof to parameterized/formal/annotated union receivers and union dispatch
+  nested under generated delegation. Preserve substitutions and every alternative before removing
+  those refusals; do not infer runtime-only implementations.
 
 Omitted consumers are an explicit project configuration boundary, not a feature that can be
 completed by guessing other repositories. Binary contracts remain read-only by design. The audit
@@ -9133,7 +9137,75 @@ See [the upstream register](errs-upstream-issues.md#up19-directory-moves-retain-
 for the implementation boundary and removal gate. This does not close broad rapid-edit/multi-window
 lifecycle acceptance or L62 as a whole.
 
-Next L62 implementation step: characterize union/generated/cyclic callable routes with compiler
-fixtures, then extend detached target-set proof only where static receiver and dispatch identities
-can be preserved. Do not infer runtime callable targets. Keep combined rename/move, unsupported
-qualification syntax and interacting batch plans as separately tracked relocation extensions.
+The next checkpoint implements the bounded callable target-set proof described below. Combined
+rename/move, unsupported qualification syntax and interacting batch plans remain separately
+tracked relocation extensions.
+
+
+### L62 union and recursive callable proof (2026-10-03)
+
+A selected `MethodConstant` may name one written declaration even when the call's receiver is a
+union or a recursively delegating class. Capturing only that declaration loses alternatives and
+receiver provenance. The adapter now captures each explicit receiver and selected method from the
+existing `NameExpression`/invocation APIs while its compilation pool is owned by the worker. It
+detaches union alternatives, ordered written contracts, delegate properties and finite cycle
+back edges before releasing the attempt. Both occurrence and call edges compare these facts
+through the proposed source edit. A present but untranslatable callable proof refuses the edit.
+No new Java AST state, compiler public API or optimized runtime method generation is required.
+
+For plain source receiver classes, a union call joins otherwise independent written method
+families. Rename from either declaration or the call updates all contracts and configured
+consumers; unrelated same-named methods stay unchanged. Nested alternatives and cross-module
+closed consumers are covered. Receiver class renames may reorder union operands without changing
+the unordered target set. Recursive delegation retains its written interface contract and closing
+edge; rename can preserve that finite route without claiming a concrete runtime implementation.
+Go to Implementation still refuses runtime-only recursive/interface delegate targets.
+
+Generated-method audit: shorthand constructors and implicit virtual-child constructors do not
+become independently renameable methods. `isCtorOrValidator` does not classify an implicit body
+without a `MethodStructure`; the audit verifies its original declaration identity instead.
+`construct` is syntax, not a user-selected name. Existing primary-property/named-label, lambda and
+escaped-value support remains attached to written
+identities (shared X119/X120/X121). Native methods and generated field accessors do not gain
+invented editable bodies. Flat dispatch continues to reject union routes: alternatives belong in
+the site proof, not in one override chain.
+
+Shared X164 renames independent methods coupled by a closed cross-module union consumer. Shared
+X165 renames a written interface contract through mutual delegation. Both drivers check exact
+changed files, diagnostics and Undo. Backend tests additionally exercise reverse rename, nested
+unions, reordered receivers, collisions, generic refusal and deliberately damaged detached
+proofs (lost alternative, changed receiver, missing source, removed delegate/back edge).
+
+Remaining L62 callable boundaries:
+
+- [ ] Parameterized, formal and annotated union receivers require detached substitution/type proof.
+- [ ] Union dispatch below generated delegation requires nested alternative-route proof.
+- [ ] Audit implicit receiver and wider escaped-value compositions before claiming those shapes.
+- [ ] Broader generated accessor/constructor transformations need written source semantics; merely
+  exposing generated runtime bodies is not sufficient.
+- Binary/XDK contracts remain read-only; consumers outside the configured graph are not inferred.
+
+Local extraction map (initial checkpoints need the subsequent site-proof correction):
+
+| Slice | Commit | Extraction requirement |
+| --- | --- | --- |
+| Union target sets and rename family closure | `6c5ac33b2` | Keep with the site-specific proof correction; a method constant alone is insufficient. |
+| Recursive written-contract routes | `649961788` | Keep cycle anchors in both dispatch relations and callable sites. |
+| Generated constructor audit | `0c3c59c25` | Include the corrected virtual-child fixture from validation. |
+| Shared X164/X165 and editor registration | `f63350357` | Keep both drivers and catalog updates together. |
+| Callable-site proof and validation correction | `22330f587` | Required with the union/cycle slices: receiver routes, call/occurrence edges, cycle relations, fail-closed translation and corrected audit fixtures. |
+| Catalog registration order | `29a3d8c47` | Keep with X164/X165: numeric catalog order and matching VS Code registration. |
+
+Backend validation: **202 tests across 19 suites**, zero failures/errors/skips. Both editor
+drivers compile. VS Code 1.140.0 `run-VqFiDW` passes **X119/X120/X121/X164/X165**
+(1,747 / 978 / 1,056 / 1,190 / 983 ms), zero reported extension failures and no internal-error
+markers in the saved compiler server log. The initial VS Code attempts stopped on catalog/driver
+registration order before executing scenarios (the second is `run-0jvdZx`); these are failed
+setup attempts, not accepted runs. IntelliJ 2026.2.3 / LSP4IJ 0.21.0
+`run-12344641320847299097` passes **START and X119/X120/X121/X164/X165**
+(20,532 / 3,401 / 1,607 / 1,820 / 1,922 / 1,583 ms), with Ultimate disabled. JUnit
+confirms one passing suite test, zero failures/errors/skips; there are no reported IDE failures
+or internal-error markers in the saved IDE/server logs. Root/LSP/IntelliJ Spotless checks pass.
+The current catalog has **170 scenarios**, SHA-256
+`82824c412b3e5636a0ce2335de726d0e6f6021bb1db1b4dd75e85c09b59fa555`.
+No full-catalog or complete-L62 acceptance is claimed.
