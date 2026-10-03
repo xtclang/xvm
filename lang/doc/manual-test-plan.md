@@ -1,13 +1,22 @@
 # Ecstasy Language Server - Manual Test Plan
 
 The current catalog has **177 scenarios**: X1–X172, CFG1–CFG3 and 7a.8/7a.9.
-The latest selected gate passes **X164–X168** in VS Code `run-oSVuMJ` and IntelliJ
+The latest selected gate passes **X161/X163/X169–X172** in VS Code `run-TjE279` and IntelliJ
+`run-14394987299477639656` (START also passes), with zero reported editor failures or compiler
+internal-error log markers. This covers combined rename-and-move, module/dependency/resource
+settings, interacting moves, whole-batch refusal and Undo/Redo. IntelliJ additionally verifies
+closed-file disk contents; its initial X169 failure exposed the fixed UP21 persistence gap.
+The related gate passes 222 backend and seven IntelliJ unit tests without failures/errors/skips.
+The separately discovered compiler issue #667 has its own failing-master/passing-fix regression.
+These are selected receipts, not a full 177-case run.
+
+The preceding selected gate passes **X164–X168** in VS Code `run-oSVuMJ` and IntelliJ
 `run-907034856191389577` (START also passes), including generic/annotated receivers and nested
 union delegation. Both exercise exact cross-file rename, closed consumers and Undo. The combined
 backend gate passes 228 tests without failures/errors/skips. IntelliJ's earlier X165 stall was a
 test Driver modality race (UP20); the repaired dedicated focus/replay test also passes in
 `run-7549109475022481665`. Successful editor runs report no IDE/compiler internal errors.
-These are selected receipts, not a full 173-case run.
+Those were selected receipts, not a full then-173-case run.
 X119/X120/X121/X164/X165 pass in VS Code `run-VqFiDW` and IntelliJ
 `run-12344641320847299097` (START also passes, zero IDE errors). These cover primary-header
 properties, lambda/escaped-method parameters and the new union/cyclic callable renames with
@@ -3112,11 +3121,16 @@ dialog is open without blocking on its modality or replaying the Rename action.
 
 | Case | Manual action | Expected result |
 | --- | --- | --- |
-| X169 | Move `App/tools/Box.x` into `App/util`, setting **New name** to `Parcel.x` in IntelliJ. In VS Code apply the equivalent file move. Keep Consumer closed; inspect all files, Undo once and Redo once. | Declaration, constructors and qualified uses become Parcel; the explicit Crate alias stays unchanged. Companion sources/resources follow the renamed type. Old-package Helper references retain their target. All changes undo/redo together. |
+| X169 | Move `App/tools/Box.x` into `App/util`, setting **New name** to `Parcel.x` in IntelliJ. In VS Code apply the equivalent file move. Keep Consumer closed; inspect all files, Undo once and Redo once. | Declaration, constructors and qualified uses become Parcel; the explicit Crate alias stays unchanged. Companion sources/resources follow the renamed type. Old-package Helper references retain their target. All changes undo/redo together; closed files have the expected contents on disk after each operation, and diagnostics remain clean. |
 | X170 | Move `old/App.x` into `target` with **New name** `Renamed.x`. Keep Consumer closed, inspect compiler settings, then Undo/Redo. Add and repair an unsaved error in the moved module. | The module declaration/import and dependency names change together with source paths. Companion files move; default resources left under old stay available through an explicit resource root. Consumer resources remain disabled. Undo/Redo restores exact settings and paths; later diagnostics follow the current file. |
 | X171 | Select First.x and Second.x from their separate packages and move both to `App/util` in one action. Keep Consumer closed, then Undo/Redo. | Mutual class references and the closed consumer use the final util namespace. One Undo/Redo restores/reapplies both moves and all text. |
 | X172 | Request the shared two-file proposal, with one destination colliding with an inline Taken declaration. Inspect files and compiler settings afterward. | The installed compiler connection returns no proposal; neither file nor graph changes. This is a protocol refusal check in both drivers. It does not claim that VS Code can veto an arbitrary Explorer move. |
 
-X169–X172 are implemented in both drivers; validation is pending for this batch. IntelliJ's native
+X169–X172 pass in both drivers in the selected runs recorded at the top of this file. IntelliJ's native
 Move dialog now permits a new basename for a single selected file. Batch moves retain each selected
 basename; the compiler proposal API additionally supports individually renamed batch entries.
+
+A fresh reverse refactoring is distinct from Undo: a move bringing previously uncaptured files into
+a pinned resource root is conservatively refused. Undo restores the stored, proven transaction and
+its original resource configuration. Before applying refactorings, save any pre-existing unsaved
+closed IntelliJ document; the host refuses buffers that were not available to the compiler proof.
