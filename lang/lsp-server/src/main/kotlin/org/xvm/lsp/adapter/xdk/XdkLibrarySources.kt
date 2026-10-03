@@ -82,7 +82,7 @@ internal object XdkLibrarySources {
 
     /** Use the actual artifact identity, never a name search across library modules. */
     fun declaration(identity: IdentityConstant): DependencyDeclaration? {
-        val module = identity.moduleConstant.name
+        val module = identity.moduleConstant?.name ?: return null
         if (module !in XdkLibraries.moduleNames) return null
         val binary =
             XdkLibraries.module(module)?.constantPool?.getConstant(identity) as? IdentityConstant
