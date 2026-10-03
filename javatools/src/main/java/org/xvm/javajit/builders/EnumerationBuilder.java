@@ -4,12 +4,10 @@ import java.lang.classfile.ClassBuilder;
 
 import java.lang.classfile.ClassFile;
 import java.lang.classfile.CodeBuilder;
-
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.asm.ClassStructure;
-import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.IdentityConstant;
@@ -22,49 +20,59 @@ import org.xvm.javajit.TypeSystem.Artifact;
 
 import static java.lang.constant.ConstantDescs.CD_MethodHandle;
 import static java.lang.constant.ConstantDescs.CD_long;
+import static java.lang.constant.ConstantDescs.CD_void;
+import static java.lang.constant.ConstantDescs.INIT_NAME;
 
 /**
  * The builder for Enumeration types.
  *
  * <p>It overrides the CommonBuilder to do the following:
  *   - augment the Java constructor
- *   - add synthetic "$names" and "$values" properties
- *   - implement "count", "names" and "values" properties
+ *   - add synthetic "$Instance", "$names" and "$values" properties
+ *   - implement "count", "names", "values" and "byValues" properties
  */
-public class EnumerationBuilder extends CommonBuilder {
+public class EnumerationBuilder
+        extends CommonBuilder
+        implements  EnumerationBuilderSupport {
+    /**
+     * Create an {@link EnumerationBuilder}.
+     *
+     * @param typeSystem the {@link TypeSystem}
+     * @param art        the {@link Artifact} to build
+     */
     public EnumerationBuilder(TypeSystem typeSystem, Artifact art) {
-        TypeConstant type = art.type();
-        ConstantPool pool = type.getConstantPool();
-        if (type.isA(pool.typeEnumeration())) {
-            enumType = art.type().getParamType(0);
-        } else {
-            // convert the Artifact for type T into the Artifact for type Enumeration<T>
-            enumType = type;
-            art = new Artifact(
-                    pool.ensureParameterizedTypeConstant(pool.typeEnumeration(), type),
-                    (ClassStructure) pool.clzEnumeration().getComponent(),
-                    art.shape(),
-                    art.className());
-        }
+        TypeConstant     type = art.type();
+        ConstantPool     pool = type.getConstantPool();
+        IdentityConstant id   = type.getSingleUnderlyingClass(true);
 
-        IdentityConstant id  = type.getSingleUnderlyingClass(false);
-        ClassStructure   clz = (ClassStructure) id.getComponent();
-        enumValues = clz.children()
-                .stream()
-                .filter(c -> c.getFormat() == Component.Format.ENUMVALUE)
-                .map(ClassStructure.class::cast)
-                .toArray(ClassStructure[]::new);
+        // convert the Artifact for type T into the Artifact for type Enumeration<T>
+        art = new Artifact(
+                pool.ensureParameterizedTypeConstant(pool.typeEnumeration(), type),
+                (ClassStructure) pool.clzEnumeration().getComponent(),
+                art.shape(),
+                art.className());
+
+        enumValues = EnumerationBuilderSupport.getEnumValues((ClassStructure) id.getComponent());
+        enumType   = type;
 
         super(typeSystem, art);
     }
 
+    /**
+     * The type of the enum being built.
+     */
     public final TypeConstant enumType;
 
+    /**
+     * The values of the enum being built.
+     */
     protected final ClassStructure[] enumValues;
 
     @Override
-    public ClassDesc getSuperCD() {
-        return CD_Enumeration;
+    public boolean assembleClass(ClassBuilder classBuilder) {
+        classBuilder.withSuperclass(CD_Enumeration)
+                    .withFlags(ClassFile.ACC_PUBLIC);
+        return true;
     }
 
     @Override
@@ -73,50 +81,77 @@ public class EnumerationBuilder extends CommonBuilder {
         assembleCountProp(classBuilder);
         assembleNamesProp(classBuilder);
         assembleValuesProp(classBuilder);
+        assembleByNameProp(classBuilder);
 
-        // public static final $INSTANCE;
         ClassDesc cd    = isContainerScoped(thisType) ? CD_MethodHandle : art.CD();
         int       flags = ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC | ClassFile.ACC_FINAL;
+
+        // public static final $INSTANCE;
         classBuilder.withField(Instance, cd, flags);
+
         // public static final ArrayᐸObjectᐳ $names;
-        classBuilder.withField(NAMES, CD_ArrayObj, flags);
-        // public static final ArrayᐸObjectᐳ $values;
-        classBuilder.withField(VALUES, CD_ArrayObj, flags);
+        PropertyInfo  nameProp = typeInfo.findProperty(PROP_NAMES);
+        JitMethodDesc nameJMD  = nameProp.getGetterJitDesc(this);
+        classBuilder.withField(FIELD_NAMES, nameJMD.standardMD.returnType(), flags);
+
+        // public static final ArrayᐸEnumTypeᐳ $values;
+        PropertyInfo  valuesProp = typeInfo.findProperty(PROP_VALUES);
+        JitMethodDesc valuesJMD  = valuesProp.getGetterJitDesc(this);
+        classBuilder.withField(FIELD_VALUES, valuesJMD.standardMD.returnType(), flags);
     }
 
     private void assembleCountProp(ClassBuilder classBuilder) {
-        PropertyInfo  prop       = typeInfo.findProperty("count");
+        PropertyInfo  prop       = typeInfo.findProperty(PROP_COUNT);
         String        getterName = prop.ensureGetterJitMethodName(typeSystem);
         JitMethodDesc jmDesc     = prop.getGetterJitDesc(this);
+        String        jitName    = getterName + OPT;
 
-        classBuilder.withMethodBody(getterName + OPT, jmDesc.optimizedMD, ClassFile.ACC_PUBLIC,
-                code -> code.loadConstant((long) enumValues.length)
-                            .lreturn());
+        classBuilder.withMethodBody(jitName, jmDesc.optimizedMD, ClassFile.ACC_PUBLIC,
+            code -> {
+                code.loadConstant((long) enumValues.length)
+                    .lreturn();
+            });
 
         classBuilder.withMethodBody(getterName, jmDesc.standardMD, ClassFile.ACC_PUBLIC,
-                code -> code.loadConstant((long) enumValues.length)
-                            .invokestatic(CD_Int64, "$box", md(CD_Int64, CD_long))
-                            .areturn());
+            code -> {
+                code.loadConstant((long) enumValues.length)
+                    .invokestatic(CD_Int64, "$box", md(CD_Int64, CD_long))
+                    .areturn();
+            });
     }
 
     private void assembleNamesProp(ClassBuilder classBuilder) {
-        PropertyInfo  prop       = typeInfo.findProperty("names");
-        String        getterName = prop.ensureGetterJitMethodName(typeSystem);
-        JitMethodDesc jmDesc     = prop.getGetterJitDesc(this);
+        PropertyInfo   prop       = typeInfo.findProperty(PROP_NAMES);
+        String         getterName = prop.ensureGetterJitMethodName(typeSystem);
+        JitMethodDesc  jmDesc     = prop.getGetterJitDesc(this);
+        MethodTypeDesc md         = jmDesc.standardMD;
 
-        classBuilder.withMethodBody(getterName, jmDesc.standardMD, ClassFile.ACC_PUBLIC, code ->
-            code.getstatic(art.CD(), NAMES, CD_ArrayObj)
-                .areturn());
+        classBuilder.withMethodBody(getterName, md, ClassFile.ACC_PUBLIC, code ->
+                code.getstatic(art.CD(), FIELD_NAMES, md.returnType())
+                    .areturn());
     }
 
     private void assembleValuesProp(ClassBuilder classBuilder) {
-        PropertyInfo  prop       = typeInfo.findProperty("values");
-        String        getterName = prop.ensureGetterJitMethodName(typeSystem);
-        JitMethodDesc jmDesc     = prop.getGetterJitDesc(this);
+        PropertyInfo   prop       = typeInfo.findProperty(PROP_VALUES);
+        String         getterName = prop.ensureGetterJitMethodName(typeSystem);
+        JitMethodDesc  jmDesc     = prop.getGetterJitDesc(this);
+        MethodTypeDesc md         = jmDesc.standardMD;
 
-        classBuilder.withMethodBody(getterName, jmDesc.standardMD, ClassFile.ACC_PUBLIC, code ->
-            code.getstatic(art.CD(), VALUES, CD_ArrayObj)
-                .areturn());
+        classBuilder.withMethodBody(getterName, md, ClassFile.ACC_PUBLIC, code ->
+        code.getstatic(art.CD(), FIELD_VALUES, md.returnType())
+            .areturn());
+    }
+
+    private void assembleByNameProp(ClassBuilder classBuilder) {
+        PropertyInfo   prop       = typeInfo.findProperty(PROP_BY_NAME);
+        String         getterName = prop.ensureGetterJitMethodName(typeSystem);
+        JitMethodDesc  jmDesc     = prop.getGetterJitDesc(this);
+        MethodTypeDesc md         = jmDesc.standardMD;
+
+        classBuilder.withMethodBody(getterName, md, ClassFile.ACC_PUBLIC, code -> {
+            int ctxSlot = code.parameterSlot(0);
+            ArrayBuilder.throwIllegalState(code, "TODO not implemented yet", ctxSlot);
+        });
     }
 
     @Override
@@ -130,7 +165,7 @@ public class EnumerationBuilder extends CommonBuilder {
         code.new_(thisCD)
             .dup()
             .aload(ctxSlot)
-            .invokespecial(thisCD, "<init>", MD_xvmVoid)
+            .invokespecial(thisCD, INIT_NAME, MD_xvmVoid)
             .putstatic(thisCD, Instance, thisCD);
 
         // set the $names array static field
@@ -148,13 +183,14 @@ public class EnumerationBuilder extends CommonBuilder {
         }
         MethodTypeDesc mdBoxString = md(CD_ArrayObj, CD_Ctx, CD_String.arrayType());
         code.invokestatic(CD_ArrayObj, "$makeStringArray", mdBoxString)
-            .putstatic(thisCD, NAMES, CD_ArrayObj);
+            .putstatic(thisCD, FIELD_NAMES, CD_ArrayObj);
 
         // set the $values array static field
-        String jitName = enumType.ensureJitClassName(typeSystem);
+        String    jitName = enumType.ensureJitClassName(typeSystem);
+        ClassDesc paramCD = enumType.isJitPrimitive() ? ensureClassDesc(enumType) : CD_Object;
         code.aload(ctxSlot)
             .loadConstant(count)
-            .anewarray(CD_Object);
+            .anewarray(paramCD);
         for (int i = 0; i < count; i++) {
             ClassStructure value   = enumValues[i];
             ClassDesc      cdValue = ClassDesc.of(jitName + "$" + value.getName());
@@ -163,33 +199,27 @@ public class EnumerationBuilder extends CommonBuilder {
                 .getstatic(cdValue, Instance, cdValue)
                 .aastore();
         }
-        MethodTypeDesc mdBoxObj = md(CD_ArrayObj, CD_Ctx, CD_Object.arrayType());
-        code.invokestatic(CD_ArrayObj, "$makeArray", mdBoxObj)
-            .putstatic(thisCD, VALUES, CD_ArrayObj);
+        PropertyInfo   propValues = typeInfo.findProperty(PROP_VALUES);
+        JitMethodDesc  jmdValues  = propValues.getGetterJitDesc(this);
+        ClassDesc      arrayCD    = jmdValues.standardMD.returnType();
+        MethodTypeDesc mdBoxObj   = md(arrayCD, CD_Ctx, paramCD.arrayType());
+
+        code.invokestatic(arrayCD, "$makeArray", mdBoxObj)
+            .putstatic(thisCD, FIELD_VALUES, arrayCD);
     }
 
     @Override
     protected void assembleMethods(ClassBuilder classBuilder) {
         // don't call super!
-        assembleConstructor(classBuilder);
+        MethodTypeDesc mdSuper = md(CD_void, CD_Ctx, CD_TypeConstant);
+        int            flags   = ClassFile.ACC_PUBLIC;
+
+        classBuilder.withMethodBody(INIT_NAME, MD_xvmVoid, flags, code -> {
+            code.aload(0)
+                .aload(code.parameterSlot(0))
+                .getstatic(art.CD(), "$sc0", CD_TypeConstant)
+                .invokespecial(CD_Enumeration, INIT_NAME, mdSuper)
+                .return_();
+        });
     }
-
-    private void assembleConstructor(ClassBuilder classBuilder) {
-        classBuilder.withMethodBody("<init>", MD_xvmVoid, ClassFile.ACC_PUBLIC,
-                code -> code.aload(0)
-                            .aload(code.parameterSlot(0))
-                            .getstatic(art.CD(), "$sc0", CD_TypeConstant)
-                            .invokespecial(CD_Enumeration, "<init>", MD_xvmInitType)
-                            .return_());
-    }
-
-    /**
-     * The name of the property holding the enum names.
-     */
-    public static String NAMES = "$names";
-
-    /**
-     * The name of the property holding the enum values.
-     */
-    public static String VALUES = "$values";
 }

@@ -39,8 +39,8 @@ public class Exception extends nConst {
      * @see org.xvm.asm.constants.MethodConstant#ensureJitMethodName
      */
     public static void construct(Ctx ctx, CtorCtx cctx, Exception thi$, Object message, Object cause) {
-        thi$.text       = message instanceof String text ? text : Nullable.Null;
-        thi$.cause      = cause instanceof Exception e ? e : Nullable.Null;
+        thi$.text       = message instanceof String text ? text : Nullable.Null.$INSTANCE;
+        thi$.cause      = cause instanceof Exception e ? e : Nullable.Null.$INSTANCE;
         thi$.$exception = thi$.$createJavaException(cause instanceof Exception e ? e.$exception : null);
     }
 
@@ -55,8 +55,8 @@ public class Exception extends nConst {
      * Helper method for native exception construction.
      */
     public nException $init(Ctx ctx, java.lang.String message, Throwable cause) {
-        this.text       = message == null ? Nullable.Null : String.of(ctx, message);
-        this.cause      = cause instanceof nException e ? e.exception : Nullable.Null;
+        this.text       = message == null ? Nullable.Null.$INSTANCE : String.of(ctx, message);
+        this.cause      = cause instanceof nException e ? e.exception : Nullable.Null.$INSTANCE;
         this.$exception = $createJavaException(cause);
         return $exception;
     }
@@ -83,7 +83,7 @@ public class Exception extends nConst {
         // TODO: replace with ecstasy.StringBuffer and move to "toString(Ctx ctx)"
         StringBuilder sb = new StringBuilder(className);
         sb.append(": ")
-          .append(text == Nullable.Null ? "" : text.toString($ctx()));
+          .append(text == Nullable.Null.$INSTANCE ? "" : text.toString($ctx()));
         if ($exception != null) { // can be null only during construction
             for (StackTraceElement el : $exception.getStackTrace()) {
                 if (el.getFileName().endsWith(".x") && !el.getMethodName().startsWith("$")) {

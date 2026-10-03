@@ -69,7 +69,7 @@ public class JitTypeDesc {
                     -> CD_float;
                 case "Float64"
                     -> CD_double;
-                case "Boolean"
+                case "Boolean", "True", "False"
                     -> CD_boolean;
                 // isJavaPrimitive() and this switch must list the same names
                 default

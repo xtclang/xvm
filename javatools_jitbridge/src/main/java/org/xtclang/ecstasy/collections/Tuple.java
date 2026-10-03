@@ -42,7 +42,7 @@ public interface Tuple {
             if (element1 == element2) {
                 continue;
             }
-            if (element1 == Nullable.Null || element2 == Nullable.Null) {
+            if (element1 == Nullable.Null.$INSTANCE || element2 == Nullable.Null.$INSTANCE) {
                 return false;
             }
 

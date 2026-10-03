@@ -385,7 +385,7 @@ public abstract class Builder {
                 ConstantPool pool = constant.getConstantPool();
                 if (enumConstant.getType().isOnlyNullable()) {
                     loadNull(code);
-                    return new SingleSlot(pool.typeNullable(), Specific, CD_Nullable, "");
+                    return new SingleSlot(pool.typeNullable(), Specific, CD_Null, "");
                 }
                 else if (enumConstant.getType().isA(pool.typeBoolean())) {
                     if (enumConstant.getIntValue().getInt() == 0) {
@@ -1237,7 +1237,7 @@ public abstract class Builder {
      * Generate a "load" for the XTC `Null` value.
      */
     public static CodeBuilder loadNull(CodeBuilder code) {
-        code.getstatic(CD_Nullable, "Null", CD_Nullable);
+        code.getstatic(CD_Null, Instance, CD_Null);
         return code;
     }
 
@@ -1448,6 +1448,8 @@ public abstract class Builder {
         switch (name) {
             case "Bit"     -> code.getfield(CD_Bit,     "$value",    CD_int);
             case "Boolean" -> code.getfield(CD_Boolean, "$value",    CD_boolean);
+            case "True"    -> code.iconst_1();
+            case "False"   -> code.iconst_0();
             case "Char"    -> code.getfield(CD_Char,    "codepoint", CD_int);
             case "Dec32"   -> code.getfield(CD_Dec32,   "$bits",     CD_int);
             case "Dec64"   -> code.getfield(CD_Dec64,   "$bits",     CD_long);
@@ -2185,7 +2187,7 @@ public abstract class Builder {
     public static final String N_IllegalState = "org.xtclang.ecstasy.IllegalState";
     public static final String N_IterableChar = "org.xtclang.ecstasy.IterableᐸCharᐳ";
     public static final String N_Nibble       = "org.xtclang.ecstasy.numbers.Nibble";
-    public static final String N_Nullable     = "org.xtclang.ecstasy.Nullable";
+    public static final String N_Null         = "org.xtclang.ecstasy.Nullable$Null";
     public static final String N_Object       = "org.xtclang.ecstasy.Object";
     public static final String N_Ordered      = "org.xtclang.ecstasy.Ordered";
     public static final String N_OutOfBounds  = "org.xtclang.ecstasy.OutOfBounds";
@@ -2329,7 +2331,7 @@ public abstract class Builder {
     public static final ClassDesc CD_Int128              = ClassDesc.of(N_Int128);
     public static final ClassDesc CD_IntLiteral          = ClassDesc.of(N_IntLiteral);
     public static final ClassDesc CD_Nibble              = ClassDesc.of(N_Nibble);
-    public static final ClassDesc CD_Nullable            = ClassDesc.of(N_Nullable);
+    public static final ClassDesc CD_Null                = ClassDesc.of(N_Null);
     public static final ClassDesc CD_Object              = ClassDesc.of(N_Object);
     public static final ClassDesc CD_Ordered             = ClassDesc.of(N_Ordered);
     public static final ClassDesc CD_String              = ClassDesc.of(N_String);
