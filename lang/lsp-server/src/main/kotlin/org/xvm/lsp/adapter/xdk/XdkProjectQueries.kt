@@ -1003,6 +1003,12 @@ internal class XdkProjectQueries(
                     if (!chain.supported) return null
                     family += chain.members.flatMap(::members)
                 }
+            // A written union call couples otherwise independent contracts: renaming only one
+            // leg would remove that call from the union's common method set.
+            facts.constants.values.filterIsInstance<ProofIdentity.Alternatives>()
+                .map(::members)
+                .filter { it.any(family::contains) }
+                .forEach { family += it }
         } while (family.size != previousSize)
         // A binary/library contract or synthetic method cannot be edited from configured sources.
         if (!facts.methods.declarations.containsAll(family)) return null
@@ -1011,6 +1017,10 @@ internal class XdkProjectQueries(
 
     private fun members(identity: ProofIdentity): Set<ProofIdentity> =
         when (identity) {
+            is ProofIdentity.Alternatives -> {
+                identity.targets.flatMapTo(linkedSetOf(), ::members)
+            }
+
             is ProofIdentity.Composed -> {
                 identity.members.flatMapTo(linkedSetOf(), ::members)
             }
