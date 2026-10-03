@@ -100,13 +100,46 @@ class XdkUnionRenameTest {
         }
     }
 
-    @Test
-    fun `generic union receivers remain refused until their substitutions have detached proof`() {
+    @ParameterizedTest
+    @ValueSource(strings = ["Int", "String", "List<String>", "Map<String, Int>", "List<Int | String>"])
+    fun `generic union receivers preserve nested substitutions during rename`(argument: String) {
         val text =
             "module App { class First<T>(T value) { T read() = value; } class Second<T>(T value) { T read() = value; } " +
-                "Int use(First<Int> | Second<Int> target) = target.read(); }"
+                "$argument use(First<$argument> | Second<$argument> target) = target.read(); }"
         workspace(text) { adapter, uri, _ ->
-            assertThat(adapter.rename(uri, 0, text.indexOf("read"), "fetch")).isNull()
+            val changed = apply(text, requireNotNull(adapter.rename(uri, 0, text.lastIndexOf("read"), "fetch")).changes.getValue(uri))
+            assertThat(changed).isEqualTo(text.replace("read", "fetch"))
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+            val reverse = requireNotNull(adapter.rename(uri, 0, changed.indexOf("fetch"), "read"))
+            assertThat(apply(changed, reverse.changes.getValue(uri))).isEqualTo(text)
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings = [
+            "mixin Mark(String label) into Object {} Int use((@Mark(\"one\") First) | (@Mark(\"two\") Second) target) = target.read();",
+            "mixin Loud into First { @Override Int read() = super() + 1; } Int use((@Loud First) | Second target) = target.read();",
+        ],
+    )
+    fun `annotated union receivers preserve annotation values and composed methods`(body: String) {
+        val text = "module App { class First { Int read() = 1; } class Second { Int read() = 2; } $body }"
+        workspace(text) { adapter, uri, _ ->
+            val changed = apply(text, requireNotNull(adapter.rename(uri, 0, text.lastIndexOf("read"), "fetch")).changes.getValue(uri))
+            assertThat(changed).isEqualTo(text.replace("read", "fetch"))
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+        }
+    }
+
+    @Test
+    fun `renaming a substituted source type translates identities inside receiver type arguments`() {
+        val text =
+            "module App { class Payload {} class First<T>(T value) { T read() = value; } " +
+                "class Second<T>(T value) { T read() = value; } Payload use(First<Payload> | Second<Payload> target) = target.read(); }"
+        workspace(text) { adapter, uri, _ ->
+            val changed = apply(text, requireNotNull(adapter.rename(uri, 0, text.indexOf("Payload"), "Content")).changes.getValue(uri))
+            assertThat(changed).isEqualTo(text.replace("Payload", "Content"))
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
         }
     }
 
