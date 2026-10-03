@@ -101,6 +101,18 @@ internal fun ParityScenarios.typeMoveCases() {
                                 )
                         }
                     }
+                    val openPaths =
+                        withContext(OnDispatcher.EDT) {
+                            service<FileEditorManager>(singleProject()).getAllEditors().map { it.getFile().getPath() }.toSet()
+                        }
+                    files.forEach { file ->
+                        val path = directory.resolve(file.string(if (moved) "destination" else "file"))
+                        if (path.toString() !in openPaths) {
+                            check(Files.readString(path) == file.string(if (moved) "expected" else "source")) {
+                                "Closed source/resource $path differs on disk after Move/Undo/Redo"
+                            }
+                        }
+                    }
                     if (data.has("afterModules")) {
                         val content = requireNotNull(utility(CompilerSettingsPage::class).content(singleProject()))
                         val modules =
