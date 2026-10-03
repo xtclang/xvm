@@ -141,6 +141,23 @@ class CompilerDispatchRoutesTest {
     }
 
     @Test
+    fun `recursive delegation retains a finite contract and explicit closing edge`() {
+        inspect("interface Api { Int read(); } class Loop(Loop next) delegates Api(next) {}") { module, errors ->
+            val owner = type(module, "Loop", errors)
+            val method = owner.methods.values.single { it.identity.name == "read" }
+            val route = owner.dispatch(method, errors)
+            assertThat(route.supported).isTrue()
+            assertThat(route.methods.map { it.namespace.name to it.name }).containsExactly("Api" to "read")
+            assertThat(route.delegates.map { it.name }).containsExactly("next")
+            assertThat(route.cycles).singleElement().satisfies { cycle ->
+                assertThat(cycle.owner.name).isEqualTo("Loop")
+                assertThat(cycle.contracts.map { it.namespace.name to it.name }).containsExactly("Api" to "read")
+            }
+            assertThat(owner.methodImplementation(method, errors)).isNull()
+        }
+    }
+
+    @Test
     fun `native binary methods do not acquire written executable implementation targets`() {
         inspect("") { module, errors ->
             val info = module.constantPool.typeString().ensureTypeInfo(errors)
