@@ -193,7 +193,7 @@ See the [L83 task and ownership record](../../../docs/errs-integration-plan.md#p
 | Document links | Regex | AST nodes + best-effort import targets | **Partial** - HTTP(S) URLs inside Java-lexer comments/literals plus compiler-resolved module and explicit type/alias import sources; wildcard/conditional imports have no link; stale text suppresses semantic links |
 | Signature help | - | Same-file | **Partial** - selected signatures; fitted incomplete method/function/constructor calls, including specialized constructors and bounded declaration/tuple/literal recovery. Methods/constructors retain named mappings; function types have unnamed parameters. Constructor class types use explicit, required-type or provisional argument inference; array suppliers include dimension offsets and single-dimensional bracket slots fit the size parameter |
 | Rename (same file) | Text | AST | **Partial** - locals/lambda/private ordinary-method parameters, captures and named labels; positional method-value escapes; graph-backed public/explicit-constructor parameter slots, types, static members, method/property families and explicit aliases; client versioned-edit support required. The L62 extension has backend and selected shared acceptance in both editors |
-| Rename (cross-file) | - | - | **Partial** - types/packages and companion directories, qualified discovery-managed modules, implicit package directories, static members and source method/property families, including supported mixin/delegate/annotation routes; public parameter slots join override declarations and named callers; primary-header properties join generated constructor labels and property uses. Full graph compilation and binding/dispatch proof remain mandatory. Explicit graph changes have guarded native client persistence/Undo through xtc/rename (X118 passes in both editors; VS Code edited-file moves require files.refactoring.autoSave); standard LSP clients still refuse them. Project proposals include a scope receipt; registered absolute roots can include external consumers. The explicit graph is a declared proof boundary: omitted consumers, even inside workspace roots, remain unknown and are not automatically refused |
+| Rename (cross-file) | - | - | **Partial** - types/packages and companion directories, qualified discovery-managed modules, implicit package directories, static members and source method/property families, including supported mixin/delegate/annotation routes, plain-class union alternatives and recursive written contracts (X164/X165); public parameter slots join override declarations and named callers; primary-header properties join generated constructor labels and property uses. Full graph compilation and binding/dispatch proof remain mandatory. Explicit graph changes have guarded native client persistence/Undo through xtc/rename (X118 passes in both editors; VS Code edited-file moves require files.refactoring.autoSave); standard LSP clients still refuse them. Project proposals include a scope receipt; registered absolute roots can include external consumers. The explicit graph is a declared proof boundary: omitted consumers, even inside workspace roots, remain unknown and are not automatically refused |
 | Code actions | Organize imports | Organize imports + auto-import + doc-comments | **Partial** - compiler-proven unused-import removal, contiguous import sorting and unresolved public-type imports; individual/all-required implement/override at a class name for source and read-only binary/XDK contracts, including generic/conditional, compound and qualified types with imports; validated constants and fresh literal-default repair; whole-return-expression extraction and adjacent typed single-use returned-local inline; complete compilation and binding/dispatch proof, versioned edits |
 | Document formatting | Trailing WS | Structural re-indent + whitespace cleanup | **Partial** - Java-lexer brace/parenthesis/bracket indentation and outer whitespace; all token spellings preserved; no expression wrapping |
 | Range formatting | Trailing WS in range | Structural formatting in range | **Partial** - same token-preserving formatter, bounded to selected lines |
@@ -632,7 +632,8 @@ Full tree-sitter support for fast, incremental parsing:
      to regression coverage. Shared X159/X160 cover cross-file rename and Undo in both drivers;
      both pass in VS Code `run-RGeVCM` and IntelliJ `run-17726972701009018455`, alongside 78 passing
      backend audit tests. Bounded cross-package type moves now rewrite qualifications (X161 passes in both editors). Explicit graph relocation is implemented through the host settings transaction;
-     union/generated/cyclic callable identities remain open; binary contracts remain read-only
+     bounded union/cyclic written-callable proof is implemented (X164/X165; current acceptance below).
+     Parameterized/annotated alternatives and wider generated routes remain open; binary contracts remain read-only
    - Whole-return-expression extraction and adjacent single-use typed returned-local inline are implemented with binding proof; X156/X157 pass in both editors
    - Wider extraction, extract method, broader inline and safe delete remain unimplemented (L63)
 
@@ -1088,3 +1089,18 @@ relocation and moving workspace configuration ownership remain unsupported. No A
 Selected X118/X161/X162/X163 passes in both hosts. IntelliJ required UP19's descendant-connection
 bridge for directory Move/Undo/Redo; post-Redo unsaved edits also pass without stale synchronizers.
 The bridge and its removal gate are recorded in the [upstream register](../../../docs/errs-upstream-issues.md).
+
+
+### L62 callable alternatives and recursive contracts (October 3)
+
+Compiler mode now detaches receiver/dispatch proof at explicit callable sites, using existing
+compiler APIs. Plain source union receivers join all written method contracts for rename, including
+nested unions and closed cross-module consumers. Recursive delegates retain finite interface
+contracts and back edges; this permits proven rename without guessing a runtime implementation.
+Generated constructors/accessors are not independent editable methods. Generic/formal/annotated
+union receivers and union routes nested under generated delegation remain refused pending richer
+proof. Shared X164/X165 cover rename and Undo in both editor drivers. X119/X120/X121/X164/X165
+pass in VS Code `run-VqFiDW` and IntelliJ `run-12344641320847299097` (START also passes; zero
+IDE failures and no internal-error log markers). The backend gate passes 202 tests without
+failures/errors/skips; formatting checks pass. See the October 3 integration-plan receipt for
+exact validation and extraction dependencies. L62 remains partially implemented.
