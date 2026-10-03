@@ -18,6 +18,7 @@ internal class CompilerMethodRelations(
         val methods: List<MethodConstant>,
         val supported: Boolean,
         val cycles: List<CompilerDispatch.Cycle> = emptyList(),
+        val alternatives: List<CompilerDispatch.Alternatives> = emptyList(),
     )
 }
 
@@ -51,6 +52,7 @@ internal fun compilerMethodRelations(
                             route.methods,
                             route.supported,
                             route.cycles,
+                            route.alternatives,
                         )
                     }
             }.distinct()
