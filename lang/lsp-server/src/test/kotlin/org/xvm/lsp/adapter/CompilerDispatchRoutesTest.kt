@@ -7,6 +7,7 @@ import org.xvm.asm.ClassStructure
 import org.xvm.asm.ConstantPool
 import org.xvm.asm.Constants.Access
 import org.xvm.asm.ErrorList
+import org.xvm.asm.MethodStructure
 import org.xvm.asm.constants.MethodBody.Implementation
 import org.xvm.asm.constants.TypeInfo
 import org.xvm.compiler.Source
@@ -128,7 +129,7 @@ class CompilerDispatchRoutesTest {
     }
 
     @Test
-    fun `union type has multiple callable contracts and remains unsupported for rename`() {
+    fun `union type has multiple callable contracts and cannot be flattened into one chain`() {
         inspect("class First { Int read() = 1; } class Second { Int read() = 2; }") { module, errors ->
             val first = (module.getChild("First") as ClassStructure).formalType
             val second = (module.getChild("Second") as ClassStructure).formalType
@@ -149,10 +150,9 @@ class CompilerDispatchRoutesTest {
             assertThat(route.supported).isTrue()
             assertThat(route.methods.map { it.namespace.name to it.name }).containsExactly("Api" to "read")
             assertThat(route.delegates.map { it.name }).containsExactly("next")
-            assertThat(route.cycles).singleElement().satisfies { cycle ->
-                assertThat(cycle.owner.name).isEqualTo("Loop")
-                assertThat(cycle.contracts.map { it.namespace.name to it.name }).containsExactly("Api" to "read")
-            }
+            val cycle = route.cycles.single()
+            assertThat(cycle.owner.name).isEqualTo("Loop")
+            assertThat(cycle.contracts.map { it.namespace.name to it.name }).containsExactly("Api" to "read")
             assertThat(owner.methodImplementation(method, errors)).isNull()
         }
     }
@@ -161,9 +161,10 @@ class CompilerDispatchRoutesTest {
     fun `generated shorthand constructors do not become independently editable methods`() {
         inspect("class Box(Int value = 1) {} Box make() = new Box(value = 2);") { module, errors ->
             val owner = type(module, "Box", errors)
-            val constructors = owner.methods.values.filter {
-                it.isCtorOrValidator && it.chain.any { body -> body.isSynthetic }
-            }
+            val constructors =
+                owner.methods.values.filter {
+                    it.isCtorOrValidator && it.chain.any { body -> body.isSynthetic }
+                }
             assertThat(constructors).isNotEmpty()
             constructors.forEach { assertThat(owner.dispatch(it, errors).supported).isFalse() }
         }
@@ -171,15 +172,18 @@ class CompilerDispatchRoutesTest {
 
     @Test
     fun `implicit virtual child constructors remain construction contracts rather than renameable methods`() {
-        inspect("class Base { class Child { construct(Int value) {} } } class Derived extends Base { class Child {} }") { module, errors ->
+        inspect(
+            "class Base { class Child { construct() {} construct(Int value) {} } } " +
+                "class Derived extends Base { @Override class Child {} }",
+        ) { module, errors ->
             val child = (module.getChild("Derived") as ClassStructure).getChild("Child") as ClassStructure
             val owner = child.formalType.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors)
             val implicit = owner.methods.values.filter { it.chain.any { body -> body.implementation == Implementation.Implicit } }
-            assertThat(implicit).isNotEmpty()
-            implicit.forEach {
-                assertThat(it.isCtorOrValidator).isTrue()
-                assertThat(owner.dispatch(it, errors).supported).isFalse()
-            }
+            // Implicit bodies have no MethodStructure for isCtorOrValidator to classify. Inspect
+            // their original declaration identity, without treating it as an executable body here.
+            val declarations = implicit.mapNotNull { it.identity.component as? MethodStructure }
+            assertThat(declarations.filter { it.isConstructor }).isNotEmpty()
+            implicit.forEach { assertThat(owner.dispatch(it, errors).supported).isFalse() }
         }
     }
 
