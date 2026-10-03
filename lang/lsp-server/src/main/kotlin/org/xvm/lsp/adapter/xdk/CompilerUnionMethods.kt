@@ -47,6 +47,9 @@ internal fun unionMethodIdentity(
             identity(receiverClass),
             dispatch.methods.map(identity),
             dispatch.delegates.map(identity),
+            dispatch.cycles.map { cycle ->
+                ProofIdentity.Composed(identity(cycle.owner), cycle.contracts.map(identity), emptyList())
+            },
         )
     }
 

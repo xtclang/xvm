@@ -57,6 +57,7 @@ internal sealed interface ProofIdentity {
         val owner: ProofIdentity,
         val members: List<ProofIdentity>,
         val delegates: List<ProofIdentity>,
+        val cycles: List<Composed> = emptyList(),
     ) : ProofIdentity
 
     /** Unordered alternatives, each retaining its receiver, ordered contracts and delegates. */
@@ -236,6 +237,9 @@ internal fun captureRenameFacts(
                             identity(requireNotNull(host)),
                             route.methods.map(::identity),
                             route.delegates.map(::identity),
+                            route.cycles.map { cycle ->
+                                ProofIdentity.Composed(identity(cycle.owner), cycle.contracts.map(::identity), emptyList())
+                            },
                         )
                     }
                 }
