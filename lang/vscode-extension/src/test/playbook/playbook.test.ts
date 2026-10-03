@@ -58,8 +58,9 @@ suite('XdkAdapter playbook', function () {
     renameFamilyCases(['X155']);
     localRefactoringCases(['X156', 'X157']);
     editingClosureCases();
-    renameFamilyCases(['X159', 'X160', 'X164', 'X165']);
+    renameFamilyCases(['X159', 'X160']);
     typeMoveCases();
+    renameFamilyCases(['X164', 'X165']);
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {
