@@ -8,6 +8,7 @@ import org.xvm.asm.MethodStructure
 import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.MethodConstant
 import org.xvm.asm.constants.PackageConstant
+import org.xvm.asm.constants.PureIdentityConstant
 import org.xvm.lsp.util.ExecutionTrace
 import java.io.File
 import java.util.UUID
@@ -56,6 +57,11 @@ internal sealed interface ProofIdentity {
         val owner: ProofIdentity,
         val members: List<ProofIdentity>,
         val delegates: List<ProofIdentity>,
+    ) : ProofIdentity
+
+    /** Unordered alternatives, each retaining its receiver, ordered contracts and delegates. */
+    data class Alternatives(
+        val targets: Set<ProofIdentity>,
     ) : ProofIdentity
 
     /** An implicit package has a directory identity, with no invented source declaration. */
@@ -163,6 +169,10 @@ internal fun captureRenameFacts(
                     (host in declarations || dependencies?.declarations?.containsKey(host) == true)
             val packageParent = (constant as? PackageConstant)?.let { identity(it.parentConstant) }
             when {
+                constant is MethodConstant && host is PureIdentityConstant && errors != null -> {
+                    unionMethodIdentity(constant, errors, ::identity) ?: ProofIdentity.Unproven()
+                }
+
                 // Bundled source navigation must use the same artifact identity as binary-only
                 // views.
                 location != null && module !in XdkLibraries.moduleNames -> {
