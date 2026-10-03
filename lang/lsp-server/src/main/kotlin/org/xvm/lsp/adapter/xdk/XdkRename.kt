@@ -57,7 +57,7 @@ internal object XdkRename {
                 sourceAfter(source) to
                     edits[source]
                         .orEmpty()
-                        .sortedByDescending { it.start }
+                        .sortedWith(compareByDescending<Edit> { it.start }.thenByDescending { it.end })
                         .fold(text) { value, edit ->
                             value.replaceRange(edit.start, edit.end, edit.text)
                         }
@@ -81,7 +81,13 @@ internal object XdkRename {
         }
 
         fun textEdits(source: String): List<TextEdit> =
-            edits[source].orEmpty().map { edit ->
+            // Keep prefix insertions separate for binding translation, but combine an insertion
+            // and a renamed token at the same position for clients requiring disjoint edits.
+            edits[source].orEmpty().groupBy { it.start }.values.map { sameStart ->
+                val ordered = sameStart.sortedBy { it.end }
+                require(ordered.dropLast(1).all { it.start == it.end })
+                Edit(ordered.first().start, ordered.last().end, ordered.joinToString("") { it.text })
+            }.map { edit ->
                 val text = original.getValue(source)
                 TextEdit(Range(position(text, edit.start), position(text, edit.end)), edit.text)
             }
@@ -94,6 +100,31 @@ internal object XdkRename {
                 qualifications[source].orEmpty().filter { it.start == offset && it.start == it.end }.sumOf { it.text.length },
             )
     }
+
+    /** Rename the written type/module owning this file, before proving its final destination. */
+    fun fileNamePlan(
+        facts: CompilerRenameFacts,
+        texts: Map<String, String>,
+        source: String,
+        oldName: String,
+        newName: String,
+    ): Plan? {
+        if (!identifier(newName)) return null
+        if (oldName == newName) return Plan(texts, emptyMap())
+        val symbol = facts.models.flatMap { it.symbols }.distinctBy { it.id }.singleOrNull {
+            it.declarationSource == source && it.name == oldName && it.declaration != null &&
+                it.kind in setOf(SemanticModel.SymbolKind.TYPE, SemanticModel.SymbolKind.MODULE)
+        } ?: return null
+        val target = facts.constants[symbol.id] ?: return null
+        val at = requireNotNull(symbol.declaration).start
+        return plan(facts, texts, source, at.line, at.column, newName, facts.constants.filterValues { it == target }.keys)
+    }
+
+    /** Same-position prefix insertion plus token replacement is ordered, not overlapping. */
+    fun disjoint(edits: List<Edit>): Boolean =
+        edits.sortedWith(compareBy({ it.start }, { it.end })).zipWithNext().all { (first, next) ->
+            first.end <= next.start && (first.start != next.start || (first.end == first.start && next.end > next.start))
+        }
 
     fun plan(
         facts: CompilerRenameFacts,
