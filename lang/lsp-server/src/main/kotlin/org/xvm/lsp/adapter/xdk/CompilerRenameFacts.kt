@@ -66,6 +66,18 @@ internal sealed interface ProofIdentity {
         val targets: Set<ProofIdentity>,
     ) : ProofIdentity
 
+    /** Compiler type structure: base then ordered arguments; relational alternatives are sets. */
+    data class TypeShape(
+        val format: Constant.Format,
+        val components: List<ProofIdentity>,
+    ) : ProofIdentity
+
+    /** Literal annotation arguments retain their constant kind as well as their exact value. */
+    data class Value(
+        val format: Constant.Format,
+        val value: String,
+    ) : ProofIdentity
+
     /** An implicit package has a directory identity, with no invented source declaration. */
     data class Directory(
         val path: String,
