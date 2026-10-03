@@ -235,9 +235,9 @@ class XdkGraphMoveTest {
             """.trimIndent(),
         )
         Files.createDirectories(directory.resolve("target"))
-        val roots = if (customResources) listOf(uri("assets"), uri("fallback")) else null
         val renamed = "Renamed" + moduleName.removePrefix("App")
         session { adapter ->
+            val roots = if (customResources) listOf(uri("assets"), uri("fallback")) else null
             val graph =
                 listOf(
                     XdkSourceModule(moduleName, uri("old/App.x"), resourceRoots = roots),
@@ -249,7 +249,8 @@ class XdkGraphMoveTest {
             val proposal = requireNotNull(adapter.renameFilesProposalAsync(requested).get(30, SECONDS))
             val after = requireNotNull(proposal.sourceModules)
             assertThat(proposal.edit.renames).containsEntry(uri("old/App"), uri("target/Renamed"))
-            assertThat(proposal.previousSourceModules!!.single { it.name == moduleName }.resourceRoots).isEqualTo(roots)
+            assertThat(proposal.previousSourceModules!!.single { it.name == moduleName }.resourceFiles)
+                .isEqualTo(if (customResources) listOf("assets", "fallback").map { directory.resolve(it).toFile() } else null)
             assertThat(after.single { it.name == renamed }.root).isEqualTo(directory.resolve("target/Renamed.x").toFile())
             assertThat(after.single { it.name == renamed }.resourceFiles)
                 .containsExactlyElementsOf(
@@ -264,15 +265,16 @@ class XdkGraphMoveTest {
             assertThat(Files.readString(directory.resolve("target/Renamed.x"))).contains("module $renamed")
             assertThat(Files.readString(directory.resolve("Consumer.x"))).contains("package app import $renamed", "app.Box", "app.text()")
             assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
-            val reverse =
-                requireNotNull(
-                    adapter
-                        .renameFilesProposalAsync(
-                            requested.entries.associate { (from, to) ->
-                                to to from
-                            },
-                        ).get(30, SECONDS),
-                )
+            val reverse = adapter.renameFilesProposalAsync(requested.entries.associate { (from, to) -> to to from }).get(30, SECONDS)
+            if (!customResources) {
+                // A fresh reverse refactoring brings an uncaptured source tree into the pinned
+                // resource directory. Refuse it; host Undo restores the stored original transaction.
+                assertThat(reverse).isNull()
+                assertThat(directory.resolve("target/Renamed.x")).exists()
+                assertThat(directory.resolve("old/App.x")).doesNotExist()
+                return@session
+            }
+            requireNotNull(reverse)
             apply(reverse.edit)
             adapter.replaceSourceModules(requireNotNull(reverse.sourceModules))
             assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
