@@ -146,6 +146,7 @@ internal fun EmbeddingSupport.Compilation.projectRenameFacts(
                 builder.receiverBindings(),
                 builder.typeNames(this),
                 builder.resourceValues(this),
+                builder.callableBindings(this),
             )
         }
     }
@@ -261,6 +262,21 @@ private class SemanticModelBuilder(
                 val type = register.type
                 if (!copyableType(type) || !type.isSingleUnderlyingClass(false)) return@mapNotNull null
                 id to CompilerReceiver(type.getSingleUnderlyingClass(false), register.index)
+            }.toMap()
+
+    /** A selected declaration alone loses union alternatives and recursive receiver provenance. */
+    fun callableBindings(compilation: EmbeddingSupport.Compilation): Map<SourceLocation, Pair<TypeConstant, MethodConstant>> =
+        nodesIn(requireNotNull(compilation.parsed()))
+            .filterIsInstance<NameExpression>()
+            .flatMap { node ->
+                val method = (callees[node] ?: node.resolvedTarget) as? MethodConstant ?: return@flatMap emptyList()
+                val receiver = node.leftExpression?.let(::validatedType) ?: return@flatMap emptyList()
+                if (receiver.isTypeOfType) return@flatMap emptyList()
+                val selected = receiver to method
+                listOf(
+                    location(node.source, node.nameToken.startPosition, node.nameToken.endPosition) to selected,
+                    location(node.source, node.startPosition, node.endPosition) to selected,
+                )
             }.toMap()
 
     fun methodRelations(
