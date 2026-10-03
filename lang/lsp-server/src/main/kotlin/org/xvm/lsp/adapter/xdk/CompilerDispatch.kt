@@ -2,7 +2,6 @@ package org.xvm.lsp.adapter.xdk
 
 import org.xvm.asm.Constants.Access
 import org.xvm.asm.ErrorListener
-import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.MethodBody.Implementation
 import org.xvm.asm.constants.MethodConstant
 import org.xvm.asm.constants.MethodInfo
@@ -32,7 +31,7 @@ internal data class CompilerDispatch(
 
     /** A finite back edge to written contracts; it does not identify an executable body. */
     data class Cycle(
-        val owner: IdentityConstant,
+        val receiver: TypeConstant,
         val contracts: List<MethodConstant>,
     )
 }
@@ -53,28 +52,11 @@ internal fun TypeInfo.dispatch(
     if (visited.any { it.first == type && it.second === method }) {
         // A delegating cycle can still have a finite, written interface contract. Retain where
         // the route closes instead of inventing a terminal implementation or dropping the edge.
-        val contracts =
-            method.chain
-                .filter { it.implementation != Implementation.Delegating }
-                .mapNotNull { body ->
-                    body.methodStructure?.takeUnless { it.isSynthetic }?.identityConstant
-                }.distinct()
-        val supported =
-            type.isSingleUnderlyingClass(false) && contracts.isNotEmpty() &&
-                method.chain.any { it.implementation == Implementation.Delegating } &&
-                method.chain.all {
-                    it.implementation in
-                        setOf(
-                            Implementation.Delegating,
-                            Implementation.Declared,
-                            Implementation.Abstract,
-                            Implementation.Default,
-                            Implementation.Explicit,
-                            Implementation.SansCode,
-                        )
-                }
-        return if (supported) {
-            CompilerDispatch(contracts, cycles = listOf(CompilerDispatch.Cycle(type.getSingleUnderlyingClass(false), contracts)))
+        val contracts = method.closingContracts()
+        return if (!contracts.isNullOrEmpty() &&
+            visited.any { (_, route) -> route.chain.any { it.implementation == Implementation.Delegating } }
+        ) {
+            CompilerDispatch(contracts, cycles = listOf(CompilerDispatch.Cycle(type, contracts)))
         } else {
             CompilerDispatch(listOf(method.identity), supported = false)
         }
@@ -112,7 +94,8 @@ internal fun TypeInfo.dispatch(
                     val delegate =
                         receiverType?.let {
                             ExecutionTrace.api("TypeConstant.ensureTypeInfo(rename-delegate)") {
-                                it.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors)
+                                val view = if (it.isSingleUnderlyingClass(false)) it.ensureAccess(Access.PRIVATE) else it
+                                view.ensureTypeInfo(errors)
                             }
                         }
                     val selected = delegate?.getMethodBySignature(body.signature)
@@ -168,4 +151,33 @@ internal fun TypeInfo.dispatch(
         bodies.flatMap { it.cycles }.distinct(),
         bodies.flatMap { it.alternatives }.distinct(),
     )
+}
+
+/** Only inspect the finite MethodBody tree; following delegate receivers again would loop. */
+private fun MethodInfo.closingContracts(depth: Int = 0): List<MethodConstant>? {
+    if (depth >= 64) return null
+    return chain
+        .flatMap { body ->
+            when (body.implementation) {
+                Implementation.Delegating -> {
+                    emptyList()
+                }
+
+                Implementation.Union -> {
+                    val left = body.unionLeft.closingContracts(depth + 1) ?: return null
+                    val right = body.unionRight.closingContracts(depth + 1) ?: return null
+                    left + right
+                }
+
+                Implementation.Declared, Implementation.Abstract, Implementation.Default,
+                Implementation.Explicit, Implementation.SansCode,
+                -> {
+                    listOf(body.methodStructure?.takeUnless { it.isSynthetic }?.identityConstant ?: return null)
+                }
+
+                else -> {
+                    return null
+                }
+            }
+        }.distinct()
 }
