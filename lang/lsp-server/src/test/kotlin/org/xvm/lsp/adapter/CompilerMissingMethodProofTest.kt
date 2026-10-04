@@ -7,6 +7,7 @@ import org.xvm.asm.ErrorList
 import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.CompilerRenameFacts
 import org.xvm.lsp.adapter.xdk.XdkDependencies
+import org.xvm.lsp.adapter.xdk.XdkMissingMethods.Dispatch
 import org.xvm.lsp.adapter.xdk.XdkRename
 import org.xvm.lsp.adapter.xdk.memberActionFacts
 import org.xvm.lsp.adapter.xdk.missingMethodInputs
@@ -14,6 +15,50 @@ import org.xvm.lsp.adapter.xdk.projectRenameFacts
 import org.xvm.lsp.adapter.xdk.renameFacts
 
 class CompilerMissingMethodProofTest {
+    @Test
+    fun `class qualifier proof requires static dispatch and the inserted owner declaration`() {
+        CompilerTestSupport.configure()
+        val text =
+            """
+            module Missing {
+                class Other { static Int missing(Int value) = value; }
+                class Box {
+                    Int read(Int value) {
+                        return Box.missing(value);
+                    }
+                }
+            }
+            """.trimIndent()
+        val embedding = EmbeddingSupport.instance()
+        val errors = ErrorList()
+        val failed = embedding.compileModule(Source(text, SOURCE), null, errors)
+        assertThat(failed.succeeded()).isFalse()
+        val inputs = failed.missingMethodInputs()
+        assertThat(inputs.sameOwnerReceivers.values).containsExactly(Dispatch.STATIC)
+        val declarationErrors = ErrorList()
+        val analysis = embedding.analyzeDeclarations(Source(text, SOURCE), null, declarationErrors).orElseThrow()
+        val headers = analysis.memberActionFacts(XdkDependencies(emptyList()).open(), declarationErrors, inputs)
+        assertThat(declarationErrors.errors).isEmpty()
+        val candidate = headers.missingMethods.single()
+        assertThat(candidate.declaration).isEqualTo("private static Int64 missing(Int64 arg1)")
+        val edit = requireNotNull(candidate.edit(text))
+
+        fun compile(plan: XdkRename.Plan): CompilerRenameFacts {
+            val repairedErrors = ErrorList()
+            val repaired = embedding.compileModule(Source(plan.proposed.getValue(SOURCE), SOURCE), null, repairedErrors)
+            assertThat(repaired.succeeded()).describedAs(repairedErrors.errors.toString()).isTrue()
+            return repaired.projectRenameFacts(XdkDependencies(emptyList()).open(), repairedErrors)
+        }
+        val plan = XdkRename.Plan(mapOf(SOURCE to text), mapOf(SOURCE to listOf(edit)))
+        val after = compile(plan)
+        assertThat(candidate.bindsNewMethod(after, plan, edit)).isTrue()
+        assertThat(candidate.copy(dispatch = Dispatch.INSTANCE).bindsNewMethod(after, plan, edit)).isFalse()
+        val qualifier = text.indexOf("Box.missing")
+        val redirect = XdkRename.Edit(qualifier, qualifier + "Box".length, "Other")
+        val wrong = XdkRename.Plan(mapOf(SOURCE to text), mapOf(SOURCE to listOf(redirect, edit)))
+        assertThat(candidate.bindsNewMethod(compile(wrong), wrong, edit)).isFalse()
+    }
+
     @Test
     fun `repair must preserve a same owner receiver even when another receiver compiles`() {
         CompilerTestSupport.configure()
