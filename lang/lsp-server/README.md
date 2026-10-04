@@ -144,14 +144,18 @@ including receiver and local-argument bindings. Explicit instance receivers crea
 methods even in static callers. Named enclosing-class qualifiers create static methods even in
 instance callers; the proof checks both dispatch and the inserted declaration target. X185–X200
 cover these boundaries in both drivers; current acceptance receipts are in the integration plan.
-Cross-module/computed receivers, runtime `Class`/`Type` values, explicit generic qualifiers,
+Computed receivers, runtime `Class`/`Type` values, explicit generic qualifiers,
 singleton qualifiers, inferred result types and unproven argument/return contexts are refused.
 An explicit **Create public method … in …** action also supports another writable ordinary class
 in the same module, including closed companion files (X201–X204). It edits the destination URI,
 proves the signature's type identities there, and preserves the caller and existing bindings.
 Cross-owner arguments use declared parameters, supported literals and compiler-established earlier
 block locals. Results use whole-return, statement or whole explicitly typed local-initializer
-contexts (X205–X208). Inferred results, generic/interface owners and other modules remain separate work. Public visibility is stated in the action and generated code.
+contexts (X205–X208). Reachable configured source dependencies also support public repairs,
+including closed companions (X209–X212). Signature types use the destination module and its existing
+module-level imports; no import or dependency edge is added. Binary/indexed/read-only destinations,
+reverse dependencies, inferred results and generic/interface owners remain refusals. Public visibility
+is stated in the action and generated code. Exact source signature and whole-graph binding proof are required.
 Explicit declaration lookup returns local/import-alias declarations or the inherited written
 contracts of an overriding method/property, including multiple source targets. Definition and
 implementation retain their separate meanings. Indexed library sources remain read-only.

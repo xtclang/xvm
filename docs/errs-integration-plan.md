@@ -9719,8 +9719,9 @@ Remaining L63 work stays explicit:
 - [x] Add qualified same-owner instance calls with compiler-proven receiver identity; see the receiver continuation below.
 - [x] Add named enclosing-class static qualifiers; see the class-qualified continuation below.
 - [x] Add bounded same-module cross-owner creation, including writable companions; see the destination continuation below.
-- [ ] Extend cross-owner local/initializer evidence and cross-module destinations, generic/conditional
-  signatures and named/computed arguments; preserve current refusals until scope, types and proposed-graph bindings are proven.
+- [x] Extend cross-owner local/initializer evidence and bounded cross-module source destinations; see the continuations below.
+- [ ] Prove generic/conditional signatures and named/computed arguments; preserve current refusals
+  until scope, types and proposed-graph bindings are proven.
 - [ ] Add missing type/property declarations with equivalent ownership and compiler proof.
 - [ ] Broader statement extraction/inline and global safe delete remain separate refactorings.
 
@@ -9983,9 +9984,9 @@ Remaining L63 tasks:
 
 - [x] Carry detached local argument/result type identities into cross-owner typed initializer
   repairs. Implemented in the continuation below; same-owner support remains covered by regression tests.
-- [ ] Extend destination resolution to another configured source module with dependency direction,
-  imports, visibility and source/binary ownership proved before edits. The current module AST
-  boundary deliberately excludes even writable modules elsewhere in the configured graph.
+- [x] Extend destination resolution to another configured source module with dependency direction,
+  existing imports, visibility and source/binary ownership proved before edits; see the cross-module continuation below.
+- [ ] Prove insertion of missing destination imports without changing graph ownership or dependency direction.
 - [ ] Prove generic destinations/substitution, computed/chained receivers, runtime Class/Type
   values, explicit generic/singleton qualifiers, named/computed arguments and conditional signatures.
 - [ ] Add missing types/properties, broader extraction/inline and global safe delete as independent
@@ -10108,3 +10109,92 @@ Keep backend, shared scenarios and matching manual rows together when extracting
 PRs; each extraction still needs independent validation. The next bounded L63 scope is destination
 selection in another configured source module, with explicit dependency direction, source/binary
 ownership, imports and public visibility proved before offering an edit.
+
+
+### L63 cross-module missing-method destinations (2026-10-04)
+
+- [x] Capture detached destination locations, insertion positions and existing module-import aliases
+  from successfully compiled configured source modules. Match dependency compiler identities through
+  their source index only when they have a corresponding reachable project-owned destination.
+- [x] Support explicit public instance/static methods in ordinary non-generic classes, including
+  closed dependency companions. Render parameter/result and compiler-established local types in the
+  destination context; no caller alias, new import or new dependency edge is introduced.
+- [x] Verify the generated signature against the exact source declaration selected by the completed
+  caller, across snapshot-local symbol IDs. Preserve the whole-graph, known-binding, dispatch and
+  local-argument proof; return a versioned edit of the destination only.
+- [x] Add backend controls for source graph direction, binary/indexed/read-only targets, existing
+  members, unsupported owners, broken closed consumers, destination imports, local/initializer type
+  evidence, compatible-but-wrong signatures and open/closed destination document versions.
+- [x] Add shared X209–X212 and both editor drivers, including closed-module/companion apply with
+  Undo/Redo/Undo, reverse-dependency refusal and differing caller/destination import aliases.
+- [x] Complete the combined backend and selected native gates; record receipts and extraction commits.
+
+The existing graph compiler owns its mutable build-artifact and destination maps within one worker
+invocation; neither map is shared between requests. Destinations contain source data only. Compiler
+classes are reassociated from each freshly reopened repository and never retained with their AST or
+constant pool. Failed-body locals carry detached identity plus destination-specific rendered text.
+No Java AST change, embedding API extension, plugin production workaround or mutable cache is added.
+
+An existing module-level package import can supply a third-module signature type; the final graph
+and exact identity proof reject shadowing. A caller-owned type requiring a reverse dependency is
+refused. A binary source index alone cannot authorize an edit, even when its source is writable and
+inside the workspace. Only reachable, successfully compiled source destinations enter this path.
+Consumers outside the configured graph remain outside the proof's coverage.
+
+Remaining L63 work: adding missing destination imports; generic/substituted owners and conditional
+signatures; computed/chained/runtime-type/singleton receivers and named/computed arguments; missing
+type/property declarations; broader statement extraction/inline and global safe delete. UP22 is an
+independent upstream lifecycle follow-up. This bounded slice does not complete L63.
+
+
+The first combined run executed 296 tests and exposed 17 new-path failures with one root cause:
+the new dependency member-collision check requested `TypeInfo` from the reopened artifact pool,
+whose system-module fingerprints were not linked. This was an integration mistake in this slice,
+not evidence of a separate master regression. The check now constructs the receiver type through
+the fresh declaration attempt's linked caller pool. The focused follow-up passes all 41 tests
+(19 cross-module, seven signature-proof and 15 server cases), zero failures/errors/skips.
+Local type spelling is computed only for external destinations referenced by this failed attempt,
+not for every class in every source dependency.
+
+
+The final combined backend gate passes **296 tests in 15 classes**, zero failures/errors/skips,
+including 19 cross-module cases, seven signature-proof tests, 38 same-module cross-owner cases,
+77 original missing-method cases and 15 server cases. Both editor drivers compile. Existing
+local/extraction/member/code-action regressions are included. Selected native acceptance follows.
+
+
+Final acceptance:
+
+- **296 backend tests pass**, zero failures/errors/skips; both editor drivers compile.
+- VS Code **`run-B54Y1R`** passes **X201/X202/X205/X206/X209–X212**, zero extension errors or
+  test failures. The eight cases finish in fifteen seconds.
+- IntelliJ **`run-14965910820534049086`** passes **START and the same eight cases**, zero IDE
+  failures. JUnit records one passing suite test, zero failures/errors/skips. Ultimate is disabled.
+  X209/X210/X212 complete in 5,690/5,612/4,992 ms, including exact source and diagnostic Undo/Redo.
+  The accepted run starts one server and contains no ERROR/SEVERE, ambiguous-union,
+  disposed-synchronizer or ProcessCanceledException markers.
+- The first native attempt, **`run-6617035480724888358`**, passed START and the four existing
+  cases but stopped at X209 before applying an edit. Overlapping full diagnostic pulls cancelled
+  a stale lazy action during a synchronous remote popup call. The harness now queues discovery
+  through the normal UI action path; bounded retries still cannot replay an accepted edit. The
+  production diagnostic bridge is unchanged. Evidence and removal obligations remain under
+  [UP07](errs-upstream-issues.md#up07-native-cancellation-during-cross-module-quick-fix-discovery-2026-10-04).
+- Both editors use the **217-scenario** catalog SHA-256
+  `b26e3dcd0d89e0f0981d50d293477cde14ae6e2c6670c97fd2e308da81121f2e`.
+  These are selected runs, not full-catalog acceptance. No new IntelliJ production-unit or
+  packaged-stdio run is claimed; older host XML entries remain historical evidence.
+
+
+Root/LSP/IntelliJ read-only Spotless and `git diff --check` pass.
+
+| Extraction group | Commit | Scope |
+| --- | --- | --- |
+| Cross-module source destination and signature proof | `a75834c93` | Extends `272963cf0`; detached source ownership, existing destination imports, fresh linked-pool member inspection, exact cross-snapshot signature proof and backend/server regressions. |
+| Native popup discovery cancellation | `67f44cd33` | Independently extractable harness correction and UP07 evidence; queues cancellable intention inspection, retaining bounded retries and no edit replay. No plugin production API change. |
+| Shared editor coverage and manual steps | `bab7048bd` | X209–X212, both drivers, extra dependency fixtures, matching manual rows and catalog counts in one commit. Depends on the backend slice and retains the existing diagnostic bridge correction `124ae9c5a`; native acceptance uses `67f44cd33`. |
+
+This documentation checkpoint records the capability boundaries and receipts. Keep the shared
+scenario/manual rows together when extracting PRs; every extracted PR still requires independent
+validation. All work remains on `lagergren/errs`; no remote operation is part of this checkpoint.
+The next bounded L63 step is adding required destination imports when the dependency already exists,
+while retaining alias-collision, ownership, complete-graph and exact-signature proof.
