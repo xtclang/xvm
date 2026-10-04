@@ -1,7 +1,14 @@
 # Ecstasy Language Server - Manual Test Plan
 
 The current catalog has **185 scenarios**: X1–X180, CFG1–CFG3 and 7a.8/7a.9.
-The latest selected gate passes **X169/X171/X173–X176** in VS Code `run-ElUMIl` and IntelliJ
+The latest selected gate passes **X156/X157/X177–X180** in VS Code `run-nDHZOH` and IntelliJ
+`run-232740531754002686` (START also passes), with zero reported editor failures. It covers
+returned/typed-initializer extraction, adjacent local inline, unused constant local removal,
+runtime-initializer refusal, exact edits, diagnostics and Undo/Redo. All 129 backend tests pass
+with no failures/errors/skips. The independent compiler repair passes 22 manual runtime checks.
+These are selected receipts from the 185-case catalog, not a full-catalog run.
+
+The preceding selected gate passes **X169/X171/X173–X176** in VS Code `run-ElUMIl` and IntelliJ
 `run-13159045223223510909` (START also passes), with no editor errors. It covers existing and
 empty-package moves, comments/whitespace, import aliases, closed consumers, companions/resources,
 collision refusal and Undo/Redo. The combined gate passes 155 LSP tests, 103 Java tests and five
@@ -3157,7 +3164,7 @@ The setup creates the listed empty directories explicitly, without a Marker.x so
 
 ### L63 local initializer and unused-local actions
 
-Shared X177–X180 are implemented in both drivers; current-batch validation is pending.
+Shared X177–X180 pass in both drivers in the selected runs recorded at the top of this file.
 Use the exact source in `lang/test-fixtures/compiler-playbook/scenarios.json` for each row.
 
 | Case | Manual action | Required result |
