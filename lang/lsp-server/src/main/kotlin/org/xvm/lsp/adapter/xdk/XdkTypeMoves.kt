@@ -10,6 +10,8 @@ internal object XdkTypeMoves {
         val resources: Map<String, String>,
         val qualifications: Map<String, List<XdkRename.Edit>>,
         val destinations: List<Destination>,
+        val imports: Map<String, List<XdkRename.Edit>>,
+        val dependencies: Map<String, Set<String>>,
     ) {
         /** Even an unused moved declaration must acquire the intended compiler owner. */
         fun provesDestinations(facts: CompilerRenameFacts): Boolean =
@@ -44,11 +46,12 @@ internal object XdkTypeMoves {
                         target?.location?.sourceName == source.path && target.name == source.nameWithoutExtension &&
                             target.format == Constant.Format.Class
                     } ?: return null
-                val namespace = namespace(facts, owner.module, destination.parentFile, texts, directories) ?: return null
+                val targetModule = project.modules.values.singleOrNull { it.uri == project.scope(destination.path) } ?: return null
+                val namespace = namespace(facts, targetModule.name, destination.parentFile, texts, directories) ?: return null
                 // An inline declaration can occupy the destination without a file of its own.
                 // Reject before replay rather than presenting a duplicate component to the compiler.
                 if (facts.typePaths.any {
-                        it.module == owner.module && it.path == namespace + destination.nameWithoutExtension &&
+                        it.module == targetModule.name && it.path == namespace + destination.nameWithoutExtension &&
                             it.target != owner.target
                     }
                 ) {
@@ -58,8 +61,25 @@ internal object XdkTypeMoves {
                 val rename =
                     XdkRename.fileNamePlan(facts, texts, source.path, source.nameWithoutExtension, destination.nameWithoutExtension)
                         ?: return null
-                Move(owner, namespace + source.nameWithoutExtension, files, rename)
+                Move(owner, targetModule.name, namespace + source.nameWithoutExtension, files, rename)
             }
+        fun owner(file: String): String? = project.modules.values.singleOrNull { it.uri == project.scope(file) }?.name
+        fun movedOwner(file: String): String? = moves.singleOrNull { file in it.files.paths }?.module ?: owner(file)
+        fun target(name: TypeName): Move? = moves.singleOrNull { name.module == it.owner.module && name.path.take(it.owner.path.size) == it.owner.path }
+        fun changesModule(name: TypeName): Boolean {
+            val file = name.location.sourceName ?: return false
+            return target(name)?.let { it.module != it.owner.module } == true || movedOwner(file) != owner(file)
+        }
+        val dependencies = facts.typeNames.filter(::changesModule).mapNotNull { name ->
+            val file = name.location.sourceName ?: return null
+            val local = movedOwner(file) ?: return null
+            val module = target(name)?.module ?: name.module
+            if (local == module || module == "ecstasy.xtclang.org") null else local to module
+        }.groupBy({ it.first }, { it.second }).mapValues { it.value.toSet() }
+        val imports = dependencies.mapValues { (module, required) ->
+            val root = project.modules.getValue(module).root.path
+            XdkMoveImports.plan(texts.getValue(root), texts.filterKeys { movedOwner(it) == module }.values, required) ?: return null
+        }
         val qualifications =
             facts.typeNames
                 .mapNotNull { name ->
@@ -84,14 +104,13 @@ internal object XdkTypeMoves {
                     if (!name.imported && alias) return@mapNotNull null
                     if (written.last() != name.path.last()) return@mapNotNull null
                     val desired = movedTarget?.let { it.path + name.path.drop(it.owner.path.size) } ?: name.path
-                    val localModule =
-                        project.modules.values
-                            .singleOrNull { it.uri == project.scope(file) }
-                            ?.name
-                            ?: return null
+                    val localModule = movedOwner(file) ?: return null
+                    val targetModule = movedTarget?.module ?: name.module
                     val qualified =
-                        if (localModule == name.module) {
+                        if (localModule == targetModule) {
                             desired
+                        } else if (changesModule(name) && targetModule != "ecstasy.xtclang.org") {
+                            listOf(imports.getValue(localModule).aliases.getValue(targetModule)) + desired
                         } else {
                             // Preserve the importing module's alias. A bare imported name remains bound
                             // through its rewritten import clause; never invent a module import here.
@@ -111,8 +130,9 @@ internal object XdkTypeMoves {
                     file to prefix.copy(start = start, end = start + prefix.end)
                 }.groupBy({ it.first }, { it.second })
                 .mapValues { (_, value) -> value.distinct().sortedBy { it.start } }
+        val importEdits = imports.map { (module, planned) -> project.modules.getValue(module).root.path to listOf(planned.edit) }.toMap()
         val edits =
-            (qualifications.entries + moves.flatMap { it.rename.edits.entries })
+            (qualifications.entries + moves.flatMap { it.rename.edits.entries } + importEdits.entries)
                 .groupBy({ it.key }, { it.value })
                 .mapValues { (_, changes) -> changes.flatten().distinct().sortedWith(compareBy({ it.start }, { it.end })) }
         if (edits.values.any { !XdkRename.disjoint(it) }) return null
@@ -120,9 +140,9 @@ internal object XdkTypeMoves {
         if (resources.values.any { it.distinct().size != 1 }) return null
         val destinations =
             moves.zip(operations.values).map { (move, destination) ->
-                Destination(destination.path, move.owner.module, move.path.dropLast(1) + destination.nameWithoutExtension)
+                Destination(destination.path, move.module, move.path.dropLast(1) + destination.nameWithoutExtension)
             }
-        return Proposal(edits, resources.mapValues { it.value.first() }, qualifications, destinations)
+        return Proposal(edits, resources.mapValues { it.value.first() }, qualifications, destinations, importEdits, dependencies)
     }
 
     /**
@@ -156,6 +176,7 @@ internal object XdkTypeMoves {
 
     private data class Move(
         val owner: TypePath,
+        val module: String,
         val path: List<String>,
         val files: XdkSourceMoves,
         val rename: XdkRename.Plan,
