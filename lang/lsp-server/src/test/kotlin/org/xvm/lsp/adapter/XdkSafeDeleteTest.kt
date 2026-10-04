@@ -31,6 +31,7 @@ class XdkSafeDeleteTest {
             "Int §unused() { return 1; }",
             "protected Int §unused() { return 1; }",
             "private Int §unused = kept();",
+            "private static Int §unused = kept();",
             "private Int §unused() { /* keep this explanation */ return 1; }",
         ],
     )
