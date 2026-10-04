@@ -194,7 +194,7 @@ See the [L83 task and ownership record](../../../docs/errs-integration-plan.md#p
 | Signature help | - | Same-file | **Partial** - selected signatures; fitted incomplete method/function/constructor calls, including specialized constructors and bounded declaration/tuple/literal recovery. Methods/constructors retain named mappings; function types have unnamed parameters. Constructor class types use explicit, required-type or provisional argument inference; array suppliers include dimension offsets and single-dimensional bracket slots fit the size parameter |
 | Rename (same file) | Text | AST | **Partial** - locals/lambda/private ordinary-method parameters, captures and named labels; positional method-value escapes; graph-backed public/explicit-constructor parameter slots, types, static members, method/property families and explicit aliases; client versioned-edit support required. The L62 extension has backend and selected shared acceptance in both editors |
 | Rename (cross-file) | - | - | **Partial** - types/packages and companion directories, combined type/module rename-and-move and interacting type batches, captured empty destinations and commented qualifications (X169–X176; latest receipts below), qualified discovery-managed modules, implicit package directories, static members and source method/property families, including supported mixin/delegate/annotation routes, union alternatives and recursive written contracts (X164/X165), plus bounded generic/formal/annotated operands and nested union delegation (X166–X168; current receipt below); public parameter slots join override declarations and named callers; primary-header properties join generated constructor labels and property uses. Full graph compilation and binding/dispatch proof remain mandatory. Explicit graph changes have guarded native client persistence/Undo through xtc/rename (X118 passes in both editors; VS Code edited-file moves require files.refactoring.autoSave); standard LSP clients still refuse them. Project proposals include a scope receipt; registered absolute roots can include external consumers. The explicit graph is a declared proof boundary: omitted consumers, even inside workspace roots, remain unknown and are not automatically refused |
-| Code actions | Organize imports | Organize imports + auto-import + doc-comments | **Partial** - compiler-proven unused-import removal, contiguous import sorting and unresolved public-type imports; individual/all-required implement/override at a class name for source and read-only binary/XDK contracts, including generic/conditional, compound and qualified types with imports; validated constants and fresh literal-default repair; whole-return/typed-initializer extraction, adjacent same-type returned/initializer local inline and unused constant local removal; complete compilation and binding/dispatch proof, versioned edits |
+| Code actions | Organize imports | Organize imports + auto-import + doc-comments | **Partial** - compiler-proven unused-import removal, contiguous import sorting and unresolved public-type imports; individual/all-required implement/override at a class name for source and read-only binary/XDK contracts, including generic/conditional, compound and qualified types with imports; validated constants and fresh literal-default repair; whole-return/typed-initializer extraction, adjacent same-type returned/initializer local inline and unused constant local removal; private same-owner expression helpers with stable inputs (X181–X184); complete compilation and binding/dispatch proof, versioned edits |
 | Document formatting | Trailing WS | Structural re-indent + whitespace cleanup | **Partial** - Java-lexer brace/parenthesis/bracket indentation and outer whitespace; all token spellings preserved; no expression wrapping |
 | Range formatting | Trailing WS in range | Structural formatting in range | **Partial** - same token-preserving formatter, bounded to selected lines |
 | On-type formatting | - | Structural formatting on trigger characters | **Partial** - current-line indentation/whitespace on configured trigger characters |
@@ -229,7 +229,7 @@ local or import-alias declarations and inherited written member contracts, prese
 
 | Protocol gaps and pending acceptance | What exists today | Task |
 |---|---|---|
-| Extract/inline/safe-delete refactorings and general missing-declaration fixes | Bounded proven rename, import cleanup, public-type imports, implement/override, whole-return/typed-initializer extraction, adjacent same-type returned/initializer local inline and compiler-proven unused constant local removal | L62–L63 |
+| Extract/inline/safe-delete refactorings and general missing-declaration fixes | Bounded proven rename, import cleanup, public-type imports, implement/override, whole-return/typed-initializer extraction, adjacent same-type returned/initializer local inline and compiler-proven unused constant local removal; private expression helpers with explicit stable inputs | L62–L63 |
 | Pull document/workspace diagnostics | Implemented for negotiated compiler clients: result IDs, related/closed documents, refresh and removal reports. Shared X123 and updated X76/X118 pass in both editors; push remains for other clients. PLAT1's source-location crash is fixed. The native demo also corrected a closed standalone-member pull gap; X27/X123 pass after that correction. | L68 implemented; demo receipts and nine pull-diagnostic tests |
 | Semantic-token range/delta requests | Negotiated range/delta with bounded result history; backend/protocol and both host checks pass | L69 / X126 |
 | Completion/action/lens/link/inlay/workspace-symbol resolve requests | All six endpoints implemented with bounded revision guards. IntelliJ selects and applies lazy actions through its undo-aware bridge. Backend/protocol and selected acceptance pass in both editors. | L70 / X127, X131 |
@@ -636,7 +636,8 @@ Full tree-sitter support for fast, incremental parsing:
      Parameterized/annotated alternatives and wider generated routes remain open; binary contracts remain read-only
    - Whole-return-expression extraction and adjacent single-use typed returned-local inline are implemented with binding proof; X156/X157 pass in both editors
    - Complete typed local initializers can also be extracted or receive an adjacent same-written-type local inline; unused locals can be removed only with compiler-proven constant, side-effect-free initialization (X177–X180, acceptance below)
-   - Wider extraction, extract method, broader inline and global safe delete remain unimplemented (L63)
+   - Private same-owner expression helpers with explicit stable inputs are implemented (X181–X184, acceptance below)
+   - Wider expression/statement extraction, mutable captures, broader inline and global safe delete remain unimplemented (L63)
 
 9. **Code actions (semantic)**
    - Organize imports is implemented in Tree-sitter and bounded by compiler proof in XdkAdapter
@@ -1190,3 +1191,26 @@ These are selected runs from the 185-case catalog. The independent ordinary-comp
 code-generation repair has a failing-master CLI reproduction and 22 passing manual runtime
 checks; keep its two commits separate in the extraction map. L63 remains partial for wider contexts,
 extract-method, missing declarations, broader inline and global safe delete.
+
+
+### L63 private expression helpers (2026-10-04)
+
+Complete return expressions and explicitly typed local initializers can be extracted to private
+helpers in the same type. Stable locals/parameters become explicit typed inputs; compiler
+identities prove their types, moved bindings/calls, argument-to-parameter mapping and unchanged
+existing dispatch. The compiler's effectively-final/non-reference register evidence prevents
+reading mutable captured values early. Written expected types and exact moved expression text
+are preserved. Generic owners and ordinary implicit instance calls are supported; method formals,
+mutable/reference-backed captures, lambda/anonymous-class creation, async calls, conditional returns
+and general statement extraction remain refused.
+
+The implementation stays in Kotlin. Existing `Register.isEffectivelyFinal()`, `isVar()` and type
+APIs suffice; there are no new Java AST fields, accessors, parent mutation or embedding entry points.
+A local ownership map is necessary because a fresh parser tree has not adopted parent links. The
+existing local-extraction reader also now skips typeless method-formal parser parameters instead
+of dereferencing their missing type. Only detached type identities/source locations survive the
+compiler worker. All 151 selected backend tests pass without failures/errors/skips. X156/X177/
+X181–X184 pass in VS Code `run-ZhuPaV` and IntelliJ `run-5839432120705984532` (plus START,
+zero IDE failures); both verify exact edits, diagnostics and Undo/Redo, while X184 verifies refusal
+through the installed connection. These are selected runs from the 189-case catalog, not full
+suite reruns. The integration plan records the failed first run, fixes and extraction commit map.
