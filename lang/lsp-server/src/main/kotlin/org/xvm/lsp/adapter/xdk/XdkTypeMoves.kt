@@ -9,7 +9,20 @@ internal object XdkTypeMoves {
         val edits: Map<String, List<XdkRename.Edit>>,
         val resources: Map<String, String>,
         val qualifications: Map<String, List<XdkRename.Edit>>,
-    )
+        val destinations: List<Destination>,
+    ) {
+        /** Even an unused moved declaration must acquire the intended compiler owner. */
+        fun provesDestinations(facts: CompilerRenameFacts): Boolean =
+            destinations.all { destination ->
+                facts.typePaths.any {
+                    val target = it.target as? ProofIdentity.Source
+                    target?.location?.sourceName == destination.source && target.format == Constant.Format.Class &&
+                        it.module == destination.module && it.path == destination.path
+                }
+            }
+    }
+
+    data class Destination(val source: String, val module: String, val path: List<String>)
 
     fun plan(
         facts: CompilerRenameFacts,
@@ -27,14 +40,11 @@ internal object XdkTypeMoves {
                         target?.location?.sourceName == source.path && target.name == source.nameWithoutExtension &&
                             target.format == Constant.Format.Class
                     } ?: return null
-                val namespace =
-                    facts.typePaths.singleOrNull {
-                        it.module == owner.module && directory(it.target) == destination.parentFile
-                    } ?: return null
+                val namespace = namespace(facts, owner.module, destination.parentFile, texts, directories) ?: return null
                 // An inline declaration can occupy the destination without a file of its own.
                 // Reject before replay rather than presenting a duplicate component to the compiler.
                 if (facts.typePaths.any {
-                        it.module == owner.module && it.path == namespace.path + destination.nameWithoutExtension &&
+                        it.module == owner.module && it.path == namespace + destination.nameWithoutExtension &&
                             it.target != owner.target
                     }
                 ) {
@@ -44,7 +54,7 @@ internal object XdkTypeMoves {
                 val rename =
                     XdkRename.fileNamePlan(facts, texts, source.path, source.nameWithoutExtension, destination.nameWithoutExtension)
                         ?: return null
-                Move(owner, namespace.path + source.nameWithoutExtension, files, rename)
+                Move(owner, namespace + source.nameWithoutExtension, files, rename)
             }
         val qualifications =
             facts.typeNames
@@ -109,7 +119,35 @@ internal object XdkTypeMoves {
         if (edits.values.any { !XdkRename.disjoint(it) }) return null
         val resources = moves.flatMap { it.files.resources.entries }.groupBy({ it.key }, { it.value })
         if (resources.values.any { it.distinct().size != 1 }) return null
-        return Proposal(edits, resources.mapValues { it.value.first() }, qualifications)
+        val destinations = moves.zip(operations.values).map { (move, destination) ->
+            Destination(destination.path, move.owner.module, move.path.dropLast(1) + destination.nameWithoutExtension)
+        }
+        return Proposal(edits, resources.mapValues { it.value.first() }, qualifications, destinations)
+    }
+
+    /**
+     * Extend the nearest compiler-owned package through captured implicit package directories.
+     * A companion source can change ownership, so only already resolved packages may cross it.
+     * Replay must subsequently prove the final declaration path, including unused declarations.
+     */
+    private fun namespace(
+        facts: CompilerRenameFacts,
+        module: String,
+        destination: File,
+        texts: Map<String, String>,
+        directories: Set<File>,
+    ): List<String>? {
+        val ancestors = generateSequence(destination) { it.parentFile }.toList()
+        val resolved = ancestors.firstNotNullOfOrNull { candidate ->
+            facts.typePaths.singleOrNull { it.module == module && directory(it.target) == candidate }
+                ?.let { candidate to it.path }
+        } ?: return null
+        val implicit = ancestors.takeWhile { it != resolved.first }.asReversed()
+        if (implicit.any {
+                it !in directories || !XdkRename.identifier(it.name) || File(it.parentFile, "${it.name}.x").path in texts
+            }
+        ) return null
+        return resolved.second + implicit.map { it.name }
     }
 
     private data class Move(
