@@ -801,20 +801,24 @@ internal class XdkProjectQueries(
             if (complete) {
                 emptyList()
             } else {
-                before.missingMethods.filter { it.selected(source, range) }.take(8).mapNotNull { candidate ->
-                    checkCurrent()
-                    val edit = candidate.edit(text) ?: return@mapNotNull null
-                    val plan = XdkRename.Plan(texts, mapOf(source to listOf(edit)))
-                    val after = compile(plan.proposed) ?: return@mapNotNull null
-                    if (!XdkRename.preservesKnownBindings(before, after, plan) || !candidate.bindsNewMethod(after, plan, edit)) {
-                        return@mapNotNull null
+                before.missingMethods
+                    .filter { it.selected(source, range) }
+                    .distinctBy { it.declaration to it.insertion }
+                    .take(8)
+                    .mapNotNull { candidate ->
+                        checkCurrent()
+                        val edit = candidate.edit(text) ?: return@mapNotNull null
+                        val plan = XdkRename.Plan(texts, mapOf(source to listOf(edit)))
+                        val after = compile(plan.proposed) ?: return@mapNotNull null
+                        if (!XdkRename.preservesKnownBindings(before, after, plan) || !candidate.bindsNewMethod(after, plan, edit)) {
+                            return@mapNotNull null
+                        }
+                        CodeAction(
+                            candidate.title,
+                            CodeAction.CodeActionKind.QUICKFIX,
+                            edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+                        )
                     }
-                    CodeAction(
-                        candidate.title,
-                        CodeAction.CodeActionKind.QUICKFIX,
-                        edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
-                    )
-                }
             }
         val members =
             XdkMemberActions.actions(before.memberActions, source, range).mapNotNull { candidate ->
