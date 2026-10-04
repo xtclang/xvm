@@ -3,6 +3,8 @@ package org.xvm.lsp.adapter
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import java.net.URI
@@ -468,11 +470,13 @@ class XdkTypeMoveTest {
             """.trimIndent(),
         )
         session { adapter ->
-            adapter.replaceSourceModules(listOf(
-                XdkSourceModule("App", uri("App.x")),
-                XdkSourceModule("Other", uri("Other.x")),
-                XdkSourceModule("Consumer", uri("Consumer.x"), setOf("App")),
-            ))
+            adapter.replaceSourceModules(
+                listOf(
+                    XdkSourceModule("App", uri("App.x")),
+                    XdkSourceModule("Other", uri("Other.x")),
+                    XdkSourceModule("Consumer", uri("Consumer.x"), setOf("App")),
+                ),
+            )
             val requested = mapOf(uri("App/tools/Box.x") to uri("Other/empty/Parcel.x"))
             assertThat(adapter.renameFilesAsync(requested).get(30, SECONDS)).isNull()
             val proposal = requireNotNull(adapter.renameFilesProposalAsync(requested).get(30, SECONDS))
@@ -503,7 +507,48 @@ class XdkTypeMoveTest {
     }
 
     @Test
-    fun `cross module move refuses cyclic dependencies and inaccessible captured members atomically`() {
+    fun `a fresh module alias cannot capture an existing source name`() {
+        write("App.x", "module App { Int other = 7; tools.Box make() = new tools.Box(); }")
+        write("App/tools/Box.x", "class Box {}")
+        write("Other.x", "module Other {}")
+        Files.createDirectories(directory.resolve("Other"))
+        session { adapter ->
+            move(adapter, mapOf(uri("App/tools/Box.x") to uri("Other/Box.x")))
+            assertThat(read("App.x")).contains("package other1 import Other;", "Int other = 7;", "other1.Box make()")
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [true, false])
+    fun `incoming resource expressions use the destination module's captured lookup policy`(sameBytes: Boolean) {
+        write("App.x", "module App {}")
+        write("App/Box.x", "class Box { static String text() = $/data.txt; }")
+        write("Other.x", "module Other {}")
+        write("original/data.txt", "expected bytes")
+        write("destination/data.txt", if (sameBytes) "expected bytes" else "changed bytes")
+        Files.createDirectories(directory.resolve("Other"))
+        session { adapter ->
+            adapter.replaceSourceModules(
+                listOf(
+                    XdkSourceModule("App", uri("App.x"), resourceRoots = listOf(uri("original"))),
+                    XdkSourceModule("Other", uri("Other.x"), resourceRoots = listOf(uri("destination"))),
+                ),
+            )
+            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            val requested = mapOf(uri("App/Box.x") to uri("Other/Box.x"))
+            val proposal = adapter.renameFilesProposalAsync(requested).get(30, SECONDS)
+            if (sameBytes) {
+                apply(requireNotNull(proposal).edit, requested)
+                assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            } else {
+                assertThat(proposal).isNull()
+                assertThat(directory.resolve("App/Box.x")).exists()
+            }
+        }
+    }
+
+    @Test
+    fun `cross module move refuses cyclic dependencies atomically`() {
         write("App.x", "module App { tools.Box make() = new tools.Box(); }")
         write("App/tools/Helper.x", "class Helper {}")
         write("App/tools/Box.x", "class Box { Helper make() = new Helper(); }")

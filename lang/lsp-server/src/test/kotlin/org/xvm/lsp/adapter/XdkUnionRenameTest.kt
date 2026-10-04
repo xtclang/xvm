@@ -175,7 +175,8 @@ class XdkUnionRenameTest {
 
     @Test
     fun `virtual child union receivers retain their enclosing source ownership`() {
-        val text = """
+        val text =
+            """
             module App {
                 class Owner {
                     class First { Int read() = 1; }
@@ -183,7 +184,7 @@ class XdkUnionRenameTest {
                     Int use(First | Second target) = target.read();
                 }
             }
-        """.trimIndent()
+            """.trimIndent()
         workspace(text) { adapter, uri ->
             val changed = apply(text, requireNotNull(adapter.renameAt(uri, text, text.lastIndexOf("read"), "fetch")).changes.getValue(uri))
             assertThat(changed).isEqualTo(text.replace("read", "fetch"))
@@ -195,14 +196,18 @@ class XdkUnionRenameTest {
     @MethodSource("annotationArguments")
     fun `compound and numeric annotation arguments permit proven union rename`(argument: Pair<String, String>) {
         val (type, value) = argument
-        val text = """
+        val text =
+            """
             module App {
                 class First { Int read() = 1; }
                 class Second { Int read() = 2; }
                 annotation Mark($type value) into Object {}
-                Int use((@Mark($value) First) | Second target) = target.read();
+                Int use(Boolean choose) {
+                    (@Mark($value) First) | Second target = choose ? new @Mark($value) First() : new Second();
+                    return target.read();
+                }
             }
-        """.trimIndent()
+            """.trimIndent()
         workspace(text) { adapter, uri ->
             val changed = apply(text, requireNotNull(adapter.renameAt(uri, text, text.lastIndexOf("read"), "fetch")).changes.getValue(uri))
             assertThat(changed).isEqualTo(text.replace("read", "fetch"))
@@ -283,10 +288,16 @@ class XdkUnionRenameTest {
 
     private companion object {
         @JvmStatic
-        fun annotationArguments() = listOf(
-            "Byte" to "7", "Float64" to "1.5", "Dec64" to "1.5", "Int[]" to "[1, 2]",
-            "Map<String, Int>" to "[\"one\" = 1]", "Range<Int>" to "1..<3", "(Int, String)" to "(1, \"two\")",
-        )
+        fun annotationArguments() =
+            listOf(
+                "Byte" to "Byte:7",
+                "Float64" to "Float64:1.5",
+                "Dec64" to "Dec64:1.5",
+                "Int[]" to "Int[]:[1, 2]",
+                "Map<String, Int>" to "Map<String, Int>:[\"one\" = 1]",
+                "Range<Int>" to "Int:1..<Int:3",
+                "Tuple<Int, String>" to "Tuple:(Int:1, \"two\")",
+            )
 
         @JvmStatic
         fun annotatedReceivers() =
