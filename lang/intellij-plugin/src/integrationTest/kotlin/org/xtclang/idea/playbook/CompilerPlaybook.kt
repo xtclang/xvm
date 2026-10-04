@@ -1574,13 +1574,33 @@ class CompilerPlaybook(
                 restore(data.text("file"))
             }
         }
-        listOf("X148", "X156", "X157", "X177", "X178", "X179", "X180", "X181", "X182", "X183", "X184").forEach { id ->
+        listOf(
+            "X148",
+            "X156",
+            "X157",
+            "X177",
+            "X178",
+            "X179",
+            "X180",
+            "X181",
+            "X182",
+            "X183",
+            "X184",
+            "X185",
+            "X186",
+            "X187",
+            "X188",
+        ).forEach { id ->
             scenario(id) {
                 discovered(id) { data ->
                     val editor = open(data.text("file"))
                     val original = data.text("source")
                     editor.text = original
-                    editor.awaitDiagnostics(emptyList())
+
+                    fun originalDiagnostics() {
+                        if (data.values["initiallyValid"]?.asBoolean == false) editor.awaitError() else editor.awaitDiagnostics(emptyList())
+                    }
+                    originalDiagnostics()
                     val at = original.indexOf(data.text("selected"))
                     if (data.values["refused"]?.asBoolean == true) {
                         fun position(offset: Int): Map<String, Int> {
@@ -1611,7 +1631,7 @@ class CompilerPlaybook(
                         focusEditor(editor)
                         invokeAction(action, now = false, component = editor.component)
                         awaitUi("$action local refactoring", 45.seconds) { editor.text == expected }
-                        editor.awaitDiagnostics(emptyList())
+                        if (expected == original) originalDiagnostics() else editor.awaitDiagnostics(emptyList())
                     }
                 }
             }
