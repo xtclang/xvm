@@ -81,7 +81,7 @@ class XdkCrossOwnerMissingMethodsTest {
 
     @ParameterizedTest
     @ValueSource(
-        strings = ["interface Other {}", "const Other {}", "class Other { Int missing(String value) = 1; }"],
+        strings = ["interface Other {}", "class Other { Int missing(String value) = 1; }"],
     )
     fun `unsupported destination or existing member never acquires another method`(target: String) {
         query(
@@ -313,6 +313,41 @@ class XdkCrossOwnerMissingMethodsTest {
             """.trimIndent(),
             companion = "class Other {}",
             signature = "public conditional Int64 missing(Int64 arg1)",
+        )
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["make()", "holder.peer", "makeHolder().peer", "new Other()"])
+    fun `validated computed and chained receivers select one source destination`(receiver: String) {
+        query(
+            """
+            module Missing {
+                class Holder(Other peer) {}
+                Other make() = new Other();
+                Holder makeHolder() = new Holder(make());
+                Int read(Holder holder, Int value) {
+                    return $receiver.§missing(value);
+                }
+            }
+            """.trimIndent(),
+            companion = "class Other {}",
+            signature = "public Int64 missing(Int64 arg1)",
+        )
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["static const", "static service"])
+    fun `written singleton receiver creates an instance method`(category: String) {
+        query(
+            """
+            module Missing {
+                $category Other {}
+                Int read(Int value) {
+                    return Other.§missing(value);
+                }
+            }
+            """.trimIndent(),
+            signature = "public Int64 missing(Int64 arg1)",
         )
     }
 

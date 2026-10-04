@@ -264,7 +264,7 @@ class XdkMissingMethodsTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["other", "otherPeer", "base", "super", "this:public", "this:protected", "this:struct", "make()"])
+    @ValueSource(strings = ["other", "otherPeer", "base", "super", "this:public", "this:protected", "this:struct"])
     fun `unproven receiver owners and access views remain refusals`(receiver: String) {
         refused(
             """
