@@ -19,7 +19,7 @@ class XdkLocalExtractionTest {
             "module Extract {\r\n    $type read() {\r\n        Int extractedValue = 1;\r\n" +
                 "        assert extractedValue == 1;\r\n        return $literal;\r\n    }\r\n}"
         query(text, literal) { adapter, uri, actions ->
-            val edit = requireNotNull(actions.single { it.kind == CodeAction.CodeActionKind.REFACTOR_EXTRACT }.edit)
+            val edit = requireNotNull(actions.single { it.title.endsWith("to local variable") }.edit)
             assertThat(edit.versioned).isTrue()
             assertThat(edit.changes.keys).containsExactly(uri)
             val changed = apply(text, edit.changes.getValue(uri))
@@ -36,7 +36,7 @@ class XdkLocalExtractionTest {
     fun `whole returned calls and compound expressions preserve evaluation and bindings`(expression: String) {
         val text = "module Extract {\n    Int read() {\n        return $expression;\n    }\n}"
         query(text, expression) { adapter, uri, actions ->
-            val action = actions.single { it.kind == CodeAction.CodeActionKind.REFACTOR_EXTRACT }
+            val action = actions.single { it.title.endsWith("to local variable") }
             assertThat(action.title).isEqualTo("Extract expression to local variable")
             val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
             assertThat(
@@ -52,7 +52,7 @@ class XdkLocalExtractionTest {
         val (type, expression, parameter) = example.split('|')
         val text = "module Extract {\n    Boolean probe() = True;\n    $type read($parameter) {\n        return $expression;\n    }\n}"
         query(text, expression) { adapter, uri, actions ->
-            val action = actions.single { it.kind == CodeAction.CodeActionKind.REFACTOR_EXTRACT }
+            val action = actions.single { it.title.endsWith("to local variable") }
             val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
             assertThat(changed).contains("$type extractedValue = $expression;\n        return extractedValue;")
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
@@ -64,7 +64,7 @@ class XdkLocalExtractionTest {
         val expression = "() -> input"
         val text = "module Extract {\n    function Int() read(Int input) {\n        return $expression;\n    }\n}"
         query(text, expression) { adapter, uri, actions ->
-            val action = actions.single { it.kind == CodeAction.CodeActionKind.REFACTOR_EXTRACT }
+            val action = actions.single { it.title.endsWith("to local variable") }
             val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
             assertThat(changed).contains("function Int() extractedValue = () -> input;\n        return extractedValue;")
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
@@ -75,11 +75,11 @@ class XdkLocalExtractionTest {
     fun `conditional return and partial short circuit selections refuse extraction`() {
         val conditional = "module Extract {\n    conditional Int read(String input) {\n        return input.indexOf('a');\n    }\n}"
         query(conditional, "input.indexOf('a')") { _, _, actions ->
-            assertThat(actions.filter { it.kind == CodeAction.CodeActionKind.REFACTOR_EXTRACT }).isEmpty()
+            assertThat(actions.filter { it.title.endsWith("to local variable") }).isEmpty()
         }
         val partial = "module Extract {\n    Boolean read(Boolean first, Boolean second) {\n        return first && second;\n    }\n}"
         query(partial, "first") { _, _, actions ->
-            assertThat(actions.filter { it.kind == CodeAction.CodeActionKind.REFACTOR_EXTRACT }).isEmpty()
+            assertThat(actions.filter { it.title.endsWith("to local variable") }).isEmpty()
         }
     }
 
@@ -88,7 +88,7 @@ class XdkLocalExtractionTest {
         directory.resolve("Broken.x").toFile().writeText("module Broken { Missing value; }")
         val text = "module Extract {\n    Int read() {\n        return 42;\n    }\n}"
         query(text, "42") { _, _, actions ->
-            assertThat(actions.filter { it.kind == CodeAction.CodeActionKind.REFACTOR_EXTRACT }).isEmpty()
+            assertThat(actions.filter { it.title.endsWith("to local variable") }).isEmpty()
         }
     }
 
@@ -97,7 +97,7 @@ class XdkLocalExtractionTest {
     fun `partial empty and oversized selections have no extraction`(selected: String) {
         val text = "module Extract {\n    Int read() {\n        return 42;\n    }\n}"
         query(text, selected) { _, _, actions ->
-            assertThat(actions.filter { it.kind == CodeAction.CodeActionKind.REFACTOR_EXTRACT }).isEmpty()
+            assertThat(actions.filter { it.title.endsWith("to local variable") }).isEmpty()
         }
     }
 
@@ -105,7 +105,7 @@ class XdkLocalExtractionTest {
     fun `same line siblings are not reformatted by extraction`() {
         val text = "module Extract { Int read() { return 42; } }"
         query(text, "42") { _, _, actions ->
-            assertThat(actions.filter { it.kind == CodeAction.CodeActionKind.REFACTOR_EXTRACT }).isEmpty()
+            assertThat(actions.filter { it.title.endsWith("to local variable") }).isEmpty()
         }
     }
 
