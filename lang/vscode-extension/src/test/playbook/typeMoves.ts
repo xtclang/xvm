@@ -6,7 +6,7 @@ import { SourceModule, sourceGraphKey } from '../../source-graph-configuration';
 import { focusTestWindow } from '../native-focus';
 import { client, eventually, noErrors, playbook, symbols } from './support';
 
-export function typeMoveCases(ids: readonly ('X161' | 'X162' | 'X163' | 'X169' | 'X170' | 'X171' | 'X172' | 'X173' | 'X174' | 'X175' | 'X176')[] = ['X161', 'X162', 'X163']): void {
+export function typeMoveCases(ids: readonly ('X161' | 'X162' | 'X163' | 'X169' | 'X170' | 'X171' | 'X172' | 'X173' | 'X174' | 'X175' | 'X176' | 'X216' | 'X217' | 'X218' | 'X219')[] = ['X161', 'X162', 'X163']): void {
     ids.forEach(id => playbook(id, async (workspace, data) => {
         for (const file of data.files) await workspace.write(file.file, file.source);
         if ('directories' in data) {

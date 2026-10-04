@@ -1,6 +1,6 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **220 scenarios**: X1–X215, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **225 scenarios**: X1–X220, CFG1–CFG3 and 7a.8/7a.9.
 The latest selected gate passes **X122/X209–X215** in VS Code `run-u5kDXk` and IntelliJ
 `run-4588144426201480586` (plus START), zero editor failures. It verifies required destination
 imports, exact signatures, atomic module-root/companion edits and diagnostic Undo/Redo. All 310
@@ -1389,7 +1389,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X215 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X220 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -3439,3 +3439,27 @@ The import and method must behave as one atomic edit; compiler graph settings re
 Backend controls include repeated/compound types, multiple imports with colliding module-name stems,
 existing alias reuse, unused dependency exclusion, CRLF preservation, open/closed document versions,
 and rejection of compilable signature substitutions after import insertions shift the method.
+
+
+### L62 ownership and relocation closure checks
+
+X216–X220 are implemented in both drivers; selected acceptance and the UP23 exception are below.
+Use the shared fixtures for exact source, destination and graph settings.
+
+| Case | Manual action | Required result |
+| --- | --- | --- |
+| X216 | Move App/tools/Box.x into Other; Undo and Redo. | Imports, closed consumers, module dependencies and companion resources change atomically and return with history. |
+| X217 | Request the cross-module proposal where Box still depends on App. | The new cycle refuses the proposal; sources and settings stay unchanged. This is a protocol refusal check, not an Explorer veto. |
+| X218 | Select tools and tools/Box.x together; move to util; Undo and Redo. | The child and its companion leave first. Remaining parent contents relocate once. References and resources follow native history. |
+| X219 | Move old into assets; Undo and Redo. | Previously uncaptured resources are retained, fallback contents stay identical and the root graph follows history. |
+| X220 | Rename Library.First.read to fetch with Consumer closed, then Undo. | Both union branches and the consumer change together; typed numeric annotation arguments retain their values. |
+
+X218's VS Code transaction must submit the independently moved child before its parent. The
+server accepts either request order, but the VS Code participant cannot reorder the host's own
+file operations. Parent-first application can partially fail; child-first application succeeds but native Undo
+also fails because VS Code retains the inverse move order. X218 remains a failing VS Code
+acceptance case, while IntelliJ passes. See [UP23](../../docs/errs-upstream-issues.md#up23-overlapping-vs-code-file-moves-retain-the-hosts-order).
+
+L62 acceptance (2026-10-04): IntelliJ `run-8069330970170232500` passes X169/X173/X216–X220.
+VS Code `run-S7CfWP` passes six and fails X218 native Undo. This is selected coverage;
+the new scenarios do not establish a full-catalog rerun. UP23 remains open while L63 proceeds.
