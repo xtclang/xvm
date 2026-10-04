@@ -423,7 +423,7 @@ VS Code receipts above.
   annotation/type proof. Uncaptured destinations and runtime/generated routes without written
   contracts remain deliberate refusals. UP23 is an explicit VS Code overlapping-move Undo
   exception, accepted as a separate follow-up before continuing to L63.
-- [ ] **L63 — Semantic quick fixes and refactorings.** Individual and all-required-member
+- [x] **L63 — Semantic quick fixes and refactorings, bounded closure.** Individual and all-required-member
   implement/override actions are implemented at a class name for inherited source and read-only
   binary/XDK contracts. Compiler-selected signatures include generic/conditional/multiple returns,
   parameterized, relational/nullable/immutable and qualified cross-module types with atomic imports.
@@ -446,9 +446,12 @@ VS Code receipts above.
   writable ordinary class of the same module, including companions (X201–X204; receipts below).
   The eight-area October 4 continuation adds bounded implementations for generic signatures,
   receivers/arguments, missing declarations, wider extraction/inline and private-member safe delete
-  (X221–X240). Backend regressions pass; final combined/native acceptance is pending. Record supported Ecstasy forms per action;
-  doc-comment generation and reference/test lenses are separate subfeatures. Semantic transformations require
-  compiler evidence and versioned multi-file edit validation.
+  (X221–X242). The final combined gate passes 498 tests, and every new case has a passing
+  selected-run receipt in both editors. The [closure table](#l63-bounded-closure-and-acceptance-2026-10-04)
+  distinguishes supported forms from deliberate refusals. Arbitrary control-flow extraction,
+  parameter-substituting inline and externally visible safe deletion are not claimed.
+  Doc-comment generation and reference/test lenses remain separate subfeatures. Semantic
+  transformations require compiler evidence and versioned multi-file edit validation.
 - [x] **L64 — Completion/signature breadth and presentation, bounded closure.** Supported recursive
   bounds, fitted scalar/collection/lambda values, enclosing instances, declaration names,
   contextual templates, imports and callable/signature presentation are implemented and audited.
@@ -1189,7 +1192,7 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 
 | Scope | Investigation already recorded | Next investigation before implementation |
 |---|---|---|
-| L63 semantic fixes/refactorings | Import fixes, bounded implement/override, whole-return/typed-initializer extraction, adjacent same-type returned/initializer local inline and unused constant local removal use full compilation and binding/dispatch proof. | Private same-owner expression helpers with explicit stable inputs are implemented below. General extraction/inline, multi-statement extraction, global safe delete and missing-declaration fixes remain open. Define each transformation separately with side-effect, evaluation-order, capture and caller-closure evidence plus supported/refused fixtures. |
+| L63 semantic fixes/refactorings | Import/member/declaration repairs, bounded statement/expression extraction, local/private-member inline and private-member safe delete pass complete-graph binding/dispatch proof and selected acceptance in both editors. | [Bounded closure](#l63-bounded-closure-and-acceptance-2026-10-04) records supported/refused forms. Arbitrary control flow, argument substitution and unknown external consumers require a separate expansion; they are not advertised as supported. |
 | L68 pull diagnostics | Negotiated pull/push, result IDs, related/closed documents and invalidation pass backend, stdio and selected acceptance in both editors. PLAT1's source-location crash is fixed. | Retain broader workload coverage rather than treating the selected fixtures as universal proof. |
 | L69 token range/delta | Negotiated range/delta and bounded result history pass backend/protocol and X126 in both hosts. | Measure representative workspace payload/cache costs under L82. |
 | L70 lazy resolve | All six resolve endpoints have detached revision guards; backend and X105/X122/X127/X131 checks pass. IntelliJ has a selected-action bridge preserving normal Undo/Redo. | Preserve eager fallback for clients without the relevant capabilities; broaden stale-application acceptance under L80/L82. |
@@ -10280,24 +10283,25 @@ L62's compiler closure and selected acceptance are recorded below. The user expl
 carrying UP23 as a VS Code host limitation and continuing with this eight-part L63 batch.
 Each area retains its own implementation checkpoint and tests; combined validation follows the batch.
 
-After the destination-import slice above, **eight work areas** remain. These are scope buckets,
-not eight promised small commits; the broader refactorings need further bounded design slices.
-The first four continue missing-method support; the last four are other L63 transformations.
+The destination-import slice left **eight work areas**. All now have bounded implementations,
+regression tests and selected acceptance in both editors. Checked entries mean the supported forms
+in the [closure table](#l63-bounded-closure-and-acceptance-2026-10-04), not arbitrary transformations.
+The first four extend missing-method support; the last four are other L63 transformations.
 
-- [ ] Generic destinations: prove receiver substitution and which declaration form belongs in
+- [x] Generic destinations: prove receiver substitution and which declaration form belongs in
   generic owners, including outer formals; retain exact types and writable-source ownership.
-- [ ] Broader signatures: method formals/constraints and conditional returns, including compiler
+- [x] Broader signatures: method formals/constraints and conditional returns, including compiler
   evidence for the intended result context. Do not guess a signature from diagnostic text.
-- [ ] Broader receivers: computed/chained, runtime Class/Type and singleton forms, where the compiler
+- [x] Broader receivers: computed/chained, runtime Class/Type and singleton forms, where the compiler
   can establish a concrete source owner and correct instance/static dispatch.
-- [ ] Broader arguments: named and computed arguments, with proven types, name mapping and bindings.
-- [ ] Missing type/property declarations: independent creation actions with ownership, visibility,
+- [x] Broader arguments: named and computed arguments, with proven types, name mapping and bindings.
+- [x] Missing type/property declarations: independent creation actions with ownership, visibility,
   initialization and complete proposed-graph proof.
-- [ ] Broader extraction: statement selections and additional evaluation contexts with control-flow,
+- [x] Broader extraction: statement selections and additional evaluation contexts with control-flow,
   return, capture and evaluation-order preservation.
-- [ ] Broader inline: methods and wider local/property contexts with side-effect, capture and
+- [x] Broader inline: methods and wider local/property contexts with side-effect, capture and
   evaluation-order preservation.
-- [ ] Global safe delete: prove references across the configured graph and reject unknown external
+- [x] Global safe delete: prove references across the configured graph and reject unknown external
   ownership/consumers; offer only deletions whose complete proposed graph remains valid.
 
 Independent UP07/UP22 host integration follow-ups, wider LSP scopes and release/soak acceptance are
@@ -10524,3 +10528,61 @@ that static runtime initializers are neither duplicated nor discarded. Both edit
 formatting passes. Native acceptance is the next gate. The catalog now has **247 scenarios**,
 including X241/X242 runtime-initializer refusals. Restore the existing JSON escape style when
 extracting the fixture commit; its temporary unescaped Unicode rewrite was unrelated to this scope.
+
+### L63 bounded closure and acceptance (2026-10-04)
+
+All eight implementation areas are accepted within the following explicit boundaries. The compiler
+adapter still requires complete proposed-graph compilation, exact types/bindings/dispatch and
+versioned edits. No new Java AST state, compiler public accessor or embedding API was needed.
+
+| Area | Supported | Deliberate refusal |
+| --- | --- | --- |
+| Generic destinations | Exact destination/lexical outer formals; concrete caller types in generic owners. | Guessing an inverse actual-to-formal substitution or using an unrelated same-named formal. |
+| Broader signatures | Method formals and constraints, exact conditional result shape, ordinary typed initializer/statement contexts. | Unproven expected results or type/constraint spellings. Generic binders have identities distinct from visible runtime parameter slots. |
+| Broader receivers | Compiler-validated computed/chained receivers, writable source owners and singleton instance dispatch. | Runtime Class/Type values without an exact source owner, ambiguous relational receivers and binary destinations. |
+| Broader arguments | Named labels and compiler-typed computed expressions, copied without evaluation or relocation. | Duplicate labels or expressions without a proven usable declaration type. |
+| Missing declarations | Bare zero-argument same-module classes and same-owner instance getters for unresolved whole return values. | Invented constructor fields/arguments, ownership, generic signatures or static-property initializers. |
+| Extraction | Nested expressions and contiguous expression statements, private helpers with stable inputs and exact result types/import aliases. | Local-declaration/control-flow outputs, mutable captures, closures, async/ref/super operations. |
+| Inline | Existing adjacent single-use locals; wider single-read compiler constants; selected private same-owner zero-parameter returned-expression calls and compile-time constant property reads. | Parameter substitution, recursion, qualified receivers, capture, annotations, multiple statements or runtime initialization. Member declarations are retained. |
+| Safe delete | Unreferenced private ordinary methods and compiler-proven static constant values after configured-graph reference/call proof. | Public/protected APIs, unknown external consumers, instance/runtime initialization, annotations/comment loss or unsupported dynamic routes. |
+
+A static property is not necessarily a compile-time value. The detached constant-property set
+requires an actual resolved, nondeferred constant and no runtime initializer method. X241/X242
+and backend regressions verify that inline cannot repeat initialization and delete cannot discard it.
+The implicit `ecstasy` alias uses `ECSTASY_MODULE`/`X_PKG_IMPORT`; other type spellings come from
+resolved imports. This is not a module-path whitelist. Source and binary dependency fixtures both
+verify imported `lib.Value` extraction.
+
+Final validation:
+
+- Combined backend/protocol gate: **498 tests in 31 suites passed**, zero failures/errors/skips,
+  including the existing rename/move/proof suites and all 22 new shared fixtures. The earlier
+  494-test run found the generic-binder/value-parameter identity collision; this final run includes
+  its correction and must be used instead of that failed receipt.
+- VS Code `run-d056KI`: X222–X242 pass; X221 was canceled during a provider lookup before any edit.
+  `run-RaIOul` reproduced that cancellation. The harness now retries only that read-only lookup
+  within its existing deadline; canceled queries cannot satisfy refusal checks. Edits and history
+  are never replayed. `run-TGD4Wh` passes X221. All three editor error arrays are empty; the first two
+  receipts remain failed runs, not all-green receipts.
+- IntelliJ `run-9429307608964703578`: startup and X221–X238 pass. X239 timed out because checking
+  the dependency file changed the selected tab; the caller diagnostic locator still expected the
+  caller editor. The harness now selects the caller before inspecting its diagnostics.
+  `run-13805036479960116063` passes startup and X239–X242. Both runs have no IDE failures.
+- These receipts collectively cover **X221–X242 in both editors**, including exact text, diagnostics,
+  refusal controls and Undo/Redo/Undo where edits apply. VS Code uses installed provider/action APIs
+  and native history; IntelliJ drives its installed actions. This is selected acceptance, not a new
+  full-catalog, physical-menu-parity or release/soak run. The catalog contains **247 scenarios**.
+- Final root/LSP/IntelliJ read-only Spotless checks and `git diff --check` pass.
+
+Commit extraction must include the acceptance corrections with their implementation groups:
+
+| Correction/acceptance commit | Keep with |
+| --- | --- |
+| `bf2be7268` | Shared X221–X240, both drivers, manual rows and backend fixture checks, split with the relevant eight implementation groups above. |
+| `2e42006f1` | Generic signatures: distinguish `MethodFormal` from `Parameter`, including existing parameter-rename regression coverage. |
+| `f18c4e847` | Inline/delete constant-initializer proof and X241/X242; keep the explicit ignored-call proof correction with those transformations. Preserve the existing JSON escape style. |
+| `780aa76ac` | Editor acceptance: complete catalog assertion, canceled read-only provider lookup retry, caller-tab selection after dependency inspection and precise X239 instructions. |
+
+Each extracted PR must pass independently. L63's bounded implementation is closed; UP07/UP22/UP23,
+wider protocol scopes and release/soak gates remain separate. In particular this text-edit batch
+neither changes nor claims to repair VS Code's overlapping file-move Undo failure (UP23).
