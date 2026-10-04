@@ -120,9 +120,10 @@ internal fun compilerMissingMethods(
             val target = destination
             val structure = (target?.component ?: external?.key?.component) as? ClassStructure ?: return@mapNotNull null
             val crossOwner = target !== owner
-            // Generic and synthetic destinations need additional ownership/substitution policy.
+            // Preserve concrete call types; never infer an owner's formal from equal actual types.
+            // Exact lexical owner formals are rendered by memberSourceType and re-proven later.
             if (crossOwner &&
-                (structure.format != Format.CLASS || structure.typeParamCount != 0 || structure.isSynthetic)
+                (structure.format != Format.CLASS || structure.isSynthetic)
             ) {
                 return@mapNotNull null
             }
@@ -436,7 +437,7 @@ internal fun EmbeddingSupport.Compilation.missingMethodDestinations(
             nodes
                 .mapNotNull { node ->
                     val structure = node.component as? ClassStructure ?: return@mapNotNull null
-                    if (structure.format != Format.CLASS || structure.typeParamCount != 0 || structure.isSynthetic) return@mapNotNull null
+                    if (structure.format != Format.CLASS || structure.isSynthetic) return@mapNotNull null
                     val moduleNode =
                         generateSequence(node as AstNode) { it.parent }
                             .filterIsInstance<TypeCompositionStatement>()
