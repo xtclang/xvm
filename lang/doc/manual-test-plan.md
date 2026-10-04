@@ -1,7 +1,15 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **205 scenarios**: X1–X200, CFG1–CFG3 and 7a.8/7a.9.
-The latest selected gate passes **X181/X185/X193/X197–X200** in VS Code `run-3Vm6C9` and
+The current catalog has **209 scenarios**: X1–X204, CFG1–CFG3 and 7a.8/7a.9.
+The latest selected gate passes **X181/X185/X195/X197/X201–X204** in VS Code `run-hOIsOh` and
+IntelliJ `run-18176000411609180309` (plus START), zero editor failures. It verifies public
+same-module destinations, closed-companion edits, exact signature/dispatch, diagnostic Undo/Redo
+and shadowed-type/interface refusals. All 256 selected backend and 90 IntelliJ unit tests pass
+without failures/errors/skips; Ultimate is disabled. Companion testing also caught and fixed a
+related-diagnostic copy error in the IntelliJ bridge. These are selected receipts from the
+209-case catalog, not a full-catalog rerun.
+
+The preceding selected gate passes **X181/X185/X193/X197–X200** in VS Code `run-3Vm6C9` and
 IntelliJ `run-11432411846060652594` (plus START), zero editor failures. It verifies named class
 qualifiers, fully qualified typed initializer calls, shadowed-name instance dispatch, diagnostic
 Undo/Redo and runtime-Type refusal. All 232 selected backend tests pass without failures/errors/skips;
@@ -1359,7 +1367,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X200 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X204 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -3245,10 +3253,11 @@ private and contain `TODO()`; inspect and implement the body before running the 
 For X185–X187, compare the exact shared expected source, check cleared diagnostics, then
 Undo/Redo/Undo. Undo must restore both the source and the error; Redo must clear the error again.
 Both drivers use the same fixtures. These are new scenarios, not evidence from X122 or extraction.
-Other-owner/computed receivers, computed/named arguments, generic methods, conditional returns and
+Cross-module/computed receivers, computed/named arguments, generic methods, conditional returns and
 nested expression result contexts remain refusals. X189–X192 below add compiler-established local
 arguments and explicitly typed initializer results; X193–X196 add proven same-owner instance receivers
-and X197–X200 add named enclosing-class static calls and dispatch controls.
+and X197–X200 add named enclosing-class static calls and dispatch controls. X201–X204 add explicit
+public repairs in other writable classes of the same module.
 No diagnostic text or numeric error code is used to invent a signature.
 
 Run **X181 followed by X185** together when validating IntelliJ: an unchanged error after a
@@ -3290,7 +3299,7 @@ invoke Quick Fix (IntelliJ Option/Alt+Enter; VS Code Quick Fix).
 | --- | --- | --- |
 | X193 | Apply **Create private method 'missing'** on `this.missing(value)`. | `private Int64 missing(Int64 arg1)` is inserted in the enclosing module; the error clears and the receiver stays `this`. |
 | X194 | Apply the action on `other.missing(value)`, where `var other = peer` in a static `Box` method. | An **instance** `private Int64 missing(Int64 arg1)` is inserted in `Box`; no `static` modifier and no changed receiver or result declaration. |
-| X195 | Inspect a call on an `Other` receiver from `Box`. | No creation action; source and error remain unchanged. No member is inserted in either owner. |
+| X195 | Inspect a call on an `Other` receiver from `Box`. | No **private** creation action in the caller. X201 separately verifies the public destination action; inspecting actions leaves source/error unchanged. |
 | X196 | Inspect `this:public.missing(value)`. | No private-method creation action; source and error remain unchanged. |
 
 For X193/X194, compare the complete expected shared text and cleared diagnostics, then Undo to
@@ -3331,3 +3340,24 @@ Acceptance: X181/X185/X193/X197–X200 pass in VS Code `run-3Vm6C9` and IntelliJ
 `95df5eed7bfb7d761f9aed380600f5574de9bd31660384c502609d53d8805915`.
 All 232 selected backend tests pass; Ultimate is disabled. No full-catalog or new packaged-protocol
 run is claimed.
+
+
+### Cross-owner missing-method quick fixes (L63, X201–X204)
+
+Use the exact shared sources in compiler mode. Open only the caller initially, put the caret on
+`missing` and inspect Quick Fix / intentions. The public action explicitly names the destination;
+its stub contains `TODO()` and is not an implemented method body.
+
+| Case | Manual action | Required result |
+| --- | --- | --- |
+| X201 | Apply **Create public method 'missing' in 'Other'** on an instance parameter receiver. | Insert `public Int64 missing(Int64 arg1)` in the inline `Other` class; preserve the caller and clear its diagnostic. |
+| X202 | Keep `Extract/Other.x` closed; repair `Other.missing(value)` from `Extract.x`. | Only the companion changes, adding `public static String missing(String arg1)`; the caller source stays unchanged and its diagnostic clears. Open the destination and Undo/Redo/Undo; verify exact text and caller diagnostics after each action. |
+| X203 | Inspect the missing call returning `Object` when the destination declares its own nested `Object`. | No public creation action: the destination would change the requested type identity. Both files and the caller error remain unchanged. |
+| X204 | Inspect a missing call on an interface receiver. | No public creation action; no interface mutation and no caller change. |
+
+For X201, also compare complete shared expected text and run Undo/Redo/Undo, checking restoration
+and clearing of diagnostics. X195 remains a distinct private-action refusal; it does not assert
+that the new explicitly public action is absent. Backend controls additionally cover read-only and
+binary destinations, another configured module, generic/const classes, existing overloads, broken
+neighbors, supported signature type shapes, and destination document versions (null when closed,
+its own version when open). Cross-owner local arguments and typed initializers remain refused.
