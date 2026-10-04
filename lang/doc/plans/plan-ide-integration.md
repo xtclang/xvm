@@ -1159,8 +1159,15 @@ resources. Cross-module ownership, uncaptured/nonexistent directories, class-own
 specialized names and overlapping companion moves remain unsupported. No new AST/embedding
 API is required. Shared X173–X176 cover empty nested packages, aliases, closed consumers,
 companions/resources, prefix removal, inline collisions, interacting batches and Undo/Redo in
-both editor drivers. Catalog: 181 scenarios. Validation for this continuation is pending.
+both editor drivers. Catalog: 181 scenarios. Selected acceptance is recorded below.
 
 The independent compiler duplicate-declaration repair is [PR #668](https://github.com/xtclang/xvm/pull/668).
 Errs includes its corrected three Java tests and five CLI manual cases, wired to the manual
 check/sequential/parallel tasks. The previous artificial conditional-parser test is removed.
+
+Selected acceptance passes X169/X171/X173–X176 in VS Code `run-ElUMIl` and IntelliJ
+`run-13159045223223510909` (plus START), with zero editor errors. The combined gate passes
+155 LSP tests, 103 Java tests and five manual CLI scenarios with no failures or skips; the
+manual task reuses configuration cache. Both drivers compile. These are selected receipts,
+not a full 181-case run. The extraction map and remaining exclusions are recorded in
+[the integration plan](../../../docs/errs-integration-plan.md#l62-empty-destination-batch-acceptance-and-extraction).
