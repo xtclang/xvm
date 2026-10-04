@@ -108,6 +108,18 @@ internal class ProofRelations(
     )
 }
 
+/** Attempt-owned inputs; copied into detached identities before leaving the compiler worker. */
+internal data class CompilerExtractionFacts(
+    val types: Map<SemanticModel.SourceLocation, TypeConstant>,
+    val stableValues: Set<SemanticModel.SourceLocation>,
+)
+
+/** Types and stable value reads needed to prove a new helper's signature and captured inputs. */
+internal data class ExtractMethodFacts(
+    val types: Map<SemanticModel.SourceLocation, ProofIdentity> = emptyMap(),
+    val stableValues: Set<SemanticModel.SourceLocation> = emptySet(),
+)
+
 /** Detached comparison facts. Keeping compiler constants here retains every root's entire pool. */
 internal class CompilerRenameFacts(
     val models: List<SemanticModel>,
@@ -122,6 +134,7 @@ internal class CompilerRenameFacts(
     val resourceValues: Map<SemanticModel.SourceLocation, String?> = emptyMap(),
     val callables: Map<SemanticModel.SourceLocation, ProofIdentity> = emptyMap(),
     val removableLocals: Set<SemanticModel.SourceLocation> = emptySet(),
+    val extraction: ExtractMethodFacts = ExtractMethodFacts(),
 ) {
     /** Unchanged independent modules cannot acquire new bindings from a source edit elsewhere. */
     fun within(scopes: Set<String>): CompilerRenameFacts = merge(modules.filterKeys(scopes::contains))
@@ -148,6 +161,10 @@ internal class CompilerRenameFacts(
                 attempts.flatMap { it.resourceValues.entries }.associate { it.toPair() },
                 attempts.flatMap { it.callables.entries }.associate { it.toPair() },
                 attempts.flatMapTo(linkedSetOf()) { it.removableLocals },
+                ExtractMethodFacts(
+                    attempts.flatMap { it.extraction.types.entries }.associate { it.toPair() },
+                    attempts.flatMapTo(linkedSetOf()) { it.extraction.stableValues },
+                ),
             )
         }
     }
@@ -168,6 +185,7 @@ internal fun captureRenameFacts(
     resourceValues: Map<SemanticModel.SourceLocation, String?> = emptyMap(),
     callables: Map<SemanticModel.SourceLocation, Pair<TypeConstant, MethodConstant>> = emptyMap(),
     removableLocals: Set<SemanticModel.SourceLocation> = emptySet(),
+    extraction: CompilerExtractionFacts? = null,
 ): CompilerRenameFacts {
     val declarations =
         models
@@ -423,6 +441,10 @@ internal fun captureRenameFacts(
                 .map { TypePath(identity(it), it.moduleConstant.name, path(it)) },
         resourceValues = resourceValues,
         removableLocals = removableLocals,
+        extraction = ExtractMethodFacts(
+            extraction?.types.orEmpty().mapNotNull { (at, type) -> receiverIdentity(type, ::identity)?.let { at to it } }.toMap(),
+            extraction?.stableValues.orEmpty(),
+        ),
         callables =
             callables
                 .mapNotNull { (site, selected) ->
