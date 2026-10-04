@@ -32,6 +32,7 @@ internal object XdkRename {
         val moves: Map<String, String> = emptyMap(),
         private val relocations: Map<String, List<Relocation>> = emptyMap(),
         val qualifications: Map<String, List<Edit>> = emptyMap(),
+        val imports: Map<String, List<Edit>> = emptyMap(),
     ) {
         init {
             require(qualifications.all { (source, changes) -> changes.all { it in edits[source].orEmpty() } })
@@ -217,7 +218,9 @@ internal object XdkRename {
         if (after.models.any { it.status != SemanticModel.Status.COMPLETE }) return false
         val beforePrefixes = qualificationSites(before, plan.original, plan.qualifications) ?: return false
         val afterQualifications =
-            plan.qualifications.entries.associate { (source, edits) ->
+            (plan.qualifications.keys + plan.imports.keys).associateWith { source ->
+                plan.qualifications[source].orEmpty() + plan.imports[source].orEmpty()
+            }.entries.associate { (source, edits) ->
                 plan.sourceAfter(source) to
                     edits.map { edit ->
                         val start = plan.map(source, edit.start)?.minus(if (edit.start == edit.end) edit.text.length else 0) ?: return false

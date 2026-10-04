@@ -10271,6 +10271,12 @@ open a PR. The next bounded L63 implementation area is generic destination owner
 
 ### Consolidated remaining L63 scope (2026-10-04)
 
+L62 closure now takes priority over this batch. Its four implementation checkpoints cover
+cross-module type ownership, overlapping resource operations, captured incoming resources and
+destinations, and remaining compiler type/annotation proof forms. Each includes regressions;
+validation is batched after the four checkpoints. L62 remains unchecked until that gate and the
+supported/refused boundary audit pass. L63's eight items below remain pending.
+
 After the destination-import slice above, **eight work areas** remain. These are scope buckets,
 not eight promised small commits; the broader refactorings need further bounded design slices.
 The first four continue missing-method support; the last four are other L63 transformations.

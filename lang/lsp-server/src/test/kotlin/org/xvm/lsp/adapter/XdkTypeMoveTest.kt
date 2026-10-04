@@ -72,7 +72,7 @@ class XdkTypeMoveTest {
     }
 
     @Test
-    fun `target collisions or a different module refuse the entire move`() {
+    fun `target collisions refuse the entire move`() {
         write("App.x", "module App { tools.Box make() = new tools.Box(); }")
         write("App/tools/Box.x", "class Box {}")
         write("App/util/Box.x", "class Box {}")
@@ -80,7 +80,6 @@ class XdkTypeMoveTest {
         write("Other/Marker.x", "class Marker {}")
         session { adapter ->
             assertThat(adapter.renameFilesAsync(request()).get(30, SECONDS)).isNull()
-            assertThat(adapter.renameFilesAsync(mapOf(uri("App/tools/Box.x") to uri("Other/Box.x"))).get(30, SECONDS)).isNull()
             assertThat(read("App.x")).contains("tools.Box")
             assertThat(directory.resolve("App/tools/Box.x")).exists()
         }
@@ -360,7 +359,7 @@ class XdkTypeMoveTest {
     }
 
     @Test
-    fun `empty destinations outside the module or below a class remain refused`() {
+    fun `unowned empty destinations or destinations below a class remain refused`() {
         write("App.x", "module App { tools.Box make() = new tools.Box(); }")
         write("App/tools/Box.x", "class Box {}")
         write("App/Owner.x", "class Owner {}")
@@ -368,7 +367,7 @@ class XdkTypeMoveTest {
         listOf("App/Owner/nested", "Other/empty", "unowned").forEach { Files.createDirectories(directory.resolve(it)) }
         session { adapter ->
             val original = sourceTexts()
-            listOf("App/Owner/nested", "Other/empty", "unowned").forEach { destination ->
+            listOf("App/Owner/nested", "unowned").forEach { destination ->
                 assertThat(adapter.renameFilesAsync(mapOf(uri("App/tools/Box.x") to uri("$destination/Box.x"))).get(30, SECONDS))
                     .describedAs(destination)
                     .isNull()
@@ -445,6 +444,75 @@ class XdkTypeMoveTest {
         session { adapter ->
             val original = sourceTexts()
             assertThat(adapter.renameFilesAsync(request()).get(30, SECONDS)).isNull()
+            assertThat(sourceTexts()).isEqualTo(original)
+        }
+    }
+
+    @Test
+    fun `cross module ownership updates closed consumers and proposes required dependencies`() {
+        write("App.x", "module App { tools.Box make() = new tools.Box(); }")
+        write("App/tools/Box.x", "class Box { static Int number() = 1; }")
+        write("App/tools/Box/Part.x", "static class Part {}")
+        write("App/tools/Box/data.txt", "companion bytes")
+        write("Other.x", "module Other {}")
+        Files.createDirectories(directory.resolve("Other/empty"))
+        write(
+            "Consumer.x",
+            """
+            module Consumer {
+                package app import App;
+                import app.tools.Box as Crate;
+                Crate make() = new Crate();
+                Int read() = app.tools.Box.number();
+            }
+            """.trimIndent(),
+        )
+        session { adapter ->
+            adapter.replaceSourceModules(listOf(
+                XdkSourceModule("App", uri("App.x")),
+                XdkSourceModule("Other", uri("Other.x")),
+                XdkSourceModule("Consumer", uri("Consumer.x"), setOf("App")),
+            ))
+            val requested = mapOf(uri("App/tools/Box.x") to uri("Other/empty/Parcel.x"))
+            assertThat(adapter.renameFilesAsync(requested).get(30, SECONDS)).isNull()
+            val proposal = requireNotNull(adapter.renameFilesProposalAsync(requested).get(30, SECONDS))
+            val graph = requireNotNull(proposal.sourceModules)
+            assertThat(graph.single { it.name == "App" }.dependencies).contains("Other")
+            assertThat(graph.single { it.name == "Consumer" }.dependencies).contains("App", "Other")
+            assertThat(read("App.x")).doesNotContain("import Other")
+            apply(proposal.edit, requested)
+            adapter.replaceSourceModules(graph)
+            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(read("Consumer.x")).contains("import Other;", "other.empty.Parcel as Crate", "Crate make() = new Crate()")
+            assertThat(read("Other/empty/Parcel/data.txt")).isEqualTo("companion bytes")
+        }
+    }
+
+    @Test
+    fun `discovered cross module move retains the moved type's source dependency`() {
+        write("App.x", "module App {}")
+        write("App/tools/Helper.x", "class Helper {}")
+        write("App/tools/Box.x", "class Box { Helper make() = new Helper(); }")
+        write("Other.x", "module Other {}")
+        Files.createDirectories(directory.resolve("Other"))
+        session { adapter ->
+            move(adapter, mapOf(uri("App/tools/Box.x") to uri("Other/Box.x")))
+            assertThat(read("Other.x")).contains("import App;")
+            assertThat(read("Other/Box.x")).contains("app.tools.Helper")
+        }
+    }
+
+    @Test
+    fun `cross module move refuses cyclic dependencies and inaccessible captured members atomically`() {
+        write("App.x", "module App { tools.Box make() = new tools.Box(); }")
+        write("App/tools/Helper.x", "class Helper {}")
+        write("App/tools/Box.x", "class Box { Helper make() = new Helper(); }")
+        write("Other.x", "module Other {}")
+        Files.createDirectories(directory.resolve("Other"))
+        session { adapter ->
+            val original = sourceTexts()
+            val requested = mapOf(uri("App/tools/Box.x") to uri("Other/Box.x"))
+            assertThat(adapter.renameFilesProposalAsync(requested).get(30, SECONDS)).isNull()
             assertThat(sourceTexts()).isEqualTo(original)
         }
     }
