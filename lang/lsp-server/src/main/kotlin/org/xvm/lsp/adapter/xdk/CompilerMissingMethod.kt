@@ -85,13 +85,8 @@ internal fun compilerMissingMethods(
                     }
 
                     is ReturnStatement -> {
-                        if (statement.expressions?.singleOrNull() ===
-                            call
-                        ) {
-                            declaration.returnTypes.toList()
-                        } else {
-                            return@mapNotNull null
-                        }
+                        if (statement.expressions?.singleOrNull() !== call) return@mapNotNull null
+                        declaration.returnTypes.toList()
                     }
 
                     else -> {
@@ -100,7 +95,8 @@ internal fun compilerMissingMethods(
                 }
 
             fun render(type: TypeConstant) =
-                type.memberSourceType(structure.identityConstant, emptyMap(), mapOf("ecstasy.xtclang.org" to "ecstasy"))
+                // Declaration analysis resolves the identity but can retain its parser wrapper.
+                type.resolveTypedefs().memberSourceType(structure.identityConstant, emptyMap(), mapOf("ecstasy.xtclang.org" to "ecstasy"))
             val result =
                 returns.map { render(it) ?: return@mapNotNull null }.let {
                     when (it.size) {
