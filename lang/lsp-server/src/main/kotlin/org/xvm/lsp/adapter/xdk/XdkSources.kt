@@ -115,14 +115,17 @@ internal class XdkSources
             ): XdkSources =
                 XdkSources(
                     File(moves[root.path] ?: root.path),
-                    members.flatMap { it.text.entries }.filter { (file, _) ->
-                        val target = File(moves[file.path] ?: file.path)
-                        val targetRoot = File(moves[root.path] ?: root.path)
-                        target == targetRoot || target.toPath().startsWith(File(targetRoot.parentFile, targetRoot.nameWithoutExtension).toPath())
-                    }.associate { (file, original) ->
-                        val path = moves[file.path] ?: file.path
-                        File(path) to (text[path] ?: original)
-                    },
+                    members
+                        .flatMap { it.text.entries }
+                        .filter { (file, _) ->
+                            val target = File(moves[file.path] ?: file.path)
+                            val targetRoot = File(moves[root.path] ?: root.path)
+                            target == targetRoot ||
+                                target.toPath().startsWith(File(targetRoot.parentFile, targetRoot.nameWithoutExtension).toPath())
+                        }.associate { (file, original) ->
+                            val path = moves[file.path] ?: file.path
+                            File(path) to (text[path] ?: original)
+                        },
                     members.flatMap { it.directories }.map { File(moves[it.path] ?: it.path) }.filterTo(linkedSetOf()) {
                         val targetRoot = File(moves[root.path] ?: root.path)
                         it.toPath().startsWith(File(targetRoot.parentFile, targetRoot.nameWithoutExtension).toPath())
