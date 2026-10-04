@@ -6199,6 +6199,75 @@
         "limitations": []
       }
     },
+    "X181": {
+      "title": "extract a private helper preserving stable input overloads comments and Undo/Redo",
+      "manual": [
+        "Select the complete expression and inspect the private-method action. Apply it, check exact helper signature/body, diagnostics and Undo/Redo/Undo."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    Int step(Int value) = value;\n    Int step(String value) = value.size;\n    Int read(Int input) {\n        return input /* keep */ + step(input);\n    }\n}",
+        "selected": "input /* keep */ + step(input)",
+        "title": "Extract expression to private method",
+        "expected": "module Extract {\n    Int step(Int value) = value;\n    Int step(String value) = value.size;\n    Int read(Int input) {\n        return extractedMethod(input);\n    }\n\n    private Int extractedMethod(Int input) {\n        return input /* keep */ + step(input);\n    }\n}"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X182": {
+      "title": "extract a typed initializer to a helper with explicit stable local and parameter inputs",
+      "manual": [
+        "Select the complete expression and inspect the private-method action. Apply it, check exact helper signature/body, diagnostics and Undo/Redo/Undo."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    Int read(Int input) {\n        Int fixed = input + 1;\n        Int result = fixed + input;\n        return result;\n    }\n}",
+        "selected": "fixed + input",
+        "title": "Extract expression to private method",
+        "expected": "module Extract {\n    Int read(Int input) {\n        Int fixed = input + 1;\n        Int result = extractedMethod(fixed, input);\n        return result;\n    }\n\n    private Int extractedMethod(Int fixed, Int input) {\n        return fixed + input;\n    }\n}"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X183": {
+      "title": "extract within a generic owner preserving the implicit receiver and type parameter",
+      "manual": [
+        "Select the complete expression and inspect the private-method action. Apply it, check exact helper signature/body, diagnostics and Undo/Redo/Undo."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    class Box<Element> {\n        Element identity(Element value) = value;\n        Element read(Element input) {\n            return identity(input);\n        }\n    }\n}",
+        "selected": "identity(input)",
+        "title": "Extract expression to private method",
+        "expected": "module Extract {\n    class Box<Element> {\n        Element identity(Element value) = value;\n        Element read(Element input) {\n            return extractedMethod(input);\n        }\n\n        private Element extractedMethod(Element input) {\n            return identity(input);\n        }\n    }\n}"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X184": {
+      "title": "refuse method extraction when a captured input is mutable",
+      "manual": [
+        "Select the complete expression and inspect the private-method action. It must be absent; the installed-connection refusal leaves source unchanged."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    Int read(Int input) {\n        input++;\n        return input + 1;\n    }\n}",
+        "selected": "input + 1",
+        "title": "Extract expression to private method",
+        "expected": "module Extract {\n    Int read(Int input) {\n        input++;\n        return input + 1;\n    }\n}",
+        "refused": true
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
