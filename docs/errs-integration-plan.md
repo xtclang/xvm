@@ -372,7 +372,7 @@ VS Code receipts above.
   their existing behavior. Indexed sources remain read-only. Backend/protocol regressions and
   shared X4 assertions pass in both clients. No AST API changes or retained compiler objects
   are needed: declaration relations live in detached Kotlin facts.
-- [ ] **L62 — Rename scope and resource edits.** Extend beyond the current proven source
+- [x] **L62 — Rename scope and resource edits (compiler scope closed; UP23 host exception).** Extend beyond the current proven source
   types/static members/ordinary method and property families/aliases/locals. Audit constructor
   names, module/package/directory moves, companion directories, annotation/mixin/delegation
   dispatch and public-parameter contracts. Keep binary declarations read-only and reject
@@ -403,8 +403,9 @@ VS Code receipts above.
      replacement for other clients. Shared X118 and settings/protocol regression tests pass.
      VS Code edited-file moves require its default `files.refactoring.autoSave = true`;
      disabling that policy refuses the proposal before changing sources or settings.
-  L62 remains open for the conservative exclusions, additional composition routes, unknown
-  external consumers and broader editor configuration coverage. The `construct` keyword is never renamed.
+  The later closure receipt below defines supported compiler scope and deliberate refusals.
+  Unknown external consumers remain outside the graph; editor defects stay in the upstream
+  register. The `construct` keyword is never renamed.
   The October 2 continuation inspects validated concrete source types as well as formal declarations
   when collecting method/property families. Conditional adoption therefore participates in rename
   proof; X155 passes source rename and Undo in both editor drivers. The October 2 continuation
@@ -418,8 +419,10 @@ VS Code receipts above.
   The combined-relocation continuation below adds simultaneous type/module rename and move plus
   interacting type moves. The October 4 batch adds captured empty package destinations and
   token-preserving commented qualifications (X173–X176, selected acceptance in both editors).
-  Unsupported annotation constants/type shapes, wider generated routes, uncaptured destinations,
-  cross-module ownership and overlapping move trees remain open.
+  The ownership closure below adds cross-module moves, overlapping move trees and exact
+  annotation/type proof. Uncaptured destinations and runtime/generated routes without written
+  contracts remain deliberate refusals. UP23 is an explicit VS Code overlapping-move Undo
+  exception, accepted as a separate follow-up before continuing to L63.
 - [ ] **L63 — Semantic quick fixes and refactorings.** Individual and all-required-member
   implement/override actions are implemented at a class name for inherited source and read-only
   binary/XDK contracts. Compiler-selected signatures include generic/conditional/multiple returns,
@@ -10271,11 +10274,9 @@ open a PR. The next bounded L63 implementation area is generic destination owner
 
 ### Consolidated remaining L63 scope (2026-10-04)
 
-L62 closure now takes priority over this batch. Its four implementation checkpoints cover
-cross-module type ownership, overlapping resource operations, captured incoming resources and
-destinations, and remaining compiler type/annotation proof forms. Each includes regressions;
-validation is batched after the four checkpoints. L62 remains unchecked until that gate and the
-supported/refused boundary audit pass. L63's eight items below remain pending.
+L62's compiler closure and selected acceptance are recorded below. The user explicitly accepted
+carrying UP23 as a VS Code host limitation and continuing with this eight-part L63 batch.
+Each area retains its own implementation checkpoint and tests; combined validation follows the batch.
 
 After the destination-import slice above, **eight work areas** remain. These are scope buckets,
 not eight promised small commits; the broader refactorings need further bounded design slices.
@@ -10299,3 +10300,69 @@ The first four continue missing-method support; the last four are other L63 tran
 
 Independent UP07/UP22 host integration follow-ups, wider LSP scopes and release/soak acceptance are
 tracked separately; they are not hidden within this eight-area L63 count.
+
+
+### L62 ownership and relocation closure batch (2026-10-04)
+
+L62 takes priority over the pending eight-part L63 batch. Four local implementation checkpoints
+precede combined backend/protocol/editor acceptance:
+
+| Checkpoint | Scope |
+| --- | --- |
+| `762f99f44` | Reassign captured companion sources across configured modules, add capture-free module imports and propose required dependency changes. |
+| `267e535a8` | Apply independently relocated children before their parent; coalesce children following the exact parent mapping. IntelliJ accepts the ordered transaction. |
+| `68b2fd73f` | Capture incoming resource membership and bytes, replay proposed lookup paths and reject changed input snapshots. |
+| `e187a6359` | Copy exact numeric/compound annotation values and nested/service receiver ownership into detached rename proof. |
+
+Validation corrections belong with these checkpoints: new package-import declarations acquire
+inherited methods and are excluded only from the *additional declaration* dispatch comparison;
+every existing binding, import terminal and callable route still compares. Destination modules
+must capture their own resource roots even when the incoming source introduces their first resource
+expression. No Java AST state, public compiler accessor or embedding API is added.
+
+Shared X216–X220 cover cross-module imports/dependency persistence and companions, cyclic proposal
+refusal, overlapping parent/child moves, incoming resource preservation, and numeric annotation
+family rename. Both drivers implement the same fixtures with native history checks where applicable;
+X217 checks the installed protocol refusal and does not claim that VS Code can veto Explorer moves.
+The acceptance receipt below records the combined gate, selected editor results and UP23 exception.
+
+The intended closure boundaries are explicit:
+
+- Edit only configured/discovered writable source owners and their registered consumers. Binary
+  declarations and unregistered consumers do not acquire writable ownership from source indexes.
+- Preserve all bindings, dispatch and embedded resource values after complete proposed-graph
+  compilation. Cycles, inaccessible dependencies, collisions and capture refuse the whole proposal.
+- Existing compiler-owned destination namespaces are required. Symlinks, occupied destinations,
+  incoming paths under moving sources and transactions needing temporary staging remain refused.
+- Native/generated/dynamic routes without a proven written contract remain refused. Deferred values,
+  runtime handles and filesystem annotation objects are not guessed from display text.
+- Compound annotation constants work in validated method-body type expressions. The ordinary
+  compiler rejects the tested array/map/range/tuple expressions in annotated method headers with
+  COMPILER-30; static property references there also remain unresolved. Typed numeric literals work
+  in headers. The body and typed-literal regression fixtures exercise valid compiler inputs; this
+  batch does not claim a compiler header-expression recovery fix.
+
+L62 validation correction `79bfe6658` belongs with these four checkpoints when extracting PRs.
+Keep its fresh-import dispatch exclusion, destination resource snapshots and exact annotation
+regressions with their corresponding implementation slices; the four earlier commits alone are
+not the validated end state.
+
+Acceptance:
+
+- Combined backend/protocol gate: **178 tests passed**, zero failures/errors/skips. IntelliJ
+  Move target/document-lifecycle unit tests: **7 passed**. Both editor drivers compiled.
+- After the final resource capture/refusal guard, the affected type move, graph move and callable
+  proof suites ran again: **58 passed**, zero failures/errors/skips.
+- IntelliJ `run-8069330970170232500`: X169/X173/X216–X220 all pass, including native Move/Rename,
+  companions/resources, graph settings and Undo/Redo. Startup passes too.
+- VS Code `run-S7CfWP`: six selected cases pass; **X218 fails during native Undo**. The earlier
+  `run-VfDauh` records parent-first apply failure. Neither receipt is an all-green VS Code run.
+  [UP23](errs-upstream-issues.md#up23-overlapping-vs-code-file-moves-retain-the-hosts-order) records
+  the host's forward inverse ordering; X218 deliberately retains its failing assertion.
+- Root/LSP/IntelliJ read-only Spotless and `git diff --check` pass. This is selected acceptance,
+  not a new full-catalog or release/soak receipt.
+
+The user explicitly chose **record UP23 and continue to L63**. L62's compiler implementation
+is closed within the boundaries above; VS Code overlapping-move Undo remains an open upstream
+acceptance item. No safe native Undo is advertised for that operation. The catalog now contains
+225 scenarios (X1–X220, CFG1–CFG3 and 7a.8–7a.9).

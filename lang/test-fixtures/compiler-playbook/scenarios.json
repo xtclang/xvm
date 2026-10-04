@@ -6959,6 +6959,379 @@
         "limitations": []
       }
     },
+    "X216": {
+      "title": "cross-module type move persists imports dependencies companions and native Undo/Redo",
+      "manual": [],
+      "values": {
+        "root": "App.x",
+        "afterRoot": "App.x",
+        "consumer": "Consumer.x",
+        "to": "Other/Box.x",
+        "destination": "Other",
+        "directories": [
+          "Other"
+        ],
+        "modules": [
+          {
+            "name": "App",
+            "uri": "App.x",
+            "dependencies": []
+          },
+          {
+            "name": "Other",
+            "uri": "Other.x",
+            "dependencies": []
+          },
+          {
+            "name": "Consumer",
+            "uri": "Consumer.x",
+            "dependencies": [
+              "App"
+            ]
+          }
+        ],
+        "afterModules": [
+          {
+            "name": "App",
+            "uri": "App.x",
+            "dependencies": [
+              "Other"
+            ]
+          },
+          {
+            "name": "Other",
+            "uri": "Other.x",
+            "dependencies": []
+          },
+          {
+            "name": "Consumer",
+            "uri": "Consumer.x",
+            "dependencies": [
+              "App",
+              "Other"
+            ]
+          }
+        ],
+        "files": [
+          {
+            "file": "App.x",
+            "source": "module App {\n    tools.Box make() = new tools.Box();\n}",
+            "expected": "module App {\n    package other import Other;\n\n    other.Box make() = new other.Box();\n}",
+            "destination": "App.x"
+          },
+          {
+            "file": "Other.x",
+            "source": "module Other {}",
+            "expected": "module Other {}",
+            "destination": "Other.x"
+          },
+          {
+            "file": "App/tools/Box.x",
+            "source": "class Box {}",
+            "expected": "class Box {}",
+            "destination": "Other/Box.x"
+          },
+          {
+            "file": "App/tools/Box/Part.x",
+            "source": "static class Part {}",
+            "expected": "static class Part {}",
+            "destination": "Other/Box/Part.x"
+          },
+          {
+            "file": "App/tools/Box/data.txt",
+            "source": "companion bytes",
+            "expected": "companion bytes",
+            "destination": "Other/Box/data.txt"
+          },
+          {
+            "file": "Consumer.x",
+            "source": "module Consumer {\n    package app import App;\n    app.tools.Box make() = new app.tools.Box();\n}",
+            "expected": "module Consumer {\n    package other import Other;\n\n    package app import App;\n    other.Box make() = new other.Box();\n}",
+            "destination": "Consumer.x"
+          }
+        ],
+        "from": "App/tools/Box.x"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X217": {
+      "title": "cross-module move refuses cyclic dependencies without edits or settings changes",
+      "manual": [],
+      "values": {
+        "root": "App.x",
+        "consumer": "Consumer.x",
+        "to": "Other/Box.x",
+        "destination": "Other",
+        "directories": [
+          "Other"
+        ],
+        "modules": [
+          {
+            "name": "App",
+            "uri": "App.x",
+            "dependencies": []
+          },
+          {
+            "name": "Other",
+            "uri": "Other.x",
+            "dependencies": []
+          },
+          {
+            "name": "Consumer",
+            "uri": "Consumer.x",
+            "dependencies": [
+              "App"
+            ]
+          }
+        ],
+        "files": [
+          {
+            "file": "App.x",
+            "source": "module App {\n    tools.Box make() = new tools.Box();\n}",
+            "expected": "module App {\n    tools.Box make() = new tools.Box();\n}",
+            "destination": "App.x"
+          },
+          {
+            "file": "Other.x",
+            "source": "module Other {}",
+            "expected": "module Other {}",
+            "destination": "Other.x"
+          },
+          {
+            "file": "App/tools/Box.x",
+            "source": "class Box { Helper make() = new Helper(); }",
+            "expected": "class Box { Helper make() = new Helper(); }",
+            "destination": "App/tools/Box.x"
+          },
+          {
+            "file": "App/tools/Box/Part.x",
+            "source": "static class Part {}",
+            "expected": "static class Part {}",
+            "destination": "App/tools/Box/Part.x"
+          },
+          {
+            "file": "App/tools/Box/data.txt",
+            "source": "companion bytes",
+            "expected": "companion bytes",
+            "destination": "App/tools/Box/data.txt"
+          },
+          {
+            "file": "Consumer.x",
+            "source": "module Consumer {\n    package app import App;\n    app.tools.Box make() = new app.tools.Box();\n}",
+            "expected": "module Consumer {\n    package app import App;\n    app.tools.Box make() = new app.tools.Box();\n}",
+            "destination": "Consumer.x"
+          },
+          {
+            "file": "App/tools/Helper.x",
+            "source": "class Helper {}",
+            "expected": "class Helper {}",
+            "destination": "App/tools/Helper.x"
+          }
+        ],
+        "from": "App/tools/Box.x",
+        "refused": true
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X218": {
+      "title": "overlapping parent and child moves preserve companions with native Undo/Redo",
+      "manual": [
+        "Submit the independently moved child before its parent to reach the VS Code Undo check. Apply succeeds, but Undo fails in VS Code 1.140.0 because inverse operations retain their original order (UP23). Keep this acceptance test failing until the host is repaired. IntelliJ passes the complete transaction. Verify companions, closed consumers, Undo and Redo."
+      ],
+      "values": {
+        "root": "App.x",
+        "consumer": "Consumer.x",
+        "to": "App/util/Box.x",
+        "destination": "App/util",
+        "directories": [
+          "App/util"
+        ],
+        "moves": [
+          {
+            "from": "App/tools/Box.x",
+            "to": "App/util/Box.x"
+          },
+          {
+            "from": "App/tools",
+            "to": "App/util/tools"
+          }
+        ],
+        "modules": [
+          {
+            "name": "App",
+            "uri": "App.x",
+            "dependencies": []
+          },
+          {
+            "name": "Consumer",
+            "uri": "Consumer.x",
+            "dependencies": [
+              "App"
+            ]
+          }
+        ],
+        "files": [
+          {
+            "file": "App.x",
+            "source": "module App {\n    tools.Box make() = new tools.Box();\n}",
+            "expected": "module App {\n    util.Box make() = new util.Box();\n}",
+            "destination": "App.x"
+          },
+          {
+            "file": "App/tools/Box.x",
+            "source": "class Box {}",
+            "expected": "class Box {}",
+            "destination": "App/util/Box.x"
+          },
+          {
+            "file": "App/tools/Helper.x",
+            "source": "class Helper {}",
+            "expected": "class Helper {}",
+            "destination": "App/util/tools/Helper.x"
+          },
+          {
+            "file": "App/tools/Box/Part.x",
+            "source": "static class Part {}",
+            "expected": "static class Part {}",
+            "destination": "App/util/Box/Part.x"
+          },
+          {
+            "file": "App/tools/Box/data.txt",
+            "source": "preserved bytes",
+            "expected": "preserved bytes",
+            "destination": "App/util/Box/data.txt"
+          },
+          {
+            "file": "Consumer.x",
+            "source": "module Consumer {\n    package app import App;\n    app.tools.Box make() = new app.tools.Box();\n}",
+            "expected": "module Consumer {\n    package app import App;\n    app.util.Box make() = new app.util.Box();\n}",
+            "destination": "Consumer.x"
+          }
+        ],
+        "from": "App/tools/Box.x"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X219": {
+      "title": "module relocation captures incoming resource bytes with native Undo/Redo",
+      "manual": [],
+      "values": {
+        "root": "old/App.x",
+        "afterRoot": "assets/old/App.x",
+        "consumer": "Consumer.x",
+        "to": "assets/old",
+        "destination": "assets",
+        "modules": [
+          {
+            "name": "App",
+            "uri": "old/App.x",
+            "dependencies": [],
+            "resourceRoots": [
+              "assets",
+              "fallback"
+            ]
+          },
+          {
+            "name": "Consumer",
+            "uri": "Consumer.x",
+            "dependencies": [
+              "App"
+            ]
+          }
+        ],
+        "afterModules": [
+          {
+            "name": "App",
+            "uri": "assets/old/App.x",
+            "dependencies": [],
+            "resourceRoots": [
+              "assets",
+              "fallback"
+            ]
+          },
+          {
+            "name": "Consumer",
+            "uri": "Consumer.x",
+            "dependencies": [
+              "App"
+            ]
+          }
+        ],
+        "files": [
+          {
+            "file": "old/App.x",
+            "source": "module App { static String text() = $./data.txt; }",
+            "expected": "module App { static String text() = $./data.txt; }",
+            "destination": "assets/old/App.x"
+          },
+          {
+            "file": "old/extra.txt",
+            "source": "incoming bytes",
+            "expected": "incoming bytes",
+            "destination": "assets/old/extra.txt"
+          },
+          {
+            "file": "assets/keep.txt",
+            "source": "existing root",
+            "expected": "existing root",
+            "destination": "assets/keep.txt"
+          },
+          {
+            "file": "fallback/data.txt",
+            "source": "fallback bytes",
+            "expected": "fallback bytes",
+            "destination": "fallback/data.txt"
+          },
+          {
+            "file": "Consumer.x",
+            "source": "module Consumer { package app import App; String text() = app.text(); }",
+            "expected": "module Consumer { package app import App; String text() = app.text(); }",
+            "destination": "Consumer.x"
+          }
+        ],
+        "from": "old"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X220": {
+      "title": "typed numeric annotation values survive family rename and closed-consumer Undo",
+      "manual": [],
+      "values": {
+        "file": "Library.x",
+        "anchor": "read()",
+        "replacement": "fetch",
+        "files": [
+          {
+            "file": "Library.x",
+            "source": "module Library {\n    class First { Int read() = 1; }\n    class Second { Int read() = 2; }\n    annotation Mark(Float64 label) into Object {}\n}",
+            "destination": "Library.x",
+            "expected": "module Library {\n    class First { Int fetch() = 1; }\n    class Second { Int fetch() = 2; }\n    annotation Mark(Float64 label) into Object {}\n}"
+          },
+          {
+            "file": "Consumer.x",
+            "source": "module Consumer {\n    package lib import Library;\n    Int use((@lib.Mark(Float64:1.5) lib.First) | (@lib.Mark(Float64:2.5) lib.Second) target) = target.read();\n}",
+            "destination": "Consumer.x",
+            "expected": "module Consumer {\n    package lib import Library;\n    Int use((@lib.Mark(Float64:1.5) lib.First) | (@lib.Mark(Float64:2.5) lib.Second) target) = target.fetch();\n}"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],

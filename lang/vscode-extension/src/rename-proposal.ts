@@ -80,6 +80,10 @@ export async function renameWithConfiguration(
 
 /** File-operation participation contributes only extra edits; VS Code owns the requested moves. */
 export async function moveWithConfiguration(client: LanguageClient, event: vscode.FileWillRenameEvent): Promise<vscode.WorkspaceEdit | null> {
+    // TODO VSCODE: UP23 — the participant cannot replace/reorder host moves. Independently
+    // relocated children must precede parents for apply, but native Undo also replays inverse
+    // moves in forward order. Overlapping moves need an upstream reversal fix as well as
+    // a complete replacement transaction; server ordering alone cannot make them safe.
     if (!event.files.length) return null;
     const settings = compilerSettingsLocation()?.uri.toString();
     const owned = [...(vscode.workspace.workspaceFolders ?? []).map(folder => folder.uri.toString()), ...(settings ? [settings] : [])];
