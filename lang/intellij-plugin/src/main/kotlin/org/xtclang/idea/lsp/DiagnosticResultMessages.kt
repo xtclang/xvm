@@ -80,7 +80,7 @@ internal class DiagnosticResultMessages(
                         }
                     }
                 }
-            next.consume(forwarded)
+            next.consume(DiagnosticQuickFixes.outgoing(forwarded))
         }
 
     fun incoming(next: MessageConsumer): MessageConsumer =
@@ -105,6 +105,6 @@ internal class DiagnosticResultMessages(
                 }
             }
             // Client callbacks may re-enter the transport; never invoke them under our lock.
-            next.consume(message)
+            next.consume(DiagnosticQuickFixes.incoming(message))
         }
 }
