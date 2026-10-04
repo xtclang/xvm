@@ -9,6 +9,7 @@ import org.xvm.asm.constants.ImmutableTypeConstant
 import org.xvm.asm.constants.IntConstant
 import org.xvm.asm.constants.IntersectionTypeConstant
 import org.xvm.asm.constants.ParameterizedTypeConstant
+import org.xvm.asm.constants.PropertyConstant
 import org.xvm.asm.constants.RelationalTypeConstant
 import org.xvm.asm.constants.SignatureConstant
 import org.xvm.asm.constants.SingletonConstant
@@ -153,6 +154,16 @@ internal fun TypeConstant.memberSourceType(
             when (val identity = definingConstant) {
                 is TypeParameterConstant -> {
                     formals[identity]
+                }
+
+                is PropertyConstant -> {
+                    // Class formals are properties, not method type parameters. Only the exact
+                    // owning class or an enclosing class can supply this spelling; an unrelated
+                    // owner's identically named formal must never be substituted by name.
+                    identity.name.takeIf {
+                        identity.isFormalType && XdkRename.identifier(it) &&
+                            generateSequence(owner) { it.parentConstant }.any { it == identity.parentConstant }
+                    }
                 }
 
                 is ClassConstant -> {
