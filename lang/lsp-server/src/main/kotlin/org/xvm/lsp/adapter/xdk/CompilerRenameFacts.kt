@@ -121,6 +121,7 @@ internal class CompilerRenameFacts(
     val typePaths: List<TypePath> = emptyList(),
     val resourceValues: Map<SemanticModel.SourceLocation, String?> = emptyMap(),
     val callables: Map<SemanticModel.SourceLocation, ProofIdentity> = emptyMap(),
+    val removableLocals: Set<SemanticModel.SourceLocation> = emptySet(),
 ) {
     /** Unchanged independent modules cannot acquire new bindings from a source edit elsewhere. */
     fun within(scopes: Set<String>): CompilerRenameFacts = merge(modules.filterKeys(scopes::contains))
@@ -146,6 +147,7 @@ internal class CompilerRenameFacts(
                 attempts.flatMap { it.typePaths }.distinct(),
                 attempts.flatMap { it.resourceValues.entries }.associate { it.toPair() },
                 attempts.flatMap { it.callables.entries }.associate { it.toPair() },
+                attempts.flatMapTo(linkedSetOf()) { it.removableLocals },
             )
         }
     }
@@ -165,6 +167,7 @@ internal fun captureRenameFacts(
     typeNames: List<CompilerTypeName> = emptyList(),
     resourceValues: Map<SemanticModel.SourceLocation, String?> = emptyMap(),
     callables: Map<SemanticModel.SourceLocation, Pair<TypeConstant, MethodConstant>> = emptyMap(),
+    removableLocals: Set<SemanticModel.SourceLocation> = emptySet(),
 ): CompilerRenameFacts {
     val declarations =
         models
@@ -419,6 +422,7 @@ internal fun captureRenameFacts(
                 }.distinct()
                 .map { TypePath(identity(it), it.moduleConstant.name, path(it)) },
         resourceValues = resourceValues,
+        removableLocals = removableLocals,
         callables =
             callables
                 .mapNotNull { (site, selected) ->
