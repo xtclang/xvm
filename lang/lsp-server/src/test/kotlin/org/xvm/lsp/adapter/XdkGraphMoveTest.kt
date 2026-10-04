@@ -305,19 +305,30 @@ class XdkGraphMoveTest {
             assertThat(Files.readString(directory.resolve("Consumer.x"))).contains("package app import $renamed", "app.Box", "app.text()")
             assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
             val reverse = adapter.renameFilesProposalAsync(requested.entries.associate { (from, to) -> to to from }).get(30, SECONDS)
-            if (!customResources) {
-                // A fresh reverse refactoring brings an uncaptured source tree into the pinned
-                // resource directory. Refuse it; host Undo restores the stored original transaction.
-                assertThat(reverse).isNull()
-                assertThat(directory.resolve("target/Renamed.x")).exists()
-                assertThat(directory.resolve("old/App.x")).doesNotExist()
-                return@session
-            }
             requireNotNull(reverse)
             apply(reverse.edit)
             adapter.replaceSourceModules(requireNotNull(reverse.sourceModules))
             assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
             assertThat(Files.readString(directory.resolve("Consumer.x"))).contains("package app import $moduleName")
+        }
+    }
+
+    @Test
+    fun `captured incoming resources permit unchanged lookups and retain new unused bytes`() {
+        write("old/App.x", "module App { static String text() = $./data.txt; }")
+        write("assets/keep.txt", "existing root")
+        write("fallback/data.txt", "original")
+        write("incoming/data.txt", "original")
+        write("incoming/extra.txt", "previously outside every root")
+        session { adapter ->
+            adapter.replaceSourceModules(listOf(XdkSourceModule("App", uri("old/App.x"), resourceRoots = listOf(uri("assets"), uri("fallback")))))
+            val moves = mapOf(uri("old") to uri("moved"), uri("incoming/data.txt") to uri("assets/data.txt"),
+                uri("incoming/extra.txt") to uri("assets/extra.txt"))
+            val proposal = requireNotNull(adapter.renameFilesProposalAsync(moves).get(30, SECONDS))
+            apply(proposal.edit)
+            adapter.replaceSourceModules(requireNotNull(proposal.sourceModules))
+            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(Files.readString(directory.resolve("assets/extra.txt"))).isEqualTo("previously outside every root")
         }
     }
 
