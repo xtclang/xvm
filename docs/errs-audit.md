@@ -1681,5 +1681,9 @@ contextual numeric/function types are preserved; inference, changed type context
 statements, runtime initialization and Ref/Var annotations remain refusals. The deletion facts
 are immutable source locations captured on the compiler worker, with no retained AST/constants
 or new Java AST API. Shared X177–X180 cover native application and Undo/Redo plus installed
-refusal checks. Validation for this batch is pending. L63 remains partial for wider contexts,
+refusal checks. All 129 backend tests pass without failures or skips; X156/X157/X177–X180 pass
+in VS Code `run-nDHZOH` and IntelliJ `run-232740531754002686` (plus START, zero IDE failures).
+These are selected runs from the 185-case catalog. The independent ordinary-compiler `&& False`
+code-generation repair has a failing-master CLI reproduction and 22 passing manual runtime
+checks; keep its two commits separate in the extraction map. L63 remains partial for wider contexts,
 extract-method, missing declarations, broader inline and global safe delete.
