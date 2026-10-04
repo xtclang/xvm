@@ -1855,3 +1855,19 @@ Ultimate disabled), zero editor failures. The first IntelliJ attempt exposed can
 synchronous native popup discovery; the driver now uses the ordinary UI action queue and retains
 its no-edit-replay guard. UP07 tracks the evidence. These are selected 217-catalog receipts;
 no fresh packaged-protocol or IntelliJ production-unit run is claimed.
+
+
+L63 destination-import continuation adds atomic imports and missing methods only for dependencies
+already available to the destination. Alias selection reserves source names across companions;
+required imports travel with detached local type spelling. Signature proof accounts for preceding
+import edits. Package imports go in the module root; a companion method and its root import share
+one atomic versioned workspace edit. X213–X215 cover editor acceptance; the [integration plan](errs-integration-plan.md#l63-destination-import-insertion-2026-10-04)
+records validation and consolidates the eight remaining L63 work areas. No Java AST or embedding
+API change is introduced.
+
+Validation: **310 backend tests pass**, zero failures/errors/skips. VS Code `run-u5kDXk` and IntelliJ
+`run-4588144426201480586` pass **X122/X209–X215** (IntelliJ also START, Ultimate disabled), zero
+editor failures, using the same 220-case catalog. X214 proves the import in the module root and
+method in its closed companion are one native Undo/Redo transaction. IntelliJ fixture isolation
+and graph-before-open setup avoid unrelated case churn; UP07's broader production transition
+remains open. These are selected receipts, not full-catalog or fresh packaged-stdio acceptance.
