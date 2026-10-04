@@ -1241,7 +1241,7 @@ internal class XdkProjectQueries(
                                             )
                                     }.orElse(null)
                             checkCurrent()
-                            val headers = declarations?.memberActionFacts(fresh, declarationErrors, compilation.missingMethodLocalTypes())
+                            val headers = declarations?.memberActionFacts(fresh, declarationErrors, compilation.missingMethodInputs())
                             val repaired =
                                 if (
                                     headers != null &&
