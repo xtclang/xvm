@@ -149,9 +149,9 @@ singleton qualifiers, inferred result types and unproven argument/return context
 An explicit **Create public method … in …** action also supports another writable ordinary class
 in the same module, including closed companion files (X201–X204). It edits the destination URI,
 proves the signature's type identities there, and preserves the caller and existing bindings.
-Cross-owner arguments currently use declared parameters/supported literals, with whole-return or
-statement result contexts. Cross-owner local arguments/typed initializers, generic/interface owners
-and other modules remain separate work. Public visibility is stated in the action and generated code.
+Cross-owner arguments use declared parameters, supported literals and compiler-established earlier
+block locals. Results use whole-return, statement or whole explicitly typed local-initializer
+contexts (X205–X208). Inferred results, generic/interface owners and other modules remain separate work. Public visibility is stated in the action and generated code.
 Explicit declaration lookup returns local/import-alias declarations or the inherited written
 contracts of an overriding method/property, including multiple source targets. Definition and
 implementation retain their separate meanings. Indexed library sources remain read-only.

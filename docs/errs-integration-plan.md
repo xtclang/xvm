@@ -9959,8 +9959,9 @@ with proven writable destinations and an explicit visibility policy.
   checks that another receiver never creates a private method in the caller. Catalog: 209 cases.
 - [x] Complete the combined backend gate and selected native runs; record receipts and commits.
 
-Supported cross-owner result contexts are whole returns and statement calls. Arguments may be
-resolved enclosing-method parameters or supported explicitly typed literals; zero arguments work.
+That checkpoint supported whole returns and statement calls, with resolved enclosing-method
+parameters or supported explicitly typed literals; zero arguments work. The next continuation
+adds earlier block locals and explicitly typed local initializer results.
 Existing renderer support includes ordinary, parameterized, compound and same-module source types.
 The destination is an ordinary, non-generic, non-synthetic class in the caller's module. Its source
 may be inline or in a captured companion file. Existing members/overloads, including inherited
@@ -9980,8 +9981,8 @@ Neither finding required weakening the production proof.
 
 Remaining L63 tasks:
 
-- [ ] Carry detached local argument/result type identities into cross-owner typed initializer
-  repairs. Same-owner local/initializer support is unchanged; cross-owner variants currently refuse.
+- [x] Carry detached local argument/result type identities into cross-owner typed initializer
+  repairs. Implemented in the continuation below; same-owner support remains covered by regression tests.
 - [ ] Extend destination resolution to another configured source module with dependency direction,
   imports, visibility and source/binary ownership proved before edits. The current module AST
   boundary deliberately excludes even writable modules elsewhere in the configured graph.
@@ -10038,3 +10039,72 @@ Extract backend `92eb89974` after `c36eb87c6`. The native companion acceptance a
 coverage and matching manual rows together when splitting PRs. Each extracted PR must still pass
 independently. The next bounded L63 task is detached cross-owner local-argument and typed-initializer
 result evidence before attempting cross-module dependency/import/ownership policy.
+
+
+### L63 cross-owner local arguments and initializer results (2026-10-04)
+
+- [x] Capture compiler-established local register types during the failed repair attempt and detach
+  them through the existing identity collector. Keep rendered type text and identity together;
+  no compiler type from the failed pool enters fresh declaration analysis.
+- [x] Extend explicit public source-destination repairs to earlier block-local arguments and whole
+  explicitly typed local initializers. Combine detached body identities with fresh declaration
+  parameter/literal types and require exact final signature identities and argument bindings.
+- [x] Add backend coverage for typed/var/val/separately assigned locals, instance/static/local
+  receivers, empty/mixed arguments, companion files, source/parameterized/compound types and
+  invalid/inferred/out-of-scope contexts. Add compiling parameter-widening, return-narrowing and
+  argument-rebinding counterexamples to the proof tests.
+- [x] Add shared X205–X208 and both editor drivers: inferred local argument, closed-companion
+  parameterized initializer, shadowed result-type refusal and inferred-result refusal. Catalog: 213.
+- [x] Complete the combined backend and selected editor gates and record receipts/commit mapping.
+
+`renameFacts(includeMissingMethods = true)` copies the failed attempt's local facts only on the
+repair path, while its model and constant-to-source associations are still owned by the same
+worker. The existing shared identity collector produces detached `ProofIdentity` structures.
+Fresh declaration types and detached local types have explicit sealed alternatives; no nullable
+compiler-pool cache or new AST field/API is introduced. The complete proposed graph must still
+compile, retain existing bindings and prove the inserted public method's signature/dispatch.
+
+A local must precede the call in a containing block. Inferred locals need a validated, fitting
+initializer; explicitly typed locals need their resolved register or fresh declaration type.
+Uninitialized/out-of-scope/invalid locals fail the final graph proof. An initializer's declared
+result type must be explicit; `var result = missing(...)` supplies no return-type evidence.
+Destination shadowing is refused even when a narrower generated result would still fit the caller.
+
+Remaining L63 tasks: cross-module destination ownership/dependency/import policy; generic,
+computed/chained/runtime-type receivers and broader signatures; missing types/properties;
+wider extraction/inline and global safe delete. UP22 remains an independent upstream lifecycle
+follow-up. This continuation does not claim those tasks complete.
+
+
+The combined backend gate passes **275 tests**, zero failures/errors/skips, across 14 classes.
+It includes 39 cross-owner repair cases, 77 existing missing-method cases, six proof tests and the
+existing local/extraction/member/server/code-action regressions. Both editor drivers compile.
+No production fix was required after this first gate. Selected native acceptance follows below.
+
+
+Final acceptance:
+
+- **275 backend tests pass**, zero failures/errors/skips. Both drivers compile; no Java AST or
+  IntelliJ/VS Code production change is needed in this slice.
+- VS Code **`run-RpTVz1`** passes **X181/X185/X190/X202/X205–X208**, zero extension errors or
+  test failures. The eight selected cases finish in eleven seconds.
+- IntelliJ **`run-14627770467027596087`** passes **START and the same eight cases**, zero IDE
+  failures. JUnit reports one passing suite test without failures/errors/skips; Ultimate is disabled.
+  X206 completes companion apply and diagnostic Undo/Redo/Undo in **3,850 ms**. The accepted run
+  starts one server, with no severe, ambiguous-union, disposed-parent or compiler internal-error
+  log markers. UP22 remains independently open.
+- Both use the **213-scenario** catalog SHA-256
+  `f68713b3213859b9bc75f75719a8f3560a221de6a1289621c23339d9d3fb19fc`.
+  These are selected native runs, not full-catalog acceptance. No new IntelliJ production-unit or
+  packaged-stdio run is claimed; historical host-check entries do not count as new validation.
+- Root/LSP/IntelliJ read-only Spotless and `git diff --check` pass.
+
+| Extraction group | Commit | Scope |
+| --- | --- | --- |
+| Cross-owner body type proof | `272963cf0` | Extends `92eb89974`; detach failed-attempt local types through the existing identity collector, support explicit initializer results and retain exact signature/local-binding proof. Includes backend and compiling-counterexample regressions. |
+| Shared editor coverage | `f400bc02b` | X205–X208 in both existing drivers; pair with their manual rows in this documentation checkpoint. Companion acceptance retains the existing diagnostic bridge fix `124ae9c5a`. |
+
+Keep backend, shared scenarios and matching manual rows together when extracting their future
+PRs; each extraction still needs independent validation. The next bounded L63 scope is destination
+selection in another configured source module, with explicit dependency direction, source/binary
+ownership, imports and public visibility proved before offering an edit.
