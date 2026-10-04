@@ -88,6 +88,98 @@ class XdkMissingMethodsTest {
         ) { assertThat(it).contains("private void missing(String arg1, Char arg2, Int8 arg3)") }
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = ["Int other = value;", "var other = value;", "val other = value;", "Int other; other = value;"])
+    fun `compiler typed local arguments retain their declaration binding`(local: String) {
+        query(
+            """
+            module Missing {
+                Int read(Int value) {
+                    $local
+                    return §missing(other);
+                }
+            }
+            """.trimIndent(),
+        ) { assertThat(it).contains("private Int64 missing(Int64 arg1)") }
+    }
+
+    @ParameterizedTest
+    @CsvSource(value = ["Int;Int64", "String;String", "List<Int>;List<Int64>", "(Int | String);(Int64 | String)"], delimiter = ';')
+    fun `explicit initializer result supplies the method return type`(
+        type: String,
+        rendered: String,
+    ) {
+        query(
+            """
+            module Missing {
+                void read($type value) {
+                    $type result = §missing(value);
+                }
+            }
+            """.trimIndent(),
+        ) { assertThat(it).contains("private $rendered missing($rendered arg1)") }
+    }
+
+    @Test
+    fun `typed initializer and inferred local arguments compose in a static class method`() {
+        query(
+            """
+            module Missing {
+                class Box {
+                    static String read(Int value) {
+                        var other = value;
+                        String result = §missing(other, other, "hello");
+                        return result;
+                    }
+                }
+            }
+            """.trimIndent(),
+        ) { assertThat(it).contains("private static String missing(Int64 arg1, Int64 arg2, String arg3)") }
+    }
+
+    @Test
+    fun `local arguments in an enclosing block keep their compiler type`() {
+        query(
+            """
+            module Missing {
+                Int read(Int value) {
+                    List<Int> values = [value];
+                    if (value > 0) {
+                        return §missing(values);
+                    }
+                    return value;
+                }
+            }
+            """.trimIndent(),
+        ) { assertThat(it).contains("private Int64 missing(List<Int64> arg1)") }
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings = [
+            "return §missing(other); Int other = value;",
+            "if (value > 0) { Int other = value; } return §missing(other);",
+            "Int other; return §missing(other);",
+            "var other = unknown(); return §missing(other);",
+            "var other = §missing(other); return other;",
+            "var result = §missing(value); return result;",
+            "val result = §missing(value); return result;",
+            "Int result = 1 + §missing(value); return result;",
+            "Int result = value; result = §missing(value); return result;",
+        ],
+    )
+    fun `unproven local scopes and initializer types remain refusals`(body: String) {
+        refused(
+            """
+            module Missing {
+                Int read(Int value) {
+                    $body
+                }
+            }
+            """.trimIndent(),
+        )
+    }
+
     @Test
     fun `a broad selection offers one repair for repeated calls with matching signatures`() {
         query(
@@ -122,9 +214,7 @@ class XdkMissingMethodsTest {
     @ParameterizedTest
     @ValueSource(
         strings = [
-            "Int other = value; return §missing(other);",
             "return 1 + §missing(value);",
-            "Int result = §missing(value); return result;",
             "return this.§missing(value);",
             "return §missing<Int>(value);",
         ],
