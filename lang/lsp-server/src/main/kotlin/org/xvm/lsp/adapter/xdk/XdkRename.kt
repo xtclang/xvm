@@ -498,6 +498,40 @@ internal object XdkRename {
         return sameType(expected, actual, plan)
     }
 
+    /** Copy precisely the selected member body, preserving its bindings and the use's result type. */
+    fun preservesMemberInline(
+        before: CompilerRenameFacts,
+        after: CompilerRenameFacts,
+        plan: Plan,
+        candidate: XdkMemberInline.Candidate,
+    ): Boolean {
+        if (after.models.any { it.status != SemanticModel.Status.COMPLETE }) return false
+        val source = candidate.source
+        val original = plan.original[source] ?: return false
+        val proposed = plan.proposed[source] ?: return false
+        val oldStart = offset(original, candidate.expression.start)?.let { plan.map(source, it) } ?: return false
+        val oldEnd = offset(original, candidate.expression.end)?.let { plan.map(source, it) } ?: return false
+        // This action has one replacement and deliberately keeps the member declaration.
+        if (plan.edits != mapOf(source to listOf(candidate.edit))) return false
+        val copyStart = candidate.edit.start + 1
+        val expected = edges(before, plan.original, ignored = candidate.ignored, translate = plan::map) ?: return false
+        val copies =
+            expected
+                .filterKeys { it.source == source && it.start >= oldStart && it.end <= oldEnd }
+                .mapKeys { (site, _) -> site.copy(start = copyStart + site.start - oldStart, end = copyStart + site.end - oldStart) }
+        val actual = edges(after, plan.proposed) { _, at -> at } ?: return false
+        if (actual != expected + copies) return false
+
+        fun at(offset: Int) = position(proposed, offset).let { SemanticModel.Position(it.line, it.column) }
+        val copied = SemanticModel.SourceLocation(source, SemanticModel.Range(at(copyStart), at(copyStart + oldEnd - oldStart)))
+        val oldType = before.extraction.types[SemanticModel.SourceLocation(source, candidate.use)] ?: return false
+        val newType = after.extraction.types[copied] ?: return false
+        if (!sameType(oldType, newType, plan)) return false
+        val oldDispatch = dispatch(before, plan.original, translate = plan::map) ?: return false
+        val newDispatch = dispatch(after, plan.proposed) { _, at -> at } ?: return false
+        return oldDispatch == newDispatch
+    }
+
     /** Removing a local may remove its declaration, written type and sole read, but no other edges. */
     fun preservesLocalRemoval(
         before: CompilerRenameFacts,
@@ -1083,7 +1117,7 @@ internal object XdkRename {
                             }
                     }
                 }
-                model.calls.forEach { call ->
+                model.calls.filter { SemanticModel.SourceLocation(source, it.callee) !in ignored }.forEach { call ->
                     val callable = facts.callables[SemanticModel.SourceLocation(source, call.callee)]
                     result[site(source, call.callee, true) ?: return null] =
                         if (callable != null) {
