@@ -4,6 +4,7 @@ import com.redhat.devtools.lsp4ij.JSONUtils
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DocumentDiagnosticReport
+import org.eclipse.lsp4j.RelatedFullDocumentDiagnosticReport
 import org.eclipse.lsp4j.jsonrpc.messages.Message
 import org.eclipse.lsp4j.jsonrpc.messages.RequestMessage
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
@@ -25,9 +26,20 @@ internal object DiagnosticQuickFixes {
         val full = report.left ?: return message
         if (full.items.isEmpty()) return message
         val gson = JSONUtils.getLsp4jGson()
-        val copy = gson.fromJson(gson.toJsonTree(full), full.javaClass)
         val revision = UUID.randomUUID()
-        copy.items = copy.items.map { it.apply { data = Presentation(data, revision) } }
+        // TODO LSP4IJ: UP06 — the shared Gson lacks our related-report discriminator. Preserve
+        // already decoded companion reports instead of sending them through that decoder again.
+        val copy =
+            RelatedFullDocumentDiagnosticReport(
+                full.items.map { diagnostic ->
+                    gson.fromJson(gson.toJsonTree(diagnostic), Diagnostic::class.java).apply {
+                        data = Presentation(diagnostic.data, revision)
+                    }
+                },
+            ).apply {
+                resultId = full.resultId
+                relatedDocuments = full.relatedDocuments
+            }
         return ResponseMessage().apply {
             jsonrpc = response.jsonrpc
             rawId = response.rawId

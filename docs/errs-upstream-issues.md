@@ -1,6 +1,6 @@
 # Upstream issues affecting Ecstasy language support
 
-This is the upstream dependency register for `lagergren/errs`, updated on 2026-10-03.
+This is the upstream dependency register for `lagergren/errs`, updated on 2026-10-04.
 It complements the [implementation plan](errs-integration-plan.md) and
 [manual playbook](../lang/doc/manual-test-plan.md). Local fixes do not mean an upstream
 release contains the repair. The entries below record the branch's source inspection,
@@ -55,6 +55,8 @@ not a claim that every referenced suite was rerun for this documentation change.
 | **UP20 — IntelliJ test Driver — bridged** | An EDT remote call captures modality, then posts its actual call separately; a newly opened modal dialog can indefinitely defer that call. | Test-only popup focus observations/activation use a bounded Swing dispatch from the default remote dispatcher. X165 stalled before submission while the compiler was idle; saved thread dumps identify `Invoker.invoke`/`LaterInvocator` and `restorePopupFocus`. Native rename now also observes focus after its dialog opens. Details below. | Driver dispatch survives a modal transition between its state capture and invocation; selected native Rename and focus-recovery cases pass without the bridge. |
 
 | **UP21 — LSP4IJ — bridged** | WorkspaceEdit changes closed document buffers without saving or synchronizing them to the server. Compiler queries continue reading the old disk contents. | `ClosedRefactoringDocuments` saves only edited, closed buffers after the transaction and native Undo/Redo; pre-existing unsaved closed buffers refuse before application. X169 exposed the problem while X161's unchanged class name concealed it. | Upstream keeps closed-file content visible to the server across apply/Undo/Redo without our bridge; X169 verifies exact disk text and current diagnostics. |
+
+| **UP22 — LSP4IJ — open** | A document-change callback can restart a failed connection, dispose its own synchronizer, then create a pull-diagnostic Alarm owned by that disposed synchronizer. | X202 exposed `DocumentContentSynchronizer.sendDidChangeEvents` → connection restart → `getDebouncePullDiagnosticsAlarm`. The triggering report-copy exception was our UP07 bridge bug and is fixed locally; no patch to the upstream disposal path is installed. Details below. | A document change after transport failure safely retires the old callback without creating resources under a disposed parent. Native reconnect/typing acceptance must accompany an upstream lifecycle fix. |
 
 ## UP19: directory moves retain old document connections
 
@@ -205,3 +207,47 @@ The sequence X181 → X185 exercises the previously failing transition. Correcti
 This acceptance covers the automatic document-pull path. Workspace/related-document report
 replacement needs separate native coverage before claiming the bridge covers every diagnostic
 delivery route; keep that in UP07's removal/acceptance checklist.
+
+
+### UP06/UP07 companion-report copy correction (2026-10-04)
+
+Native X202 failed before applying its closed-companion quick fix. The original selected run
+`run-1260617210379511142` and focused `run-11561455227684652292` restarted the connection and
+reported a disposed synchronizer. The temporary disposal probe in `run-1466707445175582203`
+identified the earlier cause: `DiagnosticQuickFixes.incoming` round-tripped an already decoded
+`RelatedFullDocumentDiagnosticReport` through `JSONUtils.getLsp4jGson()`. That shared Gson lacks
+our UP06 discriminator, so `relatedDocuments` threw `JsonParseException: Ambiguous Either type`.
+The message reader terminated and LSP4IJ tried to recover the connection.
+
+This trigger was a bug in our UP07 bridge, not an Ecstasy compiler failure or proof that the
+server crashed. The bridge now copies the root diagnostic items into an explicit typed report
+and preserves the already decoded companion reports and result ID. It does not mutate the input
+or redecode the related union. A regression containing both full and unchanged companion reports
+fails before the correction with the exact exception above. Workspace/related-document quick-fix
+refresh beyond this report-preservation path remains a separate UP07 acceptance obligation.
+
+### UP22: pull-diagnostic Alarm created after synchronizer disposal
+
+The same runs expose a separate LSP4IJ 0.21.0 lifecycle defect. A pending PSI-commit callback enters
+`DocumentContentSynchronizer.sendDidChangeEvents`; its `sendNotification` calls
+`LanguageServerWrapper.start`, which detects the failed reader and disposes the old client and
+synchronizer. The callback then continues into `processPullDiagnosticIfNeeded` and lazily creates
+`Alarm(POOLED_THREAD, this)`. IntelliJ rejects registering the Alarm under its disposed parent.
+Pinned bytecode and the recorded disposal/exception stacks establish this sequence. Checking only
+the Alarm after creation cannot protect the constructor.
+
+The upstream repair must retire callbacks when their synchronizer is disposed, including after
+sending a notification that can restart the connection, and coordinate lazy resource creation with
+disposal. Our report-copy fix removes this reproduction's trigger; it does not repair the upstream
+lifecycle. There is no reflective patch, exception suppression or new production workaround here.
+Keep UP22 open pending independent restart/typing validation on a repaired upstream version.
+
+
+After the copy correction, all 90 IntelliJ unit tests pass without failures/errors/skips. Native
+`run-18176000411609180309` passes START and X181/X185/X195/X197/X201–X204 with Ultimate disabled,
+one server start, no IDE failures and no ambiguous-union/disposed-parent log entries. X202 applies
+the closed-companion repair and completes diagnostic Undo/Redo/Undo in 3,989 ms. The intermediate
+`run-3698675823455864971` had no IDE failures and applied the edit, but its harness tried to inspect
+the hidden caller through an active-tab-only locator; the driver now selects the appropriate tab
+for each assertion without replaying the action. These are selected receipts, not a full-catalog run
+or closure of UP22.
