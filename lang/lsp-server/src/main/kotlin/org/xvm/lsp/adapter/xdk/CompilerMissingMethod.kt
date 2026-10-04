@@ -30,19 +30,32 @@ import org.xvm.compiler.ast.VariableTypeExpression
 import org.xvm.lsp.adapter.xdk.XdkMissingMethods.Dispatch
 import org.xvm.lsp.util.ExecutionTrace
 
+/** Attempt-owned types are detached by the shared compiler identity collector. */
+internal data class CompilerMissingMethod(
+    val candidate: XdkMissingMethods.Candidate,
+    val parameters: List<TypeConstant> = emptyList(),
+    val returns: List<TypeConstant> = emptyList(),
+)
+
+private data class MissingParameter(
+    val source: String,
+    val type: TypeConstant? = null,
+    val binding: XdkMissingMethods.ArgumentBinding? = null,
+)
+
 /** Read only fresh resolved declarations, never TypeInfo from a failed body-validation attempt. */
 internal fun compilerMissingMethods(
     nodes: List<AstNode>,
     errors: ErrorListener,
     inputs: XdkMissingMethods.Inputs = XdkMissingMethods.Inputs(),
-): List<XdkMissingMethods.Candidate> =
+): List<CompilerMissingMethod> =
     nodes
         .filterIsInstance<InvocationExpression>()
         .mapNotNull { call ->
             val name = call.invokedExpression as? NameExpression ?: return@mapNotNull null
             val qualified = name.leftExpression != null
             if (call.isAsync || name.hasTrailingTypeParams() || name.isSuppressDeref ||
-                (if (qualified) name.calleeLocation() !in inputs.sameOwnerReceivers else !name.isSimpleName) ||
+                (if (qualified) name.calleeLocation() !in inputs.receivers else !name.isSimpleName) ||
                 !XdkRename.identifier(name.name)
             ) {
                 return@mapNotNull null
@@ -62,10 +75,25 @@ internal fun compilerMissingMethods(
                 return@mapNotNull null
             }
             val declaration = method.component as? MethodStructure ?: return@mapNotNull null
-            val structure = owner.component as? ClassStructure ?: return@mapNotNull null
+            val receiver = inputs.receivers[name.calleeLocation()]
+            val destination =
+                if (qualified) {
+                    nodes.filterIsInstance<TypeCompositionStatement>().singleOrNull { it.location() == receiver?.destination }
+                } else {
+                    owner
+                }
+            val target = destination ?: return@mapNotNull null
+            val structure = target.component as? ClassStructure ?: return@mapNotNull null
+            val crossOwner = target !== owner
+            // Cross-module, generic and synthetic destinations need additional ownership/substitution policy.
+            if (crossOwner &&
+                (structure.format != Format.CLASS || structure.typeParamCount != 0 || structure.isSynthetic)
+            ) {
+                return@mapNotNull null
+            }
             val dispatch =
                 if (qualified) {
-                    inputs.sameOwnerReceivers.getValue(name.calleeLocation())
+                    inputs.receivers.getValue(name.calleeLocation()).dispatch
                 } else if (declaration.isFunction) {
                     Dispatch.STATIC
                 } else {
@@ -118,6 +146,7 @@ internal fun compilerMissingMethods(
                     }
 
                     is AssignmentStatement -> {
+                        if (crossOwner) return@mapNotNull null
                         val local = statement.lValue as? VariableDeclarationStatement ?: return@mapNotNull null
                         if (statement.op.id != Token.Id.ASN || statement.rValue !== call || !local.hasExplicitMethodType()) {
                             return@mapNotNull null
@@ -156,9 +185,10 @@ internal fun compilerMissingMethods(
                             }
                         }
                     if (local != null) {
+                        if (crossOwner) return@mapNotNull null
                         val rendered = localType(local) ?: return@mapNotNull null
                         val binding = XdkMissingMethods.ArgumentBinding(argument.location(), local.declarationLocation())
-                        return@mapIndexed ("$rendered arg${index + 1}" to binding)
+                        return@mapIndexed MissingParameter("$rendered arg${index + 1}", binding = binding)
                     }
                     val parameter =
                         expression?.let { value ->
@@ -175,19 +205,24 @@ internal fun compilerMissingMethods(
                     ) {
                         return@mapNotNull null
                     }
-                    "${render(type) ?: return@mapNotNull null} arg${index + 1}" to null
+                    MissingParameter("${render(type) ?: return@mapNotNull null} arg${index + 1}", type = type)
                 }
 
             fun position(value: Long) = SemanticModel.Position(Source.calculateLine(value), Source.calculateOffset(value))
-            val signature = parameters.joinToString(", ") { it.first }
-            XdkMissingMethods.Candidate(
-                name.calleeLocation(),
-                name.name,
-                position(owner.ensureBody().endPosition).let { it.copy(column = it.column - 1) },
-                position(owner.startPosition),
-                "private ${if (dispatch == Dispatch.STATIC) "static " else ""}$result ${name.name}($signature)",
-                dispatch,
-                parameters.mapNotNull { it.second },
+            val signature = parameters.joinToString(", ") { it.source }
+            CompilerMissingMethod(
+                XdkMissingMethods.Candidate(
+                    name.calleeLocation(),
+                    name.name,
+                    position(target.ensureBody().endPosition).let { it.copy(column = it.column - 1) },
+                    target.location(),
+                    "${if (crossOwner) "public" else "private"} ${if (dispatch == Dispatch.STATIC) "static " else ""}$result ${name.name}($signature)",
+                    dispatch,
+                    parameters.mapNotNull { it.binding },
+                    if (crossOwner) structure.identityConstant.pathString else null,
+                ),
+                if (crossOwner) parameters.map { requireNotNull(it.type) } else emptyList(),
+                if (crossOwner && call.parent is ReturnStatement) declaration.returnTypes.toList() else emptyList(),
             )
         }.distinct()
 
@@ -231,39 +266,36 @@ internal fun EmbeddingSupport.Compilation.missingMethodInputs(): XdkMissingMetho
                         ) {
                             return@mapNotNull null
                         }
-                        val owner = generateSequence(call.parent) { it.parent }.filterIsInstance<TypeCompositionStatement>().firstOrNull()
-                        val structure = owner?.component as? ClassStructure ?: return@mapNotNull null
-                        val dispatch =
+                        val identityAndDispatch =
                             when (val target = receiver.resolvedTarget) {
                                 is ClassConstant -> {
-                                    // The compiler resolved a named class, not a runtime Class/Type
-                                    // value or a singleton. Class spelling is not ownership evidence.
-                                    if (structure.format != Format.CLASS || target != structure.identityConstant) return@mapNotNull null
-                                    Dispatch.STATIC
+                                    target to Dispatch.STATIC
                                 }
 
                                 is Register -> {
-                                    // An instance call stays an instance call, even in a static caller.
-                                    // Public/protected/struct/super views do not prove private access.
                                     if (receiver.leftExpression != null ||
                                         (target.index < 0 && target.index !in setOf(Op.A_THIS, Op.A_PRIVATE))
                                     ) {
                                         return@mapNotNull null
                                     }
                                     val type = receiver.type ?: return@mapNotNull null
-                                    if (!type.isSingleUnderlyingClass(false) ||
-                                        type.getSingleUnderlyingClass(false) != structure.identityConstant
-                                    ) {
-                                        return@mapNotNull null
-                                    }
-                                    Dispatch.INSTANCE
+                                    if (!type.isSingleUnderlyingClass(false)) return@mapNotNull null
+                                    type.getSingleUnderlyingClass(false) to Dispatch.INSTANCE
                                 }
 
                                 else -> {
                                     return@mapNotNull null
                                 }
                             }
-                        callee.calleeLocation() to dispatch
+                        val (identity, dispatch) = identityAndDispatch
+                        // Resolve the destination in this module's source AST by compiler identity.
+                        // Binary/indexed sources and other modules cannot enter this edit path.
+                        val destination =
+                            nodes.filterIsInstance<TypeCompositionStatement>().singleOrNull {
+                                (it.component as? ClassStructure)?.identityConstant == identity
+                            } ?: return@mapNotNull null
+                        if (dispatch == Dispatch.STATIC && identity.component.format != Format.CLASS) return@mapNotNull null
+                        callee.calleeLocation() to XdkMissingMethods.Receiver(destination.location(), dispatch)
                     }.toMap()
             XdkMissingMethods.Inputs(localTypes, receivers)
         }

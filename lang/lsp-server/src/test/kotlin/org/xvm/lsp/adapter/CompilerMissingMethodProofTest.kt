@@ -16,6 +16,42 @@ import org.xvm.lsp.adapter.xdk.renameFacts
 
 class CompilerMissingMethodProofTest {
     @Test
+    fun `cross owner repair must retain signature identity even when another return type compiles`() {
+        CompilerTestSupport.configure()
+        val text =
+            """
+            module Missing {
+                class Other {}
+                Object read(Other peer) {
+                    return peer.missing();
+                }
+            }
+            """.trimIndent()
+        val embedding = EmbeddingSupport.instance()
+        val failed = embedding.compileModule(Source(text, SOURCE), null, ErrorList())
+        assertThat(failed.succeeded()).isFalse()
+        val errors = ErrorList()
+        val declarations = embedding.analyzeDeclarations(Source(text, SOURCE), null, errors).orElseThrow()
+        val headers = declarations.memberActionFacts(XdkDependencies(emptyList()).open(), errors, failed.missingMethodInputs())
+        assertThat(errors.errors).isEmpty()
+        val candidate = headers.missingMethods.single()
+        assertThat(candidate.declaration).isEqualTo("public Object missing()")
+        val edit = requireNotNull(candidate.edit(text))
+
+        fun proves(edit: XdkRename.Edit): Boolean {
+            val plan = XdkRename.Plan(mapOf(SOURCE to text), mapOf(SOURCE to listOf(edit)))
+            val compiledErrors = ErrorList()
+            val compiled = embedding.compileModule(Source(plan.proposed.getValue(SOURCE), SOURCE), null, compiledErrors)
+            assertThat(compiled.succeeded()).describedAs(compiledErrors.errors.toString()).isTrue()
+            val after = compiled.projectRenameFacts(XdkDependencies(emptyList()).open(), compiledErrors)
+            return candidate.bindsNewMethod(after, plan, edit)
+        }
+        assertThat(proves(edit)).isTrue()
+        // A String still fits the caller's Object result, but it changes the requested API.
+        assertThat(proves(edit.copy(text = edit.text.replace("public Object", "public String")))).isFalse()
+    }
+
+    @Test
     fun `class qualifier proof requires static dispatch and the inserted owner declaration`() {
         CompilerTestSupport.configure()
         val text =
@@ -34,7 +70,7 @@ class CompilerMissingMethodProofTest {
         val failed = embedding.compileModule(Source(text, SOURCE), null, errors)
         assertThat(failed.succeeded()).isFalse()
         val inputs = failed.missingMethodInputs()
-        assertThat(inputs.sameOwnerReceivers.values).containsExactly(Dispatch.STATIC)
+        assertThat(inputs.receivers.values.map { it.dispatch }).containsExactly(Dispatch.STATIC)
         val declarationErrors = ErrorList()
         val analysis = embedding.analyzeDeclarations(Source(text, SOURCE), null, declarationErrors).orElseThrow()
         val headers = analysis.memberActionFacts(XdkDependencies(emptyList()).open(), declarationErrors, inputs)
@@ -78,7 +114,7 @@ class CompilerMissingMethodProofTest {
         assertThat(failed.succeeded()).isFalse()
         val partial = failed.renameFacts(XdkDependencies(emptyList()).open())
         val inputs = failed.missingMethodInputs()
-        assertThat(inputs.sameOwnerReceivers).hasSize(1)
+        assertThat(inputs.receivers).hasSize(1)
         val declarationErrors = ErrorList()
         val analysis = embedding.analyzeDeclarations(Source(text, SOURCE), null, declarationErrors).orElseThrow()
         val headers = analysis.memberActionFacts(XdkDependencies(emptyList()).open(), declarationErrors, inputs)

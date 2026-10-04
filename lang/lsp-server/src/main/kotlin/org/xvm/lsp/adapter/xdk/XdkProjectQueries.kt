@@ -803,12 +803,16 @@ internal class XdkProjectQueries(
             } else {
                 before.missingMethods
                     .filter { it.selected(source, range) }
-                    .distinctBy { it.declaration to it.insertion }
+                    .distinctBy { Triple(it.destination, it.declaration, it.insertion) }
                     .take(8)
                     .mapNotNull { candidate ->
                         checkCurrent()
-                        val edit = candidate.edit(text) ?: return@mapNotNull null
-                        val plan = XdkRename.Plan(texts, mapOf(source to listOf(edit)))
+                        val destination = candidate.destination.sourceName ?: return@mapNotNull null
+                        val targetText = texts[destination] ?: return@mapNotNull null
+                        val targetUri = uris[destination] ?: return@mapNotNull null
+                        if (!Files.isWritable(File(destination).toPath())) return@mapNotNull null
+                        val edit = candidate.edit(targetText) ?: return@mapNotNull null
+                        val plan = XdkRename.Plan(texts, mapOf(destination to listOf(edit)))
                         val after = compile(plan.proposed) ?: return@mapNotNull null
                         if (!XdkRename.preservesKnownBindings(before, after, plan) || !candidate.bindsNewMethod(after, plan, edit)) {
                             return@mapNotNull null
@@ -816,7 +820,7 @@ internal class XdkProjectQueries(
                         CodeAction(
                             candidate.title,
                             CodeAction.CodeActionKind.QUICKFIX,
-                            edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+                            edit = WorkspaceEdit(mapOf(targetUri to plan.textEdits(destination)), versioned = true),
                         )
                     }
             }
