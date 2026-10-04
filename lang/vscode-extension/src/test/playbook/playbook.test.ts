@@ -62,7 +62,7 @@ suite('XdkAdapter playbook', function () {
     typeMoveCases();
     renameFamilyCases(['X164', 'X165', 'X166', 'X167', 'X168']);
     typeMoveCases(['X169', 'X170', 'X171', 'X172', 'X173', 'X174', 'X175', 'X176']);
-    localRefactoringCases(['X177', 'X178', 'X179', 'X180', 'X181', 'X182', 'X183', 'X184', 'X185', 'X186', 'X187', 'X188']);
+    localRefactoringCases(['X177', 'X178', 'X179', 'X180', 'X181', 'X182', 'X183', 'X184', 'X185', 'X186', 'X187', 'X188', 'X189', 'X190', 'X191', 'X192']);
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {
