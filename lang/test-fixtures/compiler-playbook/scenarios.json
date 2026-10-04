@@ -6639,6 +6639,84 @@
         "limitations": []
       }
     },
+    "X205": {
+      "title": "create a public method from an inferred local argument",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. Apply the public method action and inspect the destination, signature and TODO() body. The caller error clears. Undo restores the destination and error; Redo clears it again, then Undo restores the original. The caller stays unchanged when editing a companion file."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    class Other {}\n    Int read(Other peer, Int value) {\n        val local = value;\n        return peer.missing(local);\n    }\n}",
+        "selected": "missing",
+        "title": "Create public method 'missing' in 'Other'",
+        "expected": "module Extract {\n    class Other {\n        public Int64 missing(Int64 arg1) {\n            TODO();\n        }\n    }\n    Int read(Other peer, Int value) {\n        val local = value;\n        return peer.missing(local);\n    }\n}",
+        "initiallyValid": false
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X206": {
+      "title": "create a companion method from a local argument and typed initializer",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. Apply the public method action and inspect the destination, signature and TODO() body. The caller error clears. Undo restores the destination and error; Redo clears it again, then Undo restores the original. The caller stays unchanged when editing a companion file."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    List<Int> read(List<Int> values) {\n        val local = values;\n        List<Int> result = Other.missing(local);\n        return result;\n    }\n}",
+        "selected": "missing",
+        "title": "Create public method 'missing' in 'Other'",
+        "expected": "class Other {\n    public static List<Int64> missing(List<Int64> arg1) {\n        TODO();\n    }\n}",
+        "initiallyValid": false,
+        "destinationFile": "Extract/Other.x",
+        "destinationSource": "class Other {}"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X207": {
+      "title": "refuse a typed initializer repair when the destination shadows its result type",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. No public-method creation action may appear; the source and error remain unchanged."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    Object read(Other peer) {\n        Object result = peer.missing();\n        return result;\n    }\n}",
+        "selected": "missing",
+        "title": "Create public method 'missing' in 'Other'",
+        "expected": "class Other { class Object {} }",
+        "initiallyValid": false,
+        "destinationFile": "Extract/Other.x",
+        "destinationSource": "class Other { class Object {} }",
+        "refused": true
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X208": {
+      "title": "refuse a public signature for an inferred missing call result",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. No public-method creation action may appear; the source and error remain unchanged."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    class Other {}\n    Int read(Int value) {\n        var result = Other.missing(value);\n        return result;\n    }\n}",
+        "selected": "missing",
+        "title": "Create public method 'missing' in 'Other'",
+        "expected": "module Extract {\n    class Other {}\n    Int read(Int value) {\n        var result = Other.missing(value);\n        return result;\n    }\n}",
+        "initiallyValid": false,
+        "refused": true
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
