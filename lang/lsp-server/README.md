@@ -144,12 +144,15 @@ the action does not invent dependencies. Runtime Class/Type values without a pro
 ambiguous inverse generic substitutions, binary/read-only destinations and unproven result contexts
 remain refused. A bare zero-argument unknown constructor can create a same-module class; an unresolved
 whole return value can create a same-owner read-only property with a TODO getter. Static properties
-require compiler constants, so the action never guesses their values.
+require an initializer; the action does not invent one. Property inline/delete require compiler-proven
+constant values without runtime initialization.
 
 Type spelling reuses resolved module imports and the compiler's implicit Ecstasy module constants;
 this does not restrict the module path to the core library. Both source and binary dependency types
-have extraction regression coverage. Shared X221–X242 cover the new actions and refusals in both
-editor drivers; native acceptance of this batch is pending. Earlier receipts remain separate.
+have extraction regression coverage. Shared X221–X242 pass selected acceptance in both editor
+drivers; the combined backend/protocol gate passes 498 tests without skips. The
+[bounded closure and receipts](../../docs/errs-integration-plan.md#l63-bounded-closure-and-acceptance-2026-10-04)
+record supported/refused forms and harness corrections. This was not a full-catalog rerun.
 Explicit declaration lookup returns local/import-alias declarations or the inherited written
 contracts of an overriding method/property, including multiple source targets. Definition and
 implementation retain their separate meanings. Indexed library sources remain read-only.
