@@ -4,12 +4,18 @@ import org.xvm.lsp.adapter.Range
 
 /** Detached signatures from fresh declarations; only a complete repair proof can publish them. */
 internal object XdkMissingMethods {
+    data class ArgumentBinding(
+        val use: SemanticModel.SourceLocation,
+        val declaration: SemanticModel.SourceLocation,
+    )
+
     data class Candidate(
         val callee: SemanticModel.SourceLocation,
         val name: String,
         val insertion: SemanticModel.Position,
         val owner: SemanticModel.Position,
         val declaration: String,
+        val arguments: List<ArgumentBinding> = emptyList(),
     ) {
         val title: String get() = "Create private method '$name'"
 
@@ -52,8 +58,24 @@ internal object XdkMissingMethods {
             val symbol = model.symbolAt(at.line, at.column) ?: return false
             val declaration = symbol.declaration ?: return false
             val declarationAt = XdkRename.offset(changed, declaration.start) ?: return false
-            return symbol.kind == SemanticModel.SymbolKind.METHOD && symbol.name == name && symbol.declarationSource == source &&
-                declarationAt in edit.start until edit.start + edit.text.length
+            if (symbol.kind != SemanticModel.SymbolKind.METHOD || symbol.name != name || symbol.declarationSource != source ||
+                declarationAt !in edit.start until edit.start + edit.text.length
+            ) {
+                return false
+            }
+
+            fun mapped(location: SemanticModel.SourceLocation): SemanticModel.Position? {
+                if (location.sourceName != source) return null
+                val originalAt = XdkRename.offset(original, location.range.start) ?: return null
+                val changedAt = plan.map(source, originalAt) ?: return null
+                return XdkRename.position(changed, changedAt).let { SemanticModel.Position(it.line, it.column) }
+            }
+            return arguments.all { argument ->
+                val use = mapped(argument.use) ?: return@all false
+                val target = mapped(argument.declaration) ?: return@all false
+                val bound = model.symbolAt(use.line, use.column) ?: return@all false
+                bound.kind == SemanticModel.SymbolKind.VARIABLE && bound.declarationSource == source && bound.declaration?.start == target
+            }
         }
     }
 }
