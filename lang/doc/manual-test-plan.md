@@ -1,7 +1,7 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **225 scenarios**: X1–X220, CFG1–CFG3 and 7a.8/7a.9.
-The latest selected gate passes **X122/X209–X215** in VS Code `run-u5kDXk` and IntelliJ
+The current catalog has **245 scenarios**: X1–X240, CFG1–CFG3 and 7a.8/7a.9.
+The preceding missing-method gate passes **X122/X209–X215** in VS Code `run-u5kDXk` and IntelliJ
 `run-4588144426201480586` (plus START), zero editor failures. It verifies required destination
 imports, exact signatures, atomic module-root/companion edits and diagnostic Undo/Redo. All 310
 selected backend tests pass without failures/errors/skips; Ultimate is disabled. Both editors use
@@ -1389,7 +1389,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X220 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X240 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -3463,3 +3463,44 @@ acceptance case, while IntelliJ passes. See [UP23](../../docs/errs-upstream-issu
 L62 acceptance (2026-10-04): IntelliJ `run-8069330970170232500` passes X169/X173/X216–X220.
 VS Code `run-S7CfWP` passes six and fails X218 native Undo. This is selected coverage;
 the new scenarios do not establish a full-catalog rerun. UP23 remains open while L63 proceeds.
+
+### L63 generic repairs and broader refactorings (X221–X240)
+
+These shared scenarios are implemented in both drivers. Their new native acceptance is pending;
+earlier passing receipts do not validate this batch. Select an X number through the existing
+Gradle case properties. Successful cases check exact edits, clear diagnostics and Undo/Redo/Undo;
+missing declarations additionally restore their diagnostics on Undo. Refusal cases check that no
+matching action exists and the source remains unchanged.
+
+| Case | Action | Required result |
+| --- | --- | --- |
+| X221 | Create a missing method using the exact generic owner formal. | Apply the shared expected source; compile cleanly; Undo/Redo/Undo restores exact text. |
+| X222 | Create a constrained generic missing method. | Apply the shared expected source; compile cleanly; Undo/Redo/Undo restores exact text. |
+| X223 | Create a conditional missing method preserving result arity. | Apply the shared expected source; compile cleanly; Undo/Redo/Undo restores exact text. |
+| X224 | Create a public method on a compiler validated call receiver. | Apply the shared expected source; compile cleanly; Undo/Redo/Undo restores exact text. |
+| X225 | Create named parameters from computed argument types. | Apply the shared expected source; compile cleanly; Undo/Redo/Undo restores exact text. |
+| X226 | Create a missing zero argument class. | Apply the shared expected source; compile cleanly; Undo/Redo/Undo restores exact text. |
+| X227 | Create a read only instance property with the required result type. | Apply the shared expected source; compile cleanly; Undo/Redo/Undo restores exact text. |
+| X228 | Refuse inventing an initializer for a missing static constant. | Refuse without editing; retain the original diagnostics. |
+| X229 | Extract a nested expression using its compiler selected type. | Apply the shared expected source; compile cleanly; Undo/Redo/Undo restores exact text. |
+| X230 | Extract contiguous statements preserving order with native history. | Apply the shared expected source; compile cleanly; Undo/Redo/Undo restores exact text. |
+| X231 | Refuse statement extraction of mutable captures. | Refuse without editing; retain the original diagnostics. |
+| X232 | Inline a constant local across an intervening statement. | Apply the shared expected source; compile cleanly; Undo/Redo/Undo restores exact text. |
+| X233 | Inline one private call while retaining the method declaration. | Apply the shared expected source; compile cleanly; Undo/Redo/Undo restores exact text. |
+| X234 | Inline a private constant read while retaining its declaration. | Apply the shared expected source; compile cleanly; Undo/Redo/Undo restores exact text. |
+| X235 | Refuse method inline when a caller parameter would capture a member. | Refuse without editing; retain the original diagnostics. |
+| X236 | Safely delete an unused private method with parameter and call bindings. | Apply the shared expected source; compile cleanly; Undo/Redo/Undo restores exact text. |
+| X237 | Refuse deleting a public API with unknown external consumers. | Refuse without editing; retain the original diagnostics. |
+| X238 | Safely delete an unused private compiler constant. | Apply the shared expected source; compile cleanly; Undo/Redo/Undo restores exact text. |
+| X239 | Extract an imported module type using its real source alias. | Apply the shared expected source; compile cleanly; Undo/Redo/Undo restores exact text. |
+| X240 | Refuse inline requiring argument substitution. | Refuse without editing; retain the original diagnostics. |
+
+X230 selects multiple lines; both drivers use actual document offsets. X239 selects the initializer
+rather than its same-named parameter and imports a type from a configured Library source module.
+The backend repeats that import/type-spelling check with a compiled binary dependency too.
+
+Boundaries: runtime Class/Type values without a concrete source owner, invented generic inverse
+substitutions, static-property initializers, mutable capture/control-flow extraction, argument
+substitution for method inline, instance-property getters and public API deletion are not inferred.
+Private member inline keeps the declaration; safe delete is a separate action. UP23 remains the
+recorded VS Code overlapping-resource Undo defect; this text-edit batch does not repair it.
