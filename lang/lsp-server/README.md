@@ -129,36 +129,27 @@ inline completion/values, colors, notebooks and broader refactorings are
 among the missing features. See the [explicit absent-feature inventory](../doc/plans/plan-ide-integration.md#compiler-completeness-snapshot)
 and [active L55–L83 completion checklist](../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist).
 Capability coverage, semantic completeness and native test coverage are tracked separately.
-Compiler code actions include complete return/typed-initializer extraction, adjacent single-use
-local inline with the same written expected type, and removal of unused constant locals.
-Private same-owner expression helpers receive compiler-proven stable inputs explicitly.
-The compiler must prove side-effect-free initialization before removal; every edit recompiles
-the configured graph and preserves unaffected bindings/calls/dispatch. General statement extraction,
-mutable captures, broader missing-declaration generation and global safe delete remain open (L63).
-Missing private same-owner methods can be generated for unqualified calls and compiler-proven
-`this`/parameter/local instance receivers, plus named enclosing-class static qualifiers, using
-fresh resolved parameter/literal types, compiler-established block-local types (including validated
-`var`/`val` initializers), and declared return or explicitly typed local-initializer result types.
-The proposed graph must compile, resolve the call to the inserted stub and preserve known bindings,
-including receiver and local-argument bindings. Explicit instance receivers create instance
-methods even in static callers. Named enclosing-class qualifiers create static methods even in
-instance callers; the proof checks both dispatch and the inserted declaration target. X185–X200
-cover these boundaries in both drivers; current acceptance receipts are in the integration plan.
-Computed receivers, runtime `Class`/`Type` values, explicit generic qualifiers,
-singleton qualifiers, inferred result types and unproven argument/return contexts are refused.
-An explicit **Create public method … in …** action also supports another writable ordinary class
-in the same module, including closed companion files (X201–X204). It edits the destination URI,
-proves the signature's type identities there, and preserves the caller and existing bindings.
-Cross-owner arguments use declared parameters, supported literals and compiler-established earlier
-block locals. Results use whole-return, statement or whole explicitly typed local-initializer
-contexts (X205–X208). Reachable configured source dependencies also support public repairs,
-including closed companions (X209–X212). Signature types use the destination module and its existing
-module-level imports. Required imports can be added atomically with the method when the destination
-already has that configured dependency (X213–X215); aliases avoid source-name collisions, and no
-dependency edge is added. The module root receives the package import, including when the method
-belongs in a companion; both edits carry their own document versions. Binary/indexed/read-only destinations,
-reverse dependencies, inferred results and generic/interface owners remain refusals. Public visibility
-is stated in the action and generated code. Exact source signature and whole-graph binding proof are required.
+Compiler code actions include expression/local extraction, private helper extraction for contiguous
+call statements and nested expressions, adjacent single-evaluation local inline, wider constant-local
+inline, selected private zero-argument method/constant-property inline and safe deletion of unused
+private methods/static constants. Compiler-selected types, stable captures, evaluation order and
+all remaining bindings/dispatch must survive complete proposed-graph compilation. Mutable captures,
+control-flow outputs, parameter substitution and externally visible safe deletion remain refused.
+
+Missing methods support exact generic-owner formals, method formals/constraints, conditional returns,
+validated computed/chained receivers, singleton qualifiers, named arguments and typed expressions.
+Destinations include writable source owners in the same module and reachable configured dependencies,
+including closed companions. Required destination imports can accompany the member atomically, but
+the action does not invent dependencies. Runtime Class/Type values without a proven source owner,
+ambiguous inverse generic substitutions, binary/read-only destinations and unproven result contexts
+remain refused. A bare zero-argument unknown constructor can create a same-module class; an unresolved
+whole return value can create a same-owner read-only property with a TODO getter. Static properties
+require compiler constants, so the action never guesses their values.
+
+Type spelling reuses resolved module imports and the compiler's implicit Ecstasy module constants;
+this does not restrict the module path to the core library. Both source and binary dependency types
+have extraction regression coverage. Shared X221–X240 cover the new actions and refusals in both
+editor drivers; native acceptance of this batch is pending. Earlier receipts remain separate.
 Explicit declaration lookup returns local/import-alias declarations or the inherited written
 contracts of an overriding method/property, including multiple source targets. Definition and
 implementation retain their separate meanings. Indexed library sources remain read-only.
