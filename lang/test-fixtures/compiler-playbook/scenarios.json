@@ -6130,6 +6130,75 @@
         "limitations": []
       }
     },
+    "X177": {
+      "title": "extract a typed local initializer preserving evaluation and comments with Undo/Redo",
+      "manual": [
+        "Select the whole initializer, invoke Extract expression to local variable, inspect exact text and diagnostics, then Undo/Redo/Undo."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    Int step() = 1;\n    Int read(Int input) {\n        Int result = input /* keep */ + step();\n        return result;\n    }\n}",
+        "selected": "input /* keep */ + step()",
+        "title": "Extract expression to local variable",
+        "expected": "module Extract {\n    Int step() = 1;\n    Int read(Int input) {\n        Int extractedValue = input /* keep */ + step();\n        Int result = extractedValue;\n        return result;\n    }\n}"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X178": {
+      "title": "inline a local into an adjacent typed initializer preserving lambda context and captures",
+      "manual": [
+        "Invoke Inline local variable into initializer on value. Inspect the retained function type/capture and perform Undo/Redo/Undo."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    function Int() read(Int input) {\n        function Int() value = () -> input;\n        function Int() result = value;\n        return result;\n    }\n}",
+        "selected": "value",
+        "title": "Inline local variable into initializer",
+        "expected": "module Extract {\n    function Int() read(Int input) {\n        function Int() result = () -> input;\n        return result;\n    }\n}"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X179": {
+      "title": "remove an unused compiler constant while retaining comments and native history",
+      "manual": [
+        "Invoke Remove unused local variable. Both comments stay, diagnostics stay clear and Undo/Redo/Undo restore exact text."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    Int read(Int input) {\n        // keep context\n        Int unused = 1 + 2; // keep explanation\n        return input;\n    }\n}",
+        "selected": "unused",
+        "title": "Remove unused local variable",
+        "expected": "module Extract {\n    Int read(Int input) {\n        // keep context\n         // keep explanation\n        return input;\n    }\n}"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X180": {
+      "title": "installed code actions refuse deleting an unused initializer that must execute",
+      "manual": [
+        "Query actions at unused. Remove unused local variable must be absent and the document must stay unchanged. This is an installed-connection refusal assertion."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    Int step() = 1;\n    Int read(Int input) {\n        Int unused = step();\n        return input;\n    }\n}",
+        "selected": "unused",
+        "title": "Remove unused local variable",
+        "expected": "module Extract {\n    Int step() = 1;\n    Int read(Int input) {\n        Int unused = step();\n        return input;\n    }\n}",
+        "refused": true
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],

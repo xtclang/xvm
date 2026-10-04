@@ -56,7 +56,7 @@ suite('XdkAdapter playbook', function () {
     syntaxCompletionCases();
     semanticClosureCases();
     renameFamilyCases(['X155']);
-    localRefactoringCases(['X156', 'X157']);
+    localRefactoringCases(['X156', 'X157', 'X177', 'X178', 'X179', 'X180']);
     editingClosureCases();
     renameFamilyCases(['X159', 'X160']);
     typeMoveCases();
