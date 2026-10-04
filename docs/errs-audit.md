@@ -1871,3 +1871,17 @@ editor failures, using the same 220-case catalog. X214 proves the import in the 
 method in its closed companion are one native Undo/Redo transaction. IntelliJ fixture isolation
 and graph-before-open setup avoid unrelated case churn; UP07's broader production transition
 remains open. These are selected receipts, not full-catalog or fresh packaged-stdio acceptance.
+
+
+The L62 closure batch now covers cross-module source ownership, ordered overlapping moves,
+captured incoming resources and broader detached annotation/receiver proof. Shared X216–X220
+are implemented in both drivers (225 cases total). Acceptance and the UP23 host exception are
+recorded below. The [closure record](errs-integration-plan.md#l62-ownership-and-relocation-closure-batch-2026-10-04)
+contains the four commit groups, support boundaries and compiler header-expression limitation.
+No Java AST or embedding API change is introduced. L63 now resumes.
+
+L62 closure validation: 178 backend/protocol tests and 7 IntelliJ unit tests passed; the final
+affected backend rerun passed 58 tests. Selected IntelliJ X169/X173/X216–X220 all pass. VS Code
+passes six; X218 still fails on native overlapping-move Undo (UP23), whose failing assertion stays.
+The user explicitly accepted carrying that host limitation and continuing to L63. See the
+[integration receipt](errs-integration-plan.md#l62-ownership-and-relocation-closure-batch-2026-10-04).
