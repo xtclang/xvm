@@ -708,7 +708,7 @@ internal class XdkProjectQueries(
         val plan = XdkRename.Plan(texts, edits, paths, qualifications = qualifications)
         val resourceMoves = XdkResourceMoves(resources.mapKeys { it.key.path }.mapValues { it.value.path }, edits.keys)
         val after = compile(plan.proposed, moves = paths, graph = graph, resourceMoves = resourceMoves) ?: return null
-        if (!preservesBindings(before, after, plan) || !isCurrent()) return null
+        if (!typeMove.provesDestinations(after) || !preservesBindings(before, after, plan) || !isCurrent()) return null
         val replacement = !discoverImports && !project.sameConfiguration(graph)
         return XdkRenameProposal(
             WorkspaceEdit(
