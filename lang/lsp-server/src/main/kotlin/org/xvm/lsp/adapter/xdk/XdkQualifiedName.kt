@@ -41,7 +41,7 @@ internal class XdkQualifiedName private constructor(
         }
 
         /** A removed namespace can leave a comment before the call's first surviving token. */
-        fun leadingTrivia(text: String): Int? = lex(text)?.firstOrNull()?.start ?: if (lex(text) != null) text.length else null
+        fun leadingTrivia(text: String): Int? = lex(text)?.let { it.firstOrNull()?.start ?: text.length }
 
         private fun lex(text: String): List<Part>? = ExecutionTrace.api("Lexer.qualification(rename)") {
             val errors = ErrorList()

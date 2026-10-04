@@ -2749,3 +2749,19 @@ The integration plan maps the four implementation checkpoints, required correcti
 and IntelliJ correction `2ce6029cf` for future PR extraction. Broader L62 exclusions remain
 explicit, including uncaptured incoming resources: a fresh reverse refactoring can refuse while
 Undo still restores its previously proven transaction. No changes have been pushed in this batch.
+
+
+### L62 empty-package and trivia continuation (2026-10-04)
+
+The compiler adapter now plans same-module type moves into captured empty package directories
+and preserves comments/whitespace in qualified import, type and call names. Replay must prove
+every moved declaration's destination identity and preserve all existing bindings, dispatch and
+resources. Cross-module ownership, uncaptured/nonexistent directories, class-owned destinations,
+specialized names and overlapping companion moves remain unsupported. No new AST/embedding
+API is required. Shared X173–X176 cover empty nested packages, aliases, closed consumers,
+companions/resources, prefix removal, inline collisions, interacting batches and Undo/Redo in
+both editor drivers. Catalog: 181 scenarios. Validation for this continuation is pending.
+
+The independent compiler duplicate-declaration repair is [PR #668](https://github.com/xtclang/xvm/pull/668).
+Errs includes its corrected three Java tests and five CLI manual cases, wired to the manual
+check/sequential/parallel tasks. The previous artificial conditional-parser test is removed.
