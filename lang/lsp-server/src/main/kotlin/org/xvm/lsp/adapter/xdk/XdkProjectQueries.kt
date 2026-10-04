@@ -1221,7 +1221,7 @@ internal class XdkProjectQueries(
                         compilation.file()?.module?.name != module.name
                     ) {
                         if (proof == Proof.REPAIR) {
-                            val partial = compilation.renameFacts(open)
+                            val partial = compilation.renameFacts(open, includeMissingMethods = true)
                             val fresh = XdkDependencies(inputs.values.toList()).open()
                             val declarationErrors =
                                 ErrorListener.cancellable(ErrorList(), cancelled)
@@ -1245,7 +1245,7 @@ internal class XdkProjectQueries(
                                             )
                                     }.orElse(null)
                             checkCurrent()
-                            val headers = declarations?.memberActionFacts(fresh, declarationErrors, compilation.missingMethodInputs())
+                            val headers = declarations?.memberActionFacts(fresh, declarationErrors, partial.missingMethodInputs)
                             val repaired =
                                 if (
                                     headers != null &&

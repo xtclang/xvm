@@ -10,11 +10,58 @@ import org.xvm.lsp.adapter.xdk.XdkDependencies
 import org.xvm.lsp.adapter.xdk.XdkMissingMethods.Dispatch
 import org.xvm.lsp.adapter.xdk.XdkRename
 import org.xvm.lsp.adapter.xdk.memberActionFacts
-import org.xvm.lsp.adapter.xdk.missingMethodInputs
 import org.xvm.lsp.adapter.xdk.projectRenameFacts
 import org.xvm.lsp.adapter.xdk.renameFacts
 
 class CompilerMissingMethodProofTest {
+    @Test
+    fun `cross owner local and initializer proof rejects compatible signature changes and argument rebinding`() {
+        CompilerTestSupport.configure()
+        val text =
+            """
+            module Missing {
+                class Other {}
+                Object read(Other peer, String value) {
+                    var first = value;
+                    var other = "other";
+                    Object result = peer.missing(first);
+                    return result;
+                }
+            }
+            """.trimIndent()
+        val embedding = EmbeddingSupport.instance()
+        val failed = embedding.compileModule(Source(text, SOURCE), null, ErrorList())
+        assertThat(failed.succeeded()).isFalse()
+        val inputs = failed.renameFacts(XdkDependencies(emptyList()).open(), includeMissingMethods = true).missingMethodInputs
+        val errors = ErrorList()
+        val declarations = embedding.analyzeDeclarations(Source(text, SOURCE), null, errors).orElseThrow()
+        val headers = declarations.memberActionFacts(XdkDependencies(emptyList()).open(), errors, inputs)
+        assertThat(errors.errors).isEmpty()
+        val candidate = headers.missingMethods.single()
+        assertThat(candidate.declaration).isEqualTo("public Object missing(String arg1)")
+        assertThat(candidate.arguments).hasSize(1)
+        val edit = requireNotNull(candidate.edit(text))
+
+        fun proves(
+            proposed: XdkRename.Edit,
+            additional: List<XdkRename.Edit> = emptyList(),
+        ): Boolean {
+            val plan = XdkRename.Plan(mapOf(SOURCE to text), mapOf(SOURCE to (additional + proposed)))
+            val compiledErrors = ErrorList()
+            val compiled = embedding.compileModule(Source(plan.proposed.getValue(SOURCE), SOURCE), null, compiledErrors)
+            assertThat(compiled.succeeded()).describedAs(compiledErrors.errors.toString()).isTrue()
+            val after = compiled.projectRenameFacts(XdkDependencies(emptyList()).open(), compiledErrors)
+            return candidate.bindsNewMethod(after, plan, proposed)
+        }
+        assertThat(proves(edit)).isTrue()
+        // Both changes still compile, but change the API requested by the original local types.
+        assertThat(proves(edit.copy(text = edit.text.replace("String arg1", "Object arg1")))).isFalse()
+        assertThat(proves(edit.copy(text = edit.text.replace("public Object", "public String")))).isFalse()
+        val argument = text.indexOf("first);")
+        val redirect = XdkRename.Edit(argument, argument + "first".length, "other")
+        assertThat(proves(edit, listOf(redirect))).isFalse()
+    }
+
     @Test
     fun `cross owner repair must retain signature identity even when another return type compiles`() {
         CompilerTestSupport.configure()
@@ -32,7 +79,8 @@ class CompilerMissingMethodProofTest {
         assertThat(failed.succeeded()).isFalse()
         val errors = ErrorList()
         val declarations = embedding.analyzeDeclarations(Source(text, SOURCE), null, errors).orElseThrow()
-        val headers = declarations.memberActionFacts(XdkDependencies(emptyList()).open(), errors, failed.missingMethodInputs())
+        val inputs = failed.renameFacts(XdkDependencies(emptyList()).open(), includeMissingMethods = true).missingMethodInputs
+        val headers = declarations.memberActionFacts(XdkDependencies(emptyList()).open(), errors, inputs)
         assertThat(errors.errors).isEmpty()
         val candidate = headers.missingMethods.single()
         assertThat(candidate.declaration).isEqualTo("public Object missing()")
@@ -69,7 +117,7 @@ class CompilerMissingMethodProofTest {
         val errors = ErrorList()
         val failed = embedding.compileModule(Source(text, SOURCE), null, errors)
         assertThat(failed.succeeded()).isFalse()
-        val inputs = failed.missingMethodInputs()
+        val inputs = failed.renameFacts(XdkDependencies(emptyList()).open(), includeMissingMethods = true).missingMethodInputs
         assertThat(inputs.receivers.values.map { it.dispatch }).containsExactly(Dispatch.STATIC)
         val declarationErrors = ErrorList()
         val analysis = embedding.analyzeDeclarations(Source(text, SOURCE), null, declarationErrors).orElseThrow()
@@ -113,7 +161,7 @@ class CompilerMissingMethodProofTest {
         val failed = embedding.compileModule(Source(text, SOURCE), null, errors)
         assertThat(failed.succeeded()).isFalse()
         val partial = failed.renameFacts(XdkDependencies(emptyList()).open())
-        val inputs = failed.missingMethodInputs()
+        val inputs = failed.renameFacts(XdkDependencies(emptyList()).open(), includeMissingMethods = true).missingMethodInputs
         assertThat(inputs.receivers).hasSize(1)
         val declarationErrors = ErrorList()
         val analysis = embedding.analyzeDeclarations(Source(text, SOURCE), null, declarationErrors).orElseThrow()
@@ -157,8 +205,8 @@ class CompilerMissingMethodProofTest {
         val errors = ErrorList()
         val failed = embedding.compileModule(Source(text, SOURCE), null, errors)
         assertThat(failed.succeeded()).isFalse()
-        val inputs = failed.missingMethodInputs()
-        assertThat(inputs.localTypes.values).containsExactlyInAnyOrder("Int64", "Int64", "Int64")
+        val inputs = failed.renameFacts(XdkDependencies(emptyList()).open(), includeMissingMethods = true).missingMethodInputs
+        assertThat(inputs.localTypes.values.map { it.source }).containsExactlyInAnyOrder("Int64", "Int64", "Int64")
         val declarationErrors = ErrorList()
         val analysis = embedding.analyzeDeclarations(Source(text, SOURCE), null, declarationErrors).orElseThrow()
         val headers = analysis.memberActionFacts(XdkDependencies(emptyList()).open(), declarationErrors, inputs)

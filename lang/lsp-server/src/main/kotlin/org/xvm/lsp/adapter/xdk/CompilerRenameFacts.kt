@@ -137,6 +137,7 @@ internal class CompilerRenameFacts(
     val extraction: ExtractMethodFacts = ExtractMethodFacts(),
     val missingMethods: List<XdkMissingMethods.Candidate> = emptyList(),
     val methodSignatures: Map<SemanticModel.SymbolId, XdkMissingMethods.Signature> = emptyMap(),
+    val missingMethodInputs: XdkMissingMethods.Inputs = XdkMissingMethods.Inputs(),
 ) {
     /** Unchanged independent modules cannot acquire new bindings from a source edit elsewhere. */
     fun within(scopes: Set<String>): CompilerRenameFacts = merge(modules.filterKeys(scopes::contains))
@@ -169,6 +170,10 @@ internal class CompilerRenameFacts(
                 ),
                 attempts.flatMap { it.missingMethods }.distinct(),
                 attempts.flatMap { it.methodSignatures.entries }.associate { it.toPair() },
+                XdkMissingMethods.Inputs(
+                    attempts.flatMap { it.missingMethodInputs.localTypes.entries }.associate { it.toPair() },
+                    attempts.flatMap { it.missingMethodInputs.receivers.entries }.associate { it.toPair() },
+                ),
             )
         }
     }
@@ -191,6 +196,7 @@ internal fun captureRenameFacts(
     removableLocals: Set<SemanticModel.SourceLocation> = emptySet(),
     extraction: CompilerExtractionFacts? = null,
     missingMethods: List<CompilerMissingMethod> = emptyList(),
+    missingInputs: CompilerMissingInputs = CompilerMissingInputs(),
 ): CompilerRenameFacts {
     val declarations =
         models
@@ -359,6 +365,12 @@ internal fun captureRenameFacts(
 
     fun path(value: IdentityConstant): List<String> = value.path.filter { it.format != Constant.Format.Module }.map { it.name }
 
+    fun signatureType(type: CompilerMissingMethod.Type): ProofIdentity? =
+        when (type) {
+            is CompilerMissingMethod.Type.Resolved -> receiverIdentity(type.value, ::identity)
+            is CompilerMissingMethod.Type.Detached -> type.value
+        }
+
     fun cycle(cycle: CompilerDispatch.Cycle) =
         ProofIdentity.Composed(
             receiverIdentity(cycle.receiver, ::identity) ?: ProofIdentity.Unproven(),
@@ -458,8 +470,8 @@ internal fun captureRenameFacts(
                 if (method.candidate.publicOwner == null) {
                     method.candidate
                 } else {
-                    val parameters = method.parameters.map { receiverIdentity(it, ::identity) ?: return@mapNotNull null }
-                    val returns = method.returns.map { receiverIdentity(it, ::identity) ?: return@mapNotNull null }
+                    val parameters = method.parameters.map { signatureType(it) ?: return@mapNotNull null }
+                    val returns = method.returns.map { signatureType(it) ?: return@mapNotNull null }
                     method.candidate.copy(signature = XdkMissingMethods.Signature(parameters, returns))
                 }
             },
@@ -487,5 +499,12 @@ internal fun captureRenameFacts(
                 .mapNotNull { (site, selected) ->
                     callableIdentities[selected]?.let { site to it }
                 }.toMap(),
+        missingMethodInputs =
+            XdkMissingMethods.Inputs(
+                missingInputs.localTypes.mapValues { (_, type) ->
+                    XdkMissingMethods.LocalType(type.source, receiverIdentity(type.type, ::identity) ?: ProofIdentity.Unproven())
+                },
+                missingInputs.receivers,
+            ),
     )
 }

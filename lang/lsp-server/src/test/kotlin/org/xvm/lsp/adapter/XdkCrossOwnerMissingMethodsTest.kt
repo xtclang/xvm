@@ -127,8 +127,119 @@ class XdkCrossOwnerMissingMethodsTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["Int local = value; return peer.§missing(local);", "Int result = peer.§missing(value); return result;"])
-    fun `cross owner locals and initializer contexts wait for destination type evidence`(body: String) {
+    @ValueSource(strings = ["Int local = value;", "var local = value;", "val local = value;", "Int local; local = value;"])
+    fun `compiler established local arguments retain their type in another owner`(local: String) {
+        query(
+            """
+            module Missing {
+                class Other {}
+                Int read(Other peer, Int value) {
+                    $local
+                    return peer.§missing(local);
+                }
+            }
+            """.trimIndent(),
+            signature = "public Int64 missing(Int64 arg1)",
+        )
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["Int", "List<Int>", "(Int | String)", "Value"])
+    fun `closed companion receives exact local argument and initializer result types`(type: String) {
+        query(
+            """
+            module Missing {
+                class Value {}
+                $type read($type value) {
+                    val local = value;
+                    $type result = Other.§missing(local);
+                    return result;
+                }
+            }
+            """.trimIndent(),
+            companion = "class Other {}",
+            signature = "public static ${type.replace("Int", "Int64")} missing(${type.replace("Int", "Int64")} arg1)",
+        )
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["peer", "Other", "Missing.Other"])
+    fun `initializer repair combines local parameter and literal evidence`(receiver: String) {
+        query(
+            """
+            module Missing {
+                class Other {}
+                Int read(Other peer, Int value) {
+                    var local = value;
+                    Int result = $receiver.§missing(local, value, "text");
+                    return result;
+                }
+            }
+            """.trimIndent(),
+            signature = "public ${if (receiver == "peer") "" else "static "}Int64 missing(Int64 arg1, Int64 arg2, String arg3)",
+        )
+    }
+
+    @Test
+    fun `local receiver and zero argument typed initializer retain instance dispatch`() {
+        query(
+            """
+            module Missing {
+                Int read(Other peer) {
+                    var other = peer;
+                    Int result = other.§missing();
+                    return result;
+                }
+            }
+            """.trimIndent(),
+            companion = "class Other {}",
+            signature = "public Int64 missing()",
+        )
+    }
+
+    @Test
+    fun `void call accepts an inferred local argument`() {
+        query(
+            """
+            module Missing {
+                void run(String value) {
+                    var local = value;
+                    Other.§missing(local);
+                }
+            }
+            """.trimIndent(),
+            companion = "class Other {}",
+            signature = "public static void missing(String arg1)",
+        )
+    }
+
+    @Test
+    fun `initializer destination shadowing refuses a different but assignable return type`() {
+        query(
+            """
+            module Missing {
+                Object read(Other peer) {
+                    Object result = peer.§missing();
+                    return result;
+                }
+            }
+            """.trimIndent(),
+            companion = "class Other { class Object {} }",
+        )
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings = [
+            "var result = peer.§missing(value); return result;",
+            "Int local; return peer.§missing(local);",
+            "var local = unknown; return peer.§missing(local);",
+            "return peer.§missing(local); Int local = value;",
+            "if (value > 0) { Int local = value; } return peer.§missing(local);",
+            "var local = value; return peer.§missing(local + 1);",
+        ],
+    )
+    fun `unproven local contexts do not acquire public signatures`(body: String) {
         query(
             """
             module Missing {
