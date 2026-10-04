@@ -251,6 +251,7 @@ private class SemanticModelBuilder(
             compilerPropertyRelations(nodes, errors),
             errors,
             members = compilerMemberActions(nodes, errors),
+            missingMethods = compilerMissingMethods(nodes, errors),
         )
     }
 
