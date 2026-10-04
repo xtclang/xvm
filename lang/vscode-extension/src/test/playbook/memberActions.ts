@@ -45,9 +45,10 @@ export function memberActionCases(): void {
     });
 }
 
-export function localRefactoringCases(ids: readonly ('X148' | 'X156' | 'X157' | 'X177' | 'X178' | 'X179' | 'X180' | 'X181' | 'X182' | 'X183' | 'X184' | 'X185' | 'X186' | 'X187' | 'X188' | 'X189' | 'X190' | 'X191' | 'X192' | 'X193' | 'X194' | 'X195' | 'X196' | 'X197' | 'X198' | 'X199' | 'X200')[] = ['X148']): void {
+export function localRefactoringCases(ids: readonly ('X148' | 'X156' | 'X157' | 'X177' | 'X178' | 'X179' | 'X180' | 'X181' | 'X182' | 'X183' | 'X184' | 'X185' | 'X186' | 'X187' | 'X188' | 'X189' | 'X190' | 'X191' | 'X192' | 'X193' | 'X194' | 'X195' | 'X196' | 'X197' | 'X198' | 'X199' | 'X200' | 'X201' | 'X202' | 'X203' | 'X204')[] = ['X148']): void {
     for (const id of ids) playbook(id, async (workspace, data) => {
         await workspace.write(data.file, data.source);
+        if ('destinationFile' in data) await workspace.write(data.destinationFile, data.destinationSource);
         await discovered(workspace, async () => {
             const document = await workspace.open(data.file);
             const originalDiagnostics = async () => {
@@ -74,13 +75,17 @@ export function localRefactoringCases(ids: readonly ('X148' | 'X156' | 'X157' | 
             }, item => !!item?.edit, data.title);
             assert.ok(action?.edit);
             assert.ok(await vscode.workspace.applyEdit(action.edit));
-            assert.strictEqual(document.getText(), data.expected);
+            const destination = 'destinationFile' in data ? await workspace.open(data.destinationFile) : document;
+            const original = 'destinationFile' in data ? data.destinationSource : data.source;
+            assert.strictEqual(destination.getText(), data.expected);
+            if (destination !== document) assert.strictEqual(document.getText(), data.source);
             await noErrors(document.uri);
-            for (const [command, expected] of [['undo', data.source], ['redo', data.expected], ['undo', data.source]]) {
+            for (const [command, expected] of [['undo', original], ['redo', data.expected], ['undo', original]]) {
                 await focusTestWindow();
                 await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
                 await vscode.commands.executeCommand(command);
-                await eventually(async () => document.getText(), text => text === expected, `${command} local refactoring`);
+                await eventually(async () => destination.getText(), text => text === expected, `${command} local refactoring`);
+                if (destination !== document) assert.strictEqual(document.getText(), data.source);
                 if (command === 'redo') await noErrors(document.uri);
                 else await originalDiagnostics();
             }
