@@ -81,7 +81,7 @@ class XdkCrossOwnerMissingMethodsTest {
 
     @ParameterizedTest
     @ValueSource(
-        strings = ["interface Other {}", "class Other<Element> {}", "const Other {}", "class Other { Int missing(String value) = 1; }"],
+        strings = ["interface Other {}", "const Other {}", "class Other { Int missing(String value) = 1; }"],
     )
     fun `unsupported destination or existing member never acquires another method`(target: String) {
         query(
@@ -252,6 +252,56 @@ class XdkCrossOwnerMissingMethodsTest {
         )
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = ["Int", "String", "List<Int>"])
+    fun `generic destination retains the concrete caller types without guessing a formal`(type: String) {
+        query(
+            """
+            module Missing {
+                $type read(Other<$type> peer, $type value) {
+                    return peer.§missing(value);
+                }
+            }
+            """.trimIndent(),
+            companion = "class Other<Element> {}",
+            signature = "public ${type.replace("Int", "Int64")} missing(${type.replace("Int", "Int64")} arg1)",
+        )
+    }
+
+    @Test
+    fun `nested destination can refer to the exact enclosing class formal`() {
+        query(
+            """
+            module Missing {
+                class Outer<Element> {
+                    class Other {}
+                    Element read(Other peer, Element value) {
+                        return peer.§missing(value);
+                    }
+                }
+            }
+            """.trimIndent(),
+            signature = "public Element missing(Element arg1)",
+            owner = "Outer.Other",
+        )
+    }
+
+    @Test
+    fun `same spelling in unrelated generic owners cannot substitute type identity`() {
+        query(
+            """
+            module Missing {
+                class Other<Element> {}
+                class Caller<Element> {
+                    Element read(Other<Element> peer, Element value) {
+                        return peer.§missing(value);
+                    }
+                }
+            }
+            """.trimIndent(),
+        )
+    }
+
     @Test
     fun `read only companion is never offered as an edit destination`() {
         val target = directory.resolve("Missing/Other.x")
@@ -281,6 +331,7 @@ class XdkCrossOwnerMissingMethodsTest {
         marked: String,
         companion: String? = null,
         signature: String? = null,
+        owner: String = "Other",
     ) {
         CompilerTestSupport.configure()
         val source = directory.resolve("Missing.x").toFile().canonicalFile
@@ -309,7 +360,7 @@ class XdkCrossOwnerMissingMethodsTest {
             } else {
                 assertThat(actions).describedAs("Diagnostics: %s", diagnostics).hasSize(1)
                 val action = actions.single()
-                assertThat(action.title).isEqualTo("Create public method 'missing' in 'Other'")
+                assertThat(action.title).isEqualTo("Create public method 'missing' in '$owner'")
                 val edit = requireNotNull(action.edit)
                 assertThat(edit.versioned).isTrue()
                 assertThat(edit.changes.keys).containsExactly(targetUri)
