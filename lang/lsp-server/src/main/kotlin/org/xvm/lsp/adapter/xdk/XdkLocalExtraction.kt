@@ -137,7 +137,7 @@ internal object XdkLocalExtraction {
             method
                 .childNodes()
                 .filterIsInstance<Parameter>()
-                .filter { it.endPosition <= name.startPosition }
+                .filter { it.type != null && it.endPosition <= name.startPosition }
                 .singleOrNull() ?: return null
 
         fun offset(position: Long) =
