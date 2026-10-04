@@ -548,6 +548,22 @@ internal object XdkRename {
         return expectedDispatch == actualDispatch
     }
 
+    /** Remove only the selected private member's own chain; every surviving route stays exact. */
+    fun preservesSafeDelete(
+        before: CompilerRenameFacts,
+        after: CompilerRenameFacts,
+        plan: Plan,
+        candidate: XdkSafeDelete.Candidate,
+    ): Boolean {
+        if (after.models.any { it.status != SemanticModel.Status.COMPLETE }) return false
+        val expected = edges(before, plan.original, ignored = candidate.removed, translate = plan::map) ?: return false
+        val actual = edges(after, plan.proposed) { _, at -> at } ?: return false
+        if (expected != actual) return false
+        val oldDispatch = dispatch(before, plan.original, removedMembers = setOf(candidate.identity), translate = plan::map) ?: return false
+        val newDispatch = dispatch(after, plan.proposed) { _, at -> at } ?: return false
+        return oldDispatch == newDispatch
+    }
+
     /**
      * Allow exactly the selected implementations and their inherited effects; preserve other
      * bindings.
@@ -841,6 +857,7 @@ internal object XdkRename {
         facts: CompilerRenameFacts,
         texts: Map<String, String>,
         moved: (String) -> String = { it },
+        removedMembers: Set<ProofIdentity> = emptySet(),
         translate: (String, Int) -> Int?,
     ): Set<Dispatch>? {
         val declarations =
@@ -863,20 +880,17 @@ internal object XdkRename {
             val end = offset(text, range.end)?.let { translate(source, it) } ?: return null
             return Target.Declaration(Site(moved(source), start, end), symbol.kind)
         }
-        return facts.methods.chains.mapTo(linkedSetOf()) { chain ->
-            Dispatch(
-                target(chain.owner) ?: return null,
-                chain.members.map { target(it) ?: return null },
-                chain.supported,
-                chain.cycles.map { composedTarget(it, texts, moved, translate) ?: return null },
-                chain.alternatives.map { composedTarget(it, texts, moved, translate) ?: return null },
-            )
-        } +
-            facts.properties.chains.map { chain ->
+        return (facts.methods.chains + facts.properties.chains)
+            .filterNot { chain ->
+                chain.members.singleOrNull() in removedMembers && chain.supported &&
+                    chain.cycles.isEmpty() && chain.alternatives.isEmpty()
+            }.mapTo(linkedSetOf()) { chain ->
                 Dispatch(
                     target(chain.owner) ?: return null,
                     chain.members.map { target(it) ?: return null },
                     chain.supported,
+                    chain.cycles.map { composedTarget(it, texts, moved, translate) ?: return null },
+                    chain.alternatives.map { composedTarget(it, texts, moved, translate) ?: return null },
                 )
             }
     }
