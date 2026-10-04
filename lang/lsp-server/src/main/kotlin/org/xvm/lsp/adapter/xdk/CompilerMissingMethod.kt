@@ -9,6 +9,7 @@ import org.xvm.asm.ErrorListener
 import org.xvm.asm.MethodStructure
 import org.xvm.asm.Op
 import org.xvm.asm.Register
+import org.xvm.asm.constants.ClassConstant
 import org.xvm.asm.constants.TypeConstant
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
@@ -26,6 +27,7 @@ import org.xvm.compiler.ast.StatementBlock
 import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.compiler.ast.VariableDeclarationStatement
 import org.xvm.compiler.ast.VariableTypeExpression
+import org.xvm.lsp.adapter.xdk.XdkMissingMethods.Dispatch
 import org.xvm.lsp.util.ExecutionTrace
 
 /** Read only fresh resolved declarations, never TypeInfo from a failed body-validation attempt. */
@@ -61,6 +63,14 @@ internal fun compilerMissingMethods(
             }
             val declaration = method.component as? MethodStructure ?: return@mapNotNull null
             val structure = owner.component as? ClassStructure ?: return@mapNotNull null
+            val dispatch =
+                if (qualified) {
+                    inputs.sameOwnerReceivers.getValue(name.calleeLocation())
+                } else if (declaration.isFunction) {
+                    Dispatch.STATIC
+                } else {
+                    Dispatch.INSTANCE
+                }
             if (structure.format !in setOf(Format.CLASS, Format.MODULE) || declaration.isConstructor ||
                 declaration.typeParamCount != 0 || declaration.isConditionalReturn || errors.isAbortDesired
             ) {
@@ -175,7 +185,8 @@ internal fun compilerMissingMethods(
                 name.name,
                 position(owner.ensureBody().endPosition).let { it.copy(column = it.column - 1) },
                 position(owner.startPosition),
-                "private ${if (declaration.isFunction && !qualified) "static " else ""}$result ${name.name}($signature)",
+                "private ${if (dispatch == Dispatch.STATIC) "static " else ""}$result ${name.name}($signature)",
+                dispatch,
                 parameters.mapNotNull { it.second },
             )
         }.distinct()
@@ -214,23 +225,46 @@ internal fun EmbeddingSupport.Compilation.missingMethodInputs(): XdkMissingMetho
                     .mapNotNull { call ->
                         val callee = call.invokedExpression as? NameExpression ?: return@mapNotNull null
                         val receiver = callee.leftExpression as? NameExpression ?: return@mapNotNull null
-                        if (receiver.leftExpression != null || receiver.isSuppressDeref || receiver.hasTrailingTypeParams() ||
-                            !receiver.isValidated || !receiver.typeFit.isFit
+                        if (!receiver.isOnlyNames || !receiver.isValidated || !receiver.typeFit.isFit ||
+                            generateSequence(receiver) { it.leftExpression as? NameExpression }
+                                .any { it.isSuppressDeref || it.hasTrailingTypeParams() }
                         ) {
                             return@mapNotNull null
                         }
-                        val register = receiver.resolvedTarget as? Register ?: return@mapNotNull null
-                        // An instance call stays an instance call, even in a static caller. Public,
-                        // protected, struct and super views do not establish private-member access.
-                        if (register.index < 0 && register.index !in setOf(Op.A_THIS, Op.A_PRIVATE)) return@mapNotNull null
                         val owner = generateSequence(call.parent) { it.parent }.filterIsInstance<TypeCompositionStatement>().firstOrNull()
                         val structure = owner?.component as? ClassStructure ?: return@mapNotNull null
-                        val type = receiver.type ?: return@mapNotNull null
-                        if (!type.isSingleUnderlyingClass(false) || type.getSingleUnderlyingClass(false) != structure.identityConstant) {
-                            return@mapNotNull null
-                        }
-                        callee.calleeLocation()
-                    }.toSet()
+                        val dispatch =
+                            when (val target = receiver.resolvedTarget) {
+                                is ClassConstant -> {
+                                    // The compiler resolved a named class, not a runtime Class/Type
+                                    // value or a singleton. Class spelling is not ownership evidence.
+                                    if (structure.format != Format.CLASS || target != structure.identityConstant) return@mapNotNull null
+                                    Dispatch.STATIC
+                                }
+
+                                is Register -> {
+                                    // An instance call stays an instance call, even in a static caller.
+                                    // Public/protected/struct/super views do not prove private access.
+                                    if (receiver.leftExpression != null ||
+                                        (target.index < 0 && target.index !in setOf(Op.A_THIS, Op.A_PRIVATE))
+                                    ) {
+                                        return@mapNotNull null
+                                    }
+                                    val type = receiver.type ?: return@mapNotNull null
+                                    if (!type.isSingleUnderlyingClass(false) ||
+                                        type.getSingleUnderlyingClass(false) != structure.identityConstant
+                                    ) {
+                                        return@mapNotNull null
+                                    }
+                                    Dispatch.INSTANCE
+                                }
+
+                                else -> {
+                                    return@mapNotNull null
+                                }
+                            }
+                        callee.calleeLocation() to dispatch
+                    }.toMap()
             XdkMissingMethods.Inputs(localTypes, receivers)
         }
     }
