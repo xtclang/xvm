@@ -439,7 +439,8 @@ VS Code receipts above.
   also move to a private helper in the same type using explicit stable inputs (X181–X184; current
   batch acceptance below). Same-owner missing-method creation is implemented from fresh resolved
   declarations, compiler-established locals/typed initializers, proven same-owner instance receivers
-  and named enclosing-class static qualifiers (X185–X200; selected acceptance receipts below).
+  and named enclosing-class static qualifiers (X185–X200), plus explicit public repairs in another
+  writable ordinary class of the same module, including companions (X201–X204; receipts below).
   Wider expression/statement extraction, other missing declarations, broader inline and global safe delete remain unimplemented. Record supported XTC forms per action;
   doc-comment generation and reference/test lenses are separate subfeatures. Semantic transformations require
   compiler evidence and versioned multi-file edit validation.
@@ -9717,8 +9718,9 @@ Remaining L63 work stays explicit:
 - [x] Extend method creation to compiler-proven local arguments and typed-initializer result contexts; see the continuation below.
 - [x] Add qualified same-owner instance calls with compiler-proven receiver identity; see the receiver continuation below.
 - [x] Add named enclosing-class static qualifiers; see the class-qualified continuation below.
-- [ ] Investigate cross-owner creation, generic/conditional signatures and named/computed
-  arguments; preserve current refusals until scope, types and proposed-graph bindings are proven.
+- [x] Add bounded same-module cross-owner creation, including writable companions; see the destination continuation below.
+- [ ] Extend cross-owner local/initializer evidence and cross-module destinations, generic/conditional
+  signatures and named/computed arguments; preserve current refusals until scope, types and proposed-graph bindings are proven.
 - [ ] Add missing type/property declarations with equivalent ownership and compiler proof.
 - [ ] Broader statement extraction/inline and global safe delete remain separate refactorings.
 
@@ -9896,7 +9898,7 @@ shadow its own type annotation and produces COMPILER-136 before the missing call
 parameter type (`Missing.Box Box`, or `Extract.Box Box` in X200) tests the intended valid instance
 receiver; the corrected test passes. No production guard was weakened for that fixture.
 
-Remaining L63 scope: cross-owner creation with explicit destination/visibility policy,
+Remaining L63 scope at that checkpoint: cross-owner creation with explicit destination/visibility policy,
 computed/chained receivers, runtime Class/Type values, explicit generic and singleton qualifier
 rules, generic/conditional signatures and named/computed arguments, missing types/properties,
 broader extraction/inline and global safe delete. Current unsupported forms remain refusals.
@@ -9931,5 +9933,108 @@ Final acceptance:
 
 Extract the backend commit after `8288f7399`; keep the shared coverage with the corresponding
 playbook group and existing UP07 client dependency. Each extracted PR still requires independent
-validation. Next: bounded cross-owner missing-method creation with proven writable destinations
-and an explicit visibility policy, before broadening computed/generic contexts.
+validation. The continuation below implements bounded same-module cross-owner missing-method creation
+with proven writable destinations and an explicit visibility policy.
+
+
+### L63 cross-owner source destinations (2026-10-04)
+
+- [x] Resolve a parameter/local receiver or named class qualifier to an ordinary source class in
+  the same module, including companion files. Match compiler identities within the failed attempt;
+  hand off only destination source locations and dispatch to fresh declaration analysis.
+- [x] Name cross-owner actions **Create public method 'name' in 'Owner'** and generate explicit
+  `public` instance/static stubs. Existing same-owner actions remain private. No implicit visibility
+  escalation or edits to another owner are hidden behind the old private-action title.
+- [x] Require the destination to be in the captured configured source tree and writable. Publish
+  edits against its URI/version, preserving the caller when the destination is another file.
+  The full proposed graph must compile and the existing snapshot/currentness guards still apply.
+- [x] Prove the inserted target, dispatch, public access and exact parameter/return type identities.
+  Reuse detached `ProofIdentity` type structures and source-location translation; rendered spelling
+  and mere successful compilation are insufficient when destination names shadow signature types.
+- [x] Add backend destination/refusal tests, a compiling changed-return-type counterexample, and
+  server tests for open/closed companion versions. Binary/read-only, interface, generic, const and
+  other-module destinations remain explicit refusals.
+- [x] Add shared X201–X204 and both drivers: another source owner, a closed static companion with
+  diagnostic Undo/Redo, destination type shadowing refusal and interface refusal. X195 specifically
+  checks that another receiver never creates a private method in the caller. Catalog: 209 cases.
+- [x] Complete the combined backend gate and selected native runs; record receipts and commits.
+
+Supported cross-owner result contexts are whole returns and statement calls. Arguments may be
+resolved enclosing-method parameters or supported explicitly typed literals; zero arguments work.
+Existing renderer support includes ordinary, parameterized, compound and same-module source types.
+The destination is an ordinary, non-generic, non-synthetic class in the caller's module. Its source
+may be inline or in a captured companion file. Existing members/overloads, including inherited
+names, prevent offering a new method. Bodies contain `TODO()` and require implementation.
+
+The temporary `CompilerMissingMethod` record follows the existing compiler member-action boundary:
+it owns type constants only inside the worker/attempt; `captureRenameFacts` detaches their identity
+structures before publication. Signature facts cover source method declarations, not every binary
+method encountered during analysis. No new Java AST field, clone burden, embedding entry point or
+new plugin production bridge is needed; failed TypeInfo is never queried or validation resumed.
+Native companion acceptance did require a correction to the existing diagnostic bridge, detailed below.
+
+The first focused gate found two test problems: the refusal fixture accidentally supplied a valid
+overload, and AssertJ selected primitive unboxing for a closed document's deliberately null version.
+The fixture now uses an incompatible overload and the assertion explicitly accepts nullable `Int`.
+Neither finding required weakening the production proof.
+
+Remaining L63 tasks:
+
+- [ ] Carry detached local argument/result type identities into cross-owner typed initializer
+  repairs. Same-owner local/initializer support is unchanged; cross-owner variants currently refuse.
+- [ ] Extend destination resolution to another configured source module with dependency direction,
+  imports, visibility and source/binary ownership proved before edits. The current module AST
+  boundary deliberately excludes even writable modules elsewhere in the configured graph.
+- [ ] Prove generic destinations/substitution, computed/chained receivers, runtime Class/Type
+  values, explicit generic/singleton qualifiers, named/computed arguments and conditional signatures.
+- [ ] Add missing types/properties, broader extraction/inline and global safe delete as independent
+  compiler-proven transformations.
+
+
+The combined backend gate passes **256 tests**, zero failures/errors/skips: 21 new cross-owner
+cases, 77 existing missing-method cases, five compiler repair proofs and the broader extraction/
+local/member/rename-server/code-action regressions. Both editor drivers compile. The versioned
+server tests cover the caller at version 7 and a destination either closed (null version) or open
+at version 13; only the destination appears in the edit.
+
+| Extraction group | Commit | Scope |
+| --- | --- | --- |
+| Source destination and signature proof | `92eb89974` | Extends `c36eb87c6`; writable same-module destinations, explicit public action, detached signature proof, backend and versioned server regressions. |
+
+
+The first native IntelliJ gate passed the preceding five selected cases but failed X202 before
+applying its action. Focused repetitions exposed an exception in the branch's diagnostic bridge:
+copying a report with `relatedDocuments` through the shared Gson bypassed our UP06 discriminator
+and terminated the client message reader. The copy now constructs the root report explicitly,
+preserving decoded companion reports. The new regression fails before the repair with the exact
+`Ambiguous Either type` error; all **90 IntelliJ unit tests** pass after it, zero failures/errors/skips.
+The later disposal exception is tracked separately as open **UP22**; removing our trigger does not
+prove the upstream callback lifecycle repaired. See the [upstream register](errs-upstream-issues.md#up06up07-companion-report-copy-correction-2026-10-04).
+
+
+Final acceptance and extraction additions:
+
+- VS Code **`run-hOIsOh`** passes **X181/X185/X195/X197/X201–X204**, zero extension errors or
+  test failures. The eight selected cases finish in about ten seconds.
+- IntelliJ **`run-18176000411609180309`** passes **START and the same eight cases**, zero IDE
+  failures; JUnit reports one passing suite test without failures/errors/skips. Ultimate is disabled.
+  X202 completes companion apply and diagnostic Undo/Redo/Undo in **3,989 ms**. The accepted run
+  has one server start and no severe, ambiguous-union, disposed-parent or compiler internal-error
+  log markers. An intermediate post-fix run applied the edit but exposed an active-tab-only test
+  locator; the driver now selects each tab before reading it, without replaying edits.
+- Both editors use the **209-scenario** catalog SHA-256
+  `880cac9c23f6581f825bebbfa5e2a6444fcdad76df80a77facd9521da34d9148`.
+  These are selected acceptance runs, not a full catalog rerun. No new packaged-stdio gate is claimed.
+- Root/LSP/IntelliJ read-only Spotless and `git diff --check` pass. Backend production code remains
+  at the tested commit; the diagnostic-copy fix additionally passes the full 90-test IntelliJ unit gate.
+
+| Extraction group | Commit | Scope |
+| --- | --- | --- |
+| Existing IntelliJ diagnostic bridge correction | `124ae9c5a` | Depends on the UP07 bridge `f3de29b57`; preserve decoded full/unchanged companion reports, fail-before/pass-after unit regression, and separate UP22 upstream evidence. Independently extractable from missing-method generation. |
+| Shared editor coverage | `0155a137a` | X201–X204 and both action drivers, with companion tab assertions and caller preservation; combines with the manual rows in this documentation checkpoint. |
+
+Extract backend `92eb89974` after `c36eb87c6`. The native companion acceptance also needs
+`124ae9c5a`; its transport correction belongs with the IntelliJ integration group. Keep shared
+coverage and matching manual rows together when splitting PRs. Each extracted PR must still pass
+independently. The next bounded L63 task is detached cross-owner local-argument and typed-initializer
+result evidence before attempting cross-module dependency/import/ownership policy.

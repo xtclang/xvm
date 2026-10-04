@@ -1767,9 +1767,9 @@ refusal and public-view refusal. All 219 selected backend tests pass. X181/X185/
 pass in VS Code `run-nvquYD` and IntelliJ `run-15968094076069950349` (plus START), zero editor
 errors. Both use the 201-case catalog; these are selected runs. Acceptance receipts and extraction
 commits are in the [integration plan](errs-integration-plan.md#l63-same-owner-receiver-repairs-2026-10-04).
-No Java AST/embedding API or plugin production change was needed. Other-owner creation,
-computed/chained receivers and broader missing declarations remain open; the next continuation
-adds type-qualified static calls.
+No Java AST/embedding API or plugin production change was needed. The continuations below add
+type-qualified static calls and bounded same-module destinations. Computed/chained receivers and
+broader missing declarations remain open.
 
 
 ### L63 class qualifier and dispatch evidence (2026-10-04)
@@ -1784,12 +1784,37 @@ TypeInfo is not queried, and no Java AST/embedding API or plugin production chan
 
 X197–X200 add class/qualified-class acceptance, runtime-Type refusal and shadowed-name instance
 dispatch to both shared drivers. The combined backend gate passes 232 tests, including four
-repair proofs; an otherwise compiling call redirected to another class is rejected. Cross-owner
-creation, computed/chained receivers, runtime Class/Type values, explicit generic/singleton
-qualifiers and broader missing declarations remain open. The current commit map and native
+repair proofs; an otherwise compiling call redirected to another class is rejected. The next continuation adds
+bounded cross-owner creation. Computed/chained receivers, runtime Class/Type values, explicit
+generic/singleton qualifiers and broader missing declarations remain open. The current commit map and native
 acceptance are in the [integration plan](errs-integration-plan.md#l63-class-qualified-static-repairs-2026-10-04).
 
 
 X181/X185/X193/X197–X200 pass in VS Code `run-3Vm6C9` and IntelliJ
 `run-11432411846060652594` (plus START), zero editor errors. Both use the 205-case catalog; these
 are selected runs. IntelliJ Ultimate is disabled. Root/LSP/IntelliJ read-only Spotless passes.
+
+
+### L63 cross-owner destination evidence (2026-10-04)
+
+The adapter now proposes an explicitly public method in another writable ordinary source class
+of the same module, including a closed companion. Compiler identities select the owner; detached
+source locations carry that evidence into fresh declaration analysis. The final graph must prove
+the inserted target, public access, instance/static dispatch and exact signature type identities,
+as well as retaining known bindings and current inputs. A return-type substitution that still
+compiles is rejected. Server regressions verify the destination URI and its open/closed version.
+
+Temporary signature constants remain worker/attempt-owned and are detached by the existing
+identity collector. No Java AST field/API, clone obligation or embedding entry point was added.
+Native companion testing exposed a report-copy bug in the existing IntelliJ diagnostic bridge;
+the corrected copy preserves decoded related reports (UP06/UP07). X201–X204 extend both shared drivers with source/companion edits
+and refusal controls. Cross-owner locals/typed initializers, generic/interface destinations and
+other configured modules remain separate tasks. See the [current scope and commit map](errs-integration-plan.md#l63-cross-owner-source-destinations-2026-10-04).
+
+
+Final selected acceptance: **256 backend tests** and **90 IntelliJ unit tests** pass without
+failures/errors/skips. X181/X185/X195/X197/X201–X204 pass in VS Code `run-hOIsOh` and IntelliJ
+`run-18176000411609180309` (plus START), zero editor failures; Ultimate is disabled. The shared
+catalog has 209 cases. The native report-copy failure, its regression and the separate open UP22
+lifecycle defect are documented in the [upstream register](errs-upstream-issues.md#up06up07-companion-report-copy-correction-2026-10-04).
+These are selected acceptance runs; no full-catalog rerun or new packaged-stdio gate is claimed.
