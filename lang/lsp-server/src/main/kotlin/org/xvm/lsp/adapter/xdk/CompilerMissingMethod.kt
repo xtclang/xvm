@@ -7,6 +7,8 @@ import org.xvm.asm.ConstantPool
 import org.xvm.asm.Constants.Access
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.MethodStructure
+import org.xvm.asm.Op
+import org.xvm.asm.Register
 import org.xvm.asm.constants.TypeConstant
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
@@ -30,13 +32,15 @@ import org.xvm.lsp.util.ExecutionTrace
 internal fun compilerMissingMethods(
     nodes: List<AstNode>,
     errors: ErrorListener,
-    localTypes: Map<SemanticModel.SourceLocation, String> = emptyMap(),
+    inputs: XdkMissingMethods.Inputs = XdkMissingMethods.Inputs(),
 ): List<XdkMissingMethods.Candidate> =
     nodes
         .filterIsInstance<InvocationExpression>()
         .mapNotNull { call ->
             val name = call.invokedExpression as? NameExpression ?: return@mapNotNull null
-            if (call.isAsync || !name.isSimpleName || name.hasTrailingTypeParams() || name.isSuppressDeref ||
+            val qualified = name.leftExpression != null
+            if (call.isAsync || name.hasTrailingTypeParams() || name.isSuppressDeref ||
+                (if (qualified) name.calleeLocation() !in inputs.sameOwnerReceivers else !name.isSimpleName) ||
                 !XdkRename.identifier(name.name)
             ) {
                 return@mapNotNull null
@@ -79,8 +83,11 @@ internal fun compilerMissingMethods(
                     .filterIsInstance<VariableDeclarationStatement>()
                     .filter(::enclosed)
             val localNames = locals.map { it.name }.toSet()
-            if (name.name in localNames || declaration.params.any { it.name == name.name } ||
-                nodes.filterIsInstance<MethodDeclarationStatement>().any { it !== method && it.name == name.name && enclosed(it) }
+            if (!qualified &&
+                (
+                    name.name in localNames || declaration.params.any { it.name == name.name } ||
+                        nodes.filterIsInstance<MethodDeclarationStatement>().any { it !== method && it.name == name.name && enclosed(it) }
+                )
             ) {
                 return@mapNotNull null
             }
@@ -88,7 +95,7 @@ internal fun compilerMissingMethods(
             fun render(type: TypeConstant) = type.missingMethodType(structure)
 
             fun localType(local: VariableDeclarationStatement) =
-                localTypes[local.declarationLocation()] ?: local.takeIf { it.hasExplicitMethodType() }?.type?.let(::render)
+                inputs.localTypes[local.declarationLocation()] ?: local.takeIf { it.hasExplicitMethodType() }?.type?.let(::render)
             val returns =
                 when (val statement = call.parent) {
                     is ExpressionStatement -> {
@@ -164,44 +171,67 @@ internal fun compilerMissingMethods(
             fun position(value: Long) = SemanticModel.Position(Source.calculateLine(value), Source.calculateOffset(value))
             val signature = parameters.joinToString(", ") { it.first }
             XdkMissingMethods.Candidate(
-                SemanticModel.SourceLocation(
-                    call.source.fileName,
-                    SemanticModel.Range(position(name.startPosition), position(name.endPosition)),
-                ),
+                name.calleeLocation(),
                 name.name,
                 position(owner.ensureBody().endPosition).let { it.copy(column = it.column - 1) },
                 position(owner.startPosition),
-                "private ${if (declaration.isFunction) "static " else ""}$result ${name.name}($signature)",
+                "private ${if (declaration.isFunction && !qualified) "static " else ""}$result ${name.name}($signature)",
                 parameters.mapNotNull { it.second },
             )
         }.distinct()
 
 /**
- * Copy compiler-established local types without resuming a failed body or requesting its TypeInfo.
+ * Copy compiler-established body facts without resuming a failed body or requesting its TypeInfo.
  * Inferred locals need a validated initializer; an explicit declaration needs its resolved register.
  */
-internal fun EmbeddingSupport.Compilation.missingMethodLocalTypes(): Map<SemanticModel.SourceLocation, String> =
-    ExecutionTrace.api("Compilation.missingMethodLocalTypes") {
-        val root = parsed() ?: return@api emptyMap()
+internal fun EmbeddingSupport.Compilation.missingMethodInputs(): XdkMissingMethods.Inputs =
+    ExecutionTrace.api("Compilation.missingMethodInputs") {
+        val root = parsed() ?: return@api XdkMissingMethods.Inputs()
         ConstantPool.withPool(pool()).use {
-            fun nodes(node: AstNode): Sequence<AstNode> = sequenceOf(node) + node.childNodes().asSequence().flatMap(::nodes)
-            nodes(root)
-                .filterIsInstance<VariableDeclarationStatement>()
-                .mapNotNull { local ->
-                    if (!local.hasExplicitMethodType()) {
-                        if (local.childNodes().none { it is VariableTypeExpression }) return@mapNotNull null
-                        val assignment = local.parent as? AssignmentStatement ?: return@mapNotNull null
-                        if (assignment.lValue !== local || assignment.op.id != Token.Id.ASN ||
-                            !assignment.rValue.isValidated || !assignment.rValue.typeFit.isFit
+            fun descendants(node: AstNode): Sequence<AstNode> = sequenceOf(node) + node.childNodes().asSequence().flatMap(::descendants)
+            val nodes = descendants(root).toList()
+            val localTypes =
+                nodes
+                    .filterIsInstance<VariableDeclarationStatement>()
+                    .mapNotNull { local ->
+                        if (!local.hasExplicitMethodType()) {
+                            if (local.childNodes().none { it is VariableTypeExpression }) return@mapNotNull null
+                            val assignment = local.parent as? AssignmentStatement ?: return@mapNotNull null
+                            if (assignment.lValue !== local || assignment.op.id != Token.Id.ASN ||
+                                !assignment.rValue.isValidated || !assignment.rValue.typeFit.isFit
+                            ) {
+                                return@mapNotNull null
+                            }
+                        }
+                        val owner = generateSequence(local.parent) { it.parent }.filterIsInstance<TypeCompositionStatement>().firstOrNull()
+                        val structure = owner?.component as? ClassStructure ?: return@mapNotNull null
+                        val type = local.register?.originalType?.missingMethodType(structure) ?: return@mapNotNull null
+                        local.declarationLocation() to type
+                    }.toMap()
+            val receivers =
+                nodes
+                    .filterIsInstance<InvocationExpression>()
+                    .mapNotNull { call ->
+                        val callee = call.invokedExpression as? NameExpression ?: return@mapNotNull null
+                        val receiver = callee.leftExpression as? NameExpression ?: return@mapNotNull null
+                        if (receiver.leftExpression != null || receiver.isSuppressDeref || receiver.hasTrailingTypeParams() ||
+                            !receiver.isValidated || !receiver.typeFit.isFit
                         ) {
                             return@mapNotNull null
                         }
-                    }
-                    val owner = generateSequence(local.parent) { it.parent }.filterIsInstance<TypeCompositionStatement>().firstOrNull()
-                    val structure = owner?.component as? ClassStructure ?: return@mapNotNull null
-                    val type = local.register?.originalType?.missingMethodType(structure) ?: return@mapNotNull null
-                    local.declarationLocation() to type
-                }.toMap()
+                        val register = receiver.resolvedTarget as? Register ?: return@mapNotNull null
+                        // An instance call stays an instance call, even in a static caller. Public,
+                        // protected, struct and super views do not establish private-member access.
+                        if (register.index < 0 && register.index !in setOf(Op.A_THIS, Op.A_PRIVATE)) return@mapNotNull null
+                        val owner = generateSequence(call.parent) { it.parent }.filterIsInstance<TypeCompositionStatement>().firstOrNull()
+                        val structure = owner?.component as? ClassStructure ?: return@mapNotNull null
+                        val type = receiver.type ?: return@mapNotNull null
+                        if (!type.isSingleUnderlyingClass(false) || type.getSingleUnderlyingClass(false) != structure.identityConstant) {
+                            return@mapNotNull null
+                        }
+                        callee.calleeLocation()
+                    }.toSet()
+            XdkMissingMethods.Inputs(localTypes, receivers)
         }
     }
 
@@ -221,3 +251,5 @@ private fun AstNode.location(
 }
 
 private fun VariableDeclarationStatement.declarationLocation() = location(nameToken.startPosition, nameToken.endPosition)
+
+private fun NameExpression.calleeLocation() = location(nameToken.startPosition, nameToken.endPosition)
