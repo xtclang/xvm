@@ -438,7 +438,8 @@ VS Code receipts above.
   local removal (X177–X180; acceptance below). Complete return/typed-initializer expressions can now
   also move to a private helper in the same type using explicit stable inputs (X181–X184; current
   batch acceptance below). Same-owner missing-method creation is implemented from fresh resolved
-  declarations (X185–X188; selected acceptance in both editors below). Wider expression/statement extraction,
+  declarations and compiler-established locals/typed initializers (X185–X192; selected acceptance
+  receipts below). Wider expression/statement extraction,
   other missing declarations, broader
   inline and global safe delete remain unimplemented. Record supported XTC forms per action;
   doc-comment generation and reference/test lenses are separate subfeatures. Semantic transformations require
@@ -9642,9 +9643,9 @@ This slice uses existing embedding/declaration/AST accessors entirely from Kotli
 field, clone obligation or new embedding entry point is needed. Untyped numeric literals are
 refused rather than exposing `IntLiteral`/`FPLiteral` compiler implementation types. Other literals
 use `LiteralExpression.getImplicitType` within the fresh attempt's constant-pool scope. Unsupported
-type spellings, receiver/cross-owner creation, computed/local/named arguments, generic methods,
-conditional returns, initializer/nested-expression expected types and missing type/property
-declarations remain open. L63 also retains broader inline/extraction and global safe delete;
+type spellings, receiver/cross-owner creation, computed/named arguments, generic methods,
+conditional returns, nested-expression expected types and missing type/property declarations
+remain open. The continuation below adds compiler-established locals and typed initializer results. L63 also retains broader inline/extraction and global safe delete;
 cross-module ownership remains L62.
 
 | Extraction group | Commits | Scope |
@@ -9713,10 +9714,90 @@ slice; the first checkpoint alone lacks declaration-wrapper normalization. Edito
 
 Remaining L63 work stays explicit:
 
-- [ ] Extend method creation to compiler-proven local arguments and typed-initializer result contexts.
+- [x] Extend method creation to compiler-proven local arguments and typed-initializer result contexts; see the continuation below.
 - [ ] Investigate receiver/cross-owner creation, generic/conditional signatures and named/computed
   arguments; preserve current refusals until scope, types and proposed-graph bindings are proven.
 - [ ] Add missing type/property declarations with equivalent ownership and compiler proof.
 - [ ] Broader statement extraction/inline and global safe delete remain separate refactorings.
 
 No Java AST field/API, clone burden or embedding entry point was added by this batch.
+
+
+### L63 local arguments and typed initializer repairs (2026-10-04)
+
+- [x] Extend missing private-method creation to prior block locals with compiler-established types,
+  including `var`/`val` when their initializer has already validated successfully.
+- [x] Use an explicit local initializer's compiler-resolved type as the method's result type.
+  Support the renderer's existing ordinary, parameterized and compound type forms.
+- [x] Copy local type spellings and declaration locations while the compiler worker owns the
+  attempt. Do not retain registers, AST nodes or constants and do not resume failed validation
+  or request its TypeInfo. Fresh declaration analysis still establishes owner/member eligibility.
+- [x] Require the completed proposed graph to bind every local argument to its exact original
+  declaration, in addition to the new-method target and existing binding/dispatch/currentness proof.
+- [x] Add positive/refusal backend tests and a compiling argument-redirection counterexample.
+- [x] Add shared X189–X192 and both editor drivers, including exact edits, initial errors,
+  diagnostic clearing and Undo/Redo/Undo. The shared catalog now contains 197 cases.
+- [x] Record the combined backend and selected native acceptance receipts below.
+
+| Extraction group | Commit | Scope |
+| --- | --- | --- |
+| Local evidence, result context, binding proof and regressions | `f95f5ddf6` | Extends the preceding missing-method backend slice; no new Java compiler/AST/embedding API or mutable field. |
+| Shared native scenarios | `0bae2f596` + `c1d87431d` | X189 typed local, X190 inferred local with static typed initializer, X191 parameterized result, X192 inferred-result refusal; both existing drivers and their catalog boundary checks. |
+
+The first 47-test run exposed eight withheld actions and one proof setup failure: fresh declaration
+analysis intentionally does not resolve body-local type expressions. Reading only those fresh
+expressions was insufficient. Copying resolved register types from the original attempt fixes
+explicit local and initializer contexts. Inferred locals additionally require a successfully
+validated initializer so the compiler's temporary `Object` placeholder is never treated as
+inference evidence. The subsequent **47 tests pass**, zero failures/errors/skips, and both editor
+drivers compile. These are implementation findings in the Kotlin consumer, not a new master
+compiler bug.
+
+This supports prior ordinary block locals, including enclosing blocks, and whole explicitly typed
+local initializers using ordinary `=`. Calls used as statements or whole returns remain supported.
+A signature is only a proposal until the entire graph compiles and binding proof passes.
+Uninitialized/out-of-scope/later locals, inferred result types (`var result = missing(...)`),
+nested expressions, assignments to existing variables, Ref/Var annotations and unsupported type
+spellings remain conservative refusals. Conditional/loop-bound locals and flow-narrowed signatures
+need separate scope/type evidence before broadening the current block-local rule.
+
+Next L63 scope: receiver/cross-owner method creation, generic/conditional signatures and named or
+computed arguments; missing type/property declarations; broader extraction/inline/global safe delete.
+
+
+Validation continuation: the combined code-action/extraction/local/member/rename-server gate
+passes **198 tests**, zero failures/errors/skips, including 45 missing-method cases and two
+compiler repair proofs. Both editor drivers compile. The first VS Code launch stopped before
+editor tests in `:xdk:lib-webauth:compileXtc`: a repository scan read a temporary `.xtc` while
+another Gradle invocation was building shared outputs, producing `EOFException`. That failed
+build is not native acceptance evidence. Subsequent editor launches run sequentially after the
+backend gate to avoid overlapping writes to composite-build outputs.
+
+The next VS Code launch caught the harness's explicit catalog boundary still ending at X188,
+before opening an editor. Both drivers' catalog checks now include X1–X192. Keep that correction
+with the shared-scenario commit when extracting this batch.
+
+
+Final acceptance for this continuation:
+
+- **198 backend tests pass**, zero failures/errors/skips. This includes all 47 focused cases
+  (45 missing-method tests and two repair proofs) plus the preceding extraction/local/member/
+  rename-server/code-action regressions. In particular, an otherwise compiling repair that switches
+  a local argument to a different declaration is rejected.
+- VS Code **`run-mRmX6Y`** passes **X181/X185/X189–X192**, zero extension errors. The six cases
+  complete in eight seconds; compiler-established local signatures, explicit initializer results,
+  exact source and diagnostic Undo/Redo/Undo all pass.
+- IntelliJ **`run-1236802406694405307`** passes **START and the same six cases**, zero IDE
+  failures. JUnit reports one native test with zero failures/errors/skips; Ultimate is disabled.
+  The X181 → X185 sequence also retains the UP07 equal-report regression.
+- Both use the **197-scenario** catalog SHA-256
+  `8b50080872522162ca75585fcbf4552858371eb1d9f1a4a7f481d0907c9e7f5c`.
+  These are selected native runs, not full-catalog acceptance. No new packaged-stdio or IntelliJ
+  production-unit suite run is claimed; neither plugin's production code changed in this slice.
+- Root/LSP/IntelliJ read-only Spotless and `git diff --check` pass. Accepted editor logs contain
+  no `NullPointerException`, `ClassCastException`, `NoSuchMethodError` or `EMB-5` matches.
+
+Extract `f95f5ddf6` after the preceding missing-method backend group. Keep `0bae2f596` and
+`c1d87431d` together for complete scenario registration and catalog validation; native IntelliJ
+acceptance retains the preceding UP07 client dependency. Each future extracted PR still needs
+independent validation. No new AST compatibility or embedding entry point is needed.

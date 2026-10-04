@@ -1,7 +1,13 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **193 scenarios**: X1–X188, CFG1–CFG3 and 7a.8/7a.9.
-The latest selected gate passes **X122/X181/X185–X188** in VS Code `run-dzR5d9` and IntelliJ
+The current catalog has **197 scenarios**: X1–X192, CFG1–CFG3 and 7a.8/7a.9.
+The latest selected gate passes **X181/X185/X189–X192** in VS Code `run-mRmX6Y` and IntelliJ
+`run-1236802406694405307` (plus START), with zero editor failures. It verifies compiler-established
+local arguments, typed initializer results, exact generated source and diagnostic Undo/Redo.
+All 198 selected backend tests pass without failures/errors/skips. Ultimate is disabled in the
+IntelliJ run. These are selected receipts, not a full 197-case rerun.
+
+The preceding selected gate passes **X122/X181/X185–X188** in VS Code `run-dzR5d9` and IntelliJ
 `run-16733856986922464734` (START also passes), with zero editor failures. It verifies private
 missing-method creation, exact signatures, error/clear and Undo/Redo diagnostics, plus refusals.
 All 180 selected backend and 89 IntelliJ unit tests pass without failures/errors/skips. The
@@ -1341,7 +1347,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X188 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X192 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -3227,10 +3233,36 @@ private and contain `TODO()`; inspect and implement the body before running the 
 For X185–X187, compare the exact shared expected source, check cleared diagnostics, then
 Undo/Redo/Undo. Undo must restore both the source and the error; Redo must clear the error again.
 Both drivers use the same fixtures. These are new scenarios, not evidence from X122 or extraction.
-Qualified receiver calls, local/inferred/computed arguments, named arguments, generic methods,
-conditional returns, typed initializer and nested expression result contexts remain refusals.
+Qualified receiver calls, computed/named arguments, generic methods, conditional returns and
+nested expression result contexts remain refusals. X189–X192 below add compiler-established local
+arguments and explicitly typed initializer results.
 No diagnostic text or numeric error code is used to invent a signature.
 
 Run **X181 followed by X185** together when validating IntelliJ: an unchanged error after a
 source-graph refresh must still offer a working quick fix. Standalone X185 passing did not catch
 the UP07 stale-annotation issue. Final acceptance passes all six selected cases in both editors.
+
+
+### Local arguments and typed initializer quick fixes (L63, X189–X192)
+
+Use the exact fixtures in the shared catalog. Place a caret on `missing`, invoke Quick Fix
+(IntelliJ Option/Alt+Enter; VS Code Quick Fix), and select **Create private method 'missing'**.
+
+| Case | Action | Required result |
+| --- | --- | --- |
+| X189 | Create a method called with the preceding `Int other` local. | `private Int64 missing(Int64 arg1)`; the argument continues to refer to that local. |
+| X190 | Create a static method called with an inferred `var other` and a string, assigned to `String result`. | `private static String missing(Int64 arg1, String arg2)`; the result follows the initializer declaration, not a guessed type. |
+| X191 | Create a method assigned to `List<Int> result`. | `private List<Int64> missing(List<Int64> arg1)` using resolved compiler spelling. |
+| X192 | Inspect `var result = missing(value)`. | No creation action: there is no established result type. The source/error remain unchanged. |
+
+For X189–X191, compare the complete expected source, require diagnostics to clear, Undo to restore
+the error/source, Redo to clear them and Undo once more. X192 checks refusal through the installed
+connection in both editors. The selected continuation also runs X181 → X185, retaining the UP07
+quick-fix-refresh regression. These cases use the existing shared action drivers; they add no
+editor-specific production bridge.
+
+
+Acceptance: all six selected cases pass in VS Code `run-mRmX6Y` and IntelliJ
+`run-1236802406694405307` (plus START), zero editor errors. The catalog hash is
+`8b50080872522162ca75585fcbf4552858371eb1d9f1a4a7f481d0907c9e7f5c`.
+The backend also passes 198 selected tests; no full-catalog or new packaged-protocol run is claimed.
