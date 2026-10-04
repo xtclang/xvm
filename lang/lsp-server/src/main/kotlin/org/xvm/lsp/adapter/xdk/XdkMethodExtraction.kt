@@ -10,6 +10,7 @@ import org.xvm.compiler.ast.AnnotatedTypeExpression
 import org.xvm.compiler.ast.AssignmentStatement
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.Expression
+import org.xvm.compiler.ast.ExpressionStatement
 import org.xvm.compiler.ast.InvocationExpression
 import org.xvm.compiler.ast.LambdaExpression
 import org.xvm.compiler.ast.MethodDeclarationStatement
@@ -42,6 +43,7 @@ internal object XdkMethodExtraction {
         val relocation: XdkRename.Relocation,
         val methodOffset: Int,
         val captures: List<Capture>,
+        val statements: Boolean = false,
     ) {
         val edits: List<XdkRename.Edit> get() = listOf(replacement, insertion)
     }
@@ -86,8 +88,33 @@ internal object XdkMethodExtraction {
         val all = parents.keys
         val expression =
             all.filterIsInstance<Expression>().singleOrNull { offset(it.startPosition) == start && offset(it.endPosition) == end }
-                ?: return null
-        val ancestors = generateSequence(parents[expression]) { parents[it] }.toList()
+
+        fun statementEnd(node: AstNode): Int? {
+            val end = offset(node.endPosition) ?: return null
+            return Regex("[ \t]*;")
+                .find(text, end)
+                ?.takeIf { it.range.first == end }
+                ?.range
+                ?.last
+                ?.plus(1)
+        }
+        val statements =
+            if (expression != null) {
+                emptyList()
+            } else {
+                all
+                    .filterIsInstance<StatementBlock>()
+                    .map { block ->
+                        block.childNodes().filter { node ->
+                            (offset(node.startPosition) ?: -1) >= start && (offset(node.startPosition) ?: Int.MAX_VALUE) < end
+                        }
+                    }.singleOrNull { selected ->
+                        selected.isNotEmpty() && selected.all { it is ExpressionStatement } &&
+                            offset(selected.first().startPosition) == start && statementEnd(selected.last()) == end
+                    } ?: return null
+            }
+        val roots = expression?.let(::listOf) ?: statements
+        val ancestors = generateSequence(parents[roots.first()]) { parents[it] }.toList()
         val method = ancestors.filterIsInstance<MethodDeclarationStatement>().firstOrNull() ?: return null
         if (ancestors.takeWhile { it !== method }.any { it is LambdaExpression || it is TypeCompositionStatement }) return null
         // A local function has a different closure and cannot acquire a same-owner private method.
@@ -105,23 +132,33 @@ internal object XdkMethodExtraction {
         ) {
             return null
         }
+
+        fun at(offset: Int) = XdkRename.position(text, offset).let { SemanticModel.Position(it.line, it.column) }
+        val range = SemanticModel.Range(at(start), at(end))
+        val selectedLocation = SemanticModel.SourceLocation(source, range)
         val resultType =
-            when (val statement = parents[expression]) {
-                is ReturnStatement -> {
-                    if (parents[statement] !is StatementBlock || statement.expressions?.singleOrNull() !== expression) return null
-                    XdkLocalExtraction.writtenReturnType(text, method) ?: return null
-                }
+            if (expression == null) {
+                "void"
+            } else {
+                when (val statement = parents[expression]) {
+                    is ReturnStatement -> {
+                        if (statement.expressions?.singleOrNull() === expression) {
+                            XdkLocalExtraction.writtenReturnType(text, method)
+                        } else {
+                            null
+                        }
+                    }
 
-                is AssignmentStatement -> {
-                    if (parents[statement] !is StatementBlock || statement.rValue !== expression) return null
-                    XdkLocalDeclarations.initializer(text, statement)?.type ?: return null
-                }
+                    is AssignmentStatement -> {
+                        if (statement.rValue === expression) XdkLocalDeclarations.initializer(text, statement)?.type else null
+                    }
 
-                else -> {
-                    return null
-                }
+                    else -> {
+                        null
+                    }
+                } ?: facts.sourceTypes[selectedLocation] ?: return null
             }
-        val selectedNodes = nodes(expression).toList()
+        val selectedNodes = roots.flatMap { nodes(it).toList() }
         if (selectedNodes.any {
                 it is LambdaExpression || it is TypeCompositionStatement || (it is InvocationExpression && it.isAsync)
             }
@@ -137,9 +174,7 @@ internal object XdkMethodExtraction {
                 Lexer(Source(text.substring(start, end)), errors).asSequence().toList()
             }
         if (selectedTokens.any { it.id == Token.Id.BIT_AND || it.valueText == "super" }) return null
-        val range = SemanticModel.Range(position(expression.startPosition), position(expression.endPosition))
-        val at = SemanticModel.SourceLocation(source, range)
-        if (at !in facts.types) return null
+        if (expression != null && selectedLocation !in facts.types) return null
         val occurrences = model.occurrences.filter { it.range.start >= range.start && it.range.end <= range.end }
         val inputs =
             occurrences
@@ -195,17 +230,23 @@ internal object XdkMethodExtraction {
         val insertionAt = offset(method.endPosition) ?: return null
         val tail = text.substring(insertionAt).takeWhile { it != '\r' && it != '\n' }
         if (tail.isNotBlank()) return null
-        val newline = Regex("\\r\\n|\\r|\\n").find(text)?.value ?: "\n"
+        val newline = Regex("\r\n|\r|\n").find(text)?.value ?: "\n"
         val modifiers = if (SemanticModel.Modifier.STATIC in owner.modifiers) "private static" else "private"
         val header = "$newline$newline$indent$modifiers $resultType "
         val parameterPrefix = "$header$name("
         val parameters = captured.map { "${it.type} ${it.name}" }
-        val prefix = "$parameterPrefix${parameters.joinToString(", ")}) {$newline$indent    return "
-        val insertion = XdkRename.Edit(insertionAt, insertionAt, "$prefix${text.substring(start, end)};$newline$indent}")
-        val replacement = XdkRename.Edit(start, end, "$name(${captured.joinToString(", ") { it.name }})")
+        val prefix = "$parameterPrefix${parameters.joinToString(", ")}) {$newline$indent    ${if (expression == null) "" else "return "}"
+        val suffix = "${if (expression == null) "" else ";"}$newline$indent}"
+        val insertion = XdkRename.Edit(insertionAt, insertionAt, "$prefix${text.substring(start, end)}$suffix")
+        val replacement =
+            XdkRename.Edit(
+                start,
+                end,
+                "$name(${captured.joinToString(", ") { it.name }})${if (expression == null) ";" else ""}",
+            )
         return Candidate(
             name,
-            at,
+            selectedLocation,
             insertion,
             replacement,
             XdkRename.Relocation(start, end, insertion, prefix.length),
@@ -216,6 +257,7 @@ internal object XdkMethodExtraction {
                     argumentOffset = name.length + 1 + captured.take(index).sumOf { it.name.length + 2 },
                 )
             },
+            expression == null,
         )
     }
 }

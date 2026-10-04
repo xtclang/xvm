@@ -416,7 +416,7 @@ internal object XdkRename {
         }
         val expressionStart = insertionStart + candidate.relocation.contentOffset
         val expressionEnd = expressionStart + candidate.relocation.end - candidate.relocation.start
-        if (!sameType(candidate.expression, location(expressionStart, expressionEnd))) return false
+        if (!candidate.statements && !sameType(candidate.expression, location(expressionStart, expressionEnd))) return false
         val expected = edges(before, plan.original, sourceParameters = true, translate = plan::map) ?: return false
         val actual = edges(after, plan.proposed, sourceParameters = true) { _, at -> at } ?: return false
         val captures =
@@ -453,6 +453,11 @@ internal object XdkRename {
             return false
         }
         val model = after.models.singleOrNull { it.sourceName == source } ?: return false
+        if (candidate.statements) {
+            val at = position(proposed, helperStart)
+            val symbol = model.symbolAt(at.line, at.column) ?: return false
+            if (symbol.signature?.returns?.isNotEmpty() != false) return false
+        }
         val call = model.calls.singleOrNull { it.callee == location(callStart, callStart + candidate.name.length).range } ?: return false
         if (call.arguments.size != candidate.captures.size ||
             call.arguments.withIndex().any { (index, argument) ->
