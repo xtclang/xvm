@@ -436,9 +436,10 @@ public abstract class OpTest
     }
 
     private void buildTypeCheck(BuildContext bctx, CodeBuilder code) {
-        TypeConstant typeTarget = bctx.getArgumentType(m_nValue1);
         if (m_nValue2 <= CONSTANT_OFFSET) {
-            TypeConstant typeTest = bctx.getArgumentType(m_nValue2);
+            RegisterInfo regTarget  = bctx.ensureRegister(code, m_nValue1);
+            TypeConstant typeTarget = regTarget.type();
+            TypeConstant typeTest   = bctx.getArgumentType(m_nValue2);
             assert typeTest.isTypeOfType();
             typeTest = typeTest.getParamType(0);
 
@@ -451,7 +452,7 @@ public abstract class OpTest
                 }
                 return;
             } else {
-                bctx.loadArgument(code, m_nValue1);
+                regTarget.load(code);
                 if (typeTarget.isJitInterface()) {
                     code.checkcast(CD_nObject);
                 }
