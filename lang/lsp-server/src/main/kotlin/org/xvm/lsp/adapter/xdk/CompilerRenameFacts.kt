@@ -38,6 +38,12 @@ internal sealed interface ProofIdentity {
         val index: Int,
     ) : ProofIdentity
 
+    /** Hidden generic binders do not share the visible value-parameter slot namespace. */
+    data class MethodFormal(
+        val method: ProofIdentity,
+        val index: Int,
+    ) : ProofIdentity
+
     /** The single compiler-generated shorthand constructor, with no invented declaration span. */
     data class PrimaryConstructor(
         val owner: ProofIdentity,
@@ -234,7 +240,7 @@ internal fun captureRenameFacts(
             val packageParent = (constant as? PackageConstant)?.let { identity(it.parentConstant) }
             when {
                 constant is TypeParameterConstant -> {
-                    ProofIdentity.Parameter(identity(constant.method), constant.register)
+                    ProofIdentity.MethodFormal(identity(constant.method), constant.register)
                 }
 
                 // Bundled source navigation must use the same artifact identity as binary-only
