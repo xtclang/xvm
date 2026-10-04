@@ -70,16 +70,27 @@ export function localRefactoringCases(ids: readonly ('X148' | 'X156' | 'X157' | 
             const kind = 'initiallyValid' in data ? vscode.CodeActionKind.QuickFix.value : vscode.CodeActionKind.Refactor.value;
             const start = 'selectionOffset' in data ? document.positionAt(data.selectionOffset) : position(document, data.selected);
             const range = new vscode.Range(start, document.positionAt(document.offsetAt(start) + data.selected.length));
+            const readActions = async () => {
+                try {
+                    return await vscode.commands.executeCommand<vscode.CodeAction[]>(
+                        'vscode.executeCodeActionProvider', document.uri, range, kind, 100) ?? [];
+                } catch (error) {
+                    // Host refresh can cancel a read-only lookup. Never retry edits or history.
+                    if (error instanceof Error && error.name === 'Canceled') {
+                        console.log(`[playbook] ${id}: provider lookup cancelled before any edit; retrying lookup`);
+                        return undefined;
+                    }
+                    throw error;
+                }
+            };
             if ('refused' in data && data.refused) {
-                const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
-                    'vscode.executeCodeActionProvider', document.uri, range, kind, 100);
+                const actions = await eventually(readActions, items => items !== undefined, 'Completed code-action refusal query');
                 assert.ok(!actions?.some(item => item.title === data.title));
                 assert.strictEqual(document.getText(), data.source);
                 return;
             }
             const action = await eventually(async () => {
-                const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
-                    'vscode.executeCodeActionProvider', document.uri, range, kind, 100);
+                const actions = await readActions();
                 return actions?.find(item => item.title === data.title);
             }, item => !!item?.edit, data.title);
             assert.ok(action?.edit);
