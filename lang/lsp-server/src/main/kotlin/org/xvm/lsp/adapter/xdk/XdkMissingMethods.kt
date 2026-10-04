@@ -32,6 +32,8 @@ internal object XdkMissingMethods {
         val parameters: List<ProofIdentity>,
         val returns: List<ProofIdentity>,
         val isPublic: Boolean = true,
+        val formals: List<ProofIdentity> = emptyList(),
+        val conditional: Boolean = false,
     )
 
     /** Detached body evidence copied before the fresh declaration attempt checks eligibility. */
@@ -120,7 +122,7 @@ internal object XdkMissingMethods {
                 return false
             }
 
-            if (publicOwner != null) {
+            if (signature != null || publicOwner != null) {
                 val expected = signature ?: return false
                 // A dependency use has a different snapshot-local symbol id. Read the signature
                 // from the exact source declaration selected by the completed caller instead.
@@ -128,12 +130,42 @@ internal object XdkMissingMethods {
                 val declared = target.symbolAt(declaration.start.line, declaration.start.column) ?: return false
                 if (declared.declaration != declaration || declared.name != name) return false
                 val actual = after.methodSignatures[declared.id] ?: return false
-                if (!actual.isPublic) return false
+                if (actual.isPublic != expected.isPublic || actual.conditional != expected.conditional ||
+                    actual.formals.size != expected.formals.size
+                ) {
+                    return false
+                }
+                // New method formals are alpha-renamed binders. Compare their constraints and
+                // all uses by ordinal, never by source spelling or assignability.
+                val binders = expected.formals.zip(actual.formals).toMap()
+
+                fun sameType(
+                    old: ProofIdentity,
+                    new: ProofIdentity,
+                ): Boolean =
+                    when {
+                        old in binders -> {
+                            binders[old] == new
+                        }
+
+                        old is ProofIdentity.TypeShape && new is ProofIdentity.TypeShape -> {
+                            old.format == new.format && old.components.size == new.components.size &&
+                                old.components.zip(new.components).all { (first, second) -> sameType(first, second) }
+                        }
+
+                        old is ProofIdentity.Alternatives && new is ProofIdentity.Alternatives -> {
+                            old.targets.size == new.targets.size && old.targets.all { first -> new.targets.any { sameType(first, it) } }
+                        }
+
+                        else -> {
+                            XdkRename.sameType(old, new, plan)
+                        }
+                    }
 
                 fun equivalent(
                     expected: List<ProofIdentity>,
                     actual: List<ProofIdentity>,
-                ) = expected.size == actual.size && expected.zip(actual).all { (old, new) -> XdkRename.sameType(old, new, plan) }
+                ) = expected.size == actual.size && expected.zip(actual).all { (old, new) -> sameType(old, new) }
                 if (!equivalent(expected.parameters, actual.parameters) || !equivalent(expected.returns, actual.returns)) return false
             }
 
