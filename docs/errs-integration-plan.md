@@ -438,10 +438,9 @@ VS Code receipts above.
   local removal (X177–X180; acceptance below). Complete return/typed-initializer expressions can now
   also move to a private helper in the same type using explicit stable inputs (X181–X184; current
   batch acceptance below). Same-owner missing-method creation is implemented from fresh resolved
-  declarations, compiler-established locals/typed initializers and proven same-owner receivers
-  (X185–X196; selected acceptance receipts below). Wider expression/statement extraction,
-  other missing declarations, broader
-  inline and global safe delete remain unimplemented. Record supported XTC forms per action;
+  declarations, compiler-established locals/typed initializers, proven same-owner instance receivers
+  and named enclosing-class static qualifiers (X185–X200; selected acceptance receipts below).
+  Wider expression/statement extraction, other missing declarations, broader inline and global safe delete remain unimplemented. Record supported XTC forms per action;
   doc-comment generation and reference/test lenses are separate subfeatures. Semantic transformations require
   compiler evidence and versioned multi-file edit validation.
 - [x] **L64 — Completion/signature breadth and presentation, bounded closure.** Supported recursive
@@ -9643,9 +9642,10 @@ This slice uses existing embedding/declaration/AST accessors entirely from Kotli
 field, clone obligation or new embedding entry point is needed. Untyped numeric literals are
 refused rather than exposing `IntLiteral`/`FPLiteral` compiler implementation types. Other literals
 use `LiteralExpression.getImplicitType` within the fresh attempt's constant-pool scope. Unsupported
-type spellings, type-qualified/cross-owner creation, computed/named arguments, generic methods,
-conditional returns, nested-expression expected types and missing type/property declarations
-remain open. The continuation below adds compiler-established locals and typed initializer results. L63 also retains broader inline/extraction and global safe delete;
+type spellings, cross-owner creation, computed/named arguments, generic methods, conditional
+returns, nested-expression expected types and missing type/property declarations remain open.
+The continuations below add compiler-established locals, typed initializer results and bounded
+instance/class qualifiers. L63 also retains broader inline/extraction and global safe delete;
 cross-module ownership remains L62.
 
 | Extraction group | Commits | Scope |
@@ -9716,7 +9716,8 @@ Remaining L63 work stays explicit:
 
 - [x] Extend method creation to compiler-proven local arguments and typed-initializer result contexts; see the continuation below.
 - [x] Add qualified same-owner instance calls with compiler-proven receiver identity; see the receiver continuation below.
-- [ ] Investigate type-qualified/cross-owner creation, generic/conditional signatures and named/computed
+- [x] Add named enclosing-class static qualifiers; see the class-qualified continuation below.
+- [ ] Investigate cross-owner creation, generic/conditional signatures and named/computed
   arguments; preserve current refusals until scope, types and proposed-graph bindings are proven.
 - [ ] Add missing type/property declarations with equivalent ownership and compiler proof.
 - [ ] Broader statement extraction/inline and global safe delete remain separate refactorings.
@@ -9762,7 +9763,7 @@ nested expressions, assignments to existing variables, Ref/Var annotations and u
 spellings remain conservative refusals. Conditional/loop-bound locals and flow-narrowed signatures
 need separate scope/type evidence before broadening the current block-local rule.
 
-Next L63 scope after the same-owner receiver continuation below: type-qualified/cross-owner
+Next L63 scope after the receiver/class-qualifier continuations below: cross-owner
 method creation, generic/conditional signatures and named or
 computed arguments; missing type/property declarations; broader extraction/inline/global safe delete.
 
@@ -9832,11 +9833,11 @@ The first focused gate passes 67 tests with zero failures/errors/skips. The fina
 also includes the subsequently added receiver-only selection refusal. No Java AST field/API,
 clone obligation, new embedding entry point, or plugin production bridge is needed.
 
-Other-owner, computed/chained, type-qualified and `super` receivers remain refusals. Explicit
-public/protected/struct `this` views are not evidence for creating a private method. Signatures
+At this checkpoint, other-owner, computed/chained, type-qualified and `super` receivers remained
+refusals. Explicit public/protected/struct `this` views are not evidence for creating a private method. Signatures
 remain bounded by the preceding argument/result renderer and owner checks; this is not cross-owner
-or general missing-declaration support. Type-qualified same-owner static calls are the next small
-receiver extension before cross-owner editing and visibility policy. Generic/conditional signatures,
+or general missing-declaration support. The continuation below adds type-qualified same-owner
+static calls before cross-owner editing and visibility policy. Generic/conditional signatures,
 named/computed arguments, missing types/properties and broader refactorings remain separate L63 work.
 
 
@@ -9866,3 +9867,69 @@ For extraction, place `8288f7399` after the preceding local/initializer backend 
 `2fe49703d` with the shared editor coverage. Native acceptance retains the existing UP07 client
 correction. These commits add no new Java AST/embedding API, dependency or plugin production change;
 each future extracted PR must still pass independently.
+
+
+### L63 class-qualified static repairs (2026-10-04)
+
+- [x] Accept named class qualifiers, including fully qualified names, only when the validated
+  compiler target is the exact enclosing ordinary class identity. Names alone prove nothing.
+- [x] Copy dispatch as an immutable enum alongside each qualifying callee span. Generate static
+  methods for class qualifiers and instance methods for instance receivers, independently of
+  whether the enclosing caller is static. No compiler objects escape the worker.
+- [x] Require the completed proposed graph to resolve the selected call to the inserted declaration
+  with the requested dispatch. Preserve all known receiver/argument bindings and existing calls.
+- [x] Add regressions for both caller kinds, qualified names, typed initializer/local arguments,
+  multiple compatible sites, class-name shadowing, unrelated owners, existing overloads, runtime
+  Class/Type values, explicit generic qualifiers and singleton qualifiers. A repair redirected to
+  an existing method on another owner must be rejected even when it compiles.
+- [x] Add X197–X200 to shared data, both drivers and their catalog boundary checks. The catalog
+  contains 205 cases: X1–X200, CFG1–CFG3 and 7a.8/7a.9.
+- [x] Record combined backend and selected native acceptance below.
+
+This uses the existing `NameExpression.getResolvedTarget()`, class identity and semantic modifier
+APIs. No Java AST field/accessor, clone burden, embedding entry point, dependency or plugin
+production change is needed. Failed body validation is never resumed and its TypeInfo is not
+queried; declaration/member eligibility still comes from a fresh successful declaration pass.
+
+The initial focused gate exposed a malformed shadowing fixture: `Box Box` makes the parameter
+shadow its own type annotation and produces COMPILER-136 before the missing call. Qualifying the
+parameter type (`Missing.Box Box`, or `Extract.Box Box` in X200) tests the intended valid instance
+receiver; the corrected test passes. No production guard was weakened for that fixture.
+
+Remaining L63 scope: cross-owner creation with explicit destination/visibility policy,
+computed/chained receivers, runtime Class/Type values, explicit generic and singleton qualifier
+rules, generic/conditional signatures and named/computed arguments, missing types/properties,
+broader extraction/inline and global safe delete. Current unsupported forms remain refusals.
+
+
+The combined backend gate passes **232 tests**, zero failures/errors/skips: 77 missing-method
+cases, four repair proofs and the preceding 151 extraction/local/member/rename-server/code-action
+regressions. Both editor drivers compile. Backend and editor Gradle runs are sequential so shared
+XDK build outputs are not written concurrently.
+
+| Extraction group | Commit | Scope |
+| --- | --- | --- |
+| Class evidence, dispatch proof and backend regressions | `c36eb87c6` | Extends `8288f7399` after the local/initializer missing-method slice; existing compiler APIs only. |
+| Shared editor coverage | `165c21d79` | X197–X200, both existing action drivers and complete X1–X200 catalog checks. |
+
+Final acceptance:
+
+- **232 backend tests pass**, zero failures/errors/skips, including all 81 focused missing-method
+  tests/proofs. Both editor drivers compile.
+- VS Code **`run-3Vm6C9`** passes **X181/X185/X193/X197–X200**, zero extension errors. The seven
+  cases finish in ten seconds, checking exact edits, diagnostic Undo/Redo/Undo and refusals.
+- IntelliJ **`run-11432411846060652594`** passes **START and the same seven cases**, zero IDE
+  failures. JUnit reports one native test with zero failures/errors/skips; Ultimate is disabled.
+  The X181 → X185 sequence retains the UP07 unchanged-report quick-fix regression.
+- Both use the **205-scenario** catalog SHA-256
+  `95df5eed7bfb7d761f9aed380600f5574de9bd31660384c502609d53d8805915`.
+  These are selected runs, not full-catalog acceptance. Existing host-check XML outside the fresh
+  backend gate is historical; no new packaged-stdio or IntelliJ production-unit run is claimed.
+- Accepted IntelliJ/VS Code server logs contain no `NullPointerException`, `ClassCastException`,
+  `NoSuchMethodError` or `EMB-5` matches. Root/LSP/IntelliJ read-only Spotless and `git diff --check`
+  pass. No upstream workaround was added.
+
+Extract the backend commit after `8288f7399`; keep the shared coverage with the corresponding
+playbook group and existing UP07 client dependency. Each extracted PR still requires independent
+validation. Next: bounded cross-owner missing-method creation with proven writable destinations
+and an explicit visibility policy, before broadening computed/generic contexts.
