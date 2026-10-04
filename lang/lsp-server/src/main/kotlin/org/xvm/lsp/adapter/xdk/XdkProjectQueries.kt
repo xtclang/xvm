@@ -857,7 +857,7 @@ internal class XdkProjectQueries(
                         val after = compile(plan.proposed) ?: return@let null
                         if (!XdkRename.preservesLocalRemoval(before, after, plan, candidate.removed)) return@let null
                         CodeAction(
-                            "Inline returned local variable",
+                            candidate.title,
                             CodeAction.CodeActionKind.REFACTOR_INLINE,
                             edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
                         )

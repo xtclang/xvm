@@ -94,6 +94,65 @@ class XdkLocalInitializerActionsTest {
         } }
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = ["Int|input + probe()", "Int8|input + 1", "function Int()|() -> input", "Int[]|[input, probe()]"])
+    fun `inline into adjacent typed initializer keeps expected type and exactly one evaluation`(example: String) {
+        val (type, expression) = example.split('|')
+        val parameter = if (type == "Int8") "Int8" else "Int"
+        query("""
+            module Extract {
+                Int probe() = 1;
+                $type read($parameter input) {
+                    $type value = $expression;
+                    $type result = §value§;
+                    return result;
+                }
+            }
+        """.trimIndent()) { adapter, uri, text, actions ->
+            val action = actions.single { it.kind == CodeAction.CodeActionKind.REFACTOR_INLINE }
+            assertThat(action.title).isEqualTo("Inline local variable into initializer")
+            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            assertThat(changed).isEqualTo(text.replace("$type value = $expression;\n        $type result = value;", "$type result = $expression;"))
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = [
+        "val result = §value§;", "Int result = §value§ + value;",
+        "Int result = probe() + §value§;", "probe();\n        Int result = §value§;",
+        "// keep explanation\n        Int result = §value§;",
+        "Int8 result = §value§.toInt8();", "function Int() result = () -> §value§;",
+    ])
+    fun `inline refuses changed contexts multiple uses delayed evaluation intervening statements and comments`(use: String) {
+        query("""
+            module Extract {
+                Int probe() = 1;
+                void read() {
+                    Int value = probe();
+                    $use
+                }
+            }
+        """.trimIndent()) { _, _, _, actions ->
+            assertThat(actions.filter { it.kind == CodeAction.CodeActionKind.REFACTOR_INLINE }).isEmpty()
+        }
+    }
+
+    @Test
+    fun `different written destination type refuses inline even when conversion would compile`() {
+        query("""
+            module Extract {
+                Int read() {
+                    Int8 value = 1;
+                    Int result = §value§;
+                    return result;
+                }
+            }
+        """.trimIndent()) { _, _, _, actions ->
+            assertThat(actions.filter { it.kind == CodeAction.CodeActionKind.REFACTOR_INLINE }).isEmpty()
+        }
+    }
+
     private fun query(marked: String, check: (XdkAdapter, String, String, List<CodeAction>) -> Unit) {
         CompilerTestSupport.configure()
         val start = marked.indexOf('§')
