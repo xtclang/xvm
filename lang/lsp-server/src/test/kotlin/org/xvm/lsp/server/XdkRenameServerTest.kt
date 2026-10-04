@@ -37,6 +37,7 @@ import org.xvm.api.EmbeddingSupport
 import org.xvm.lsp.adapter.CompilerTestSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import java.net.URI
 import java.nio.file.Path
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit.SECONDS
@@ -429,6 +430,56 @@ class XdkRenameServerTest {
                         ),
                     ).get(30, SECONDS),
             ).isNull()
+        } finally {
+            server.shutdown().get(20, SECONDS)
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `missing method quick fix targets the companion with its own document version`(open: Boolean) {
+        directory = directory.toRealPath()
+        val text =
+            """
+            module Missing {
+                Int read(Other peer, Int value) {
+                    return peer.missing(value);
+                }
+            }
+            """.trimIndent()
+        val source = directory.resolve("Missing.x").toFile().apply { writeText(text) }
+        val target =
+            directory.resolve("Missing/Other.x").toFile().apply {
+                parentFile.mkdirs()
+                writeText("class Other {}")
+            }
+        val uri = source.toURI().toString()
+        val targetUri = target.toURI().toString()
+        val server = XtcLanguageServer(XdkAdapter())
+        server.connect(mock(LanguageClient::class.java))
+        try {
+            server.initialize(parameters()).get(20, SECONDS)
+            server.replaceCompilerSourceModules(listOf(XdkSourceModule("Missing", uri)))
+            val documents = server.textDocumentService
+            documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 7, text)))
+            if (open) documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(targetUri, "xtc", 13, target.readText())))
+            val at = Position(2, 20)
+            val actions =
+                documents
+                    .codeAction(CodeActionParams(TextDocumentIdentifier(uri), Range(at, at), CodeActionContext(emptyList())))
+                    .get(30, SECONDS)
+            val edit = actions.single { it.isRight && it.right.title == "Create public method 'missing' in 'Other'" }.right.edit
+            assertThat(edit.changes).isNull()
+            val change = edit.documentChanges.single().left
+            assertThat(URI(change.textDocument.uri)).isEqualTo(URI(targetUri))
+            assertThat<Int?>(change.textDocument.version).isEqualTo(if (open) 13 else null)
+            assertThat(
+                change.edits
+                    .single()
+                    .left.newText,
+            ).contains("public Int64 missing(Int64 arg1)")
+            assertThat(source.readText()).isEqualTo(text)
+            assertThat(target.readText()).isEqualTo("class Other {}")
         } finally {
             server.shutdown().get(20, SECONDS)
         }

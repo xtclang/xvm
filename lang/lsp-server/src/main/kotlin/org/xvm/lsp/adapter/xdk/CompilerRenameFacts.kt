@@ -136,6 +136,7 @@ internal class CompilerRenameFacts(
     val removableLocals: Set<SemanticModel.SourceLocation> = emptySet(),
     val extraction: ExtractMethodFacts = ExtractMethodFacts(),
     val missingMethods: List<XdkMissingMethods.Candidate> = emptyList(),
+    val methodSignatures: Map<SemanticModel.SymbolId, XdkMissingMethods.Signature> = emptyMap(),
 ) {
     /** Unchanged independent modules cannot acquire new bindings from a source edit elsewhere. */
     fun within(scopes: Set<String>): CompilerRenameFacts = merge(modules.filterKeys(scopes::contains))
@@ -167,6 +168,7 @@ internal class CompilerRenameFacts(
                     attempts.flatMapTo(linkedSetOf()) { it.extraction.stableValues },
                 ),
                 attempts.flatMap { it.missingMethods }.distinct(),
+                attempts.flatMap { it.methodSignatures.entries }.associate { it.toPair() },
             )
         }
     }
@@ -188,7 +190,7 @@ internal fun captureRenameFacts(
     callables: Map<SemanticModel.SourceLocation, Pair<TypeConstant, MethodConstant>> = emptyMap(),
     removableLocals: Set<SemanticModel.SourceLocation> = emptySet(),
     extraction: CompilerExtractionFacts? = null,
-    missingMethods: List<XdkMissingMethods.Candidate> = emptyList(),
+    missingMethods: List<CompilerMissingMethod> = emptyList(),
 ): CompilerRenameFacts {
     val declarations =
         models
@@ -198,6 +200,14 @@ internal fun captureRenameFacts(
                 val range = symbol.declaration ?: return@mapNotNull null
                 constants[symbol.id]?.let { it to SemanticModel.SourceLocation(source, range) }
             }.toMap()
+    val sourceMethods =
+        models
+            .flatMap { model ->
+                model.symbols.filter {
+                    it.kind == SemanticModel.SymbolKind.METHOD && it.declaration != null &&
+                        it.declarationSource == model.sourceName
+                }
+            }.mapTo(hashSetOf()) { it.id }
     val identities = mutableMapOf<Constant, ProofIdentity>()
 
     fun identity(constant: Constant): ProofIdentity =
@@ -443,7 +453,25 @@ internal fun captureRenameFacts(
                 }.distinct()
                 .map { TypePath(identity(it), it.moduleConstant.name, path(it)) },
         resourceValues = resourceValues,
-        missingMethods = missingMethods,
+        missingMethods =
+            missingMethods.mapNotNull { method ->
+                if (method.candidate.publicOwner == null) {
+                    method.candidate
+                } else {
+                    val parameters = method.parameters.map { receiverIdentity(it, ::identity) ?: return@mapNotNull null }
+                    val returns = method.returns.map { receiverIdentity(it, ::identity) ?: return@mapNotNull null }
+                    method.candidate.copy(signature = XdkMissingMethods.Signature(parameters, returns))
+                }
+            },
+        methodSignatures =
+            constants
+                .filterKeys(sourceMethods::contains)
+                .mapNotNull { (id, constant) ->
+                    val method = (constant as? MethodConstant)?.component as? MethodStructure ?: return@mapNotNull null
+                    val parameters = method.params.map { receiverIdentity(it.type, ::identity) ?: return@mapNotNull null }
+                    val returns = method.returnTypes.map { receiverIdentity(it, ::identity) ?: return@mapNotNull null }
+                    id to XdkMissingMethods.Signature(parameters, returns, method.access == Access.PUBLIC)
+                }.toMap(),
         removableLocals = removableLocals,
         extraction =
             ExtractMethodFacts(
