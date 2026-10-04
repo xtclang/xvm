@@ -465,6 +465,7 @@ val runOne = tasks.register<XtcRunTask>("runOne") {
 
 // Shared list of test module names for both parallel and sequential runners
 val testModuleNames = listOf(
+    "TestConditionalEffects",
     "TestAnnotations",
     "TestArray",
     "TestCollections",
