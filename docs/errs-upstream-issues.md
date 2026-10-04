@@ -274,3 +274,29 @@ The corrected native run `run-14965910820534049086` passes START/X201/X202/X205/
 zero IDE failures, one server start and no ProcessCanceledException or severe-error log markers.
 Exact cross-module edits and diagnostic Undo/Redo pass with Ultimate disabled. This selected
 acceptance preserves the failed receipt and does not close the broader UP07 delivery-route audit.
+
+
+### UP07 explicit-graph quick-fix transition (2026-10-04)
+
+The destination-import selection `run-4191909342836480788` passes START/X209–X212, then X213
+receives a valid `Create public method 'missing' in 'Other'` reply but never shows the native
+intention list. The server trace records overlapping diagnostic refreshes and cancelled code-action
+requests after replacing the discovered fixture graph with X213's explicit three-module graph.
+Earlier cases' broken caller tabs and inspected dependency tabs were still open; each participated
+in refresh. No IDE internal failure or compiler crash is recorded. This is evidence of the existing
+delivery race, not evidence that the missing-method proof failed.
+
+The harness now extends the workspace cases' existing tab isolation to every independent
+`discovered` case: it closes preceding fixture tabs before configuring/opening the next case.
+Isolation alone passes X213 but still loses X214's popup in `run-4352512895301591077`.
+Explicit-graph cases now install the graph before opening their caller, and verify initial fixture
+text instead of rewriting it. Discovery cases retain server startup before workspace notifications.
+The popup still uses native actions and the modification-stamp guard prohibits replaying edits.
+This does not repair or claim acceptance for normal editing with unrelated broken files open
+through graph replacement. Keep that production transition in UP07's follow-up/native acceptance
+checklist. The final destination-import receipt is recorded in the integration plan.
+
+The corrected setup passes START and X122/X209–X215 in `run-4588144426201480586`, zero IDE
+failures, Ultimate disabled. X214 includes native atomic Undo/Redo of its module-root import and
+companion method. The accepted IDE log contains no ERROR/SEVERE or ProcessCanceledException
+markers. The broader production graph-replacement acceptance obligation above remains open.
