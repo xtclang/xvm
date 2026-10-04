@@ -1,7 +1,13 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **197 scenarios**: X1–X192, CFG1–CFG3 and 7a.8/7a.9.
-The latest selected gate passes **X181/X185/X189–X192** in VS Code `run-mRmX6Y` and IntelliJ
+The current catalog has **201 scenarios**: X1–X196, CFG1–CFG3 and 7a.8/7a.9.
+The latest selected gate passes **X181/X185/X190/X193–X196** in VS Code `run-nvquYD` and IntelliJ
+`run-15968094076069950349` (plus START), with zero editor failures. It verifies qualified same-owner
+instance repairs, static-caller behavior, diagnostic Undo/Redo and other-owner/public-view refusals.
+All 219 selected backend tests pass without failures/errors/skips; IntelliJ Ultimate is disabled.
+These are selected receipts, not a full 201-case rerun.
+
+The preceding selected gate passes **X181/X185/X189–X192** in VS Code `run-mRmX6Y` and IntelliJ
 `run-1236802406694405307` (plus START), with zero editor failures. It verifies compiler-established
 local arguments, typed initializer results, exact generated source and diagnostic Undo/Redo.
 All 198 selected backend tests pass without failures/errors/skips. Ultimate is disabled in the
@@ -1347,7 +1353,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X192 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X196 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -3233,9 +3239,9 @@ private and contain `TODO()`; inspect and implement the body before running the 
 For X185–X187, compare the exact shared expected source, check cleared diagnostics, then
 Undo/Redo/Undo. Undo must restore both the source and the error; Redo must clear the error again.
 Both drivers use the same fixtures. These are new scenarios, not evidence from X122 or extraction.
-Qualified receiver calls, computed/named arguments, generic methods, conditional returns and
+Other-owner/computed/type-qualified receivers, computed/named arguments, generic methods, conditional returns and
 nested expression result contexts remain refusals. X189–X192 below add compiler-established local
-arguments and explicitly typed initializer results.
+arguments and explicitly typed initializer results; X193–X196 add proven same-owner receivers.
 No diagnostic text or numeric error code is used to invent a signature.
 
 Run **X181 followed by X185** together when validating IntelliJ: an unchanged error after a
@@ -3266,3 +3272,27 @@ Acceptance: all six selected cases pass in VS Code `run-mRmX6Y` and IntelliJ
 `run-1236802406694405307` (plus START), zero editor errors. The catalog hash is
 `8b50080872522162ca75585fcbf4552858371eb1d9f1a4a7f481d0907c9e7f5c`.
 The backend also passes 198 selected tests; no full-catalog or new packaged-protocol run is claimed.
+
+
+### Qualified missing-method quick fixes (L63, X193–X196)
+
+Use the exact shared sources in compiler mode. Place the caret on the leaf `missing` token, then
+invoke Quick Fix (IntelliJ Option/Alt+Enter; VS Code Quick Fix).
+
+| Case | Action | Required result |
+| --- | --- | --- |
+| X193 | Apply **Create private method 'missing'** on `this.missing(value)`. | `private Int64 missing(Int64 arg1)` is inserted in the enclosing module; the error clears and the receiver stays `this`. |
+| X194 | Apply the action on `other.missing(value)`, where `var other = peer` in a static `Box` method. | An **instance** `private Int64 missing(Int64 arg1)` is inserted in `Box`; no `static` modifier and no changed receiver or result declaration. |
+| X195 | Inspect a call on an `Other` receiver from `Box`. | No creation action; source and error remain unchanged. No member is inserted in either owner. |
+| X196 | Inspect `this:public.missing(value)`. | No private-method creation action; source and error remain unchanged. |
+
+For X193/X194, compare the complete expected shared text and cleared diagnostics, then Undo to
+restore source/error, Redo to clear them and Undo again. Refusals use the installed connection
+in both editors. The backend additionally rejects a repair that still compiles after changing
+`peer` to `this`, and verifies that selecting only the receiver does not offer member creation.
+
+
+Acceptance: X181/X185/X190/X193–X196 pass in VS Code `run-nvquYD` and IntelliJ
+`run-15968094076069950349` (plus START), zero editor errors. Catalog SHA-256:
+`47aeb686ed81ed76507c03bf87b0cf65c1a9ac42dc64c7e7f340912931cea9b5`.
+All 219 selected backend tests pass. No full-catalog or new packaged-protocol run is claimed.
