@@ -7653,7 +7653,7 @@
     "X239": {
       "title": "extract an imported module type using its real source alias",
       "manual": [
-        "Select input; and inspect Extract expression to private method. Apply it, inspect exact text and diagnostics, then Undo/Redo/Undo."
+        "Select the initializer input in val value = input; and invoke Extract expression to private method. Verify lib.Value in the helper signature, unchanged Library source, diagnostics and Undo/Redo/Undo."
       ],
       "values": {
         "file": "Extract.x",
