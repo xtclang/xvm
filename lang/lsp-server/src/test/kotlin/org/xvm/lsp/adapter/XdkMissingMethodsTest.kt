@@ -160,8 +160,8 @@ class XdkMissingMethodsTest {
     }
 
     @Test
-    fun `module singleton qualifier is not treated as an ordinary class`() {
-        refused(
+    fun `module singleton qualifier retains instance dispatch`() {
+        query(
             """
             module Missing {
                 static Int read(Int value) {
@@ -169,7 +169,7 @@ class XdkMissingMethodsTest {
                 }
             }
             """.trimIndent(),
-        )
+        ) { assertThat(it).contains("private Int64 missing(Int64 arg1)").doesNotContain("private static") }
     }
 
     @Test
@@ -479,7 +479,30 @@ class XdkMissingMethodsTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["1", "1.5", "True", "Null", "value + 1", "value = value", "() -> value", "[value]"])
+    @CsvSource(
+        value = [
+            "True;True arg1", "Null;Null arg1", "value + 1;Int64 arg1", "value = value;Int64 value",
+            "() -> value;Function<Tuple<>, Tuple<Int64>> arg1", "[value];immutable Array<Int64> arg1",
+        ],
+        delimiter = ';',
+    )
+    fun `compiler established argument types replace earlier conservative refusals`(
+        argument: String,
+        parameter: String,
+    ) {
+        query(
+            """
+            module Missing {
+                Int read(Int value) {
+                    return §missing($argument);
+                }
+            }
+            """.trimIndent(),
+        ) { assertThat(it).contains("private Int64 missing($parameter)", "return missing($argument);") }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["1", "1.5"])
     fun `unproven argument types do not invent a signature`(argument: String) {
         refused(
             """
