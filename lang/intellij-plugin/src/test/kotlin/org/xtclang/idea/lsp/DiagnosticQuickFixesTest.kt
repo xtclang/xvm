@@ -8,15 +8,46 @@ import org.eclipse.lsp4j.CodeActionContext
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.lsp4j.Diagnostic
 import org.eclipse.lsp4j.DocumentDiagnosticReport
+import org.eclipse.lsp4j.FullDocumentDiagnosticReport
 import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.eclipse.lsp4j.RelatedFullDocumentDiagnosticReport
 import org.eclipse.lsp4j.TextDocumentIdentifier
+import org.eclipse.lsp4j.UnchangedDocumentDiagnosticReport
+import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.eclipse.lsp4j.jsonrpc.messages.RequestMessage
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 import org.junit.jupiter.api.Test
 
 class DiagnosticQuickFixesTest {
+    @Test
+    fun `presentation preserves decoded full and unchanged companion reports`() {
+        val diagnostic = Diagnostic(Range(Position(2, 8), Position(2, 15)), "Unknown method")
+        val companion = FullDocumentDiagnosticReport(emptyList()).apply { resultId = "companion" }
+        val unchanged = UnchangedDocumentDiagnosticReport("unchanged")
+        val report =
+            RelatedFullDocumentDiagnosticReport(listOf(diagnostic)).apply {
+                resultId = "caller"
+                relatedDocuments =
+                    mapOf(
+                        "file:///Extract/Other.x" to Either.forLeft(companion),
+                        "file:///Extract/Stable.x" to Either.forRight(unchanged),
+                    )
+            }
+        val response =
+            ResponseMessage().apply {
+                id = "pull"
+                result = DocumentDiagnosticReport(report)
+            }
+        val presented = ((DiagnosticQuickFixes.incoming(response) as ResponseMessage).result as DocumentDiagnosticReport).left
+        assertThat(presented.resultId).isEqualTo(report.resultId)
+        assertThat(presented.relatedDocuments).isEqualTo(report.relatedDocuments)
+        assertThat(presented.items.single().data).isNotNull()
+        assertThat(diagnostic.data).isNull()
+        assertThat(companion.items).isEmpty()
+        assertThat(unchanged.resultId).isEqualTo("unchanged")
+    }
+
     @Test
     fun `identical full reports refresh annotations that own replaced lazy fixes`() {
         val diagnostic = Diagnostic(Range(Position(2, 8), Position(2, 15)), "Unknown method")
