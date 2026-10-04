@@ -80,10 +80,16 @@ internal object XdkLocalInline {
                                 val type = XdkLocalExtraction.writtenReturnType(text, owner) ?: return@mapNotNull null
                                 AdjacentUse(first, second, expression, type)
                             }
-                            is AssignmentStatement -> XdkLocalDeclarations.initializer(text, second)?.let {
-                                AdjacentUse(first, second, second.rValue, it.type)
+
+                            is AssignmentStatement -> {
+                                XdkLocalDeclarations.initializer(text, second)?.let {
+                                    AdjacentUse(first, second, second.rValue, it.type)
+                                }
                             }
-                            else -> null
+
+                            else -> {
+                                null
+                            }
                         }
                     }
                 } else {
