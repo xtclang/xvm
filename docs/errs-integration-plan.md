@@ -10397,3 +10397,13 @@ evidence; it is never resumed for TypeInfo. Source const/service owners and writ
 can receive methods with compiler-established instance dispatch. Unknown runtime Class/Type values,
 binary owners and ambiguous relational receivers remain refusals. Tests cover returned/constructed
 receivers, property chains and static const/service singletons. Combined validation is pending.
+
+### L63 argument continuation (2026-10-04)
+
+Named call arguments now supply parameter names, while generated positional names avoid label
+collisions. Duplicate labels refuse creation. Validated argument expressions contribute detached
+exact types and destination import spellings; proposals do not move, duplicate or evaluate them.
+Complete graph compilation and binding/signature checks still gate publication. Tests cover
+arithmetic, calls, property reads, mixed named/positional inputs and duplicate-label refusal.
+The four shared missing-method checkpoints now receive one combined backend gate before further
+refactorings build on them. Native editor acceptance remains batched with the remaining L63 scope.

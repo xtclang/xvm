@@ -221,7 +221,6 @@ class XdkCrossOwnerMissingMethodsTest {
             "var local = unknown; return peer.§missing(local);",
             "return peer.§missing(local); Int local = value;",
             "if (value > 0) { Int local = value; } return peer.§missing(local);",
-            "var local = value; return peer.§missing(local + 1);",
         ],
     )
     fun `unproven local contexts do not acquire public signatures`(body: String) {
@@ -348,6 +347,53 @@ class XdkCrossOwnerMissingMethodsTest {
             }
             """.trimIndent(),
             signature = "public Int64 missing(Int64 arg1)",
+        )
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["value + Int:1", "makeValue(value)", "holder.value"])
+    fun `validated computed arguments retain exact types and evaluation sites`(argument: String) {
+        query(
+            """
+            module Missing {
+                class Holder(Int value) {}
+                Int makeValue(Int value) = value + 1;
+                Int read(Other peer, Holder holder, Int value) {
+                    return peer.§missing($argument);
+                }
+            }
+            """.trimIndent(),
+            companion = "class Other {}",
+            signature = "public Int64 missing(Int64 arg1)",
+        )
+    }
+
+    @Test
+    fun `named and positional arguments generate unique parameter names in source order`() {
+        query(
+            """
+            module Missing {
+                Int read(Other peer, Int value) {
+                    return peer.§missing(value, label = "text", arg1 = value);
+                }
+            }
+            """.trimIndent(),
+            companion = "class Other {}",
+            signature = "public Int64 missing(Int64 arg2, String label, Int64 arg1)",
+        )
+    }
+
+    @Test
+    fun `duplicate argument labels refuse creation`() {
+        query(
+            """
+            module Missing {
+                class Other {}
+                Int read(Other peer, Int value) {
+                    return peer.§missing(label = value, label = value);
+                }
+            }
+            """.trimIndent(),
         )
     }
 
