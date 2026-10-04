@@ -438,8 +438,8 @@ VS Code receipts above.
   local removal (X177–X180; acceptance below). Complete return/typed-initializer expressions can now
   also move to a private helper in the same type using explicit stable inputs (X181–X184; current
   batch acceptance below). Same-owner missing-method creation is implemented from fresh resolved
-  declarations and compiler-established locals/typed initializers (X185–X192; selected acceptance
-  receipts below). Wider expression/statement extraction,
+  declarations, compiler-established locals/typed initializers and proven same-owner receivers
+  (X185–X196; selected acceptance receipts below). Wider expression/statement extraction,
   other missing declarations, broader
   inline and global safe delete remain unimplemented. Record supported XTC forms per action;
   doc-comment generation and reference/test lenses are separate subfeatures. Semantic transformations require
@@ -9643,7 +9643,7 @@ This slice uses existing embedding/declaration/AST accessors entirely from Kotli
 field, clone obligation or new embedding entry point is needed. Untyped numeric literals are
 refused rather than exposing `IntLiteral`/`FPLiteral` compiler implementation types. Other literals
 use `LiteralExpression.getImplicitType` within the fresh attempt's constant-pool scope. Unsupported
-type spellings, receiver/cross-owner creation, computed/named arguments, generic methods,
+type spellings, type-qualified/cross-owner creation, computed/named arguments, generic methods,
 conditional returns, nested-expression expected types and missing type/property declarations
 remain open. The continuation below adds compiler-established locals and typed initializer results. L63 also retains broader inline/extraction and global safe delete;
 cross-module ownership remains L62.
@@ -9715,7 +9715,8 @@ slice; the first checkpoint alone lacks declaration-wrapper normalization. Edito
 Remaining L63 work stays explicit:
 
 - [x] Extend method creation to compiler-proven local arguments and typed-initializer result contexts; see the continuation below.
-- [ ] Investigate receiver/cross-owner creation, generic/conditional signatures and named/computed
+- [x] Add qualified same-owner instance calls with compiler-proven receiver identity; see the receiver continuation below.
+- [ ] Investigate type-qualified/cross-owner creation, generic/conditional signatures and named/computed
   arguments; preserve current refusals until scope, types and proposed-graph bindings are proven.
 - [ ] Add missing type/property declarations with equivalent ownership and compiler proof.
 - [ ] Broader statement extraction/inline and global safe delete remain separate refactorings.
@@ -9761,7 +9762,8 @@ nested expressions, assignments to existing variables, Ref/Var annotations and u
 spellings remain conservative refusals. Conditional/loop-bound locals and flow-narrowed signatures
 need separate scope/type evidence before broadening the current block-local rule.
 
-Next L63 scope: receiver/cross-owner method creation, generic/conditional signatures and named or
+Next L63 scope after the same-owner receiver continuation below: type-qualified/cross-owner
+method creation, generic/conditional signatures and named or
 computed arguments; missing type/property declarations; broader extraction/inline/global safe delete.
 
 
@@ -9801,3 +9803,66 @@ Extract `f95f5ddf6` after the preceding missing-method backend group. Keep `0bae
 `c1d87431d` together for complete scenario registration and catalog validation; native IntelliJ
 acceptance retains the preceding UP07 client dependency. Each future extracted PR still needs
 independent validation. No new AST compatibility or embedding entry point is needed.
+
+
+### L63 same-owner receiver repairs (2026-10-04)
+
+- [x] Accept `this`, `this:private` and plain parameter/local receivers when their validated compiler
+  type has the exact enclosing class identity. Compare compiler identities, never rendered names.
+- [x] Copy only qualifying callee source spans with existing local-type evidence. `Inputs` is an
+  immutable Kotlin handoff; it retains no registers, AST nodes or constants. Failed validation is
+  not resumed and its TypeInfo is not queried.
+- [x] Generate an instance method for an explicit instance receiver, including inside a static
+  caller. Qualified calls bypass unrelated local-name shadowing; existing member names still refuse.
+- [x] Select/prove the leaf member token. A selection on the receiver alone must not offer creation.
+  The complete proposed graph must bind that token to the inserted method and preserve existing
+  receiver/argument bindings and dispatch. Merely compiling with a different instance is insufficient.
+- [x] Add positive/refusal backend tests, including same-short-name/different-owner classes and a
+  compiling `peer` → `this` redirection counterexample.
+- [x] Add shared X193–X196 and both editor drivers, including diagnostic Undo/Redo and refusals.
+  The shared catalog now has 201 cases (X1–X196, CFG1–CFG3 and 7a.8/7a.9).
+- [x] Record combined backend and selected native acceptance below.
+
+| Extraction group | Commit | Scope |
+| --- | --- | --- |
+| Receiver evidence and repair proof | `8288f7399` | Extends the local/initializer missing-method slice; receiver identity, instance/static choice, leaf spans and backend regressions. |
+| Shared editor acceptance | `2fe49703d` | X193 explicit `this`, X194 inferred local receiver in a static caller, X195 different owner refusal, X196 public `this` view refusal; both drivers and catalog checks. |
+
+The first focused gate passes 67 tests with zero failures/errors/skips. The final combined gate
+also includes the subsequently added receiver-only selection refusal. No Java AST field/API,
+clone obligation, new embedding entry point, or plugin production bridge is needed.
+
+Other-owner, computed/chained, type-qualified and `super` receivers remain refusals. Explicit
+public/protected/struct `this` views are not evidence for creating a private method. Signatures
+remain bounded by the preceding argument/result renderer and owner checks; this is not cross-owner
+or general missing-declaration support. Type-qualified same-owner static calls are the next small
+receiver extension before cross-owner editing and visibility policy. Generic/conditional signatures,
+named/computed arguments, missing types/properties and broader refactorings remain separate L63 work.
+
+
+The combined backend gate passes **219 tests**, zero failures/errors/skips: 65 missing-method
+cases, three repair proofs, and the preceding 151 code-action/member/local/extraction/rename-server
+regressions. Both editor drivers compile. The backend and editor Gradle invocations run sequentially
+to avoid writing composite XDK outputs concurrently.
+
+
+Final acceptance:
+
+- **219 backend tests pass**, zero failures/errors/skips, including all 68 focused missing-method
+  cases/proofs and the existing local/extraction/member/rename-server regressions.
+- VS Code **`run-nvquYD`** passes **X181/X185/X190/X193–X196**, zero extension errors. The seven
+  cases complete in nine seconds and verify exact generated text, diagnostic Undo/Redo/Undo and refusals.
+- IntelliJ **`run-15968094076069950349`** passes **START and the same seven cases**, zero IDE
+  failures. JUnit reports one native test with zero failures/errors/skips; Ultimate is disabled.
+- Both use the **201-scenario** catalog SHA-256
+  `47aeb686ed81ed76507c03bf87b0cf65c1a9ac42dc64c7e7f340912931cea9b5`.
+  These are selected runs, not full-catalog acceptance. Existing host-check XML in native reports
+  is historical unless covered by the fresh backend gate; no new packaged-stdio or IntelliJ
+  production-unit suite run is claimed.
+- Accepted editor logs contain no `NullPointerException`, `ClassCastException`, `NoSuchMethodError`
+  or `EMB-5` matches. Root/LSP/IntelliJ read-only Spotless and `git diff --check` pass.
+
+For extraction, place `8288f7399` after the preceding local/initializer backend group and keep
+`2fe49703d` with the shared editor coverage. Native acceptance retains the existing UP07 client
+correction. These commits add no new Java AST/embedding API, dependency or plugin production change;
+each future extracted PR must still pass independently.

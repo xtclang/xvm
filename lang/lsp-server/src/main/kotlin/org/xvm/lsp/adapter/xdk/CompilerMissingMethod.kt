@@ -77,7 +77,7 @@ internal fun compilerMissingMethods(
             }
 
             fun enclosed(node: AstNode) = generateSequence(node.parent) { it.parent }.any { it === method }
-            // Never introduce a method whose name can be shadowed by a body-local declaration.
+            // An unqualified call must not be redirected around a body-local declaration.
             val locals =
                 nodes
                     .filterIsInstance<VariableDeclarationStatement>()
