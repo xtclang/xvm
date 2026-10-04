@@ -3014,6 +3014,7 @@ implicit module constants; both source and binary dependency types are covered.
 The implementations retain explicit ownership, initialization, control-flow/capture, type and
 binding/dispatch refusals. They are bounded refactorings, not arbitrary source transformations or
 proof of unknown external consumers. Shared X221–X242 bring the catalog to **247 scenarios** and
-are registered in both drivers. Their native acceptance and the final combined gate remain pending;
-L63 is not yet marked accepted. UP23 remains open. See the current
-[implementation and acceptance record](errs-integration-plan.md#l63-generic-destinations-continuation-2026-10-04).
+pass selected acceptance in both editors. The final combined backend/protocol gate passes
+**498 tests**, zero failures/errors/skips. L63 is closed within its documented supported/refused
+forms; this does not claim arbitrary refactorings or a full-catalog rerun. UP23 remains open.
+See the [closure and acceptance record](errs-integration-plan.md#l63-bounded-closure-and-acceptance-2026-10-04).
