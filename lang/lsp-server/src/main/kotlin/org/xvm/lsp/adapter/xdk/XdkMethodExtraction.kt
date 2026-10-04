@@ -46,87 +46,146 @@ internal object XdkMethodExtraction {
         val edits: List<XdkRename.Edit> get() = listOf(replacement, insertion)
     }
 
-    fun candidate(text: String, selection: Range, model: SemanticModel, facts: ExtractMethodFacts): Candidate? {
+    fun candidate(
+        text: String,
+        selection: Range,
+        model: SemanticModel,
+        facts: ExtractMethodFacts,
+    ): Candidate? {
         val source = model.sourceName ?: return null
         val start = XdkRename.offset(text, SemanticModel.Position(selection.start.line, selection.start.column)) ?: return null
         val end = XdkRename.offset(text, SemanticModel.Position(selection.end.line, selection.end.column)) ?: return null
         if (start >= end) return null
         val errors = ErrorList()
-        val root = try {
-            ExecutionTrace.api("Parser.parseSource(extract-method)") { Parser(Source(text), errors).parseSource() }
-        } catch (_: CompilerException) {
-            return null
-        }
+        val root =
+            try {
+                ExecutionTrace.api("Parser.parseSource(extract-method)") { Parser(Source(text), errors).parseSource() }
+            } catch (_: CompilerException) {
+                return null
+            }
         if (errors.hasSeriousErrors()) return null
+
         fun nodes(node: AstNode): Sequence<AstNode> = sequenceOf(node) + node.childNodes().asSequence().flatMap(::nodes)
+
         fun position(value: Long) = SemanticModel.Position(Source.calculateLine(value), Source.calculateOffset(value))
+
         fun offset(value: Long) = XdkRename.offset(text, position(value))
+
         fun spelling(node: AstNode): String? {
             val from = offset(node.startPosition) ?: return null
             val to = offset(node.endPosition) ?: return null
             return text.substring(from, to)
         }
-        val all = nodes(root).toList()
-        val expression = all.filterIsInstance<Expression>().singleOrNull { offset(it.startPosition) == start && offset(it.endPosition) == end }
-            ?: return null
-        val ancestors = generateSequence(expression.parent) { it.parent }.toList()
+
+        // A freshly parsed tree has no adopted parent links. Keep ownership local to this query.
+        fun tree(
+            node: AstNode,
+            parent: AstNode? = null,
+        ): Sequence<Pair<AstNode, AstNode?>> = sequenceOf(node to parent) + node.childNodes().asSequence().flatMap { tree(it, node) }
+        val parents = tree(root).toMap()
+        val all = parents.keys
+        val expression =
+            all.filterIsInstance<Expression>().singleOrNull { offset(it.startPosition) == start && offset(it.endPosition) == end }
+                ?: return null
+        val ancestors = generateSequence(parents[expression]) { parents[it] }.toList()
         val method = ancestors.filterIsInstance<MethodDeclarationStatement>().firstOrNull() ?: return null
         if (ancestors.takeWhile { it !== method }.any { it is LambdaExpression || it is TypeCompositionStatement }) return null
         // A local function has a different closure and cannot acquire a same-owner private method.
-        if (generateSequence(method.parent) { it.parent }.takeWhile { it !is TypeCompositionStatement }
-                .any { it is MethodDeclarationStatement || it is LambdaExpression }) return null
+        if (generateSequence(parents[method]) { parents[it] }
+                .takeWhile { it !is TypeCompositionStatement }
+                .any { it is MethodDeclarationStatement || it is LambdaExpression }
+        ) {
+            return null
+        }
         val methodName = method.nameToken ?: return null
         val owner = model.symbolAt(position(methodName.startPosition).line, position(methodName.startPosition).column) ?: return null
         val signature = owner.signature ?: return null
-        if (owner.kind != SemanticModel.SymbolKind.METHOD || signature.conditional || signature.parameters.any { it.typeParameter }) return null
-        val resultType = when (val statement = expression.parent) {
-            is ReturnStatement -> {
-                if (statement.parent !is StatementBlock || statement.expressions?.singleOrNull() !== expression) return null
-                XdkLocalExtraction.writtenReturnType(text, method) ?: return null
-            }
-            is AssignmentStatement -> {
-                if (statement.parent !is StatementBlock || statement.rValue !== expression) return null
-                XdkLocalDeclarations.initializer(text, statement)?.type ?: return null
-            }
-            else -> return null
+        if (owner.kind != SemanticModel.SymbolKind.METHOD || signature.conditional ||
+            signature.parameters.any { it.typeParameter }
+        ) {
+            return null
         }
+        val resultType =
+            when (val statement = parents[expression]) {
+                is ReturnStatement -> {
+                    if (parents[statement] !is StatementBlock || statement.expressions?.singleOrNull() !== expression) return null
+                    XdkLocalExtraction.writtenReturnType(text, method) ?: return null
+                }
+
+                is AssignmentStatement -> {
+                    if (parents[statement] !is StatementBlock || statement.rValue !== expression) return null
+                    XdkLocalDeclarations.initializer(text, statement)?.type ?: return null
+                }
+
+                else -> {
+                    return null
+                }
+            }
         val selectedNodes = nodes(expression).toList()
-        if (selectedNodes.any { it is LambdaExpression || it is TypeCompositionStatement || it is InvocationExpression && it.isAsync }) return null
+        if (selectedNodes.any {
+                it is LambdaExpression || it is TypeCompositionStatement || (it is InvocationExpression && it.isAsync)
+            }
+        ) {
+            return null
+        }
         val tokens = ExecutionTrace.api("Lexer.lex(extract-method)") { Lexer(Source(text), errors).asSequence().toList() }
         if (errors.hasSeriousErrors()) return null
         // Ref-taking and super dispatch need a different contract. Preserve bitwise expressions in
         // a later slice once syntax distinguishes them from address-taking at the extraction site.
-        val selectedTokens = Lexer(Source(text.substring(start, end)), errors).asSequence().toList()
+        val selectedTokens =
+            ExecutionTrace.api("Lexer.lex(extract-method-selection)") {
+                Lexer(Source(text.substring(start, end)), errors).asSequence().toList()
+            }
         if (selectedTokens.any { it.id == Token.Id.BIT_AND || it.valueText == "super" }) return null
         val range = SemanticModel.Range(position(expression.startPosition), position(expression.endPosition))
         val at = SemanticModel.SourceLocation(source, range)
         if (at !in facts.types) return null
         val occurrences = model.occurrences.filter { it.range.start >= range.start && it.range.end <= range.end }
-        val inputs = occurrences.mapNotNull { it.symbol?.let(model::symbol) }
-            .filter { it.kind in setOf(SemanticModel.SymbolKind.VARIABLE, SemanticModel.SymbolKind.PARAMETER) }.distinctBy { it.id }
-        val captured = inputs.map { symbol ->
-            val declaration = SemanticModel.SourceLocation(symbol.declarationSource, symbol.declaration ?: return null)
-            if (declaration.sourceName != source || declaration !in facts.stableValues || declaration !in facts.types) return null
-            if (occurrences.filter { it.symbol == symbol.id }.any { it.role != SemanticModel.Role.REFERENCE || it.usage != SemanticModel.Usage.READ }) return null
-            val written = all.singleOrNull {
-                val token = when (it) {
-                    is Parameter -> it.nameToken
-                    is VariableDeclarationStatement -> it.nameToken
-                    else -> null
+        val inputs =
+            occurrences
+                .mapNotNull { it.symbol?.let(model::symbol) }
+                .filter { it.kind in setOf(SemanticModel.SymbolKind.VARIABLE, SemanticModel.SymbolKind.PARAMETER) }
+                .distinctBy { it.id }
+        val captured =
+            inputs.map { symbol ->
+                val declaration = SemanticModel.SourceLocation(symbol.declarationSource, symbol.declaration ?: return null)
+                if (declaration.sourceName != source || declaration !in facts.stableValues || declaration !in facts.types) return null
+                if (occurrences.filter { it.symbol == symbol.id }.any {
+                        it.role != SemanticModel.Role.REFERENCE ||
+                            it.usage != SemanticModel.Usage.READ
+                    }
+                ) {
+                    return null
                 }
-                token != null && position(token.startPosition) == declaration.range.start && position(token.endPosition) == declaration.range.end
-            } ?: return null
-            val type = when (written) {
-                is Parameter -> {
-                    if (written.parent !== method) return null
-                    written.type
-                }
-                is VariableDeclarationStatement -> written.childNodes().filterIsInstance<TypeExpression>().singleOrNull() ?: return null
-                else -> return null
+                val written =
+                    all.singleOrNull {
+                        val token =
+                            when (it) {
+                                is Parameter -> it.nameToken
+                                is VariableDeclarationStatement -> it.nameToken
+                                else -> null
+                            }
+                        token != null && position(token.startPosition) == declaration.range.start &&
+                            position(token.endPosition) == declaration.range.end
+                    } ?: return null
+                val type =
+                    when (written) {
+                        is Parameter -> {
+                            if (parents[written] !== method) return null
+                            written.type
+                        }
+
+                        is VariableDeclarationStatement -> {
+                            written.childNodes().filterIsInstance<TypeExpression>().singleOrNull() ?: return null
+                        }
+
+                        else -> {
+                            return null
+                        }
+                    }
+                if (type is VariableTypeExpression || type is AnnotatedTypeExpression) return null
+                Capture(declaration, symbol.kind, symbol.name, spelling(type) ?: return null, 0, 0)
             }
-            if (type is VariableTypeExpression || type is AnnotatedTypeExpression) return null
-            Capture(declaration, symbol.kind, symbol.name, spelling(type) ?: return null, 0, 0)
-        }
         val names = tokens.filter { it.id == Token.Id.IDENTIFIER }.map { it.valueText }.toSet() + model.symbols.map { it.name }
         val name = generateSequence(0) { it + 1 }.map { if (it == 0) "extractedMethod" else "extractedMethod$it" }.first { it !in names }
         val methodStart = offset(method.startPosition) ?: return null
@@ -144,12 +203,19 @@ internal object XdkMethodExtraction {
         val prefix = "$parameterPrefix${parameters.joinToString(", ")}) {$newline$indent    return "
         val insertion = XdkRename.Edit(insertionAt, insertionAt, "$prefix${text.substring(start, end)};$newline$indent}")
         val replacement = XdkRename.Edit(start, end, "$name(${captured.joinToString(", ") { it.name }})")
-        return Candidate(name, at, insertion, replacement, XdkRename.Relocation(start, end, insertion, prefix.length), header.length,
+        return Candidate(
+            name,
+            at,
+            insertion,
+            replacement,
+            XdkRename.Relocation(start, end, insertion, prefix.length),
+            header.length,
             captured.mapIndexed { index, capture ->
                 capture.copy(
                     parameterOffset = parameterPrefix.length + parameters.take(index).sumOf { it.length + 2 } + capture.type.length + 1,
                     argumentOffset = name.length + 1 + captured.take(index).sumOf { it.name.length + 2 },
                 )
-            })
+            },
+        )
     }
 }

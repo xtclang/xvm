@@ -441,10 +441,15 @@ internal fun captureRenameFacts(
                 .map { TypePath(identity(it), it.moduleConstant.name, path(it)) },
         resourceValues = resourceValues,
         removableLocals = removableLocals,
-        extraction = ExtractMethodFacts(
-            extraction?.types.orEmpty().mapNotNull { (at, type) -> receiverIdentity(type, ::identity)?.let { at to it } }.toMap(),
-            extraction?.stableValues.orEmpty(),
-        ),
+        extraction =
+            ExtractMethodFacts(
+                extraction
+                    ?.types
+                    .orEmpty()
+                    .mapNotNull { (at, type) -> receiverIdentity(type, ::identity)?.let { at to it } }
+                    .toMap(),
+                extraction?.stableValues.orEmpty(),
+            ),
         callables =
             callables
                 .mapNotNull { (site, selected) ->
