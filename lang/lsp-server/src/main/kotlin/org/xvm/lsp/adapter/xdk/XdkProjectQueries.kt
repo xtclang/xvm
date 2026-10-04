@@ -944,6 +944,24 @@ internal class XdkProjectQueries(
             } else {
                 null
             }
+        val memberInline =
+            if (complete) {
+                before.models.singleOrNull { it.sourceName == source }?.let { model ->
+                    XdkMemberInline.candidate(text, range, model)?.let { candidate ->
+                        checkCurrent()
+                        val plan = XdkRename.Plan(texts, mapOf(source to listOf(candidate.edit)))
+                        val after = compile(plan.proposed, Proof.REPAIR) ?: return@let null
+                        if (!XdkRename.preservesMemberInline(before, after, plan, candidate)) return@let null
+                        CodeAction(
+                            candidate.title,
+                            CodeAction.CodeActionKind.REFACTOR_INLINE,
+                            edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+                        )
+                    }
+                }
+            } else {
+                null
+            }
         val removal =
             if (complete) {
                 before.models.singleOrNull { it.sourceName == source }?.let { model ->
@@ -990,6 +1008,7 @@ internal class XdkProjectQueries(
                 listOfNotNull(
                     extraction,
                     inline,
+                    memberInline,
                     removal,
                     method,
                 )
