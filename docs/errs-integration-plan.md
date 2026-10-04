@@ -9466,7 +9466,7 @@ Implement in separate checkpoints, then run the combined backend and selected ed
    initializers, partial selections and declaration annotations/comments that are not understood.
 2. [x] Inline an adjacent single-use local into another explicitly typed initializer with the
    same written expected type, preserving every moved reference/call and the evaluation count.
-3. [ ] Remove an unused plain local only with compiler-proven constant, side-effect-free
+3. [x] Remove an unused plain local only with compiler-proven constant, side-effect-free
    initialization; preserve comments and reject runtime evaluation or Ref/Var construction.
 4. [ ] Shared editor cases, exact edits, diagnostics and Undo/Redo; update capability/playbook docs.
 
@@ -9475,3 +9475,10 @@ whole-graph binding/dispatch proof gate the edits. Extract-method, missing decla
 safe delete and wider evaluation contexts remain separate L63 transformations. Cross-module
 ownership stays in L62: it must account for dependency edges, import changes, visibility and
 resource ownership, in addition to the type's final path.
+
+Unused-local removal captures validated `Expression.isConstant()` and `hasSideEffects()` evidence
+on the serialized compiler worker and retains only declaration source locations. It also rejects
+Ref/Var annotations, runtime initializers, uses/writes, inference and comments inside deleted syntax.
+Leading/trailing comments remain intact. The compiler must accept the complete proposed graph and
+the existing removal proof must preserve every unaffected binding/call/dispatch edge. No AST API
+change is required. Validation follows the shared-scenario checkpoint.
