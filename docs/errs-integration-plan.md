@@ -433,9 +433,11 @@ VS Code receipts above.
   the [library and complete-repair batch](#l63-library-and-complete-repair-batch). Older seven-variant
   receipts do not establish the new coverage. Whole-return-expression extraction and adjacent
   single-use typed returned-local inline preserve the written expected type and relocated bindings;
-  X156/X157 pass in both editors. Wider extraction, extract method, missing declarations, broader
-  inline and safe delete remain unimplemented. Record supported XTC forms per action; doc-comment
-  generation and reference/test lenses are separate subfeatures. Semantic transformations require
+  X156/X157 pass in both editors. The October 4 batch adds complete explicitly typed local
+  initializers, adjacent same-written-type initializer inline and compiler-proven unused constant
+  local removal (X177–X180; acceptance below). Wider extraction, extract method, missing declarations,
+  broader inline and global safe delete remain unimplemented. Record supported XTC forms per action;
+  doc-comment generation and reference/test lenses are separate subfeatures. Semantic transformations require
   compiler evidence and versioned multi-file edit validation.
 - [x] **L64 — Completion/signature breadth and presentation, bounded closure.** Supported recursive
   bounds, fitted scalar/collection/lambda values, enclosing instances, declaration names,
@@ -557,7 +559,8 @@ evidence; do not relabel them. The first shared playbook checkpoint needs its fo
 URI, decoding and native-readiness corrections during extraction.
 
 The broader family boundaries remain explicit: L62 still excludes unproven dispatch/binary and
-external-consumer routes; L63 has no extract/inline/safe-delete/missing-declaration implementation;
+external-consumer routes; at this checkpoint L63 had no extract/inline/safe-delete/missing-declaration
+implementation (the October 2/4 continuations below add bounded local transformations);
 L64's last batch covers its recorded literal/formal/presentation forms; L65 still cannot enumerate
 runtime-selected targets; L66 still lacks import links and comprehensive wrapping; L67 adds
 in-memory diagnostic reuse, not a persistent or universal incremental semantic index. These are
@@ -1176,7 +1179,7 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 
 | Scope | Investigation already recorded | Next investigation before implementation |
 |---|---|---|
-| L63 semantic fixes/refactorings | Import fixes and bounded implement/override use full compilation and binding/dispatch proof. Extract, inline, safe delete and missing-declaration fixes have no implementation. | Define each transformation separately; identify the compiler facts needed for side effects, evaluation order, captures and caller closure; add supported and refused fixtures before enabling it. |
+| L63 semantic fixes/refactorings | Import fixes, bounded implement/override, whole-return/typed-initializer extraction, adjacent same-type returned/initializer local inline and unused constant local removal use full compilation and binding/dispatch proof. | General extraction/inline, extract method, global safe delete and missing-declaration fixes remain open. Define each transformation separately with side-effect, evaluation-order, capture and caller-closure evidence plus supported/refused fixtures. |
 | L68 pull diagnostics | Negotiated pull/push, result IDs, related/closed documents and invalidation pass backend, stdio and selected acceptance in both editors. PLAT1's source-location crash is fixed. | Retain broader workload coverage rather than treating the selected fixtures as universal proof. |
 | L69 token range/delta | Negotiated range/delta and bounded result history pass backend/protocol and X126 in both hosts. | Measure representative workspace payload/cache costs under L82. |
 | L70 lazy resolve | All six resolve endpoints have detached revision guards; backend and X105/X122/X127/X131 checks pass. IntelliJ has a selected-action bridge preserving normal Undo/Redo. | Preserve eager fallback for clients without the relevant capabilities; broaden stale-application acceptance under L80/L82. |
@@ -7758,7 +7761,7 @@ reproducible, and reconcile completed versus remaining scope. Validation is batc
    | Scope | Implemented and proven | Concrete remaining work |
    | --- | --- | --- |
    | L62 rename | Recorded source families, primary/ordinary parameter slots, lambdas, escaped method values, packages/modules/companions, bounded cross-package qualification, host-persisted graph relocation and bounded union/cyclic callable-site proof | Unsupported qualification syntax, unproven empty namespaces, overlapping move trees, unsupported annotation constants/type shapes and wider generated routes; characterize each refused route before extending proof. External consumers omitted from the configured graph remain an explicit unknown boundary. |
-   | L63 semantic actions | Import fixes and compiler-proven implement/override, including bundled contracts | Whole-return-expression extraction and adjacent single-use returned-local inline are implemented in the continuations below. General statement/context extraction, missing-declaration fixes, extract method, broader inline and safe delete remain separate transformations. Each needs its own side-effect/capture/caller-closure design and positive/refusal tests. |
+   | L63 semantic actions | Import fixes, compiler-proven implement/override including bundled contracts, whole-return/typed-initializer extraction, adjacent same-type returned/initializer local inline and unused constant local removal | General statement/context extraction, missing-declaration fixes, extract method, broader inline and global safe delete remain separate transformations. Each needs its own side-effect/capture/caller-closure design and positive/refusal tests. |
    | L64 completion/signatures | Import edits, syntax names/templates, guarded bounds and compiler-fitted literals/values; latest continuation adds wrapped names, enclosing-instance arguments and real platform anonymous-body recovery | Latest continuation below gives the exact supported forms, evidence and conservative exclusions. Remaining expansion includes inferred/ambiguous local names, arbitrary value synthesis and general special-this enumeration outside calls; these are not counted as implemented. |
    | L65 navigation/classification | Source/bundled navigation, recorded hierarchy/composition relations and resolved tokens | Conditional/synthetic/native/redirect routes and ambiguous binary source metadata need individual fixtures. Runtime function targets cannot be invented by a static hierarchy. |
    | L66 editing/structure | Token-preserving indentation, URL links, local linked editing, recorded damaged-source structure | Expression wrapping and comment/string layout, wildcard/conditional import links, broader proven linked scopes and remaining damaged constructs. Resolved module/type/alias source links and lexical alias linked editing are implemented below. A full pretty-printer is not implemented. |
@@ -8794,8 +8797,10 @@ remain separate from functionality implementation.
   and unsupported dispatch identities remain separate implementation work.
 - [x] L63 whole-return-expression extraction and adjacent single-use typed returned-local inline,
   with relocation/type/binding proof and positive/refusal tests.
+- [x] L63 complete typed-initializer extraction, adjacent same-written-type initializer inline
+  and compiler-proven unused constant local removal; October 4 validation below.
 - [ ] L63 remaining transformations: wider extraction contexts, extract method, broader inline,
-  safe delete and missing declarations; each needs its own semantic proof.
+  global safe delete and missing declarations; each needs its own semantic proof.
 - [x] L66 resolved module/type import source links and explicit lexical alias linked editing.
 - [ ] L66 remaining damaged structure, wildcard/conditional links and broader linked scopes; agree
   formatter behavior before introducing wrapping or changing comment/string layout.
@@ -9470,7 +9475,7 @@ Implement in separate checkpoints, then run the combined backend and selected ed
    initialization; preserve comments and reject runtime evaluation or Ref/Var construction.
 4. [x] Shared editor cases, exact edits, diagnostics and Undo/Redo; update capability/playbook docs.
 
-No new Java AST fields or accessors are planned. Detached compiler evidence and the existing
+No new Java AST fields or accessors were added. Detached compiler evidence and the existing
 whole-graph binding/dispatch proof gate the edits. Extract-method, missing declarations, global
 safe delete and wider evaluation contexts remain separate L63 transformations. Cross-module
 ownership stays in L62: it must account for dependency edges, import changes, visibility and
@@ -9481,10 +9486,12 @@ on the serialized compiler worker and retains only declaration source locations.
 Ref/Var annotations, runtime initializers, uses/writes, inference and comments inside deleted syntax.
 Leading/trailing comments remain intact. The compiler must accept the complete proposed graph and
 the existing removal proof must preserve every unaffected binding/call/dispatch edge. No AST API
-change is required. Validation follows the shared-scenario checkpoint.
+change is required. Validation is recorded below; these facts are collected only for semantic
+action proof, so ordinary rename/navigation does not add this AST walk.
 
 X177–X180 now share source, selection, expected edits and descriptions across both editor drivers.
-The catalog has 185 scenarios; validation follows all four implementation checkpoints.
+The catalog has 185 scenarios. All four implementation checkpoints preceded the combined
+backend and selected editor validation below.
 
 
 L63 validation exposed an independent compiler defect: `probe() == 1 && False` passes
@@ -9499,4 +9506,47 @@ exactly once, and corrects that operand comparison. `conditionalEffects.x` is a 
 module, wired into both sequential and parallel module lists. It checks both input values across
 value, branch, nested argument and constant-left/right forms (22 runtime assertions of one call
 and the expected result). Keep the compiler/fixture/list change separate from the LSP actions
-when extracting a master fix. No LSP-only AST fields/accessors are involved. Validation is pending.
+when extracting a master fix. No LSP-only AST fields/accessors are involved. The final fixture
+fails in the retained unmodified-master CLI artifact (`7a4e29e57`) with that code-generation stack,
+then compiles and passes all 22 runtime checks with this repair. The current `origin/master`
+source comparison confirms the same missing case; no remote issue or PR was created in this batch.
+
+
+### L63 local transformation acceptance and extraction
+
+| Extraction group | Commits | Scope |
+| --- | --- | --- |
+| Typed initializer extraction | `326f1faaa` | Shared plain-local syntax boundary, contextual type preservation and 22 combined initializer tests with the next group. |
+| Adjacent initializer inline | `39b6be560` | Same-written-type, single-use, adjacent relocation with existing binding/call/dispatch proof. |
+| Unused constant local removal | `c4b0130bd` | Detached validated constant/side-effect facts, complete-graph deletion proof and 15 removal/refusal tests. |
+| Shared editor coverage | `7dc0f7c65` | X177–X180, both drivers, descriptions/manual steps and capability updates. |
+| Acceptance corrections | `888e89bf6` | Spotless output, test line wrapping, restrict unused-local evidence capture to action proof, and register VS Code cases in catalog order. Distribute these file-specific corrections with the corresponding groups above. |
+| Independent ordinary compiler fix | `554f86e63` + `0550380b4` | Missing `UandF` emission, assignment operand correction and executable `TestConditionalEffects` manual module. The follow-up uses an instance counter because a module property is constant. No LSP dependency. |
+
+Validation on 2026-10-04:
+
+- **129 LSP tests pass**, zero failures/errors/skips: 22 new initializer cases, 15 removal cases,
+  16 existing extraction, 14 existing inline, 47 member-action, 11 server rename, two relocation
+  proof and two code-action tests. Both editor drivers compile.
+- `:manualTests:runOne -PtestName=TestConditionalEffects` compiles the normal manual source set
+  and passes all **22 runtime checks**; a second real run passes with configuration cache reused.
+  Both manual sequential/parallel module lists include it, but those entire suites were not rerun.
+- VS Code **`run-nDHZOH`** passes X156/X157/X177–X180, zero failures/extension errors. The earlier
+  **`run-OKOdXS`** failed the catalog-order setup assertion before running any case; the registration
+  correction is included above, and that failure is not counted as acceptance.
+- IntelliJ **`run-232740531754002686`** passes START and the same six cases, zero IDE failures;
+  JUnit reports one test, zero failures/errors/skips. X177–X179 use native intentions and Undo/Redo;
+  X180 checks refusal through the installed connection without applying an edit. Ultimate remains
+  disabled. VS Code uses its extension-host provider/edit/history commands.
+- Both use catalog SHA-256
+  `c369eab0aa4278bb0f2714fd518a605c6317d97191931e817e49263b7f4c7788` (185 scenarios).
+  These are selected runs, not a full-catalog rerun. Saved logs contain no compiler internal-error,
+  `ClassCastException` or `NullPointerException` markers.
+- Root, LSP and IntelliJ read-only Spotless checks and `git diff --check` pass.
+
+The initial backend run passed 115/116 and exposed the independent conditional-expression
+compiler bug above. The first combined rerun passed all 129 backend tests but rejected the manual
+fixture's constant module counter; the corrected instance-based fixture then passed. Preserve
+these distinctions when extracting the commits. L63 remains partial for general extraction,
+extract method, broader inline, missing declarations and global safe delete. Cross-module
+ownership remains the separate L62 graph/import/visibility/resource transformation.
