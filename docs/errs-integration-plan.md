@@ -10366,3 +10366,14 @@ The user explicitly chose **record UP23 and continue to L63**. L62's compiler im
 is closed within the boundaries above; VS Code overlapping-move Undo remains an open upstream
 acceptance item. No safe native Undo is advertised for that operation. The catalog now contains
 225 scenarios (X1–X220, CFG1–CFG3 and 7a.8–7a.9).
+
+### L63 generic destinations continuation (2026-10-04)
+
+The first checkpoint removes the blanket generic-class destination exclusion. Concrete caller
+types remain concrete in the new signature; equal actual types do not justify guessing an owner
+formal. The shared type renderer now spells exact class-formal property identities owned by the
+destination or its lexical enclosing classes. Unrelated same-named formals remain refused.
+Fresh linked declarations, complete graph repair and exact public-signature proof remain required.
+Regressions cover generic closed companions, enclosing class formals and unrelated formal capture.
+Validation is batched with subsequent L63 work; this note is not a passing receipt or closure of
+the full generic-substitution/signature scope. No compiler AST/API changes are needed.
