@@ -9,6 +9,7 @@ import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.MethodConstant
 import org.xvm.asm.constants.PackageConstant
 import org.xvm.asm.constants.TypeConstant
+import org.xvm.asm.constants.TypeParameterConstant
 import org.xvm.asm.constants.UnionTypeConstant
 import org.xvm.lsp.util.ExecutionTrace
 import java.io.File
@@ -229,6 +230,10 @@ internal fun captureRenameFacts(
                     (host in declarations || dependencies?.declarations?.containsKey(host) == true)
             val packageParent = (constant as? PackageConstant)?.let { identity(it.parentConstant) }
             when {
+                constant is TypeParameterConstant -> {
+                    ProofIdentity.Parameter(identity(constant.method), constant.register)
+                }
+
                 // Bundled source navigation must use the same artifact identity as binary-only
                 // views.
                 location != null && module !in XdkLibraries.moduleNames -> {
@@ -467,13 +472,19 @@ internal fun captureRenameFacts(
         resourceValues = resourceValues,
         missingMethods =
             missingMethods.mapNotNull { method ->
-                if (method.candidate.publicOwner == null) {
-                    method.candidate
-                } else {
-                    val parameters = method.parameters.map { signatureType(it) ?: return@mapNotNull null }
-                    val returns = method.returns.map { signatureType(it) ?: return@mapNotNull null }
-                    method.candidate.copy(signature = XdkMissingMethods.Signature(parameters, returns))
-                }
+                val parameters = method.parameters.map { signatureType(it) ?: return@mapNotNull null }
+                val returns = method.returns.map { signatureType(it) ?: return@mapNotNull null }
+                val formals = method.formals.map { receiverIdentity(it, ::identity) ?: return@mapNotNull null }
+                method.candidate.copy(
+                    signature =
+                        XdkMissingMethods.Signature(
+                            parameters,
+                            returns,
+                            method.candidate.publicOwner != null,
+                            formals,
+                            method.conditional,
+                        ),
+                )
             },
         methodSignatures =
             constants
@@ -482,7 +493,19 @@ internal fun captureRenameFacts(
                     val method = (constant as? MethodConstant)?.component as? MethodStructure ?: return@mapNotNull null
                     val parameters = method.params.map { receiverIdentity(it.type, ::identity) ?: return@mapNotNull null }
                     val returns = method.returnTypes.map { receiverIdentity(it, ::identity) ?: return@mapNotNull null }
-                    id to XdkMissingMethods.Signature(parameters, returns, method.access == Access.PUBLIC)
+                    val formals =
+                        method.params
+                            .take(
+                                method.typeParamCount,
+                            ).map { identity(it.asTypeParameterConstant(method.identityConstant)) }
+                    id to
+                        XdkMissingMethods.Signature(
+                            parameters,
+                            returns,
+                            method.access == Access.PUBLIC,
+                            formals,
+                            method.isConditionalReturn,
+                        )
                 }.toMap(),
         removableLocals = removableLocals,
         extraction =
