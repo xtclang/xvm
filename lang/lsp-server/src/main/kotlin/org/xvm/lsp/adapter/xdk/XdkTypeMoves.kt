@@ -68,11 +68,8 @@ internal object XdkTypeMoves {
                     if (movedTarget == null && !movedUse) return@mapNotNull null
                     val start = XdkRename.offset(text, name.location.range.start) ?: return null
                     val end = XdkRename.offset(text, name.location.range.end) ?: return null
-                    val spelling = text.substring(start, end)
-                    // Comments or specialized names need token-preserving edits of their own. Do not
-                    // normalize arbitrary source into an apparently equivalent dotted name.
-                    val written = spelling.split('.')
-                    if (written.any { !XdkRename.identifier(it) }) return null
+                    val spelling = XdkQualifiedName.parse(text.substring(start, end)) ?: return null
+                    val written = spelling.names
                     val terminal = XdkRename.offset(text, name.terminal.start) ?: return null
                     val alias =
                         facts.models
@@ -105,11 +102,9 @@ internal object XdkTypeMoves {
                             .takeWhile { it.first == it.second }
                             .size
                     if (suffix == 0) return null
-                    val retained = written.takeLast(suffix).joinToString(".")
-                    val prefixEnd = end - retained.length
-                    if (prefixEnd > terminal) return null
-                    val prefix = qualified.dropLast(suffix).joinToString(".").let { if (it.isEmpty()) it else "$it." }
-                    file to XdkRename.Edit(start, prefixEnd, prefix)
+                    val prefix = spelling.prefix(written.size - suffix, qualified.dropLast(suffix))
+                    if (start + prefix.end > terminal) return null
+                    file to prefix.copy(start = start, end = start + prefix.end)
                 }.groupBy({ it.first }, { it.second })
                 .mapValues { (_, value) -> value.distinct().sortedBy { it.start } }
         val edits =
