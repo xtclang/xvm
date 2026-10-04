@@ -1624,9 +1624,9 @@ class CompilerPlaybook(
                     check(editor.text == original) { "Fresh scenario source differs from shared fixture: $id" }
 
                     fun callerDiagnostics(broken: Boolean) {
-                        // Driver's editor locator sees the selected tab. Select the caller again
-                        // after inspecting a companion; opening a tab never reapplies its edits.
-                        val caller = if (companion) open(data.text("file")) else editor
+                        // The locator sees the selected tab. Dependency-file checks also switch
+                        // tabs; selecting the caller never reapplies an edit or changes its text.
+                        val caller = open(data.text("file"))
                         if (companion) check(caller.text == original)
                         if (broken) caller.awaitError() else caller.awaitDiagnostics(emptyList())
                     }
