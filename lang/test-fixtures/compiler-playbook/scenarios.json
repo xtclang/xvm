@@ -6341,6 +6341,79 @@
         "limitations": []
       }
     },
+    "X189": {
+      "title": "create a private method from a typed block local",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. Apply the named method action; inspect its signature and TODO() body. The error clears. Undo restores the source and error; Redo clears it again, then Undo restores the original."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    Int read(Int value) {\n        Int other = value;\n        return missing(other);\n    }\n}",
+        "selected": "missing",
+        "title": "Create private method 'missing'",
+        "expected": "module Extract {\n    Int read(Int value) {\n        Int other = value;\n        return missing(other);\n    }\n    private Int64 missing(Int64 arg1) {\n        TODO();\n    }\n}",
+        "initiallyValid": false
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X190": {
+      "title": "create a static method from an inferred local and typed initializer",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. Apply the named method action; inspect its signature and TODO() body. The error clears. Undo restores the source and error; Redo clears it again, then Undo restores the original."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    static String read(Int value) {\n        var other = value;\n        String result = missing(other, \"hello\");\n        return result;\n    }\n}",
+        "selected": "missing",
+        "title": "Create private method 'missing'",
+        "expected": "module Extract {\n    static String read(Int value) {\n        var other = value;\n        String result = missing(other, \"hello\");\n        return result;\n    }\n    private static String missing(Int64 arg1, String arg2) {\n        TODO();\n    }\n}",
+        "initiallyValid": false
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X191": {
+      "title": "create a method with a parameterized initializer result",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. Apply the named method action; inspect its signature and TODO() body. The error clears. Undo restores the source and error; Redo clears it again, then Undo restores the original."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    void run(List<Int> values) {\n        List<Int> result = missing(values);\n    }\n}",
+        "selected": "missing",
+        "title": "Create private method 'missing'",
+        "expected": "module Extract {\n    void run(List<Int> values) {\n        List<Int> result = missing(values);\n    }\n    private List<Int64> missing(List<Int64> arg1) {\n        TODO();\n    }\n}",
+        "initiallyValid": false
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X192": {
+      "title": "refuse missing method creation without an initializer result type",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. No method creation action may appear; the error and source remain unchanged."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    void run(Int value) {\n        var result = missing(value);\n    }\n}",
+        "selected": "missing",
+        "title": "Create private method 'missing'",
+        "expected": "module Extract {\n    void run(Int value) {\n        var result = missing(value);\n    }\n}",
+        "initiallyValid": false,
+        "refused": true
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
