@@ -1156,6 +1156,7 @@ internal class XdkProjectQueries(
         checkCurrent()
         if (proof == Proof.COMPLETE && sources.size != graph.modules.size) return null
         val artifacts = dependencies.modules.filterKeys { it !in project.modules }.toMutableMap()
+        val missingDestinations = mutableMapOf<String, Map<SemanticModel.SourceLocation, XdkMissingMethods.Destination>>()
         val attempts =
             graph
                 .buildOrder()
@@ -1185,6 +1186,12 @@ internal class XdkProjectQueries(
                         artifacts.filterKeys {
                             it !in graph.modules || it in sourceDependencies
                         }
+                    val destinations =
+                        missingDestinations
+                            .filterKeys(sourceDependencies::contains)
+                            .values
+                            .flatMap { it.entries }
+                            .associate { it.toPair() }
                     val open = XdkDependencies(inputs.values.toList()).open()
                     val heard = ErrorList()
                     val errors = ErrorListener.cancellable(heard, cancelled)
@@ -1221,7 +1228,7 @@ internal class XdkProjectQueries(
                         compilation.file()?.module?.name != module.name
                     ) {
                         if (proof == Proof.REPAIR) {
-                            val partial = compilation.renameFacts(open, includeMissingMethods = true)
+                            val partial = compilation.renameFacts(open, includeMissingMethods = true, missingDestinations = destinations)
                             val fresh = XdkDependencies(inputs.values.toList()).open()
                             val declarationErrors =
                                 ErrorListener.cancellable(ErrorList(), cancelled)
@@ -1245,7 +1252,13 @@ internal class XdkProjectQueries(
                                             )
                                     }.orElse(null)
                             checkCurrent()
-                            val headers = declarations?.memberActionFacts(fresh, declarationErrors, partial.missingMethodInputs)
+                            val headers =
+                                declarations?.memberActionFacts(
+                                    fresh,
+                                    declarationErrors,
+                                    partial.missingMethodInputs,
+                                    destinations,
+                                )
                             val repaired =
                                 if (
                                     headers != null &&
@@ -1275,6 +1288,7 @@ internal class XdkProjectQueries(
                         return null
                     }
                     artifacts[module.name] = compilation.toDependency()
+                    if (proof == Proof.REPAIR) missingDestinations[module.name] = compilation.missingMethodDestinations()
                     module.uri to facts
                 }.toMap()
         checkCurrent()
