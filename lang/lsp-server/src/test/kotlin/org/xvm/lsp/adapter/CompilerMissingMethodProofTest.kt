@@ -10,10 +10,65 @@ import org.xvm.lsp.adapter.xdk.XdkDependencies
 import org.xvm.lsp.adapter.xdk.XdkMissingMethods.Dispatch
 import org.xvm.lsp.adapter.xdk.XdkRename
 import org.xvm.lsp.adapter.xdk.memberActionFacts
+import org.xvm.lsp.adapter.xdk.missingMethodDestinations
 import org.xvm.lsp.adapter.xdk.projectRenameFacts
 import org.xvm.lsp.adapter.xdk.renameFacts
+import org.xvm.lsp.adapter.xdk.toDependency
 
 class CompilerMissingMethodProofTest {
+    @Test
+    fun `cross module proof reads the actual destination signature and rejects compatible substitutions`() {
+        CompilerTestSupport.configure()
+        val librarySource = "/proof/Library.x"
+        val libraryText = "module Library { class Other {} }"
+        val text =
+            """
+            module Missing {
+                package lib import Library;
+                Object read(lib.Other peer, String value) {
+                    return peer.missing(value);
+                }
+            }
+            """.trimIndent()
+        val embedding = EmbeddingSupport.instance()
+        val errors = ErrorList()
+        val library = embedding.compileModule(Source(libraryText, librarySource), null, errors)
+        assertThat(library.succeeded()).describedAs(errors.errors.toString()).isTrue()
+        val dependencies = XdkDependencies(listOf(library.toDependency()))
+        val destinations = library.missingMethodDestinations()
+        val open = dependencies.open()
+        val failed = embedding.compileModule(Source(text, SOURCE), open.repository, ErrorList())
+        assertThat(failed.succeeded()).isFalse()
+        val inputs = failed.renameFacts(open, includeMissingMethods = true, missingDestinations = destinations).missingMethodInputs
+        val fresh = dependencies.open()
+        val declarations = embedding.analyzeDeclarations(Source(text, SOURCE), fresh.repository, errors).orElseThrow()
+        val headers = declarations.memberActionFacts(fresh, errors, inputs, destinations)
+        assertThat(errors.errors).isEmpty()
+        val candidate = headers.missingMethods.single()
+        val edit = requireNotNull(candidate.edit(libraryText))
+
+        fun proves(proposed: XdkRename.Edit): Boolean {
+            val plan = XdkRename.Plan(mapOf(SOURCE to text, librarySource to libraryText), mapOf(librarySource to listOf(proposed)))
+            val nextErrors = ErrorList()
+            val nextLibrary = embedding.compileModule(Source(plan.proposed.getValue(librarySource), librarySource), null, nextErrors)
+            assertThat(nextLibrary.succeeded()).describedAs(nextErrors.errors.toString()).isTrue()
+            val next = XdkDependencies(listOf(nextLibrary.toDependency())).open()
+            val caller = embedding.compileModule(Source(text, SOURCE), next.repository, nextErrors)
+            assertThat(caller.succeeded()).describedAs(nextErrors.errors.toString()).isTrue()
+            val after =
+                CompilerRenameFacts.merge(
+                    mapOf(
+                        "library" to nextLibrary.projectRenameFacts(XdkDependencies(emptyList()).open(), nextErrors),
+                        "caller" to caller.projectRenameFacts(next, nextErrors),
+                    ),
+                )
+            return candidate.bindsNewMethod(after, plan, proposed)
+        }
+        assertThat(proves(edit)).isTrue()
+        assertThat(proves(edit.copy(text = edit.text.replace("String arg1", "Object arg1")))).isFalse()
+        assertThat(proves(edit.copy(text = edit.text.replace("public Object", "public String")))).isFalse()
+    }
+
     @Test
     fun `cross owner local and initializer proof rejects compatible signature changes and argument rebinding`() {
         CompilerTestSupport.configure()

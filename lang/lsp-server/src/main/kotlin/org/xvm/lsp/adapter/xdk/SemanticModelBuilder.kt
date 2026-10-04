@@ -108,6 +108,7 @@ fun EmbeddingSupport.Compilation.semanticSnapshots(errors: ErrorListener): List<
 internal fun EmbeddingSupport.Compilation.renameFacts(
     dependencies: XdkDependencies.Open,
     includeMissingMethods: Boolean = false,
+    missingDestinations: Map<SourceLocation, XdkMissingMethods.Destination> = emptyMap(),
 ): CompilerRenameFacts =
     ExecutionTrace.api("Compilation.renameFacts") {
         ConstantPool.withPool(pool()).use {
@@ -121,7 +122,14 @@ internal fun EmbeddingSupport.Compilation.renameFacts(
                 dependencies,
                 supers = builder.superBindings(),
                 receivers = builder.receiverBindings(),
-                missingInputs = if (includeMissingMethods) missingMethodInputs() else CompilerMissingInputs(),
+                missingInputs =
+                    if (includeMissingMethods) {
+                        missingMethodInputs(
+                            dependencies.missingMethodDestinations(missingDestinations),
+                        )
+                    } else {
+                        CompilerMissingInputs()
+                    },
             )
         }
     }
@@ -165,6 +173,7 @@ internal fun EmbeddingSupport.DeclarationAnalysis.memberActionFacts(
     dependencies: XdkDependencies.Open,
     errors: ErrorListener,
     missingMethodInputs: XdkMissingMethods.Inputs = XdkMissingMethods.Inputs(),
+    missingDestinations: Map<SourceLocation, XdkMissingMethods.Destination> = emptyMap(),
 ): CompilerRenameFacts =
     ExecutionTrace.api("DeclarationAnalysis.memberActionFacts") {
         ConstantPool.withPool(pool()).use {
@@ -172,7 +181,7 @@ internal fun EmbeddingSupport.DeclarationAnalysis.memberActionFacts(
                 SemanticModelBuilder(
                     dependencies.declarations.filterKeys { it.moduleConstant != file().moduleId },
                 )
-            builder.declarationFacts(this, dependencies, errors, missingMethodInputs)
+            builder.declarationFacts(this, dependencies, errors, missingMethodInputs, missingDestinations)
         }
     }
 
@@ -246,6 +255,7 @@ private class SemanticModelBuilder(
         dependencies: XdkDependencies.Open,
         errors: ErrorListener,
         missingMethodInputs: XdkMissingMethods.Inputs,
+        missingDestinations: Map<SourceLocation, XdkMissingMethods.Destination>,
     ): CompilerRenameFacts {
         val nodes = nodesIn(analysis.ast())
         collect(nodes, emptyMap(), emptyMap(), analysis.pool())
@@ -257,7 +267,13 @@ private class SemanticModelBuilder(
             compilerPropertyRelations(nodes, errors),
             errors,
             members = compilerMemberActions(nodes, errors),
-            missingMethods = compilerMissingMethods(nodes, errors, missingMethodInputs),
+            missingMethods =
+                compilerMissingMethods(
+                    nodes,
+                    errors,
+                    missingMethodInputs,
+                    dependencies.missingMethodDestinations(missingDestinations),
+                ),
         )
     }
 

@@ -8,6 +8,7 @@ import org.xvm.asm.Constants.Access
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.MethodStructure
 import org.xvm.asm.Op
+import org.xvm.asm.PackageStructure
 import org.xvm.asm.Register
 import org.xvm.asm.constants.ClassConstant
 import org.xvm.asm.constants.TypeConstant
@@ -54,8 +55,9 @@ internal data class CompilerMissingInputs(
     val receivers: Map<SemanticModel.SourceLocation, XdkMissingMethods.Receiver> = emptyMap(),
 ) {
     data class LocalType(
-        val source: String,
+        val source: String?,
         val type: TypeConstant,
+        val destinationSources: Map<SemanticModel.SourceLocation, String> = emptyMap(),
     )
 }
 
@@ -75,6 +77,7 @@ internal fun compilerMissingMethods(
     nodes: List<AstNode>,
     errors: ErrorListener,
     inputs: XdkMissingMethods.Inputs = XdkMissingMethods.Inputs(),
+    destinations: Map<ClassConstant, XdkMissingMethods.Destination> = emptyMap(),
 ): List<CompilerMissingMethod> =
     nodes
         .filterIsInstance<InvocationExpression>()
@@ -109,10 +112,11 @@ internal fun compilerMissingMethods(
                 } else {
                     owner
                 }
-            val target = destination ?: return@mapNotNull null
-            val structure = target.component as? ClassStructure ?: return@mapNotNull null
+            val external = destinations.entries.singleOrNull { it.value.location == receiver?.destination }
+            val target = destination
+            val structure = (target?.component ?: external?.key?.component) as? ClassStructure ?: return@mapNotNull null
             val crossOwner = target !== owner
-            // Cross-module, generic and synthetic destinations need additional ownership/substitution policy.
+            // Generic and synthetic destinations need additional ownership/substitution policy.
             if (crossOwner &&
                 (structure.format != Format.CLASS || structure.typeParamCount != 0 || structure.isSynthetic)
             ) {
@@ -133,7 +137,15 @@ internal fun compilerMissingMethods(
             }
             val info =
                 ExecutionTrace.api("TypeConstant.ensureTypeInfo(missing-method)") {
-                    structure.formalType.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors)
+                    // Reopened artifacts carry source indexes, but their pools are not linked for
+                    // TypeInfo. Inspect the dependency through this fresh caller's linked pool.
+                    val type =
+                        if (external == null) {
+                            structure.formalType
+                        } else {
+                            declaration.constantPool.ensureTerminalTypeConstant(external.key)
+                        }
+                    type.ensureAccess(Access.PRIVATE).ensureTypeInfo(errors)
                 }
             if (errors.hasSeriousErrors() || errors.isAbortDesired ||
                 info.methods.values.any { it.signature.name == name.name } || info.properties.values.any { it.name == name.name }
@@ -158,14 +170,16 @@ internal fun compilerMissingMethods(
             }
 
             fun render(type: TypeConstant) =
-                type.missingMethodType(structure)?.let { MissingType(it, CompilerMissingMethod.Type.Resolved(type)) }
+                type
+                    .missingMethodType(
+                        structure,
+                        external?.value?.modules.orEmpty(),
+                    )?.let { MissingType(it, CompilerMissingMethod.Type.Resolved(type)) }
 
             fun localType(local: VariableDeclarationStatement) =
                 inputs.localTypes[local.declarationLocation()]?.let {
-                    MissingType(
-                        it.source,
-                        CompilerMissingMethod.Type.Detached(it.identity),
-                    )
+                    val source = if (external == null) it.source else it.destinationSources[external.value.location]
+                    source?.let { source -> MissingType(source, CompilerMissingMethod.Type.Detached(it.identity)) }
                 }
                     ?: local.takeIf { it.hasExplicitMethodType() }?.type?.let(::render)
             val returns =
@@ -247,8 +261,9 @@ internal fun compilerMissingMethods(
                 XdkMissingMethods.Candidate(
                     name.calleeLocation(),
                     name.name,
-                    position(target.ensureBody().endPosition).let { it.copy(column = it.column - 1) },
-                    target.location(),
+                    external?.value?.insertion
+                        ?: position(requireNotNull(target).ensureBody().endPosition).let { it.copy(column = it.column - 1) },
+                    external?.value?.location ?: requireNotNull(target).location(),
                     "${if (crossOwner) "public" else "private"} ${if (dispatch == Dispatch.STATIC) "static " else ""}$result ${name.name}($signature)",
                     dispatch,
                     parameters.mapNotNull { it.binding },
@@ -263,31 +278,14 @@ internal fun compilerMissingMethods(
  * Copy compiler-established body facts without resuming a failed body or requesting its TypeInfo.
  * Inferred locals need a validated initializer; an explicit declaration needs its resolved register.
  */
-internal fun EmbeddingSupport.Compilation.missingMethodInputs(): CompilerMissingInputs =
+internal fun EmbeddingSupport.Compilation.missingMethodInputs(
+    destinations: Map<ClassConstant, XdkMissingMethods.Destination> = emptyMap(),
+): CompilerMissingInputs =
     ExecutionTrace.api("Compilation.missingMethodInputs") {
         val root = parsed() ?: return@api CompilerMissingInputs()
         ConstantPool.withPool(pool()).use {
             fun descendants(node: AstNode): Sequence<AstNode> = sequenceOf(node) + node.childNodes().asSequence().flatMap(::descendants)
             val nodes = descendants(root).toList()
-            val localTypes =
-                nodes
-                    .filterIsInstance<VariableDeclarationStatement>()
-                    .mapNotNull { local ->
-                        if (!local.hasExplicitMethodType()) {
-                            if (local.childNodes().none { it is VariableTypeExpression }) return@mapNotNull null
-                            val assignment = local.parent as? AssignmentStatement ?: return@mapNotNull null
-                            if (assignment.lValue !== local || assignment.op.id != Token.Id.ASN ||
-                                !assignment.rValue.isValidated || !assignment.rValue.typeFit.isFit
-                            ) {
-                                return@mapNotNull null
-                            }
-                        }
-                        val owner = generateSequence(local.parent) { it.parent }.filterIsInstance<TypeCompositionStatement>().firstOrNull()
-                        val structure = owner?.component as? ClassStructure ?: return@mapNotNull null
-                        val type = local.register?.originalType ?: return@mapNotNull null
-                        val rendered = type.missingMethodType(structure) ?: return@mapNotNull null
-                        local.declarationLocation() to CompilerMissingInputs.LocalType(rendered, type)
-                    }.toMap()
             val receivers =
                 nodes
                     .filterIsInstance<InvocationExpression>()
@@ -322,14 +320,46 @@ internal fun EmbeddingSupport.Compilation.missingMethodInputs(): CompilerMissing
                                 }
                             }
                         val (identity, dispatch) = identityAndDispatch
-                        // Resolve the destination in this module's source AST by compiler identity.
-                        // Binary/indexed sources and other modules cannot enter this edit path.
+                        // Dependency source indexes locate declarations but do not authorize edits.
+                        // Only a matching destination from the configured source graph is writable.
                         val destination =
-                            nodes.filterIsInstance<TypeCompositionStatement>().singleOrNull {
-                                (it.component as? ClassStructure)?.identityConstant == identity
-                            } ?: return@mapNotNull null
+                            nodes
+                                .filterIsInstance<TypeCompositionStatement>()
+                                .singleOrNull {
+                                    (it.component as? ClassStructure)?.identityConstant == identity
+                                }?.location() ?: destinations[identity]?.location ?: return@mapNotNull null
                         if (dispatch == Dispatch.STATIC && identity.component.format != Format.CLASS) return@mapNotNull null
-                        callee.calleeLocation() to XdkMissingMethods.Receiver(destination.location(), dispatch)
+                        callee.calleeLocation() to XdkMissingMethods.Receiver(destination, dispatch)
+                    }.toMap()
+            val destinationLocations = receivers.values.mapTo(hashSetOf()) { it.destination }
+            val referencedDestinations = destinations.filterValues { it.location in destinationLocations }
+            val localTypes =
+                nodes
+                    .filterIsInstance<VariableDeclarationStatement>()
+                    .mapNotNull { local ->
+                        if (!local.hasExplicitMethodType()) {
+                            if (local.childNodes().none { it is VariableTypeExpression }) return@mapNotNull null
+                            val assignment = local.parent as? AssignmentStatement ?: return@mapNotNull null
+                            if (assignment.lValue !== local || assignment.op.id != Token.Id.ASN ||
+                                !assignment.rValue.isValidated || !assignment.rValue.typeFit.isFit
+                            ) {
+                                return@mapNotNull null
+                            }
+                        }
+                        val owner = generateSequence(local.parent) { it.parent }.filterIsInstance<TypeCompositionStatement>().firstOrNull()
+                        val structure = owner?.component as? ClassStructure ?: return@mapNotNull null
+                        val type = local.register?.originalType ?: return@mapNotNull null
+                        val destinationSources =
+                            referencedDestinations.entries
+                                .mapNotNull { (identity, destination) ->
+                                    type.missingMethodType(identity.component as ClassStructure, destination.modules)?.let {
+                                        destination.location to
+                                            it
+                                    }
+                                }.toMap()
+                        val rendered = type.missingMethodType(structure)
+                        if (rendered == null && destinationSources.isEmpty()) return@mapNotNull null
+                        local.declarationLocation() to CompilerMissingInputs.LocalType(rendered, type, destinationSources)
                     }.toMap()
             CompilerMissingInputs(localTypes, receivers)
         }
@@ -338,9 +368,54 @@ internal fun EmbeddingSupport.Compilation.missingMethodInputs(): CompilerMissing
 private fun VariableDeclarationStatement.hasExplicitMethodType(): Boolean =
     childNodes().none { it is VariableTypeExpression || it is AnnotatedTypeExpression }
 
-private fun TypeConstant.missingMethodType(owner: ClassStructure): String? =
+private fun TypeConstant.missingMethodType(
+    owner: ClassStructure,
+    modules: Map<String, String> = emptyMap(),
+): String? =
     // Declaration analysis resolves the identity but can retain its parser wrapper.
-    resolveTypedefs().memberSourceType(owner.identityConstant, emptyMap(), mapOf("ecstasy.xtclang.org" to "ecstasy"))
+    resolveTypedefs().memberSourceType(owner.identityConstant, emptyMap(), modules + ("ecstasy.xtclang.org" to "ecstasy"))
+
+/** Detach source destinations before their compilation and AST leave this worker attempt. */
+internal fun EmbeddingSupport.Compilation.missingMethodDestinations(): Map<SemanticModel.SourceLocation, XdkMissingMethods.Destination> =
+    ExecutionTrace.api("Compilation.missingMethodDestinations") {
+        check(succeeded())
+        ConstantPool.withPool(pool()).use {
+            fun descendants(node: AstNode): Sequence<AstNode> = sequenceOf(node) + node.childNodes().asSequence().flatMap(::descendants)
+            val nodes = descendants(requireNotNull(parsed())).filterIsInstance<TypeCompositionStatement>().toList()
+            // Existing module-level package imports are visible in the destination. No repair
+            // adds an import or a dependency edge, or borrows the caller's alias spelling.
+            val modules =
+                nodes
+                    .mapNotNull { node ->
+                        val structure = node.component as? PackageStructure ?: return@mapNotNull null
+                        if (!structure.isModuleImport || structure.parent.format != Format.MODULE) return@mapNotNull null
+                        structure.importedModule.identityConstant.name to structure.identityConstant.pathString
+                    }.toMap()
+            nodes
+                .mapNotNull { node ->
+                    val structure = node.component as? ClassStructure ?: return@mapNotNull null
+                    if (structure.format != Format.CLASS || structure.typeParamCount != 0 || structure.isSynthetic) return@mapNotNull null
+                    val end = node.ensureBody().endPosition
+                    val declaration = node.location(node.nameToken.startPosition, node.nameToken.endPosition)
+                    declaration to
+                        XdkMissingMethods.Destination(
+                            node.location(),
+                            SemanticModel.Position(Source.calculateLine(end), Source.calculateOffset(end) - 1),
+                            modules,
+                        )
+                }.toMap()
+        }
+    }
+
+/** Reassociate only detached project-owned source locations with this attempt's fresh constants. */
+internal fun XdkDependencies.Open.missingMethodDestinations(
+    destinations: Map<SemanticModel.SourceLocation, XdkMissingMethods.Destination>,
+): Map<ClassConstant, XdkMissingMethods.Destination> =
+    declarations.entries
+        .mapNotNull { (identity, declaration) ->
+            val owner = identity as? ClassConstant ?: return@mapNotNull null
+            destinations[declaration.location]?.let { owner to it }
+        }.toMap()
 
 private fun AstNode.location(
     start: Long = startPosition,

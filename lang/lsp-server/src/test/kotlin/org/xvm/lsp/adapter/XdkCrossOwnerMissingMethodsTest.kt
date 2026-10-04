@@ -111,21 +111,6 @@ class XdkCrossOwnerMissingMethodsTest {
         )
     }
 
-    @Test
-    fun `another configured module remains outside this destination policy`() {
-        directory.resolve("Library.x").toFile().writeText("module Library { class Other {} }")
-        query(
-            """
-            module Missing {
-                package lib import Library;
-                Int read(lib.Other peer, Int value) {
-                    return peer.§missing(value);
-                }
-            }
-            """.trimIndent(),
-        )
-    }
-
     @ParameterizedTest
     @ValueSource(strings = ["Int local = value;", "var local = value;", "val local = value;", "Int local; local = value;"])
     fun `compiler established local arguments retain their type in another owner`(local: String) {

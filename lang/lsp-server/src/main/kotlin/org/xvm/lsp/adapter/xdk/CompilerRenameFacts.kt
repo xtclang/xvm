@@ -502,7 +502,11 @@ internal fun captureRenameFacts(
         missingMethodInputs =
             XdkMissingMethods.Inputs(
                 missingInputs.localTypes.mapValues { (_, type) ->
-                    XdkMissingMethods.LocalType(type.source, receiverIdentity(type.type, ::identity) ?: ProofIdentity.Unproven())
+                    XdkMissingMethods.LocalType(
+                        type.source,
+                        receiverIdentity(type.type, ::identity) ?: ProofIdentity.Unproven(),
+                        type.destinationSources,
+                    )
                 },
                 missingInputs.receivers,
             ),
