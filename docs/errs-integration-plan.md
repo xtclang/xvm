@@ -9390,3 +9390,10 @@ claim. Keep this fixture/runner checkpoint with the independent compiler fix dur
 `runDuplicateTypes` uses the consumer's resolved XDK and participates in `check`, `runSequential`
 and `runParallel`. Configuration-cache and combined validation for this errs batch are pending.
 The preceding L62 checkpoints through `50b113961` were pushed before this continuation.
+
+Empty existing destination directories now extend the nearest compiler-proven module/package
+through captured implicit package directories. Explicit companion sources cannot be guessed past.
+After replay, every moved declaration must have its expected module and full type path, including
+unused types; normal binding/call/resource proof still applies. Nonexistent destinations, foreign
+modules and class-owned directories remain refusals. Backend regressions cover nested empty
+destinations, explicit empty packages and all three ownership refusals. Validation is batched.
