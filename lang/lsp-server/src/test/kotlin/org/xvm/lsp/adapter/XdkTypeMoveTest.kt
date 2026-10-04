@@ -333,6 +333,49 @@ class XdkTypeMoveTest {
         }
     }
 
+    @Test
+    fun `empty nested destination acquires compiler package ownership without marker sources`() {
+        write("App.x", "module App { tools.Box make() = new tools.Box(); }")
+        write("App/tools/Box.x", "class Box {}")
+        write("Consumer.x", "module Consumer { package app import App; app.tools.Box make() = new app.tools.Box(); }")
+        Files.createDirectories(directory.resolve("App/util/nested"))
+        session { adapter ->
+            move(adapter, mapOf(uri("App/tools/Box.x") to uri("App/util/nested/Parcel.x")))
+            assertThat(read("App.x")).contains("util.nested.Parcel")
+            assertThat(read("Consumer.x")).contains("app.util.nested.Parcel")
+            assertThat(read("App/util/nested/Parcel.x")).isEqualTo("class Parcel {}")
+        }
+    }
+
+    @Test
+    fun `unused type moves into an explicit empty package`() {
+        write("App.x", "module App {}")
+        write("App/tools/Box.x", "class Box {}")
+        write("App/util.x", "package util {}")
+        Files.createDirectories(directory.resolve("App/util"))
+        session { adapter ->
+            move(adapter)
+            assertThat(read("App/util/Box.x")).isEqualTo("class Box {}")
+        }
+    }
+
+    @Test
+    fun `empty destinations outside the module or below a class remain refused`() {
+        write("App.x", "module App { tools.Box make() = new tools.Box(); }")
+        write("App/tools/Box.x", "class Box {}")
+        write("App/Owner.x", "class Owner {}")
+        write("Other.x", "module Other {}")
+        listOf("App/Owner/nested", "Other/empty", "unowned").forEach { Files.createDirectories(directory.resolve(it)) }
+        session { adapter ->
+            val original = sourceTexts()
+            listOf("App/Owner/nested", "Other/empty", "unowned").forEach { destination ->
+                assertThat(adapter.renameFilesAsync(mapOf(uri("App/tools/Box.x") to uri("$destination/Box.x"))).get(30, SECONDS))
+                    .describedAs(destination).isNull()
+            }
+            assertThat(sourceTexts()).isEqualTo(original)
+        }
+    }
+
     private fun sourceTexts(): Map<String, String> =
         directory
             .toFile()
