@@ -192,6 +192,45 @@ class XdkGraphMoveTest {
     }
 
     @Test
+    fun `parent and independently relocated child apply child first regardless of request order`() {
+        write("old/App.x", "module App {}")
+        write("old/App/Box.x", "class Box {}")
+        write("old/App/Box/Part.x", "static class Part {}")
+        write("old/App/Box/data.txt", "keep bytes")
+        write("Other.x", "module Other {}")
+        Files.createDirectories(directory.resolve("Other"))
+        session { adapter ->
+            adapter.replaceSourceModules(listOf(XdkSourceModule("App", uri("old/App.x")), XdkSourceModule("Other", uri("Other.x"))))
+            val moves = mapOf(uri("old") to uri("new"), uri("old/App/Box.x") to uri("Other/Box.x"))
+            val proposal = requireNotNull(adapter.renameFilesProposalAsync(moves).get(30, SECONDS))
+            val reversed = requireNotNull(adapter.renameFilesProposalAsync(moves.entries.reversed().associate { it.toPair() }).get(30, SECONDS))
+            assertThat(proposal.edit.renames.entries.toList()).isEqualTo(reversed.edit.renames.entries.toList())
+            assertThat(proposal.edit.renames.keys.last()).isEqualTo(uri("old"))
+            apply(proposal.edit)
+            adapter.replaceSourceModules(requireNotNull(proposal.sourceModules))
+            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+            assertThat(Files.readString(directory.resolve("Other/Box/data.txt"))).isEqualTo("keep bytes")
+            assertThat(directory.resolve("new/App/Box.x")).doesNotExist()
+        }
+    }
+
+    @Test
+    fun `redundant child relocation is coalesced with its parent`() {
+        write("old/App.x", "module App {}")
+        write("old/App/Box.x", "class Box {}")
+        session { adapter ->
+            adapter.replaceSourceModules(listOf(XdkSourceModule("App", uri("old/App.x"))))
+            val proposal = requireNotNull(adapter.renameFilesProposalAsync(mapOf(
+                uri("old") to uri("new"), uri("old/App/Box.x") to uri("new/App/Box.x"),
+            )).get(30, SECONDS))
+            assertThat(proposal.edit.renames).containsExactlyEntriesOf(mapOf(uri("old") to uri("new")))
+            apply(proposal.edit)
+            adapter.replaceSourceModules(requireNotNull(proposal.sourceModules))
+            assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
+        }
+    }
+
+    @Test
     fun `existing destination and overlapping requests refuse a graph transaction`() {
         write("old/App.x", "module App {}")
         write("taken/Keep.x", "module Keep {}")

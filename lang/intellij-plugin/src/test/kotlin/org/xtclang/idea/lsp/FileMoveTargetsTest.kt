@@ -21,12 +21,13 @@ class FileMoveTargetsTest {
             mapOf(a to b),
             mapOf(a to moved, b to moved),
             mapOf(source to source.resolve("child")),
-            mapOf(source to target.resolve("source"), a to moved),
             mapOf(a to root.resolve("missing/A.x")),
             mapOf(a to target.resolve("../target/A.x")),
         ).forEach { assertThat(FileMoveTargets.valid(it)).isFalse() }
         assertThat(Files.readString(a)).isEqualTo("class A {}")
         assertThat(moved).doesNotExist()
+        // The compiler orders the independently moved child before the parent directory.
+        assertThat(FileMoveTargets.valid(mapOf(source to target.resolve("source"), a to moved))).isTrue()
         Files.createSymbolicLink(moved, root.resolve("absent"))
         assertThat(FileMoveTargets.valid(mapOf(a to moved))).isFalse()
     }
