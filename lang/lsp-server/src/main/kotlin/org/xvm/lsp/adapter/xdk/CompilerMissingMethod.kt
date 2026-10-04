@@ -20,9 +20,11 @@ import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AnnotatedTypeExpression
 import org.xvm.compiler.ast.AssignmentStatement
 import org.xvm.compiler.ast.AstNode
+import org.xvm.compiler.ast.Expression
 import org.xvm.compiler.ast.ExpressionStatement
 import org.xvm.compiler.ast.InvocationExpression
 import org.xvm.compiler.ast.LambdaExpression
+import org.xvm.compiler.ast.LabeledExpression
 import org.xvm.compiler.ast.LiteralExpression
 import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.compiler.ast.NameExpression
@@ -58,6 +60,7 @@ internal data class CompilerMissingMethod(
 internal data class CompilerMissingInputs(
     val localTypes: Map<SemanticModel.SourceLocation, LocalType> = emptyMap(),
     val receivers: Map<SemanticModel.SourceLocation, XdkMissingMethods.Receiver> = emptyMap(),
+    val expressions: Map<SemanticModel.SourceLocation, LocalType> = emptyMap(),
 ) {
     data class LocalType(
         val source: String?,
@@ -247,8 +250,18 @@ internal fun compilerMissingMethods(
                     }
                 }
             val arguments = call.childNodes().filter { it !== name }
+            val labels = arguments.filterIsInstance<LabeledExpression>().map { it.name }
+            if (labels.distinct().size != labels.size || labels.any { !XdkRename.identifier(it) }) return@mapNotNull null
+            val argumentNames = buildList {
+                arguments.forEachIndexed { index, argument ->
+                    add((argument as? LabeledExpression)?.name
+                        ?: generateSequence(index + 1) { it + 1 }.map { "arg$it" }.first { it !in labels && it !in this })
+                }
+            }
             val parameters =
-                arguments.mapIndexed { index, argument ->
+                arguments.mapIndexed { index, wrapped ->
+                    val argument = (wrapped as? LabeledExpression)?.underlyingExpression ?: wrapped
+                    val argumentName = argumentNames[index]
                     val expression =
                         (argument as? NameExpression)
                             ?.takeIf { it.isSimpleName && !it.hasTrailingTypeParams() && !it.isSuppressDeref }
@@ -268,7 +281,7 @@ internal fun compilerMissingMethods(
                     if (local != null) {
                         val rendered = localType(local) ?: return@mapNotNull null
                         val binding = XdkMissingMethods.ArgumentBinding(argument.location(), local.declarationLocation())
-                        return@mapIndexed MissingParameter("${rendered.source} arg${index + 1}", rendered.proof, binding, rendered.imports)
+                        return@mapIndexed MissingParameter("${rendered.source} $argumentName", rendered.proof, binding, rendered.imports)
                     }
                     val parameter =
                         expression?.let { value ->
@@ -277,6 +290,14 @@ internal fun compilerMissingMethods(
                                     it.name !in localNames
                             }
                         }
+                    val evidence = inputs.expressions[argument.location()]
+                    if (parameter == null && evidence != null) {
+                        val rendered = if (external == null) evidence.source?.let { XdkMissingMethods.TypeSource(it) }
+                            else evidence.destinationSources[external.value.location]
+                        rendered ?: return@mapNotNull null
+                        return@mapIndexed MissingParameter("${rendered.source} $argumentName",
+                            CompilerMissingMethod.Type.Detached(evidence.identity), imports = rendered.imports)
+                    }
                     val type = parameter?.type ?: (argument as? LiteralExpression)?.getImplicitType(null) ?: return@mapNotNull null
                     // Untyped numeric literals still have a choice of runtime representation; do not
                     // turn the compiler's IntLiteral/FPLiteral implementation types into a public signature.
@@ -286,7 +307,7 @@ internal fun compilerMissingMethods(
                         return@mapNotNull null
                     }
                     val rendered = render(type) ?: return@mapNotNull null
-                    MissingParameter("${rendered.source} arg${index + 1}", rendered.proof, imports = rendered.imports)
+                    MissingParameter("${rendered.source} $argumentName", rendered.proof, imports = rendered.imports)
                 }
 
             fun position(value: Long) = SemanticModel.Position(Source.calculateLine(value), Source.calculateOffset(value))
@@ -413,7 +434,27 @@ internal fun EmbeddingSupport.Compilation.missingMethodInputs(
                         if (rendered == null && destinationSources.isEmpty()) return@mapNotNull null
                         local.declarationLocation() to CompilerMissingInputs.LocalType(rendered, type, destinationSources)
                     }.toMap()
-            CompilerMissingInputs(localTypes, receivers)
+            val expressions = nodes.filterIsInstance<InvocationExpression>().flatMap { call ->
+                call.childNodes().filter { it !== call.invokedExpression }.map {
+                    (it as? LabeledExpression)?.underlyingExpression ?: it
+                }
+            }.filterIsInstance<Expression>().mapNotNull { expression ->
+                if (!expression.isValidated || !expression.typeFit.isFit || expression.valueCount != 1) return@mapNotNull null
+                val type = expression.type ?: return@mapNotNull null
+                if (type == pool().typeIntLiteral() || type == pool().typeFPLiteral()) return@mapNotNull null
+                val ancestors = generateSequence(expression.parent) { it.parent }.toList()
+                val owner = ancestors.filterIsInstance<TypeCompositionStatement>().firstOrNull()?.component as? ClassStructure
+                    ?: return@mapNotNull null
+                val method = ancestors.filterIsInstance<MethodDeclarationStatement>().firstOrNull()?.component as? MethodStructure
+                val formals = method?.params?.take(method.typeParamCount).orEmpty().associate {
+                    it.asTypeParameterConstant(requireNotNull(method).identityConstant) to (it.name ?: return@mapNotNull null)
+                }
+                val destinations = referencedDestinations.entries.mapNotNull { (identity, destination) ->
+                    destination.render(type, identity.component as ClassStructure, formals)?.let { destination.location to it }
+                }.toMap()
+                expression.location() to CompilerMissingInputs.LocalType(type.missingMethodType(owner, formals = formals), type, destinations)
+            }.toMap()
+            CompilerMissingInputs(localTypes, receivers, expressions)
         }
     }
 
