@@ -14,6 +14,13 @@ internal object XdkMissingMethods {
         val dispatch: Dispatch,
     )
 
+    /** Source ownership and spelling context copied from a successfully compiled project module. */
+    data class Destination(
+        val location: SemanticModel.SourceLocation,
+        val insertion: SemanticModel.Position,
+        val modules: Map<String, String>,
+    )
+
     data class Signature(
         val parameters: List<ProofIdentity>,
         val returns: List<ProofIdentity>,
@@ -27,8 +34,9 @@ internal object XdkMissingMethods {
     )
 
     data class LocalType(
-        val source: String,
+        val source: String?,
         val identity: ProofIdentity,
+        val destinationSources: Map<SemanticModel.SourceLocation, String> = emptyMap(),
     )
 
     data class ArgumentBinding(
@@ -99,7 +107,12 @@ internal object XdkMissingMethods {
 
             if (publicOwner != null) {
                 val expected = signature ?: return false
-                val actual = after.methodSignatures[symbol.id] ?: return false
+                // A dependency use has a different snapshot-local symbol id. Read the signature
+                // from the exact source declaration selected by the completed caller instead.
+                val target = after.models.singleOrNull { it.sourceName == targetSource } ?: return false
+                val declared = target.symbolAt(declaration.start.line, declaration.start.column) ?: return false
+                if (declared.declaration != declaration || declared.name != name) return false
+                val actual = after.methodSignatures[declared.id] ?: return false
                 if (!actual.isPublic) return false
 
                 fun equivalent(
