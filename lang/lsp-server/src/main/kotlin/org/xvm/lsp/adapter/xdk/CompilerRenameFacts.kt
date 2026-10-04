@@ -147,6 +147,7 @@ internal class CompilerRenameFacts(
     val missingMethods: List<XdkMissingMethods.Candidate> = emptyList(),
     val methodSignatures: Map<SemanticModel.SymbolId, XdkMissingMethods.Signature> = emptyMap(),
     val missingMethodInputs: XdkMissingMethods.Inputs = XdkMissingMethods.Inputs(),
+    val constantProperties: Set<SemanticModel.SourceLocation> = emptySet(),
 ) {
     /** Unchanged independent modules cannot acquire new bindings from a source edit elsewhere. */
     fun within(scopes: Set<String>): CompilerRenameFacts = merge(modules.filterKeys(scopes::contains))
@@ -184,6 +185,7 @@ internal class CompilerRenameFacts(
                     attempts.flatMap { it.missingMethodInputs.localTypes.entries }.associate { it.toPair() },
                     attempts.flatMap { it.missingMethodInputs.receivers.entries }.associate { it.toPair() },
                 ),
+                attempts.flatMapTo(linkedSetOf()) { it.constantProperties },
             )
         }
     }
@@ -207,6 +209,7 @@ internal fun captureRenameFacts(
     extraction: CompilerExtractionFacts? = null,
     missingMethods: List<CompilerMissingMethod> = emptyList(),
     missingInputs: CompilerMissingInputs = CompilerMissingInputs(),
+    constantProperties: Set<SemanticModel.SourceLocation> = emptySet(),
 ): CompilerRenameFacts {
     val declarations =
         models
@@ -517,6 +520,7 @@ internal fun captureRenameFacts(
                         )
                 }.toMap(),
         removableLocals = removableLocals,
+        constantProperties = constantProperties,
         extraction =
             ExtractMethodFacts(
                 extraction

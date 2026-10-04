@@ -947,7 +947,7 @@ internal class XdkProjectQueries(
         val memberInline =
             if (complete) {
                 before.models.singleOrNull { it.sourceName == source }?.let { model ->
-                    XdkMemberInline.candidate(text, range, model)?.let { candidate ->
+                    XdkMemberInline.candidate(text, range, model, before)?.let { candidate ->
                         checkCurrent()
                         val plan = XdkRename.Plan(texts, mapOf(source to listOf(candidate.edit)))
                         val after = compile(plan.proposed, Proof.REPAIR) ?: return@let null
