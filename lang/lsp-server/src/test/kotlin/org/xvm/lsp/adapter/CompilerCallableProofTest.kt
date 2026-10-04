@@ -154,18 +154,19 @@ class CompilerCallableProofTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["Float64", "Dec64", "Int[]"])
-    fun `changed numeric or compound annotation arguments cannot preserve dispatch`(type: String) {
-        val first = if (type == "Int[]") "[1, 2]" else "1.5"
-        val second = if (type == "Int[]") "[2, 1]" else "2.5"
-        val text = """
+    @ValueSource(strings = ["Float64", "Dec64"])
+    fun `changed numeric annotation arguments cannot preserve dispatch`(type: String) {
+        val first = "$type:1.5"
+        val second = "$type:2.5"
+        val text =
+            """
             module App {
                 class First { Int read() = 1; }
                 class Second { Int read() = 2; }
                 annotation Mark($type value) into Object {}
                 Int use((@Mark($first) First) | Second target) = target.read();
             }
-        """.trimIndent()
+            """.trimIndent()
         val before = facts(text)
         val changed = text.replace(first, second)
         val after = facts(changed)

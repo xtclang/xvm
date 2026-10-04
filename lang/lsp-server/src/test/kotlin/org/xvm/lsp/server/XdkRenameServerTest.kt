@@ -202,6 +202,69 @@ class XdkRenameServerTest {
     }
 
     @Test
+    fun `cross module type proposal carries dependency replacement and versioned source edits`() {
+        directory = directory.toRealPath()
+        val root = directory.resolve("App.x").toFile().apply { writeText("module App { Box make() = new Box(); }") }
+        val other = directory.resolve("Other.x").toFile().apply { writeText("module Other {}") }
+        val member =
+            directory.resolve("App/Box.x").toFile().apply {
+                parentFile.mkdirs()
+                writeText("class Box {}")
+            }
+        val target = directory.resolve("Other/Box.x").toFile().apply { parentFile.mkdirs() }
+        val server = XtcLanguageServer(XdkAdapter())
+        server.connect(mock(LanguageClient::class.java))
+        try {
+            server
+                .initialize(
+                    parameters().apply {
+                        capabilities.workspace.workspaceEdit.resourceOperations = listOf("rename")
+                        capabilities.workspace.fileOperations = FileOperationsWorkspaceCapabilities().apply { willRename = true }
+                    },
+                ).get(20, SECONDS)
+            server.replaceCompilerSourceModules(
+                listOf(
+                    XdkSourceModule("App", root.toURI().toString()),
+                    XdkSourceModule("Other", other.toURI().toString()),
+                ),
+            )
+            val params = RenameFilesParams(listOf(FileRename(member.toURI().toString(), target.toURI().toString())))
+            assertThat(server.willRenameFiles(params).get(30, SECONDS)).isNull()
+            val proposal = requireNotNull(server.renameFilesProposal(params).get(30, SECONDS))
+            assertThat(
+                proposal.graph!!
+                    .before
+                    .single { it.name == "App" }
+                    .dependencies,
+            ).isEmpty()
+            assertThat(
+                proposal.graph!!
+                    .after
+                    .single { it.name == "App" }
+                    .dependencies,
+            ).containsExactly("Other")
+            assertThat(proposal.edit.documentChanges.filter { it.isLeft }).isNotEmpty()
+            assertThat(
+                proposal.edit.documentChanges
+                    .filter { it.isRight }
+                    .single()
+                    .right,
+            ).isInstanceOf(RenameFile::class.java)
+            assertThat(
+                server
+                    .compilerSourceModules()
+                    .get(30, SECONDS)
+                    .single { it.name == "App" }
+                    .dependencies,
+            ).isEmpty()
+            assertThat(member).exists()
+            assertThat(target).doesNotExist()
+        } finally {
+            server.shutdown().get(20, SECONDS)
+        }
+    }
+
+    @Test
     fun `host rename carries the expected graph and replacement without applying either`() {
         directory = directory.toRealPath()
         val library = directory.resolve("Library.x").toFile()

@@ -203,9 +203,19 @@ class XdkGraphMoveTest {
             adapter.replaceSourceModules(listOf(XdkSourceModule("App", uri("old/App.x")), XdkSourceModule("Other", uri("Other.x"))))
             val moves = mapOf(uri("old") to uri("new"), uri("old/App/Box.x") to uri("Other/Box.x"))
             val proposal = requireNotNull(adapter.renameFilesProposalAsync(moves).get(30, SECONDS))
-            val reversed = requireNotNull(adapter.renameFilesProposalAsync(moves.entries.reversed().associate { it.toPair() }).get(30, SECONDS))
-            assertThat(proposal.edit.renames.entries.toList()).isEqualTo(reversed.edit.renames.entries.toList())
-            assertThat(proposal.edit.renames.keys.last()).isEqualTo(uri("old"))
+            val reversed =
+                requireNotNull(adapter.renameFilesProposalAsync(moves.entries.reversed().associate { it.toPair() }).get(30, SECONDS))
+            assertThat(
+                proposal.edit.renames.entries
+                    .toList(),
+            ).isEqualTo(
+                reversed.edit.renames.entries
+                    .toList(),
+            )
+            assertThat(
+                proposal.edit.renames.keys
+                    .last(),
+            ).isEqualTo(uri("old"))
             apply(proposal.edit)
             adapter.replaceSourceModules(requireNotNull(proposal.sourceModules))
             assertThat(adapter.workspaceDiagnosticsAsync().get(30, SECONDS)).allMatch { it.success }
@@ -220,9 +230,16 @@ class XdkGraphMoveTest {
         write("old/App/Box.x", "class Box {}")
         session { adapter ->
             adapter.replaceSourceModules(listOf(XdkSourceModule("App", uri("old/App.x"))))
-            val proposal = requireNotNull(adapter.renameFilesProposalAsync(mapOf(
-                uri("old") to uri("new"), uri("old/App/Box.x") to uri("new/App/Box.x"),
-            )).get(30, SECONDS))
+            val proposal =
+                requireNotNull(
+                    adapter
+                        .renameFilesProposalAsync(
+                            mapOf(
+                                uri("old") to uri("new"),
+                                uri("old/App/Box.x") to uri("new/App/Box.x"),
+                            ),
+                        ).get(30, SECONDS),
+                )
             assertThat(proposal.edit.renames).containsExactlyEntriesOf(mapOf(uri("old") to uri("new")))
             apply(proposal.edit)
             adapter.replaceSourceModules(requireNotNull(proposal.sourceModules))
@@ -321,9 +338,15 @@ class XdkGraphMoveTest {
         write("incoming/data.txt", "original")
         write("incoming/extra.txt", "previously outside every root")
         session { adapter ->
-            adapter.replaceSourceModules(listOf(XdkSourceModule("App", uri("old/App.x"), resourceRoots = listOf(uri("assets"), uri("fallback")))))
-            val moves = mapOf(uri("old") to uri("moved"), uri("incoming/data.txt") to uri("assets/data.txt"),
-                uri("incoming/extra.txt") to uri("assets/extra.txt"))
+            adapter.replaceSourceModules(
+                listOf(XdkSourceModule("App", uri("old/App.x"), resourceRoots = listOf(uri("assets"), uri("fallback")))),
+            )
+            val moves =
+                mapOf(
+                    uri("old") to uri("moved"),
+                    uri("incoming/data.txt") to uri("assets/data.txt"),
+                    uri("incoming/extra.txt") to uri("assets/extra.txt"),
+                )
             val proposal = requireNotNull(adapter.renameFilesProposalAsync(moves).get(30, SECONDS))
             apply(proposal.edit)
             adapter.replaceSourceModules(requireNotNull(proposal.sourceModules))
