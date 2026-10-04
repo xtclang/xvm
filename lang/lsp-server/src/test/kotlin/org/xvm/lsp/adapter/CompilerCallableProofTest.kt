@@ -154,6 +154,28 @@ class CompilerCallableProofTest {
     }
 
     @ParameterizedTest
+    @ValueSource(strings = ["Float64", "Dec64", "Int[]"])
+    fun `changed numeric or compound annotation arguments cannot preserve dispatch`(type: String) {
+        val first = if (type == "Int[]") "[1, 2]" else "1.5"
+        val second = if (type == "Int[]") "[2, 1]" else "2.5"
+        val text = """
+            module App {
+                class First { Int read() = 1; }
+                class Second { Int read() = 2; }
+                annotation Mark($type value) into Object {}
+                Int use((@Mark($first) First) | Second target) = target.read();
+            }
+        """.trimIndent()
+        val before = facts(text)
+        val changed = text.replace(first, second)
+        val after = facts(changed)
+        val start = text.indexOf(first)
+        val plan = XdkRename.Plan(mapOf(SOURCE to text), mapOf(SOURCE to listOf(XdkRename.Edit(start, start + first.length, second))))
+        assertThat(XdkRename.preservesBindings(before, facts(text), XdkRename.Plan(mapOf(SOURCE to text), emptyMap()))).isTrue()
+        assertThat(XdkRename.preservesBindings(before, after, plan)).isFalse()
+    }
+
+    @ParameterizedTest
     @ValueSource(strings = ["List<String>", "Map<String, Int>"])
     fun `nested type arguments remain equivalent across fresh pools`(argument: String) {
         val text =
