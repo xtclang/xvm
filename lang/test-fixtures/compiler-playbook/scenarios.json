@@ -6451,9 +6451,9 @@
       }
     },
     "X195": {
-      "title": "refuse missing method creation in another receiver owner",
+      "title": "refuse private method creation in the caller for another receiver owner",
       "manual": [
-        "Place the caret on missing and inspect Quick Fix. No method creation action may appear; the error and source remain unchanged."
+        "Place the caret on missing and inspect Quick Fix. No private method creation action may appear in the caller. The explicitly public action names the destination owner; X201 tests applying it. Inspecting actions leaves the error and source unchanged."
       ],
       "values": {
         "file": "Extract.x",
@@ -6555,6 +6555,84 @@
         "title": "Create private method 'missing'",
         "expected": "module Extract {\n    class Box {\n        static Int read(Extract.Box Box, Int value) {\n            return Box.missing(value);\n        }\n        private Int64 missing(Int64 arg1) {\n            TODO();\n        }\n    }\n}",
         "initiallyValid": false
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X201": {
+      "title": "create a public instance method in another source class",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. Apply the public method action and inspect the destination, signature and TODO() body. The caller error clears. Undo restores the destination and error; Redo clears it again, then Undo restores the original. The caller stays unchanged when editing a companion file."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    class Other {}\n    Int read(Other peer, Int value) {\n        return peer.missing(value);\n    }\n}",
+        "selected": "missing",
+        "title": "Create public method 'missing' in 'Other'",
+        "expected": "module Extract {\n    class Other {\n        public Int64 missing(Int64 arg1) {\n            TODO();\n        }\n    }\n    Int read(Other peer, Int value) {\n        return peer.missing(value);\n    }\n}",
+        "initiallyValid": false
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X202": {
+      "title": "create a public static method in a closed companion with Undo and Redo",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. Apply the public method action and inspect the destination, signature and TODO() body. The caller error clears. Undo restores the destination and error; Redo clears it again, then Undo restores the original. The caller stays unchanged when editing a companion file."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    String read(String value) {\n        return Other.missing(value);\n    }\n}",
+        "selected": "missing",
+        "title": "Create public method 'missing' in 'Other'",
+        "expected": "class Other {\n    public static String missing(String arg1) {\n        TODO();\n    }\n}",
+        "initiallyValid": false,
+        "destinationFile": "Extract/Other.x",
+        "destinationSource": "class Other {}"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X203": {
+      "title": "refuse a destination that changes the requested return type identity",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. No public-method creation action may appear; the source and error remain unchanged."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    Object read(Other peer) {\n        return peer.missing();\n    }\n}",
+        "selected": "missing",
+        "title": "Create public method 'missing' in 'Other'",
+        "expected": "class Other { class Object {} }",
+        "initiallyValid": false,
+        "destinationFile": "Extract/Other.x",
+        "destinationSource": "class Other { class Object {} }",
+        "refused": true
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X204": {
+      "title": "refuse missing method generation in an interface",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. No public-method creation action may appear; the source and error remain unchanged."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    interface Other {}\n    Int read(Other peer, Int value) {\n        return peer.missing(value);\n    }\n}",
+        "selected": "missing",
+        "title": "Create public method 'missing' in 'Other'",
+        "expected": "module Extract {\n    interface Other {}\n    Int read(Other peer, Int value) {\n        return peer.missing(value);\n    }\n}",
+        "initiallyValid": false,
+        "refused": true
       },
       "intellij": {
         "coverage": "full",
