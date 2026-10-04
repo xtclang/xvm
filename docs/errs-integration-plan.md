@@ -416,8 +416,10 @@ VS Code receipts above.
   and recursive written contracts at callable sites (X164/X165). The next slice adds bounded
   generic/formal/annotated operands and nested union delegation (X166–X168); see its receipt below.
   The combined-relocation continuation below adds simultaneous type/module rename and move plus
-  interacting type moves. Unsupported annotation constants/type shapes, wider generated routes,
-  empty/unproven namespaces, commented qualification syntax and overlapping move trees remain open.
+  interacting type moves. The October 4 batch adds captured empty package destinations and
+  token-preserving commented qualifications (X173–X176, selected acceptance in both editors).
+  Unsupported annotation constants/type shapes, wider generated routes, uncaptured destinations,
+  cross-module ownership and overlapping move trees remain open.
 - [ ] **L63 — Semantic quick fixes and refactorings.** Individual and all-required-member
   implement/override actions are implemented at a class name for inherited source and read-only
   binary/XDK contracts. Compiler-selected signatures include generic/conditional/multiple returns,
@@ -8360,7 +8362,7 @@ Implementation lookup now follows existing `FromInto` and capped/narrowing metho
 a written body, with method-instance cycle guards. It does not generate optimized forwarding
 bodies or guess runtime delegate receivers. Real `manualTests` mixin and delegation modules are
 loaded as standalone test modules; covariant self-return lookup and interface-valued delegation
-have explicit source-location assertions. No AST/embedding API change. Validation is batched.
+have explicit source-location assertions. No AST/embedding API change. Validation was batched after the implementation checkpoints; see the receipt below.
 Dynamic receivers, unsupported property forwarding and missing binary source remain boundaries.
 
 ### Functionality continuation: L62 composition families
@@ -8954,9 +8956,11 @@ Remaining implementation work in L62:
 - [x] Accept shared X161 Move/Undo/Redo in both editors; see the implementation receipt below.
 - [x] Implement simultaneous type/module rename plus move and interacting type qualifications
   against the complete requested batch; see the combined-relocation continuation for validation.
-- [ ] Extend relocation to unproven empty namespaces and token-preserving qualified names with
-  comments. Overlapping parent/child/companion operations and cross-module type ownership changes
-  remain refused; they need a separate final-ownership design.
+- [x] Extend relocation through captured empty package directories and preserve comments/whitespace
+  in qualified names. Compiler replay confirms every destination identity, including unused types.
+  X173–X176 pass selected acceptance in both editors; see the October 4 receipt below.
+- [ ] Design final ownership for cross-module type moves and overlapping parent/child/companion
+  operations. Uncaptured or nonexistent destination directories remain refused.
 - [x] Implement explicit graph relocation through `xtc/renameFiles`, with source/resource roots,
   version checks and persisted editor Undo/Redo (X162/X163). Selected acceptance is recorded below.
   Standard `willRenameFiles` still refuses a host configuration change.
@@ -9371,8 +9375,9 @@ Structure registration is its natural home: it rejects invalid declarations befo
 assembler siblings reach name/type resolution. It adds no AST fields, accessors, partial/LSP hooks,
 cloning responsibilities or embedding API. The relocation and host repairs remain Kotlin-side.
 
-L62 remains open for unproven empty namespaces, cross-module type ownership moves,
-commented/specialized qualifications, overlapping companion operations, uncaptured incoming
+At this October 3 checkpoint, L62 remained open for unproven empty namespaces and commented
+qualifications (subsequently addressed for captured packages below), cross-module type ownership,
+specialized qualifications, overlapping companion operations, uncaptured incoming
 resources, unsupported annotation/type/callable routes and unconfigured consumers. Binary
 contracts remain read-only; compiler refusal cannot veto arbitrary VS Code Explorer moves.
 
@@ -9388,7 +9393,7 @@ above describes the previous test version; conditional AST mutation is no longer
 claim. Keep this fixture/runner checkpoint with the independent compiler fix during extraction.
 
 `runDuplicateTypes` uses the consumer's resolved XDK and participates in `check`, `runSequential`
-and `runParallel`. Configuration-cache and combined validation for this errs batch are pending.
+and `runParallel`. Configuration-cache reuse and combined validation pass; see the receipt below.
 The preceding L62 checkpoints through `50b113961` were pushed before this continuation.
 
 Empty existing destination directories now extend the nearest compiler-proven module/package
@@ -9396,7 +9401,8 @@ through captured implicit package directories. Explicit companion sources cannot
 After replay, every moved declaration must have its expected module and full type path, including
 unused types; normal binding/call/resource proof still applies. Nonexistent destinations, foreign
 modules and class-owned directories remain refusals. Backend regressions cover nested empty
-destinations, explicit empty packages and all three ownership refusals. Validation is batched.
+destinations, explicit empty packages and all three ownership refusals. Validation was batched
+after the implementation checkpoints; see the receipt below.
 
 Qualified-name edits now use the compiler lexer to change identifier/dot tokens while preserving
 intervening comments and whitespace. Common suffixes and explicit import aliases remain intact.
@@ -9404,20 +9410,48 @@ Call-site translation skips trivia left by a removed prefix; declaration/binding
 is unchanged. Regressions include import aliases, closed consumers, nested types, constructor
 and static calls, prefix insertion/removal, Unicode, CRLF and a binding-changing refusal. No
 AST or embedding API change is needed. Specialized names outside identifier/dot syntax still
-refuse; this is not arbitrary source rewriting. Validation is batched.
+refuse. Validation was batched after the implementation checkpoints; see the receipt below.
 
 
-### L62 empty-package and trivia continuation (2026-10-04)
+### L62 empty-destination batch acceptance and extraction
 
-The compiler adapter now plans same-module type moves into captured empty package directories
-and preserves comments/whitespace in qualified import, type and call names. Replay must prove
-every moved declaration's destination identity and preserve all existing bindings, dispatch and
-resources. Cross-module ownership, uncaptured/nonexistent directories, class-owned destinations,
-specialized names and overlapping companion moves remain unsupported. No new AST/embedding
-API is required. Shared X173–X176 cover empty nested packages, aliases, closed consumers,
-companions/resources, prefix removal, inline collisions, interacting batches and Undo/Redo in
-both editor drivers. Catalog: 181 scenarios. Validation for this continuation is pending.
+The four implementation checkpoints preceded the combined test iteration. The extraction map
+also includes the Gradle import correction required when bringing the manual runner into errs:
 
-The independent compiler duplicate-declaration repair is [PR #668](https://github.com/xtclang/xvm/pull/668).
-Errs includes its corrected three Java tests and five CLI manual cases, wired to the manual
-check/sequential/parallel tasks. The previous artificial conditional-parser test is removed.
+| Checkpoint | Extraction group |
+| --- | --- |
+| `a1b266cd0` + `102560ccb` | Independent compiler issue #667 / PR #668 regression fixtures, runner, Java test cleanup and errs-specific Gradle import. Keep with `2793efdd9`; no LSP dependency. |
+| `a58a10830` | Empty captured package planning, explicit post-replay destination proof and ownership regressions. |
+| `7a81b0a90` | Lexer-based qualification spelling, prefix-trivia call-site translation and binding-preservation regressions. |
+| `8cdc60dd0` | Shared X173–X176 data, empty-directory setup in both drivers, manual steps and capability updates. |
+
+Acceptance correction `6675be43a` carries formatter output, restores the catalog's existing
+JSON Unicode escaping and adjusts IntelliJ's test comparison for LF-normalized document buffers.
+Closed sources/resources still compare exact disk text. X174 uses CRLF input; its open IntelliJ
+buffer is compared with LF normalization, matching the IDE document model.
+Keep these file-specific corrections with the respective implementation/editor groups above.
+No new mutable AST state, compiler accessor or embedding API was introduced.
+
+Validation receipts:
+
+- **155 LSP tests** across rename/move suites and **103 Java compiler tests** pass with zero
+  failures/errors/skips. This includes all 21 `XdkTypeMoveTest` cases, six added in this batch.
+- All **five manual CLI scenarios** pass on errs. `runDuplicateTypes` executes again with
+  configuration cache explicitly reused (4 seconds); logs are under
+  `manualTests/build/reports/duplicate-types/run-10035154598908356788`. The broader manual
+  sequential/parallel runtime suites were not rerun in this batch.
+- Both editor drivers compile. VS Code **`run-ElUMIl`** passes X169/X171/X173–X176 with zero
+  failures and zero extension errors.
+- IntelliJ **`run-13159045223223510909`** passes START and the same six cases, with zero IDE
+  failures; JUnit reports one test, zero failures/errors/skips. Closed-file disk assertions
+  participate in each successful Move/Undo/Redo case.
+- Both use the 181-scenario shared catalog SHA-256
+  `e4c39da9ecef44abf0ac5bad3c08c5044ecc2a78f2433a0b841d3d0289024eda`. Neither is a full-catalog
+  run. Saved logs contain no compiler internal-error, ClassCastException or NullPointerException
+  markers. X175 is a proposal refusal check; VS Code Explorer veto remains unsupported.
+- Root, LSP and IntelliJ read-only Spotless checks pass, as does `git diff --check`.
+
+This finishes the agreed L62 batch, not every remaining L62 exclusion. Cross-module ownership,
+overlapping companion operations, uncaptured resources and unsupported callable/type/annotation
+routes remain explicit follow-ups. Binary declarations stay read-only and unconfigured consumers
+remain outside the declared proof scope. L63 is the next planned functionality slice.
