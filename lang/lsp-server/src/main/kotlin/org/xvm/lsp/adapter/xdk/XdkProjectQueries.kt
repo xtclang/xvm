@@ -455,11 +455,12 @@ internal class XdkProjectQueries(
 
     /** Complete transaction for hosts that persist the graph with the requested resource moves. */
     fun renameFilesProposal(requested: Map<String, String>): XdkRenameProposal? {
-        val operations =
+        val inputOperations =
             requested.entries
                 .associate { (from, to) ->
                     (XdkSources.file(from) ?: return null) to (XdkSources.file(to) ?: return null)
                 }.filter { (from, to) -> from != to }
+        val operations = XdkMoveOperations.ordered(inputOperations) ?: return null
         if (operations.isEmpty()) return XdkRenameProposal(WorkspaceEdit(emptyMap(), versioned = true))
         if (
             operations.values.distinct().size != operations.size ||
@@ -473,14 +474,6 @@ internal class XdkProjectQueries(
                             from.walkTopDown().any { Files.isSymbolicLink(it.toPath()) }
                     ) ||
                     to.toPath().startsWith(from.toPath())
-            }
-        ) {
-            return null
-        }
-        // Overlapping parent/child requests have ambiguous application order; do not guess.
-        if (
-            operations.keys.any { parent ->
-                operations.keys.any { it != parent && it.toPath().startsWith(parent.toPath()) }
             }
         ) {
             return null
@@ -590,14 +583,7 @@ internal class XdkProjectQueries(
         if (allMoves.groupBy({ it.first }, { it.second }).values.any { it.distinct().size > 1 }) {
             return null
         }
-        val resources = allMoves.toMap()
-        if (resources.keys.any { parent ->
-                resources.keys.any { child -> child != parent && child.toPath().startsWith(parent.toPath()) } ||
-                    resources.values.any { it.toPath().startsWith(parent.toPath()) }
-            }
-        ) {
-            return null
-        }
+        val resources = XdkMoveOperations.ordered(allMoves.toMap()) ?: return null
         val paths =
             (texts.keys.map(::File) + directories)
                 .mapNotNull { file ->

@@ -35,6 +35,7 @@ internal object FileMoveTargets {
                     !Files.exists(to, NOFOLLOW_LINKS) &&
                     Files.isDirectory(to.parent) &&
                     !to.startsWith(from) &&
-                    moves.keys.none { it != from && (from.startsWith(it) || to.startsWith(it)) }
+                    moves.keys.none(to::startsWith) &&
+                    moves.values.none { it != to && to.startsWith(it) }
             }
 }
