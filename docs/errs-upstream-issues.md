@@ -300,3 +300,23 @@ The corrected setup passes START and X122/X209–X215 in `run-458814442620148058
 failures, Ultimate disabled. X214 includes native atomic Undo/Redo of its module-root import and
 companion method. The accepted IDE log contains no ERROR/SEVERE or ProcessCanceledException
 markers. The broader production graph-replacement acceptance obligation above remains open.
+
+### UP23: overlapping VS Code file moves retain the host's order
+
+VS Code 1.140.0 applies requested file moves in their supplied order after the Ecstasy participant's
+additional edits. In X218, moving `App/tools` before independently moving `App/tools/Box.x` removes
+the child's old path. The host reports `EntryNotFound` and returns false after partial application
+(`run-VfDauh`, 2026-10-04). Child-first applies successfully, but Undo then restores the child
+before the parent; the newly created parent directory causes `target already exists`
+(`run-S7CfWP`). Both native failures remain failures in X218. This is distinct from UP16's Explorer Cut highlighting failure.
+
+The compiler proposal normalizes both input orders to child-first and coalesces inherited child
+paths. IntelliJ applies that complete ordered transaction. VS Code's participant cannot replace,
+reorder or veto host-owned moves. X218 submits the child first to reach and expose the Undo defect;
+this is not passing VS Code acceptance. The installed `workbench.desktop.main.js` confirms that
+`Swo._reverse()` calls inverse operations in forward order; `ALe.perform()` also retains the
+original rename-entry order. Reversal must reverse both levels for dependent moves, with regression
+coverage for repeated Undo/Redo.
+Do not retry a partially applied transaction. A host API for replacing the transaction, or a
+separate Ecstasy-owned Move command with complete undo ownership, is required to remove this limit.
+The marker is in `lang/vscode-extension/src/rename-proposal.ts`.
