@@ -126,7 +126,7 @@ internal fun compilerMissingMethods(
             // Preserve concrete call types; never infer an owner's formal from equal actual types.
             // Exact lexical owner formals are rendered by memberSourceType and re-proven later.
             if (crossOwner &&
-                (structure.format != Format.CLASS || structure.isSynthetic)
+                (structure.format !in setOf(Format.CLASS, Format.CONST, Format.SERVICE) || structure.isSynthetic)
             ) {
                 return@mapNotNull null
             }
@@ -138,7 +138,9 @@ internal fun compilerMissingMethods(
                 } else {
                     Dispatch.INSTANCE
                 }
-            if (structure.format !in setOf(Format.CLASS, Format.MODULE) || declaration.isConstructor || errors.isAbortDesired) {
+            if (structure.format !in setOf(Format.CLASS, Format.CONST, Format.SERVICE, Format.MODULE) || declaration.isConstructor ||
+                errors.isAbortDesired
+            ) {
                 return@mapNotNull null
             }
             val info =
@@ -331,23 +333,29 @@ internal fun EmbeddingSupport.Compilation.missingMethodInputs(
                     .filterIsInstance<InvocationExpression>()
                     .mapNotNull { call ->
                         val callee = call.invokedExpression as? NameExpression ?: return@mapNotNull null
-                        val receiver = callee.leftExpression as? NameExpression ?: return@mapNotNull null
-                        if (!receiver.isOnlyNames || !receiver.isValidated || !receiver.typeFit.isFit ||
-                            generateSequence(receiver) { it.leftExpression as? NameExpression }
+                        val receiver = callee.leftExpression ?: return@mapNotNull null
+                        val receiverName = receiver as? NameExpression
+                        if (!receiver.isValidated || !receiver.typeFit.isFit ||
+                            generateSequence(receiverName) { it.leftExpression as? NameExpression }
                                 .any { it.isSuppressDeref || it.hasTrailingTypeParams() }
                         ) {
                             return@mapNotNull null
                         }
                         val identityAndDispatch =
-                            when (val target = receiver.resolvedTarget) {
+                            when (val target = receiverName?.resolvedTarget) {
                                 is ClassConstant -> {
-                                    target to Dispatch.STATIC
+                                    target to
+                                        if ((target.component as? ClassStructure)?.isSingleton ==
+                                            true
+                                        ) {
+                                            Dispatch.INSTANCE
+                                        } else {
+                                            Dispatch.STATIC
+                                        }
                                 }
 
                                 is Register -> {
-                                    if (receiver.leftExpression != null ||
-                                        (target.index < 0 && target.index !in setOf(Op.A_THIS, Op.A_PRIVATE))
-                                    ) {
+                                    if (target.index < 0 && target.index !in setOf(Op.A_THIS, Op.A_PRIVATE)) {
                                         return@mapNotNull null
                                     }
                                     val type = receiver.type ?: return@mapNotNull null
@@ -356,7 +364,11 @@ internal fun EmbeddingSupport.Compilation.missingMethodInputs(
                                 }
 
                                 else -> {
-                                    return@mapNotNull null
+                                    // Retain the validated computed/property receiver type. Never
+                                    // re-evaluate it or query TypeInfo on this failed attempt.
+                                    val type = receiver.type ?: return@mapNotNull null
+                                    if (!type.isSingleUnderlyingClass(false)) return@mapNotNull null
+                                    type.getSingleUnderlyingClass(false) to Dispatch.INSTANCE
                                 }
                             }
                         val (identity, dispatch) = identityAndDispatch
@@ -467,7 +479,11 @@ internal fun EmbeddingSupport.Compilation.missingMethodDestinations(
             nodes
                 .mapNotNull { node ->
                     val structure = node.component as? ClassStructure ?: return@mapNotNull null
-                    if (structure.format != Format.CLASS || structure.isSynthetic) return@mapNotNull null
+                    if (structure.format !in setOf(Format.CLASS, Format.CONST, Format.SERVICE) ||
+                        structure.isSynthetic
+                    ) {
+                        return@mapNotNull null
+                    }
                     val moduleNode =
                         generateSequence(node as AstNode) { it.parent }
                             .filterIsInstance<TypeCompositionStatement>()
