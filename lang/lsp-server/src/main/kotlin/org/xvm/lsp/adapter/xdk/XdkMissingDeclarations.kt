@@ -145,7 +145,13 @@ internal object XdkMissingDeclarations {
                         val method =
                             generateSequence(parents[node]) { parents[it] }.filterIsInstance<MethodDeclarationStatement>().firstOrNull()
                                 ?: return@mapNotNull null
-                        val owner = parents[parents[method]] as? TypeCompositionStatement ?: return@mapNotNull null
+                        val owner =
+                            parents[parents[method]] as? TypeCompositionStatement
+                                ?: return@mapNotNull null.also {
+                                    System.err.println(
+                                        "DECL owner ${parents[method]} / ${parents[parents[method]]}",
+                                    )
+                                }
                         val methodToken = method.nameToken ?: return@mapNotNull null
                         val methodAt = position(methodToken.startPosition)
                         val declared = model.symbolAt(methodAt.line, methodAt.column) ?: return@mapNotNull null
@@ -156,8 +162,10 @@ internal object XdkMissingDeclarations {
                         }
                         val type = XdkLocalExtraction.writtenReturnType(text, method) ?: return@mapNotNull null
                         val expected = facts.methodSignatures[declared.id]?.returns?.singleOrNull() ?: return@mapNotNull null
-                        val modifiers = if (SemanticModel.Modifier.STATIC in declared.modifiers) "private static" else "private"
-                        val edit = insertion(owner, "$modifiers $type ${node.name}.get() { TODO(); }") ?: return@mapNotNull null
+                        // Static properties are constants: the compiler requires a value and
+                        // forbids custom getters. A repair cannot invent that value.
+                        if (SemanticModel.Modifier.STATIC in declared.modifiers) return@mapNotNull null
+                        val edit = insertion(owner, "private $type ${node.name}.get() { TODO(); }") ?: return@mapNotNull null
                         Candidate(node.name, SemanticModel.SymbolKind.PROPERTY, location(node), edit, expected)
                     }
 
