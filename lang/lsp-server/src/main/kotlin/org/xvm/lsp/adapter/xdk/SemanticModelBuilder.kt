@@ -105,7 +105,10 @@ fun EmbeddingSupport.Compilation.semanticSnapshots(errors: ErrorListener): List<
  * Bindings for local renames or partial repairs; never resume failed validation or inspect
  * TypeInfo.
  */
-internal fun EmbeddingSupport.Compilation.renameFacts(dependencies: XdkDependencies.Open): CompilerRenameFacts =
+internal fun EmbeddingSupport.Compilation.renameFacts(
+    dependencies: XdkDependencies.Open,
+    includeMissingMethods: Boolean = false,
+): CompilerRenameFacts =
     ExecutionTrace.api("Compilation.renameFacts") {
         ConstantPool.withPool(pool()).use {
             val builder =
@@ -118,6 +121,7 @@ internal fun EmbeddingSupport.Compilation.renameFacts(dependencies: XdkDependenc
                 dependencies,
                 supers = builder.superBindings(),
                 receivers = builder.receiverBindings(),
+                missingInputs = if (includeMissingMethods) missingMethodInputs() else CompilerMissingInputs(),
             )
         }
     }
