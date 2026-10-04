@@ -46,6 +46,146 @@ class XdkMissingMethodsTest {
         ) { assertThat(it).contains("private void missing()") }
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = ["this", "this:private", "peer"])
+    fun `same owner receiver creates an instance method`(receiver: String) {
+        query(
+            """
+            module Missing {
+                class Box {
+                    Int read(Box peer, Int value) {
+                        return $receiver.§missing(value);
+                    }
+                }
+            }
+            """.trimIndent(),
+        ) { assertThat(it).contains("private Int64 missing(Int64 arg1)").doesNotContain("private static") }
+    }
+
+    @Test
+    fun `module this receiver supports a void statement call`() {
+        query(
+            """
+            module Missing {
+                void run() {
+                    this.§missing();
+                }
+            }
+            """.trimIndent(),
+        ) { assertThat(it).contains("private void missing()") }
+    }
+
+    @Test
+    fun `selecting only the receiver does not offer creation for the member`() {
+        refused(
+            """
+            module Missing {
+                class Box {
+                    Int read(Box peer, Int value) {
+                        return §peer.missing(value);
+                    }
+                }
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["Box other = peer;", "var other = peer;", "val other = peer;"])
+    fun `same owner local receiver supports typed initializer result in a static caller`(local: String) {
+        query(
+            """
+            module Missing {
+                class Box {
+                    static Int read(Box peer, Int value) {
+                        $local
+                        Int result = other.§missing(value);
+                        return result;
+                    }
+                }
+            }
+            """.trimIndent(),
+        ) { assertThat(it).contains("private Int64 missing(Int64 arg1)").doesNotContain("private static Int64 missing") }
+    }
+
+    @Test
+    fun `explicit receiver bypasses unrelated local name shadowing`() {
+        query(
+            """
+            module Missing {
+                Int read(Int value) {
+                    Int missing = value;
+                    return this.§missing(missing);
+                }
+            }
+            """.trimIndent(),
+        ) { assertThat(it).contains("private Int64 missing(Int64 arg1)", "this.missing(missing)") }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["other", "otherPeer", "base", "super", "Box", "this:public", "this:protected", "this:struct", "make()"])
+    fun `unproven receiver owners and access views remain refusals`(receiver: String) {
+        refused(
+            """
+            module Missing {
+                class Base {}
+                class Other {}
+                class Box extends Base {
+                    Box make() = this;
+                    Int read(Other other, Base base, String otherPeer, Int value) {
+                        return $receiver.§missing(value);
+                    }
+                }
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `a class with the same short name is not the same receiver owner`() {
+        refused(
+            """
+            module Missing {
+                class Outer { class Box {} }
+                class Box {
+                    Int read(Outer.Box peer, Int value) {
+                        return peer.§missing(value);
+                    }
+                }
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `this in a static caller does not invent instance access`() {
+        refused(
+            """
+            module Missing {
+                class Box {
+                    static Int read(Int value) {
+                        return this.§missing(value);
+                    }
+                }
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `qualified existing overload remains an overload error`() {
+        refused(
+            """
+            module Missing {
+                Int missing(Int value) = value;
+                Int read(String value) {
+                    return this.§missing(value);
+                }
+            }
+            """.trimIndent(),
+        )
+    }
+
     @Test
     fun `static typed return preserves CRLF and unicode`() {
         query(
@@ -215,7 +355,6 @@ class XdkMissingMethodsTest {
     @ValueSource(
         strings = [
             "return 1 + §missing(value);",
-            "return this.§missing(value);",
             "return §missing<Int>(value);",
         ],
     )
