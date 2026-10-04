@@ -66,17 +66,28 @@ internal object XdkLocalExtraction {
                         is LambdaExpression -> null
                         else -> method
                     }
-                val candidate = if (node is StatementBlock) {
-                    when (child) {
-                        is ReturnStatement -> child.expressions?.singleOrNull()?.let {
-                            Selected(child, it, writtenReturnType(text, owner))
+                val candidate =
+                    if (node is StatementBlock) {
+                        when (child) {
+                            is ReturnStatement -> {
+                                child.expressions?.singleOrNull()?.let {
+                                    Selected(child, it, writtenReturnType(text, owner))
+                                }
+                            }
+
+                            is AssignmentStatement -> {
+                                XdkLocalDeclarations.initializer(text, child)?.let {
+                                    Selected(child, child.rValue, it.type)
+                                }
+                            }
+
+                            else -> {
+                                null
+                            }
                         }
-                        is AssignmentStatement -> XdkLocalDeclarations.initializer(text, child)?.let {
-                            Selected(child, child.rValue, it.type)
-                        }
-                        else -> null
+                    } else {
+                        null
                     }
-                } else null
                 listOfNotNull(candidate) + expressions(child, owner)
             }
         val selected =
