@@ -13,6 +13,7 @@ import org.xvm.asm.PackageStructure
 import org.xvm.asm.Register
 import org.xvm.asm.constants.ClassConstant
 import org.xvm.asm.constants.TypeConstant
+import org.xvm.asm.constants.TypeParameterConstant
 import org.xvm.compiler.Lexer
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
@@ -38,6 +39,8 @@ internal data class CompilerMissingMethod(
     val candidate: XdkMissingMethods.Candidate,
     val parameters: List<Type> = emptyList(),
     val returns: List<Type> = emptyList(),
+    val formals: List<TypeConstant> = emptyList(),
+    val conditional: Boolean = false,
 ) {
     /** Fresh declaration types and already detached body types never share compiler pools. */
     sealed interface Type {
@@ -135,9 +138,7 @@ internal fun compilerMissingMethods(
                 } else {
                     Dispatch.INSTANCE
                 }
-            if (structure.format !in setOf(Format.CLASS, Format.MODULE) || declaration.isConstructor ||
-                declaration.typeParamCount != 0 || declaration.isConditionalReturn || errors.isAbortDesired
-            ) {
+            if (structure.format !in setOf(Format.CLASS, Format.MODULE) || declaration.isConstructor || errors.isAbortDesired) {
                 return@mapNotNull null
             }
             val info =
@@ -174,10 +175,16 @@ internal fun compilerMissingMethods(
                 return@mapNotNull null
             }
 
+            val formals =
+                declaration.params.take(declaration.typeParamCount).associate { parameter ->
+                    val spelling = parameter.name?.takeIf(XdkRename::identifier) ?: return@mapNotNull null
+                    parameter.asTypeParameterConstant(declaration.identityConstant) to spelling
+                }
+
             fun render(type: TypeConstant): MissingType? {
                 val rendered =
-                    external?.value?.render(type, structure)
-                        ?: type.missingMethodType(structure)?.let { XdkMissingMethods.TypeSource(it) }
+                    external?.value?.render(type, structure, formals)
+                        ?: type.missingMethodType(structure, formals = formals)?.let { XdkMissingMethods.TypeSource(it) }
                         ?: return null
                 return MissingType(rendered.source, CompilerMissingMethod.Type.Resolved(type), rendered.imports)
             }
@@ -216,11 +223,26 @@ internal fun compilerMissingMethods(
                     }
                 }
 
+            val conditional = declaration.isConditionalReturn && call.parent is ReturnStatement
+            val writtenReturns = returns.drop(if (conditional) 1 else 0)
             val result =
-                when (returns.size) {
+                when (writtenReturns.size) {
                     0 -> "void"
-                    1 -> returns.single().source
-                    else -> returns.joinToString(", ", "(", ")") { it.source }
+                    1 -> writtenReturns.single().source
+                    else -> writtenReturns.joinToString(", ", "(", ")") { it.source }
+                }
+            val constraints =
+                declaration.params.take(declaration.typeParamCount).map { parameter ->
+                    val constraint = parameter.type.paramTypes.singleOrNull() ?: return@mapNotNull null
+                    render(constraint) ?: return@mapNotNull null
+                }
+            val generic =
+                if (formals.isEmpty()) {
+                    ""
+                } else {
+                    formals.values.zip(constraints).joinToString(", ", "<", "> ") { (formal, bound) ->
+                        "$formal extends ${bound.source}"
+                    }
                 }
             val arguments = call.childNodes().filter { it !== name }
             val parameters =
@@ -274,15 +296,21 @@ internal fun compilerMissingMethods(
                     external?.value?.insertion
                         ?: position(requireNotNull(target).ensureBody().endPosition).let { it.copy(column = it.column - 1) },
                     external?.value?.location ?: requireNotNull(target).location(),
-                    "${if (crossOwner) "public" else "private"} ${if (dispatch == Dispatch.STATIC) "static " else ""}$result ${name.name}($signature)",
+                    "${if (crossOwner) "public" else "private"} ${if (dispatch == Dispatch.STATIC) "static " else ""}" +
+                        "$generic${if (conditional) "conditional " else ""}$result ${name.name}($signature)",
                     dispatch,
                     parameters.mapNotNull { it.binding },
                     if (crossOwner) structure.identityConstant.pathString else null,
                     importSource = external?.value?.importSource,
-                    imports = (parameters.flatMap { it.imports } + returns.flatMap { it.imports }).distinct(),
+                    imports =
+                        (parameters.flatMap { it.imports } + returns.flatMap { it.imports } + constraints.flatMap { it.imports })
+                            .distinct(),
                 ),
-                if (crossOwner) parameters.map { it.type } else emptyList(),
-                if (crossOwner) returns.map { it.proof } else emptyList(),
+                declaration.params.take(declaration.typeParamCount).map { CompilerMissingMethod.Type.Resolved(it.type) } +
+                    parameters.map { it.type },
+                returns.map { it.proof },
+                formals.keys.map { it.type },
+                conditional,
             )
         }.distinct()
 
@@ -383,17 +411,19 @@ private fun VariableDeclarationStatement.hasExplicitMethodType(): Boolean =
 private fun TypeConstant.missingMethodType(
     owner: ClassStructure,
     modules: Map<String, String> = emptyMap(),
+    formals: Map<TypeParameterConstant, String> = emptyMap(),
 ): String? =
     // Declaration analysis resolves the identity but can retain its parser wrapper.
-    resolveTypedefs().memberSourceType(owner.identityConstant, emptyMap(), modules + ("ecstasy.xtclang.org" to "ecstasy"))
+    resolveTypedefs().memberSourceType(owner.identityConstant, formals, modules + ("ecstasy.xtclang.org" to "ecstasy"))
 
 /** Type spelling and only its required imports travel together across compiler attempts. */
 private fun XdkMissingMethods.Destination.render(
     type: TypeConstant,
     owner: ClassStructure,
+    formals: Map<TypeParameterConstant, String> = emptyMap(),
 ): XdkMissingMethods.TypeSource? {
     val resolved = type.resolveTypedefs()
-    val source = resolved.missingMethodType(owner, modules) ?: return null
+    val source = resolved.missingMethodType(owner, modules, formals) ?: return null
     val required =
         resolved
             .memberClasses()

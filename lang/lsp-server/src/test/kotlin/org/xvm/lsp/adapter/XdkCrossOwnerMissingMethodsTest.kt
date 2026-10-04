@@ -287,6 +287,36 @@ class XdkCrossOwnerMissingMethodsTest {
     }
 
     @Test
+    fun `generic missing method declares its own constrained binder in the destination`() {
+        query(
+            """
+            module Missing {
+                <Value extends Const> List<Value> read(Other peer, Value value) {
+                    return peer.§missing(value);
+                }
+            }
+            """.trimIndent(),
+            companion = "class Other {}",
+            signature = "public <Value extends Const> List<Value> missing(Value arg1)",
+        )
+    }
+
+    @Test
+    fun `conditional cross owner result is kept conditional`() {
+        query(
+            """
+            module Missing {
+                conditional Int read(Other peer, Int value) {
+                    return peer.§missing(value);
+                }
+            }
+            """.trimIndent(),
+            companion = "class Other {}",
+            signature = "public conditional Int64 missing(Int64 arg1)",
+        )
+    }
+
+    @Test
     fun `same spelling in unrelated generic owners cannot substitute type identity`() {
         query(
             """
