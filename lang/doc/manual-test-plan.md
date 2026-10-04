@@ -1,7 +1,13 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **209 scenarios**: X1–X204, CFG1–CFG3 and 7a.8/7a.9.
-The latest selected gate passes **X181/X185/X195/X197/X201–X204** in VS Code `run-hOIsOh` and
+The current catalog has **213 scenarios**: X1–X208, CFG1–CFG3 and 7a.8/7a.9.
+The latest selected gate passes **X181/X185/X190/X202/X205–X208** in VS Code `run-RpTVz1` and
+IntelliJ `run-14627770467027596087` (plus START), zero editor failures. It verifies compiler-typed
+local arguments, explicit initializer results, exact public companion edits, signature identity
+refusals and diagnostic Undo/Redo. All 275 selected backend tests pass without failures/errors/skips;
+Ultimate is disabled. These are selected receipts from the 213-case catalog, not a full rerun.
+
+The preceding selected gate passes **X181/X185/X195/X197/X201–X204** in VS Code `run-hOIsOh` and
 IntelliJ `run-18176000411609180309` (plus START), zero editor failures. It verifies public
 same-module destinations, closed-companion edits, exact signature/dispatch, diagnostic Undo/Redo
 and shadowed-type/interface refusals. All 256 selected backend and 90 IntelliJ unit tests pass
@@ -1367,7 +1373,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X204 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X208 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -3360,4 +3366,22 @@ and clearing of diagnostics. X195 remains a distinct private-action refusal; it 
 that the new explicitly public action is absent. Backend controls additionally cover read-only and
 binary destinations, another configured module, generic/const classes, existing overloads, broken
 neighbors, supported signature type shapes, and destination document versions (null when closed,
-its own version when open). Cross-owner local arguments and typed initializers remain refused.
+its own version when open). The next continuation adds bounded local arguments and typed initializers.
+
+
+### Cross-owner local types and initializer contexts (L63, X205–X208)
+
+Use the shared source for each case in compiler mode. The public action states both visibility
+and destination; `TODO()` still needs an implementation. These cases reuse the same native
+quick-fix and Undo/Redo steps as X201/X202.
+
+| Case | Manual action | Required result |
+| --- | --- | --- |
+| X205 | Apply the public method fix to `peer.missing(local)` after `val local = value`. | The inline destination gains `public Int64 missing(Int64 arg1)`; the argument keeps its original local declaration binding. Inspect exact text and diagnostics across Undo/Redo/Undo. |
+| X206 | Keep `Extract/Other.x` closed; repair the `Other.missing(local)` initializer of `List<Int> result`. | Only the companion gains `public static List<Int64> missing(List<Int64> arg1)`. The caller is unchanged. Open the companion and check exact text, caller diagnostics and Undo/Redo/Undo. |
+| X207 | Inspect an explicitly typed `Object result` when the destination declares its own nested `Object`. | No public action; even an assignable narrower result may not change the requested type identity. Both sources remain unchanged. |
+| X208 | Inspect `var result = Other.missing(value)`. | No public action: the missing call supplies no compiler-established result type. Source and diagnostic remain unchanged. |
+
+Backend controls additionally cover typed/var/val locals, separately assigned locals, instance and
+class qualifiers, zero/mixed arguments, source and compound types, invalid/out-of-scope locals,
+and compilable signature substitutions or argument rebinding that the proof must reject.
