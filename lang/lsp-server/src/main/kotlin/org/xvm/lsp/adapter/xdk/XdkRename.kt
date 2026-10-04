@@ -514,7 +514,9 @@ internal object XdkRename {
         // This action has one replacement and deliberately keeps the member declaration.
         if (plan.edits != mapOf(source to listOf(candidate.edit))) return false
         val copyStart = candidate.edit.start + 1
-        val expected = edges(before, plan.original, ignored = candidate.ignored, translate = plan::map) ?: return false
+        val expected =
+            edges(before, plan.original, ignored = candidate.ignored, ignoredCalls = candidate.ignored, translate = plan::map)
+                ?: return false
         val copies =
             expected
                 .filterKeys { it.source == source && it.start >= oldStart && it.end <= oldEnd }
@@ -556,7 +558,9 @@ internal object XdkRename {
         candidate: XdkSafeDelete.Candidate,
     ): Boolean {
         if (after.models.any { it.status != SemanticModel.Status.COMPLETE }) return false
-        val expected = edges(before, plan.original, ignored = candidate.removed, translate = plan::map) ?: return false
+        val expected =
+            edges(before, plan.original, ignored = candidate.removed, ignoredCalls = candidate.removed, translate = plan::map)
+                ?: return false
         val actual = edges(after, plan.proposed) { _, at -> at } ?: return false
         if (expected != actual) return false
         val oldDispatch = dispatch(before, plan.original, removedMembers = setOf(candidate.identity), translate = plan::map) ?: return false
@@ -1057,6 +1061,7 @@ internal object XdkRename {
         allowUnresolved: Boolean = false,
         sourceParameters: Boolean = false,
         ignored: Set<SemanticModel.SourceLocation> = emptySet(),
+        ignoredCalls: Set<SemanticModel.SourceLocation> = emptySet(),
         callStart: ((String, Int) -> Int?)? = null,
         translate: (String, Int) -> Int?,
     ): Map<Site, Target>? {
@@ -1143,7 +1148,7 @@ internal object XdkRename {
                             }
                     }
                 }
-                model.calls.filter { SemanticModel.SourceLocation(source, it.callee) !in ignored }.forEach { call ->
+                model.calls.filter { SemanticModel.SourceLocation(source, it.callee) !in ignoredCalls }.forEach { call ->
                     val callable = facts.callables[SemanticModel.SourceLocation(source, call.callee)]
                     result[site(source, call.callee, true) ?: return null] =
                         if (callable != null) {

@@ -1898,7 +1898,7 @@ implicit module constants; both source and binary dependency types are covered.
 
 The implementations retain explicit ownership, initialization, control-flow/capture, type and
 binding/dispatch refusals. They are bounded refactorings, not arbitrary source transformations or
-proof of unknown external consumers. Shared X221–X240 bring the catalog to **245 scenarios** and
+proof of unknown external consumers. Shared X221–X242 bring the catalog to **247 scenarios** and
 are registered in both drivers. Their native acceptance and the final combined gate remain pending;
 L63 is not yet marked accepted. UP23 remains open. See the current
 [implementation and acceptance record](errs-integration-plan.md#l63-generic-destinations-continuation-2026-10-04).
