@@ -1386,31 +1386,7 @@ class CompilerPlaybook(
     private fun Driver.workspaceScenarios() {
         ((109..121).map { "X$it" } + listOf("X155", "X159", "X160", "X164", "X165", "X166", "X167", "X168")).forEach { id ->
             scenario(id) {
-                withContext(OnDispatcher.EDT) {
-                    val manager = service<FileEditorManager>(singleProject())
-                    manager
-                        .getAllEditors()
-                        .map { it.getFile() }
-                        .distinctBy { it.getPath() }
-                        .forEach(manager::closeFile)
-                }
                 discovered(id) { data ->
-                    if (data.values.has("sourceModules")) {
-                        val modules = data.values["sourceModules"].deepCopy().asJsonArray
-                        modules.forEach { module ->
-                            val entry = module.asJsonObject
-                            entry.addProperty(
-                                "uri",
-                                Path
-                                    .of(singleProject().getBasePath())
-                                    .resolve(id)
-                                    .resolve(entry["uri"].asString)
-                                    .toUri()
-                                    .toString(),
-                            )
-                        }
-                        configure("""{"xtc":{"compiler":{"sourceModules":$modules}}}""")
-                    }
                     val projectSettings = data.values["projectSettingsRoundTrip"]?.asBoolean == true
                     try {
                         if (projectSettings) {
@@ -1614,13 +1590,16 @@ class CompilerPlaybook(
             "X210",
             "X211",
             "X212",
+            "X213",
+            "X214",
+            "X215",
         ).forEach { id ->
             scenario(id) {
                 discovered(id) { data ->
                     val editor = open(data.text("file"))
                     val original = data.text("source")
                     val companion = data.values.has("destinationFile")
-                    editor.text = original
+                    check(editor.text == original) { "Fresh scenario source differs from shared fixture: $id" }
 
                     fun callerDiagnostics(broken: Boolean) {
                         // Driver's editor locator sees the selected tab. Select the caller again
@@ -1628,6 +1607,15 @@ class CompilerPlaybook(
                         val caller = if (companion) open(data.text("file")) else editor
                         if (companion) check(caller.text == original)
                         if (broken) caller.awaitError() else caller.awaitDiagnostics(emptyList())
+                    }
+
+                    fun additionalFiles(applied: Boolean) {
+                        if (!data.values.has("files")) return
+                        data.rows("files").forEach { file ->
+                            val target = open("$id/${file["file"].asString}")
+                            val expected = file[if (applied && file.has("expected")) "expected" else "source"].asString
+                            awaitUi("additional refactoring file ${file["file"].asString}", 45.seconds) { target.text == expected }
+                        }
                     }
                     val initiallyBroken = data.values["initiallyValid"]?.asBoolean == false
                     callerDiagnostics(initiallyBroken)
@@ -1661,6 +1649,7 @@ class CompilerPlaybook(
                     val destination = if (companion) open(data.text("destinationFile")) else editor
                     val destinationOriginal = if (companion) data.text("destinationSource") else original
                     awaitUi("local refactoring matches shared source", 45.seconds) { destination.text == data.text("expected") }
+                    additionalFiles(true)
                     callerDiagnostics(false)
                     val history =
                         listOf("\$Undo" to destinationOriginal, "\$Redo" to data.text("expected"), "\$Undo" to destinationOriginal)
@@ -1669,6 +1658,7 @@ class CompilerPlaybook(
                         focusEditor(target)
                         invokeAction(action, now = false, component = target.component)
                         awaitUi("$action local refactoring", 45.seconds) { target.text == expected }
+                        additionalFiles(action == "\$Redo")
                         callerDiagnostics(expected == destinationOriginal && initiallyBroken)
                     }
                 }
@@ -1735,18 +1725,52 @@ class CompilerPlaybook(
                         }
                     },
             )
+        // Independent cases replace the source graph. Close their predecessors' fixture tabs,
+        // as the workspace scenarios already did, before opening this case's caller.
+        // TODO LSP4IJ: UP07 — keeping unrelated broken fixtures open during replacement can
+        // cancel the new caller's lazy intentions after a successful server action reply.
+        // This isolates fixtures; it does not claim to repair that production delivery race.
+        withContext(OnDispatcher.EDT) {
+            val manager = service<FileEditorManager>(singleProject())
+            manager
+                .getAllEditors()
+                .map { it.getFile() }
+                .distinctBy { it.getPath() }
+                .forEach(manager::closeFile)
+        }
         // Match VS Code's per-case discovery workspace so unrelated teaching fixtures cannot
         // silently alter this scenario's graph or the scope of its refactoring proof.
-        open(data.text("file"))
         val root = Path.of(singleProject().getBasePath())
         val discovery = !data.values.has("sourceModules")
         // Explicit graphs already isolate the case. Keep their project-relative roots anchored
         // to the real project; moving the workspace folder would change their meaning.
         if (discovery) {
+            // Workspace-folder notifications need a started server; explicit settings can be
+            // installed before the first document starts it.
+            open(data.text("file"))
             changeWorkspaceFolders(root, root.resolve(id))
             configure("""{"xtc":{"compiler":{"sourceModules":null}}}""")
         }
         try {
+            if (data.values.has("sourceModules")) {
+                val modules = data.values["sourceModules"].deepCopy().asJsonArray
+                modules.forEach { module ->
+                    val entry = module.asJsonObject
+                    entry.addProperty(
+                        "uri",
+                        Path
+                            .of(singleProject().getBasePath())
+                            .resolve(id)
+                            .resolve(entry["uri"].asString)
+                            .toUri()
+                            .toString(),
+                    )
+                }
+                configure("""{"xtc":{"compiler":{"sourceModules":$modules}}}""")
+            }
+            // Open only after selecting this case's graph, avoiding a cold pull against the
+            // previous fixture graph followed immediately by diagnostic invalidation.
+            open(data.text("file"))
             action(data)
         } finally {
             configure(shared.graph)

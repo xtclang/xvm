@@ -1,7 +1,16 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **217 scenarios**: X1–X212, CFG1–CFG3 and 7a.8/7a.9.
-The latest selected gate passes **X201/X202/X205/X206/X209–X212** in VS Code `run-B54Y1R` and
+The current catalog has **220 scenarios**: X1–X215, CFG1–CFG3 and 7a.8/7a.9.
+The latest selected gate passes **X122/X209–X215** in VS Code `run-u5kDXk` and IntelliJ
+`run-4588144426201480586` (plus START), zero editor failures. It verifies required destination
+imports, exact signatures, atomic module-root/companion edits and diagnostic Undo/Redo. All 310
+selected backend tests pass without failures/errors/skips; Ultimate is disabled. Both editors use
+catalog SHA-256 `49bb9eb0b8c900f5a08e4ab0ace289150e2eec2b196f96db13bce5ded46b09ac`.
+These are selected receipts, not a full rerun. Independent IntelliJ fixtures close previous tabs,
+install explicit graphs before opening callers, and do not rewrite unchanged fixture text.
+The broader production graph-replacement cancellation race remains open under UP07.
+
+The preceding selected gate passes **X201/X202/X205/X206/X209–X212** in VS Code `run-B54Y1R` and
 IntelliJ `run-14965910820534049086` (plus START), zero editor failures. It verifies cross-module
 source ownership, destination import spelling, closed companions and diagnostic Undo/Redo. All
 296 selected backend tests pass without failures/errors/skips; Ultimate is disabled. These are
@@ -1380,7 +1389,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X212 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X215 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -3411,3 +3420,22 @@ Undo/Redo/Undo. These repairs use existing source ownership and imports; they ne
 Backend controls cover explicit dependency graphs, unrelated roots, binary artifacts with and without
 source indexes, read-only destinations, unsupported owners, existing members, closed broken consumers,
 missing destination imports, exact signature identity and destination-specific document versions.
+
+
+### Missing-method destination imports (L63, X213–X215)
+
+Load every shared fixture and use the explicit `sourceModules` graph recorded for each case.
+The source import alone does not establish the destination's dependency permission. Keep the
+destination closed until applying Quick Fix on `missing`. Compare complete generated text,
+verify that the caller remains unchanged, then Undo/Redo/Undo and check caller diagnostics.
+The import and method must behave as one atomic edit; compiler graph settings remain unchanged.
+
+| Case | Manual action | Required result |
+| --- | --- | --- |
+| X213 | Repair the call using `shared.Value`; Library has a configured Types dependency but no import. | Library gains `package types import Types;` and a public `types.Value` method together. One Undo removes both. |
+| X214 | Repair the static call with a local argument and typed initializer; destination is the closed `Library/Other.x`. | `Library.x` gains `package types2 import Types;`; the companion gains the public static method. Existing `types` and `types1` names, comments and caller text are preserved. Undo/Redo affects both additions together. |
+| X215 | Inspect the same call with Types configured only as a caller dependency. | No public-method action. No file or graph setting changes; the diagnostic remains. |
+
+Backend controls include repeated/compound types, multiple imports with colliding module-name stems,
+existing alias reuse, unused dependency exclusion, CRLF preservation, open/closed document versions,
+and rejection of compilable signature substitutions after import insertions shift the method.
