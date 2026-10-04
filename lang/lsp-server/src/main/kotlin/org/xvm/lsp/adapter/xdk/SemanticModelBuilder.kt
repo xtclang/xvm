@@ -14,6 +14,7 @@ import org.xvm.asm.PackageStructure
 import org.xvm.asm.PropertyStructure
 import org.xvm.asm.Register
 import org.xvm.asm.constants.ClassConstant
+import org.xvm.asm.constants.DeferredValueConstant
 import org.xvm.asm.constants.FormalConstant
 import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.MethodConstant
@@ -162,6 +163,7 @@ internal fun EmbeddingSupport.Compilation.projectRenameFacts(
                 builder.callableBindings(this),
                 if (includeMembers) builder.removableLocals(this) else emptySet(),
                 if (includeMembers) builder.extractionFacts(this) else null,
+                constantProperties = if (includeMembers) builder.constantProperties(this) else emptySet(),
             )
         }
     }
@@ -1935,6 +1937,25 @@ private class SemanticModelBuilder(
                         return@mapNotNull null
                     }
                     location(local.source, local.nameToken.startPosition, local.nameToken.endPosition)
+                }.toSet()
+        }
+
+    /** Static alone does not imply compile-time evaluation; runtime initializers stay in place. */
+    fun constantProperties(compilation: EmbeddingSupport.Compilation): Set<SourceLocation> =
+        if (!compilation.succeeded()) {
+            emptySet()
+        } else {
+            nodesIn(requireNotNull(compilation.parsed()))
+                .filterIsInstance<PropertyDeclarationStatement>()
+                .mapNotNull { node ->
+                    val property = node.component as? PropertyStructure ?: return@mapNotNull null
+                    val value = property.initialValue ?: return@mapNotNull null
+                    if (!property.isConstant || value is DeferredValueConstant ||
+                        value.containsUnresolved() || property.initializer != null
+                    ) {
+                        return@mapNotNull null
+                    }
+                    location(node.source, node.nameToken.startPosition, node.nameToken.endPosition)
                 }.toSet()
         }
 
