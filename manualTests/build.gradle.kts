@@ -1,5 +1,6 @@
 import org.xtclang.plugin.launchers.ExecutionMode
 import org.xtclang.plugin.tasks.XtcCompileTask
+import org.xtclang.plugin.tasks.XtcExtractXdkTask
 import org.xtclang.plugin.tasks.XtcRunTask
 import org.xtclang.plugin.tasks.XtcTestTask
 
