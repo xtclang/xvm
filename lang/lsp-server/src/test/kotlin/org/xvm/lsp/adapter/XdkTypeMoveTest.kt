@@ -370,7 +370,8 @@ class XdkTypeMoveTest {
             val original = sourceTexts()
             listOf("App/Owner/nested", "Other/empty", "unowned").forEach { destination ->
                 assertThat(adapter.renameFilesAsync(mapOf(uri("App/tools/Box.x") to uri("$destination/Box.x"))).get(30, SECONDS))
-                    .describedAs(destination).isNull()
+                    .describedAs(destination)
+                    .isNull()
             }
             assertThat(sourceTexts()).isEqualTo(original)
         }
@@ -378,21 +379,27 @@ class XdkTypeMoveTest {
 
     @Test
     fun `qualified imports and calls retain comments whitespace and explicit aliases during combined moves`() {
-        write("App.x", """
+        write(
+            "App.x",
+            """
             module App {
                 import tools /* namespace */ . Box as Crate;
                 Crate make() = new Crate();
                 tools /* type */ . Box direct() = new tools . /* constructor */ Box();
             }
-        """.trimIndent())
+            """.trimIndent(),
+        )
         write("App/tools/Box.x", "class Box { static Int number() = 1; }")
-        write("Consumer.x", """
+        write(
+            "Consumer.x",
+            """
             module Consumer {
                 package app import App;
                 app /* alias */ . tools /* package */ . Box make() = new app . tools . Box();
                 Int read() = app.tools /* call */ . Box.number();
             }
-        """.trimIndent())
+            """.trimIndent(),
+        )
         Files.createDirectories(directory.resolve("App/util/nested"))
         session { adapter ->
             move(adapter, mapOf(uri("App/tools/Box.x") to uri("App/util/nested/Parcel.x")))
@@ -410,18 +417,21 @@ class XdkTypeMoveTest {
 
     @Test
     fun `removing a namespace preserves line comments unicode and CRLF in nested types and calls`() {
-        val text = """
+        val text =
+            """
             module App {
                 tools /* α */ . Box.Part make() = new tools // keep namespace note
                     . Box.Part();
             }
-        """.trimIndent().replace("\n", "\r\n")
+            """.trimIndent().replace("\n", "\r\n")
         write("App.x", text)
         write("App/tools/Box.x", "class Box {}")
         write("App/tools/Box/Part.x", "static class Part {}")
         session { adapter ->
             move(adapter, mapOf(uri("App/tools/Box.x") to uri("App/Box.x")))
-            assertThat(read("App.x")).isEqualTo(text.replace("tools /* α */ .", " /* α */ ").replace("tools //", " //").replace(". Box.Part();", " Box.Part();"))
+            assertThat(
+                read("App.x"),
+            ).isEqualTo(text.replace("tools /* α */ .", " /* α */ ").replace("tools //", " //").replace(". Box.Part();", " Box.Part();"))
         }
     }
 
@@ -499,8 +509,14 @@ class XdkTypeMoveTest {
             val text = Files.readString(path)
 
             fun offset(position: Position): Int =
-                if (position.line == 0) position.column
-                else Regex("\\r\\n|\\r|\\n").findAll(text).elementAt(position.line - 1).range.last + 1 + position.column
+                if (position.line == 0) {
+                    position.column
+                } else {
+                    Regex("\\r\\n|\\r|\\n")
+                        .findAll(text)
+                        .elementAt(position.line - 1)
+                        .range.last + 1 + position.column
+                }
             Files.writeString(
                 path,
                 changes
