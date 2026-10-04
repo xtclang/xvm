@@ -45,18 +45,26 @@ export function memberActionCases(): void {
     });
 }
 
-export function localRefactoringCases(ids: readonly ('X148' | 'X156' | 'X157' | 'X177' | 'X178' | 'X179' | 'X180' | 'X181' | 'X182' | 'X183' | 'X184' | 'X185' | 'X186' | 'X187' | 'X188' | 'X189' | 'X190' | 'X191' | 'X192' | 'X193' | 'X194' | 'X195' | 'X196' | 'X197' | 'X198' | 'X199' | 'X200' | 'X201' | 'X202' | 'X203' | 'X204' | 'X205' | 'X206' | 'X207' | 'X208' | 'X209' | 'X210' | 'X211' | 'X212')[] = ['X148']): void {
+export function localRefactoringCases(ids: readonly ('X148' | 'X156' | 'X157' | 'X177' | 'X178' | 'X179' | 'X180' | 'X181' | 'X182' | 'X183' | 'X184' | 'X185' | 'X186' | 'X187' | 'X188' | 'X189' | 'X190' | 'X191' | 'X192' | 'X193' | 'X194' | 'X195' | 'X196' | 'X197' | 'X198' | 'X199' | 'X200' | 'X201' | 'X202' | 'X203' | 'X204' | 'X205' | 'X206' | 'X207' | 'X208' | 'X209' | 'X210' | 'X211' | 'X212' | 'X213' | 'X214' | 'X215')[] = ['X148']): void {
     for (const id of ids) playbook(id, async (workspace, data) => {
         await workspace.write(data.file, data.source);
         if ('destinationFile' in data) await workspace.write(data.destinationFile, data.destinationSource);
         if ('files' in data) for (const file of data.files) await workspace.write(file.file, file.source);
         await discovered(workspace, async () => {
+            if ('sourceModules' in data) await workspace.configure(data.sourceModules.map(module => ({ ...module, uri: workspace.uri(module.uri).toString() })));
             const document = await workspace.open(data.file);
             const originalDiagnostics = async () => {
                 if ('initiallyValid' in data && !data.initiallyValid) {
                     await diagnostics(document.uri, values => values.some(item => item.severity === vscode.DiagnosticSeverity.Error),
                         'Missing method is diagnosed before applying the action');
                 } else await noErrors(document.uri);
+            };
+            const verifyAdditionalFiles = async (applied: boolean) => {
+                if ('files' in data) for (const file of data.files) {
+                    const document = await vscode.workspace.openTextDocument(workspace.uri(file.file));
+                    const expected = applied && 'expected' in file ? file.expected : file.source;
+                    assert.strictEqual(document.getText(), expected);
+                }
             };
             await originalDiagnostics();
             const kind = 'initiallyValid' in data ? vscode.CodeActionKind.QuickFix.value : vscode.CodeActionKind.Refactor.value;
@@ -79,6 +87,7 @@ export function localRefactoringCases(ids: readonly ('X148' | 'X156' | 'X157' | 
             const destination = 'destinationFile' in data ? await workspace.open(data.destinationFile) : document;
             const original = 'destinationFile' in data ? data.destinationSource : data.source;
             assert.strictEqual(destination.getText(), data.expected);
+            await verifyAdditionalFiles(true);
             if (destination !== document) assert.strictEqual(document.getText(), data.source);
             await noErrors(document.uri);
             for (const [command, expected] of [['undo', original], ['redo', data.expected], ['undo', original]]) {
@@ -87,6 +96,7 @@ export function localRefactoringCases(ids: readonly ('X148' | 'X156' | 'X157' | 
                 await vscode.commands.executeCommand(command);
                 await eventually(async () => destination.getText(), text => text === expected, `${command} local refactoring`);
                 if (destination !== document) assert.strictEqual(document.getText(), data.source);
+                await verifyAdditionalFiles(command === 'redo');
                 if (command === 'redo') await noErrors(document.uri);
                 else await originalDiagnostics();
             }
