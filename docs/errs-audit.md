@@ -1710,3 +1710,22 @@ X181–X184 pass in VS Code `run-ZhuPaV` and IntelliJ `run-5839432120705984532` 
 zero IDE failures); both verify exact edits, diagnostics and Undo/Redo, while X184 verifies refusal
 through the installed connection. These are selected runs from the 189-case catalog, not full
 suite reruns. The integration plan records the failed first run, fixes and extraction commit map.
+
+
+### L63 missing-method declaration evidence (2026-10-04)
+
+The next repair action creates a private method in the caller's module/class from a fresh
+successful declaration analysis. It never asks failed-validation TypeInfo for a signature.
+Enclosing method parameters/returns provide resolved compiler types; supported literals use
+compiler implicit types within the same attempt. Immutable action facts retain only rendered
+text and positions. Full proposed compilation, known binding/dispatch preservation, selected-call
+target and existing current-input guards protect publication. Both editors gain shared
+X185–X188 with initial error, repair and Undo/Redo diagnostics. The combined gate passes 180
+backend and 89 IntelliJ unit tests; X122/X181/X185–X188 pass in VS Code `run-dzR5d9` and IntelliJ
+`run-16733856986922464734`, zero editor failures. These are selected runs. Native acceptance also
+exposed and fixed UP07 equal-full diagnostic reports retaining canceled quick fixes in unchanged
+annotations. The client-only correction and failure receipts are in the integration plan.
+
+No Java AST or embedding API change is needed. Unsupported receiver/closure/overload contexts,
+method formals, inferred/computed/named arguments and ambiguous numeric literal representations
+remain refusals. See [the current scope and commit map](errs-integration-plan.md#l63-missing-method-quick-fixes-2026-10-04).
