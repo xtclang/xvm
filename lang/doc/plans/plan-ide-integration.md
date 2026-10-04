@@ -194,7 +194,7 @@ See the [L83 task and ownership record](../../../docs/errs-integration-plan.md#p
 | Signature help | - | Same-file | **Partial** - selected signatures; fitted incomplete method/function/constructor calls, including specialized constructors and bounded declaration/tuple/literal recovery. Methods/constructors retain named mappings; function types have unnamed parameters. Constructor class types use explicit, required-type or provisional argument inference; array suppliers include dimension offsets and single-dimensional bracket slots fit the size parameter |
 | Rename (same file) | Text | AST | **Partial** - locals/lambda/private ordinary-method parameters, captures and named labels; positional method-value escapes; graph-backed public/explicit-constructor parameter slots, types, static members, method/property families and explicit aliases; client versioned-edit support required. The L62 extension has backend and selected shared acceptance in both editors |
 | Rename (cross-file) | - | - | **Partial** - types/packages and companion directories, combined type/module rename-and-move and interacting type batches, captured empty destinations and commented qualifications (X169–X176; latest receipts below), qualified discovery-managed modules, implicit package directories, static members and source method/property families, including supported mixin/delegate/annotation routes, union alternatives and recursive written contracts (X164/X165), plus bounded generic/formal/annotated operands and nested union delegation (X166–X168; current receipt below); public parameter slots join override declarations and named callers; primary-header properties join generated constructor labels and property uses. Full graph compilation and binding/dispatch proof remain mandatory. Explicit graph changes have guarded native client persistence/Undo through xtc/rename (X118 passes in both editors; VS Code edited-file moves require files.refactoring.autoSave); standard LSP clients still refuse them. Project proposals include a scope receipt; registered absolute roots can include external consumers. The explicit graph is a declared proof boundary: omitted consumers, even inside workspace roots, remain unknown and are not automatically refused |
-| Code actions | Organize imports | Organize imports + auto-import + doc-comments | **Partial** - compiler-proven unused-import removal, contiguous import sorting and unresolved public-type imports; individual/all-required implement/override at a class name for source and read-only binary/XDK contracts, including generic/conditional, compound and qualified types with imports; validated constants and fresh literal-default repair; whole-return/typed-initializer extraction, adjacent same-type returned/initializer local inline and unused constant local removal; private same-owner expression helpers with stable inputs (X181–X184); missing private methods from resolved declaration/local types and typed initializer contexts (X185–X192; acceptance receipts below); complete compilation and binding/dispatch proof, versioned edits |
+| Code actions | Organize imports | Organize imports + auto-import + doc-comments | **Partial** - compiler-proven unused-import removal, contiguous import sorting and unresolved public-type imports; individual/all-required implement/override at a class name for source and read-only binary/XDK contracts, including generic/conditional, compound and qualified types with imports; validated constants and fresh literal-default repair; whole-return/typed-initializer extraction, adjacent same-type returned/initializer local inline and unused constant local removal; private same-owner expression helpers with stable inputs (X181–X184); missing private methods from resolved declaration/local types, typed initializer contexts and proven same-owner instance receivers (X185–X196; acceptance receipts below); complete compilation and binding/dispatch proof, versioned edits |
 | Document formatting | Trailing WS | Structural re-indent + whitespace cleanup | **Partial** - Java-lexer brace/parenthesis/bracket indentation and outer whitespace; all token spellings preserved; no expression wrapping |
 | Range formatting | Trailing WS in range | Structural formatting in range | **Partial** - same token-preserving formatter, bounded to selected lines |
 | On-type formatting | - | Structural formatting on trigger characters | **Partial** - current-line indentation/whitespace on configured trigger characters |
@@ -637,7 +637,7 @@ Full tree-sitter support for fast, incremental parsing:
    - Whole-return-expression extraction and adjacent single-use typed returned-local inline are implemented with binding proof; X156/X157 pass in both editors
    - Complete typed local initializers can also be extracted or receive an adjacent same-written-type local inline; unused locals can be removed only with compiler-proven constant, side-effect-free initialization (X177–X180, acceptance below)
    - Private same-owner expression helpers with explicit stable inputs are implemented (X181–X184, acceptance below)
-   - Missing private same-owner methods can be proposed from resolved declaration parameters, supported literal types, compiler-established block locals and explicit return/typed-initializer contexts (X185–X192; acceptance receipts below)
+   - Missing private same-owner methods can be proposed from resolved declaration parameters, supported literal types, compiler-established block locals and explicit return/typed-initializer contexts, including proven same-owner instance receivers (X185–X196; acceptance receipts below)
    - Wider expression/statement extraction, other missing declarations, mutable captures, broader inline and global safe delete remain unimplemented (L63)
 
 9. **Code actions (semantic)**
@@ -1222,7 +1222,8 @@ suite reruns. The integration plan records the failed first run, fixes and extra
 Compiler mode now proposes **Create private method** for supported unqualified calls in modules
 and classes. It uses fresh resolved declarations, compiler type rendering and a complete proposed
 graph proof, including the selected call's new declaration target. Existing overload/property
-names, local shadowing, receiver calls, computed/named arguments, method formals and
+names, unqualified local shadowing, other-owner/computed/type-qualified receivers, computed/named
+arguments, method formals and
 conditional returns are refused. The continuation below adds compiler-established local arguments.
 Untyped numeric literals are not runtime type evidence.
 No new AST API/state is required. X185–X188 exercise both drivers with error/clear and Undo/Redo
@@ -1244,3 +1245,18 @@ The continuation passes 198 backend tests and X181/X185/X189–X192 in VS Code `
 and IntelliJ `run-1236802406694405307` (plus START), zero editor failures. Both use the 197-case
 catalog; these are selected runs. IntelliJ Ultimate is disabled. No plugin production changes
 were needed in this continuation.
+
+
+### L63 same-owner receiver boundary (2026-10-04)
+
+Qualified creation now accepts `this`, `this:private` and plain parameter/local receivers when
+validated compiler identities prove the receiver has the enclosing class type. It creates a private
+instance method even inside a static caller. Full graph compilation, unchanged receiver/argument
+bindings and the inserted declaration target are mandatory. X193–X196 add exact-edit/diagnostic
+Undo/Redo coverage and other-owner/public-view refusals in both shared drivers. Type-qualified,
+computed/chained and other-owner receivers remain outside this slice. See the
+[scope, commits and acceptance receipts](../../../docs/errs-integration-plan.md#l63-same-owner-receiver-repairs-2026-10-04).
+
+This receiver continuation passes 219 backend tests and X181/X185/X190/X193–X196 in VS Code
+`run-nvquYD` and IntelliJ `run-15968094076069950349` (plus START), zero editor failures. Both
+use the 201-case catalog; these are selected runs. IntelliJ Ultimate is disabled.
