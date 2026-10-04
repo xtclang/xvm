@@ -2,8 +2,10 @@ package org.xvm.lsp.adapter.xdk
 
 import org.xvm.asm.ErrorList
 import org.xvm.compiler.CompilerException
+import org.xvm.compiler.Lexer
 import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
+import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AssignmentStatement
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.Expression
@@ -16,13 +18,14 @@ import org.xvm.compiler.ast.VariableDeclarationStatement
 import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.util.ExecutionTrace
 
-/** Inline an adjacent single-use local into a return or initializer with the same expected type. */
+/** Inline single-use locals with either adjacent evaluation or compiler-proven constant values. */
 internal object XdkLocalInline {
     data class Candidate(
         val title: String,
         val edits: List<XdkRename.Edit>,
         val relocation: XdkRename.Relocation,
         val removed: Set<SemanticModel.SourceLocation>,
+        val expression: SemanticModel.SourceLocation? = null,
     )
 
     private data class AdjacentUse(
@@ -33,6 +36,13 @@ internal object XdkLocalInline {
     )
 
     fun candidate(
+        text: String,
+        selection: Range,
+        model: SemanticModel,
+        facts: CompilerRenameFacts,
+    ): Candidate? = adjacent(text, selection, model) ?: constant(text, selection, model, facts)
+
+    private fun adjacent(
         text: String,
         selection: Range,
         model: SemanticModel,
@@ -139,6 +149,78 @@ internal object XdkLocalInline {
             listOf(XdkRename.Edit(start, nextStart, ""), destination),
             XdkRename.Relocation(valueStart, valueEnd, destination, 0),
             removed,
+        )
+    }
+
+    /** A constant needs no evaluation at its declaration; its sole read keeps its exact type. */
+    private fun constant(
+        text: String,
+        selection: Range,
+        model: SemanticModel,
+        facts: CompilerRenameFacts,
+    ): Candidate? {
+        val source = model.sourceName ?: return null
+        val symbol = model.symbolAt(selection.start.line, selection.start.column) ?: return null
+        if (symbol.kind != SemanticModel.SymbolKind.VARIABLE || symbol.declarationSource != source) return null
+        val declared = SemanticModel.SourceLocation(source, symbol.declaration ?: return null)
+        if (declared !in facts.removableLocals) return null
+        val uses = model.occurrences.filter { it.symbol == symbol.id }
+        if (uses.size != 2 || uses.count { it.role == SemanticModel.Role.DECLARATION } != 1) return null
+        val use = uses.singleOrNull { it.role == SemanticModel.Role.REFERENCE && it.usage == SemanticModel.Usage.READ } ?: return null
+        val errors = ErrorList()
+        val root =
+            try {
+                ExecutionTrace.api("Parser.parseSource(inline-constant-local)") { Parser(Source(text), errors).parseSource() }
+            } catch (_: CompilerException) {
+                return null
+            }
+        if (errors.hasSeriousErrors()) return null
+
+        fun nodes(node: AstNode): Sequence<AstNode> = sequenceOf(node) + node.childNodes().asSequence().flatMap(::nodes)
+
+        fun at(value: Long) = SemanticModel.Position(Source.calculateLine(value), Source.calculateOffset(value))
+
+        fun offset(value: Long) = XdkRename.offset(text, at(value))
+        val all = nodes(root).toList()
+        val local =
+            all
+                .filterIsInstance<AssignmentStatement>()
+                .mapNotNull { XdkLocalDeclarations.initializer(text, it) }
+                .singleOrNull { at(it.local.nameToken.startPosition) == declared.range.start } ?: return null
+        val read =
+            all.filterIsInstance<NameExpression>().singleOrNull {
+                it.isSimpleName && at(it.startPosition) == use.range.start && at(it.endPosition) == use.range.end
+            } ?: return null
+        val expression = local.statement.rValue
+        val valueStart = offset(expression.startPosition) ?: return null
+        val valueEnd = offset(expression.endPosition) ?: return null
+        val start = offset(local.statement.startPosition) ?: return null
+        val lineStart = maxOf(text.lastIndexOf('\n', start - 1), text.lastIndexOf('\r', start - 1)) + 1
+        if (text.substring(lineStart, start).any { it != ' ' && it != '\t' }) return null
+        // Keep comments and declaration trivia intact by refusing anything beyond whitespace.
+        val tail = Regex("[ \t]*;[ \t]*(?:\r\n|\r|\n)").find(text, valueEnd)?.takeIf { it.range.first == valueEnd } ?: return null
+        val header =
+            ExecutionTrace.api("Lexer.lex(inline-local-declaration)") {
+                Lexer(Source(text.substring(start, valueStart)), errors).asSequence().toList()
+            }
+        if (errors.hasSeriousErrors() || header.any { it.id in setOf(Token.Id.EOL_COMMENT, Token.Id.ENC_COMMENT) }) return null
+        val destination =
+            XdkRename.Edit(
+                offset(read.startPosition) ?: return null,
+                offset(read.endPosition) ?: return null,
+                "(${text.substring(valueStart, valueEnd)})",
+            )
+        val removed =
+            model.occurrences
+                .filter {
+                    it.range == use.range || (XdkRename.offset(text, it.range.start) ?: -1) in start until valueStart
+                }.mapTo(linkedSetOf()) { SemanticModel.SourceLocation(source, it.range) }
+        return Candidate(
+            "Inline constant local variable",
+            listOf(XdkRename.Edit(lineStart, tail.range.last + 1, ""), destination),
+            XdkRename.Relocation(valueStart, valueEnd, destination, 1),
+            removed,
+            SemanticModel.SourceLocation(source, SemanticModel.Range(at(expression.startPosition), at(expression.endPosition))),
         )
     }
 }
