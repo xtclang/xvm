@@ -22,7 +22,11 @@ internal object XdkTypeMoves {
             }
     }
 
-    data class Destination(val source: String, val module: String, val path: List<String>)
+    data class Destination(
+        val source: String,
+        val module: String,
+        val path: List<String>,
+    )
 
     fun plan(
         facts: CompilerRenameFacts,
@@ -114,9 +118,10 @@ internal object XdkTypeMoves {
         if (edits.values.any { !XdkRename.disjoint(it) }) return null
         val resources = moves.flatMap { it.files.resources.entries }.groupBy({ it.key }, { it.value })
         if (resources.values.any { it.distinct().size != 1 }) return null
-        val destinations = moves.zip(operations.values).map { (move, destination) ->
-            Destination(destination.path, move.owner.module, move.path.dropLast(1) + destination.nameWithoutExtension)
-        }
+        val destinations =
+            moves.zip(operations.values).map { (move, destination) ->
+                Destination(destination.path, move.owner.module, move.path.dropLast(1) + destination.nameWithoutExtension)
+            }
         return Proposal(edits, resources.mapValues { it.value.first() }, qualifications, destinations)
     }
 
@@ -133,15 +138,19 @@ internal object XdkTypeMoves {
         directories: Set<File>,
     ): List<String>? {
         val ancestors = generateSequence(destination) { it.parentFile }.toList()
-        val resolved = ancestors.firstNotNullOfOrNull { candidate ->
-            facts.typePaths.singleOrNull { it.module == module && directory(it.target) == candidate }
-                ?.let { candidate to it.path }
-        } ?: return null
+        val resolved =
+            ancestors.firstNotNullOfOrNull { candidate ->
+                facts.typePaths
+                    .singleOrNull { it.module == module && directory(it.target) == candidate }
+                    ?.let { candidate to it.path }
+            } ?: return null
         val implicit = ancestors.takeWhile { it != resolved.first }.asReversed()
         if (implicit.any {
                 it !in directories || !XdkRename.identifier(it.name) || File(it.parentFile, "${it.name}.x").path in texts
             }
-        ) return null
+        ) {
+            return null
+        }
         return resolved.second + implicit.map { it.name }
     }
 
