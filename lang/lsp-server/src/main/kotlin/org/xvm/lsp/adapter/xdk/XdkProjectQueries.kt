@@ -850,24 +850,25 @@ internal class XdkProjectQueries(
             if (complete) {
                 emptyList()
             } else {
+                // Header and body attempts have separate snapshot identities for the same source.
                 before.models
-                    .singleOrNull { it.sourceName == source }
-                    ?.let { model ->
-                        XdkMissingDeclarations.candidates(text, range, model, before).mapNotNull { candidate ->
-                            checkCurrent()
-                            if (!Files.isWritable(File(source).toPath())) return@mapNotNull null
-                            val plan = XdkRename.Plan(texts, mapOf(source to listOf(candidate.edit)))
-                            val after = compile(plan.proposed, Proof.REPAIR) ?: return@mapNotNull null
-                            if (!XdkRename.preservesKnownBindings(before, after, plan) || !candidate.proves(after, plan)) {
-                                return@mapNotNull null
-                            }
-                            CodeAction(
-                                candidate.title,
-                                CodeAction.CodeActionKind.QUICKFIX,
-                                edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
-                            )
+                    .filter { it.sourceName == source }
+                    .flatMap { model -> XdkMissingDeclarations.candidates(text, range, model, before) }
+                    .distinct()
+                    .mapNotNull { candidate ->
+                        checkCurrent()
+                        if (!Files.isWritable(File(source).toPath())) return@mapNotNull null
+                        val plan = XdkRename.Plan(texts, mapOf(source to listOf(candidate.edit)))
+                        val after = compile(plan.proposed, Proof.REPAIR) ?: return@mapNotNull null
+                        if (!XdkRename.preservesKnownBindings(before, after, plan) || !candidate.proves(after, plan)) {
+                            return@mapNotNull null
                         }
-                    }.orEmpty()
+                        CodeAction(
+                            candidate.title,
+                            CodeAction.CodeActionKind.QUICKFIX,
+                            edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+                        )
+                    }
             }
         val members =
             XdkMemberActions.actions(before.memberActions, source, range).mapNotNull { candidate ->
