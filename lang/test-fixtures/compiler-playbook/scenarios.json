@@ -6488,6 +6488,79 @@
         "limitations": []
       }
     },
+    "X197": {
+      "title": "create a static method from a class qualifier in an instance caller",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. Apply the named method action; inspect its signature and TODO() body. The error clears. Undo restores the source and error; Redo clears it again, then Undo restores the original."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    class Box {\n        Int read(Int value) {\n            return Box.missing(value);\n        }\n    }\n}",
+        "selected": "missing",
+        "title": "Create private method 'missing'",
+        "expected": "module Extract {\n    class Box {\n        Int read(Int value) {\n            return Box.missing(value);\n        }\n        private static Int64 missing(Int64 arg1) {\n            TODO();\n        }\n    }\n}",
+        "initiallyValid": false
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X198": {
+      "title": "create a static method through a fully qualified owner and typed initializer",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. Apply the named method action; inspect its signature and TODO() body. The error clears. Undo restores the source and error; Redo clears it again, then Undo restores the original."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    class Box {\n        void read(List<Int> values) {\n            val other = values;\n            List<Int> result = Extract.Box.missing(other);\n        }\n    }\n}",
+        "selected": "missing",
+        "title": "Create private method 'missing'",
+        "expected": "module Extract {\n    class Box {\n        void read(List<Int> values) {\n            val other = values;\n            List<Int> result = Extract.Box.missing(other);\n        }\n        private static List<Int64> missing(List<Int64> arg1) {\n            TODO();\n        }\n    }\n}",
+        "initiallyValid": false
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X199": {
+      "title": "refuse static method creation through a runtime Type value",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. No method creation action may appear; the error and source remain unchanged."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    class Box {\n        Int read(Type<Box> type, Int value) {\n            return type.missing(value);\n        }\n    }\n}",
+        "selected": "missing",
+        "title": "Create private method 'missing'",
+        "expected": "module Extract {\n    class Box {\n        Int read(Type<Box> type, Int value) {\n            return type.missing(value);\n        }\n    }\n}",
+        "initiallyValid": false,
+        "refused": true
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X200": {
+      "title": "keep instance dispatch when a parameter shadows the class name",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. Apply the named method action; inspect its signature and TODO() body. The error clears. Undo restores the source and error; Redo clears it again, then Undo restores the original."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    class Box {\n        static Int read(Extract.Box Box, Int value) {\n            return Box.missing(value);\n        }\n    }\n}",
+        "selected": "missing",
+        "title": "Create private method 'missing'",
+        "expected": "module Extract {\n    class Box {\n        static Int read(Extract.Box Box, Int value) {\n            return Box.missing(value);\n        }\n        private Int64 missing(Int64 arg1) {\n            TODO();\n        }\n    }\n}",
+        "initiallyValid": false
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
