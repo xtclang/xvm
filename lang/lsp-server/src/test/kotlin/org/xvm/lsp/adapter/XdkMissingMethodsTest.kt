@@ -62,6 +62,147 @@ class XdkMissingMethodsTest {
         ) { assertThat(it).contains("private Int64 missing(Int64 arg1)").doesNotContain("private static") }
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = ["", "static "])
+    fun `class qualifier creates a static method regardless of the caller`(modifier: String) {
+        query(
+            """
+            module Missing {
+                class Box {
+                    ${modifier}Int read(Int value) {
+                        return Box.§missing(value);
+                    }
+                }
+            }
+            """.trimIndent(),
+        ) { assertThat(it).contains("private static Int64 missing(Int64 arg1)", "Box.missing(value)") }
+    }
+
+    @Test
+    fun `fully qualified owner preserves typed initializer and local argument evidence`() {
+        query(
+            """
+            module Missing {
+                class Box {
+                    void read(List<Int> values) {
+                        val other = values;
+                        List<Int> result = Missing.Box.§missing(other);
+                    }
+                }
+            }
+            """.trimIndent(),
+        ) { assertThat(it).contains("private static List<Int64> missing(List<Int64> arg1)", "Missing.Box.missing(other)") }
+    }
+
+    @Test
+    fun `class qualifier supports a void call and multiple compatible sites`() {
+        query(
+            """
+            module Missing {
+                class Box {
+                    void run() {
+                        Box.§missing();
+                        Box.missing();
+                    }
+                }
+            }
+            """.trimIndent(),
+            wholeFile = true,
+        ) { assertThat(it).contains("private static void missing()") }
+    }
+
+    @Test
+    fun `parameter shadowing the class name remains an instance receiver`() {
+        query(
+            """
+            module Missing {
+                class Box {
+                    static Int read(Missing.Box Box, Int value) {
+                        return Box.§missing(value);
+                    }
+                }
+            }
+            """.trimIndent(),
+        ) { assertThat(it).contains("private Int64 missing(Int64 arg1)").doesNotContain("private static Int64 missing") }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["Other", "Outer.Box", "type", "clz"])
+    fun `other owner and runtime type qualifiers remain refusals`(qualifier: String) {
+        refused(
+            """
+            module Missing {
+                class Other {}
+                class Outer { class Box {} }
+                class Box {
+                    Int read(Type<Box> type, Class<Box> clz, Int value) {
+                        return $qualifier.§missing(value);
+                    }
+                }
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `a class spelling shadowed by a different instance type does not establish ownership`() {
+        refused(
+            """
+            module Missing {
+                class Box {
+                    Int read(String Box, Int value) {
+                        return Box.§missing(value);
+                    }
+                }
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `module singleton qualifier is not treated as an ordinary class`() {
+        refused(
+            """
+            module Missing {
+                static Int read(Int value) {
+                    return Missing.§missing(value);
+                }
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `explicit type arguments do not acquire a guessed static signature`() {
+        refused(
+            """
+            module Missing {
+                class Box<Element> {
+                    Int read(Int value) {
+                        return Box<Int>.§missing(value);
+                    }
+                }
+            }
+            """.trimIndent(),
+        )
+    }
+
+    @Test
+    fun `existing static overload is not mistaken for a missing declaration`() {
+        refused(
+            """
+            module Missing {
+                class Box {
+                    static Int missing(Int value) = value;
+                    Int read(String value) {
+                        return Box.§missing(value);
+                    }
+                }
+            }
+            """.trimIndent(),
+        )
+    }
+
     @Test
     fun `module this receiver supports a void statement call`() {
         query(
@@ -123,7 +264,7 @@ class XdkMissingMethodsTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = ["other", "otherPeer", "base", "super", "Box", "this:public", "this:protected", "this:struct", "make()"])
+    @ValueSource(strings = ["other", "otherPeer", "base", "super", "this:public", "this:protected", "this:struct", "make()"])
     fun `unproven receiver owners and access views remain refusals`(receiver: String) {
         refused(
             """
@@ -488,7 +629,7 @@ class XdkMissingMethodsTest {
                 assertThat(action).isNull()
                 return
             }
-            assertThat(action).describedAs("Missing method action for %s", marked).isNotNull()
+            assertThat(action).describedAs("Missing method action for %s%nCompiler diagnostics: %s", marked, diagnostics).isNotNull()
             assertThat(action!!.kind).isEqualTo(CodeAction.CodeActionKind.QUICKFIX)
             val edit = requireNotNull(action.edit)
             assertThat(edit.versioned).isTrue()
