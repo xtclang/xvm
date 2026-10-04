@@ -1590,6 +1590,10 @@ class CompilerPlaybook(
             "X186",
             "X187",
             "X188",
+            "X189",
+            "X190",
+            "X191",
+            "X192",
         ).forEach { id ->
             scenario(id) {
                 discovered(id) { data ->
