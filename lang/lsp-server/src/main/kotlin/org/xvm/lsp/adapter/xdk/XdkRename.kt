@@ -99,10 +99,12 @@ internal object XdkRename {
         fun callStart(
             source: String,
             offset: Int,
-        ): Int? =
-            map(source, offset)?.minus(
-                qualifications[source].orEmpty().filter { it.start == offset && it.start == it.end }.sumOf { it.text.length },
-            )
+        ): Int? {
+            val mapped = map(source, offset) ?: return null
+            val prefix = qualifications[source].orEmpty().singleOrNull { it.start == offset } ?: return mapped
+            val start = mapped - if (prefix.start == prefix.end) prefix.text.length else 0
+            return start + (XdkQualifiedName.leadingTrivia(prefix.text) ?: return null)
+        }
     }
 
     /** Rename the written type/module owning this file, before proving its final destination. */

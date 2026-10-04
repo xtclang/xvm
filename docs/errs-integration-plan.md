@@ -9397,3 +9397,11 @@ After replay, every moved declaration must have its expected module and full typ
 unused types; normal binding/call/resource proof still applies. Nonexistent destinations, foreign
 modules and class-owned directories remain refusals. Backend regressions cover nested empty
 destinations, explicit empty packages and all three ownership refusals. Validation is batched.
+
+Qualified-name edits now use the compiler lexer to change identifier/dot tokens while preserving
+intervening comments and whitespace. Common suffixes and explicit import aliases remain intact.
+Call-site translation skips trivia left by a removed prefix; declaration/binding/dispatch proof
+is unchanged. Regressions include import aliases, closed consumers, nested types, constructor
+and static calls, prefix insertion/removal, Unicode, CRLF and a binding-changing refusal. No
+AST or embedding API change is needed. Specialized names outside identifier/dot syntax still
+refuse; this is not arbitrary source rewriting. Validation is batched.
