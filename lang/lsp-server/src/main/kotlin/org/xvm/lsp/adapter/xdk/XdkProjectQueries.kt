@@ -980,6 +980,24 @@ internal class XdkProjectQueries(
             } else {
                 null
             }
+        val safeDelete =
+            if (complete) {
+                before.models.singleOrNull { it.sourceName == source }?.let { model ->
+                    XdkSafeDelete.candidate(text, range, model, before)?.let { candidate ->
+                        checkCurrent()
+                        val plan = XdkRename.Plan(texts, mapOf(source to listOf(candidate.edit)))
+                        val after = compile(plan.proposed) ?: return@let null
+                        if (!XdkRename.preservesSafeDelete(before, after, plan, candidate)) return@let null
+                        CodeAction(
+                            "Safely delete private member '${candidate.name}'",
+                            CodeAction.CodeActionKind.REFACTOR_REWRITE,
+                            edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+                        )
+                    }
+                }
+            } else {
+                null
+            }
         val method =
             if (complete) {
                 before.models.singleOrNull { it.sourceName == source }?.let { model ->
@@ -1010,6 +1028,7 @@ internal class XdkProjectQueries(
                     inline,
                     memberInline,
                     removal,
+                    safeDelete,
                     method,
                 )
         } else {
