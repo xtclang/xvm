@@ -632,12 +632,12 @@ internal class XdkProjectQueries(
             return null
         }
         val graph =
-            XdkProject(
+            try { XdkProject(
                 project.buildOrder().map { module ->
                     XdkSourceModule(
                         names.getValue(module.name),
                         File(paths[module.root.path] ?: module.root.path).toURI().toString(),
-                        module.dependencies.mapTo(linkedSetOf()) { names[it] ?: it },
+                        (module.dependencies + typeMove.dependencies[module.name].orEmpty()).mapTo(linkedSetOf()) { names[it] ?: it },
                         (
                             module.resourceFiles ?: sources[module]?.inputs?.resources?.roots?.takeIf {
                                 File(paths[module.root.path] ?: module.root.path).parentFile != module.root.parentFile
@@ -658,7 +658,7 @@ internal class XdkProjectQueries(
                         },
                     )
                 },
-            )
+            ) } catch (_: IllegalArgumentException) { return null }
         val renamed =
             proposals
                 .flatMap { it.edit.changes.entries }
@@ -705,10 +705,10 @@ internal class XdkProjectQueries(
         if (edits.values.any { !XdkRename.disjoint(it) }) {
             return null
         }
-        val plan = XdkRename.Plan(texts, edits, paths, qualifications = qualifications)
+        val plan = XdkRename.Plan(texts, edits, paths, qualifications = qualifications, imports = typeMove.imports)
         val resourceMoves = XdkResourceMoves(resources.mapKeys { it.key.path }.mapValues { it.value.path }, edits.keys)
         val after = compile(plan.proposed, moves = paths, graph = graph, resourceMoves = resourceMoves) ?: return null
-        if (!typeMove.provesDestinations(after) || !preservesBindings(before, after, plan) || !isCurrent()) return null
+        if (!typeMove.provesDestinations(after) || !preservesBindings(before, after, plan, graph) || !isCurrent()) return null
         val replacement = !discoverImports && !project.sameConfiguration(graph)
         return XdkRenameProposal(
             WorkspaceEdit(
@@ -745,6 +745,7 @@ internal class XdkProjectQueries(
         before: CompilerRenameFacts,
         after: CompilerRenameFacts,
         plan: XdkRename.Plan,
+        graph: XdkProject = project,
     ): Boolean {
         // Compilation still checks the complete graph. Binding/dispatch equivalence is needed
         // for every edited module and its transitive consumers; independent roots have identical
@@ -753,7 +754,8 @@ internal class XdkProjectQueries(
         val affected =
             (plan.edits.keys + plan.moves.keys)
                 .mapNotNull { project.scope(it) }
-                .flatMapTo(linkedSetOf(), project::affected)
+                .flatMapTo(linkedSetOf(), project::affected) +
+                plan.moves.values.mapNotNull { graph.scope(it) }.flatMap(graph::affected)
         val movedScopes =
             affected.mapTo(linkedSetOf()) { scope ->
                 val path = requireNotNull(XdkSources.file(scope)).path
@@ -1206,22 +1208,15 @@ internal class XdkProjectQueries(
                         sources.entries
                             .single { it.value === source }
                             .key.root
-                    // A snapshot belongs to one root and its companion tree. Interacting moves
-                    // must not leave its members outside that tree (nor invent cross-module ownership).
-                    val boundary = File(module.root.parentFile, module.root.nameWithoutExtension).toPath()
-                    if ((
-                            source.inputs.text.keys
-                                .filter { it != originalRoot } + source.inputs.directories
-                        ).any {
-                            !File(moves[it.path] ?: it.path).toPath().startsWith(boundary)
-                        }
-                    ) {
+                    // Reassign captured source members to their proposed module, never to a
+                    // guessed filesystem owner. Each module still uses its own resource policy.
+                    if (text.keys.any { graph.scope(it) == null }) {
                         return null
                     }
                     val compilation =
                         try {
                             compileTree(
-                                XdkSources.replay(originalRoot, source.inputs, text, moves, resourceMoves),
+                                XdkSources.replay(originalRoot, source.inputs, text, moves, resourceMoves, sources.values.map { it.inputs }),
                                 open.repository,
                                 errors,
                             )
