@@ -4,10 +4,15 @@ import org.xvm.lsp.adapter.Range
 
 /** Detached signatures from fresh declarations; only a complete repair proof can publish them. */
 internal object XdkMissingMethods {
+    enum class Dispatch {
+        INSTANCE,
+        STATIC,
+    }
+
     /** Detached body evidence copied before the fresh declaration attempt checks eligibility. */
     data class Inputs(
         val localTypes: Map<SemanticModel.SourceLocation, String> = emptyMap(),
-        val sameOwnerReceivers: Set<SemanticModel.SourceLocation> = emptySet(),
+        val sameOwnerReceivers: Map<SemanticModel.SourceLocation, Dispatch> = emptyMap(),
     )
 
     data class ArgumentBinding(
@@ -21,6 +26,7 @@ internal object XdkMissingMethods {
         val insertion: SemanticModel.Position,
         val owner: SemanticModel.Position,
         val declaration: String,
+        val dispatch: Dispatch,
         val arguments: List<ArgumentBinding> = emptyList(),
     ) {
         val title: String get() = "Create private method '$name'"
@@ -65,6 +71,7 @@ internal object XdkMissingMethods {
             val declaration = symbol.declaration ?: return false
             val declarationAt = XdkRename.offset(changed, declaration.start) ?: return false
             if (symbol.kind != SemanticModel.SymbolKind.METHOD || symbol.name != name || symbol.declarationSource != source ||
+                (SemanticModel.Modifier.STATIC in symbol.modifiers) != (dispatch == Dispatch.STATIC) ||
                 declarationAt !in edit.start until edit.start + edit.text.length
             ) {
                 return false
