@@ -1624,7 +1624,10 @@ class CompilerPlaybook(
                         check(editor.text == original)
                         return@discovered
                     }
-                    quickFix(editor, at, data.text("title"), at + data.text("selected").length)
+                    // Diagnostic quick fixes use a caret at the error; expression refactorings
+                    // use the complete selection specified by the shared scenario.
+                    val selectionEnd = if (data.values["initiallyValid"]?.asBoolean == false) at else at + data.text("selected").length
+                    quickFix(editor, at, data.text("title"), selectionEnd)
                     awaitUi("local refactoring matches shared source", 45.seconds) { editor.text == data.text("expected") }
                     editor.awaitDiagnostics(emptyList())
                     listOf("\$Undo" to original, "\$Redo" to data.text("expected"), "\$Undo" to original).forEach { (action, expected) ->
