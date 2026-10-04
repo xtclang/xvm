@@ -1,5 +1,6 @@
 import org.xtclang.plugin.launchers.ExecutionMode
 import org.xtclang.plugin.tasks.XtcCompileTask
+import org.xtclang.plugin.tasks.XtcExtractXdkTask
 import org.xtclang.plugin.tasks.XtcRunTask
 import org.xtclang.plugin.tasks.XtcTestTask
 
@@ -491,12 +492,38 @@ val testModuleNames = listOf(
     "TestTuples"
 )
 
+// Negative source fixtures are intentionally excluded from compileXtc. Exercise them through
+// the consumer's resolved XDK and assert diagnostics as well as successful control compilations.
+val runDuplicateTypes = tasks.register<JavaExec>("runDuplicateTypes") {
+    group = "verification"
+    description = "Verify duplicate source type diagnostics and valid companion-file controls."
+    javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass.set("DuplicateTypesRunner")
+
+    val xdk = tasks.named<XtcExtractXdkTask>("extractXdk").flatMap { it.outputXtcModules }
+    val fixtures = layout.projectDirectory.dir("src/main/x/archive/duplicateTypes")
+    val reports = layout.buildDirectory.dir("reports/duplicate-types")
+    inputs.dir(xdk).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir(fixtures).withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.dir(reports)
+    outputs.upToDateWhen { false }
+    argumentProviders.add(CommandLineArgumentProvider {
+        listOf(xdk.get().asFile.absolutePath, fixtures.asFile.absolutePath, reports.get().asFile.absolutePath)
+    })
+}
+
+tasks.named("check") {
+    dependsOn(runDuplicateTypes)
+}
+
 /**
  * Run all tests in parallel using the Runner module, which spawns all test modules concurrently.
  */
 val runParallel = tasks.register<XtcRunTask>("runParallel") {
     group = "application"
     description = "Run all known tests in parallel through the parallel test runner."
+    dependsOn(runDuplicateTypes)
     // TODO: Re-enable TestIO here after the intermittent TypeSystem.implicitTypes initialization
     // race is fixed. It still runs through the other manual test paths, but keeping it out of the
     // parallel runner avoids a known flaky interpreter crash in CI for now.
@@ -521,6 +548,7 @@ val runParallel = tasks.register<XtcRunTask>("runParallel") {
 val runSequential = tasks.register<XtcRunTask>("runSequential") {
     group = "application"
     description = "Run all known tests sequentially, one after another."
+    dependsOn(runDuplicateTypes)
     // TODO: TestAnnotations is currently failing - fix the test and remove this exclusion
     // TODO: The runner.x in parallel tests apparently just swallows and prints exceptions WTF?
     // TODO: We should integrate this with xUnit instead maybe? OR finally implement negative and positive tests.
@@ -633,4 +661,3 @@ val printTestModules = tasks.register("printTestModules") {
         }
     }
 }
-

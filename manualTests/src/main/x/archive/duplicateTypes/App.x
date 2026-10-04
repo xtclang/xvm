@@ -2,6 +2,11 @@
  * Negative compiler regression for issue #667: util.Taken is declared inline in App/util.x
  * and again in the companion file App/util/Taken.x.
  *
+ * Automated from the repository root (also included in the manual suites and check):
+ *
+ *     ./gradlew :manualTests:runDuplicateTypes \
+ *         -PincludeBuildManualTests=true -PincludeBuildAttachManualTests=true
+ *
  * From this directory, using the XDK to test:
  *
  *     xcc -o . App.x
