@@ -1574,7 +1574,7 @@ class CompilerPlaybook(
                 restore(data.text("file"))
             }
         }
-        listOf("X148", "X156", "X157", "X177", "X178", "X179", "X180").forEach { id ->
+        listOf("X148", "X156", "X157", "X177", "X178", "X179", "X180", "X181", "X182", "X183", "X184").forEach { id ->
             scenario(id) {
                 discovered(id) { data ->
                     val editor = open(data.text("file"))
@@ -1583,12 +1583,10 @@ class CompilerPlaybook(
                     editor.awaitDiagnostics(emptyList())
                     val at = original.indexOf(data.text("selected"))
                     if (data.values["refused"]?.asBoolean == true) {
-                        val prefix = original.take(at)
-                        val position =
-                            mapOf(
-                                "line" to prefix.count { it == '\n' },
-                                "character" to (at - prefix.lastIndexOf('\n') - 1),
-                            )
+                        fun position(offset: Int): Map<String, Int> {
+                            val prefix = original.take(offset)
+                            return mapOf("line" to prefix.count { it == '\n' }, "character" to (offset - prefix.lastIndexOf('\n') - 1))
+                        }
                         val actions =
                             ClientProtocol(this)
                                 .query(
@@ -1598,7 +1596,7 @@ class CompilerPlaybook(
                                             mapOf(
                                                 "uri" to Path.of(editor.editor.getVirtualFile().getPath()).toUri().toString(),
                                             ),
-                                        "range" to mapOf("start" to position, "end" to position),
+                                        "range" to mapOf("start" to position(at), "end" to position(at + data.text("selected").length)),
                                         "context" to mapOf("diagnostics" to emptyList<Any>()),
                                     ),
                                 ).asJsonArray
