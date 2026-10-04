@@ -10481,3 +10481,29 @@ All **10 safe-delete regressions** pass, zero failures/errors/skips, including p
 removal, retained live calls, known closed consumers and unknown public consumers. The selected
 method/property inline checkpoint is `de86a5afd`. Shared editor cases and the final combined gate
 remain pending; L63 is not yet marked accepted.
+
+### L63 shared acceptance preparation (2026-10-04)
+
+X221–X240 cover all eight implementation areas, including successful edits and explicit refusals,
+exact source text, error/clear restoration and Undo/Redo/Undo. Both editor drivers use these same
+fixtures and selection offsets. VS Code now converts the selection end through document offsets
+for multi-line statement selections. The catalog has **245 scenarios**; X218 remains the explicit
+UP23 upstream failure and is not part of this new text-edit acceptance selection.
+
+All **20 shared-scenario backend tests** pass, zero failures/errors/skips, and both editor drivers
+compile. This validates fixture content and expected edits before native runs. The final combined
+regression gate and native acceptance remain pending.
+
+| Extraction group | Commit(s) | Scope |
+| --- | --- | --- |
+| Generic owners | `ef4b298e5` | Exact owner/outer formal rendering, concrete generic destination signatures. |
+| Broader signatures | `0baa91a85` | Method formals/constraints and conditional return shape. |
+| Broader receivers | `fbd5247ba` | Validated computed/chained and singleton receiver ownership. |
+| Broader arguments | `2e521970c` + `a1d52a42d` | Named/computed expression types and corrected acceptance/refusal fixtures. |
+| Missing declarations | `1ff71acfe` + `b5632cc7a` | Missing class/instance-property creation, deduplicated header/body attempts and static-constant refusal. |
+| Broader extraction | `161111d69` | Statement/nested-expression extraction and shared compiler module-alias rendering. |
+| Broader inline | `3fde8fca2` + `de86a5afd` | Constant locals and selected private method/constant-property uses. |
+| Safe delete | `d3ef9d715` | Complete configured-graph proof for unused private methods/constants. |
+
+Keep the associated correction and shared acceptance commits with these groups when extracting.
+Each future PR must validate independently; these local commits have not been pushed.
