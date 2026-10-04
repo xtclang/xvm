@@ -1,6 +1,6 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **245 scenarios**: X1–X240, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **247 scenarios**: X1–X242, CFG1–CFG3 and 7a.8/7a.9.
 The preceding missing-method gate passes **X122/X209–X215** in VS Code `run-u5kDXk` and IntelliJ
 `run-4588144426201480586` (plus START), zero editor failures. It verifies required destination
 imports, exact signatures, atomic module-root/companion edits and diagnostic Undo/Redo. All 310
@@ -1389,7 +1389,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X240 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X242 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -3464,7 +3464,7 @@ L62 acceptance (2026-10-04): IntelliJ `run-8069330970170232500` passes X169/X173
 VS Code `run-S7CfWP` passes six and fails X218 native Undo. This is selected coverage;
 the new scenarios do not establish a full-catalog rerun. UP23 remains open while L63 proceeds.
 
-### L63 generic repairs and broader refactorings (X221–X240)
+### L63 generic repairs and broader refactorings (X221–X242)
 
 These shared scenarios are implemented in both drivers. Their new native acceptance is pending;
 earlier passing receipts do not validate this batch. Select an X number through the existing
@@ -3494,6 +3494,8 @@ matching action exists and the source remains unchanged.
 | X238 | Safely delete an unused private compiler constant. | Apply the shared expected source; compile cleanly; Undo/Redo/Undo restores exact text. |
 | X239 | Extract an imported module type using its real source alias. | Apply the shared expected source; compile cleanly; Undo/Redo/Undo restores exact text. |
 | X240 | Refuse inline requiring argument substitution. | Refuse without editing; retain the original diagnostics. |
+| X241 | Refuse repeating a static runtime initializer during inline. | No action; no source or initialization changes. |
+| X242 | Refuse deleting a static runtime initializer. | No action; no source or initialization changes. |
 
 X230 selects multiple lines; both drivers use actual document offsets. X239 selects the initializer
 rather than its same-named parameter and imports a type from a configured Library source module.

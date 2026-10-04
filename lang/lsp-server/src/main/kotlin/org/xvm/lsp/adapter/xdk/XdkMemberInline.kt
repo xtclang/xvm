@@ -37,6 +37,7 @@ internal object XdkMemberInline {
         text: String,
         selection: Range,
         model: SemanticModel,
+        facts: CompilerRenameFacts,
     ): Candidate? {
         val source = model.sourceName ?: return null
         val symbol = model.symbolAt(selection.start.line, selection.start.column) ?: return null
@@ -87,6 +88,7 @@ internal object XdkMemberInline {
                 }
 
                 SemanticModel.SymbolKind.PROPERTY -> {
+                    if (SemanticModel.SourceLocation(source, declaration) !in facts.constantProperties) return null
                     val property =
                         parents.keys.filterIsInstance<PropertyDeclarationStatement>().singleOrNull {
                             at(it.nameToken.startPosition) == declaration.start

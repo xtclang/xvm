@@ -95,6 +95,21 @@ class XdkMemberInlineTest {
         )
     }
 
+    @Test
+    fun `static runtime initializer is not repeated at its read`() {
+        query(
+            """
+            module Inline {
+                private static Int amount = compute();
+                static Int compute() = 3;
+                Int read() { return §amount; }
+            }
+            """.trimIndent(),
+            "Inline constant property",
+            null,
+        )
+    }
+
     private fun query(
         marked: String,
         title: String,
