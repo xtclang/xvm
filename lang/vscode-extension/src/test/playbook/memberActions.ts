@@ -45,24 +45,31 @@ export function memberActionCases(): void {
     });
 }
 
-export function localRefactoringCases(ids: readonly ('X148' | 'X156' | 'X157' | 'X177' | 'X178' | 'X179' | 'X180' | 'X181' | 'X182' | 'X183' | 'X184')[] = ['X148']): void {
+export function localRefactoringCases(ids: readonly ('X148' | 'X156' | 'X157' | 'X177' | 'X178' | 'X179' | 'X180' | 'X181' | 'X182' | 'X183' | 'X184' | 'X185' | 'X186' | 'X187' | 'X188')[] = ['X148']): void {
     for (const id of ids) playbook(id, async (workspace, data) => {
         await workspace.write(data.file, data.source);
         await discovered(workspace, async () => {
             const document = await workspace.open(data.file);
-            await noErrors(document.uri);
+            const originalDiagnostics = async () => {
+                if ('initiallyValid' in data && !data.initiallyValid) {
+                    await diagnostics(document.uri, values => values.some(item => item.severity === vscode.DiagnosticSeverity.Error),
+                        'Missing method is diagnosed before applying the action');
+                } else await noErrors(document.uri);
+            };
+            await originalDiagnostics();
+            const kind = 'initiallyValid' in data ? vscode.CodeActionKind.QuickFix.value : vscode.CodeActionKind.Refactor.value;
             const start = position(document, data.selected);
             const range = new vscode.Range(start, start.translate(0, data.selected.length));
             if ('refused' in data && data.refused) {
                 const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
-                    'vscode.executeCodeActionProvider', document.uri, range, vscode.CodeActionKind.Refactor.value, 100);
+                    'vscode.executeCodeActionProvider', document.uri, range, kind, 100);
                 assert.ok(!actions?.some(item => item.title === data.title));
                 assert.strictEqual(document.getText(), data.source);
                 return;
             }
             const action = await eventually(async () => {
                 const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
-                    'vscode.executeCodeActionProvider', document.uri, range, vscode.CodeActionKind.Refactor.value, 100);
+                    'vscode.executeCodeActionProvider', document.uri, range, kind, 100);
                 return actions?.find(item => item.title === data.title);
             }, item => !!item?.edit, data.title);
             assert.ok(action?.edit);
@@ -74,7 +81,8 @@ export function localRefactoringCases(ids: readonly ('X148' | 'X156' | 'X157' | 
                 await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
                 await vscode.commands.executeCommand(command);
                 await eventually(async () => document.getText(), text => text === expected, `${command} local refactoring`);
-                await noErrors(document.uri);
+                if (command === 'redo') await noErrors(document.uri);
+                else await originalDiagnostics();
             }
         });
     });
