@@ -63,8 +63,58 @@ class XdkLocalInlineTest {
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = ["value + probe()", "probe() + value", "accept(value)"])
+    fun `constant local can move across statements into a nested expression without changing type`(use: String) {
+        val text =
+            """
+            module Inline {
+                Int probe() = 1;
+                Int accept(Int input) = input;
+                Int read() {
+                    Int value = 1 + 2;
+                    probe();
+                    return $use;
+                }
+            }
+            """.trimIndent()
+        query(text, select = "Int value") { adapter, uri, actions ->
+            val action = actions.single { it.title == "Inline constant local variable" }
+            val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
+            assertThat(changed).doesNotContain("Int value =").contains("return ${use.replace("value", "(1 + 2)")};")
+            assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings = [
+            "Int8 value = 1;",
+            "Int value = /* keep me */ 1;",
+            "Int value = 1; // keep me",
+            "Int value = probe();",
+        ],
+    )
+    fun `wider inline refuses contextual widening lost comments and deferred effects`(declaration: String) {
+        val text =
+            """
+            module Inline {
+                Int probe() = 1;
+                Int read() {
+                    $declaration
+                    probe();
+                    return value + 2;
+                }
+            }
+            """.trimIndent()
+        query(text, select = declaration) { _, _, actions ->
+            assertThat(actions.filter { it.kind == CodeAction.CodeActionKind.REFACTOR_INLINE }).isEmpty()
+        }
+    }
+
     private fun query(
         text: String,
+        select: String = "return value",
         check: (XdkAdapter, String, List<CodeAction>) -> Unit,
     ) {
         val uri =
@@ -75,7 +125,7 @@ class XdkLocalInlineTest {
                 .canonicalFile
                 .toURI()
                 .toString()
-        val at = text.positionOf("return value", "value")
+        val at = text.positionOf(select, "value")
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
             adapter.compile(uri, text)
