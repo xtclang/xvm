@@ -10454,3 +10454,16 @@ refuse the action. The existing adjacent single-evaluation inline stays availabl
 All **21 local-inline regressions** pass with zero failures/errors/skips. This is the local-variable
 part of the broader-inline area; method/property inline and graph-wide safe delete still need their
 own implementation and acceptance. The extraction checkpoint is `161111d69`.
+
+### L63 selected method and constant-property inline (2026-10-04)
+
+A selected call to a private, same-owner, zero-parameter method containing one returned expression
+can be expanded at its existing evaluation site. A private static constant read can similarly use
+its initializer. Both actions retain the declaration and parenthesize the copied expression.
+Complete compilation verifies the exact use type, every copied binding/call and unchanged dispatch.
+Caller name capture, public/parameterized/multi-statement/recursive methods, qualified receivers,
+closures, annotations and instance-property initialization/getters remain refused. No AST state or
+embedding API is added.
+
+The **10 member-inline** and **21 local-inline** regressions pass, zero failures/errors/skips.
+The local-inline checkpoint is `3fde8fca2`. Shared editor scenarios/native acceptance remain pending.
