@@ -149,6 +149,7 @@ internal fun EmbeddingSupport.Compilation.projectRenameFacts(
                 builder.resourceValues(this),
                 builder.callableBindings(this),
                 if (includeMembers) builder.removableLocals(this) else emptySet(),
+                if (includeMembers) builder.extractionFacts(this) else null,
             )
         }
     }
@@ -1854,6 +1855,25 @@ private class SemanticModelBuilder(
                 )
             }
         }.distinct()
+    }
+
+    /** A value may be passed earlier only if the compiler proves its register cannot change. */
+    fun extractionFacts(compilation: EmbeddingSupport.Compilation): CompilerExtractionFacts? {
+        if (!compilation.succeeded()) return null
+        val values = registers.entries.mapNotNull { (register, id) ->
+            val symbol = symbols[id] ?: return@mapNotNull null
+            if (symbol.kind !in setOf(SymbolKind.VARIABLE, SymbolKind.PARAMETER)) return@mapNotNull null
+            val source = symbol.declarationSource ?: return@mapNotNull null
+            val range = symbol.declaration ?: return@mapNotNull null
+            Triple(SourceLocation(source, range), register.originalType, register.isEffectivelyFinal && !register.isVar)
+        }
+        val expressionTypes = nodesIn(requireNotNull(compilation.parsed())).filterIsInstance<Expression>().mapNotNull { node ->
+            validatedType(node)?.let { location(node.source, node.startPosition, node.endPosition) to it }
+        }
+        return CompilerExtractionFacts(
+            expressionTypes.toMap() + values.associate { it.first to it.second },
+            values.filter { it.third }.mapTo(linkedSetOf()) { it.first },
+        )
     }
 
     /** Inspect validated initializers on the worker; do not retain ASTs or infer purity from spelling. */
