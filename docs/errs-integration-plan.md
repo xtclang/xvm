@@ -9375,3 +9375,18 @@ L62 remains open for unproven empty namespaces, cross-module type ownership move
 commented/specialized qualifications, overlapping companion operations, uncaptured incoming
 resources, unsupported annotation/type/callable routes and unconfigured consumers. Binary
 contracts remain read-only; compiler refusal cannot veto arbitrary VS Code Explorer moves.
+
+
+### L62 empty destinations and source trivia (2026-10-04)
+
+The duplicate-declaration repair is now extracted as [PR #668](https://github.com/xtclang/xvm/pull/668).
+Its `8f1104bfe` corresponds to errs compiler checkpoint `2793efdd9`; `583cdd81d` adds the
+manual-suite runner and removes the artificial conditional-parser test. Errs now carries the
+same three actual-source Java tests and five CLI scenarios: duplicate companion, duplicate
+inline, inline-only, companion-only, and distinct enclosing scopes. The earlier four-test receipt
+above describes the previous test version; conditional AST mutation is no longer a regression
+claim. Keep this fixture/runner checkpoint with the independent compiler fix during extraction.
+
+`runDuplicateTypes` uses the consumer's resolved XDK and participates in `check`, `runSequential`
+and `runParallel`. Configuration-cache and combined validation for this errs batch are pending.
+The preceding L62 checkpoints through `50b113961` were pushed before this continuation.

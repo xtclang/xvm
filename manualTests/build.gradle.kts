@@ -488,10 +488,36 @@ val testModuleNames = listOf(
     "TestTuples"
 )
 
+// Negative source fixtures are intentionally excluded from compileXtc. Exercise them through
+// the consumer's resolved XDK and assert diagnostics as well as successful control compilations.
+val runDuplicateTypes = tasks.register<JavaExec>("runDuplicateTypes") {
+    group = "verification"
+    description = "Verify duplicate source type diagnostics and valid companion-file controls."
+    javaLauncher.set(javaToolchains.launcherFor(java.toolchain))
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass.set("DuplicateTypesRunner")
+
+    val xdk = tasks.named<XtcExtractXdkTask>("extractXdk").flatMap { it.outputXtcModules }
+    val fixtures = layout.projectDirectory.dir("src/main/x/archive/duplicateTypes")
+    val reports = layout.buildDirectory.dir("reports/duplicate-types")
+    inputs.dir(xdk).withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.dir(fixtures).withPathSensitivity(PathSensitivity.RELATIVE)
+    outputs.dir(reports)
+    outputs.upToDateWhen { false }
+    argumentProviders.add(CommandLineArgumentProvider {
+        listOf(xdk.get().asFile.absolutePath, fixtures.asFile.absolutePath, reports.get().asFile.absolutePath)
+    })
+}
+
+tasks.named("check") {
+    dependsOn(runDuplicateTypes)
+}
+
 /**
  * Run all tests in parallel using the Runner module, which spawns all test modules concurrently.
  */
 val runParallel = tasks.register<XtcRunTask>("runParallel") {
+    dependsOn(runDuplicateTypes)
     group = "application"
     description = "Run all known tests in parallel through the parallel test runner."
     module {
@@ -512,6 +538,7 @@ val runParallel = tasks.register<XtcRunTask>("runParallel") {
  * the next one starts. This is useful for debugging or when parallel execution causes issues.
  */
 val runSequential = tasks.register<XtcRunTask>("runSequential") {
+    dependsOn(runDuplicateTypes)
     group = "application"
     description = "Run all known tests sequentially, one after another."
     // TODO: The runner.x in parallel tests apparently just swallows and prints exceptions WTF?
