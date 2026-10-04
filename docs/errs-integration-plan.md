@@ -437,7 +437,9 @@ VS Code receipts above.
   initializers, adjacent same-written-type initializer inline and compiler-proven unused constant
   local removal (X177–X180; acceptance below). Complete return/typed-initializer expressions can now
   also move to a private helper in the same type using explicit stable inputs (X181–X184; current
-  batch acceptance below). Wider expression/statement extraction, missing declarations, broader
+  batch acceptance below). Same-owner missing-method creation is implemented from fresh resolved
+  declarations (X185–X188; selected acceptance in both editors below). Wider expression/statement extraction,
+  other missing declarations, broader
   inline and global safe delete remain unimplemented. Record supported XTC forms per action;
   doc-comment generation and reference/test lenses are separate subfeatures. Semantic transformations require
   compiler evidence and versioned multi-file edit validation.
@@ -9619,3 +9621,102 @@ creation, async calls and method-owned formals remain outside this proof. No new
 mutable field, parent mutation or embedding entry point was introduced. Missing-method declaration
 fixes are the next planned L63 capability; broader inline and global safe delete remain open, and
 cross-module ownership retains its separate L62 scope.
+
+
+### L63 missing-method quick fixes (2026-10-04)
+
+- [x] Inspect only a fresh successful declaration analysis, not failed-validation TypeInfo.
+  Reuse the compiler-type signature renderer; copy only strings and source positions into action facts.
+- [x] Generate a private same-owner method for an unqualified synchronous call used as a statement
+  or the complete return expression. Parameters come from resolved enclosing-method parameters
+  or supported explicitly typed literals; return types come from the enclosing declaration.
+  Reject existing overload/property names, local shadowing, method-owned formals and closure boundaries.
+- [x] Compile the entire proposed graph, preserve all known binding and dispatch facts and verify
+  that the selected call binds to the newly inserted declaration. Publish a versioned edit only
+  while captured inputs remain current. The body is `TODO()`; no source file is written by the query.
+- [x] Add backend positive/refusal regressions and shared X185–X188 with both editor drivers.
+  Drivers assert error-before, clean-after and diagnostic restoration/clearing on Undo/Redo.
+- [x] Finish the combined backend gate and selected acceptance in both editors; receipts below.
+
+This slice uses existing embedding/declaration/AST accessors entirely from Kotlin. No Java AST
+field, clone obligation or new embedding entry point is needed. Untyped numeric literals are
+refused rather than exposing `IntLiteral`/`FPLiteral` compiler implementation types. Other literals
+use `LiteralExpression.getImplicitType` within the fresh attempt's constant-pool scope. Unsupported
+type spellings, receiver/cross-owner creation, computed/local/named arguments, generic methods,
+conditional returns, initializer/nested-expression expected types and missing type/property
+declarations remain open. L63 also retains broader inline/extraction and global safe delete;
+cross-module ownership remains L62.
+
+| Extraction group | Commits | Scope |
+| --- | --- | --- |
+| Compiler evidence, repair action and backend regressions | `46d742b8f` | Fresh declaration candidates, existing renderer reuse, detached facts, full graph proof and selected-call target check. |
+| Shared editor acceptance | `b761766e4` | X185–X188, both drivers, initial errors and Undo/Redo diagnostics. Catalog grows to 193 cases. |
+| Declaration normalization and proof regression | `2507fbf51` | Resolve parser type wrappers through compiler APIs, use canonical rendered signatures and reject a compiling edit that redirects an existing overload. Keep this with the compiler evidence change when extracting. |
+| Broad-selection action deduplication | `bdb27ecbc` | Repeated compatible calls in a broad selection yield one repair; the backend regression selects across both calls. |
+
+The initial 108-test gate passed 100 tests; eight creation tests correctly withheld actions because
+resolved declaration types were still wrapped in `UnresolvedTypeConstant`. Normalizing through
+`resolveTypedefs()` fixes the candidate capture. The next run generated all supported actions;
+assertions were then aligned with resolved spelling (`Int64` for `Int`, including compound types).
+The focused 29-test gate passes without failures/errors/skips. The proof regression now also
+checks a compiling but unrelated overload redirection. The combined gate passes all **180 tests**,
+zero failures/errors/skips; both editor drivers compile. The subsequent broad-selection guard
+passes the 29 affected tests again. Native editor acceptance passes in the final receipt below.
+
+Native acceptance progress:
+
+- VS Code **`run-dzR5d9`** passes X122/X181/X185–X188, zero extension errors. Existing
+  packaged-protocol XML listed in that report is historical; the selected run did not rerun it.
+- IntelliJ **`run-3835897731901718389`** passed START/X181, then X185 timed out on an intention
+  menu containing only the scratch-file action. The server had completed the request in about
+  226 ms; there was no IDE error/crash. The driver incorrectly selected the identifier as for
+  expression extraction. Diagnostic quick fixes now place only a caret on the error, matching
+  X105 and the manual steps. **`f62a45373`** is a harness correction, with no production bridge
+  or new upstream workaround. Focused **`run-5829423385480751052`** passes START/X185 and
+  diagnostic Undo/Redo. The six-case continuation `run-14888381295818547127` still failed X185,
+  showing that the caret correction alone was insufficient. The UP07 fix below resolves the
+  sequence failure.
+
+
+#### L63 missing-method final acceptance and remaining work
+
+- **180 backend tests pass**, zero failures/errors/skips: 28 missing-method cases, one fresh
+  declaration/repair proof (including a compiling overload-redirection counterexample), and the
+  preceding 151-test local/member/extraction/rename-server selection. The subsequent broad-selection
+  deduplication passes all 29 affected tests again. Both editor drivers compile.
+- **89 IntelliJ unit tests pass**, zero failures/errors/skips, including three new UP07
+  annotation-refresh/data-restoration tests and the existing diagnostic-result/action bridge tests.
+- VS Code **`run-dzR5d9`** passes **X122/X181/X185–X188**, zero extension errors.
+- IntelliJ **`run-16733856986922464734`** passes **START and the same six cases** in one run,
+  zero IDE failures; JUnit reports one test, zero failures/errors/skips. Ultimate is disabled.
+  In particular X181 → X185 now passes after previously failing twice; X185–X187 verify native
+  generation, exact text, diagnostics and Undo/Redo/Undo. X188 verifies refusal through the
+  installed connection.
+- Both use the **193-scenario** catalog SHA-256
+  `d57b3270eac87e87689ecca1db3fbf07700267555b2b98a0431f0e300db5937d`.
+  These are selected runs, not full-catalog acceptance. No new packaged-stdio run is claimed.
+- Read-only root/LSP/IntelliJ Spotless and `git diff --check` pass.
+
+Native validation also required **`f3de29b57`**, extending the existing UP07 bridge: equal full
+diagnostic reports replaced/canceled lazy fixes while their unchanged annotations kept the old
+actions. The client now gives each full report a presentation-only data revision and strips that
+wrapper before action requests. Original server data, messages and ranges are preserved; the
+helper adds no mutable state. This is separately extractable with the earlier UP07 client bridge.
+It is tagged `TODO LSP4IJ` and documented in [upstream issues](errs-upstream-issues.md).
+The tested correction covers automatic document pulls; workspace/related-report replacement
+retains a separate UP07 native-coverage follow-up.
+
+For future PRs, keep **`46d742b8f` + `2507fbf51` + `bdb27ecbc`** together for the complete backend
+slice; the first checkpoint alone lacks declaration-wrapper normalization. Editor acceptance needs
+**`b761766e4` + the catalog correction in `2507fbf51` + `f62a45373`**, plus the UP07 dependency
+**`f3de29b57`**. Each extracted PR still needs independent validation.
+
+Remaining L63 work stays explicit:
+
+- [ ] Extend method creation to compiler-proven local arguments and typed-initializer result contexts.
+- [ ] Investigate receiver/cross-owner creation, generic/conditional signatures and named/computed
+  arguments; preserve current refusals until scope, types and proposed-graph bindings are proven.
+- [ ] Add missing type/property declarations with equivalent ownership and compiler proof.
+- [ ] Broader statement extraction/inline and global safe delete remain separate refactorings.
+
+No Java AST field/API, clone burden or embedding entry point was added by this batch.
