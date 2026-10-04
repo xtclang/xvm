@@ -376,6 +376,69 @@ class XdkTypeMoveTest {
         }
     }
 
+    @Test
+    fun `qualified imports and calls retain comments whitespace and explicit aliases during combined moves`() {
+        write("App.x", """
+            module App {
+                import tools /* namespace */ . Box as Crate;
+                Crate make() = new Crate();
+                tools /* type */ . Box direct() = new tools . /* constructor */ Box();
+            }
+        """.trimIndent())
+        write("App/tools/Box.x", "class Box { static Int number() = 1; }")
+        write("Consumer.x", """
+            module Consumer {
+                package app import App;
+                app /* alias */ . tools /* package */ . Box make() = new app . tools . Box();
+                Int read() = app.tools /* call */ . Box.number();
+            }
+        """.trimIndent())
+        Files.createDirectories(directory.resolve("App/util/nested"))
+        session { adapter ->
+            move(adapter, mapOf(uri("App/tools/Box.x") to uri("App/util/nested/Parcel.x")))
+            assertThat(read("App.x")).contains(
+                "import util /* namespace */ . nested.Parcel as Crate;",
+                "Crate make() = new Crate();",
+                "util /* type */ . nested.Parcel direct() = new util . /* constructor */ nested.Parcel();",
+            )
+            assertThat(read("Consumer.x")).contains(
+                "app /* alias */ . util /* package */ . nested.Parcel make() = new app . util . nested.Parcel();",
+                "app.util /* call */ . nested.Parcel.number()",
+            )
+        }
+    }
+
+    @Test
+    fun `removing a namespace preserves line comments unicode and CRLF in nested types and calls`() {
+        val text = """
+            module App {
+                tools /* α */ . Box.Part make() = new tools // keep namespace note
+                    . Box.Part();
+            }
+        """.trimIndent().replace("\n", "\r\n")
+        write("App.x", text)
+        write("App/tools/Box.x", "class Box {}")
+        write("App/tools/Box/Part.x", "static class Part {}")
+        session { adapter ->
+            move(adapter, mapOf(uri("App/tools/Box.x") to uri("App/Box.x")))
+            assertThat(read("App.x")).isEqualTo(text.replace("tools /* α */ .", " /* α */ ").replace("tools //", " //").replace(". Box.Part();", " Box.Part();"))
+        }
+    }
+
+    @Test
+    fun `commented names do not weaken refusal when a move changes an unqualified call binding`() {
+        write("App.x", "module App { tools /* target */ . Box make() = new tools . Box(); }")
+        write("App/tools.x", "package tools { static Int number() = 1; }")
+        write("App/tools/Box.x", "class Box { Int read() = number(); }")
+        write("App/util.x", "package util { static Int number() = 2; }")
+        Files.createDirectories(directory.resolve("App/util"))
+        session { adapter ->
+            val original = sourceTexts()
+            assertThat(adapter.renameFilesAsync(request()).get(30, SECONDS)).isNull()
+            assertThat(sourceTexts()).isEqualTo(original)
+        }
+    }
+
     private fun sourceTexts(): Map<String, String> =
         directory
             .toFile()
@@ -435,7 +498,9 @@ class XdkTypeMoveTest {
             val path = Path.of(URI(uri))
             val text = Files.readString(path)
 
-            fun offset(position: Position): Int = text.lineSequence().take(position.line).sumOf { it.length + 1 } + position.column
+            fun offset(position: Position): Int =
+                if (position.line == 0) position.column
+                else Regex("\\r\\n|\\r|\\n").findAll(text).elementAt(position.line - 1).range.last + 1 + position.column
             Files.writeString(
                 path,
                 changes
