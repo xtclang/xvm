@@ -45,10 +45,11 @@ export function memberActionCases(): void {
     });
 }
 
-export function localRefactoringCases(ids: readonly ('X148' | 'X156' | 'X157' | 'X177' | 'X178' | 'X179' | 'X180' | 'X181' | 'X182' | 'X183' | 'X184' | 'X185' | 'X186' | 'X187' | 'X188' | 'X189' | 'X190' | 'X191' | 'X192' | 'X193' | 'X194' | 'X195' | 'X196' | 'X197' | 'X198' | 'X199' | 'X200' | 'X201' | 'X202' | 'X203' | 'X204' | 'X205' | 'X206' | 'X207' | 'X208')[] = ['X148']): void {
+export function localRefactoringCases(ids: readonly ('X148' | 'X156' | 'X157' | 'X177' | 'X178' | 'X179' | 'X180' | 'X181' | 'X182' | 'X183' | 'X184' | 'X185' | 'X186' | 'X187' | 'X188' | 'X189' | 'X190' | 'X191' | 'X192' | 'X193' | 'X194' | 'X195' | 'X196' | 'X197' | 'X198' | 'X199' | 'X200' | 'X201' | 'X202' | 'X203' | 'X204' | 'X205' | 'X206' | 'X207' | 'X208' | 'X209' | 'X210' | 'X211' | 'X212')[] = ['X148']): void {
     for (const id of ids) playbook(id, async (workspace, data) => {
         await workspace.write(data.file, data.source);
         if ('destinationFile' in data) await workspace.write(data.destinationFile, data.destinationSource);
+        if ('files' in data) for (const file of data.files) await workspace.write(file.file, file.source);
         await discovered(workspace, async () => {
             const document = await workspace.open(data.file);
             const originalDiagnostics = async () => {
