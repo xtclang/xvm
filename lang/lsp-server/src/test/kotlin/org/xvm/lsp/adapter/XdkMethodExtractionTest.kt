@@ -5,9 +5,14 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.xvm.api.EmbeddingSupport
+import org.xvm.asm.ErrorList
+import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRename
+import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import org.xvm.lsp.adapter.xdk.toDependency
 import java.nio.file.Path
 
 class XdkMethodExtractionTest {
@@ -123,11 +128,9 @@ class XdkMethodExtractionTest {
             "input++;\nreturn §input + 1§;",
             "@Volatile Int stored = input;\nreturn §stored + 1§;",
             "Int changed = input;\nchanged++;\nreturn §changed + 1§;",
-            "return §input§ + 1;",
-            "val value = §input + 1§;\nreturn value;",
         ],
     )
-    fun `refuse mutation reference storage partial selections and inferred initializer`(body: String) {
+    fun `refuse mutation and reference storage`(body: String) {
         refused(
             """
             module Extract {
@@ -214,11 +217,126 @@ class XdkMethodExtractionTest {
         )
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = ["return §input§ + 1;", "val value = §input + 1§;\nreturn value;", "return accept(§input + step()§);"])
+    fun `nested expressions and inferred initializers retain the compiler selected result type`(body: String) {
+        query(
+            """
+            module Extract {
+                Int step() = 1;
+                Int accept(Int value) = value;
+                Int read(Int input) {
+                    ${body.replace("\n", "\n                    ")}
+                }
+            }
+            """.trimIndent(),
+        ) { _, changed -> assertThat(changed).contains("private Int64 extractedMethod(Int input)") }
+    }
+
+    @Test
+    fun `condition extraction keeps its original branch evaluation site`() {
+        query(
+            """
+            module Extract {
+                Int read(Int input) {
+                    if (§input > 0§) {
+                        return 1;
+                    }
+                    return 0;
+                }
+            }
+            """.trimIndent(),
+        ) { _, changed -> assertThat(changed).contains("if (extractedMethod(input))", "private Boolean extractedMethod(Int input)") }
+    }
+
+    @Test
+    fun `contiguous call statements move once in their original order`() {
+        query(
+            """
+            module Extract {
+                void emit(Int value) {}
+                void run(Int input) {
+                    §emit(input);
+                    emit(input + 1);§
+                }
+            }
+            """.trimIndent(),
+            title = "Extract statements to private method",
+        ) { _, changed ->
+            assertThat(changed)
+                .contains("private void extractedMethod(Int input)", "extractedMethod(input);")
+                .containsOnlyOnce("emit(input);")
+                .containsOnlyOnce("emit(input + 1);")
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `inferred result from another module uses its source alias for source and binary dependencies`(binary: Boolean) {
+        CompilerTestSupport.configure()
+        val library =
+            directory.resolve("Library.x").toFile().canonicalFile.apply {
+                writeText("module Library { class Value {} }")
+            }
+        query(
+            """
+            module Extract {
+                package lib import Library;
+                Object read(lib.Value input) {
+                    val value = §input§;
+                    return value;
+                }
+            }
+            """.trimIndent(),
+            configure = { adapter, uri ->
+                if (binary) {
+                    val errors = ErrorList()
+                    val compiled = EmbeddingSupport.instance().compileModule(Source(library.readText(), library.path), null, errors)
+                    assertThat(compiled.succeeded()).describedAs("%s", errors).isTrue()
+                    adapter.replaceDependencies(listOf(compiled.toDependency()))
+                }
+                adapter.replaceSourceModules(
+                    buildList {
+                        if (!binary) add(XdkSourceModule("Library", library.toURI().toString()))
+                        add(XdkSourceModule("Extract", uri, setOf("Library")))
+                    },
+                )
+            },
+        ) { _, changed -> assertThat(changed).contains("private lib.Value extractedMethod(lib.Value input)") }
+    }
+
+    @ParameterizedTest
+    @ValueSource(
+        strings = [
+            "if (input > 0) { emit(input); }",
+            "Int local = input;",
+            "input++;",
+        ],
+    )
+    fun `statement extraction refuses intervening control flow declarations and mutable captures`(middle: String) {
+        query(
+            """
+            module Extract {
+                void emit(Int value) {}
+                void run(Int input) {
+                    §emit(input);
+                    $middle
+                    emit(input);§
+                }
+            }
+            """.trimIndent(),
+            expected = false,
+            title = "Extract statements to private method",
+        ) { _, _ -> error("Unexpected statement extraction") }
+    }
+
     private fun refused(marked: String) = query(marked, expected = false) { _, _ -> error("Unexpected extraction") }
 
     private fun query(
         marked: String,
         expected: Boolean = true,
+        title: String = "Extract expression to private method",
+        configure: (XdkAdapter, String) -> Unit = { _, _ -> },
         check: (String, String) -> Unit,
     ) {
         CompilerTestSupport.configure()
@@ -234,9 +352,10 @@ class XdkMethodExtractionTest {
         val uri = file.toURI().toString()
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))
+            configure(adapter, uri)
             assertThat(adapter.compile(uri, text).diagnostics).isEmpty()
             val range = Range(XdkRename.position(text, start), XdkRename.position(text, end))
-            val action = adapter.getCodeActions(uri, range, emptyList()).singleOrNull { it.title == "Extract expression to private method" }
+            val action = adapter.getCodeActions(uri, range, emptyList()).singleOrNull { it.title == title }
             if (!expected) {
                 assertThat(action).isNull()
                 return
