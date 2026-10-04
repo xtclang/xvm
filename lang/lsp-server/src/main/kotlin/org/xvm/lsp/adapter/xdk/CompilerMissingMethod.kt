@@ -5,6 +5,7 @@ import org.xvm.asm.ClassStructure
 import org.xvm.asm.Component.Format
 import org.xvm.asm.ConstantPool
 import org.xvm.asm.Constants.Access
+import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.MethodStructure
 import org.xvm.asm.Op
@@ -12,6 +13,7 @@ import org.xvm.asm.PackageStructure
 import org.xvm.asm.Register
 import org.xvm.asm.constants.ClassConstant
 import org.xvm.asm.constants.TypeConstant
+import org.xvm.compiler.Lexer
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AnnotatedTypeExpression
@@ -57,19 +59,21 @@ internal data class CompilerMissingInputs(
     data class LocalType(
         val source: String?,
         val type: TypeConstant,
-        val destinationSources: Map<SemanticModel.SourceLocation, String> = emptyMap(),
+        val destinationSources: Map<SemanticModel.SourceLocation, XdkMissingMethods.TypeSource> = emptyMap(),
     )
 }
 
 private data class MissingType(
     val source: String,
     val proof: CompilerMissingMethod.Type,
+    val imports: List<XdkMemberActions.Import> = emptyList(),
 )
 
 private data class MissingParameter(
     val source: String,
     val type: CompilerMissingMethod.Type,
     val binding: XdkMissingMethods.ArgumentBinding? = null,
+    val imports: List<XdkMemberActions.Import> = emptyList(),
 )
 
 /** Read only fresh resolved declarations, never TypeInfo from a failed body-validation attempt. */
@@ -169,19 +173,24 @@ internal fun compilerMissingMethods(
                 return@mapNotNull null
             }
 
-            fun render(type: TypeConstant) =
-                type
-                    .missingMethodType(
-                        structure,
-                        external?.value?.modules.orEmpty(),
-                    )?.let { MissingType(it, CompilerMissingMethod.Type.Resolved(type)) }
+            fun render(type: TypeConstant): MissingType? {
+                val rendered =
+                    external?.value?.render(type, structure)
+                        ?: type.missingMethodType(structure)?.let { XdkMissingMethods.TypeSource(it) }
+                        ?: return null
+                return MissingType(rendered.source, CompilerMissingMethod.Type.Resolved(type), rendered.imports)
+            }
 
             fun localType(local: VariableDeclarationStatement) =
-                inputs.localTypes[local.declarationLocation()]?.let {
-                    val source = if (external == null) it.source else it.destinationSources[external.value.location]
-                    source?.let { source -> MissingType(source, CompilerMissingMethod.Type.Detached(it.identity)) }
-                }
-                    ?: local.takeIf { it.hasExplicitMethodType() }?.type?.let(::render)
+                inputs.localTypes[local.declarationLocation()]?.let { evidence ->
+                    val rendered =
+                        if (external == null) {
+                            evidence.source?.let { XdkMissingMethods.TypeSource(it) }
+                        } else {
+                            evidence.destinationSources[external.value.location]
+                        }
+                    rendered?.let { MissingType(it.source, CompilerMissingMethod.Type.Detached(evidence.identity), it.imports) }
+                } ?: local.takeIf { it.hasExplicitMethodType() }?.type?.let(::render)
             val returns =
                 when (val statement = call.parent) {
                     is ExpressionStatement -> {
@@ -234,7 +243,7 @@ internal fun compilerMissingMethods(
                     if (local != null) {
                         val rendered = localType(local) ?: return@mapNotNull null
                         val binding = XdkMissingMethods.ArgumentBinding(argument.location(), local.declarationLocation())
-                        return@mapIndexed MissingParameter("${rendered.source} arg${index + 1}", rendered.proof, binding)
+                        return@mapIndexed MissingParameter("${rendered.source} arg${index + 1}", rendered.proof, binding, rendered.imports)
                     }
                     val parameter =
                         expression?.let { value ->
@@ -252,7 +261,7 @@ internal fun compilerMissingMethods(
                         return@mapNotNull null
                     }
                     val rendered = render(type) ?: return@mapNotNull null
-                    MissingParameter("${rendered.source} arg${index + 1}", rendered.proof)
+                    MissingParameter("${rendered.source} arg${index + 1}", rendered.proof, imports = rendered.imports)
                 }
 
             fun position(value: Long) = SemanticModel.Position(Source.calculateLine(value), Source.calculateOffset(value))
@@ -268,6 +277,8 @@ internal fun compilerMissingMethods(
                     dispatch,
                     parameters.mapNotNull { it.binding },
                     if (crossOwner) structure.identityConstant.pathString else null,
+                    importSource = external?.value?.importSource,
+                    imports = (parameters.flatMap { it.imports } + returns.flatMap { it.imports }).distinct(),
                 ),
                 if (crossOwner) parameters.map { it.type } else emptyList(),
                 if (crossOwner) returns.map { it.proof } else emptyList(),
@@ -352,7 +363,7 @@ internal fun EmbeddingSupport.Compilation.missingMethodInputs(
                         val destinationSources =
                             referencedDestinations.entries
                                 .mapNotNull { (identity, destination) ->
-                                    type.missingMethodType(identity.component as ClassStructure, destination.modules)?.let {
+                                    destination.render(type, identity.component as ClassStructure)?.let {
                                         destination.location to
                                             it
                                     }
@@ -375,15 +386,33 @@ private fun TypeConstant.missingMethodType(
     // Declaration analysis resolves the identity but can retain its parser wrapper.
     resolveTypedefs().memberSourceType(owner.identityConstant, emptyMap(), modules + ("ecstasy.xtclang.org" to "ecstasy"))
 
+/** Type spelling and only its required imports travel together across compiler attempts. */
+private fun XdkMissingMethods.Destination.render(
+    type: TypeConstant,
+    owner: ClassStructure,
+): XdkMissingMethods.TypeSource? {
+    val resolved = type.resolveTypedefs()
+    val source = resolved.missingMethodType(owner, modules) ?: return null
+    val required =
+        resolved
+            .memberClasses()
+            .filter { it.constantPool.getImplicitlyImportedIdentity(it.name) != it }
+            .mapNotNull { imports[it.moduleConstant.name] }
+            .distinct()
+    return XdkMissingMethods.TypeSource(source, required)
+}
+
 /** Detach source destinations before their compilation and AST leave this worker attempt. */
-internal fun EmbeddingSupport.Compilation.missingMethodDestinations(): Map<SemanticModel.SourceLocation, XdkMissingMethods.Destination> =
+internal fun EmbeddingSupport.Compilation.missingMethodDestinations(
+    dependencies: Set<String> = emptySet(),
+): Map<SemanticModel.SourceLocation, XdkMissingMethods.Destination> =
     ExecutionTrace.api("Compilation.missingMethodDestinations") {
         check(succeeded())
         ConstantPool.withPool(pool()).use {
             fun descendants(node: AstNode): Sequence<AstNode> = sequenceOf(node) + node.childNodes().asSequence().flatMap(::descendants)
             val nodes = descendants(requireNotNull(parsed())).filterIsInstance<TypeCompositionStatement>().toList()
-            // Existing module-level package imports are visible in the destination. No repair
-            // adds an import or a dependency edge, or borrows the caller's alias spelling.
+            // Reuse module-level imports and reserve all source names before planning new aliases.
+            // The host supplies only dependencies already available to this source module.
             val modules =
                 nodes
                     .mapNotNull { node ->
@@ -391,17 +420,47 @@ internal fun EmbeddingSupport.Compilation.missingMethodDestinations(): Map<Seman
                         if (!structure.isModuleImport || structure.parent.format != Format.MODULE) return@mapNotNull null
                         structure.importedModule.identityConstant.name to structure.identityConstant.pathString
                     }.toMap()
+            val lexicalErrors = ErrorList()
+            val names =
+                nodes
+                    .map { it.source }
+                    .distinctBy { it.fileName }
+                    .flatMap { source ->
+                        ExecutionTrace.api("Lexer.lex(missing-method-imports)") {
+                            Lexer(source.clone(), lexicalErrors).asSequence().map { it.valueText }.toList()
+                        }
+                    }.toSet()
+            if (lexicalErrors.hasSeriousErrors()) return@use emptyMap()
+            val existing = modules + ("ecstasy.xtclang.org" to "ecstasy")
+            val aliases = XdkMemberActions.moduleAliases(dependencies - file().module.name, existing, names)
             nodes
                 .mapNotNull { node ->
                     val structure = node.component as? ClassStructure ?: return@mapNotNull null
                     if (structure.format != Format.CLASS || structure.typeParamCount != 0 || structure.isSynthetic) return@mapNotNull null
+                    val moduleNode =
+                        generateSequence(node as AstNode) { it.parent }
+                            .filterIsInstance<TypeCompositionStatement>()
+                            .lastOrNull { it.category.id == Token.Id.MODULE }
+                    // A companion admits one top-level declaration. Module package imports
+                    // belong in the root, even when the generated method belongs in a companion.
+                    val module = moduleNode ?: return@mapNotNull null
+                    val importAt =
+                        module.ensureBody().startPosition.let {
+                            SemanticModel.Position(Source.calculateLine(it), Source.calculateOffset(it) + 1)
+                        }
+                    val imports =
+                        aliases.filterKeys { it !in existing }.mapValues { (module, alias) ->
+                            XdkMemberActions.Import(importAt, "    package $alias import $module;")
+                        }
                     val end = node.ensureBody().endPosition
                     val declaration = node.location(node.nameToken.startPosition, node.nameToken.endPosition)
                     declaration to
                         XdkMissingMethods.Destination(
                             node.location(),
                             SemanticModel.Position(Source.calculateLine(end), Source.calculateOffset(end) - 1),
-                            modules,
+                            aliases,
+                            imports,
+                            module.source.fileName,
                         )
                 }.toMap()
         }
