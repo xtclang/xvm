@@ -17,6 +17,69 @@ import org.xvm.lsp.adapter.xdk.toDependency
 
 class CompilerMissingMethodProofTest {
     @Test
+    fun `imports shift the inserted method but cannot weaken its source signature proof`() {
+        CompilerTestSupport.configure()
+        val librarySource = "/proof/Library.x"
+        val libraryText = "module Library { class Other {} }"
+        val text =
+            """
+            module Missing {
+                package lib import Library;
+                package shared import Types;
+                Object read(lib.Other peer, shared.Value value) {
+                    val local = value;
+                    return peer.missing(local);
+                }
+            }
+            """.trimIndent()
+        val embedding = EmbeddingSupport.instance()
+        val errors = ErrorList()
+        val types = embedding.compileModule(Source("module Types { class Value {} }", "/proof/Types.x"), null, errors)
+        assertThat(types.succeeded()).isTrue()
+        val typeDependency = types.toDependency()
+        val library = embedding.compileModule(Source(libraryText, librarySource), null, errors)
+        assertThat(library.succeeded()).isTrue()
+        val dependencies = XdkDependencies(listOf(library.toDependency(), typeDependency))
+        val destinations = library.missingMethodDestinations(setOf("Types"))
+        val open = dependencies.open()
+        val failed = embedding.compileModule(Source(text, SOURCE), open.repository, ErrorList())
+        assertThat(failed.succeeded()).isFalse()
+        val inputs = failed.renameFacts(open, includeMissingMethods = true, missingDestinations = destinations).missingMethodInputs
+        val fresh = dependencies.open()
+        val declarations = embedding.analyzeDeclarations(Source(text, SOURCE), fresh.repository, errors).orElseThrow()
+        val candidate = declarations.memberActionFacts(fresh, errors, inputs, destinations).missingMethods.single()
+        val edits = requireNotNull(candidate.edit(libraryText))
+        assertThat(edits.imports).hasSize(1)
+
+        fun proves(member: XdkRename.Edit): Boolean {
+            val plan = XdkRename.Plan(mapOf(SOURCE to text, librarySource to libraryText), mapOf(librarySource to (edits.imports + member)))
+            val nextErrors = ErrorList()
+            val typeInputs = XdkDependencies(listOf(typeDependency)).open()
+            val nextLibrary =
+                embedding.compileModule(
+                    Source(plan.proposed.getValue(librarySource), librarySource),
+                    typeInputs.repository,
+                    nextErrors,
+                )
+            assertThat(nextLibrary.succeeded()).describedAs(nextErrors.errors.toString()).isTrue()
+            val next = XdkDependencies(listOf(nextLibrary.toDependency(), typeDependency)).open()
+            val caller = embedding.compileModule(Source(text, SOURCE), next.repository, nextErrors)
+            assertThat(caller.succeeded()).describedAs(nextErrors.errors.toString()).isTrue()
+            val after =
+                CompilerRenameFacts.merge(
+                    mapOf(
+                        "library" to nextLibrary.projectRenameFacts(typeInputs, nextErrors),
+                        "caller" to caller.projectRenameFacts(next, nextErrors),
+                    ),
+                )
+            return candidate.bindsNewMethod(after, plan, member)
+        }
+        assertThat(proves(edits.member)).isTrue()
+        assertThat(proves(edits.member.copy(text = edits.member.text.replace("types.Value arg1", "Object arg1")))).isFalse()
+        assertThat(proves(edits.member.copy(text = edits.member.text.replace("public Object", "public String")))).isFalse()
+    }
+
+    @Test
     fun `cross module proof reads the actual destination signature and rejects compatible substitutions`() {
         CompilerTestSupport.configure()
         val librarySource = "/proof/Library.x"
@@ -45,7 +108,7 @@ class CompilerMissingMethodProofTest {
         val headers = declarations.memberActionFacts(fresh, errors, inputs, destinations)
         assertThat(errors.errors).isEmpty()
         val candidate = headers.missingMethods.single()
-        val edit = requireNotNull(candidate.edit(libraryText))
+        val edit = requireNotNull(candidate.edit(libraryText)).member
 
         fun proves(proposed: XdkRename.Edit): Boolean {
             val plan = XdkRename.Plan(mapOf(SOURCE to text, librarySource to libraryText), mapOf(librarySource to listOf(proposed)))
@@ -95,7 +158,7 @@ class CompilerMissingMethodProofTest {
         val candidate = headers.missingMethods.single()
         assertThat(candidate.declaration).isEqualTo("public Object missing(String arg1)")
         assertThat(candidate.arguments).hasSize(1)
-        val edit = requireNotNull(candidate.edit(text))
+        val edit = requireNotNull(candidate.edit(text)).member
 
         fun proves(
             proposed: XdkRename.Edit,
@@ -139,7 +202,7 @@ class CompilerMissingMethodProofTest {
         assertThat(errors.errors).isEmpty()
         val candidate = headers.missingMethods.single()
         assertThat(candidate.declaration).isEqualTo("public Object missing()")
-        val edit = requireNotNull(candidate.edit(text))
+        val edit = requireNotNull(candidate.edit(text)).member
 
         fun proves(edit: XdkRename.Edit): Boolean {
             val plan = XdkRename.Plan(mapOf(SOURCE to text), mapOf(SOURCE to listOf(edit)))
@@ -180,7 +243,7 @@ class CompilerMissingMethodProofTest {
         assertThat(declarationErrors.errors).isEmpty()
         val candidate = headers.missingMethods.single()
         assertThat(candidate.declaration).isEqualTo("private static Int64 missing(Int64 arg1)")
-        val edit = requireNotNull(candidate.edit(text))
+        val edit = requireNotNull(candidate.edit(text)).member
 
         fun compile(plan: XdkRename.Plan): CompilerRenameFacts {
             val repairedErrors = ErrorList()
@@ -224,7 +287,7 @@ class CompilerMissingMethodProofTest {
         assertThat(declarationErrors.errors).isEmpty()
         val candidate = headers.missingMethods.single()
         assertThat(candidate.declaration).isEqualTo("private Int64 missing(Int64 arg1)")
-        val edit = requireNotNull(candidate.edit(text))
+        val edit = requireNotNull(candidate.edit(text)).member
         val before = CompilerRenameFacts.merge(mapOf("headers" to headers, "partial" to partial))
 
         fun proves(plan: XdkRename.Plan): Boolean {
@@ -269,7 +332,7 @@ class CompilerMissingMethodProofTest {
         val candidate = headers.missingMethods.single()
         assertThat(candidate.declaration).isEqualTo("private Int64 missing(Int64 arg1)")
         assertThat(candidate.arguments).hasSize(1)
-        val edit = requireNotNull(candidate.edit(text))
+        val edit = requireNotNull(candidate.edit(text)).member
 
         fun proves(plan: XdkRename.Plan): Boolean {
             val repairedErrors = ErrorList()
@@ -313,7 +376,7 @@ class CompilerMissingMethodProofTest {
         assertThat(declarationErrors.errors).isEmpty()
         assertThat(headers.missingMethods.map { it.declaration }).containsExactly("private Int64 missing(Int64 arg1)")
         val candidate = headers.missingMethods.single()
-        val edit = requireNotNull(candidate.edit(text))
+        val edit = requireNotNull(candidate.edit(text)).member
         val plan = XdkRename.Plan(mapOf(SOURCE to text), mapOf(SOURCE to listOf(edit)))
         val compiledErrors = ErrorList()
         val compiled = embedding.compileModule(Source(plan.proposed.getValue(SOURCE), SOURCE), null, compiledErrors)
