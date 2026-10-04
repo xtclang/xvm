@@ -39,7 +39,7 @@ not a claim that every referenced suite was rerun for this documentation change.
 | **UP04 — LSP4IJ — bridged** | Rename and generic `workspace/applyEdit` can apply stale edits without checking transmitted document versions/epochs. | [Rename handler](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcRenameHandler.kt), [snapshot guard](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcRenameEdit.kt) and [client edit handler](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcClientFeatures.kt) validate inside the write command. Unsupported generic resource/snippet/confirmation edits are refused. | Equivalent upstream ownership/version checks pass stale/closed/reopened document tests and X144; supported Rename/Move remains atomic and undoable. |
 | **UP05 — LSP4IJ — bridged** | Dynamic filesystem watcher registrations do not alone establish/refresh unknown or missing external VFS roots while the IDE stays focused. | [CompilerRootWatches](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/CompilerRootWatches.kt) owns roots and their disposal; `CompilerRootWatchesTest` and X124 cover resources. | Upstream observes creation/deletion/change under configured external roots while focused and releases watchers on disposal. |
 | **UP06 — LSP4J, bundled by LSP4IJ — bridged** | `relatedDocuments` diagnostic unions are not reliably decoded by their `kind` discriminator. | [DiagnosticReportJson](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/DiagnosticReportJson.kt) supplies the adapter; `DiagnosticReportJsonTest` checks full/unchanged reports. | Correct full/unchanged wire round trips without the adapter in the actual bundled client library. |
-| **UP07 — LSP4IJ — bridged** | Automatic diagnostic pulls omit `previousResultId`; unchanged results must also retain quick-fix data. | [DiagnosticResultMessages](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/DiagnosticResultMessages.kt) owns result IDs; `DiagnosticResultMessagesTest` verifies lifecycle behavior. | Upstream owns IDs, retirement and unchanged quick fixes; remove only after diagnostic/action regressions pass. |
+| **UP07 — LSP4IJ — bridged** | Automatic pulls omit `previousResultId`. Equal full reports also replace/cancel lazy fixes without refreshing the annotations that own them. | [DiagnosticResultMessages](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/DiagnosticResultMessages.kt) owns result IDs; [DiagnosticQuickFixes](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/DiagnosticQuickFixes.kt) gives delivered full reports a client-only data revision and restores original data on outgoing action requests. Lifecycle, upstream equality and opaque-data tests cover both. | Upstream must own IDs/retirement and retain equivalent lazy fixes or refresh their annotations. Verify X181 → X185 plus diagnostic/action Undo/Redo before removing either bridge. |
 | **UP08 — LSP4IJ — bridged** | Normal Gson omission of explicit null configuration fields prevents reset-to-discovery from reaching the server. | [ConfigurationJson](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/ConfigurationJson.kt) preserves explicit nulls; `ConfigurationJsonTest` covers the wire representation. | Reset-to-discovery survives native settings and transport round trips without the adapter. |
 | **UP09 — LSP4IJ — bridged** | Startup document messages can arrive out of order; folding replies can outlive the editor that requested them. | [DocumentStartupMessages](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/DocumentStartupMessages.kt) serializes messages and retires stale responses; matching unit tests cover open/change/close ownership. | Upstream passes startup typing and close/reopen regressions without the transport bridge. |
 | **UP10 — LSP4IJ — bridged** | Parameter Info retains old overload metadata after retrigger, ignores per-overload active parameters and renders absent parameter metadata as an empty signature. | [XtcParameterInfoHandler](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcParameterInfoHandler.kt) uses current metadata and preserves the label without inventing a highlighted argument. | Native signature cases, including X20 and retrigger/constructor variants, preserve the label and highlight the correct current argument without this handler. |
@@ -178,3 +178,24 @@ Repaired IntelliJ `run-14394987299477639656` passes START and all six selected m
 (X161/X163/X169–X172), including exact closed-file disk content, clean diagnostics and native
 Undo/Redo. JUnit reports one passing test without failures/errors/skips; the IDE has zero failures
 or internal-error log markers. This upstream integration workaround is separate from Ecstasy compiler issue [#667](https://github.com/xtclang/xvm/issues/667).
+
+
+### UP07 equal-full-report continuation (2026-10-04)
+
+Pinned LSP4IJ 0.21.0 `LSPDiagnosticsForServer.update` always replaces its lazy quick-fix map
+and cancels the previous actions. `LSPDiagnosticUtils.isDiagnosticsChanged` can simultaneously
+return false for identical diagnostic values, leaving old annotations with canceled actions.
+The previous-result-ID bridge avoids ordinary repeated full reports, but cannot avoid a new full
+report after graph replacement or an overlapping initial pull.
+
+X185 passed alone but failed after X181 twice (native runs `run-3835897731901718389` and
+`run-14888381295818547127`), despite a completed server action reply in about 226–232 ms.
+There was no IDE exception or compiler hang. The initial selected-text driver was corrected to
+a caret; the sequence still failed, establishing that caret correction alone was insufficient.
+
+`DiagnosticQuickFixes` copies a nonempty full report and wraps only its diagnostic data in a
+client-local presentation revision. Diagnostic text/ranges are unchanged, and every delivered full
+report makes upstream refresh annotations and their actions. Outgoing code-action contexts restore
+the original opaque server data. The helper has no mutable fields or additional lifecycle cache.
+The actual upstream equality function and opaque-data round trips pass in the 12-test focused
+plugin gate. Native sequence acceptance is pending the current continuation.
