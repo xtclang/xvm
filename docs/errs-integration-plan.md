@@ -9986,7 +9986,8 @@ Remaining L63 tasks:
   repairs. Implemented in the continuation below; same-owner support remains covered by regression tests.
 - [x] Extend destination resolution to another configured source module with dependency direction,
   existing imports, visibility and source/binary ownership proved before edits; see the cross-module continuation below.
-- [ ] Prove insertion of missing destination imports without changing graph ownership or dependency direction.
+- [x] Prove insertion of missing destination imports without changing graph ownership or dependency direction
+  (destination-import continuation below; final acceptance recorded there).
 - [ ] Prove generic destinations/substitution, computed/chained receivers, runtime Class/Type
   values, explicit generic/singleton qualifiers, named/computed arguments and conditional signatures.
 - [ ] Add missing types/properties, broader extraction/inline and global safe delete as independent
@@ -10198,3 +10199,97 @@ scenario/manual rows together when extracting PRs; every extracted PR still requ
 validation. All work remains on `lagergren/errs`; no remote operation is part of this checkpoint.
 The next bounded L63 step is adding required destination imports when the dependency already exists,
 while retaining alias-collision, ownership, complete-graph and exact-signature proof.
+
+
+### L63 destination import insertion (2026-10-04)
+
+- [x] Plan destination module aliases from its existing imports and host-configured dependencies
+  (plus the bundled XDK). Reserve names across its source tree and reuse the member-action alias
+  allocator. Never borrow the caller's dependency edges.
+- [x] Carry required imports with fresh/detached signature spelling. Insert only imports actually
+  used by the method's parameter/result types, deduplicated across repeated and compound types.
+- [x] Apply imports and method as one versioned workspace edit, including root-plus-companion edits. Adjust
+  the inserted-declaration proof for preceding import edits and retain exact signature/binding proof.
+- [x] Add regressions for import permission, aliases, compound/local types, closed companions,
+  unused dependencies, CRLF and destination document versions. Add shared X213–X215 and both drivers.
+- [x] Finish combined backend and selected editor acceptance; record receipts and extraction commits.
+
+The package import belongs inside the destination module root; a companion admits only one
+top-level declaration. When the method belongs in a companion, the same atomic workspace edit
+changes both files and carries each document's own version (or null for a closed file). Existing source/import names are reserved before selecting aliases; complete proposed
+compilation and binding preservation remain mandatory. No source graph, AST node or embedding API
+is changed. Reopened library pools still supply identity indexes only; TypeInfo uses the fresh
+caller's linked pool. Imports and detached local type spelling contain no compiler-owned objects.
+
+Final validation:
+
+- **310 backend tests pass** in 15 classes, zero failures/errors/skips. The batch includes 28
+  cross-module missing-method cases, eight proof tests and 19 server tests, plus the existing
+  extraction, local, member-action and code-action regressions. Both editor drivers compile.
+- VS Code **`run-u5kDXk`** passes **X122 and X209–X215**, zero test failures or extension errors;
+  eight cases complete in 25 seconds. X214 verifies exact root and companion contents through
+  Undo/Redo/Undo. The catalog has **220 scenarios**, SHA-256
+  `49bb9eb0b8c900f5a08e4ab0ace289150e2eec2b196f96db13bce5ded46b09ac`.
+- The initial backend batch exposed invalid top-level package insertion in companions. The repair
+  now writes imports into the module root and refuses the entire action if that root is read-only.
+  A separate fixture used an invalid two-component module name; the collision regression now uses
+  valid `Types.one.org` and `Types.two.org` modules. The final backend batch includes both corrections.
+- IntelliJ's first attempt, `run-11810269263038848645`, passed START/X209 and stopped at X210's
+  newly added extra-file comparison. That check opened the shared `Library.x` instead of the
+  case-relative `X210/Library.x`; the driver now prefixes the scenario directory. The method edit
+  had already passed its exact-source check. This was a harness path error, with zero IDE failures.
+- The next attempt, `run-4191909342836480788`, passes START/X209–X212 but X213's native popup
+  remains absent after a successful server action reply and overlapping diagnostic refresh/cancellation.
+  The harness now applies existing workspace-case tab isolation to all independent discovered
+  fixtures. [UP07](errs-upstream-issues.md#up07-explicit-graph-quick-fix-transition-2026-10-04)
+  retains the production transition with unrelated broken tabs as unfinished acceptance.
+- Tab isolation alone passes X213 in `run-4352512895301591077` but X214 still loses its popup
+  before applying an edit. Explicit-graph fixtures now install their graph before opening the
+  caller, and unchanged fixture text is checked rather than rewritten. Discovery fixtures still
+  open first because their workspace-folder notification requires a started server; the setup
+  regression caught in `run-14011335717437201168` established that ordering requirement.
+- IntelliJ **`run-4588144426201480586`** passes **START and X122/X209–X215**, zero IDE failures.
+  X213/X214 complete in 4,659/5,693 ms, including exact root/companion contents and diagnostic
+  Undo/Redo/Undo. JUnit records one passing suite test with zero failures/errors/skips. Ultimate
+  is disabled; the accepted IDE log has no ERROR/SEVERE or ProcessCanceledException markers.
+  Both editors use the same 220-case catalog hash above.
+
+These are selected acceptance receipts, not a full catalog, fresh IntelliJ production-unit or
+packaged-stdio gate. UP07's broader production graph-replacement race remains open; the fixture
+isolation/setup correction does not claim to repair it.
+
+Root/LSP/IntelliJ read-only Spotless and `git diff --check` pass.
+
+| Extraction group | Commit | Scope |
+| --- | --- | --- |
+| Missing-method destination imports | `f6a27ed75` | Extends `a75834c93`; detached import plans, shared alias/rendering helpers, atomic root/companion edits, exact shifted-signature proof, backend and server regressions. No Java AST or embedding API change. |
+| Shared editor acceptance and fixture setup | `fc3408a61` | X213–X215, both drivers, atomic extra-file assertions, matching manual rows/catalog counts and UP07 evidence. Includes fixture path correction, tab isolation and explicit graph-before-open setup; preserve discovery server startup before workspace notifications. Depends on the backend slice. |
+
+Keep scenario data, both drivers and manual rows together when extracting. Each extracted PR still
+requires independent validation. This checkpoint is local on `lagergren/errs`; it does not push or
+open a PR. The next bounded L63 implementation area is generic destination ownership/substitution.
+
+### Consolidated remaining L63 scope (2026-10-04)
+
+After the destination-import slice above, **eight work areas** remain. These are scope buckets,
+not eight promised small commits; the broader refactorings need further bounded design slices.
+The first four continue missing-method support; the last four are other L63 transformations.
+
+- [ ] Generic destinations: prove receiver substitution and which declaration form belongs in
+  generic owners, including outer formals; retain exact types and writable-source ownership.
+- [ ] Broader signatures: method formals/constraints and conditional returns, including compiler
+  evidence for the intended result context. Do not guess a signature from diagnostic text.
+- [ ] Broader receivers: computed/chained, runtime Class/Type and singleton forms, where the compiler
+  can establish a concrete source owner and correct instance/static dispatch.
+- [ ] Broader arguments: named and computed arguments, with proven types, name mapping and bindings.
+- [ ] Missing type/property declarations: independent creation actions with ownership, visibility,
+  initialization and complete proposed-graph proof.
+- [ ] Broader extraction: statement selections and additional evaluation contexts with control-flow,
+  return, capture and evaluation-order preservation.
+- [ ] Broader inline: methods and wider local/property contexts with side-effect, capture and
+  evaluation-order preservation.
+- [ ] Global safe delete: prove references across the configured graph and reject unknown external
+  ownership/consumers; offer only deletions whose complete proposed graph remains valid.
+
+Independent UP07/UP22 host integration follow-ups, wider LSP scopes and release/soak acceptance are
+tracked separately; they are not hidden within this eight-area L63 count.

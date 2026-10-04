@@ -153,7 +153,10 @@ Cross-owner arguments use declared parameters, supported literals and compiler-e
 block locals. Results use whole-return, statement or whole explicitly typed local-initializer
 contexts (X205–X208). Reachable configured source dependencies also support public repairs,
 including closed companions (X209–X212). Signature types use the destination module and its existing
-module-level imports; no import or dependency edge is added. Binary/indexed/read-only destinations,
+module-level imports. Required imports can be added atomically with the method when the destination
+already has that configured dependency (X213–X215); aliases avoid source-name collisions, and no
+dependency edge is added. The module root receives the package import, including when the method
+belongs in a companion; both edits carry their own document versions. Binary/indexed/read-only destinations,
 reverse dependencies, inferred results and generic/interface owners remain refusals. Public visibility
 is stated in the action and generated code. Exact source signature and whole-graph binding proof are required.
 Explicit declaration lookup returns local/import-alias declarations or the inherited written
