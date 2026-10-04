@@ -219,7 +219,6 @@ class XdkCrossModuleMissingMethodsTest {
     @ValueSource(
         strings = [
             "interface Other {}",
-            "class Other<Element> {}",
             "class Other { Int missing(String value) = 1; }",
             "class Other { class Object {} }",
         ],
@@ -261,6 +260,22 @@ class XdkCrossModuleMissingMethodsTest {
             }
         }
         """.trimIndent()
+
+    @Test
+    fun `generic dependency owner accepts an exact concrete signature`() {
+        query(
+            """
+            module App {
+                package lib import Library;
+                Object read(lib.Other<Int> peer, Object value) {
+                    return peer.§missing(value);
+                }
+            }
+            """.trimIndent(),
+            library = "module Library { class Other<Element> {} }",
+            signature = "public Object missing(Object arg1)",
+        )
+    }
 
     private fun query(
         marked: String,
