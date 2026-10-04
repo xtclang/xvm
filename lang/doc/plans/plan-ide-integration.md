@@ -1387,3 +1387,20 @@ VS Code Move parity. UP23 records the host ordering defect. The user accepted th
 host limitation and continuation to L63. Backend/protocol: 178 passed, final affected rerun 58
 passed; IntelliJ unit gate 7 passed. Scope boundaries and extraction grouping are in the
 [L62 closure receipt](../../../docs/errs-integration-plan.md#l62-ownership-and-relocation-closure-batch-2026-10-04).
+
+
+### L63 eight-area implementation batch (2026-10-04)
+
+The current batch adds exact generic-owner/method-formal and conditional missing signatures,
+compiler-validated receivers/named or computed arguments, missing class/instance-property stubs,
+statement/nested-expression extraction, wider constant-local and selected private member inline,
+and configured-graph safe deletion of unused private methods/constants. No compiler AST state or
+embedding API has been added. Source type spelling uses actual module imports plus the compiler's
+implicit module constants; both source and binary dependency types are covered.
+
+The implementations retain explicit ownership, initialization, control-flow/capture, type and
+binding/dispatch refusals. They are bounded refactorings, not arbitrary source transformations or
+proof of unknown external consumers. Shared X221–X240 bring the catalog to **245 scenarios** and
+are registered in both drivers. Their native acceptance and the final combined gate remain pending;
+L63 is not yet marked accepted. UP23 remains open. See the current
+[implementation and acceptance record](../../../docs/errs-integration-plan.md#l63-generic-destinations-continuation-2026-10-04).

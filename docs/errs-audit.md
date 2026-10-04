@@ -1885,3 +1885,20 @@ affected backend rerun passed 58 tests. Selected IntelliJ X169/X173/X216–X220 
 passes six; X218 still fails on native overlapping-move Undo (UP23), whose failing assertion stays.
 The user explicitly accepted carrying that host limitation and continuing to L63. See the
 [integration receipt](errs-integration-plan.md#l62-ownership-and-relocation-closure-batch-2026-10-04).
+
+
+### L63 eight-area implementation batch (2026-10-04)
+
+The current batch adds exact generic-owner/method-formal and conditional missing signatures,
+compiler-validated receivers/named or computed arguments, missing class/instance-property stubs,
+statement/nested-expression extraction, wider constant-local and selected private member inline,
+and configured-graph safe deletion of unused private methods/constants. No compiler AST state or
+embedding API has been added. Source type spelling uses actual module imports plus the compiler's
+implicit module constants; both source and binary dependency types are covered.
+
+The implementations retain explicit ownership, initialization, control-flow/capture, type and
+binding/dispatch refusals. They are bounded refactorings, not arbitrary source transformations or
+proof of unknown external consumers. Shared X221–X240 bring the catalog to **245 scenarios** and
+are registered in both drivers. Their native acceptance and the final combined gate remain pending;
+L63 is not yet marked accepted. UP23 remains open. See the current
+[implementation and acceptance record](errs-integration-plan.md#l63-generic-destinations-continuation-2026-10-04).
