@@ -170,8 +170,9 @@ single-use local inline into a same-written-type return/initializer, and unused 
 removal are implemented. Every candidate recompiles the complete configured graph and proves
 unaffected bindings/calls/dispatch. Removal additionally requires compiler-validated constant and
 side-effect facts; runtime evaluation, Ref/Var annotations and internal comments refuse. X177–X180
-and the October 4 acceptance receipt cover this batch. Extract method, missing declarations, global
-safe delete and broader evaluation contexts remain open. No Java AST API or state was added.
+and the October 4 acceptance receipt cover this batch. The private expression-helper continuation
+below adds bounded extract-method support. Missing declarations, general statement extraction,
+global safe delete and broader evaluation contexts remain open. No Java AST API or state was added.
 
 The four incomplete syntax nodes now live in `org.xvm.compiler.ast.partial`. The stateless
 `PartialQueries` boundary and package-private semantic helpers stay beside ordinary AST validation.
@@ -2798,3 +2799,26 @@ These are selected runs from the 185-case catalog. The independent ordinary-comp
 code-generation repair has a failing-master CLI reproduction and 22 passing manual runtime
 checks; keep its two commits separate in the extraction map. L63 remains partial for wider contexts,
 extract-method, missing declarations, broader inline and global safe delete.
+
+
+### L63 private expression helpers (2026-10-04)
+
+Complete return expressions and explicitly typed local initializers can be extracted to private
+helpers in the same type. Stable locals/parameters become explicit typed inputs; compiler
+identities prove their types, moved bindings/calls, argument-to-parameter mapping and unchanged
+existing dispatch. The compiler's effectively-final/non-reference register evidence prevents
+reading mutable captured values early. Written expected types and exact moved expression text
+are preserved. Generic owners and ordinary implicit instance calls are supported; method formals,
+mutable/reference-backed captures, lambda/anonymous-class creation, async calls, conditional returns
+and general statement extraction remain refused.
+
+The implementation stays in Kotlin. Existing `Register.isEffectivelyFinal()`, `isVar()` and type
+APIs suffice; there are no new Java AST fields, accessors, parent mutation or embedding entry points.
+A local ownership map is necessary because a fresh parser tree has not adopted parent links. The
+existing local-extraction reader also now skips typeless method-formal parser parameters instead
+of dereferencing their missing type. Only detached type identities/source locations survive the
+compiler worker. All 151 selected backend tests pass without failures/errors/skips. X156/X177/
+X181–X184 pass in VS Code `run-ZhuPaV` and IntelliJ `run-5839432120705984532` (plus START,
+zero IDE failures); both verify exact edits, diagnostics and Undo/Redo, while X184 verifies refusal
+through the installed connection. These are selected runs from the 189-case catalog, not full
+suite reruns. The integration plan records the failed first run, fixes and extraction commit map.
