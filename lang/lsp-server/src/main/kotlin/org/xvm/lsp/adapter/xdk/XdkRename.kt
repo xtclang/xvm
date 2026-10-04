@@ -921,6 +921,11 @@ internal object XdkRename {
             val index: Int,
         ) : Target
 
+        data class MethodFormal(
+            val method: Target,
+            val index: Int,
+        ) : Target
+
         data class PrimaryConstructor(
             val owner: Target,
         ) : Target
@@ -990,6 +995,12 @@ internal object XdkRename {
             is ProofIdentity.Parameter -> {
                 composedTarget(identity.method, texts, moved, translate)?.let {
                     Target.Parameter(it, identity.index)
+                }
+            }
+
+            is ProofIdentity.MethodFormal -> {
+                composedTarget(identity.method, texts, moved, translate)?.let {
+                    Target.MethodFormal(it, identity.index)
                 }
             }
 
@@ -1101,7 +1112,8 @@ internal object XdkRename {
                 identity is ProofIdentity.Super ||
                 identity is ProofIdentity.Receiver ||
                 identity is ProofIdentity.PrimaryConstructor ||
-                identity is ProofIdentity.Parameter
+                identity is ProofIdentity.Parameter ||
+                identity is ProofIdentity.MethodFormal
             ) {
                 return composedTarget(identity, texts, moved, translate)
             }
