@@ -1839,3 +1839,19 @@ zero editor failures. Both use the 213-case catalog; Ultimate is disabled. Root/
 read-only Spotless passes. These are selected runs, not a full-catalog or new packaged-protocol gate.
 The [integration plan](errs-integration-plan.md#l63-cross-owner-local-arguments-and-initializer-results-2026-10-04)
 records the proof boundary, receipts and commit extraction map.
+
+
+L63 cross-module continuation: public missing-method repairs now select reachable, writable
+configured source dependencies, including closed companions, and render types using the destination's
+existing imports. Source indexes alone do not authorize edits; reverse dependency needs remain a
+refusal. The proof verifies the exact destination signature across module-local symbol IDs, complete
+graph compilation and preservation of existing bindings. Shared X209–X212 cover editor behavior;
+validation and extraction status are tracked in the [integration plan](errs-integration-plan.md#l63-cross-module-missing-method-destinations-2026-10-04).
+No Java AST/embedding API or plugin production change is introduced.
+
+Acceptance for this continuation: 296 backend tests and X201/X202/X205/X206/X209–X212 in both
+editors pass. Receipts: VS Code `run-B54Y1R`, IntelliJ `run-14965910820534049086` (plus START,
+Ultimate disabled), zero editor failures. The first IntelliJ attempt exposed cancellation during
+synchronous native popup discovery; the driver now uses the ordinary UI action queue and retains
+its no-edit-replay guard. UP07 tracks the evidence. These are selected 217-catalog receipts;
+no fresh packaged-protocol or IntelliJ production-unit run is claimed.
