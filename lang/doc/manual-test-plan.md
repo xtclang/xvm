@@ -1,13 +1,19 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **201 scenarios**: X1–X196, CFG1–CFG3 and 7a.8/7a.9.
-The latest selected gate passes **X181/X185/X190/X193–X196** in VS Code `run-nvquYD` and IntelliJ
+The current catalog has **205 scenarios**: X1–X200, CFG1–CFG3 and 7a.8/7a.9.
+The latest selected gate passes **X181/X185/X193/X197–X200** in VS Code `run-3Vm6C9` and
+IntelliJ `run-11432411846060652594` (plus START), zero editor failures. It verifies named class
+qualifiers, fully qualified typed initializer calls, shadowed-name instance dispatch, diagnostic
+Undo/Redo and runtime-Type refusal. All 232 selected backend tests pass without failures/errors/skips;
+IntelliJ Ultimate is disabled. These are selected receipts, not a full 205-case rerun.
+
+The preceding selected gate passes **X181/X185/X190/X193–X196** in VS Code `run-nvquYD` and IntelliJ
 `run-15968094076069950349` (plus START), with zero editor failures. It verifies qualified same-owner
 instance repairs, static-caller behavior, diagnostic Undo/Redo and other-owner/public-view refusals.
 All 219 selected backend tests pass without failures/errors/skips; IntelliJ Ultimate is disabled.
 These are selected receipts, not a full 201-case rerun.
 
-The preceding selected gate passes **X181/X185/X189–X192** in VS Code `run-mRmX6Y` and IntelliJ
+An earlier selected gate passes **X181/X185/X189–X192** in VS Code `run-mRmX6Y` and IntelliJ
 `run-1236802406694405307` (plus START), with zero editor failures. It verifies compiler-established
 local arguments, typed initializer results, exact generated source and diagnostic Undo/Redo.
 All 198 selected backend tests pass without failures/errors/skips. Ultimate is disabled in the
@@ -1353,7 +1359,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X196 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X200 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -3239,9 +3245,10 @@ private and contain `TODO()`; inspect and implement the body before running the 
 For X185–X187, compare the exact shared expected source, check cleared diagnostics, then
 Undo/Redo/Undo. Undo must restore both the source and the error; Redo must clear the error again.
 Both drivers use the same fixtures. These are new scenarios, not evidence from X122 or extraction.
-Other-owner/computed/type-qualified receivers, computed/named arguments, generic methods, conditional returns and
+Other-owner/computed receivers, computed/named arguments, generic methods, conditional returns and
 nested expression result contexts remain refusals. X189–X192 below add compiler-established local
-arguments and explicitly typed initializer results; X193–X196 add proven same-owner receivers.
+arguments and explicitly typed initializer results; X193–X196 add proven same-owner instance receivers
+and X197–X200 add named enclosing-class static calls and dispatch controls.
 No diagnostic text or numeric error code is used to invent a signature.
 
 Run **X181 followed by X185** together when validating IntelliJ: an unchanged error after a
@@ -3296,3 +3303,31 @@ Acceptance: X181/X185/X190/X193–X196 pass in VS Code `run-nvquYD` and IntelliJ
 `run-15968094076069950349` (plus START), zero editor errors. Catalog SHA-256:
 `47aeb686ed81ed76507c03bf87b0cf65c1a9ac42dc64c7e7f340912931cea9b5`.
 All 219 selected backend tests pass. No full-catalog or new packaged-protocol run is claimed.
+
+
+### Class-qualified missing-method quick fixes (L63, X197–X200)
+
+Use the exact shared sources in compiler mode, with the caret on the leaf `missing` token.
+Open Quick Fix / intentions and select **Create private method 'missing'** where offered.
+
+| Case | Action | Required result |
+| --- | --- | --- |
+| X197 | Repair `Box.missing(value)` from an instance method of `Box`. | Insert `private static Int64 missing(Int64 arg1)` in `Box`; the original qualifier stays unchanged. |
+| X198 | Repair `Extract.Box.missing(other)` in a `List<Int>` initializer, with a validated `val other`. | Insert `private static List<Int64> missing(List<Int64> arg1)` in `Box`; the qualifier, local and declared result context are preserved. |
+| X199 | Inspect `type.missing(value)` on a runtime `Type<Box>` parameter. | No method-creation action; source and error stay unchanged. |
+| X200 | Repair `Box.missing(value)` with a parameter declared as `Extract.Box Box`. | Insert an **instance** `private Int64 missing(Int64 arg1)` even though the caller is static: the receiver resolves to a parameter, not a class. |
+
+For X197/X198/X200, compare the complete expected source, require diagnostics to clear, Undo to
+restore source/error, Redo to clear them and Undo again. X199 checks refusal through the installed
+connection in both editors. The backend also checks static callers, multiple compatible sites,
+other class owners, existing static overloads, explicit generic/singleton qualifiers and runtime
+`Class` values. An otherwise compiling repair redirected to another class must fail target proof.
+The parameter type in X200 is qualified deliberately: `Box Box` shadows its own type annotation
+and reports a separate dynamic-type diagnostic before the missing call can be analyzed.
+
+
+Acceptance: X181/X185/X193/X197–X200 pass in VS Code `run-3Vm6C9` and IntelliJ
+`run-11432411846060652594` (plus START), zero editor errors. Both use the 205-case catalog SHA-256
+`95df5eed7bfb7d761f9aed380600f5574de9bd31660384c502609d53d8805915`.
+All 232 selected backend tests pass; Ultimate is disabled. No full-catalog or new packaged-protocol
+run is claimed.
