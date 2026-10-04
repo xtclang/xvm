@@ -444,7 +444,9 @@ VS Code receipts above.
   declarations, compiler-established locals/typed initializers, proven same-owner instance receivers
   and named enclosing-class static qualifiers (X185–X200), plus explicit public repairs in another
   writable ordinary class of the same module, including companions (X201–X204; receipts below).
-  Wider expression/statement extraction, other missing declarations, broader inline and global safe delete remain unimplemented. Record supported XTC forms per action;
+  The eight-area October 4 continuation adds bounded implementations for generic signatures,
+  receivers/arguments, missing declarations, wider extraction/inline and private-member safe delete
+  (X221–X240). Backend regressions pass; final combined/native acceptance is pending. Record supported Ecstasy forms per action;
   doc-comment generation and reference/test lenses are separate subfeatures. Semantic transformations require
   compiler evidence and versioned multi-file edit validation.
 - [x] **L64 — Completion/signature breadth and presentation, bounded closure.** Supported recursive
@@ -10507,3 +10509,18 @@ regression gate and native acceptance remain pending.
 
 Keep the associated correction and shared acceptance commits with these groups when extracting.
 Each future PR must validate independently; these local commits have not been pushed.
+
+### L63 acceptance corrections (2026-10-04)
+
+The expanded regression gate ran **494 tests** and found one regression: generic-method parameter
+rename was refused because the newly detached generic binder and the first visible value parameter
+shared `Parameter(method, 0)`. Generic binders now use a separate `MethodFormal` identity; signature
+alpha-equivalence remains exact. The existing parameter-rename test reproduced the defect before
+this correction and passes afterward.
+
+The affected follow-up gate passes **185 tests**, zero failures/errors/skips: generic/missing-method
+proof, parameter/server rename, type moves, inline/delete and **22 shared scenarios**. It also checks
+that static runtime initializers are neither duplicated nor discarded. Both editor drivers compile;
+formatting passes. Native acceptance is the next gate. The catalog now has **247 scenarios**,
+including X241/X242 runtime-initializer refusals. Restore the existing JSON escape style when
+extracting the fixture commit; its temporary unescaped Unicode rewrite was unrelated to this scope.
