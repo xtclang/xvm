@@ -884,7 +884,20 @@ internal class XdkProjectQueries(
             } else {
                 null
             }
-        return if (isCurrent()) actions + members + listOfNotNull(extraction, inline, removal) else emptyList()
+        val method = if (complete) {
+            before.models.singleOrNull { it.sourceName == source }?.let { model ->
+                XdkMethodExtraction.candidate(text, range, model, before.extraction)?.let { candidate ->
+                    checkCurrent()
+                    val plan = XdkRename.Plan(texts, mapOf(source to candidate.edits),
+                        relocations = mapOf(source to listOf(candidate.relocation)))
+                    val after = compile(plan.proposed, Proof.REPAIR) ?: return@let null
+                    if (!XdkRename.preservesMethodExtraction(before, after, plan, candidate)) return@let null
+                    CodeAction("Extract expression to private method", CodeAction.CodeActionKind.REFACTOR_EXTRACT,
+                        edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true))
+                }
+            }
+        } else null
+        return if (isCurrent()) actions + members + listOfNotNull(extraction, inline, removal, method) else emptyList()
     }
 
     private fun autoImports(
