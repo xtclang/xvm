@@ -178,9 +178,12 @@ fun Driver.quickFix(
         editor.editor.getCaretModel().moveToOffset(at)
         if (selectionEnd != at) editor.editor.getSelectionModel().setSelection(at, selectionEnd)
     }
-    invokeAction("ShowIntentionActions", component = editor.component)
+    // TODO LSP4IJ: UP07 — overlapping full pulls can cancel an old lazy fix during discovery.
+    // Dispatch through the UI queue so the platform handles ProcessCanceledException normally;
+    // the bounded popup wait may reopen an unapplied inspection, never replay a chosen edit.
+    invokeAction("ShowIntentionActions", now = false, component = editor.component)
     choosePopup(editor, listOf(title), title) {
-        invokeAction("ShowIntentionActions", component = editor.component)
+        invokeAction("ShowIntentionActions", now = false, component = editor.component)
     }
 }
 
