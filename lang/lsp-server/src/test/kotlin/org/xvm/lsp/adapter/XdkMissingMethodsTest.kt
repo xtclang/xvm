@@ -4,6 +4,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.CsvSource
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.SemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
@@ -14,8 +15,11 @@ class XdkMissingMethodsTest {
     @TempDir lateinit var directory: Path
 
     @ParameterizedTest
-    @ValueSource(strings = ["Int", "String", "List<Int>", "(Int | String)"])
-    fun `resolved parameter and return types produce a private method`(type: String) {
+    @CsvSource(value = ["Int;Int64", "String;String", "List<Int>;List<Int64>", "(Int | String);(Int64 | String)"], delimiter = ';')
+    fun `resolved parameter and return types produce a private method`(
+        type: String,
+        rendered: String,
+    ) {
         query(
             """
             module Missing {
@@ -25,7 +29,7 @@ class XdkMissingMethodsTest {
             }
             """.trimIndent(),
         ) { changed ->
-            assertThat(changed).contains("private $type missing($type arg1)", "TODO();", "return missing(value);")
+            assertThat(changed).contains("private $rendered missing($rendered arg1)", "TODO();", "return missing(value);")
         }
     }
 
@@ -53,7 +57,7 @@ class XdkMissingMethodsTest {
                 }
             }
             """.trimIndent().replace("\n", "\r\n"),
-        ) { assertThat(it).contains("private static Int missing(Int arg1) {\r\n        TODO();\r\n") }
+        ) { assertThat(it).contains("private static Int64 missing(Int64 arg1) {\r\n        TODO();\r\n") }
     }
 
     @Test
@@ -68,7 +72,7 @@ class XdkMissingMethodsTest {
                 }
             }
             """.trimIndent(),
-        ) { assertThat(it).contains("        private (Int, String) missing(Int arg1, String arg2, Int arg3)") }
+        ) { assertThat(it).contains("        private (Int64, String) missing(Int64 arg1, String arg2, Int64 arg3)") }
     }
 
     @Test
@@ -97,7 +101,7 @@ class XdkMissingMethodsTest {
                 }
             }
             """.trimIndent(),
-        ) { assertThat(it).contains("private Int missing(Int arg1)") }
+        ) { assertThat(it).contains("private Int64 missing(Int64 arg1)") }
     }
 
     @ParameterizedTest
@@ -217,7 +221,7 @@ class XdkMissingMethodsTest {
                 }
             }
             """.trimIndent(),
-        ) { assertThat(it).contains("Int previous = keep(value);", "private Int missing(Int arg1)") }
+        ) { assertThat(it).contains("Int previous = keep(value);", "private Int64 missing(Int64 arg1)") }
     }
 
     private fun refused(marked: String) = query(marked, expected = false) { error("Unexpected method creation") }
