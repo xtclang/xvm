@@ -1602,17 +1602,27 @@ class CompilerPlaybook(
             "X198",
             "X199",
             "X200",
+            "X201",
+            "X202",
+            "X203",
+            "X204",
         ).forEach { id ->
             scenario(id) {
                 discovered(id) { data ->
                     val editor = open(data.text("file"))
                     val original = data.text("source")
+                    val companion = data.values.has("destinationFile")
                     editor.text = original
 
-                    fun originalDiagnostics() {
-                        if (data.values["initiallyValid"]?.asBoolean == false) editor.awaitError() else editor.awaitDiagnostics(emptyList())
+                    fun callerDiagnostics(broken: Boolean) {
+                        // Driver's editor locator sees the selected tab. Select the caller again
+                        // after inspecting a companion; opening a tab never reapplies its edits.
+                        val caller = if (companion) open(data.text("file")) else editor
+                        if (companion) check(caller.text == original)
+                        if (broken) caller.awaitError() else caller.awaitDiagnostics(emptyList())
                     }
-                    originalDiagnostics()
+                    val initiallyBroken = data.values["initiallyValid"]?.asBoolean == false
+                    callerDiagnostics(initiallyBroken)
                     val at = original.indexOf(data.text("selected"))
                     if (data.values["refused"]?.asBoolean == true) {
                         fun position(offset: Int): Map<String, Int> {
@@ -1640,13 +1650,18 @@ class CompilerPlaybook(
                     // use the complete selection specified by the shared scenario.
                     val selectionEnd = if (data.values["initiallyValid"]?.asBoolean == false) at else at + data.text("selected").length
                     quickFix(editor, at, data.text("title"), selectionEnd)
-                    awaitUi("local refactoring matches shared source", 45.seconds) { editor.text == data.text("expected") }
-                    editor.awaitDiagnostics(emptyList())
-                    listOf("\$Undo" to original, "\$Redo" to data.text("expected"), "\$Undo" to original).forEach { (action, expected) ->
-                        focusEditor(editor)
-                        invokeAction(action, now = false, component = editor.component)
-                        awaitUi("$action local refactoring", 45.seconds) { editor.text == expected }
-                        if (expected == original) originalDiagnostics() else editor.awaitDiagnostics(emptyList())
+                    val destination = if (companion) open(data.text("destinationFile")) else editor
+                    val destinationOriginal = if (companion) data.text("destinationSource") else original
+                    awaitUi("local refactoring matches shared source", 45.seconds) { destination.text == data.text("expected") }
+                    callerDiagnostics(false)
+                    val history =
+                        listOf("\$Undo" to destinationOriginal, "\$Redo" to data.text("expected"), "\$Undo" to destinationOriginal)
+                    history.forEach { (action, expected) ->
+                        val target = if (companion) open(data.text("destinationFile")) else editor
+                        focusEditor(target)
+                        invokeAction(action, now = false, component = target.component)
+                        awaitUi("$action local refactoring", 45.seconds) { target.text == expected }
+                        callerDiagnostics(expected == destinationOriginal && initiallyBroken)
                     }
                 }
             }
@@ -1707,7 +1722,7 @@ class CompilerPlaybook(
             original.copy(
                 values =
                     original.values.deepCopy().apply {
-                        listOf("file", "library", "neighbor").filter(::has).forEach { key ->
+                        listOf("file", "library", "neighbor", "destinationFile").filter(::has).forEach { key ->
                             addProperty(key, "$id/${get(key).asString}")
                         }
                     },
