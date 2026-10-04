@@ -862,6 +862,17 @@ internal object XdkRename {
         ) : Target
     }
 
+    /** Compare detached compiler types, translating source identities through the proposed edit. */
+    internal fun sameType(
+        before: ProofIdentity,
+        after: ProofIdentity,
+        plan: Plan,
+    ): Boolean {
+        val expected = composedTarget(before, plan.original, { it }, plan::map) ?: return false
+        val actual = composedTarget(after, plan.proposed, { it }) { _, at -> at } ?: return false
+        return expected == actual
+    }
+
     private fun composedTarget(
         identity: ProofIdentity,
         texts: Map<String, String>,
