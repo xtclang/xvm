@@ -173,7 +173,8 @@ side-effect facts; runtime evaluation, Ref/Var annotations and internal comments
 and the October 4 acceptance receipt cover this batch. The private expression-helper continuation
 below adds bounded extract-method support. Fresh-declaration missing-method repair is implemented
 for supported same-owner calls, now including compiler-established block locals and typed local
-initializer results (selected acceptance in both editors). Other missing declarations, general statement extraction,
+initializer results and compiler-proven same-owner receivers (acceptance receipts below).
+Other missing declarations, general statement extraction,
 global safe delete and broader evaluation contexts remain open. No Java AST API or state was added.
 
 The four incomplete syntax nodes now live in `org.xvm.compiler.ast.partial`. The stateless
@@ -2861,5 +2862,25 @@ pass in VS Code `run-mRmX6Y` and IntelliJ `run-1236802406694405307` (plus START)
 errors. Both use the 197-case catalog; these are selected runs. New cases verify exact edits,
 diagnostics and Undo/Redo plus inferred-result refusal. The commit map, build interruption and
 acceptance receipts are tracked in the [integration plan](errs-integration-plan.md#l63-local-arguments-and-typed-initializer-repairs-2026-10-04).
-Receiver/cross-owner creation, named/computed arguments, generic/conditional signatures, inferred
-result contexts and broader missing-declaration generation remain open.
+Type-qualified/cross-owner creation, named/computed arguments, generic/conditional signatures,
+inferred result contexts and broader missing-declaration generation remain open. The continuation
+below adds same-owner instance receivers.
+
+
+### L63 same-owner receiver evidence (2026-10-04)
+
+Missing private-method creation now accepts `this`, `this:private` and plain parameter/local
+receivers whose validated compiler type has the exact enclosing class identity. Body evidence is
+copied into immutable Kotlin inputs alongside the local type strings; no compiler object escapes,
+failed validation is not resumed and failed TypeInfo is not queried. The generated method remains
+an instance method even when the caller is static. Full proposed compilation must preserve the
+receiver binding and resolve the selected leaf token to the inserted declaration. A compiling
+change from `peer` to `this` is rejected by binding proof.
+
+Shared X193–X196 cover explicit `this`, an inferred local receiver in a static caller, another-owner
+refusal and public-view refusal. All 219 selected backend tests pass. X181/X185/X190/X193–X196
+pass in VS Code `run-nvquYD` and IntelliJ `run-15968094076069950349` (plus START), zero editor
+errors. Both use the 201-case catalog; these are selected runs. Acceptance receipts and extraction
+commits are in the [integration plan](errs-integration-plan.md#l63-same-owner-receiver-repairs-2026-10-04).
+No Java AST/embedding API or plugin production change was needed. Type-qualified static calls,
+other-owner creation, computed/chained receivers and broader missing declarations remain open.
