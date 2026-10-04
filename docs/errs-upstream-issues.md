@@ -198,4 +198,10 @@ client-local presentation revision. Diagnostic text/ranges are unchanged, and ev
 report makes upstream refresh annotations and their actions. Outgoing code-action contexts restore
 the original opaque server data. The helper has no mutable fields or additional lifecycle cache.
 The actual upstream equality function and opaque-data round trips pass in the 12-test focused
-plugin gate. Native sequence acceptance is pending the current continuation.
+plugin gate. The full 89-test IntelliJ unit suite passes, and native
+`run-16733856986922464734` passes START/X122/X181/X185–X188 together with no IDE failures.
+The sequence X181 → X185 exercises the previously failing transition. Correction: `f3de29b57`.
+
+This acceptance covers the automatic document-pull path. Workspace/related-document report
+replacement needs separate native coverage before claiming the bridge covers every diagnostic
+delivery route; keep that in UP07's removal/acceptance checklist.
