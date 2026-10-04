@@ -129,6 +129,11 @@ inline completion/values, colors, notebooks and broader refactorings are
 among the missing features. See the [explicit absent-feature inventory](../doc/plans/plan-ide-integration.md#compiler-completeness-snapshot)
 and [active L55–L83 completion checklist](../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist).
 Capability coverage, semantic completeness and native test coverage are tracked separately.
+Compiler code actions include complete return/typed-initializer extraction, adjacent single-use
+local inline with the same written expected type, and removal of unused constant locals.
+The compiler must prove side-effect-free initialization before removal; every edit recompiles
+the configured graph and preserves unaffected bindings/calls/dispatch. General extraction,
+extract method, missing-declaration generation and global safe delete remain open (L63).
 Explicit declaration lookup returns local/import-alias declarations or the inherited written
 contracts of an overriding method/property, including multiple source targets. Definition and
 implementation retain their separate meanings. Indexed library sources remain read-only.

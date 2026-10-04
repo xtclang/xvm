@@ -165,6 +165,14 @@ all-required guard then passed 47 member-action tests. All eleven X122 variants 
 editors, plus IntelliJ X105. The [commit map and receipts](errs-integration-plan.md#l63-librarycomplete-repair-validation-and-extraction)
 separate implementation checkpoints, validation corrections and selected native acceptance.
 
+**L63 local transformations:** whole-return and explicitly typed initializer extraction, adjacent
+single-use local inline into a same-written-type return/initializer, and unused constant local
+removal are implemented. Every candidate recompiles the complete configured graph and proves
+unaffected bindings/calls/dispatch. Removal additionally requires compiler-validated constant and
+side-effect facts; runtime evaluation, Ref/Var annotations and internal comments refuse. X177–X180
+and the October 4 acceptance receipt cover this batch. Extract method, missing declarations, global
+safe delete and broader evaluation contexts remain open. No Java AST API or state was added.
+
 The four incomplete syntax nodes now live in `org.xvm.compiler.ast.partial`. The stateless
 `PartialQueries` boundary and package-private semantic helpers stay beside ordinary AST validation.
 Registered child fields support traversal across the package boundary without public fields or
@@ -2784,5 +2792,9 @@ contextual numeric/function types are preserved; inference, changed type context
 statements, runtime initialization and Ref/Var annotations remain refusals. The deletion facts
 are immutable source locations captured on the compiler worker, with no retained AST/constants
 or new Java AST API. Shared X177–X180 cover native application and Undo/Redo plus installed
-refusal checks. Validation for this batch is pending. L63 remains partial for wider contexts,
+refusal checks. All 129 backend tests pass without failures or skips; X156/X157/X177–X180 pass
+in VS Code `run-nDHZOH` and IntelliJ `run-232740531754002686` (plus START, zero IDE failures).
+These are selected runs from the 185-case catalog. The independent ordinary-compiler `&& False`
+code-generation repair has a failing-master CLI reproduction and 22 passing manual runtime
+checks; keep its two commits separate in the extraction map. L63 remains partial for wider contexts,
 extract-method, missing declarations, broader inline and global safe delete.
