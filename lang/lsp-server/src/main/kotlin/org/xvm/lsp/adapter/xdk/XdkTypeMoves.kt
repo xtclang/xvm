@@ -63,23 +63,42 @@ internal object XdkTypeMoves {
                         ?: return null
                 Move(owner, targetModule.name, namespace + source.nameWithoutExtension, files, rename)
             }
-        fun owner(file: String): String? = project.modules.values.singleOrNull { it.uri == project.scope(file) }?.name
+
+        fun owner(file: String): String? =
+            project.modules.values
+                .singleOrNull { it.uri == project.scope(file) }
+                ?.name
+
         fun movedOwner(file: String): String? = moves.singleOrNull { file in it.files.paths }?.module ?: owner(file)
-        fun target(name: TypeName): Move? = moves.singleOrNull { name.module == it.owner.module && name.path.take(it.owner.path.size) == it.owner.path }
+
+        fun target(name: TypeName): Move? =
+            moves.singleOrNull {
+                name.module == it.owner.module &&
+                    name.path.take(it.owner.path.size) == it.owner.path
+            }
+
         fun changesModule(name: TypeName): Boolean {
             val file = name.location.sourceName ?: return false
             return target(name)?.let { it.module != it.owner.module } == true || movedOwner(file) != owner(file)
         }
-        val dependencies = facts.typeNames.filter(::changesModule).mapNotNull { name ->
-            val file = name.location.sourceName ?: return null
-            val local = movedOwner(file) ?: return null
-            val module = target(name)?.module ?: name.module
-            if (local == module || module == "ecstasy.xtclang.org") null else local to module
-        }.groupBy({ it.first }, { it.second }).mapValues { it.value.toSet() }
-        val imports = dependencies.mapValues { (module, required) ->
-            val root = project.modules.getValue(module).root.path
-            XdkMoveImports.plan(texts.getValue(root), texts.filterKeys { movedOwner(it) == module }.values, required) ?: return null
-        }
+        val dependencies =
+            facts.typeNames
+                .filter(::changesModule)
+                .mapNotNull { name ->
+                    val file = name.location.sourceName ?: return null
+                    val local = movedOwner(file) ?: return null
+                    val module = target(name)?.module ?: name.module
+                    if (local == module || module == "ecstasy.xtclang.org") null else local to module
+                }.groupBy({ it.first }, { it.second })
+                .mapValues { it.value.toSet() }
+        val imports =
+            dependencies.mapValues { (module, required) ->
+                val root =
+                    project.modules
+                        .getValue(module)
+                        .root.path
+                XdkMoveImports.plan(texts.getValue(root), texts.filterKeys { movedOwner(it) == module }.values, required) ?: return null
+            }
         val qualifications =
             facts.typeNames
                 .mapNotNull { name ->
@@ -130,7 +149,13 @@ internal object XdkTypeMoves {
                     file to prefix.copy(start = start, end = start + prefix.end)
                 }.groupBy({ it.first }, { it.second })
                 .mapValues { (_, value) -> value.distinct().sortedBy { it.start } }
-        val importEdits = imports.map { (module, planned) -> project.modules.getValue(module).root.path to listOf(planned.edit) }.toMap()
+        val importEdits =
+            imports
+                .map { (module, planned) ->
+                    project.modules
+                        .getValue(module)
+                        .root.path to listOf(planned.edit)
+                }.toMap()
         val edits =
             (qualifications.entries + moves.flatMap { it.rename.edits.entries } + importEdits.entries)
                 .groupBy({ it.key }, { it.value })
