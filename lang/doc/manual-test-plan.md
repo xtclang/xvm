@@ -1,14 +1,20 @@
 # Ecstasy Language Server - Manual Test Plan
 
 The current catalog has **181 scenarios**: X1–X176, CFG1–CFG3 and 7a.8/7a.9.
-The latest selected gate passes **X161/X163/X169–X172** in VS Code `run-TjE279` and IntelliJ
+The latest selected gate passes **X169/X171/X173–X176** in VS Code `run-ElUMIl` and IntelliJ
+`run-13159045223223510909` (START also passes), with no editor errors. It covers existing and
+empty-package moves, comments/whitespace, import aliases, closed consumers, companions/resources,
+collision refusal and Undo/Redo. The combined gate passes 155 LSP tests, 103 Java tests and five
+manual CLI cases without failures/skips. These are selected receipts, not a full 181-case run.
+
+The preceding selected gate passes **X161/X163/X169–X172** in VS Code `run-TjE279` and IntelliJ
 `run-14394987299477639656` (START also passes), with zero reported editor failures or compiler
 internal-error log markers. This covers combined rename-and-move, module/dependency/resource
 settings, interacting moves, whole-batch refusal and Undo/Redo. IntelliJ additionally verifies
 closed-file disk contents; its initial X169 failure exposed the fixed UP21 persistence gap.
 The related gate passes 222 backend and seven IntelliJ unit tests without failures/errors/skips.
 The separately discovered compiler issue #667 has its own failing-master/passing-fix regression.
-These are selected receipts, not a full 177-case run.
+These are selected receipts, not a full then-177-case run.
 
 The preceding selected gate passes **X164–X168** in VS Code `run-oSVuMJ` and IntelliJ
 `run-907034856191389577` (START also passes), including generic/annotated receivers and nested
@@ -3138,7 +3144,7 @@ closed IntelliJ document; the host refuses buffers that were not available to th
 
 ### L62 empty destinations and qualified-name trivia
 
-New shared cases are implemented in both drivers; current-batch acceptance is pending.
+Shared X173–X176 pass in both drivers in the selected runs recorded at the top of this file.
 The setup creates the listed empty directories explicitly, without a Marker.x source.
 
 | Case | Manual action | Required result |
