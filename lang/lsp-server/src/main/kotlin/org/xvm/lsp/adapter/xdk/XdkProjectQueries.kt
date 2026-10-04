@@ -501,7 +501,8 @@ internal class XdkProjectQueries(
                     from.isFile && from.parentFile != to.parentFile && from.path in texts &&
                         project.modules.values.none { it.root == from }
                 }
-        val typeMove = XdkTypeMoves.plan(before, typeOperations, texts, directories, project) ?: return null
+        val typeMove =
+            XdkTypeMoves.plan(before, typeOperations, texts, directories, project) ?: return null
         val proposals =
             operations
                 .map { (from, to) ->
@@ -585,6 +586,18 @@ internal class XdkProjectQueries(
         }
         val resources = XdkMoveOperations.ordered(allMoves.toMap()) ?: return null
         val movedInputs = XdkMoveInputs.capture(resources.keys, cancelled) ?: return null
+
+        // A destination module may acquire its first resource expression with an incoming type.
+        // Capture its configured lookup roots too, even when its original sources used none.
+        fun captureResources(): Map<XdkSourceModule, XdkResources>? =
+            try {
+                project.modules.values.associateWith { module ->
+                    XdkResources.capture(module.root, module.resourceFiles, texts.values, cancelled)
+                }
+            } catch (_: IOException) {
+                null
+            }
+        val resourceSnapshots = captureResources() ?: return null
         val paths =
             (texts.keys.map(::File) + directories)
                 .mapNotNull { file ->
@@ -619,33 +632,37 @@ internal class XdkProjectQueries(
             return null
         }
         val graph =
-            try { XdkProject(
-                project.buildOrder().map { module ->
-                    XdkSourceModule(
-                        names.getValue(module.name),
-                        File(paths[module.root.path] ?: module.root.path).toURI().toString(),
-                        (module.dependencies + typeMove.dependencies[module.name].orEmpty()).mapTo(linkedSetOf()) { names[it] ?: it },
-                        (
-                            module.resourceFiles ?: sources[module]?.inputs?.resources?.roots?.takeIf {
-                                File(paths[module.root.path] ?: module.root.path).parentFile != module.root.parentFile
-                            }
-                        )?.map { resource ->
-                            val move =
-                                resources.entries.firstOrNull {
-                                    resource.toPath().startsWith(it.key.toPath())
-                                }
+            try {
+                XdkProject(
+                    project.buildOrder().map { module ->
+                        XdkSourceModule(
+                            names.getValue(module.name),
+                            File(paths[module.root.path] ?: module.root.path).toURI().toString(),
+                            (module.dependencies + typeMove.dependencies[module.name].orEmpty()).mapTo(linkedSetOf()) { names[it] ?: it },
                             (
-                                move
-                                    ?.value
-                                    ?.toPath()
-                                    ?.resolve(move.key.toPath().relativize(resource.toPath()))
-                                    ?.toFile() ?: resource
-                            ).toURI()
-                                .toString()
-                        },
-                    )
-                },
-            ) } catch (_: IllegalArgumentException) { return null }
+                                module.resourceFiles ?: sources[module]?.inputs?.resources?.roots?.takeIf {
+                                    File(paths[module.root.path] ?: module.root.path).parentFile != module.root.parentFile
+                                }
+                            )?.map { resource ->
+                                val move =
+                                    resources.entries.firstOrNull {
+                                        resource.toPath().startsWith(it.key.toPath())
+                                    }
+                                (
+                                    move
+                                        ?.value
+                                        ?.toPath()
+                                        ?.resolve(move.key.toPath().relativize(resource.toPath()))
+                                        ?.toFile() ?: resource
+                                ).toURI()
+                                    .toString()
+                            },
+                        )
+                    },
+                )
+            } catch (_: IllegalArgumentException) {
+                return null
+            }
         val renamed =
             proposals
                 .flatMap { it.edit.changes.entries }
@@ -694,9 +711,15 @@ internal class XdkProjectQueries(
         }
         val plan = XdkRename.Plan(texts, edits, paths, qualifications = qualifications, imports = typeMove.imports)
         val resourceMoves = XdkResourceMoves(resources.mapKeys { it.key.path }.mapValues { it.value.path }, edits.keys, movedInputs.entries)
-        val after = compile(plan.proposed, moves = paths, graph = graph, resourceMoves = resourceMoves) ?: return null
+        val after =
+            compile(plan.proposed, moves = paths, graph = graph, resourceMoves = resourceMoves, resourceSnapshots = resourceSnapshots)
+                ?: return null
         if (!typeMove.provesDestinations(after) || !preservesBindings(before, after, plan, graph) ||
-            !isCurrent() || !movedInputs.isCurrent(cancelled)) return null
+            !isCurrent() || !movedInputs.isCurrent(cancelled) ||
+            resourceSnapshots != captureResources()
+        ) {
+            return null
+        }
         val replacement = !discoverImports && !project.sameConfiguration(graph)
         return XdkRenameProposal(
             WorkspaceEdit(
@@ -743,7 +766,9 @@ internal class XdkProjectQueries(
             (plan.edits.keys + plan.moves.keys)
                 .mapNotNull { project.scope(it) }
                 .flatMapTo(linkedSetOf(), project::affected) +
-                plan.moves.values.mapNotNull { graph.scope(it) }.flatMap(graph::affected)
+                plan.moves.values
+                    .mapNotNull { graph.scope(it) }
+                    .flatMap(graph::affected)
         val movedScopes =
             affected.mapTo(linkedSetOf()) { scope ->
                 val path = requireNotNull(XdkSources.file(scope)).path
@@ -1149,6 +1174,7 @@ internal class XdkProjectQueries(
         moves: Map<String, String> = emptyMap(),
         graph: XdkProject = project,
         resourceMoves: XdkResourceMoves? = null,
+        resourceSnapshots: Map<XdkSourceModule, XdkResources> = emptyMap(),
     ): CompilerRenameFacts? {
         checkCurrent()
         if (proof == Proof.COMPLETE && sources.size != graph.modules.size) return null
@@ -1204,7 +1230,16 @@ internal class XdkProjectQueries(
                     val compilation =
                         try {
                             compileTree(
-                                XdkSources.replay(originalRoot, source.inputs, text, moves, resourceMoves, sources.values.map { it.inputs }),
+                                XdkSources.replay(
+                                    originalRoot,
+                                    resourceSnapshots.entries.firstOrNull { it.key.root == originalRoot }?.value?.let {
+                                        source.inputs.copy(resources = it)
+                                    } ?: source.inputs,
+                                    text,
+                                    moves,
+                                    resourceMoves,
+                                    if (moves.isEmpty()) listOf(source.inputs) else sources.values.map { it.inputs },
+                                ),
                                 open.repository,
                                 errors,
                             )

@@ -13,20 +13,24 @@ internal class XdkMoveInputs private constructor(
     fun isCurrent(cancelled: () -> Boolean): Boolean = capture(roots, cancelled)?.entries == entries
 
     companion object {
-        fun capture(roots: Set<File>, cancelled: () -> Boolean): XdkMoveInputs? {
+        fun capture(
+            roots: Set<File>,
+            cancelled: () -> Boolean,
+        ): XdkMoveInputs? {
             val minimal = roots.filterTo(linkedSetOf()) { source -> roots.none { it != source && source.toPath().startsWith(it.toPath()) } }
             return try {
-                val entries = buildMap {
-                    minimal.forEach { root ->
-                        Files.walk(root.toPath()).use { paths ->
-                            paths.forEach { path ->
-                                if (cancelled()) throw CancellationException()
-                                if (Files.isSymbolicLink(path)) throw IOException("Moved input contains a symbolic link")
-                                put(path.toString(), XdkResources.entry(path, cancelled))
+                val entries =
+                    buildMap {
+                        minimal.forEach { root ->
+                            Files.walk(root.toPath()).use { paths ->
+                                paths.forEach { path ->
+                                    if (cancelled()) throw CancellationException()
+                                    if (Files.isSymbolicLink(path)) throw IOException("Moved input contains a symbolic link")
+                                    put(path.toString(), XdkResources.entry(path, cancelled))
+                                }
                             }
                         }
                     }
-                }
                 XdkMoveInputs(minimal, entries)
             } catch (_: IOException) {
                 null
