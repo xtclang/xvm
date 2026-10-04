@@ -29,7 +29,7 @@ class XdkLocalInitializerActionsTest {
             }
             """.trimIndent()
         query(marked) { adapter, uri, text, actions ->
-            val action = actions.single { it.kind == CodeAction.CodeActionKind.REFACTOR_EXTRACT }
+            val action = actions.single { it.title.endsWith("to local variable") }
             val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
             assertThat(changed).isEqualTo(
                 text.replace(
@@ -53,7 +53,7 @@ class XdkLocalInitializerActionsTest {
             }
             """.trimIndent().replace("\n", "\r\n")
         query(marked) { adapter, uri, text, actions ->
-            val action = actions.single { it.kind == CodeAction.CodeActionKind.REFACTOR_EXTRACT }
+            val action = actions.single { it.title.endsWith("to local variable") }
             val changed = apply(text, requireNotNull(action.edit).changes.getValue(uri))
             assertThat(changed).contains("Int extractedValue1 = extractedValue /* 😀 */ + 1;\r\n        Int result = extractedValue1;")
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
@@ -78,7 +78,7 @@ class XdkLocalInitializerActionsTest {
             }
             """.trimIndent(),
         ) { _, _, _, actions ->
-            assertThat(actions.filter { it.kind == CodeAction.CodeActionKind.REFACTOR_EXTRACT }).isEmpty()
+            assertThat(actions.filter { it.title.endsWith("to local variable") }).isEmpty()
         }
     }
 
@@ -102,7 +102,7 @@ class XdkLocalInitializerActionsTest {
             """.trimIndent(),
         ).forEach { marked ->
             query(marked) { _, _, _, actions ->
-                assertThat(actions.filter { it.kind == CodeAction.CodeActionKind.REFACTOR_EXTRACT }).isEmpty()
+                assertThat(actions.filter { it.title.endsWith("to local variable") }).isEmpty()
             }
         }
     }
