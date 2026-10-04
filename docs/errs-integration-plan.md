@@ -10425,3 +10425,20 @@ combines their candidates and deduplicates before compiling the proposal.
 The combined missing-method/member/declaration/extraction backend gate passes **247 tests**, zero
 failures/errors/skips. This includes all seven missing-declaration regressions. Editor acceptance
 and shared scenarios for this batch remain pending.
+
+### L63 statement and nested-expression extraction (2026-10-04)
+
+Extraction now accepts contiguous expression statements and nested expressions such as call
+arguments, conditions and inferred initializers. It preserves call order, stable captures,
+compiler-selected result types and all existing graph bindings/dispatch. Statement helpers return
+void. Intervening control flow, local declarations, mutable captures, closures, async calls and
+unsupported ref/super operations remain explicit refusals; no data-flow result is invented.
+
+Source type spelling reuses resolved module imports plus the compiler's `ECSTASY_MODULE` and
+`X_PKG_IMPORT` constants. This is source naming, not an XDK module-path allowlist. Extraction tests
+cover the same imported type from configured source and compiled binary dependencies. The new
+module-import lookup also replaces duplicated missing-method import discovery.
+
+All **26 extraction tests** pass as part of the **247-test** combined gate above, with no skips.
+`b5632cc7a` corrects and validates missing-declaration checkpoint `1ff71acfe`; keep them together
+when extracting that PR. New editor scenarios and native acceptance remain pending for the batch.

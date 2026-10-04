@@ -1,12 +1,17 @@
 package org.xvm.lsp.adapter.xdk
 
+import org.xvm.asm.Component.Format
 import org.xvm.asm.Constant
+import org.xvm.asm.Constants.ECSTASY_MODULE
+import org.xvm.asm.Constants.X_PKG_IMPORT
+import org.xvm.asm.PackageStructure
 import org.xvm.compiler.Source
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.ImportStatement
 import org.xvm.compiler.ast.NameExpression
 import org.xvm.compiler.ast.NamedTypeExpression
 import org.xvm.compiler.ast.StatementBlock
+import org.xvm.compiler.ast.TypeCompositionStatement
 
 /** Copy explicit aliases using resolved identity and lexical import ownership; retain no syntax. */
 internal fun compilerImportAliases(
@@ -77,3 +82,16 @@ internal fun compilerImportAliases(
             )
         }
 }
+
+/** The language's implicit module name, independent of the configured module path. */
+internal val implicitModuleAliases: Map<String, String> = mapOf(ECSTASY_MODULE to X_PKG_IMPORT)
+
+/** Module-level imports can be spelled in any member of the same compilation. */
+internal fun compilerModuleAliases(nodes: List<AstNode>): Map<String, String> =
+    nodes
+        .filterIsInstance<TypeCompositionStatement>()
+        .mapNotNull { node ->
+            val structure = node.component as? PackageStructure ?: return@mapNotNull null
+            if (!structure.isModuleImport || structure.parent.format != Format.MODULE) return@mapNotNull null
+            structure.importedModule.identityConstant.name to structure.identityConstant.pathString
+        }.toMap() + implicitModuleAliases

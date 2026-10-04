@@ -113,12 +113,14 @@ internal class ProofRelations(
 internal data class CompilerExtractionFacts(
     val types: Map<SemanticModel.SourceLocation, TypeConstant>,
     val stableValues: Set<SemanticModel.SourceLocation>,
+    val sourceTypes: Map<SemanticModel.SourceLocation, String> = emptyMap(),
 )
 
 /** Types and stable value reads needed to prove a new helper's signature and captured inputs. */
 internal data class ExtractMethodFacts(
     val types: Map<SemanticModel.SourceLocation, ProofIdentity> = emptyMap(),
     val stableValues: Set<SemanticModel.SourceLocation> = emptySet(),
+    val sourceTypes: Map<SemanticModel.SourceLocation, String> = emptyMap(),
 )
 
 /** Detached comparison facts. Keeping compiler constants here retains every root's entire pool. */
@@ -168,6 +170,7 @@ internal class CompilerRenameFacts(
                 ExtractMethodFacts(
                     attempts.flatMap { it.extraction.types.entries }.associate { it.toPair() },
                     attempts.flatMapTo(linkedSetOf()) { it.extraction.stableValues },
+                    attempts.flatMap { it.extraction.sourceTypes.entries }.associate { it.toPair() },
                 ),
                 attempts.flatMap { it.missingMethods }.distinct(),
                 attempts.flatMap { it.methodSignatures.entries }.associate { it.toPair() },
@@ -516,6 +519,7 @@ internal fun captureRenameFacts(
                     .mapNotNull { (at, type) -> receiverIdentity(type, ::identity)?.let { at to it } }
                     .toMap(),
                 extraction?.stableValues.orEmpty(),
+                extraction?.sourceTypes.orEmpty(),
             ),
         callables =
             callables
