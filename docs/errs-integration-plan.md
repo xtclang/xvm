@@ -10467,3 +10467,17 @@ embedding API is added.
 
 The **10 member-inline** and **21 local-inline** regressions pass, zero failures/errors/skips.
 The local-inline checkpoint is `3fde8fca2`. Shared editor scenarios/native acceptance remain pending.
+
+### L63 configured-graph safe delete (2026-10-04)
+
+Adds a separate versioned safe-delete action for unreferenced private methods and static constants.
+Reference discovery includes every captured source view and call target. Complete graph compilation
+must succeed after deletion; every surviving edge and dispatch chain remains identical. Only the
+selected declaration's exact, supported singleton chain can disappear. Public/protected APIs,
+instance properties, annotations, unresolved/dynamic routes, comment loss and broken graph neighbors
+remain refused. This does not claim discoverability of consumers outside configured ownership.
+
+All **10 safe-delete regressions** pass, zero failures/errors/skips, including parameter/body-edge
+removal, retained live calls, known closed consumers and unknown public consumers. The selected
+method/property inline checkpoint is `de86a5afd`. Shared editor cases and the final combined gate
+remain pending; L63 is not yet marked accepted.
