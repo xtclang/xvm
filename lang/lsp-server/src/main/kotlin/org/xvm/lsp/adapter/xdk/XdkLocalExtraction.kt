@@ -6,6 +6,7 @@ import org.xvm.compiler.Lexer
 import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
+import org.xvm.compiler.ast.AssignmentStatement
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.Expression
 import org.xvm.compiler.ast.LambdaExpression
@@ -18,8 +19,8 @@ import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.util.ExecutionTrace
 
 /**
- * Move a complete return expression to an immediately preceding local without changing evaluation
- * order. Non-literals retain the written return type as their expected type. The graph proof must
+ * Move a complete return expression or typed local initializer to an immediately preceding local
+ * without changing evaluation order. Initializers retain their written expected type. The graph proof must
  * preserve relocated references and calls as well as every unaffected binding and dispatch chain.
  */
 internal object XdkLocalExtraction {
@@ -29,10 +30,10 @@ internal object XdkLocalExtraction {
         val relocation: XdkRename.Relocation,
     )
 
-    private data class Returned(
-        val statement: ReturnStatement,
+    private data class Selected(
+        val statement: AstNode,
         val expression: Expression,
-        val method: MethodDeclarationStatement?,
+        val type: String?,
     )
 
     fun candidate(
@@ -54,10 +55,10 @@ internal object XdkLocalExtraction {
         fun offset(position: Long): Int? =
             XdkRename.offset(text, SemanticModel.Position(Source.calculateLine(position), Source.calculateOffset(position)))
 
-        fun returns(
+        fun expressions(
             node: AstNode,
             method: MethodDeclarationStatement? = null,
-        ): List<Returned> =
+        ): List<Selected> =
             node.childNodes().flatMap { child ->
                 val owner =
                     when (node) {
@@ -65,26 +66,30 @@ internal object XdkLocalExtraction {
                         is LambdaExpression -> null
                         else -> method
                     }
-                if (node is StatementBlock && child is ReturnStatement) {
-                    child.expressions
-                        ?.singleOrNull()
-                        ?.let { listOf(Returned(child, it, owner)) }
-                        .orEmpty()
-                } else {
-                    returns(child, owner)
-                }
+                val candidate = if (node is StatementBlock) {
+                    when (child) {
+                        is ReturnStatement -> child.expressions?.singleOrNull()?.let {
+                            Selected(child, it, writtenReturnType(text, owner))
+                        }
+                        is AssignmentStatement -> XdkLocalDeclarations.initializer(text, child)?.let {
+                            Selected(child, child.rValue, it.type)
+                        }
+                        else -> null
+                    }
+                } else null
+                listOfNotNull(candidate) + expressions(child, owner)
             }
         val selected =
-            returns(root).singleOrNull {
+            expressions(root).singleOrNull {
                 offset(it.expression.startPosition) == start && offset(it.expression.endPosition) == end
             } ?: return null
         val literal =
             (selected.expression as? LiteralExpression)?.literal?.id in setOf(Token.Id.LIT_INT, Token.Id.LIT_STRING, Token.Id.LIT_CHAR)
         val type =
-            if (literal) {
+            if (literal && selected.statement is ReturnStatement) {
                 "val"
             } else {
-                writtenReturnType(text, selected.method) ?: return null
+                selected.type ?: return null
             }
         val insertion = offset(selected.statement.startPosition) ?: return null
         val lineStart = maxOf(text.lastIndexOf('\n', insertion - 1), text.lastIndexOf('\r', insertion - 1)) + 1
