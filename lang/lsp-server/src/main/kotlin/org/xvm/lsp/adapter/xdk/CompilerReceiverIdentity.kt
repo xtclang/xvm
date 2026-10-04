@@ -7,8 +7,8 @@ import org.xvm.asm.constants.ImmutableTypeConstant
 import org.xvm.asm.constants.InnerChildTypeConstant
 import org.xvm.asm.constants.ParameterizedTypeConstant
 import org.xvm.asm.constants.PropertyConstant
-import org.xvm.asm.constants.RelationalTypeConstant
 import org.xvm.asm.constants.RecursiveTypeConstant
+import org.xvm.asm.constants.RelationalTypeConstant
 import org.xvm.asm.constants.ServiceTypeConstant
 import org.xvm.asm.constants.TerminalTypeConstant
 import org.xvm.asm.constants.TypeConstant
@@ -62,7 +62,9 @@ internal fun receiverIdentity(
             ProofIdentity.TypeShape(type.format, listOf(nested(type.parentType) ?: return null, identity(type.definingConstant)))
         }
 
-        is RecursiveTypeConstant -> identity(type.typedef)
+        is RecursiveTypeConstant -> {
+            identity(type.typedef)
+        }
 
         is RelationalTypeConstant -> {
             val operands = listOf(nested(type.underlyingType) ?: return null, nested(type.underlyingType2) ?: return null)
