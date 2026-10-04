@@ -1,6 +1,6 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **185 scenarios**: X1–X180, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **189 scenarios**: X1–X184, CFG1–CFG3 and 7a.8/7a.9.
 The latest selected gate passes **X156/X157/X177–X180** in VS Code `run-nDHZOH` and IntelliJ
 `run-232740531754002686` (START also passes), with zero reported editor failures. It covers
 returned/typed-initializer extraction, adjacent local inline, unused constant local removal,
@@ -1327,7 +1327,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X180 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X184 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -3177,3 +3177,21 @@ Use the exact source in `lang/test-fixtures/compiler-playbook/scenarios.json` fo
 Inferred locals, changed expected types, partial/deferred expressions, intervening statements,
 Ref/Var annotations and runtime initializers remain refusal controls in backend tests. General
 extract-method, missing-declaration generation and global safe delete remain separate work.
+
+
+### L63 private helper extraction
+
+X181–X184 share fixtures in both drivers. This batch's validation is pending.
+
+| Case | Manual action | Required result |
+| --- | --- | --- |
+| X181 | Select the complete returned expression; apply **Extract expression to private method**, then Undo/Redo/Undo. | One private helper receives the stable input; comments and overload bindings survive, with exact edits and clean diagnostics. |
+| X182 | Extract the complete typed initializer. | Explicit helper parameters receive the stable local and method parameter in the expected order; the result type stays `Int`. |
+| X183 | Extract inside `Box<Element>`. | The helper stays inside that generic owner; its `Element` signature and implicit instance call still resolve. |
+| X184 | Select the returned expression after `input++` and inspect actions. | Private-method extraction is absent. Query the whole selection, not a zero-length caret; source remains unchanged. |
+
+Backend controls additionally cover contextual `Int8`, short circuiting, static methods, fresh
+names, CRLF/Unicode, reference-backed storage, method formals, lambdas, conditional returns and
+broken neighbors. Swapped helper arguments and changed moved-call targets must fail proof even
+when both programs compile. Multi-statement extraction and mutable/by-reference captures remain
+outside this slice.
