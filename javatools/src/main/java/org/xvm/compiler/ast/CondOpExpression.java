@@ -209,6 +209,11 @@ public class CondOpExpression
             code.add(labelEnd);
             return regAccum;
 
+        case UandF:
+            // The value is always false, but evaluating the left operand is still required.
+            expr1.generateArgument(ctx, code, fLocalPropOk, errs);
+            return pool().valFalse();
+
         case UorT:
             // ensure side effects are in play
             expr1.generateArgument(ctx, code, fLocalPropOk, errs);
@@ -229,7 +234,7 @@ public class CondOpExpression
         }
 
         if (LVal.isNormalVariable()) {
-            switch (combine(expr1.toConstant(), getOperatorString(), expr1.toConstant())) {
+            switch (combine(expr1.toConstant(), getOperatorString(), expr2.toConstant())) {
             case UorF:
             case UandT:
                 // result is the same as the result of the first expression
@@ -289,6 +294,14 @@ public class CondOpExpression
             } else {
                 expr1.generateConditionalJump(ctx, code, label, false, errs);
                 expr2.generateConditionalJump(ctx, code, label, false, errs);
+            }
+            break;
+
+        case UandF:
+            // Preserve left-hand effects even when the branch result is already known.
+            expr1.generateArgument(ctx, code, true, errs);
+            if (!fWhenTrue) {
+                code.add(new Jump(label));
             }
             break;
 

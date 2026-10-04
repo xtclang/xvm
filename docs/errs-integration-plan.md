@@ -9485,3 +9485,18 @@ change is required. Validation follows the shared-scenario checkpoint.
 
 X177–X180 now share source, selection, expected edits and descriptions across both editor drivers.
 The catalog has 185 scenarios; validation follows all four implementation checkpoints.
+
+
+L63 validation exposed an independent compiler defect: `probe() == 1 && False` passes
+validation but throws `IllegalStateException` in `CondOpExpression.generateArgument()` while
+emitting code. The runtime/False case (`UandF`) was absent from both value and conditional-jump
+emission, although validation deliberately keeps the runtime left operand for its effects. The
+existing `origin/master` source has the same omission. The assignment fast path also compared
+the left operand twice instead of inspecting the right operand.
+
+The isolated repair adds the missing false-result emission while evaluating the left operand
+exactly once, and corrects that operand comparison. `conditionalEffects.x` is a standalone manual
+module, wired into both sequential and parallel module lists. It checks both input values across
+value, branch, nested argument and constant-left/right forms (22 runtime assertions of one call
+and the expected result). Keep the compiler/fixture/list change separate from the LSP actions
+when extracting a master fix. No LSP-only AST fields/accessors are involved. Validation is pending.
