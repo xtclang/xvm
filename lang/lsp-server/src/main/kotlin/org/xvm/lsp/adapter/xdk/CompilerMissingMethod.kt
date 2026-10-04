@@ -9,7 +9,6 @@ import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
 import org.xvm.asm.MethodStructure
 import org.xvm.asm.Op
-import org.xvm.asm.PackageStructure
 import org.xvm.asm.Register
 import org.xvm.asm.constants.ClassConstant
 import org.xvm.asm.constants.TypeConstant
@@ -490,7 +489,7 @@ private fun TypeConstant.missingMethodType(
     formals: Map<TypeParameterConstant, String> = emptyMap(),
 ): String? =
     // Declaration analysis resolves the identity but can retain its parser wrapper.
-    resolveTypedefs().memberSourceType(owner.identityConstant, formals, modules + ("ecstasy.xtclang.org" to "ecstasy"))
+    resolveTypedefs().memberSourceType(owner.identityConstant, formals, modules + implicitModuleAliases)
 
 /** Type spelling and only its required imports travel together across compiler attempts. */
 private fun XdkMissingMethods.Destination.render(
@@ -520,13 +519,7 @@ internal fun EmbeddingSupport.Compilation.missingMethodDestinations(
             val nodes = descendants(requireNotNull(parsed())).filterIsInstance<TypeCompositionStatement>().toList()
             // Reuse module-level imports and reserve all source names before planning new aliases.
             // The host supplies only dependencies already available to this source module.
-            val modules =
-                nodes
-                    .mapNotNull { node ->
-                        val structure = node.component as? PackageStructure ?: return@mapNotNull null
-                        if (!structure.isModuleImport || structure.parent.format != Format.MODULE) return@mapNotNull null
-                        structure.importedModule.identityConstant.name to structure.identityConstant.pathString
-                    }.toMap()
+            val existing = compilerModuleAliases(nodes)
             val lexicalErrors = ErrorList()
             val names =
                 nodes
@@ -538,7 +531,6 @@ internal fun EmbeddingSupport.Compilation.missingMethodDestinations(
                         }
                     }.toSet()
             if (lexicalErrors.hasSeriousErrors()) return@use emptyMap()
-            val existing = modules + ("ecstasy.xtclang.org" to "ecstasy")
             val aliases = XdkMemberActions.moduleAliases(dependencies - file().module.name, existing, names)
             nodes
                 .mapNotNull { node ->
