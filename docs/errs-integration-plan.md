@@ -10377,3 +10377,14 @@ Fresh linked declarations, complete graph repair and exact public-signature proo
 Regressions cover generic closed companions, enclosing class formals and unrelated formal capture.
 Validation is batched with subsequent L63 work; this note is not a passing receipt or closure of
 the full generic-substitution/signature scope. No compiler AST/API changes are needed.
+
+### L63 method signature continuation (2026-10-04)
+
+Missing-method proposals now declare the caller's method formals and their compiler-resolved
+constraints in the new method. Exact signature comparison alpha-renames these binders by ordinal
+and compares all constraints/uses; unrelated owner formals still cannot escape by spelling.
+Whole conditional-return calls retain the conditional modifier and payload, including cross-owner
+creation. Typed initializer and statement calls keep their own ordinary result contexts. Private
+proposals now receive the same exact signature check as public proposals. Tests cover constrained
+formals, nested generic results and conditional results in private and companion destinations.
+This separate checkpoint awaits the combined L63 validation gate.
