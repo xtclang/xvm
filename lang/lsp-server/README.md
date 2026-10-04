@@ -136,14 +136,16 @@ The compiler must prove side-effect-free initialization before removal; every ed
 the configured graph and preserves unaffected bindings/calls/dispatch. General statement extraction,
 mutable captures, broader missing-declaration generation and global safe delete remain open (L63).
 Missing private same-owner methods can be generated for unqualified calls and compiler-proven
-`this`/parameter/local instance receivers using fresh resolved parameter/literal types,
-compiler-established block-local types (including validated
+`this`/parameter/local instance receivers, plus named enclosing-class static qualifiers, using
+fresh resolved parameter/literal types, compiler-established block-local types (including validated
 `var`/`val` initializers), and declared return or explicitly typed local-initializer result types.
 The proposed graph must compile, resolve the call to the inserted stub and preserve known bindings,
 including receiver and local-argument bindings. Explicit instance receivers create instance
-methods even in static callers. X185–X196 cover these boundaries in both drivers; current acceptance
-receipts are in the integration plan. Other-owner, computed and type-qualified receivers, inferred
-result types and unproven argument/return contexts are refused.
+methods even in static callers. Named enclosing-class qualifiers create static methods even in
+instance callers; the proof checks both dispatch and the inserted declaration target. X185–X200
+cover these boundaries in both drivers; current acceptance receipts are in the integration plan.
+Other-owner/computed receivers, runtime `Class`/`Type` values, explicit generic qualifiers,
+singleton qualifiers, inferred result types and unproven argument/return contexts are refused.
 Explicit declaration lookup returns local/import-alias declarations or the inherited written
 contracts of an overriding method/property, including multiple source targets. Definition and
 implementation retain their separate meanings. Indexed library sources remain read-only.
