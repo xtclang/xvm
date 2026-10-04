@@ -1,7 +1,14 @@
 # Ecstasy Language Server - Manual Test Plan
 
 The current catalog has **189 scenarios**: X1–X184, CFG1–CFG3 and 7a.8/7a.9.
-The latest selected gate passes **X156/X157/X177–X180** in VS Code `run-nDHZOH` and IntelliJ
+The latest selected gate passes **X156/X177/X181–X184** in VS Code `run-ZhuPaV` and IntelliJ
+`run-5839432120705984532` (START also passes), with zero reported editor failures. Private-helper
+extraction preserves stable inputs, generic owners, overloads, comments, exact edits, diagnostics
+and Undo/Redo. Mutable-input extraction is refused through the installed connection. All 151
+selected backend tests pass without failures/errors/skips. These are selected receipts from the
+189-case catalog, not full-catalog reruns.
+
+The preceding selected gate passes **X156/X157/X177–X180** in VS Code `run-nDHZOH` and IntelliJ
 `run-232740531754002686` (START also passes), with zero reported editor failures. It covers
 returned/typed-initializer extraction, adjacent local inline, unused constant local removal,
 runtime-initializer refusal, exact edits, diagnostics and Undo/Redo. All 129 backend tests pass
@@ -3181,7 +3188,7 @@ extract-method, missing-declaration generation and global safe delete remain sep
 
 ### L63 private helper extraction
 
-X181–X184 share fixtures in both drivers. This batch's validation is pending.
+X181–X184 pass in both drivers in the selected runs recorded at the top of this file.
 
 | Case | Manual action | Required result |
 | --- | --- | --- |

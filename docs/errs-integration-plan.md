@@ -435,8 +435,10 @@ VS Code receipts above.
   single-use typed returned-local inline preserve the written expected type and relocated bindings;
   X156/X157 pass in both editors. The October 4 batch adds complete explicitly typed local
   initializers, adjacent same-written-type initializer inline and compiler-proven unused constant
-  local removal (X177–X180; acceptance below). Wider extraction, extract method, missing declarations,
-  broader inline and global safe delete remain unimplemented. Record supported XTC forms per action;
+  local removal (X177–X180; acceptance below). Complete return/typed-initializer expressions can now
+  also move to a private helper in the same type using explicit stable inputs (X181–X184; current
+  batch acceptance below). Wider expression/statement extraction, missing declarations, broader
+  inline and global safe delete remain unimplemented. Record supported XTC forms per action;
   doc-comment generation and reference/test lenses are separate subfeatures. Semantic transformations require
   compiler evidence and versioned multi-file edit validation.
 - [x] **L64 — Completion/signature breadth and presentation, bounded closure.** Supported recursive
@@ -1179,7 +1181,7 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 
 | Scope | Investigation already recorded | Next investigation before implementation |
 |---|---|---|
-| L63 semantic fixes/refactorings | Import fixes, bounded implement/override, whole-return/typed-initializer extraction, adjacent same-type returned/initializer local inline and unused constant local removal use full compilation and binding/dispatch proof. | General extraction/inline, extract method, global safe delete and missing-declaration fixes remain open. Define each transformation separately with side-effect, evaluation-order, capture and caller-closure evidence plus supported/refused fixtures. |
+| L63 semantic fixes/refactorings | Import fixes, bounded implement/override, whole-return/typed-initializer extraction, adjacent same-type returned/initializer local inline and unused constant local removal use full compilation and binding/dispatch proof. | Private same-owner expression helpers with explicit stable inputs are implemented below. General extraction/inline, multi-statement extraction, global safe delete and missing-declaration fixes remain open. Define each transformation separately with side-effect, evaluation-order, capture and caller-closure evidence plus supported/refused fixtures. |
 | L68 pull diagnostics | Negotiated pull/push, result IDs, related/closed documents and invalidation pass backend, stdio and selected acceptance in both editors. PLAT1's source-location crash is fixed. | Retain broader workload coverage rather than treating the selected fixtures as universal proof. |
 | L69 token range/delta | Negotiated range/delta and bounded result history pass backend/protocol and X126 in both hosts. | Measure representative workspace payload/cache costs under L82. |
 | L70 lazy resolve | All six resolve endpoints have detached revision guards; backend and X105/X122/X127/X131 checks pass. IntelliJ has a selected-action bridge preserving normal Undo/Redo. | Preserve eager fallback for clients without the relevant capabilities; broaden stale-application acceptance under L80/L82. |
@@ -7761,7 +7763,7 @@ reproducible, and reconcile completed versus remaining scope. Validation is batc
    | Scope | Implemented and proven | Concrete remaining work |
    | --- | --- | --- |
    | L62 rename | Recorded source families, primary/ordinary parameter slots, lambdas, escaped method values, packages/modules/companions, bounded cross-package qualification, host-persisted graph relocation and bounded union/cyclic callable-site proof | Unsupported qualification syntax, unproven empty namespaces, overlapping move trees, unsupported annotation constants/type shapes and wider generated routes; characterize each refused route before extending proof. External consumers omitted from the configured graph remain an explicit unknown boundary. |
-   | L63 semantic actions | Import fixes, compiler-proven implement/override including bundled contracts, whole-return/typed-initializer extraction, adjacent same-type returned/initializer local inline and unused constant local removal | General statement/context extraction, missing-declaration fixes, extract method, broader inline and global safe delete remain separate transformations. Each needs its own side-effect/capture/caller-closure design and positive/refusal tests. |
+   | L63 semantic actions | Import fixes, compiler-proven implement/override including bundled contracts, whole-return/typed-initializer extraction, adjacent same-type returned/initializer local inline and unused constant local removal | Private same-owner expression helpers are implemented in the latest batch below. General statement/context extraction, missing-declaration fixes, broader inline and global safe delete remain separate transformations. Each needs its own side-effect/capture/caller-closure design and positive/refusal tests. |
    | L64 completion/signatures | Import edits, syntax names/templates, guarded bounds and compiler-fitted literals/values; latest continuation adds wrapped names, enclosing-instance arguments and real platform anonymous-body recovery | Latest continuation below gives the exact supported forms, evidence and conservative exclusions. Remaining expansion includes inferred/ambiguous local names, arbitrary value synthesis and general special-this enumeration outside calls; these are not counted as implemented. |
    | L65 navigation/classification | Source/bundled navigation, recorded hierarchy/composition relations and resolved tokens | Conditional/synthetic/native/redirect routes and ambiguous binary source metadata need individual fixtures. Runtime function targets cannot be invented by a static hierarchy. |
    | L66 editing/structure | Token-preserving indentation, URL links, local linked editing, recorded damaged-source structure | Expression wrapping and comment/string layout, wildcard/conditional import links, broader proven linked scopes and remaining damaged constructs. Resolved module/type/alias source links and lexical alias linked editing are implemented below. A full pretty-printer is not implemented. |
@@ -8799,8 +8801,10 @@ remain separate from functionality implementation.
   with relocation/type/binding proof and positive/refusal tests.
 - [x] L63 complete typed-initializer extraction, adjacent same-written-type initializer inline
   and compiler-proven unused constant local removal; October 4 validation below.
-- [ ] L63 remaining transformations: wider extraction contexts, extract method, broader inline,
-  global safe delete and missing declarations; each needs its own semantic proof.
+- [x] L63 private same-owner expression helpers with stable inputs and explicit parameter/call proof;
+  X181–X184 and the current batch acceptance below record the boundary.
+- [ ] L63 remaining transformations: wider expression/statement extraction, mutable captures, broader
+  inline, global safe delete and missing declarations; each needs its own semantic proof.
 - [x] L66 resolved module/type import source links and explicit lexical alias linked editing.
 - [ ] L66 remaining damaged structure, wildcard/conditional links and broader linked scopes; agree
   formatter behavior before introducing wrapping or changing comment/string layout.
@@ -9563,7 +9567,7 @@ ownership remains the separate L62 graph/import/visibility/resource transformati
    arguments and redirected moved calls. Existing local-extraction assertions identify their action
    title now that multiple extract actions can coexist.
 4. [x] Add shared X181–X184, both editor drivers, full-selection refusal checks and manual steps.
-5. [ ] Run the combined backend/formatting gate and selected cases in both IDEs; record receipts.
+5. [x] Run the combined backend/formatting gate and selected cases in both IDEs; receipts below.
 
 Same-owner generic types and stable local/parameter values are candidates. Mutable/register-ref
 captures, method-owned generic parameters, conditional returns, async calls, lambda/anonymous-class
@@ -9573,3 +9577,45 @@ compared through compiler identities, never display strings. New helpers must pr
 binding/call edges and may add only their own dispatch chain. This remains a bounded L63 slice;
 missing declarations, broader inline and global safe delete remain open. Cross-module ownership
 remains in L62. Validation follows all four implementation checkpoints.
+
+
+### L63 private helper acceptance and extraction
+
+| Extraction group | Commits | Notes |
+| --- | --- | --- |
+| Detached capture/type evidence | `db986edcd` | Compiler-owned register/type inputs copied to immutable proof identities and source locations only during semantic action proof. Includes stability/normal-query controls. |
+| Private helper planning and proof | `2d29188bb` | Exact whole-expression relocation, explicit stable inputs, same-owner private helper, signature/argument/call/binding/dispatch validation. |
+| Semantic tests | `a3bc940c7` | Supported/refused sources and two compiling-but-incorrect argument/call counterexamples. Existing local-extraction assertions select their action by title. |
+| Shared editor scenarios | `13817b4d4` | X181–X184, both drivers, full-selection refusal checks, catalog and manual steps. |
+| Acceptance corrections | `6acfcfab5` | Query-local parser ownership map, skip typeless method formals in the existing return-type reader, stateful-call/anonymous-class regressions and formatter output. Keep the relevant corrections with the groups above. |
+
+Validation on 2026-10-04:
+
+- **151 backend tests pass**, zero failures/errors/skips. This includes 18 method-extraction
+  scenarios, two detached-fact tests, two adversarial proof tests and the preceding 129-test local,
+  member-action, rename-server, relocation and code-action selection. Both editor drivers compile.
+- The first substantive run was 137/149: eleven missing-action failures traced to unadopted parser
+  parent links, plus the typeless-formal null dereference in the existing extract-local reader.
+  The corrections passed all 58 affected tests before the final expanded 151-test gate. These are
+  branch LSP implementation defects, not additional ordinary compiler defects on master.
+- VS Code **`run-ZhuPaV`** passes X156/X177/X181–X184, zero failures/extension errors.
+- IntelliJ **`run-5839432120705984532`** passes START and the same six cases, zero IDE failures;
+  JUnit reports one test, zero failures/errors/skips. Ultimate remains disabled.
+- X181–X183 verify exact helper signatures/bodies, clean diagnostics and Undo/Redo/Undo. X184
+  queries the entire selected expression through the installed connection and verifies refusal
+  with unchanged source. Existing X156/X177 confirm local extraction still coexists with the
+  new extract-method action.
+- Both use the **189-scenario** catalog SHA-256
+  `e22c795324e6b4086391b280a7250a3eb055cde5959725c59ff2d01eaa7c9163`.
+  These are selected runs, not full-catalog reruns. Saved logs contain no compiler internal-error,
+  `NullPointerException` or `ClassCastException` markers.
+- Root, LSP and IntelliJ read-only Spotless checks and `git diff --check` pass.
+
+Generated helpers use a fresh `extractedMethod` name with a numeric suffix when needed; ordinary
+rename can change it afterward. The expression text remains unchanged inside its helper.
+Only stable value reads are passed early; state-changing calls stay in their original order inside
+the expression. General statement extraction, mutable/reference captures, lambda/anonymous-class
+creation, async calls and method-owned formals remain outside this proof. No new Java AST API,
+mutable field, parent mutation or embedding entry point was introduced. Missing-method declaration
+fixes are the next planned L63 capability; broader inline and global safe delete remain open, and
+cross-module ownership retains its separate L62 scope.
