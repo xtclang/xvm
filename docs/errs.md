@@ -2862,9 +2862,9 @@ pass in VS Code `run-mRmX6Y` and IntelliJ `run-1236802406694405307` (plus START)
 errors. Both use the 197-case catalog; these are selected runs. New cases verify exact edits,
 diagnostics and Undo/Redo plus inferred-result refusal. The commit map, build interruption and
 acceptance receipts are tracked in the [integration plan](errs-integration-plan.md#l63-local-arguments-and-typed-initializer-repairs-2026-10-04).
-Type-qualified/cross-owner creation, named/computed arguments, generic/conditional signatures,
-inferred result contexts and broader missing-declaration generation remain open. The continuation
-below adds same-owner instance receivers.
+Cross-owner creation, named/computed arguments, generic/conditional signatures, inferred result
+contexts and broader missing-declaration generation remain open. The continuations below add
+same-owner instance receivers and named class qualifiers.
 
 
 ### L63 same-owner receiver evidence (2026-10-04)
@@ -2882,5 +2882,29 @@ refusal and public-view refusal. All 219 selected backend tests pass. X181/X185/
 pass in VS Code `run-nvquYD` and IntelliJ `run-15968094076069950349` (plus START), zero editor
 errors. Both use the 201-case catalog; these are selected runs. Acceptance receipts and extraction
 commits are in the [integration plan](errs-integration-plan.md#l63-same-owner-receiver-repairs-2026-10-04).
-No Java AST/embedding API or plugin production change was needed. Type-qualified static calls,
-other-owner creation, computed/chained receivers and broader missing declarations remain open.
+No Java AST/embedding API or plugin production change was needed. Other-owner creation,
+computed/chained receivers and broader missing declarations remain open; the next continuation
+adds type-qualified static calls.
+
+
+### L63 class qualifier and dispatch evidence (2026-10-04)
+
+Missing-method creation now accepts named enclosing-class qualifiers, including fully qualified
+names. A validated class constant must equal the enclosing class identity; runtime Class/Type
+values and class-name spelling alone are insufficient. Detached evidence records instance/static
+dispatch, and the completed proposed graph must bind the call to the inserted declaration with
+that dispatch. A class qualifier creates a static helper even in an instance caller; a parameter
+shadowing the class name still creates an instance helper. No compiler objects escape, failed
+TypeInfo is not queried, and no Java AST/embedding API or plugin production change is required.
+
+X197–X200 add class/qualified-class acceptance, runtime-Type refusal and shadowed-name instance
+dispatch to both shared drivers. The combined backend gate passes 232 tests, including four
+repair proofs; an otherwise compiling call redirected to another class is rejected. Cross-owner
+creation, computed/chained receivers, runtime Class/Type values, explicit generic/singleton
+qualifiers and broader missing declarations remain open. The current commit map and native
+acceptance are in the [integration plan](errs-integration-plan.md#l63-class-qualified-static-repairs-2026-10-04).
+
+
+X181/X185/X193/X197–X200 pass in VS Code `run-3Vm6C9` and IntelliJ
+`run-11432411846060652594` (plus START), zero editor errors. Both use the 205-case catalog; these
+are selected runs. IntelliJ Ultimate is disabled. Root/LSP/IntelliJ read-only Spotless passes.
