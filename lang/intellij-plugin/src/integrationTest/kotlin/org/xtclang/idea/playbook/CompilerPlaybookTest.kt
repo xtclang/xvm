@@ -108,7 +108,7 @@ class CompilerPlaybookTest {
             fixture("X105/${it.text("library")}", it.text("libraryText"))
         }
         fixture("X122/Actions.x", "module Actions {}")
-        listOf("X148", "X156", "X157", "X177", "X178", "X179", "X180").forEach { id ->
+        listOf("X148", "X156", "X157", "X177", "X178", "X179", "X180", "X181", "X182", "X183", "X184").forEach { id ->
             fixture("$id/Extract.x", shared.scenarios.getValue(id).text("source"))
         }
         listOf("X149", "X150", "X151", "X152").forEach { id ->

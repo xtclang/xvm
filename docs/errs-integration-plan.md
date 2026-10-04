@@ -9550,3 +9550,26 @@ fixture's constant module counter; the corrected instance-based fixture then pas
 these distinctions when extracting the commits. L63 remains partial for general extraction,
 extract method, broader inline, missing declarations and global safe delete. Cross-module
 ownership remains the separate L62 graph/import/visibility/resource transformation.
+
+
+### L63 private helper extraction batch (2026-10-04)
+
+1. [x] Capture detached compiler type identities and effectively-final, non-reference register
+   evidence for action proof. Reuse existing Register/AST APIs; add no mutable AST fields.
+2. [x] Extract a complete return expression or explicitly typed local initializer to a private
+   same-owner helper. Pass stable inputs explicitly, preserve written types and exact moved text,
+   and prove parameter rebinding, argument order, selected calls and unaffected dispatch.
+3. [x] Add supported/refused backend fixtures and compiling counterexamples for swapped helper
+   arguments and redirected moved calls. Existing local-extraction assertions identify their action
+   title now that multiple extract actions can coexist.
+4. [x] Add shared X181–X184, both editor drivers, full-selection refusal checks and manual steps.
+5. [ ] Run the combined backend/formatting gate and selected cases in both IDEs; record receipts.
+
+Same-owner generic types and stable local/parameter values are candidates. Mutable/register-ref
+captures, method-owned generic parameters, conditional returns, async calls, lambda/anonymous-class
+creation, reference-taking, partial selections and inferred initializers remain refusals. General
+statement extraction and new mutable-capture protocols require separate semantic work. Types are
+compared through compiler identities, never display strings. New helpers must preserve all old
+binding/call edges and may add only their own dispatch chain. This remains a bounded L63 slice;
+missing declarations, broader inline and global safe delete remain open. Cross-module ownership
+remains in L62. Validation follows all four implementation checkpoints.

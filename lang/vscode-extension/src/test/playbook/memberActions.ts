@@ -45,7 +45,7 @@ export function memberActionCases(): void {
     });
 }
 
-export function localRefactoringCases(ids: readonly ('X148' | 'X156' | 'X157' | 'X177' | 'X178' | 'X179' | 'X180')[] = ['X148']): void {
+export function localRefactoringCases(ids: readonly ('X148' | 'X156' | 'X157' | 'X177' | 'X178' | 'X179' | 'X180' | 'X181' | 'X182' | 'X183' | 'X184')[] = ['X148']): void {
     for (const id of ids) playbook(id, async (workspace, data) => {
         await workspace.write(data.file, data.source);
         await discovered(workspace, async () => {
