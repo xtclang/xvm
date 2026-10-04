@@ -17,10 +17,11 @@ import java.nio.file.Path
 import kotlin.time.Duration.Companion.seconds
 
 internal fun ParityScenarios.typeMoveCases() {
-    listOf("X161", "X162", "X163", "X169", "X170", "X171", "X172").forEach { id ->
+    listOf("X161", "X162", "X163", "X169", "X170", "X171", "X172", "X173", "X174", "X175", "X176").forEach { id ->
         case(id) { data ->
             val files = data["files"].rows()
             files.forEach { write(it.string("file"), it.string("source")) }
+            data["directories"]?.asJsonArray?.forEach { Files.createDirectories(directory.resolve(it.asString)) }
             configure(data["modules"])
             val document = open(data.string("root"))
             clean(document)
