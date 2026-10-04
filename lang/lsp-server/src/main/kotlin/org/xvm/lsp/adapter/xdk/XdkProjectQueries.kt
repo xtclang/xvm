@@ -584,6 +584,7 @@ internal class XdkProjectQueries(
             return null
         }
         val resources = XdkMoveOperations.ordered(allMoves.toMap()) ?: return null
+        val movedInputs = XdkMoveInputs.capture(resources.keys, cancelled) ?: return null
         val paths =
             (texts.keys.map(::File) + directories)
                 .mapNotNull { file ->
@@ -692,9 +693,10 @@ internal class XdkProjectQueries(
             return null
         }
         val plan = XdkRename.Plan(texts, edits, paths, qualifications = qualifications, imports = typeMove.imports)
-        val resourceMoves = XdkResourceMoves(resources.mapKeys { it.key.path }.mapValues { it.value.path }, edits.keys)
+        val resourceMoves = XdkResourceMoves(resources.mapKeys { it.key.path }.mapValues { it.value.path }, edits.keys, movedInputs.entries)
         val after = compile(plan.proposed, moves = paths, graph = graph, resourceMoves = resourceMoves) ?: return null
-        if (!typeMove.provesDestinations(after) || !preservesBindings(before, after, plan, graph) || !isCurrent()) return null
+        if (!typeMove.provesDestinations(after) || !preservesBindings(before, after, plan, graph) ||
+            !isCurrent() || !movedInputs.isCurrent(cancelled)) return null
         val replacement = !discoverImports && !project.sameConfiguration(graph)
         return XdkRenameProposal(
             WorkspaceEdit(
