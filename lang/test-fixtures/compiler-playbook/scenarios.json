@@ -6810,6 +6810,155 @@
         "limitations": []
       }
     },
+    "X213": {
+      "title": "add a destination import and public method as one undoable repair",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. Apply the public method action and inspect the destination, signature and TODO() body. The caller error clears. Undo restores the destination and error; Redo clears it again, then Undo restores the original. The caller stays unchanged when editing a companion file."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    package lib import Library;\n    package shared import Types;\n    shared.Value read(lib.Other peer, shared.Value value) {\n        return peer.missing(value);\n    }\n}",
+        "selected": "missing",
+        "title": "Create public method 'missing' in 'Other'",
+        "expected": "module Library {\n    package types import Types;\n\n    class Other {\n        public types.Value missing(types.Value arg1) {\n            TODO();\n        }\n    }\n}",
+        "initiallyValid": false,
+        "destinationFile": "Library.x",
+        "destinationSource": "module Library {\n    class Other {}\n}",
+        "files": [
+          {
+            "file": "Types.x",
+            "source": "module Types {\n    class Value {}\n}"
+          }
+        ],
+        "sourceModules": [
+          {
+            "name": "Types",
+            "uri": "Types.x",
+            "dependencies": []
+          },
+          {
+            "name": "Library",
+            "uri": "Library.x",
+            "dependencies": [
+              "Types"
+            ]
+          },
+          {
+            "name": "Extract",
+            "uri": "Extract.x",
+            "dependencies": [
+              "Library",
+              "Types"
+            ]
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X214": {
+      "title": "avoid companion alias collisions when importing inferred argument types",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. Apply the public method action and inspect the destination, signature and TODO() body. The caller error clears. Undo restores the destination and error; Redo clears it again, then Undo restores the original. The caller stays unchanged when editing a companion file.",
+        "The import belongs in Library.x and the method in Library/Other.x. Keep both closed initially. One Undo/Redo must restore both files atomically, including the original comment and properties."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    package lib import Library;\n    package shared import Types;\n    shared.Value read(shared.Value value) {\n        val local = value;\n        shared.Value result = lib.Other.missing(local);\n        return result;\n    }\n}",
+        "selected": "missing",
+        "title": "Create public method 'missing' in 'Other'",
+        "expected": "// Destination comment.\nclass Other {\n    Int types1 = 2;\n    public static types2.Value missing(types2.Value arg1) {\n        TODO();\n    }\n}",
+        "initiallyValid": false,
+        "destinationFile": "Library/Other.x",
+        "destinationSource": "// Destination comment.\nclass Other {\n    Int types1 = 2;\n}",
+        "files": [
+          {
+            "file": "Types.x",
+            "source": "module Types {\n    class Value {}\n}"
+          },
+          {
+            "file": "Library.x",
+            "source": "module Library {\n    Int types = 1;\n}",
+            "expected": "module Library {\n    package types2 import Types;\n\n    Int types = 1;\n}"
+          }
+        ],
+        "sourceModules": [
+          {
+            "name": "Types",
+            "uri": "Types.x",
+            "dependencies": []
+          },
+          {
+            "name": "Library",
+            "uri": "Library.x",
+            "dependencies": [
+              "Types"
+            ]
+          },
+          {
+            "name": "Extract",
+            "uri": "Extract.x",
+            "dependencies": [
+              "Library",
+              "Types"
+            ]
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X215": {
+      "title": "refuse a signature import when only the caller has the dependency",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. No public-method creation action may appear; the source and error remain unchanged."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    package lib import Library;\n    package shared import Types;\n    shared.Value read(lib.Other peer, shared.Value value) {\n        return peer.missing(value);\n    }\n}",
+        "selected": "missing",
+        "title": "Create public method 'missing' in 'Other'",
+        "expected": "module Library {\n    class Other {}\n}",
+        "initiallyValid": false,
+        "destinationFile": "Library.x",
+        "destinationSource": "module Library {\n    class Other {}\n}",
+        "files": [
+          {
+            "file": "Types.x",
+            "source": "module Types {\n    class Value {}\n}"
+          }
+        ],
+        "sourceModules": [
+          {
+            "name": "Types",
+            "uri": "Types.x",
+            "dependencies": []
+          },
+          {
+            "name": "Library",
+            "uri": "Library.x",
+            "dependencies": []
+          },
+          {
+            "name": "Extract",
+            "uri": "Extract.x",
+            "dependencies": [
+              "Library",
+              "Types"
+            ]
+          }
+        ],
+        "refused": true
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
