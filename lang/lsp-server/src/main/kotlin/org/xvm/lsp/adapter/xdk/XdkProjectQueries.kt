@@ -919,7 +919,7 @@ internal class XdkProjectQueries(
         val inline =
             if (complete) {
                 before.models.singleOrNull { it.sourceName == source }?.let { model ->
-                    XdkLocalInline.candidate(text, range, model)?.let { candidate ->
+                    XdkLocalInline.candidate(text, range, model, before)?.let { candidate ->
                         checkCurrent()
                         val plan =
                             XdkRename.Plan(
@@ -927,7 +927,12 @@ internal class XdkProjectQueries(
                                 mapOf(source to candidate.edits),
                                 relocations = mapOf(source to listOf(candidate.relocation)),
                             )
-                        val after = compile(plan.proposed) ?: return@let null
+                        val after = compile(plan.proposed, Proof.REPAIR) ?: return@let null
+                        if (candidate.expression != null &&
+                            !XdkRename.preservesRelocatedType(before, after, plan, candidate.expression)
+                        ) {
+                            return@let null
+                        }
                         if (!XdkRename.preservesLocalRemoval(before, after, plan, candidate.removed)) return@let null
                         CodeAction(
                             candidate.title,

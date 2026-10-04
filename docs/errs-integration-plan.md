@@ -10442,3 +10442,15 @@ module-import lookup also replaces duplicated missing-method import discovery.
 All **26 extraction tests** pass as part of the **247-test** combined gate above, with no skips.
 `b5632cc7a` corrects and validates missing-declaration checkpoint `1ff71acfe`; keep them together
 when extracting that PR. New editor scenarios and native acceptance remain pending for the batch.
+
+### L63 wider constant-local inline (2026-10-04)
+
+A compiler-proven constant local with exactly one read can now be inlined across intervening
+statements and into nested expressions. The copied expression is parenthesized, retains its exact
+compiler type and must preserve every remaining binding and dispatch chain. Declaration comments,
+contextual type widening, repeated reads, writes, reference storage and deferred side effects
+refuse the action. The existing adjacent single-evaluation inline stays available.
+
+All **21 local-inline regressions** pass with zero failures/errors/skips. This is the local-variable
+part of the broader-inline area; method/property inline and graph-wide safe delete still need their
+own implementation and acceptance. The extraction checkpoint is `161111d69`.

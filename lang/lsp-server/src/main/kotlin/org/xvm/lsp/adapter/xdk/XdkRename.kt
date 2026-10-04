@@ -477,6 +477,27 @@ internal object XdkRename {
             }.toSet() == oldDispatch
     }
 
+    /** Contextual inference must not change the value's type when its expression moves. */
+    fun preservesRelocatedType(
+        before: CompilerRenameFacts,
+        after: CompilerRenameFacts,
+        plan: Plan,
+        expression: SemanticModel.SourceLocation,
+    ): Boolean {
+        val source = expression.sourceName ?: return false
+        val original = plan.original[source] ?: return false
+        val proposed = plan.proposed[source] ?: return false
+
+        fun mapped(at: SemanticModel.Position): SemanticModel.Position? {
+            val offset = offset(original, at)?.let { plan.map(source, it) } ?: return null
+            return position(proposed, offset).let { SemanticModel.Position(it.line, it.column) }
+        }
+        val range = SemanticModel.Range(mapped(expression.range.start) ?: return false, mapped(expression.range.end) ?: return false)
+        val expected = before.extraction.types[expression] ?: return false
+        val actual = after.extraction.types[SemanticModel.SourceLocation(source, range)] ?: return false
+        return sameType(expected, actual, plan)
+    }
+
     /** Removing a local may remove its declaration, written type and sole read, but no other edges. */
     fun preservesLocalRemoval(
         before: CompilerRenameFacts,
