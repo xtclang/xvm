@@ -1,7 +1,14 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **213 scenarios**: X1–X208, CFG1–CFG3 and 7a.8/7a.9.
-The latest selected gate passes **X181/X185/X190/X202/X205–X208** in VS Code `run-RpTVz1` and
+The current catalog has **217 scenarios**: X1–X212, CFG1–CFG3 and 7a.8/7a.9.
+The latest selected gate passes **X201/X202/X205/X206/X209–X212** in VS Code `run-B54Y1R` and
+IntelliJ `run-14965910820534049086` (plus START), zero editor failures. It verifies cross-module
+source ownership, destination import spelling, closed companions and diagnostic Undo/Redo. All
+296 selected backend tests pass without failures/errors/skips; Ultimate is disabled. These are
+selected receipts from the 217-case catalog, not a full rerun. The initial native cancellation and
+its UI-dispatch correction are recorded in the integration plan and UP07 register.
+
+The preceding selected gate passes **X181/X185/X190/X202/X205–X208** in VS Code `run-RpTVz1` and
 IntelliJ `run-14627770467027596087` (plus START), zero editor failures. It verifies compiler-typed
 local arguments, explicit initializer results, exact public companion edits, signature identity
 refusals and diagnostic Undo/Redo. All 275 selected backend tests pass without failures/errors/skips;
@@ -1373,7 +1380,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X208 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X212 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -3385,3 +3392,22 @@ quick-fix and Undo/Redo steps as X201/X202.
 Backend controls additionally cover typed/var/val locals, separately assigned locals, instance and
 class qualifiers, zero/mixed arguments, source and compound types, invalid/out-of-scope locals,
 and compilable signature substitutions or argument rebinding that the proof must reject.
+
+
+### Cross-module missing-method destinations (L63, X209–X212)
+
+Use compiler mode and the complete shared fixture set for each case. Keep the destination closed
+until applying the Quick Fix on `missing`. Successful actions must edit only the named destination;
+the caller text stays unchanged. Inspect exact generated text and caller diagnostics through
+Undo/Redo/Undo. These repairs use existing source ownership and imports; they never add graph edges.
+
+| Case | Manual action | Required result |
+| --- | --- | --- |
+| X209 | Repair `peer.missing(value)` in `Extract.x`, with `Library.x` closed. | The dependency's `Other` gains `public Int64 missing(Int64 arg1)`. The caller diagnostic clears and returns on Undo. |
+| X210 | Repair `lib.Other.missing(local)` in a typed `lib.Value` initializer; keep `Library/Other.x` closed. | Only the companion gains `public static Value missing(Value arg1)`. Types use the destination module's names. |
+| X211 | Inspect a call passing and returning the caller module's `Value`. | No public-method action: it would require a reverse dependency. Both sources and the caller error stay unchanged. |
+| X212 | Repair the local argument and initializer using caller alias `shared` and destination alias `types`. | The generated declaration uses `public types.Value missing(types.Value arg1)` in `Library.x`; no import, graph or caller edits. |
+
+Backend controls cover explicit dependency graphs, unrelated roots, binary artifacts with and without
+source indexes, read-only destinations, unsupported owners, existing members, closed broken consumers,
+missing destination imports, exact signature identity and destination-specific document versions.
