@@ -4472,8 +4472,6 @@ public class CommonBuilder
             Set.of("construct")), // TODO: verify specialized constructor return with a conditional mixin
         Map.entry("org.xtclang.ecstasy.maps.ListMap",
             Set.of("ensurePersistent")), // TODO: private access requested on a nullable array union
-        Map.entry("org.xtclang.ecstasy.maps.Map",
-            Set.of("removeAll")), // TODO: IP_ADD cannot find add (+) on Array<Map.Key>
         Map.entry("org.xtclang.ecstasy.Timeout",
             Set.of("construct")) // TODO: invokes nService with invokeinterface although nService is a Java class
     );

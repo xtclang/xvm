@@ -531,8 +531,17 @@ public abstract class OpInvocable extends Op {
 
     protected MethodInfo computeMethodInfo(BuildContext bctx, TypeConstant typeTarget) {
         if (typeTarget.containsFormalType(true)) {
-            typeTarget = typeTarget.resolveConstraints().ensureAccess(Access.PRIVATE);
+            for (TypeConstant typeParam : typeTarget.getParamTypesArray()) {
+                if (typeParam.isRelationalType()) {
+                    // if the specialization combines the concrete and formal parameter (e.g. Bit +
+                    // List.Element), its TypeInfo signature is not a usable invocation signature
+                    // TODO: this is a vert blunt compensation; may need to reconsider
+                    typeTarget = typeTarget.resolveConstraints().ensureAccess(Access.PRIVATE);
+                    break;
+                }
+            }
         }
+
         TypeInfo        infoTarget = bctx.getTypeInfo(typeTarget);
         MethodConstant  idMethod   = bctx.getConstant(m_nMethodId, MethodConstant.class);
         MethodInfo      infoMethod = infoTarget.getMethodById(idMethod, true); // runtime hack
