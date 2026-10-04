@@ -36,6 +36,7 @@ internal object XdkRename {
     ) {
         init {
             require(qualifications.all { (source, changes) -> changes.all { it in edits[source].orEmpty() } })
+            require(imports.all { (source, changes) -> changes.all { it.start == it.end && it in edits[source].orEmpty() } })
             relocations.forEach { (source, moved) ->
                 moved.forEach { relocation ->
                     val insertion = relocation.destination
@@ -218,15 +219,17 @@ internal object XdkRename {
         if (after.models.any { it.status != SemanticModel.Status.COMPLETE }) return false
         val beforePrefixes = qualificationSites(before, plan.original, plan.qualifications) ?: return false
         val afterQualifications =
-            (plan.qualifications.keys + plan.imports.keys).associateWith { source ->
-                plan.qualifications[source].orEmpty() + plan.imports[source].orEmpty()
-            }.entries.associate { (source, edits) ->
-                plan.sourceAfter(source) to
-                    edits.map { edit ->
-                        val start = plan.map(source, edit.start)?.minus(if (edit.start == edit.end) edit.text.length else 0) ?: return false
-                        Edit(start, start + edit.text.length, edit.text)
-                    }
-            }
+            (plan.qualifications.keys + plan.imports.keys)
+                .associateWith { source -> plan.qualifications[source].orEmpty() + plan.imports[source].orEmpty() }
+                .entries
+                .associate { (source, edits) ->
+                    plan.sourceAfter(source) to
+                        edits.map { edit ->
+                            val mapped = plan.map(source, edit.start) ?: return false
+                            val start = mapped - if (edit.start == edit.end) edit.text.length else 0
+                            Edit(start, start + edit.text.length, edit.text)
+                        }
+                }
         val afterPrefixes = qualificationSites(after, plan.proposed, afterQualifications) ?: return false
         val expected =
             edges(before, plan.original, plan::sourceAfter, ignored = beforePrefixes, callStart = plan::callStart) { source, offset ->
@@ -242,7 +245,22 @@ internal object XdkRename {
                 plan.map(source, offset)
             } ?: return false
         val actualDispatch = dispatch(after, plan.proposed) { _, offset -> offset } ?: return false
-        return expectedDispatch == actualDispatch
+        // New package imports inherit Object's methods. Only that new package's declaration
+        // acquires dispatch; existing declarations and every use still compare exactly.
+        val retainedDispatch =
+            actualDispatch
+                .filterNot { route ->
+                    val owner = route.owner as? Target.Declaration ?: return@filterNot false
+                    if (owner.kind != SemanticModel.SymbolKind.PACKAGE) return@filterNot false
+                    plan.imports.any { (source, imports) ->
+                        plan.sourceAfter(source) == owner.site.source &&
+                            imports.any { edit ->
+                                val end = plan.map(source, edit.start) ?: return false
+                                owner.site.start >= end - edit.text.length && owner.site.end <= end
+                            }
+                    }
+                }.toSet()
+        return expectedDispatch == retainedDispatch
     }
 
     /** Only static namespace/type prefixes may disappear; terminal bindings and calls still match. */
