@@ -2923,8 +2923,8 @@ Temporary signature constants remain worker/attempt-owned and are detached by th
 identity collector. No Java AST field/API, clone obligation or embedding entry point was added.
 Native companion testing exposed a report-copy bug in the existing IntelliJ diagnostic bridge;
 the corrected copy preserves decoded related reports (UP06/UP07). X201–X204 extend both shared drivers with source/companion edits
-and refusal controls. Cross-owner locals/typed initializers, generic/interface destinations and
-other configured modules remain separate tasks. See the [current scope and commit map](errs-integration-plan.md#l63-cross-owner-source-destinations-2026-10-04).
+and refusal controls. The next continuation adds cross-owner locals/typed initializers;
+generic/interface destinations and other configured modules remain separate tasks. See the [current scope and commit map](errs-integration-plan.md#l63-cross-owner-source-destinations-2026-10-04).
 
 
 Final selected acceptance: **256 backend tests** and **90 IntelliJ unit tests** pass without
@@ -2933,3 +2933,24 @@ failures/errors/skips. X181/X185/X195/X197/X201–X204 pass in VS Code `run-hOIs
 catalog has 209 cases. The native report-copy failure, its regression and the separate open UP22
 lifecycle defect are documented in the [upstream register](errs-upstream-issues.md#up06up07-companion-report-copy-correction-2026-10-04).
 These are selected acceptance runs; no full-catalog rerun or new packaged-stdio gate is claimed.
+
+
+### L63 detached local types across source owners (2026-10-04)
+
+Public same-module missing-method repairs now accept earlier compiler-typed local arguments and
+whole explicitly typed local initializers, including companion destinations. The failed attempt's
+register types are detached by the existing identity collector before fresh declaration analysis;
+its compiler constants never cross that boundary. Final compilation proves the exact parameter/
+return identities, original local binding, public access, destination and dispatch. Compiling
+parameter widening, result narrowing and argument rebinding are regression counterexamples.
+No Java AST/API or plugin production change is needed. X205–X208 extend the shared catalog to 213.
+Cross-module destinations, generic/computed receivers and broader missing declarations remain open.
+See the [scope and validation record](errs-integration-plan.md#l63-cross-owner-local-arguments-and-initializer-results-2026-10-04).
+
+
+Selected acceptance: **275 backend tests** pass without failures/errors/skips. X181/X185/X190/
+X202/X205–X208 pass in VS Code `run-RpTVz1` and IntelliJ `run-14627770467027596087` (plus START),
+zero editor failures. Both use the 213-case catalog; Ultimate is disabled. Root/LSP/IntelliJ
+read-only Spotless passes. These are selected runs, not a full-catalog or new packaged-protocol gate.
+The [integration plan](errs-integration-plan.md#l63-cross-owner-local-arguments-and-initializer-results-2026-10-04)
+records the proof boundary, receipts and commit extraction map.
