@@ -1593,6 +1593,26 @@ class CompilerPlaybook(
             "X213",
             "X214",
             "X215",
+            "X221",
+            "X222",
+            "X223",
+            "X224",
+            "X225",
+            "X226",
+            "X227",
+            "X228",
+            "X229",
+            "X230",
+            "X231",
+            "X232",
+            "X233",
+            "X234",
+            "X235",
+            "X236",
+            "X237",
+            "X238",
+            "X239",
+            "X240",
         ).forEach { id ->
             scenario(id) {
                 discovered(id) { data ->
@@ -1619,7 +1639,7 @@ class CompilerPlaybook(
                     }
                     val initiallyBroken = data.values["initiallyValid"]?.asBoolean == false
                     callerDiagnostics(initiallyBroken)
-                    val at = original.indexOf(data.text("selected"))
+                    val at = data.values["selectionOffset"]?.asInt ?: original.indexOf(data.text("selected"))
                     if (data.values["refused"]?.asBoolean == true) {
                         fun position(offset: Int): Map<String, Int> {
                             val prefix = original.take(offset)
