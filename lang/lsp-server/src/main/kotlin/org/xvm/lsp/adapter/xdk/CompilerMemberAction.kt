@@ -113,7 +113,7 @@ internal fun compilerMemberActions(
         val aliases =
             XdkMemberActions.moduleAliases(
                 external.map { it.moduleConstant.name },
-                mapOf("ecstasy.xtclang.org" to "ecstasy"),
+                implicitModuleAliases,
                 names,
             )
         val moduleNode =
@@ -159,7 +159,7 @@ internal fun compilerMemberActions(
                         .map { it.moduleConstant.name }
                         .distinct()
                         .filter {
-                            it != "ecstasy.xtclang.org" &&
+                            it !in implicitModuleAliases &&
                                 it != structure.identityConstant.moduleConstant.name
                         }.map {
                             XdkMemberActions.Import(

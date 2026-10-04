@@ -1891,13 +1891,32 @@ private class SemanticModelBuilder(
                 val range = symbol.declaration ?: return@mapNotNull null
                 Triple(SourceLocation(source, range), register.originalType, register.isEffectivelyFinal && !register.isVar)
             }
+        val nodes = nodesIn(requireNotNull(compilation.parsed()))
+        val modules = compilerModuleAliases(nodes)
         val expressionTypes =
-            nodesIn(requireNotNull(compilation.parsed())).filterIsInstance<Expression>().mapNotNull { node ->
+            nodes.filterIsInstance<Expression>().mapNotNull { node ->
                 validatedType(node)?.let { location(node.source, node.startPosition, node.endPosition) to it }
             }
+        val sourceTypes =
+            nodes
+                .filterIsInstance<Expression>()
+                .mapNotNull { node ->
+                    val type = validatedType(node) ?: return@mapNotNull null
+                    val owner = generateSequence(node.parent) { it.parent }.filterIsInstance<TypeCompositionStatement>().firstOrNull()
+                    val structure = owner?.component as? ClassStructure ?: return@mapNotNull null
+                    val source =
+                        type.resolveTypedefs().memberSourceType(
+                            structure.identityConstant,
+                            emptyMap(),
+                            modules,
+                        )
+                            ?: return@mapNotNull null
+                    location(node.source, node.startPosition, node.endPosition) to source
+                }.toMap()
         return CompilerExtractionFacts(
             expressionTypes.toMap() + values.associate { it.first to it.second },
             values.filter { it.third }.mapTo(linkedSetOf()) { it.first },
+            sourceTypes,
         )
     }
 
