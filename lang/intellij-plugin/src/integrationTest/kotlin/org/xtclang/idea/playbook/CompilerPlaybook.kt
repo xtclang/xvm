@@ -1574,7 +1574,7 @@ class CompilerPlaybook(
                 restore(data.text("file"))
             }
         }
-        listOf("X148", "X156", "X157").forEach { id ->
+        listOf("X148", "X156", "X157", "X177", "X178", "X179", "X180").forEach { id ->
             scenario(id) {
                 discovered(id) { data ->
                     val editor = open(data.text("file"))
@@ -1582,6 +1582,21 @@ class CompilerPlaybook(
                     editor.text = original
                     editor.awaitDiagnostics(emptyList())
                     val at = original.indexOf(data.text("selected"))
+                    if (data.values["refused"]?.asBoolean == true) {
+                        val prefix = original.take(at)
+                        val position = mapOf("line" to prefix.count { it == '\n' }, "character" to (at - prefix.lastIndexOf('\n') - 1))
+                        val actions = ClientProtocol(this).query(
+                            "textDocument/codeAction",
+                            mapOf(
+                                "textDocument" to mapOf("uri" to Path.of(editor.editor.getVirtualFile().getPath()).toUri().toString()),
+                                "range" to mapOf("start" to position, "end" to position),
+                                "context" to mapOf("diagnostics" to emptyList<Any>()),
+                            ),
+                        ).asJsonArray
+                        check(actions.none { it.asJsonObject["title"].asString == data.text("title") })
+                        check(editor.text == original)
+                        return@discovered
+                    }
                     quickFix(editor, at, data.text("title"), at + data.text("selected").length)
                     awaitUi("local refactoring matches shared source", 45.seconds) { editor.text == data.text("expected") }
                     editor.awaitDiagnostics(emptyList())
