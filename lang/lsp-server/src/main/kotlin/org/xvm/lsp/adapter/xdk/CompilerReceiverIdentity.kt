@@ -2,18 +2,18 @@ package org.xvm.lsp.adapter.xdk
 
 import org.xvm.asm.Constant
 import org.xvm.asm.constants.AnnotatedTypeConstant
-import org.xvm.asm.constants.CharConstant
 import org.xvm.asm.constants.ClassConstant
 import org.xvm.asm.constants.ImmutableTypeConstant
-import org.xvm.asm.constants.IntConstant
+import org.xvm.asm.constants.InnerChildTypeConstant
 import org.xvm.asm.constants.ParameterizedTypeConstant
 import org.xvm.asm.constants.PropertyConstant
 import org.xvm.asm.constants.RelationalTypeConstant
-import org.xvm.asm.constants.SingletonConstant
-import org.xvm.asm.constants.StringConstant
+import org.xvm.asm.constants.RecursiveTypeConstant
+import org.xvm.asm.constants.ServiceTypeConstant
 import org.xvm.asm.constants.TerminalTypeConstant
 import org.xvm.asm.constants.TypeConstant
 import org.xvm.asm.constants.TypeParameterConstant
+import org.xvm.asm.constants.VirtualChildTypeConstant
 
 /** Copy receiver substitutions and annotations; source identities still translate through edits. */
 internal fun receiverIdentity(
@@ -44,20 +44,25 @@ internal fun receiverIdentity(
             val base = nested(type.underlyingType) ?: return null
             val annotation = nested(type.annotationType) ?: return null
             val arguments =
-                type.annotationParams.map { argument ->
-                    when (argument) {
-                        is TypeConstant -> nested(argument) ?: return null
-                        is StringConstant, is CharConstant, is IntConstant -> ProofIdentity.Value(argument.format, argument.valueString)
-                        is SingletonConstant -> identity(argument.classConstant)
-                        else -> return null
-                    }
-                }
+                type.annotationParams.map { annotationIdentity(it, identity, depth + 1) ?: return null }
             ProofIdentity.TypeShape(type.format, listOf(base, annotation) + arguments)
         }
 
-        is ImmutableTypeConstant -> {
+        is ImmutableTypeConstant, is ServiceTypeConstant -> {
             ProofIdentity.TypeShape(type.format, listOf(nested(type.underlyingType) ?: return null))
         }
+
+        is VirtualChildTypeConstant -> {
+            val parent = nested(type.parentType) ?: return null
+            val origin = type.originParentType?.let { nested(it) ?: return null }
+            ProofIdentity.TypeShape(type.format, listOf(parent, identity(type.definingConstant)) + listOfNotNull(origin))
+        }
+
+        is InnerChildTypeConstant -> {
+            ProofIdentity.TypeShape(type.format, listOf(nested(type.parentType) ?: return null, identity(type.definingConstant)))
+        }
+
+        is RecursiveTypeConstant -> identity(type.typedef)
 
         is RelationalTypeConstant -> {
             val operands = listOf(nested(type.underlyingType) ?: return null, nested(type.underlyingType2) ?: return null)
