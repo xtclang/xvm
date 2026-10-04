@@ -160,6 +160,7 @@ internal fun EmbeddingSupport.Compilation.projectRenameFacts(
 internal fun EmbeddingSupport.DeclarationAnalysis.memberActionFacts(
     dependencies: XdkDependencies.Open,
     errors: ErrorListener,
+    localTypes: Map<SourceLocation, String> = emptyMap(),
 ): CompilerRenameFacts =
     ExecutionTrace.api("DeclarationAnalysis.memberActionFacts") {
         ConstantPool.withPool(pool()).use {
@@ -167,7 +168,7 @@ internal fun EmbeddingSupport.DeclarationAnalysis.memberActionFacts(
                 SemanticModelBuilder(
                     dependencies.declarations.filterKeys { it.moduleConstant != file().moduleId },
                 )
-            builder.declarationFacts(this, dependencies, errors)
+            builder.declarationFacts(this, dependencies, errors, localTypes)
         }
     }
 
@@ -240,6 +241,7 @@ private class SemanticModelBuilder(
         analysis: EmbeddingSupport.DeclarationAnalysis,
         dependencies: XdkDependencies.Open,
         errors: ErrorListener,
+        localTypes: Map<SourceLocation, String>,
     ): CompilerRenameFacts {
         val nodes = nodesIn(analysis.ast())
         collect(nodes, emptyMap(), emptyMap(), analysis.pool())
@@ -251,7 +253,7 @@ private class SemanticModelBuilder(
             compilerPropertyRelations(nodes, errors),
             errors,
             members = compilerMemberActions(nodes, errors),
-            missingMethods = compilerMissingMethods(nodes, errors),
+            missingMethods = compilerMissingMethods(nodes, errors, localTypes),
         )
     }
 
