@@ -9,10 +9,21 @@ internal object XdkMissingMethods {
         STATIC,
     }
 
+    data class Receiver(
+        val destination: SemanticModel.SourceLocation,
+        val dispatch: Dispatch,
+    )
+
+    data class Signature(
+        val parameters: List<ProofIdentity>,
+        val returns: List<ProofIdentity>,
+        val isPublic: Boolean = true,
+    )
+
     /** Detached body evidence copied before the fresh declaration attempt checks eligibility. */
     data class Inputs(
         val localTypes: Map<SemanticModel.SourceLocation, String> = emptyMap(),
-        val sameOwnerReceivers: Map<SemanticModel.SourceLocation, Dispatch> = emptyMap(),
+        val receivers: Map<SemanticModel.SourceLocation, Receiver> = emptyMap(),
     )
 
     data class ArgumentBinding(
@@ -24,12 +35,14 @@ internal object XdkMissingMethods {
         val callee: SemanticModel.SourceLocation,
         val name: String,
         val insertion: SemanticModel.Position,
-        val owner: SemanticModel.Position,
+        val destination: SemanticModel.SourceLocation,
         val declaration: String,
         val dispatch: Dispatch,
         val arguments: List<ArgumentBinding> = emptyList(),
+        val publicOwner: String? = null,
+        val signature: Signature? = null,
     ) {
-        val title: String get() = "Create private method '$name'"
+        val title: String get() = publicOwner?.let { "Create public method '$name' in '$it'" } ?: "Create private method '$name'"
 
         fun selected(
             source: String,
@@ -48,7 +61,7 @@ internal object XdkMissingMethods {
             val indent =
                 text
                     .lineSequence()
-                    .elementAtOrNull(owner.line)
+                    .elementAtOrNull(destination.range.start.line)
                     .orEmpty()
                     .takeWhile { it == ' ' || it == '\t' }
             val body = "$indent    $declaration {$newline$indent        TODO();$newline$indent    }$newline"
@@ -69,12 +82,26 @@ internal object XdkMissingMethods {
             val model = after.models.singleOrNull { it.sourceName == source } ?: return false
             val symbol = model.symbolAt(at.line, at.column) ?: return false
             val declaration = symbol.declaration ?: return false
-            val declarationAt = XdkRename.offset(changed, declaration.start) ?: return false
-            if (symbol.kind != SemanticModel.SymbolKind.METHOD || symbol.name != name || symbol.declarationSource != source ||
+            val targetSource = destination.sourceName ?: return false
+            val targetText = plan.proposed[targetSource] ?: return false
+            val declarationAt = XdkRename.offset(targetText, declaration.start) ?: return false
+            if (symbol.kind != SemanticModel.SymbolKind.METHOD || symbol.name != name || symbol.declarationSource != targetSource ||
                 (SemanticModel.Modifier.STATIC in symbol.modifiers) != (dispatch == Dispatch.STATIC) ||
                 declarationAt !in edit.start until edit.start + edit.text.length
             ) {
                 return false
+            }
+
+            if (publicOwner != null) {
+                val expected = signature ?: return false
+                val actual = after.methodSignatures[symbol.id] ?: return false
+                if (!actual.isPublic) return false
+
+                fun equivalent(
+                    expected: List<ProofIdentity>,
+                    actual: List<ProofIdentity>,
+                ) = expected.size == actual.size && expected.zip(actual).all { (old, new) -> XdkRename.sameType(old, new, plan) }
+                if (!equivalent(expected.parameters, actual.parameters) || !equivalent(expected.returns, actual.returns)) return false
             }
 
             fun mapped(location: SemanticModel.SourceLocation): SemanticModel.Position? {
