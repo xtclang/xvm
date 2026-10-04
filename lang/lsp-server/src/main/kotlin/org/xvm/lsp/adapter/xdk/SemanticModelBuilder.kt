@@ -148,7 +148,7 @@ internal fun EmbeddingSupport.Compilation.projectRenameFacts(
                 builder.typeNames(this),
                 builder.resourceValues(this),
                 builder.callableBindings(this),
-                builder.removableLocals(this),
+                if (includeMembers) builder.removableLocals(this) else emptySet(),
             )
         }
     }
@@ -1858,15 +1858,21 @@ private class SemanticModelBuilder(
 
     /** Inspect validated initializers on the worker; do not retain ASTs or infer purity from spelling. */
     fun removableLocals(compilation: EmbeddingSupport.Compilation): Set<SourceLocation> =
-        if (!compilation.succeeded()) emptySet() else nodesIn(requireNotNull(compilation.parsed()))
-            .filterIsInstance<AssignmentStatement>()
-            .mapNotNull { assignment ->
-                val local = assignment.lValue as? VariableDeclarationStatement ?: return@mapNotNull null
-                if (assignment.op.id != Token.Id.ASN || local.hasRefAnnotations() ||
-                    !assignment.rValue.isConstant || assignment.rValue.hasSideEffects()
-                ) return@mapNotNull null
-                location(local.source, local.nameToken.startPosition, local.nameToken.endPosition)
-            }.toSet()
+        if (!compilation.succeeded()) {
+            emptySet()
+        } else {
+            nodesIn(requireNotNull(compilation.parsed()))
+                .filterIsInstance<AssignmentStatement>()
+                .mapNotNull { assignment ->
+                    val local = assignment.lValue as? VariableDeclarationStatement ?: return@mapNotNull null
+                    if (assignment.op.id != Token.Id.ASN || local.hasRefAnnotations() ||
+                        !assignment.rValue.isConstant || assignment.rValue.hasSideEffects()
+                    ) {
+                        return@mapNotNull null
+                    }
+                    location(local.source, local.nameToken.startPosition, local.nameToken.endPosition)
+                }.toSet()
+        }
 
     fun resourceValues(compilation: EmbeddingSupport.Compilation): Map<SourceLocation, String?> =
         compilerResourceValues(nodesIn(requireNotNull(compilation.parsed())))
