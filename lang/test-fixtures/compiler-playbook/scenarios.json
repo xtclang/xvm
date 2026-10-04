@@ -6268,6 +6268,79 @@
         "limitations": []
       }
     },
+    "X185": {
+      "title": "create a private void method from a missing call",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. Apply the named method action; inspect its signature and TODO() body. The error clears. Undo restores the source and error; Redo clears it again, then Undo restores the original."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    void run() {\n        missing();\n    }\n}",
+        "selected": "missing",
+        "title": "Create private method 'missing'",
+        "expected": "module Extract {\n    void run() {\n        missing();\n    }\n    private void missing() {\n        TODO();\n    }\n}",
+        "initiallyValid": false
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X186": {
+      "title": "create a private method from resolved parameter and return types",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. Apply the named method action; inspect its signature and TODO() body. The error clears. Undo restores the source and error; Redo clears it again, then Undo restores the original."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    Int read(Int value, String label) {\n        return missing(value, label);\n    }\n}",
+        "selected": "missing",
+        "title": "Create private method 'missing'",
+        "expected": "module Extract {\n    Int read(Int value, String label) {\n        return missing(value, label);\n    }\n    private Int missing(Int arg1, String arg2) {\n        TODO();\n    }\n}",
+        "initiallyValid": false
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X187": {
+      "title": "create a static method using compiler typed literal arguments",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. Apply the named method action; inspect its signature and TODO() body. The error clears. Undo restores the source and error; Redo clears it again, then Undo restores the original."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    static String read() {\n        return missing(\"hello\", 'x', Int8:7);\n    }\n}",
+        "selected": "missing",
+        "title": "Create private method 'missing'",
+        "expected": "module Extract {\n    static String read() {\n        return missing(\"hello\", 'x', Int8:7);\n    }\n    private static String missing(String arg1, Char arg2, Int8 arg3) {\n        TODO();\n    }\n}",
+        "initiallyValid": false
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X188": {
+      "title": "refuse missing method creation for an ambiguous numeric argument",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. No method creation action may appear; the error and source remain unchanged."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    Int read() {\n        return missing(1);\n    }\n}",
+        "selected": "missing",
+        "title": "Create private method 'missing'",
+        "expected": "module Extract {\n    Int read() {\n        return missing(1);\n    }\n}",
+        "initiallyValid": false,
+        "refused": true
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
