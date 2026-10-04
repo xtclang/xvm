@@ -6414,6 +6414,80 @@
         "limitations": []
       }
     },
+    "X193": {
+      "title": "create a private method through an explicit this receiver",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. Apply the named method action; inspect its signature and TODO() body. The error clears. Undo restores the source and error; Redo clears it again, then Undo restores the original."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    Int read(Int value) {\n        return this.missing(value);\n    }\n}",
+        "selected": "missing",
+        "title": "Create private method 'missing'",
+        "expected": "module Extract {\n    Int read(Int value) {\n        return this.missing(value);\n    }\n    private Int64 missing(Int64 arg1) {\n        TODO();\n    }\n}",
+        "initiallyValid": false
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X194": {
+      "title": "create an instance method through a same owner local in a static caller",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. Apply the named method action; inspect its signature and TODO() body. The error clears. Undo restores the source and error; Redo clears it again, then Undo restores the original."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    class Box {\n        static Int read(Box peer, Int value) {\n            var other = peer;\n            Int result = other.missing(value);\n            return result;\n        }\n    }\n}",
+        "selected": "missing",
+        "title": "Create private method 'missing'",
+        "expected": "module Extract {\n    class Box {\n        static Int read(Box peer, Int value) {\n            var other = peer;\n            Int result = other.missing(value);\n            return result;\n        }\n        private Int64 missing(Int64 arg1) {\n            TODO();\n        }\n    }\n}",
+        "initiallyValid": false
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X195": {
+      "title": "refuse missing method creation in another receiver owner",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. No method creation action may appear; the error and source remain unchanged."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    class Other {}\n    class Box {\n        Int read(Other peer, Int value) {\n            return peer.missing(value);\n        }\n    }\n}",
+        "selected": "missing",
+        "title": "Create private method 'missing'",
+        "expected": "module Extract {\n    class Other {}\n    class Box {\n        Int read(Other peer, Int value) {\n            return peer.missing(value);\n        }\n    }\n}",
+        "initiallyValid": false,
+        "refused": true
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X196": {
+      "title": "refuse private method creation through a public this view",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. No method creation action may appear; the error and source remain unchanged."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    Int read(Int value) {\n        return this:public.missing(value);\n    }\n}",
+        "selected": "missing",
+        "title": "Create private method 'missing'",
+        "expected": "module Extract {\n    Int read(Int value) {\n        return this:public.missing(value);\n    }\n}",
+        "initiallyValid": false,
+        "refused": true
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
