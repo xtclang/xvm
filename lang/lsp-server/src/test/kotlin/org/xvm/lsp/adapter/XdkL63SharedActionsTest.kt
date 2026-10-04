@@ -16,7 +16,7 @@ class XdkL63SharedActionsTest {
     @TempDir lateinit var directory: Path
 
     @ParameterizedTest(name = "X{0} shared refactoring")
-    @ValueSource(ints = [221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240])
+    @ValueSource(ints = [221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233, 234, 235, 236, 237, 238, 239, 240, 241, 242])
     fun `shared action produces exact source or a documented refusal`(number: Int) {
         CompilerTestSupport.configure()
         val scenarios = Path.of(System.getProperty("xtc.composite.root"), "lang/test-fixtures/compiler-playbook/scenarios.json")

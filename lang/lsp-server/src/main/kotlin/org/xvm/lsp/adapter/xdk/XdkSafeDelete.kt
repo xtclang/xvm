@@ -62,6 +62,7 @@ internal object XdkSafeDelete {
                 }
 
                 SemanticModel.SymbolKind.PROPERTY -> {
+                    if (SemanticModel.SourceLocation(source, declaration) !in facts.constantProperties) return null
                     parents.keys.filterIsInstance<PropertyDeclarationStatement>().singleOrNull {
                         at(it.nameToken.startPosition) == declaration.start && it.defaultAccess == Access.PRIVATE && it.isStatic &&
                             it.childNodes().none { child -> child is StatementBlock }

@@ -148,7 +148,7 @@ require compiler constants, so the action never guesses their values.
 
 Type spelling reuses resolved module imports and the compiler's implicit Ecstasy module constants;
 this does not restrict the module path to the core library. Both source and binary dependency types
-have extraction regression coverage. Shared X221–X240 cover the new actions and refusals in both
+have extraction regression coverage. Shared X221–X242 cover the new actions and refusals in both
 editor drivers; native acceptance of this batch is pending. Earlier receipts remain separate.
 Explicit declaration lookup returns local/import-alias declarations or the inherited written
 contracts of an overriding method/property, including multiple source targets. Definition and
