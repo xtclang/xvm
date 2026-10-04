@@ -33,13 +33,40 @@ import org.xvm.lsp.util.ExecutionTrace
 /** Attempt-owned types are detached by the shared compiler identity collector. */
 internal data class CompilerMissingMethod(
     val candidate: XdkMissingMethods.Candidate,
-    val parameters: List<TypeConstant> = emptyList(),
-    val returns: List<TypeConstant> = emptyList(),
+    val parameters: List<Type> = emptyList(),
+    val returns: List<Type> = emptyList(),
+) {
+    /** Fresh declaration types and already detached body types never share compiler pools. */
+    sealed interface Type {
+        data class Resolved(
+            val value: TypeConstant,
+        ) : Type
+
+        data class Detached(
+            val value: ProofIdentity,
+        ) : Type
+    }
+}
+
+/** Register types may leave the failed attempt only through the shared identity collector. */
+internal data class CompilerMissingInputs(
+    val localTypes: Map<SemanticModel.SourceLocation, LocalType> = emptyMap(),
+    val receivers: Map<SemanticModel.SourceLocation, XdkMissingMethods.Receiver> = emptyMap(),
+) {
+    data class LocalType(
+        val source: String,
+        val type: TypeConstant,
+    )
+}
+
+private data class MissingType(
+    val source: String,
+    val proof: CompilerMissingMethod.Type,
 )
 
 private data class MissingParameter(
     val source: String,
-    val type: TypeConstant? = null,
+    val type: CompilerMissingMethod.Type,
     val binding: XdkMissingMethods.ArgumentBinding? = null,
 )
 
@@ -130,10 +157,17 @@ internal fun compilerMissingMethods(
                 return@mapNotNull null
             }
 
-            fun render(type: TypeConstant) = type.missingMethodType(structure)
+            fun render(type: TypeConstant) =
+                type.missingMethodType(structure)?.let { MissingType(it, CompilerMissingMethod.Type.Resolved(type)) }
 
             fun localType(local: VariableDeclarationStatement) =
-                inputs.localTypes[local.declarationLocation()] ?: local.takeIf { it.hasExplicitMethodType() }?.type?.let(::render)
+                inputs.localTypes[local.declarationLocation()]?.let {
+                    MissingType(
+                        it.source,
+                        CompilerMissingMethod.Type.Detached(it.identity),
+                    )
+                }
+                    ?: local.takeIf { it.hasExplicitMethodType() }?.type?.let(::render)
             val returns =
                 when (val statement = call.parent) {
                     is ExpressionStatement -> {
@@ -146,7 +180,6 @@ internal fun compilerMissingMethods(
                     }
 
                     is AssignmentStatement -> {
-                        if (crossOwner) return@mapNotNull null
                         val local = statement.lValue as? VariableDeclarationStatement ?: return@mapNotNull null
                         if (statement.op.id != Token.Id.ASN || statement.rValue !== call || !local.hasExplicitMethodType()) {
                             return@mapNotNull null
@@ -162,8 +195,8 @@ internal fun compilerMissingMethods(
             val result =
                 when (returns.size) {
                     0 -> "void"
-                    1 -> returns.single()
-                    else -> returns.joinToString(", ", "(", ")")
+                    1 -> returns.single().source
+                    else -> returns.joinToString(", ", "(", ")") { it.source }
                 }
             val arguments = call.childNodes().filter { it !== name }
             val parameters =
@@ -185,10 +218,9 @@ internal fun compilerMissingMethods(
                             }
                         }
                     if (local != null) {
-                        if (crossOwner) return@mapNotNull null
                         val rendered = localType(local) ?: return@mapNotNull null
                         val binding = XdkMissingMethods.ArgumentBinding(argument.location(), local.declarationLocation())
-                        return@mapIndexed MissingParameter("$rendered arg${index + 1}", binding = binding)
+                        return@mapIndexed MissingParameter("${rendered.source} arg${index + 1}", rendered.proof, binding)
                     }
                     val parameter =
                         expression?.let { value ->
@@ -205,7 +237,8 @@ internal fun compilerMissingMethods(
                     ) {
                         return@mapNotNull null
                     }
-                    MissingParameter("${render(type) ?: return@mapNotNull null} arg${index + 1}", type = type)
+                    val rendered = render(type) ?: return@mapNotNull null
+                    MissingParameter("${rendered.source} arg${index + 1}", rendered.proof)
                 }
 
             fun position(value: Long) = SemanticModel.Position(Source.calculateLine(value), Source.calculateOffset(value))
@@ -221,8 +254,8 @@ internal fun compilerMissingMethods(
                     parameters.mapNotNull { it.binding },
                     if (crossOwner) structure.identityConstant.pathString else null,
                 ),
-                if (crossOwner) parameters.map { requireNotNull(it.type) } else emptyList(),
-                if (crossOwner && call.parent is ReturnStatement) declaration.returnTypes.toList() else emptyList(),
+                if (crossOwner) parameters.map { it.type } else emptyList(),
+                if (crossOwner) returns.map { it.proof } else emptyList(),
             )
         }.distinct()
 
@@ -230,9 +263,9 @@ internal fun compilerMissingMethods(
  * Copy compiler-established body facts without resuming a failed body or requesting its TypeInfo.
  * Inferred locals need a validated initializer; an explicit declaration needs its resolved register.
  */
-internal fun EmbeddingSupport.Compilation.missingMethodInputs(): XdkMissingMethods.Inputs =
+internal fun EmbeddingSupport.Compilation.missingMethodInputs(): CompilerMissingInputs =
     ExecutionTrace.api("Compilation.missingMethodInputs") {
-        val root = parsed() ?: return@api XdkMissingMethods.Inputs()
+        val root = parsed() ?: return@api CompilerMissingInputs()
         ConstantPool.withPool(pool()).use {
             fun descendants(node: AstNode): Sequence<AstNode> = sequenceOf(node) + node.childNodes().asSequence().flatMap(::descendants)
             val nodes = descendants(root).toList()
@@ -251,8 +284,9 @@ internal fun EmbeddingSupport.Compilation.missingMethodInputs(): XdkMissingMetho
                         }
                         val owner = generateSequence(local.parent) { it.parent }.filterIsInstance<TypeCompositionStatement>().firstOrNull()
                         val structure = owner?.component as? ClassStructure ?: return@mapNotNull null
-                        val type = local.register?.originalType?.missingMethodType(structure) ?: return@mapNotNull null
-                        local.declarationLocation() to type
+                        val type = local.register?.originalType ?: return@mapNotNull null
+                        val rendered = type.missingMethodType(structure) ?: return@mapNotNull null
+                        local.declarationLocation() to CompilerMissingInputs.LocalType(rendered, type)
                     }.toMap()
             val receivers =
                 nodes
@@ -297,7 +331,7 @@ internal fun EmbeddingSupport.Compilation.missingMethodInputs(): XdkMissingMetho
                         if (dispatch == Dispatch.STATIC && identity.component.format != Format.CLASS) return@mapNotNull null
                         callee.calleeLocation() to XdkMissingMethods.Receiver(destination.location(), dispatch)
                     }.toMap()
-            XdkMissingMethods.Inputs(localTypes, receivers)
+            CompilerMissingInputs(localTypes, receivers)
         }
     }
 

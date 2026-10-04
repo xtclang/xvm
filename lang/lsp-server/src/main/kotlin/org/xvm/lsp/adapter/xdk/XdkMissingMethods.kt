@@ -22,8 +22,13 @@ internal object XdkMissingMethods {
 
     /** Detached body evidence copied before the fresh declaration attempt checks eligibility. */
     data class Inputs(
-        val localTypes: Map<SemanticModel.SourceLocation, String> = emptyMap(),
+        val localTypes: Map<SemanticModel.SourceLocation, LocalType> = emptyMap(),
         val receivers: Map<SemanticModel.SourceLocation, Receiver> = emptyMap(),
+    )
+
+    data class LocalType(
+        val source: String,
+        val identity: ProofIdentity,
     )
 
     data class ArgumentBinding(
