@@ -1584,15 +1584,24 @@ class CompilerPlaybook(
                     val at = original.indexOf(data.text("selected"))
                     if (data.values["refused"]?.asBoolean == true) {
                         val prefix = original.take(at)
-                        val position = mapOf("line" to prefix.count { it == '\n' }, "character" to (at - prefix.lastIndexOf('\n') - 1))
-                        val actions = ClientProtocol(this).query(
-                            "textDocument/codeAction",
+                        val position =
                             mapOf(
-                                "textDocument" to mapOf("uri" to Path.of(editor.editor.getVirtualFile().getPath()).toUri().toString()),
-                                "range" to mapOf("start" to position, "end" to position),
-                                "context" to mapOf("diagnostics" to emptyList<Any>()),
-                            ),
-                        ).asJsonArray
+                                "line" to prefix.count { it == '\n' },
+                                "character" to (at - prefix.lastIndexOf('\n') - 1),
+                            )
+                        val actions =
+                            ClientProtocol(this)
+                                .query(
+                                    "textDocument/codeAction",
+                                    mapOf(
+                                        "textDocument" to
+                                            mapOf(
+                                                "uri" to Path.of(editor.editor.getVirtualFile().getPath()).toUri().toString(),
+                                            ),
+                                        "range" to mapOf("start" to position, "end" to position),
+                                        "context" to mapOf("diagnostics" to emptyList<Any>()),
+                                    ),
+                                ).asJsonArray
                         check(actions.none { it.asJsonObject["title"].asString == data.text("title") })
                         check(editor.text == original)
                         return@discovered
