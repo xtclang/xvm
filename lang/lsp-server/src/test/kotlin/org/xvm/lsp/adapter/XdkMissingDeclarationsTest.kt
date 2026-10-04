@@ -30,7 +30,7 @@ class XdkMissingDeclarationsTest {
 
     @ParameterizedTest
     @ValueSource(strings = ["", "static "])
-    fun `read only property stub preserves the enclosing result type`(modifier: String) {
+    fun `read only property repairs instance access but never invents a static constant value`(modifier: String) {
         query(
             """
             module App {
@@ -40,7 +40,7 @@ class XdkMissingDeclarationsTest {
             }
             """.trimIndent(),
             "Create read-only property 'missing'",
-            "private ${modifier}Int missing.get() { TODO(); }",
+            if (modifier.isEmpty()) "private Int missing.get() { TODO(); }" else null,
         )
     }
 

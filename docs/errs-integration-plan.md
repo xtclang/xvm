@@ -10416,5 +10416,12 @@ same-owner getter with an explicit TODO body and the enclosing result type. Thes
 guess constructor fields, external ownership or a writable property's initialization policy.
 The proposed graph must compile, preserve all previously resolved bindings and bind the selected
 use to the inserted declaration; getter use types must match the original return type exactly.
-Regression tests cover successful repairs, static/instance getters, unsupported constructor
-requirements and unrelated source errors. Validation remains pending.
+Regression tests cover successful repairs, instance getters, static-property refusal, unsupported
+constructor requirements and unrelated source errors. Static properties are compiler constants,
+require an initializer and cannot contain a custom getter (VERIFY-57/60); a quick fix does not
+invent an initializer. Header and body snapshots may both represent the same source, so discovery
+combines their candidates and deduplicates before compiling the proposal.
+
+The combined missing-method/member/declaration/extraction backend gate passes **247 tests**, zero
+failures/errors/skips. This includes all seven missing-declaration regressions. Editor acceptance
+and shared scenarios for this batch remain pending.
