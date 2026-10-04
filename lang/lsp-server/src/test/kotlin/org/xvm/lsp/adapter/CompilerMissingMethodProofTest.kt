@@ -9,10 +9,53 @@ import org.xvm.lsp.adapter.xdk.CompilerRenameFacts
 import org.xvm.lsp.adapter.xdk.XdkDependencies
 import org.xvm.lsp.adapter.xdk.XdkRename
 import org.xvm.lsp.adapter.xdk.memberActionFacts
+import org.xvm.lsp.adapter.xdk.missingMethodLocalTypes
 import org.xvm.lsp.adapter.xdk.projectRenameFacts
 import org.xvm.lsp.adapter.xdk.renameFacts
 
 class CompilerMissingMethodProofTest {
+    @Test
+    fun `inferred local evidence remains detached and repair must bind the exact argument declaration`() {
+        CompilerTestSupport.configure()
+        val text =
+            """
+            module Missing {
+                Int read(Int value) {
+                    var first = value;
+                    var other = value + 1;
+                    Int result = missing(first);
+                    return result;
+                }
+            }
+            """.trimIndent()
+        val embedding = EmbeddingSupport.instance()
+        val errors = ErrorList()
+        val failed = embedding.compileModule(Source(text, SOURCE), null, errors)
+        assertThat(failed.succeeded()).isFalse()
+        val types = failed.missingMethodLocalTypes()
+        assertThat(types.values).containsExactlyInAnyOrder("Int64", "Int64", "Int64")
+        val declarationErrors = ErrorList()
+        val analysis = embedding.analyzeDeclarations(Source(text, SOURCE), null, declarationErrors).orElseThrow()
+        val headers = analysis.memberActionFacts(XdkDependencies(emptyList()).open(), declarationErrors, types)
+        assertThat(declarationErrors.errors).isEmpty()
+        val candidate = headers.missingMethods.single()
+        assertThat(candidate.declaration).isEqualTo("private Int64 missing(Int64 arg1)")
+        assertThat(candidate.arguments).hasSize(1)
+        val edit = requireNotNull(candidate.edit(text))
+
+        fun proves(plan: XdkRename.Plan): Boolean {
+            val repairedErrors = ErrorList()
+            val repaired = embedding.compileModule(Source(plan.proposed.getValue(SOURCE), SOURCE), null, repairedErrors)
+            assertThat(repaired.succeeded()).describedAs(repairedErrors.errors.toString()).isTrue()
+            return candidate.bindsNewMethod(repaired.projectRenameFacts(XdkDependencies(emptyList()).open(), repairedErrors), plan, edit)
+        }
+        assertThat(proves(XdkRename.Plan(mapOf(SOURCE to text), mapOf(SOURCE to listOf(edit))))).isTrue()
+        // This compiles with the same signature, but the argument now denotes a different local.
+        val argument = text.indexOf("first);")
+        val redirect = XdkRename.Edit(argument, argument + "first".length, "other")
+        assertThat(proves(XdkRename.Plan(mapOf(SOURCE to text), mapOf(SOURCE to listOf(redirect, edit))))).isFalse()
+    }
+
     @Test
     fun `fresh parameter signature repairs a failed body without changing known bindings`() {
         CompilerTestSupport.configure()
