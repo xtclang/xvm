@@ -10388,3 +10388,12 @@ creation. Typed initializer and statement calls keep their own ordinary result c
 proposals now receive the same exact signature check as public proposals. Tests cover constrained
 formals, nested generic results and conditional results in private and companion destinations.
 This separate checkpoint awaits the combined L63 validation gate.
+
+### L63 receiver continuation (2026-10-04)
+
+Validated computed and property-chain receivers now supply their concrete source class, alongside
+register receivers and direct class names. The failed attempt contributes only detached ownership
+evidence; it is never resumed for TypeInfo. Source const/service owners and written singletons
+can receive methods with compiler-established instance dispatch. Unknown runtime Class/Type values,
+binary owners and ambiguous relational receivers remain refusals. Tests cover returned/constructed
+receivers, property chains and static const/service singletons. Combined validation is pending.
