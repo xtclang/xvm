@@ -40,6 +40,7 @@ internal object XdkMissingMethods {
     data class Inputs(
         val localTypes: Map<SemanticModel.SourceLocation, LocalType> = emptyMap(),
         val receivers: Map<SemanticModel.SourceLocation, Receiver> = emptyMap(),
+        val expressions: Map<SemanticModel.SourceLocation, LocalType> = emptyMap(),
     )
 
     data class LocalType(
