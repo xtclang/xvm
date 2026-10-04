@@ -9464,7 +9464,7 @@ Implement in separate checkpoints, then run the combined backend and selected ed
 1. [x] Extract an entire explicitly typed local initializer into an immediately preceding local,
    preserving its written expected type and evaluation order. Reject inference, property/conditional
    initializers, partial selections and declaration annotations/comments that are not understood.
-2. [ ] Inline an adjacent single-use local into another explicitly typed initializer with the
+2. [x] Inline an adjacent single-use local into another explicitly typed initializer with the
    same written expected type, preserving every moved reference/call and the evaluation count.
 3. [ ] Remove an unused plain local only with compiler-proven constant, side-effect-free
    initialization; preserve comments and reject runtime evaluation or Ref/Var construction.
