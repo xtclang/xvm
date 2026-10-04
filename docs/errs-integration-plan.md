@@ -10407,3 +10407,14 @@ Complete graph compilation and binding/signature checks still gate publication. 
 arithmetic, calls, property reads, mixed named/positional inputs and duplicate-label refusal.
 The four shared missing-method checkpoints now receive one combined backend gate before further
 refactorings build on them. Native editor acceptance remains batched with the remaining L63 scope.
+
+### L63 missing declaration continuation (2026-10-04)
+
+Adds independent class and read-only-property creation actions. A bare, zero-argument unknown
+constructor can propose a same-module class. An unresolved whole return value can propose a
+same-owner getter with an explicit TODO body and the enclosing result type. These actions never
+guess constructor fields, external ownership or a writable property's initialization policy.
+The proposed graph must compile, preserve all previously resolved bindings and bind the selected
+use to the inserted declaration; getter use types must match the original return type exactly.
+Regression tests cover successful repairs, static/instance getters, unsupported constructor
+requirements and unrelated source errors. Validation remains pending.
