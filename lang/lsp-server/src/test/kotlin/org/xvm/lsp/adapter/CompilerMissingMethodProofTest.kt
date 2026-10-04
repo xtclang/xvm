@@ -9,11 +9,55 @@ import org.xvm.lsp.adapter.xdk.CompilerRenameFacts
 import org.xvm.lsp.adapter.xdk.XdkDependencies
 import org.xvm.lsp.adapter.xdk.XdkRename
 import org.xvm.lsp.adapter.xdk.memberActionFacts
-import org.xvm.lsp.adapter.xdk.missingMethodLocalTypes
+import org.xvm.lsp.adapter.xdk.missingMethodInputs
 import org.xvm.lsp.adapter.xdk.projectRenameFacts
 import org.xvm.lsp.adapter.xdk.renameFacts
 
 class CompilerMissingMethodProofTest {
+    @Test
+    fun `repair must preserve a same owner receiver even when another receiver compiles`() {
+        CompilerTestSupport.configure()
+        val text =
+            """
+            module Missing {
+                class Box {
+                    Int read(Box peer, Int value) {
+                        return peer.missing(value);
+                    }
+                }
+            }
+            """.trimIndent()
+        val embedding = EmbeddingSupport.instance()
+        val errors = ErrorList()
+        val failed = embedding.compileModule(Source(text, SOURCE), null, errors)
+        assertThat(failed.succeeded()).isFalse()
+        val partial = failed.renameFacts(XdkDependencies(emptyList()).open())
+        val inputs = failed.missingMethodInputs()
+        assertThat(inputs.sameOwnerReceivers).hasSize(1)
+        val declarationErrors = ErrorList()
+        val analysis = embedding.analyzeDeclarations(Source(text, SOURCE), null, declarationErrors).orElseThrow()
+        val headers = analysis.memberActionFacts(XdkDependencies(emptyList()).open(), declarationErrors, inputs)
+        assertThat(declarationErrors.errors).isEmpty()
+        val candidate = headers.missingMethods.single()
+        assertThat(candidate.declaration).isEqualTo("private Int64 missing(Int64 arg1)")
+        val edit = requireNotNull(candidate.edit(text))
+        val before = CompilerRenameFacts.merge(mapOf("headers" to headers, "partial" to partial))
+
+        fun proves(plan: XdkRename.Plan): Boolean {
+            val repairedErrors = ErrorList()
+            val repaired = embedding.compileModule(Source(plan.proposed.getValue(SOURCE), SOURCE), null, repairedErrors)
+            assertThat(repaired.succeeded()).describedAs(repairedErrors.errors.toString()).isTrue()
+            val after = repaired.projectRenameFacts(XdkDependencies(emptyList()).open(), repairedErrors)
+            assertThat(candidate.bindsNewMethod(after, plan, edit)).isTrue()
+            return XdkRename.preservesKnownBindings(before, after, plan)
+        }
+        assertThat(proves(XdkRename.Plan(mapOf(SOURCE to text), mapOf(SOURCE to listOf(edit))))).isTrue()
+        // Both receivers select the new method, but switching instances changes program behavior.
+        val receiver = text.indexOf("peer.missing")
+        val redirect = XdkRename.Edit(receiver, receiver + "peer".length, "this")
+        assertThat(proves(XdkRename.Plan(mapOf(SOURCE to text), mapOf(SOURCE to listOf(redirect, edit))))).isFalse()
+    }
+
     @Test
     fun `inferred local evidence remains detached and repair must bind the exact argument declaration`() {
         CompilerTestSupport.configure()
@@ -32,11 +76,11 @@ class CompilerMissingMethodProofTest {
         val errors = ErrorList()
         val failed = embedding.compileModule(Source(text, SOURCE), null, errors)
         assertThat(failed.succeeded()).isFalse()
-        val types = failed.missingMethodLocalTypes()
-        assertThat(types.values).containsExactlyInAnyOrder("Int64", "Int64", "Int64")
+        val inputs = failed.missingMethodInputs()
+        assertThat(inputs.localTypes.values).containsExactlyInAnyOrder("Int64", "Int64", "Int64")
         val declarationErrors = ErrorList()
         val analysis = embedding.analyzeDeclarations(Source(text, SOURCE), null, declarationErrors).orElseThrow()
-        val headers = analysis.memberActionFacts(XdkDependencies(emptyList()).open(), declarationErrors, types)
+        val headers = analysis.memberActionFacts(XdkDependencies(emptyList()).open(), declarationErrors, inputs)
         assertThat(declarationErrors.errors).isEmpty()
         val candidate = headers.missingMethods.single()
         assertThat(candidate.declaration).isEqualTo("private Int64 missing(Int64 arg1)")

@@ -4,6 +4,12 @@ import org.xvm.lsp.adapter.Range
 
 /** Detached signatures from fresh declarations; only a complete repair proof can publish them. */
 internal object XdkMissingMethods {
+    /** Detached body evidence copied before the fresh declaration attempt checks eligibility. */
+    data class Inputs(
+        val localTypes: Map<SemanticModel.SourceLocation, String> = emptyMap(),
+        val sameOwnerReceivers: Set<SemanticModel.SourceLocation> = emptySet(),
+    )
+
     data class ArgumentBinding(
         val use: SemanticModel.SourceLocation,
         val declaration: SemanticModel.SourceLocation,
