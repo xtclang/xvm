@@ -348,28 +348,47 @@ internal object XdkRename {
         candidate: XdkMethodExtraction.Candidate,
     ): Boolean {
         if (before.models.any { it.status != SemanticModel.Status.COMPLETE } ||
-            after.models.any { it.status != SemanticModel.Status.COMPLETE }) return false
+            after.models.any { it.status != SemanticModel.Status.COMPLETE }
+        ) {
+            return false
+        }
         val source = candidate.expression.sourceName ?: return false
         val original = plan.original[source] ?: return false
         val proposed = plan.proposed[source] ?: return false
         val insertion = candidate.insertion
-        val insertionStart = insertion.start + plan.edits[source].orEmpty()
-            .filter { it != insertion && it.end <= insertion.start }.sumOf { it.text.length - (it.end - it.start) }
+        val insertionStart =
+            insertion.start +
+                plan.edits[source]
+                    .orEmpty()
+                    .filter { it != insertion && it.end <= insertion.start }
+                    .sumOf { it.text.length - (it.end - it.start) }
         // The old expression maps to its relocated body, not to the replacement call.
-        val callStart = candidate.replacement.start + plan.edits[source].orEmpty()
-            .filter { it != candidate.replacement && it.end <= candidate.replacement.start }
-            .sumOf { it.text.length - (it.end - it.start) }
+        val callStart =
+            candidate.replacement.start +
+                plan.edits[source]
+                    .orEmpty()
+                    .filter { it != candidate.replacement && it.end <= candidate.replacement.start }
+                    .sumOf { it.text.length - (it.end - it.start) }
+
         fun oldSite(at: SemanticModel.SourceLocation): Site? {
             if (at.sourceName != source) return null
             val start = offset(original, at.range.start)?.let { plan.map(source, it) } ?: return null
             val end = offset(original, at.range.end)?.let { plan.map(source, it) } ?: return null
             return Site(source, start, end)
         }
-        fun location(start: Int, end: Int): SemanticModel.SourceLocation {
+
+        fun location(
+            start: Int,
+            end: Int,
+        ): SemanticModel.SourceLocation {
             fun at(offset: Int) = position(proposed, offset).let { SemanticModel.Position(it.line, it.column) }
             return SemanticModel.SourceLocation(source, SemanticModel.Range(at(start), at(end)))
         }
-        fun sameType(old: SemanticModel.SourceLocation, new: SemanticModel.SourceLocation): Boolean {
+
+        fun sameType(
+            old: SemanticModel.SourceLocation,
+            new: SemanticModel.SourceLocation,
+        ): Boolean {
             val expected = before.extraction.types[old]?.let { composedTarget(it, plan.original, { it }, plan::map) } ?: return false
             val actual = after.extraction.types[new]?.let { composedTarget(it, plan.proposed, { it }) { _, at -> at } } ?: return false
             return expected == actual
@@ -379,38 +398,57 @@ internal object XdkRename {
         if (!sameType(candidate.expression, location(expressionStart, expressionEnd))) return false
         val expected = edges(before, plan.original, sourceParameters = true, translate = plan::map) ?: return false
         val actual = edges(after, plan.proposed, sourceParameters = true) { _, at -> at } ?: return false
-        val captures = candidate.captures.associate { capture ->
-            if (capture.declaration !in before.extraction.stableValues) return false
-            val parameterStart = insertionStart + capture.parameterOffset
-            val parameterEnd = parameterStart + capture.name.length
-            val parameter = Target.Declaration(Site(source, parameterStart, parameterEnd), SemanticModel.SymbolKind.PARAMETER)
-            val originalTarget = Target.Declaration(oldSite(capture.declaration) ?: return false, capture.kind)
-            if (actual[parameter.site] != parameter || !sameType(capture.declaration, location(parameterStart, parameterEnd))) return false
-            val argumentStart = callStart + capture.argumentOffset
-            if (actual[Site(source, argumentStart, argumentStart + capture.name.length)] != originalTarget) return false
-            parameter to originalTarget
-        }
+        val captures =
+            candidate.captures.associate { capture ->
+                if (capture.declaration !in before.extraction.stableValues) return false
+                val parameterStart = insertionStart + capture.parameterOffset
+                val parameterEnd = parameterStart + capture.name.length
+                val parameter = Target.Declaration(Site(source, parameterStart, parameterEnd), SemanticModel.SymbolKind.PARAMETER)
+                val originalTarget = Target.Declaration(oldSite(capture.declaration) ?: return false, capture.kind)
+                if (actual[parameter.site] != parameter ||
+                    !sameType(capture.declaration, location(parameterStart, parameterEnd))
+                ) {
+                    return false
+                }
+                val argumentStart = callStart + capture.argumentOffset
+                if (actual[Site(source, argumentStart, argumentStart + capture.name.length)] != originalTarget) return false
+                parameter to originalTarget
+            }
         if (expected.any { (site, target) ->
                 val value = actual[site]
-                value != target && (site.source != source || site.call || site.start < expressionStart || site.end > expressionEnd ||
-                    captures[value] != target)
-            }) return false
+                val relocatedRead =
+                    site.source == source && !site.call &&
+                        site.start >= expressionStart && site.end <= expressionEnd
+                value != target && (!relocatedRead || captures[value] != target)
+            }
+        ) {
+            return false
+        }
         val helperStart = insertionStart + candidate.methodOffset
         val helper = Target.Declaration(Site(source, helperStart, helperStart + candidate.name.length), SemanticModel.SymbolKind.METHOD)
         if (actual[helper.site] != helper ||
-            actual[Site(source, callStart, callStart + candidate.name.length, true)] != helper) return false
+            actual[Site(source, callStart, callStart + candidate.name.length, true)] != helper
+        ) {
+            return false
+        }
         val model = after.models.singleOrNull { it.sourceName == source } ?: return false
         val call = model.calls.singleOrNull { it.callee == location(callStart, callStart + candidate.name.length).range } ?: return false
-        if (call.arguments.size != candidate.captures.size || call.arguments.withIndex().any { (index, argument) ->
+        if (call.arguments.size != candidate.captures.size ||
+            call.arguments.withIndex().any { (index, argument) ->
                 val capture = candidate.captures[index]
                 val start = callStart + capture.argumentOffset
                 argument.parameterIndex != index || argument.range != location(start, start + capture.name.length).range
-            }) return false
+            }
+        ) {
+            return false
+        }
         val oldDispatch = dispatch(before, plan.original, translate = plan::map) ?: return false
         val newDispatch = dispatch(after, plan.proposed) { _, at -> at } ?: return false
         // A fresh private helper can add its own chain, but cannot override or redirect old members.
-        return newDispatch.filterNot { it.members == listOf(helper) && it.supported && it.cycles.isEmpty() && it.alternatives.isEmpty() }.toSet() ==
-            oldDispatch
+        return newDispatch
+            .filterNot {
+                it.members == listOf(helper) && it.supported && it.cycles.isEmpty() && it.alternatives.isEmpty()
+            }.toSet() == oldDispatch
     }
 
     /** Removing a local may remove its declaration, written type and sole read, but no other edges. */
