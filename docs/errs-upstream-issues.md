@@ -251,3 +251,26 @@ the closed-companion repair and completes diagnostic Undo/Redo/Undo in 3,989 ms.
 the hidden caller through an active-tab-only locator; the driver now selects the appropriate tab
 for each assertion without replaying the action. These are selected receipts, not a full-catalog run
 or closure of UP22.
+
+
+### UP07 native cancellation during cross-module quick-fix discovery (2026-10-04)
+
+Native `run-6617035480724888358` passes START/X201/X202/X205/X206, then aborts X209 before
+applying an edit. Overlapping root pulls deliver several full reports for the same caller result
+(`384/376/369` in the saved client trace). LSP4IJ cancels old lazy fixes while refreshing annotations;
+`LSPLazyCodeActions.loadCodeActionsFor` raises `ProcessCanceledException` through the synchronous
+remote `ShowIntentionActions` call. The server continues replying correctly: code-action request
+411 returns the public method proposal in about 288 ms server time. No IDE error or server restart
+is recorded. Related reports in this failure contain only an empty library report, so this is not
+evidence of the still-open related/workspace nonempty-report refresh gap.
+
+The native driver now queues intention discovery as an ordinary UI action (`now = false`), allowing
+the IDE to handle cancellation normally. Its existing bounded popup wait can reopen only an
+unapplied inspection after checking the document stamp; accepting an edit stays outside that retry.
+It neither suppresses IDE failures nor treats an absent action as success. This is a harness
+correction, not a new product bridge or a claim that all UP07 delivery routes are fixed.
+
+The corrected native run `run-14965910820534049086` passes START/X201/X202/X205/X206/X209–X212,
+zero IDE failures, one server start and no ProcessCanceledException or severe-error log markers.
+Exact cross-module edits and diagnostic Undo/Redo pass with Ultimate disabled. This selected
+acceptance preserves the failed receipt and does not close the broader UP07 delivery-route audit.
