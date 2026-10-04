@@ -1,6 +1,6 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **181 scenarios**: X1–X176, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **185 scenarios**: X1–X180, CFG1–CFG3 and 7a.8/7a.9.
 The latest selected gate passes **X169/X171/X173–X176** in VS Code `run-ElUMIl` and IntelliJ
 `run-13159045223223510909` (START also passes), with no editor errors. It covers existing and
 empty-package moves, comments/whitespace, import aliases, closed consumers, companions/resources,
@@ -1320,7 +1320,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X176 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X180 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -3153,3 +3153,20 @@ The setup creates the listed empty directories explicitly, without a Marker.x so
 | X174 | Move Box.x from tools to the module companion root. Undo and Redo. | Removed prefixes leave both block and line comments, CRLF and Unicode intact; nested Part and constructors still resolve. |
 | X175 | Request the shared batch into empty util with an inline Taken collision. | No proposal, edits, file changes or settings changes. This is a protocol refusal; it cannot veto arbitrary VS Code Explorer moves. |
 | X176 | Move First.x and Second.x together into empty util. Undo and Redo. | Mutual references and the closed consumer update as one transaction; diagnostics remain clean. |
+
+
+### L63 local initializer and unused-local actions
+
+Shared X177–X180 are implemented in both drivers; current-batch validation is pending.
+Use the exact source in `lang/test-fixtures/compiler-playbook/scenarios.json` for each row.
+
+| Case | Manual action | Required result |
+| --- | --- | --- |
+| X177 | Select the complete `input /* keep */ + step()` initializer and invoke **Extract expression to local variable**. Undo, Redo, Undo. | A preceding explicitly typed local holds the original expression and comment; the original initializer uses it. Text and diagnostics match the fixture at every step. |
+| X178 | Invoke **Inline local variable into initializer** on `value`. Undo, Redo, Undo. | The lambda moves into the adjacent initializer with its original expected function type and capture. No duplicate evaluation. |
+| X179 | Invoke **Remove unused local variable** on `unused`. Undo, Redo, Undo. | The constant initializer disappears, both surrounding comments remain, and exact original/changed text and clean diagnostics follow history. |
+| X180 | Inspect code actions at `unused` where its initializer calls `step()`. | Removal is absent; the unused initializer may still have effects. The installed-connection refusal leaves source untouched. |
+
+Inferred locals, changed expected types, partial/deferred expressions, intervening statements,
+Ref/Var annotations and runtime initializers remain refusal controls in backend tests. General
+extract-method, missing-declaration generation and global safe delete remain separate work.
