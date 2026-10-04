@@ -1,6 +1,6 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **177 scenarios**: X1–X172, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **181 scenarios**: X1–X176, CFG1–CFG3 and 7a.8/7a.9.
 The latest selected gate passes **X161/X163/X169–X172** in VS Code `run-TjE279` and IntelliJ
 `run-14394987299477639656` (START also passes), with zero reported editor failures or compiler
 internal-error log markers. This covers combined rename-and-move, module/dependency/resource
@@ -1314,7 +1314,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X172 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X176 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -3134,3 +3134,16 @@ A fresh reverse refactoring is distinct from Undo: a move bringing previously un
 a pinned resource root is conservatively refused. Undo restores the stored, proven transaction and
 its original resource configuration. Before applying refactorings, save any pre-existing unsaved
 closed IntelliJ document; the host refuses buffers that were not available to the compiler proof.
+
+
+### L62 empty destinations and qualified-name trivia
+
+New shared cases are implemented in both drivers; current-batch acceptance is pending.
+The setup creates the listed empty directories explicitly, without a Marker.x source.
+
+| Case | Manual action | Required result |
+| --- | --- | --- |
+| X173 | Create empty `App/util/nested`; move Box.x there as Parcel.x, keeping Consumer closed. Undo and Redo. | Aliases, all comments/whitespace, qualified calls, companions and resources survive; closed sources have exact expected contents. |
+| X174 | Move Box.x from tools to the module companion root. Undo and Redo. | Removed prefixes leave both block and line comments, CRLF and Unicode intact; nested Part and constructors still resolve. |
+| X175 | Request the shared batch into empty util with an inline Taken collision. | No proposal, edits, file changes or settings changes. This is a protocol refusal; it cannot veto arbitrary VS Code Explorer moves. |
+| X176 | Move First.x and Second.x together into empty util. Undo and Redo. | Mutual references and the closed consumer update as one transaction; diagnostics remain clean. |
