@@ -846,6 +846,29 @@ internal class XdkProjectQueries(
                         )
                     }
             }
+        val declarations =
+            if (complete) {
+                emptyList()
+            } else {
+                before.models
+                    .singleOrNull { it.sourceName == source }
+                    ?.let { model ->
+                        XdkMissingDeclarations.candidates(text, range, model, before).mapNotNull { candidate ->
+                            checkCurrent()
+                            if (!Files.isWritable(File(source).toPath())) return@mapNotNull null
+                            val plan = XdkRename.Plan(texts, mapOf(source to listOf(candidate.edit)))
+                            val after = compile(plan.proposed, Proof.REPAIR) ?: return@mapNotNull null
+                            if (!XdkRename.preservesKnownBindings(before, after, plan) || !candidate.proves(after, plan)) {
+                                return@mapNotNull null
+                            }
+                            CodeAction(
+                                candidate.title,
+                                CodeAction.CodeActionKind.QUICKFIX,
+                                edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+                            )
+                        }
+                    }.orEmpty()
+            }
         val members =
             XdkMemberActions.actions(before.memberActions, source, range).mapNotNull { candidate ->
                 checkCurrent()
@@ -956,7 +979,17 @@ internal class XdkProjectQueries(
             } else {
                 null
             }
-        return if (isCurrent()) actions + missing + members + listOfNotNull(extraction, inline, removal, method) else emptyList()
+        return if (isCurrent()) {
+            actions + missing + declarations + members +
+                listOfNotNull(
+                    extraction,
+                    inline,
+                    removal,
+                    method,
+                )
+        } else {
+            emptyList()
+        }
     }
 
     private fun autoImports(
