@@ -525,22 +525,23 @@ class XdkMissingMethodsTest {
         )
     }
 
-    @Test
-    fun `method formals cannot escape into a sibling signature`() {
-        refused(
+    @ParameterizedTest
+    @ValueSource(strings = ["Object", "Const", "Hashable"])
+    fun `method formals and constraints are declared by the generated sibling`(bound: String) {
+        query(
             """
             module Missing {
-                <Value> Value read(Value value) {
+                <Value extends $bound> Value read(Value value) {
                     return §missing(value);
                 }
             }
             """.trimIndent(),
-        )
+        ) { assertThat(it).contains("private <Value extends $bound> Value missing(Value arg1)") }
     }
 
     @Test
-    fun `conditional return is not flattened into ordinary returns`() {
-        refused(
+    fun `conditional return context preserves the conditional signature`() {
+        query(
             """
             module Missing {
                 conditional Int read(Int value) {
@@ -548,7 +549,7 @@ class XdkMissingMethodsTest {
                 }
             }
             """.trimIndent(),
-        )
+        ) { assertThat(it).contains("private conditional Int64 missing(Int64 arg1)") }
     }
 
     @Test
