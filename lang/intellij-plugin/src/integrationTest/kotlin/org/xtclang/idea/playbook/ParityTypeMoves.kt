@@ -91,11 +91,14 @@ internal fun ParityScenarios.typeMoveCases() {
                             Files.exists(path) &&
                                 (
                                     if (path.toString().endsWith(".x")) {
-                                        Document(path.fileName.toString(), requireNotNull(refresh(path))).text
+                                        // IntelliJ normalizes document buffers to LF; closed files
+                                        // below still assert exact disk bytes, including CRLF.
+                                        Document(path.fileName.toString(), requireNotNull(refresh(path))).text ==
+                                            expected.replace("\r\n", "\n").replace('\r', '\n')
                                     } else {
-                                        Files.readString(path)
+                                        Files.readString(path) == expected
                                     }
-                                ) == expected &&
+                                ) &&
                                 (
                                     file.string("file") == file.string("destination") ||
                                         !Files.exists(directory.resolve(file.string(if (moved) "file" else "destination")))
