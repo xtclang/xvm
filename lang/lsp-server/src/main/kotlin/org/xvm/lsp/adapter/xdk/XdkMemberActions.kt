@@ -76,19 +76,41 @@ internal object XdkMemberActions {
                 } else {
                     XdkRename.Edit(at, at, "$newline$body$indent")
                 }
-            val imports =
-                members
-                    .flatMap { it.imports }
-                    .distinct()
-                    .groupBy { it.position }
-                    .map { (position, declarations) ->
-                        val offset = XdkRename.offset(text, position) ?: return null
-                        if (offset != 0 && text.getOrNull(offset - 1) != '{') return null
-                        val block =
-                            declarations.joinToString(newline, postfix = newline) { it.declaration }
-                        XdkRename.Edit(offset, offset, if (offset == 0) block else "$newline$block")
-                    }
+            val imports = importEdits(text, members.flatMap { it.imports }) ?: return null
             return Edits(memberEdit, imports)
+        }
+    }
+
+    /** Reuse existing aliases and allocate deterministic names that cannot capture source tokens. */
+    fun moduleAliases(
+        modules: Collection<String>,
+        existing: Map<String, String>,
+        names: Set<String>,
+    ): Map<String, String> =
+        modules.distinct().sorted().fold(existing) { known, module ->
+            if (module in known) {
+                known
+            } else {
+                val base = module.substringBefore('.').replaceFirstChar { it.lowercase() }
+                val alias =
+                    generateSequence(0) { it + 1 }
+                        .map { if (it == 0) base else "$base$it" }
+                        .first { it !in names && it !in known.values && XdkRename.identifier(it) }
+                known + (module to alias)
+            }
+        }
+
+    /** Both member intentions and missing-method fixes apply imports and declarations atomically. */
+    fun importEdits(
+        text: String,
+        imports: List<Import>,
+    ): List<XdkRename.Edit>? {
+        val newline = Regex("\r\n|\r|\n").find(text)?.value ?: "\n"
+        return imports.distinct().groupBy { it.position }.map { (position, declarations) ->
+            val offset = XdkRename.offset(text, position) ?: return null
+            if (offset != 0 && text.getOrNull(offset - 1) != '{') return null
+            val block = declarations.joinToString(newline, postfix = newline) { it.declaration }
+            XdkRename.Edit(offset, offset, if (offset == 0) block else "$newline$block")
         }
     }
 

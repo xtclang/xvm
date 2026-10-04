@@ -809,18 +809,25 @@ internal class XdkProjectQueries(
                         checkCurrent()
                         val destination = candidate.destination.sourceName ?: return@mapNotNull null
                         val targetText = texts[destination] ?: return@mapNotNull null
-                        val targetUri = uris[destination] ?: return@mapNotNull null
                         if (!Files.isWritable(File(destination).toPath())) return@mapNotNull null
-                        val edit = candidate.edit(targetText) ?: return@mapNotNull null
-                        val plan = XdkRename.Plan(texts, mapOf(destination to listOf(edit)))
+                        val importSource = candidate.importSource ?: destination
+                        val importText = texts[importSource] ?: return@mapNotNull null
+                        val edit = candidate.edit(targetText, importText) ?: return@mapNotNull null
+                        val changes =
+                            listOf(destination to listOf(edit.member), importSource to edit.imports)
+                                .filter { it.second.isNotEmpty() }
+                                .groupBy({ it.first }, { it.second })
+                                .mapValues { (_, edits) -> edits.flatten() }
+                        if (changes.keys.any { it !in uris || !Files.isWritable(File(it).toPath()) }) return@mapNotNull null
+                        val plan = XdkRename.Plan(texts, changes)
                         val after = compile(plan.proposed) ?: return@mapNotNull null
-                        if (!XdkRename.preservesKnownBindings(before, after, plan) || !candidate.bindsNewMethod(after, plan, edit)) {
+                        if (!XdkRename.preservesKnownBindings(before, after, plan) || !candidate.bindsNewMethod(after, plan, edit.member)) {
                             return@mapNotNull null
                         }
                         CodeAction(
                             candidate.title,
                             CodeAction.CodeActionKind.QUICKFIX,
-                            edit = WorkspaceEdit(mapOf(targetUri to plan.textEdits(destination)), versioned = true),
+                            edit = WorkspaceEdit(changes.keys.associate { uris.getValue(it) to plan.textEdits(it) }, versioned = true),
                         )
                     }
             }
@@ -1288,7 +1295,10 @@ internal class XdkProjectQueries(
                         return null
                     }
                     artifacts[module.name] = compilation.toDependency()
-                    if (proof == Proof.REPAIR) missingDestinations[module.name] = compilation.missingMethodDestinations()
+                    if (proof == Proof.REPAIR) {
+                        missingDestinations[module.name] =
+                            compilation.missingMethodDestinations(module.dependencies + XdkLibraries.moduleNames)
+                    }
                     module.uri to facts
                 }.toMap()
         checkCurrent()

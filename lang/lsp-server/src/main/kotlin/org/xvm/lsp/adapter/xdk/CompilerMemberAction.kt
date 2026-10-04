@@ -111,24 +111,11 @@ internal fun compilerMemberActions(
             }
         if (lexicalErrors.hasSeriousErrors()) return@flatMap emptyList()
         val aliases =
-            external
-                .map { it.moduleConstant.name }
-                .distinct()
-                .sorted()
-                .fold(mapOf("ecstasy.xtclang.org" to "ecstasy")) { known, module ->
-                    if (module in known) {
-                        known
-                    } else {
-                        val base = module.substringBefore('.').replaceFirstChar { it.lowercase() }
-                        val alias =
-                            generateSequence(0) { it + 1 }
-                                .map { if (it == 0) base else "$base$it" }
-                                .first {
-                                    it !in names && it !in known.values && XdkRename.identifier(it)
-                                }
-                        known + (module to alias)
-                    }
-                }
+            XdkMemberActions.moduleAliases(
+                external.map { it.moduleConstant.name },
+                mapOf("ecstasy.xtclang.org" to "ecstasy"),
+                names,
+            )
         val moduleNode =
             generateSequence(node as AstNode) { it.parent }
                 .filterIsInstance<TypeCompositionStatement>()
