@@ -1726,6 +1726,26 @@ backend and 89 IntelliJ unit tests; X122/X181/X185–X188 pass in VS Code `run-d
 exposed and fixed UP07 equal-full diagnostic reports retaining canceled quick fixes in unchanged
 annotations. The client-only correction and failure receipts are in the integration plan.
 
-No Java AST or embedding API change is needed. Unsupported receiver/closure/overload contexts,
-method formals, inferred/computed/named arguments and ambiguous numeric literal representations
-remain refusals. See [the current scope and commit map](errs-integration-plan.md#l63-missing-method-quick-fixes-2026-10-04).
+No Java AST or embedding API change is needed. At that checkpoint, receiver/closure/overload
+contexts, method formals, inferred/computed/named arguments and ambiguous numeric literal
+representations remained refusals; the continuation below adds compiler-established locals.
+See [the current scope and commit map](errs-integration-plan.md#l63-missing-method-quick-fixes-2026-10-04).
+
+
+### L63 local argument and initializer evidence (2026-10-04)
+
+Missing private-method creation now accepts prior typed block locals and compiler-inferred
+`var`/`val` locals whose initializers have validated. An explicitly typed local initializer supplies
+the new method's result type. Resolved register types are copied to detached strings/locations;
+failed validation is never resumed and its TypeInfo is never requested. Fresh declaration analysis
+still checks owner/member eligibility. The complete proposed graph must prove each local argument
+binds to its original declaration, as well as preserving known bindings and resolving the call to
+the inserted method. No Java AST or embedding API/state was added.
+
+All 198 selected backend tests pass, including 47 missing-method cases/proofs. X181/X185/X189–X192
+pass in VS Code `run-mRmX6Y` and IntelliJ `run-1236802406694405307` (plus START), zero editor
+errors. Both use the 197-case catalog; these are selected runs. New cases verify exact edits,
+diagnostics and Undo/Redo plus inferred-result refusal. The commit map, build interruption and
+acceptance receipts are tracked in the [integration plan](errs-integration-plan.md#l63-local-arguments-and-typed-initializer-repairs-2026-10-04).
+Receiver/cross-owner creation, named/computed arguments, generic/conditional signatures, inferred
+result contexts and broader missing-declaration generation remain open.
