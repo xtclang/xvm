@@ -144,10 +144,19 @@ class CompilerPlaybookTest {
             "X206",
             "X207",
             "X208",
+            "X209",
+            "X210",
+            "X211",
+            "X212",
         ).forEach { id ->
             val data = shared.scenarios.getValue(id)
             fixture("$id/Extract.x", data.text("source"))
             if (data.values.has("destinationFile")) fixture("$id/${data.text("destinationFile")}", data.text("destinationSource"))
+            if (data.values.has("files")) {
+                data.rows("files").forEach { file ->
+                    fixture("$id/${file["file"].asString}", file["source"].asString)
+                }
+            }
         }
         listOf("X149", "X150", "X151", "X152").forEach { id ->
             val data = shared.scenarios.getValue(id)
