@@ -89,7 +89,7 @@ class XdkMissingMethodsTest {
     }
 
     @Test
-    fun `one declaration repairs repeated calls with matching signatures`() {
+    fun `a broad selection offers one repair for repeated calls with matching signatures`() {
         query(
             """
             module Missing {
@@ -101,6 +101,7 @@ class XdkMissingMethodsTest {
                 }
             }
             """.trimIndent(),
+            wholeFile = true,
         ) { assertThat(it).contains("private Int64 missing(Int64 arg1)") }
     }
 
@@ -229,6 +230,7 @@ class XdkMissingMethodsTest {
     private fun query(
         marked: String,
         expected: Boolean = true,
+        wholeFile: Boolean = false,
         check: (String) -> Unit,
     ) {
         CompilerTestSupport.configure()
@@ -247,8 +249,9 @@ class XdkMissingMethodsTest {
             assertThat(diagnostics).isNotEmpty()
             assertThat(diagnostics).noneMatch { it.code == "EMB-5" }
             val at = XdkRename.position(text, offset)
+            val end = if (wholeFile) XdkRename.position(text, text.length) else at
             val action =
-                adapter.getCodeActions(uri, Range(at, at), diagnostics).singleOrNull {
+                adapter.getCodeActions(uri, Range(at, end), diagnostics).singleOrNull {
                     it.title ==
                         "Create private method 'missing'"
                 }
