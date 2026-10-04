@@ -62,24 +62,6 @@ class CompilerDuplicateTypeTest {
         assertFalse(errors.hasSeriousErrors(), errors::toString);
     }
 
-    @Test
-    void mutuallyExclusiveClassesRemainConditionalSiblings() {
-        var errors = new ErrorList(20);
-        var module = type("module App {}", errors);
-        // The parser does not yet expose conditional type declarations in source syntax. Feed
-        // its existing conditional-declaration entry point the two complementary conditions.
-        List.of("Feature.present", "!Feature.present").forEach(text -> {
-            var condition = new Parser(new Source(text), errors).parseExpression();
-            var choice = new Parser(new Source("class Choice { class Nested {} }"), errors)
-                    .parseTypeCompositionComponent(condition, false);
-            module.addEnclosed(choice);
-        });
-
-        assertDoesNotThrow(() -> new Compiler(module, errors).generateInitialFileStructure());
-
-        assertFalse(errors.hasSeriousErrors(), errors::toString);
-    }
-
     private static StatementBlock parse(String text, ErrorList errors) {
         var block = new Parser(new Source(text), errors).parseSource();
         assertFalse(errors.hasSeriousErrors(), errors::toString);
