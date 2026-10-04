@@ -117,7 +117,7 @@ internal fun memberSignature(
  * Recursive named types and this method's own formals; other source spellings remain explicit
  * refusals.
  */
-private fun TypeConstant.memberSourceType(
+internal fun TypeConstant.memberSourceType(
     owner: IdentityConstant,
     formals: Map<TypeParameterConstant, String>,
     modules: Map<String, String>,

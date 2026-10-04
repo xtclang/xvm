@@ -797,6 +797,25 @@ internal class XdkProjectQueries(
                     )
                 }
             }
+        val missing =
+            if (complete) {
+                emptyList()
+            } else {
+                before.missingMethods.filter { it.selected(source, range) }.take(8).mapNotNull { candidate ->
+                    checkCurrent()
+                    val edit = candidate.edit(text) ?: return@mapNotNull null
+                    val plan = XdkRename.Plan(texts, mapOf(source to listOf(edit)))
+                    val after = compile(plan.proposed) ?: return@mapNotNull null
+                    if (!XdkRename.preservesKnownBindings(before, after, plan) || !candidate.bindsNewMethod(after, plan, edit)) {
+                        return@mapNotNull null
+                    }
+                    CodeAction(
+                        candidate.title,
+                        CodeAction.CodeActionKind.QUICKFIX,
+                        edit = WorkspaceEdit(mapOf(uri to plan.textEdits(source)), versioned = true),
+                    )
+                }
+            }
         val members =
             XdkMemberActions.actions(before.memberActions, source, range).mapNotNull { candidate ->
                 checkCurrent()
@@ -907,7 +926,7 @@ internal class XdkProjectQueries(
             } else {
                 null
             }
-        return if (isCurrent()) actions + members + listOfNotNull(extraction, inline, removal, method) else emptyList()
+        return if (isCurrent()) actions + missing + members + listOfNotNull(extraction, inline, removal, method) else emptyList()
     }
 
     private fun autoImports(
