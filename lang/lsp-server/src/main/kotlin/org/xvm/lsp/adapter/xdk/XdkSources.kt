@@ -111,14 +111,22 @@ internal class XdkSources
                 text: Map<String, String>,
                 moves: Map<String, String> = emptyMap(),
                 resourceMoves: XdkResourceMoves? = null,
+                members: Collection<Inputs> = listOf(inputs),
             ): XdkSources =
                 XdkSources(
                     File(moves[root.path] ?: root.path),
-                    inputs.text.entries.associate { (file, original) ->
+                    members.flatMap { it.text.entries }.filter { (file, _) ->
+                        val target = File(moves[file.path] ?: file.path)
+                        val targetRoot = File(moves[root.path] ?: root.path)
+                        target == targetRoot || target.toPath().startsWith(File(targetRoot.parentFile, targetRoot.nameWithoutExtension).toPath())
+                    }.associate { (file, original) ->
                         val path = moves[file.path] ?: file.path
                         File(path) to (text[path] ?: original)
                     },
-                    inputs.directories.mapTo(linkedSetOf()) { File(moves[it.path] ?: it.path) },
+                    members.flatMap { it.directories }.map { File(moves[it.path] ?: it.path) }.filterTo(linkedSetOf()) {
+                        val targetRoot = File(moves[root.path] ?: root.path)
+                        it.toPath().startsWith(File(targetRoot.parentFile, targetRoot.nameWithoutExtension).toPath())
+                    },
                     inputs.aliases.filterKeys { it.path !in moves },
                     inputs.resources,
                     inputs.resources.roots,
