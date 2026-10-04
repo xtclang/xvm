@@ -45,7 +45,7 @@ export function memberActionCases(): void {
     });
 }
 
-export function localRefactoringCases(ids: readonly ('X148' | 'X156' | 'X157')[] = ['X148']): void {
+export function localRefactoringCases(ids: readonly ('X148' | 'X156' | 'X157' | 'X177' | 'X178' | 'X179' | 'X180')[] = ['X148']): void {
     for (const id of ids) playbook(id, async (workspace, data) => {
         await workspace.write(data.file, data.source);
         await discovered(workspace, async () => {
@@ -53,6 +53,13 @@ export function localRefactoringCases(ids: readonly ('X148' | 'X156' | 'X157')[]
             await noErrors(document.uri);
             const start = position(document, data.selected);
             const range = new vscode.Range(start, start.translate(0, data.selected.length));
+            if ('refused' in data && data.refused) {
+                const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
+                    'vscode.executeCodeActionProvider', document.uri, range, vscode.CodeActionKind.Refactor.value, 100);
+                assert.ok(!actions?.some(item => item.title === data.title));
+                assert.strictEqual(document.getText(), data.source);
+                return;
+            }
             const action = await eventually(async () => {
                 const actions = await vscode.commands.executeCommand<vscode.CodeAction[]>(
                     'vscode.executeCodeActionProvider', document.uri, range, vscode.CodeActionKind.Refactor.value, 100);

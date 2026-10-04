@@ -9468,7 +9468,7 @@ Implement in separate checkpoints, then run the combined backend and selected ed
    same written expected type, preserving every moved reference/call and the evaluation count.
 3. [x] Remove an unused plain local only with compiler-proven constant, side-effect-free
    initialization; preserve comments and reject runtime evaluation or Ref/Var construction.
-4. [ ] Shared editor cases, exact edits, diagnostics and Undo/Redo; update capability/playbook docs.
+4. [x] Shared editor cases, exact edits, diagnostics and Undo/Redo; update capability/playbook docs.
 
 No new Java AST fields or accessors are planned. Detached compiler evidence and the existing
 whole-graph binding/dispatch proof gate the edits. Extract-method, missing declarations, global
@@ -9482,3 +9482,6 @@ Ref/Var annotations, runtime initializers, uses/writes, inference and comments i
 Leading/trailing comments remain intact. The compiler must accept the complete proposed graph and
 the existing removal proof must preserve every unaffected binding/call/dispatch edge. No AST API
 change is required. Validation follows the shared-scenario checkpoint.
+
+X177–X180 now share source, selection, expected edits and descriptions across both editor drivers.
+The catalog has 185 scenarios; validation follows all four implementation checkpoints.

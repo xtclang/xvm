@@ -1171,3 +1171,17 @@ Selected acceptance passes X169/X171/X173–X176 in VS Code `run-ElUMIl` and Int
 manual task reuses configuration cache. Both drivers compile. These are selected receipts,
 not a full 181-case run. The extraction map and remaining exclusions are recorded in
 [the integration plan](../../../docs/errs-integration-plan.md#l62-empty-destination-batch-acceptance-and-extraction).
+
+
+### L63 typed initializers and unused locals (2026-10-04)
+
+The compiler adapter now extracts whole explicitly typed local initializers and inlines a local
+into an adjacent, single-use typed initializer with the same written expected type. It can also
+remove an unused plain local whose initializer the compiler proves constant and free of side
+effects. Complete-graph compilation and binding/dispatch proof remain mandatory. Comments and
+contextual numeric/function types are preserved; inference, changed type contexts, intervening
+statements, runtime initialization and Ref/Var annotations remain refusals. The deletion facts
+are immutable source locations captured on the compiler worker, with no retained AST/constants
+or new Java AST API. Shared X177–X180 cover native application and Undo/Redo plus installed
+refusal checks. Validation for this batch is pending. L63 remains partial for wider contexts,
+extract-method, missing declarations, broader inline and global safe delete.
