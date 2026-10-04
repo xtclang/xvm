@@ -3466,9 +3466,11 @@ the new scenarios do not establish a full-catalog rerun. UP23 remains open while
 
 ### L63 generic repairs and broader refactorings (X221–X242)
 
-These shared scenarios are implemented in both drivers. Their new native acceptance is pending;
-earlier passing receipts do not validate this batch. Select an X number through the existing
-Gradle case properties. Successful cases check exact edits, clear diagnostics and Undo/Redo/Undo;
+These shared scenarios have passing selected-run receipts in both drivers. The
+[acceptance record](../../docs/errs-integration-plan.md#l63-bounded-closure-and-acceptance-2026-10-04)
+identifies each run and the corrected provider-cancellation/selected-tab harness failures; no
+full-catalog rerun is claimed. Select an X number through the existing Gradle case properties.
+Successful cases check exact edits, clear diagnostics and Undo/Redo/Undo;
 missing declarations additionally restore their diagnostics on Undo. Refusal cases check that no
 matching action exists and the source remains unchanged.
 
