@@ -7,6 +7,7 @@ import java.io.File
 internal class XdkResourceMoves(
     private val moves: Map<String, String>,
     private val changedSources: Set<String>,
+    private val incoming: Map<String, String> = emptyMap(),
 ) {
     class UnprovenResource(
         reason: String,
@@ -19,10 +20,10 @@ internal class XdkResourceMoves(
 
     fun directory(resources: XdkResources): ResourceDir {
         if (resources.entries.isEmpty()) return resources.directory()
-        // A moved root has its entire old contents captured. An incoming subtree from outside
-        // those roots does not: approving its old, empty destination would miss new resources.
+        // Extra move inputs are captured before replay and checked again before publication.
+        // Without that snapshot an incoming file could silently shadow a fallback resource.
         if (moves.any { (from, to) ->
-                from !in resources.entries &&
+                from !in resources.entries && from !in incoming &&
                     resources.roots.any { root ->
                         val destination = File(to).toPath()
                         val proposedRoot = path(root).toPath()
@@ -34,7 +35,7 @@ internal class XdkResourceMoves(
             throw UnprovenResource("The move introduces resources outside the captured roots")
         }
         val entries =
-            resources.entries
+            (resources.entries + incoming)
                 .filterValues { it != "missing" }
                 .keys
                 .map(::File)
