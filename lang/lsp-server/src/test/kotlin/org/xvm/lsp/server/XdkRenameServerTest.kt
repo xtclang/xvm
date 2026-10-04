@@ -436,27 +436,53 @@ class XdkRenameServerTest {
     }
 
     @ParameterizedTest
-    @CsvSource("false, false", "true, false", "false, true", "true, true")
+    @CsvSource(
+        "false, false, false, false",
+        "true, false, false, false",
+        "false, true, false, false",
+        "true, true, false, false",
+        "false, true, true, false",
+        "true, true, true, false",
+        "false, true, true, true",
+        "true, true, true, true",
+    )
     fun `missing method quick fix targets source destination with its own document version`(
         open: Boolean,
         separateModule: Boolean,
+        requiresImport: Boolean,
+        companion: Boolean,
     ) {
         directory = directory.toRealPath()
+        val type = if (requiresImport) "shared.Value" else "Int"
         val text =
             """
             module Missing {
                 ${if (separateModule) "package lib import Library;" else ""}
-                Int read(${if (separateModule) "lib.Other" else "Other"} peer, Int value) {
+                ${if (requiresImport) "package shared import Types;" else ""}
+                $type read(${if (separateModule) "lib.Other" else "Other"} peer, $type value) {
                     return peer.missing(value);
                 }
             }
             """.trimIndent()
         val source = directory.resolve("Missing.x").toFile().apply { writeText(text) }
         val target =
-            directory.resolve(if (separateModule) "Library.x" else "Missing/Other.x").toFile().apply {
-                parentFile.mkdirs()
-                writeText(if (separateModule) "module Library { class Other {} }" else "class Other {}")
-            }
+            directory
+                .resolve(
+                    if (companion) {
+                        "Library/Other.x"
+                    } else if (separateModule) {
+                        "Library.x"
+                    } else {
+                        "Missing/Other.x"
+                    },
+                ).toFile()
+                .apply {
+                    parentFile.mkdirs()
+                    writeText(if (separateModule && !companion) "module Library { class Other {} }" else "class Other {}")
+                }
+        val root = if (companion) directory.resolve("Library.x").toFile().apply { writeText("module Library {}") } else target
+        val rootOriginal = root.readText()
+        val types = directory.resolve("Types.x").toFile().apply { writeText("module Types { class Value {} }") }
         val targetOriginal = target.readText()
         val uri = source.toURI().toString()
         val targetUri = target.toURI().toString()
@@ -466,30 +492,51 @@ class XdkRenameServerTest {
             server.initialize(parameters()).get(20, SECONDS)
             server.replaceCompilerSourceModules(
                 buildList {
-                    if (separateModule) add(XdkSourceModule("Library", targetUri))
-                    add(XdkSourceModule("Missing", uri, if (separateModule) setOf("Library") else emptySet()))
+                    if (requiresImport) add(XdkSourceModule("Types", types.toURI().toString()))
+                    val typeDependency = if (requiresImport) setOf("Types") else emptySet()
+                    if (separateModule) add(XdkSourceModule("Library", root.toURI().toString(), typeDependency))
+                    add(XdkSourceModule("Missing", uri, (if (separateModule) setOf("Library") else emptySet()) + typeDependency))
                 },
             )
             val documents = server.textDocumentService
             documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 7, text)))
             if (open) documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(targetUri, "xtc", 13, target.readText())))
-            val at = Position(3, 20)
+            if (open && companion) {
+                documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(root.toURI().toString(), "xtc", 17, rootOriginal)))
+            }
+            val line = text.lines().indexOfFirst { "peer.missing" in it }
+            val at = Position(line, text.lines()[line].indexOf("missing"))
             val actions =
                 documents
                     .codeAction(CodeActionParams(TextDocumentIdentifier(uri), Range(at, at), CodeActionContext(emptyList())))
                     .get(30, SECONDS)
             val edit = actions.single { it.isRight && it.right.title == "Create public method 'missing' in 'Other'" }.right.edit
             assertThat(edit.changes).isNull()
-            val change = edit.documentChanges.single().left
+            assertThat(edit.documentChanges).hasSize(if (companion) 2 else 1)
+            val change = edit.documentChanges.map { it.left }.single { URI(it.textDocument.uri) == URI(targetUri) }
+            if (companion) {
+                val rootChange = edit.documentChanges.map { it.left }.single { URI(it.textDocument.uri) == root.toURI() }
+                assertThat<Int?>(rootChange.textDocument.version).isEqualTo(if (open) 17 else null)
+                assertThat(rootChange.edits).hasSize(1)
+                assertThat(
+                    rootChange.edits
+                        .single()
+                        .left.newText,
+                ).contains("package types import Types;")
+            }
             assertThat(URI(change.textDocument.uri)).isEqualTo(URI(targetUri))
             assertThat<Int?>(change.textDocument.version).isEqualTo(if (open) 13 else null)
-            assertThat(
-                change.edits
-                    .single()
-                    .left.newText,
-            ).contains("public Int64 missing(Int64 arg1)")
+            assertThat(change.edits).hasSize(if (requiresImport && !companion) 2 else 1)
+            val generated = change.edits.joinToString("\n") { it.left.newText }
+            if (requiresImport) {
+                assertThat(generated).contains("public types.Value missing(types.Value arg1)")
+                if (!companion) assertThat(generated).contains("package types import Types;")
+            } else {
+                assertThat(generated).contains("public Int64 missing(Int64 arg1)")
+            }
             assertThat(source.readText()).isEqualTo(text)
             assertThat(target.readText()).isEqualTo(targetOriginal)
+            assertThat(root.readText()).isEqualTo(rootOriginal)
         } finally {
             server.shutdown().get(20, SECONDS)
         }

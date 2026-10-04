@@ -93,11 +93,115 @@ class XdkCrossModuleMissingMethodsTest {
     }
 
     @Test
-    fun `repair cannot invent a destination import even when the dependency edge exists`() {
+    fun `repair imports signature types from an existing destination dependency`() {
         query(
             caller("shared.Value", "return peer.§missing(value);", "package shared import Types;"),
             extra = mapOf("Types" to "module Types { class Value {} }"),
             libraryDependencies = setOf("Types"),
+            signature = "public types.Value missing(types.Value arg1)",
+            imports = listOf("package types import Types;"),
+        )
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["shared.Value", "List<shared.Value>", "(shared.Value | String)"])
+    fun `companion local and initializer types add one import for repeated signature types`(type: String) {
+        query(
+            caller(
+                type,
+                """
+                val local = value;
+                $type result = lib.Other.§missing(local);
+                return result;
+                """.trimIndent(),
+                "package shared import Types;",
+            ),
+            library = "module Library {}",
+            companion = "// Destination stays in its own file.\nclass Other {}",
+            extra = mapOf("Types" to "module Types { class Value {} }"),
+            libraryDependencies = setOf("Types"),
+            signature = "public static ${type.replace("shared.", "types.")} missing(${type.replace("shared.", "types.")} arg1)",
+            imports = listOf("package types import Types;"),
+        )
+    }
+
+    @Test
+    fun `new import aliases avoid names in the destination and its companions`() {
+        query(
+            caller("shared.Value", "return peer.§missing(value);", "package shared import Types;"),
+            library = "module Library { Int types = 1; }",
+            companion = "class Other { Int types1 = 2; }",
+            extra = mapOf("Types" to "module Types { class Value {} }"),
+            libraryDependencies = setOf("Types"),
+            signature = "public types2.Value missing(types2.Value arg1)",
+            imports = listOf("package types2 import Types;"),
+        )
+    }
+
+    @Test
+    fun `multiple required modules with the same alias stem remain distinct`() {
+        query(
+            """
+            module App {
+                package lib import Library;
+                package first import Types.one.org;
+                package second import Types.two.org;
+                first.Value read(lib.Other peer, second.Value value) {
+                    return peer.§missing(value);
+                }
+            }
+            """.trimIndent(),
+            extra =
+                mapOf(
+                    "Types.one.org" to "module Types.one.org { class Value {} }",
+                    "Types.two.org" to "module Types.two.org { class Value {} }",
+                ),
+            libraryDependencies = setOf("Types.one.org", "Types.two.org"),
+            signature = "public types.Value missing(types1.Value arg1)",
+            imports = listOf("package types import Types.one.org;", "package types1 import Types.two.org;"),
+        )
+    }
+
+    @Test
+    fun `unused available modules do not acquire imports`() {
+        query(
+            caller("shared.Value", "return peer.§missing(value);", "package shared import Types;"),
+            extra = mapOf("Types" to "module Types { class Value {} }", "Unused" to "module Unused {}"),
+            libraryDependencies = setOf("Types", "Unused"),
+            signature = "public types.Value missing(types.Value arg1)",
+            imports = listOf("package types import Types;"),
+        )
+    }
+
+    @Test
+    fun `new imports preserve destination CRLF line endings`() {
+        query(
+            caller("shared.Value", "return peer.§missing(value);", "package shared import Types;"),
+            library = "module Library {\r\n    class Other {}\r\n}",
+            extra = mapOf("Types" to "module Types { class Value {} }"),
+            libraryDependencies = setOf("Types"),
+            signature = "public types.Value missing(types.Value arg1)",
+            imports = listOf("package types import Types;"),
+        )
+    }
+
+    @Test
+    fun `caller dependency does not authorize adding an edge to the destination`() {
+        query(
+            caller("shared.Value", "return peer.§missing(value);", "package shared import Types;"),
+            extra = mapOf("Types" to "module Types { class Value {} }"),
+        )
+    }
+
+    @Test
+    fun `read only module root refuses a writable companion repair that needs an import`() {
+        query(
+            caller("shared.Value", "return peer.§missing(value);", "package shared import Types;"),
+            library = "module Library {}",
+            companion = "class Other {}",
+            extra = mapOf("Types" to "module Types { class Value {} }"),
+            libraryDependencies = setOf("Types"),
+            readOnlyRoot = true,
         )
     }
 
@@ -163,11 +267,13 @@ class XdkCrossModuleMissingMethodsTest {
         library: String = "module Library { class Other {} }",
         companion: String? = null,
         signature: String? = null,
+        imports: List<String> = emptyList(),
         extra: Map<String, String> = emptyMap(),
         libraryDependencies: Set<String> = emptySet(),
         callerDependencies: Set<String> = setOf("Library") + extra.keys,
         brokenConsumer: Boolean = false,
         readOnly: Boolean = false,
+        readOnlyRoot: Boolean = false,
         binary: XdkDependency? = null,
     ) {
         CompilerTestSupport.configure()
@@ -199,11 +305,12 @@ class XdkCrossModuleMissingMethodsTest {
                     )
                 }
             }
-        val permissions = Files.getPosixFilePermissions(target.toPath())
+        val protectedFile = if (readOnlyRoot) root else target
+        val permissions = Files.getPosixFilePermissions(protectedFile.toPath())
         try {
-            if (readOnly) {
+            if (readOnly || readOnlyRoot) {
                 Files.setPosixFilePermissions(
-                    target.toPath(),
+                    protectedFile.toPath(),
                     permissions - setOf(PosixFilePermission.OWNER_WRITE, PosixFilePermission.GROUP_WRITE, PosixFilePermission.OTHERS_WRITE),
                 )
             }
@@ -223,27 +330,37 @@ class XdkCrossModuleMissingMethodsTest {
                     assertThat(actions).describedAs("Diagnostics: %s", diagnostics).hasSize(1)
                     val edit = requireNotNull(actions.single().edit)
                     assertThat(edit.versioned).isTrue()
-                    assertThat(edit.changes.keys).containsExactly(targetUri)
+                    val rootUri = root.toURI().toString()
+                    val originals = mapOf(rootUri to library, targetUri to targetOriginal)
+                    assertThat(edit.changes.keys).containsExactlyInAnyOrderElementsOf(
+                        if (imports.isNotEmpty()) setOf(targetUri, rootUri) else setOf(targetUri),
+                    )
                     val changed =
-                        edit.changes
-                            .getValue(targetUri)
-                            .sortedByDescending {
-                                it.range.start.line * targetOriginal.length +
-                                    it.range.start.column
-                            }.fold(targetOriginal) { text, change ->
-                                fun offset(position: Position) =
-                                    requireNotNull(XdkRename.offset(targetOriginal, SemanticModel.Position(position.line, position.column)))
+                        edit.changes.mapValues { (changedUri, edits) ->
+                            val originalText = originals.getValue(changedUri)
+
+                            fun offset(position: Position) =
+                                requireNotNull(XdkRename.offset(originalText, SemanticModel.Position(position.line, position.column)))
+                            edits.sortedByDescending { offset(it.range.start) }.fold(originalText) { text, change ->
                                 text.replaceRange(offset(change.range.start), offset(change.range.end), change.newText)
                             }
-                    assertThat(changed).contains(signature)
-                    assertThat(adapter.compile(targetUri, changed).diagnostics).isEmpty()
+                        }
+                    assertThat(changed.getValue(targetUri)).contains(signature)
+                    val rootText = changed[rootUri] ?: library
+                    imports.forEach { assertThat(rootText).containsOnlyOnce(it) }
+                    val packageImports = Regex("\\bpackage\\s+\\w+\\s+import\\s+")
+                    assertThat(packageImports.findAll(rootText).count()).isEqualTo(packageImports.findAll(library).count() + imports.size)
+                    if ("\r\n" in library) assertThat(rootText.replace("\r\n", "")).doesNotContain("\n")
+                    changed.forEach { (changedUri, text) -> adapter.compile(changedUri, text) }
+                    assertThat(adapter.compile(targetUri, changed.getValue(targetUri)).diagnostics).isEmpty()
                     assertThat(adapter.compile(uri, original).diagnostics).isEmpty()
                 }
                 assertThat(source.readText()).isEqualTo(original)
                 assertThat(target.readText()).isEqualTo(targetOriginal)
+                assertThat(root.readText()).isEqualTo(library)
             }
         } finally {
-            if (readOnly) Files.setPosixFilePermissions(target.toPath(), permissions)
+            if (readOnly || readOnlyRoot) Files.setPosixFilePermissions(protectedFile.toPath(), permissions)
         }
     }
 }
