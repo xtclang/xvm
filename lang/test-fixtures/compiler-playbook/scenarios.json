@@ -6717,6 +6717,99 @@
         "limitations": []
       }
     },
+    "X209": {
+      "title": "create a public method in a closed source dependency with Undo and Redo",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. Apply the public method action and inspect the destination, signature and TODO() body. The caller error clears. Undo restores the destination and error; Redo clears it again, then Undo restores the original. The caller stays unchanged when editing a companion file."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    package lib import Library;\n    Int read(lib.Other peer, Int value) {\n        return peer.missing(value);\n    }\n}",
+        "selected": "missing",
+        "title": "Create public method 'missing' in 'Other'",
+        "expected": "module Library {\n    class Other {\n        public Int64 missing(Int64 arg1) {\n            TODO();\n        }\n    }\n}",
+        "initiallyValid": false,
+        "destinationFile": "Library.x",
+        "destinationSource": "module Library {\n    class Other {}\n}"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X210": {
+      "title": "create a dependency companion method from local and initializer types",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. Apply the public method action and inspect the destination, signature and TODO() body. The caller error clears. Undo restores the destination and error; Redo clears it again, then Undo restores the original. The caller stays unchanged when editing a companion file."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    package lib import Library;\n    lib.Value read(lib.Value value) {\n        val local = value;\n        lib.Value result = lib.Other.missing(local);\n        return result;\n    }\n}",
+        "selected": "missing",
+        "title": "Create public method 'missing' in 'Other'",
+        "expected": "class Other {\n    public static Value missing(Value arg1) {\n        TODO();\n    }\n}",
+        "initiallyValid": false,
+        "destinationFile": "Library/Other.x",
+        "destinationSource": "class Other {}",
+        "files": [
+          {
+            "file": "Library.x",
+            "source": "module Library {\n    class Value {}\n}"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X211": {
+      "title": "refuse a missing method that would introduce a reverse module dependency",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. No public-method creation action may appear; the source and error remain unchanged."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    package lib import Library;\n    class Value {}\n    Value read(lib.Other peer, Value value) {\n        return peer.missing(value);\n    }\n}",
+        "selected": "missing",
+        "title": "Create public method 'missing' in 'Other'",
+        "expected": "module Library {\n    class Other {}\n}",
+        "initiallyValid": false,
+        "destinationFile": "Library.x",
+        "destinationSource": "module Library {\n    class Other {}\n}",
+        "refused": true
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X212": {
+      "title": "render a missing method using the destination module import alias",
+      "manual": [
+        "Place the caret on missing and inspect Quick Fix. Apply the public method action and inspect the destination, signature and TODO() body. The caller error clears. Undo restores the destination and error; Redo clears it again, then Undo restores the original. The caller stays unchanged when editing a companion file."
+      ],
+      "values": {
+        "file": "Extract.x",
+        "source": "module Extract {\n    package lib import Library;\n    package shared import Types;\n    shared.Value read(lib.Other peer, shared.Value value) {\n        val local = value;\n        shared.Value result = peer.missing(local);\n        return result;\n    }\n}",
+        "selected": "missing",
+        "title": "Create public method 'missing' in 'Other'",
+        "expected": "module Library {\n    package types import Types;\n    class Other {\n        public types.Value missing(types.Value arg1) {\n            TODO();\n        }\n    }\n}",
+        "initiallyValid": false,
+        "destinationFile": "Library.x",
+        "destinationSource": "module Library {\n    package types import Types;\n    class Other {}\n}",
+        "files": [
+          {
+            "file": "Types.x",
+            "source": "module Types {\n    class Value {}\n}"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
