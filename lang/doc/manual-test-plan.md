@@ -1,7 +1,14 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **189 scenarios**: X1–X184, CFG1–CFG3 and 7a.8/7a.9.
-The latest selected gate passes **X156/X177/X181–X184** in VS Code `run-ZhuPaV` and IntelliJ
+The current catalog has **193 scenarios**: X1–X188, CFG1–CFG3 and 7a.8/7a.9.
+The latest selected gate passes **X122/X181/X185–X188** in VS Code `run-dzR5d9` and IntelliJ
+`run-16733856986922464734` (START also passes), with zero editor failures. It verifies private
+missing-method creation, exact signatures, error/clear and Undo/Redo diagnostics, plus refusals.
+All 180 selected backend and 89 IntelliJ unit tests pass without failures/errors/skips. The
+IntelliJ run includes the UP07 equal-full-diagnostic quick-fix correction; isolated X185 passing
+was insufficient before that fix. These are selected receipts, not a full 193-case rerun.
+
+The preceding selected gate passes **X156/X177/X181–X184** in VS Code `run-ZhuPaV` and IntelliJ
 `run-5839432120705984532` (START also passes), with zero reported editor failures. Private-helper
 extraction preserves stable inputs, generic owners, overloads, comments, exact edits, diagnostics
 and Undo/Redo. Mutable-input extraction is refused through the installed connection. All 151
@@ -1334,7 +1341,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X184 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X188 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -3202,3 +3209,28 @@ names, CRLF/Unicode, reference-backed storage, method formals, lambdas, conditio
 broken neighbors. Swapped helper arguments and changed moved-call targets must fail proof even
 when both programs compile. Multi-statement extraction and mutable/by-reference captures remain
 outside this slice.
+
+
+### Missing-method quick fixes (L63, X185–X188)
+
+Use compiler mode. The call must initially report an error. Place the caret on `missing` and
+open Quick Fix / intentions (Alt+Enter in IntelliJ; Quick Fix in VS Code). Generated methods are
+private and contain `TODO()`; inspect and implement the body before running the program.
+
+| Case | Action | Required result |
+| --- | --- | --- |
+| X185 | Apply **Create private method 'missing'** on a zero-argument statement call. | A `private void missing()` stub is inserted in the same module; the diagnostic clears. |
+| X186 | Apply the action on `return missing(value, label)` with declared `Int` and `String` parameters. | Generated signature is `private Int64 missing(Int64 arg1, String arg2)` (the resolved `Int` alias); existing source remains intact. |
+| X187 | Apply the action inside a static method with string, character and explicitly typed numeric literals. | The helper is static with compiler-selected `String`, `Char` and `Int8` parameters and the declared return type. |
+| X188 | Inspect actions on `missing(1)`. | No method creation action: an untyped numeric literal does not establish a runtime parameter type. Error/source stay unchanged. |
+
+For X185–X187, compare the exact shared expected source, check cleared diagnostics, then
+Undo/Redo/Undo. Undo must restore both the source and the error; Redo must clear the error again.
+Both drivers use the same fixtures. These are new scenarios, not evidence from X122 or extraction.
+Qualified receiver calls, local/inferred/computed arguments, named arguments, generic methods,
+conditional returns, typed initializer and nested expression result contexts remain refusals.
+No diagnostic text or numeric error code is used to invent a signature.
+
+Run **X181 followed by X185** together when validating IntelliJ: an unchanged error after a
+source-graph refresh must still offer a working quick fix. Standalone X185 passing did not catch
+the UP07 stale-annotation issue. Final acceptance passes all six selected cases in both editors.

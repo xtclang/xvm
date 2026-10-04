@@ -134,7 +134,11 @@ local inline with the same written expected type, and removal of unused constant
 Private same-owner expression helpers receive compiler-proven stable inputs explicitly.
 The compiler must prove side-effect-free initialization before removal; every edit recompiles
 the configured graph and preserves unaffected bindings/calls/dispatch. General statement extraction,
-mutable captures, missing-declaration generation and global safe delete remain open (L63).
+mutable captures, broader missing-declaration generation and global safe delete remain open (L63).
+Missing private same-owner methods can be generated for supported unqualified calls using fresh
+resolved parameter/literal types and declared return types; the proposed graph must compile,
+preserve known bindings and resolve the call to the inserted stub. X185–X188 cover this boundary
+(selected acceptance passes in both editors). Receiver calls and unproven argument/return contexts are refused.
 Explicit declaration lookup returns local/import-alias declarations or the inherited written
 contracts of an overriding method/property, including multiple source targets. Definition and
 implementation retain their separate meanings. Indexed library sources remain read-only.
