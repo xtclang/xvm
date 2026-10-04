@@ -19,6 +19,13 @@ internal object XdkMissingMethods {
         val location: SemanticModel.SourceLocation,
         val insertion: SemanticModel.Position,
         val modules: Map<String, String>,
+        val imports: Map<String, XdkMemberActions.Import> = emptyMap(),
+        val importSource: String? = null,
+    )
+
+    data class TypeSource(
+        val source: String,
+        val imports: List<XdkMemberActions.Import> = emptyList(),
     )
 
     data class Signature(
@@ -36,7 +43,7 @@ internal object XdkMissingMethods {
     data class LocalType(
         val source: String?,
         val identity: ProofIdentity,
-        val destinationSources: Map<SemanticModel.SourceLocation, String> = emptyMap(),
+        val destinationSources: Map<SemanticModel.SourceLocation, TypeSource> = emptyMap(),
     )
 
     data class ArgumentBinding(
@@ -54,6 +61,8 @@ internal object XdkMissingMethods {
         val arguments: List<ArgumentBinding> = emptyList(),
         val publicOwner: String? = null,
         val signature: Signature? = null,
+        val importSource: String? = null,
+        val imports: List<XdkMemberActions.Import> = emptyList(),
     ) {
         val title: String get() = publicOwner?.let { "Create public method '$name' in '$it'" } ?: "Create private method '$name'"
 
@@ -65,7 +74,10 @@ internal object XdkMissingMethods {
                 callee.range.start <= SemanticModel.Position(range.end.line, range.end.column) &&
                 callee.range.end >= SemanticModel.Position(range.start.line, range.start.column)
 
-        fun edit(text: String): XdkRename.Edit? {
+        fun edit(
+            text: String,
+            importText: String = text,
+        ): XdkMemberActions.Edits? {
             val at = XdkRename.offset(text, insertion) ?: return null
             if (text.getOrNull(at) != '}') return null
             val newline = Regex("\r\n|\r|\n").find(text)?.value ?: "\n"
@@ -78,7 +90,8 @@ internal object XdkMissingMethods {
                     .orEmpty()
                     .takeWhile { it == ' ' || it == '\t' }
             val body = "$indent    $declaration {$newline$indent        TODO();$newline$indent    }$newline"
-            return if (ownLine) XdkRename.Edit(lineStart, lineStart, body) else XdkRename.Edit(at, at, "$newline$body$indent")
+            val member = if (ownLine) XdkRename.Edit(lineStart, lineStart, body) else XdkRename.Edit(at, at, "$newline$body$indent")
+            return XdkMemberActions.Edits(member, XdkMemberActions.importEdits(importText, imports) ?: return null)
         }
 
         /** Successful compilation must resolve this call to the inserted declaration itself. */
@@ -98,9 +111,11 @@ internal object XdkMissingMethods {
             val targetSource = destination.sourceName ?: return false
             val targetText = plan.proposed[targetSource] ?: return false
             val declarationAt = XdkRename.offset(targetText, declaration.start) ?: return false
+            if (edit !in plan.edits[targetSource].orEmpty()) return false
+            val insertedAt = (plan.map(targetSource, edit.start) ?: return false) - edit.text.length
             if (symbol.kind != SemanticModel.SymbolKind.METHOD || symbol.name != name || symbol.declarationSource != targetSource ||
                 (SemanticModel.Modifier.STATIC in symbol.modifiers) != (dispatch == Dispatch.STATIC) ||
-                declarationAt !in edit.start until edit.start + edit.text.length
+                declarationAt !in insertedAt until insertedAt + edit.text.length
             ) {
                 return false
             }
