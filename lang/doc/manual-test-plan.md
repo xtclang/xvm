@@ -1,6 +1,6 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **259 scenarios**: X1–X254, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **263 scenarios**: X1–X258, CFG1–CFG3 and 7a.8/7a.9.
 
 Latest selection (L75): VS Code `run-e4dCrP` passes X31/X101/X158/X252–X254. IntelliJ
 `run-16728311754487527222` passes START and X31/X101/X158/X252/X253; X254 passes its read-only
@@ -1402,7 +1402,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X254 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X258 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -3612,3 +3612,17 @@ explicit partial status for UP25, zero IDE failures. The catalog SHA-256 is
 The final whitespace guard additionally verifies CRLF acceptance, refusal of shifted/mismatched
 presentation coordinates, and restoration of IDs after presentation repair in backend/protocol tests.
 It does not change the earlier native normal-text acceptance; no full-catalog rerun is claimed.
+
+### Compiler inline completion (L76)
+
+| Case | Action | Expected |
+|---|---|---|
+| X255 | Accept and undo a compiler-backed inline name. Use the shared `X255/InlineValues.x` source. | Native ghost text accepts answer; one Undo restores ans. |
+| X256 | Dismiss ghost text and keep suggestions current while typing. Use the shared `X256/InlineValues.x` source. | Dismissal leaves source unchanged; further typing produces a current suggestion. |
+| X257 | Respect ambiguity and the selected completion item. Use the shared `X257/InlineValues.x` source. | Automatic ambiguity yields nothing; explicit alternatives and selection constraints match the source. IntelliJ native trigger/selection limits are UP26. |
+| X258 | Complete a type-compatible value in an unfinished call. Use the shared `X258/InlineValues.x` source. | Only the Int-compatible answer is suggested; missing delimiters remain untouched. |
+
+Ghost suggestions are plain compiler names/values. No imports or placeholder bodies are inserted.
+VS Code uses its Inline Suggest commands (Tab to accept, Escape to dismiss); IntelliJ uses
+Insert Inline Completion and Escape. Explicit ambiguous suggestions are a VS Code native check;
+LSP4IJ currently sends Automatic even for a direct invocation (UP26). Validation pending.
