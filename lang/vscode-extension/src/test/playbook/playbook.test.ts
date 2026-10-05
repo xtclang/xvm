@@ -5,7 +5,7 @@ import { advancedCases, pullDiagnosticCases, typeHeaderCases } from './advanced'
 import { completionCases } from './completion';
 import { editingClosureCases, formattingBreadthCases, linkedScopeCases, structuralRecoveryCases } from './editingClosure';
 import { configurationCases, dependencyCases } from './dependencies';
-import { graphCases } from './graph';
+import { graphCases, indexingCases } from './graph';
 import { liveWorkspaceCases } from './liveWorkspace';
 import { localRefactoringCases, memberActionCases } from './memberActions';
 import { moduleCases } from './modules';
@@ -70,6 +70,7 @@ suite('XdkAdapter playbook', function () {
     linkedScopeCases();
     structuralRecoveryCases();
     formattingBreadthCases();
+    indexingCases();
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {
