@@ -33,7 +33,7 @@ internal fun ParityScenarios.platformCases() {
             )
             val document = open(data.string("file"))
             if (id == "X244") {
-                diagnostics(document) { items -> items.any { it.code == "COMPILER-29" } && items.none { it.severity == "Error" } }
+                diagnostics(document) { items -> items.any { it.severity == "Error" } }
             } else {
                 clean(document)
             }
@@ -72,35 +72,64 @@ internal fun ParityScenarios.platformCases() {
             data["queries"].asJsonArray.forEach { row ->
                 val request = row.asJsonObject
                 val result = query("textDocument/linkedEditingRange", document, document.at(request.string("anchor")))
-                val starts = if (result.isJsonNull) emptyList() else result.asJsonObject["ranges"].asJsonArray.map {
-                    ParityWorkspace.offset(document.text, it.asJsonObject["start"].asJsonObject)
-                }
+                val starts =
+                    if (result.isJsonNull) {
+                        emptyList()
+                    } else {
+                        result.asJsonObject["ranges"].asJsonArray.map {
+                            ParityWorkspace.offset(document.text, it.asJsonObject["start"].asJsonObject)
+                        }
+                    }
                 check(starts == request.strings("occurrences").map { document.text.indexOf(it) })
                 check(document.text == data.string("source"))
             }
         }
     }
     case("X248") { data ->
-        val document = open(data.string("file"), data["variants"].asJsonArray.first().asJsonObject.string("source"))
+        val document =
+            open(
+                data.string("file"),
+                data["variants"]
+                    .asJsonArray
+                    .first()
+                    .asJsonObject
+                    .string("source"),
+            )
         data["variants"].asJsonArray.forEach { row ->
             val variant = row.asJsonObject
             replace(document, variant.string("source"))
             errors(document)
             val outline = query("textDocument/documentSymbol", document)
-            fun names(rows: List<JsonObject>): List<String> = rows.flatMap { symbol ->
-                listOf(symbol.string("name")) + symbol["children"]?.let { names(it.rows()) }.orEmpty()
-            }
+
+            fun names(rows: List<JsonObject>): List<String> =
+                rows.flatMap { symbol ->
+                    listOf(symbol.string("name")) + symbol["children"]?.let { names(it.rows()) }.orEmpty()
+                }
             check(names(outline.rows()).containsAll(variant.strings("symbols")))
             val folds = query("textDocument/foldingRange", document).rows()
             check(folds.any { it["startLine"].asInt == variant["foldLine"].asInt && it["endLine"].asInt > it["startLine"].asInt })
             val at = document.at(variant.string("anchor"))
-            val selections = query("textDocument/selectionRange", document, extra = mapOf("positions" to listOf(document.params(at).getValue("position")))).rows()
-            val chain = generateSequence(selections.single()) { it["parent"]?.takeUnless { parent -> parent.isJsonNull }?.asJsonObject }.toList()
+            val selections =
+                query(
+                    "textDocument/selectionRange",
+                    document,
+                    extra =
+                        mapOf("positions" to listOf(document.params(at).getValue("position"))),
+                ).rows()
+            val chain =
+                generateSequence(selections.single()) {
+                    it["parent"]
+                        ?.takeUnless { parent ->
+                            parent.isJsonNull
+                        }?.asJsonObject
+                }.toList()
             check(chain.size > 1)
-            val spans = chain.map { selection ->
-                val range = selection["range"].asJsonObject
-                ParityWorkspace.offset(document.text, range["start"].asJsonObject) to ParityWorkspace.offset(document.text, range["end"].asJsonObject)
-            }
+            val spans =
+                chain.map { selection ->
+                    val range = selection["range"].asJsonObject
+                    ParityWorkspace.offset(document.text, range["start"].asJsonObject) to
+                        ParityWorkspace.offset(document.text, range["end"].asJsonObject)
+                }
             check(spans.distinct() == spans)
             val cursor = document.text.indexOf(variant.string("anchor"))
             check(spans.all { cursor in it.first..it.second })
@@ -121,7 +150,14 @@ internal fun ParityScenarios.platformCases() {
                 awaitUi("$id native formatting matches shared layout", 30.seconds) { document.text == data.string("expected") }
             }
             clean(document)
-            check(query("textDocument/formatting", document, extra = mapOf("options" to mapOf("tabSize" to 4, "insertSpaces" to true, "insertFinalNewline" to true))).rows().isEmpty())
+            check(
+                query(
+                    "textDocument/formatting",
+                    document,
+                    extra =
+                        mapOf("options" to mapOf("tabSize" to 4, "insertSpaces" to true, "insertFinalNewline" to true)),
+                ).rows().isEmpty(),
+            )
             listOf("\$Undo" to "source", "\$Redo" to "expected", "\$Undo" to "source").forEach { (action, state) ->
                 with(driver) {
                     focusEditor(document.editor)

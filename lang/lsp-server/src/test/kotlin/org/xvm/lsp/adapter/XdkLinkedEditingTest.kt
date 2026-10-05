@@ -11,7 +11,8 @@ class XdkLinkedEditingTest {
     @ParameterizedTest
     @ValueSource(strings = ["(Int input) -> input", "input -> input"])
     fun `lambda parameters link only their own declaration and uses`(lambda: String) {
-        val text = """
+        val text =
+            """
             module Linked {
                 Int run() {
                     function Int(Int) first = $lambda;
@@ -19,7 +20,7 @@ class XdkLinkedEditingTest {
                     return first(1) + second(2);
                 }
             }
-        """.trimIndent()
+            """.trimIndent()
         XdkAdapter().use { adapter ->
             assertThat(adapter.compile(URI, text).diagnostics).isEmpty()
             listOf(2, 3).forEach { line ->
@@ -36,7 +37,8 @@ class XdkLinkedEditingTest {
 
     @Test
     fun `nested lambda capture preserves lexical identity and UTF16 positions`() {
-        val text = """
+        val text =
+            """
             module Linked {
                 Int run() {
                     /* 😀 */ function Int(Int) first = (Int input) -> {
@@ -47,7 +49,7 @@ class XdkLinkedEditingTest {
                     return first(1) + second(2);
                 }
             }
-        """.trimIndent().replace("\n", "\r\n")
+            """.trimIndent().replace("\n", "\r\n")
         XdkAdapter().use { adapter ->
             assertThat(adapter.compile(URI, text).diagnostics).isEmpty()
             val at = XdkRename.position(text, text.indexOf("input"))
@@ -58,14 +60,15 @@ class XdkLinkedEditingTest {
 
     @Test
     fun `callable parameters and member names require graph rename rather than linked editing`() {
-        val text = """
+        val text =
+            """
             module Linked {
                 private Int pick(Int privateInput) = privateInput;
                 Int exposed(Int publicInput) = publicInput;
                 Int run() = pick(privateInput = 1) + exposed(publicInput = 2);
                 class Box(Int value) { Int read() = value; }
             }
-        """.trimIndent()
+            """.trimIndent()
         XdkAdapter().use { adapter ->
             assertThat(adapter.compile(URI, text).diagnostics).isEmpty()
             listOf("privateInput", "publicInput", "value", "pick", "exposed").forEach { name ->
@@ -77,13 +80,14 @@ class XdkLinkedEditingTest {
 
     @Test
     fun `explicit same-spelling aliases retain their lexical ownership`() {
-        val text = """
+        val text =
+            """
             module Linked {
                 package types { class Box {} }
                 Int first() { import types.Box as Box; Box value = new Box(); return 1; }
                 Int second() { import types.Box as Box; Box value = new Box(); return 2; }
             }
-        """.trimIndent()
+            """.trimIndent()
         XdkAdapter().use { adapter ->
             assertThat(adapter.compile(URI, text).diagnostics).isEmpty()
             listOf(2, 3).forEach { line ->

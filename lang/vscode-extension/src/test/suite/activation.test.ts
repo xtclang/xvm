@@ -45,7 +45,8 @@ suite('Extension activation surfaces', () => {
         assert.strictEqual(properties['xtc.languageService.textSynchronization'].default, 'full');
         assert.strictEqual(properties['xtc.languageService.saveFormatting'].default, 'editor');
         assert.ok(properties['xtc.formatting.tabSize'].deprecationMessage);
-        assert.ok(properties['xtc.formatting.maxLineWidth'].deprecationMessage);
+        assert.strictEqual(properties['xtc.formatting.maxLineWidth'].deprecationMessage, undefined);
+        assert.strictEqual(properties['xtc.formatting.maxLineWidth'].default, 120);
     });
 
     test('xtc.showServerOutput executes without throwing', async () => {

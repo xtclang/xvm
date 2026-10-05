@@ -90,8 +90,9 @@ no applied Move or Undo was retried. IntelliJ passes the same 19 selected cases 
 
 Both plugins have a server-log show/hide shortcut: **Ctrl+Alt+X, then L** (macOS:
 Control+Option+X, then L). It reuses each host's existing log panel; X135 checks the actions.
-Formatting is deliberately bounded: Java-lexer indentation and outer whitespace cleanup, guarded
-by token equality. Operator spacing, wrapping/alignment and `xtc-format.toml` are not implemented.
+Formatting is deliberately bounded: Java-lexer indentation, operator continuations, expression/list
+wrapping and standalone comment margins, guarded by code/literal token equality. Operator-spacing
+normalization, declaration alignment, literal/comment reflow and `xtc-format.toml` are not implemented.
 
 **Previous L69–L71 / PLAT2c checkpoint:** selected native testing fixed a diagnostic-refresh/Rename
 deadlock and file-event ordering. It temporarily kept code-action edits eager because LSP4IJ's
@@ -3024,5 +3025,6 @@ See the [closure and acceptance record](errs-integration-plan.md#l63-bounded-clo
 `ImportStatement.getQualifiedNameTokens()` returns an immutable copy of its existing syntax tokens
 for exact wildcard container spans. The tokens already belong to the AST and follow its existing
 clone ownership; no new field, state or phase coupling is introduced. Kotlin copies the resolved
-identity and source range on the compiler worker. Conditional-import links retain the compiler's
-COMPILER-29 warning instead of inventing condition semantics.
+identity and source range on the compiler worker. The current parser rejects conditional import
+source syntax before the latent AST COMPILER-29 path; X244 tests diagnostics and absence of guessed
+links. No conditional-compilation syntax has been added.

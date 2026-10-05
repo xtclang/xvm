@@ -15,8 +15,8 @@ import org.xtclang.idea.XtcIntelliJLanguage
  * - No tab characters
  * - 120-character right margin
  *
- * The formatter implements indentation and whitespace cleanup. The right margin is visual guidance;
- * wrapping and `xtc-format.toml` configuration are not implemented.
+ * The compiler formatter uses the right margin for token-boundary expression/list wrapping.
+ * Literal/comment reflow and `xtc-format.toml` configuration are not implemented.
  */
 class XtcLanguageCodeStyleSettingsProvider : LanguageCodeStyleSettingsProvider() {
     override fun getLanguage(): Language = XtcIntelliJLanguage
@@ -43,6 +43,8 @@ class XtcLanguageCodeStyleSettingsProvider : LanguageCodeStyleSettingsProvider()
                 "TAB_SIZE",
                 "USE_TAB_CHARACTER",
             )
+        } else if (settingsType == SettingsType.WRAPPING_AND_BRACES_SETTINGS) {
+            consumer.showStandardOptions("RIGHT_MARGIN")
         }
     }
 

@@ -34,12 +34,13 @@ class XdkFormattingBreadthTest {
 
     @Test
     fun `range and on type formatting preserve unrelated lines and do not wrap while typing`() {
-        val text = """
+        val text =
+            """
             module Layout {
             Int sum(Int first, Int second, Int third) = first + second + third;
             Int unchanged = 1;
             }
-        """.trimIndent()
+            """.trimIndent()
         val config = FormattingConfig(maxLineWidth = 40)
         val range = Range(Position(1, 0), Position(2, 0))
         val changed = apply(text, XdkLexical.format(text, config, OPTIONS, range))
@@ -54,16 +55,17 @@ class XdkFormattingBreadthTest {
 
     @Test
     fun `multiline literals templates and unterminated lexemes never have their contents reformatted`() {
-        val samples = listOf(
-            """
+        val samples =
+            listOf(
+                """
                 module Literals {
                 String value = \|keep  this indent
                                |and "quoted" content
                     ;
                 }
-            """.trimIndent(),
-            "module Literals { String value = $\"keep  {1 + 2}\"; }",
-        )
+                """.trimIndent(),
+                "module Literals { String value = $\"keep  {1 + 2}\"; }",
+            )
         samples.forEach { source ->
             XdkAdapter().use { adapter -> assertThat(adapter.compile("untitled:Literals.x", source).diagnostics).isEmpty() }
             val formatted = apply(source, XdkLexical.format(source, FormattingConfig(maxLineWidth = 20), OPTIONS))
@@ -72,7 +74,47 @@ class XdkFormattingBreadthTest {
         assertThat(XdkLexical.format("module Bad { String text = \"unfinished", FormattingConfig.DEFAULT, OPTIONS)).isEmpty()
     }
 
-    private fun apply(text: String, edits: List<TextEdit>): String {
+    @Test
+    fun `wrapping honors configured indentation continuation width and tabs`() {
+        val text =
+            """
+            module Layout {
+            Int sum(Int first, Int second, Int third) = first + second + third;
+            }
+            """.trimIndent()
+        val options = FormattingOptions(2, true)
+        listOf(true, false).forEach { spaces ->
+            val config = FormattingConfig(2, 6, spaces, 40)
+            val formatted = apply(text, XdkLexical.format(text, config, options))
+            val lines = formatted.lines().filter(String::isNotEmpty)
+            assertThat(lines[1]).startsWith(if (spaces) "  Int" else "\tInt")
+            assertThat(lines.drop(2).dropLast(1))
+                .isNotEmpty()
+                .allSatisfy { line ->
+                    assertThat(line.takeWhile(Char::isWhitespace)).isEqualTo(if (spaces) "        " else "\t\t\t\t")
+                }
+            assertThat(XdkLexical.format(formatted, config, options)).isEmpty()
+            XdkAdapter().use { adapter -> assertThat(adapter.compile("untitled:Layout.x", formatted).diagnostics).isEmpty() }
+        }
+    }
+
+    @Test
+    fun `wrapping compact declarations uses nesting at each break and remains stable`() {
+        val text =
+            """
+            module Compact { Int sum(Int first, Int second, Int third) = first + second + third; }
+            """.trimIndent()
+        val config = FormattingConfig(maxLineWidth = 40)
+        val formatted = apply(text, XdkLexical.format(text, config, OPTIONS))
+        assertThat(formatted.lines()).hasSizeGreaterThan(1)
+        assertThat(XdkLexical.format(formatted, config, OPTIONS)).isEmpty()
+        XdkAdapter().use { adapter -> assertThat(adapter.compile("untitled:Compact.x", formatted).diagnostics).isEmpty() }
+    }
+
+    private fun apply(
+        text: String,
+        edits: List<TextEdit>,
+    ): String {
         fun offset(at: Position) = requireNotNull(XdkRename.offset(text, SemanticModel.Position(at.line, at.column)))
         return edits.sortedByDescending { offset(it.range.start) }.fold(text) { changed, edit ->
             changed.replaceRange(offset(edit.range.start), offset(edit.range.end), edit.newText)

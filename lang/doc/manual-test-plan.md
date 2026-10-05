@@ -890,12 +890,13 @@ assignment target receives WRITE. Use X41 for the compiler-specific expectations
 **Status:** Implemented with bounded formatting rules; not a complete style formatter.
 **Works with:** Tree-sitter and compiler adapters (Mock only cleans whitespace).
 
-Compiler mode uses the Java compiler lexer to indent brace blocks and parenthesis/bracket
-continuations, trim trailing whitespace and optionally insert the final newline. It preserves
-multiline literals/comments and refuses edits if lexing fails or the token stream would change.
-It does not normalize operator spacing, align declarations, wrap long expressions, reorder code,
-or implement every Ecstasy layout convention. `maxLineWidth` is not a wrapping implementation.
-Range and save-time requests use these same rules. See X102/X107/X132 and the adapter matrix.
+Compiler mode uses the Java compiler lexer to indent blocks and delimiter/operator continuations,
+trim trailing whitespace and optionally insert the final newline. It wraps expressions/lists at safe
+token boundaries using the configured margin and shifts standalone block-comment margins together.
+Literal/template contents and relative comment layout are preserved. Failed lexing or changed
+code/literal tokens refuse the edit. Operator-spacing normalization, declaration alignment, literal
+splitting, comment reflow and brace relocation are not implemented. Range and save-time requests use
+these rules; on-type formatting only indents and cleans whitespace. See X102/X107/X132/X249/X250.
 
 **How to trigger (full document):**
 - *IntelliJ:* Ctrl+Alt+L (Reformat Code)
@@ -908,7 +909,7 @@ Range and save-time requests use these same rules. See X102/X107/X132 and the ad
 | # | Test | Steps | Expected Result |
 |---|------|-------|-----------------|
 | 13.1 | Remove trailing whitespace | Add spaces at end of a line, format | Trailing whitespace removed |
-| 13.2 | Insert final newline | Remove final newline from file, format | Final newline added |
+| 13.2 | Insert final newline | Enable final-newline insertion in the editor, remove the final newline from the file, format | Final newline added |
 | 13.3 | Range format | Select 2-3 lines with trailing spaces, format selection | Only selected lines cleaned |
 | 13.4 | No-op on clean file | Format a correctly indented file with no trailing whitespace and the configured final newline | No changes |
 
@@ -2628,7 +2629,7 @@ sections instead of silently counting provider responses as complete UI acceptan
 | Navigation, symbols and hierarchy | X3–X5/X21–X22/X28/X33–X44/X59/X63–X69/X99–X101/X131 | Native workspace-symbol search/navigation for closed roots, multiple declaration targets, back navigation, ambiguous/missing source attachments, inherited generic/compound edges and stale closed-file handles. Do not infer a complete conditional-mixin hierarchy or dynamic call graph. |
 | Highlights, folds and selection | X1/X4/X41/X92 and L56 startup test | Exact nested selection expansion/shrink, empty/recovered document fallback, folding boundaries after closing/reopening or deleting text, and theme/read/write visual distinctions. Startup race assertions are a separate harness test, not the normal readiness wait. |
 | Inlay hints | X42/X131 | Enable/disable through native controls, inspect tooltip rendering for locals/parameters/lambdas, verify no misleading names for unnamed function calls, named arguments or omitted defaults. A protocol tooltip does not prove the UI renders it. |
-| Formatting | X31/X132; backend token-preservation tests; sections 13–13c | Apply full/range/on-type edits through native actions; verify literal and multiline-string/comment bytes, CRLF, tabs, final-newline policy, untouched lines and idempotence. Check real supported settings; a max-line-width control does not establish wrapping. These variants are not all shared-driver scenarios yet. |
+| Formatting | X31/X132; backend token-preservation tests; sections 13–13c | Apply full/range/on-type edits through native actions; verify literal and multiline-string/comment bytes, CRLF, tabs, final-newline policy, untouched lines and idempotence. X138 verifies live indent settings; X249/X250 verify continuation/comment margins and bounded width wrapping with native history. Backend regressions cover custom indentation and tabs. Not every variant is a shared-driver scenario. |
 | Document links | X131 plus lexical unit tests; section 15 | Click HTTP(S) URLs in comments/strings; verify exact ranges and absence of invented import/file/unsupported-scheme links. Malformed/partial literals must not create arbitrary targets. External browser launching is a manual action, separate from resolving a URI. |
 | Code lenses / Run | X131 verifies lens identity and command arguments; section 18 | Verify native lens placement and invocation target, no lens for an ordinary class-only member, and current arguments after moving a file. Successful persistent execution/rerun is **R1–R8 work**, not established by showing a Run lens. |
 | Semantic tokens | X41/X126, existing token tests; section 19 | Inspect theme fallback, enable/disable behavior, UTF-16/range clipping, edits/close/restart with old result IDs and refresh. Audit per-token claims (e.g. deprecated tags) against actual modifiers rather than claiming every row for every adapter. |
@@ -2756,7 +2757,8 @@ VS Code: run **Ecstasy: Open Language Service Settings**, or filter Settings by
 Use **Ecstasy: Show Effective Language Service Configuration** for configured values and origin,
 running capabilities, queue and bundled read-only libraries. **Ecstasy: Show Effective Compiler
 Paths** remains the detailed source/build-model view. Trace and logs use the existing controls.
-Legacy formatter tab width and line width are explicitly deprecated: they do not implement wrapping.
+Legacy `xtc.formatting.tabSize` is deprecated; use `editor.tabSize` for visual tab width.
+`xtc.formatting.maxLineWidth` controls bounded compiler expression/list wrapping (default 120).
 
 Additional manual acceptance: change an application default while a project inherits it, then add
 and remove a project override; reopen the IDE and verify persistence. Edit a compiler graph through
@@ -3511,12 +3513,18 @@ recorded VS Code overlapping-resource Undo defect; this text-edit batch does not
 
 ### L66 structural and editing continuation
 
-New shared cases are implemented in both drivers; validation is batched after the four L66 slices.
+X243–X250 have passing selected receipts in both editors, together with X132/X138/X139/X158.
+The [L66 acceptance record](../../docs/errs-integration-plan.md#l66-bounded-closure-and-acceptance-2026-10-05)
+retains the failed attempts and corrections, including UP24 (IntelliJ formatting Redo). The shared
+formatting fixtures preserve their existing final newline; newline insertion remains an independent
+editor setting. Four/eight spaces and a 120-column margin are the default settings. Change IntelliJ
+Ecstasy Code Style or VS Code `xtc.formatting.*` to verify custom indentation and width; use
+`editor.tabSize` for VS Code tab width. This is selected acceptance, not a new full-catalog run.
 
 | Case | Action | Required result |
 | --- | --- | --- |
 | X243 | Open the wildcard import link on `lib.tools`. | The resolved container opens in Library; no child or filesystem path is guessed. |
-| X244 | Open the aliased import inside `if (true)`. | The compiler-selected source opens. COMPILER-29 still reports that import conditions are ignored. |
+| X244 | Inspect the unsupported conditional import source. | Ordinary parser diagnostics are shown and no semantic import link is guessed. |
 | X245 | Request linked ranges for each lambda parameter and its nested capture. | Only that lambda's declaration and uses are included; the sibling parameter stays separate. |
 | X246 | Request linked editing for private/public method and primary constructor parameters. | No linked ranges: named callers and property contracts require graph Rename. |
 | X247 | Request linked ranges for `import types.Box as Box` in each method. | Include the explicit alias and its uses, excluding the imported target and other lexical scopes. |

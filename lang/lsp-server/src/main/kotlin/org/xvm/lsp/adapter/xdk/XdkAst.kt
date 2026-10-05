@@ -85,7 +85,8 @@ internal object XdkAst {
         generateSequence(root?.takeIf { it.contains(line, column) }) { node ->
             // Recovery and generated wrappers can overlap. At a sibling boundary prefer the
             // node starting there; never expand into a child outside its written parent's span.
-            node.childNodes()
+            node
+                .childNodes()
                 .filter {
                     it.belongsTo(requireNotNull(root)) && it.contains(line, column) &&
                         it.startPosition >= node.startPosition && it.endPosition <= node.endPosition
