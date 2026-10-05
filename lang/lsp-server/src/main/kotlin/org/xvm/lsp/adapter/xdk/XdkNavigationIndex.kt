@@ -27,6 +27,7 @@ internal class XdkNavigationIndex {
     // Identity, rather than structural equality, fences publication after retirement or close.
     class Snapshot(
         val builds: Map<String, Build> = emptyMap(),
+        val navigation: Map<String, XdkWorkspaceNavigation> = emptyMap(),
     )
 
     private val current = AtomicReference(Snapshot())
@@ -36,7 +37,8 @@ internal class XdkNavigationIndex {
     fun publish(
         previous: Snapshot,
         builds: Map<String, Build>,
-    ) = current.compareAndSet(previous, Snapshot(builds.toMap()))
+        navigation: Map<String, XdkWorkspaceNavigation> = emptyMap(),
+    ) = current.compareAndSet(previous, Snapshot(builds.toMap(), navigation.toMap()))
 
     /** Called under the adapter lifecycle lock, after checking the editor request is current. */
     fun record(
