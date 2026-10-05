@@ -1,3 +1,11 @@
+UI5/UI6 now guards compiler build imports in both editors: cancellable project-owned progress,
+one import at a time, and acceptance only after successful task completion and model validation.
+Failed/cancelled output cannot replace the previous model through a watcher read. All 106 IntelliJ
+unit tests, 34 VS Code extension tests and X129 in both editors pass. Native import Cancel-button
+acceptance remains manual. See the [implementation and receipt](errs-integration-plan.md#compiler-import-progress-and-accepted-model-ownership-ui5ui6-2026-10-05).
+Five separately committed local LSP4IJ repairs are recorded in the [upstream register](errs-upstream-issues.md);
+they are unpushed and not installed in this branch. UP17 remains an open IntelliJ Platform defect.
+
 L82 has a new combined post-fix backend checkpoint: **2,991 passed, 44 existing skips, zero failures**.
 Real platform sources exposed a recursive-type adapter crash and repeatable empty-thread-local
 retention on a long-lived compiler worker; both now have regression-tested fixes in separate commits.
