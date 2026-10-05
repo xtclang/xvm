@@ -44,8 +44,8 @@ async function folder(): Promise<vscode.WorkspaceFolder | undefined> {
 }
 
 /** Native task execution keeps build ownership and output visible and never starts Gradle in LSP. */
-export async function refreshCompilerBuild(prepare = false): Promise<void> {
-    const owner = await folder();
+export async function refreshCompilerBuild(prepare = false, selected?: vscode.WorkspaceFolder): Promise<void> {
+    const owner = selected ?? await folder();
     if (!owner) return;
     if (!vscode.workspace.isTrusted) throw new Error('Trust this workspace before running its Gradle build.');
     if (owner.uri.scheme !== 'file') throw new Error('Compiler build import requires a local workspace folder.');
@@ -202,6 +202,16 @@ export function registerCompilerPaths(context: vscode.ExtensionContext): void {
         activeImports.forEach(cancellation => cancellation.cancel());
         imports.clear();
     } },
+        vscode.tasks.onDidEndTaskProcess(event => {
+            const task = event.execution.task;
+            const owner = task.scope;
+            // Observe the public task lifecycle rather than depending on a particular Java or
+            // Gradle extension. Our own xtc-model tasks cannot recursively trigger another export.
+            if (event.exitCode !== 0 || task.definition.type !== 'gradle' || !owner || typeof owner === 'number' ||
+                !vscode.workspace.isTrusted || owner.uri.scheme !== 'file' || activeImports.has(owner.uri.toString()) ||
+                !fs.existsSync(path.join(owner.uri.fsPath, modelPath))) return;
+            void refreshCompilerBuild(false, owner).catch(error => output.appendLine(`Automatic compiler refresh failed: ${error}`));
+        }),
         vscode.workspace.onDidChangeWorkspaceFolders(event => {
             event.removed.forEach(owner => {
                 const key = owner.uri.toString();
