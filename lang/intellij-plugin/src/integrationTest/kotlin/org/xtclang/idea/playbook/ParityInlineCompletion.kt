@@ -15,17 +15,34 @@ internal fun ParityScenarios.inlineCompletionCases() {
             val source = marked.replace("§", "")
             val document = open(data.string("file"), source)
             val mode = data.string("mode")
-            fun queryInline(kind: InlineCompletionTriggerKind, selected: Map<String, Any>? = null) =
-                query("textDocument/inlineCompletion", document, offset, mapOf("context" to buildMap {
-                    put("triggerKind", kind.value)
-                    selected?.let { put("selectedCompletionInfo", it) }
-                })).asJsonObject["items"].rows()
+
+            fun queryInline(
+                kind: InlineCompletionTriggerKind,
+                selected: Map<String, Any>? = null,
+            ) = query(
+                "textDocument/inlineCompletion",
+                document,
+                offset,
+                mapOf(
+                    "context" to
+                        buildMap {
+                            put("triggerKind", kind.value)
+                            selected?.let { put("selectedCompletionInfo", it) }
+                        },
+                ),
+            ).asJsonObject["items"].rows()
             check(protocol.capabilities().asJsonObject["inlineCompletionProvider"].asBoolean)
             if (mode == "selection") {
                 check(queryInline(InlineCompletionTriggerKind.Automatic).isEmpty())
-                check(queryInline(InlineCompletionTriggerKind.Invoked).map { it.string("insertText") }.sorted() == listOf("another", "answer"))
-                val range = mapOf("start" to position(source, offset - 2), "end" to position(source, offset))
-                check(queryInline(InlineCompletionTriggerKind.Invoked, mapOf("range" to range, "text" to "ans")).map { it.string("insertText") } == listOf("answer"))
+                val alternatives = queryInline(InlineCompletionTriggerKind.Invoked).map { it.string("insertText") }
+                check(alternatives.sorted() == listOf("another", "answer"))
+                val range =
+                    mapOf(
+                        "start" to ParityWorkspace.position(source, offset - 2),
+                        "end" to ParityWorkspace.position(source, offset),
+                    )
+                val selected = queryInline(InlineCompletionTriggerKind.Invoked, mapOf("range" to range, "text" to "ans"))
+                check(selected.map { it.string("insertText") } == listOf("answer"))
                 check(queryInline(InlineCompletionTriggerKind.Invoked, mapOf("range" to range, "text" to "answer")).isEmpty())
                 // TODO LSP4IJ: UP26 always sends Automatic, including DirectCall, without selectedCompletionInfo.
                 // Keep this protocol coverage explicit until native invocation/selection is forwarded.
@@ -36,6 +53,7 @@ internal fun ParityScenarios.inlineCompletionCases() {
                 val editor = document.editor
                 focusEditor(editor)
                 withContext(OnDispatcher.EDT) { editor.editor.getCaretModel().moveToOffset(offset) }
+
                 fun visible() = withContext(OnDispatcher.EDT) { utility(InlineCompletionProbe::class).visibleText(editor.editor) }
                 invokeAction("CallInlineCompletionAction", component = editor.component)
                 awaitUi("compiler ghost text is visible", 30.seconds) { visible() == "wer" }
@@ -66,7 +84,10 @@ internal fun ParityScenarios.inlineCompletionCases() {
 
 @Remote("org.xtclang.idea.playbook.probe.InlineCompletionUi", plugin = "org.xtclang.playbook.probe")
 internal interface InlineCompletionProbe {
-    fun type(editor: Editor, text: String)
+    fun type(
+        editor: Editor,
+        text: String,
+    )
 
     fun visibleText(editor: Editor): String
 }
