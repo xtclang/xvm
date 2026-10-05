@@ -1,6 +1,11 @@
+L75 is implemented and validated: negotiated read-only library content/refresh and direct artifact
+monikers in matching bundled source views. VS Code passes all six selected cases; IntelliJ passes
+five plus startup, and X254 passes its file-fallback checks with explicit partial status (UP25).
+No AST/Java embedding changes were needed. See the [contract, limits and receipts](errs-integration-plan.md#l75-read-only-library-content-2026-10-05).
+
 L74 is implemented and validated: portable artifact identities now match source declarations and
 binary consumers through `textDocument/moniker`. Shared X31/X252/X253 pass in both editors.
-No AST changes were needed. The next compiler feature is L75 read-only document content/refresh;
+No AST changes were needed. L75 subsequently adds read-only document content/refresh;
 see the [contract, limits and receipts](errs-integration-plan.md#l74-artifact-identities-2026-10-05).
 
 L81 now has late progress-registration cleanup, all-provider refresh/lifecycle regressions and
@@ -3077,9 +3082,9 @@ recompilation, checkout relocation, distinct same-name artifacts, visibility, in
 closed graph views and replacement. Selected acceptance passes in both editors; receipts below.
 
 Companion views share an immutable identity table per compilation, including after graph joining.
-Queries need a current semantic snapshot: parsed-only library source views still return no moniker
-when queried directly. Resolved imports in consumers have binary identities; semantic enrichment of
-read-only library documents is tracked with L75. This is not a claim of complete library-document
+At the L74 checkpoint, parsed-only library source views returned no moniker when queried directly.
+L75 adds exact artifact-backed declaration identities to those views; consumer imports already had
+binary identities. This is not a claim of complete library-document
 language support.
 
 L74 validation: **137 distinct backend/protocol unit cases** pass across the recorded selections,
