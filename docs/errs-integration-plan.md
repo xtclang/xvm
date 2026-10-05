@@ -4,7 +4,10 @@ Latest feature checkpoint: [L76 inline completion](#l76-compiler-inline-completi
 passes backend, packaged transport and selected acceptance in both editors. IntelliJ native explicit
 invocation/selection context remains UP26; read-only virtual content remains UP25. L77–L79 retain
 explicit product/runtime scope decisions. [L81 native acceptance](#l81-native-acceptance-closure-2026-10-05)
-now passes its bounded scope; L82 retains full-catalog, scale and release work.
+now passes its bounded scope. The [L82 checkpoint](#l82-combined-regression-and-retention-checkpoint-2026-10-05)
+passes 2,991 backend tests and removes repeatable compiler-worker retention. Both full editor
+catalogs have been exercised, but clean native acceptance remains open: VS Code UP23 and IntelliJ
+UP27/UP03 are explicit failures, alongside the existing partial coverage and scale/release gates.
 
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
@@ -31,8 +34,8 @@ master's dependencies and passes 455 tests (three existing skips), including all
 regressions. [PR #653](https://github.com/xtclang/xvm/pull/653) targets `master`, with review
 requested from `ggleyzer`; see the diagnosis for the exact size and checks.
 
-Current inventory: updated 2026-10-02, extending the native/tracing checkpoint `86fc15348` and the
-L55/L61/L62 implementation and validation batches recorded below. This is the active task list;
+Current inventory: updated 2026-10-05, including the bounded L62–L67 closures, L74–L76 features,
+L80/L81 acceptance and the L82 combined regression/retention checkpoint below. This is the active task list;
 dated records retain their historical scope and results. Checkboxes distinguish completed acceptance from
 implemented-but-unverified work and planned features. Compiler API changes get separate C-series
 extraction boundaries when their implementations establish what is required.
@@ -1346,6 +1349,28 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
   Establish explicit response-time and memory targets using representative project sizes, and
   include prolonged editing/restart/process-leak workloads on supported platforms. Record
   packaging, source attachment and failure-recovery acceptance in both clients.
+  - [x] October 5 combined compiler/utils/LSP/stdio/plugin/DSL gate: 2,991 passed, 44 existing skips,
+    zero failures/errors; formatting and extension assembly pass. Preserve the copied XML.
+  - [x] Identify and fix repeatable compiler-worker heap growth. Three post-fix 400-cycle platform
+    sessions retain stable transient-local counts; normal/EOF/normal shutdown and source hashes pass.
+    The 5,000/20,000-method semantic comparison also passes, with one compilation per fixture.
+  - [x] Run the complete 264-case VS Code catalog: 263 pass, X218 remains a failed UP23 host Undo
+    assertion. X130, visible Cancel and the recursive-JSON X259 extension pass this run.
+  - [x] Exercise the matching 264-case IntelliJ catalog across recorded continuations: 262 cases
+    pass their assertions, X254/X257 retain UP25/UP26 partial status. Preserve the initial failures.
+  - [ ] Obtain clean combined native IntelliJ acceptance. The long continuation records four
+    independent IDE alerts despite resumed feature-case coverage: two refresh overload errors
+    (UP27) and two freeze alerts in VFS file preflight (UP03). The nine-case rerun is clean but
+    does not clear the long-session gate.
+  - [ ] Bound native refresh work across distinct connected files, preserving latest-state refresh
+    and disposal; add a many-file dependency/settings/close-reopen stress regression (UP27).
+  - [ ] Prevent redundant VFS preflight inside verified native refactoring transactions without
+    bypassing generic events, guards or Undo/Redo; verify delayed replies and cancellation (UP03).
+  - [ ] Agree release budgets across supported hardware/platforms and complete prolonged-session
+    acceptance. The current receipt defines provisional local comparison budgets only.
+  - [ ] Resolve the recorded host gates or retain explicit release exceptions: UP16/UP23 resource
+    edits, UP25/UP26 native feature constraints and UP17 large-file editing below. The user already
+    accepted UP23 as a compiler-scope exception; it is not a passing host assertion.
   - [ ] Investigate IntelliJ bulk replacement of heavily decorated large files: the 20,000-method
     X145 attempt recorded a 21.3-second EDT freeze in `RangeMarkerTree.documentChanged` /
     `IntervalTreeImpl.maxEndOf` during `DocumentImpl.setText`. Preserve the failed receipt below;
@@ -11037,3 +11062,182 @@ The shared catalog now has **264 scenarios** (X1–X259, CFG1–CFG3, 7a.8/7a.9)
 L81's bounded work is closed with UP15 explicitly retained. L82 still owns the full combined
 checkpoint, declared scale budgets, prolonged workloads, other-platform acceptance and UP17's
 large decorated-file freeze. Existing upstream host limitations are not relabeled as fixes.
+
+
+### L82 combined regression and retention checkpoint (2026-10-05)
+
+The forced combined baseline at `4d12ea55b` completed **3,027 tests: 2,982 passed, 45 existing
+skips, zero failures/errors**. This covers javatools, utilities, LSP, packaged stdio, IntelliJ
+unit/manifest and DSL tests. The skips are existing disabled compiler/syntax tests, two size
+benchmarks and four opt-in project-creator integration tests; compiled XDK outputs were present.
+`lang/build/reports/l82/checkpoint-2026-10-05/combined-tests.json` and its compressed XML copies
+preserve this baseline separately from subsequent focused runs. It precedes the fixes below and
+must not be presented as a full run of their final code.
+
+`79adbd2f2` replaces the disabled Tree-sitter inlay placeholder with an executed negative capability
+and empty-result test. Compiler hints remain enabled by default and covered by the presentation
+regressions and X42/X259. The focused 31-test selection passes without failures/errors/skips.
+
+The first real-platform workload (`platform-workload/l82-2026-10-05`) failed during workspace
+diagnostics: `RecursiveTypeConstant` inherits `TerminalTypeConstant` but deliberately has no single
+`getDefiningConstant()`. The adapter matched the base class before the recursive-specific handler.
+`5994b454e` moves that handler first and retains the typedef's identity. Two new regressions fail
+before the fix and pass afterwards for a local recursive alias and bundled `json.Doc`, including
+closed-graph diagnostics, three exact parameter-rename edits and recompilation. This is an adapter
+regression, not a compiler internal error or an embedding/AST API gap.
+
+The audit also reproduced that invalid access in member-import collection and missing-method source
+rendering. These paths cannot yet prove a recursive alias's destination spelling/import route;
+they must decline that candidate while retaining unrelated member actions. The regression verifies
+an ordinary inherited override remains available beside the refused recursive signature.
+
+After the identity fix, `platform-workload/l82-2026-10-05-fixed` passes **three 400-cycle sessions**
+on 11 modules/50 platform sources: 1,200 successful cancellations, normal/EOF/normal process exits,
+no sampling errors, unchanged source hashes and at most one compiler API thread active. This is
+functional/lifecycle evidence; its heap growth is not acceptance of bounded retention.
+
+Live histograms identify the growth: between cycles 100 and 400, each worker retains **74,100 extra
+`TransientThreadLocal` instances** and their cleanup callbacks. The first session's live histogram
+total rises from 93,142,312 to 97,170,576 bytes. A null `get()` stores the local as a strong key in
+the per-thread `IdentityHashMap`; compiler recursion/deferred-work probes that return early never
+remove that empty entry. The same implementation exists in the local `origin/master` reference.
+A deterministic utility regression reproduces 1,000 retained keys without depending on GC timing;
+worker reuse and null-setting controls reproduce the related empty-entry retention. Initial-value
+and nested-scope behavior remains a separate positive control.
+
+The repair avoids registering null initial values and makes `set(null)` remove the entry, consistent
+with this utility's existing null-as-absent computation semantics. It does not change compiler
+concurrency, introduce a weak-map cache, retain ASTs, or add public APIs. Keep this utility fix and
+its tests as an independently extractable master-bug slice. No remote branch or PR is created here.
+
+The final forced backend gate after these fixes passes **3,035 tests: 2,991 passed, 44 existing
+skips, zero failures/errors**. Root and lang `spotlessCheck` pass, and VS Code assembles successfully.
+The authoritative copied XML and summary are under `checkpoint-2026-10-05/final-backend`.
+
+| Suite | Total | Passed | Existing skips |
+| --- | ---: | ---: | ---: |
+| Java compiler / embedding | 566 | 526 | 40 |
+| Java utilities | 124 | 122 | 2 |
+| LSP adapters / server | 2,124 | 2,122 | 2 |
+| Packaged stdio / lifecycle | 81 | 81 | 0 |
+| IntelliJ unit / manifest | 90 | 90 | 0 |
+| DSL | 50 | 50 | 0 |
+
+The final retention case performs 120 cycles / 960 edit requests and releases all 3,148 observed
+compiler objects, with rebuild p50/p95 of 216/231 ms including debounce. It complements the
+real-platform histogram comparison; object-release checks alone did not catch empty thread-local
+keys. The two remaining LSP skips are existing Tree-sitter navigation placeholders.
+
+Shared X259 now includes a bundled recursive `json.Doc` method signature. Both editor drivers
+consume the same expanded fixture while checking visible consumer hints through dependency/settings
+changes and server restart. The catalog remains 264 cases; its SHA-256 is
+`c451adcd9c11471bd9f8360920f82ccf267aaf7b0e788a50d48881964353e4be`.
+
+| Commit | Extraction slice |
+| --- | --- |
+| `79adbd2f2` | Active syntax-adapter inlay capability test; no compiler hint disablement |
+| `5994b454e` | Recursive typedef proof identity and real-source regressions |
+| `7235443b1` | Safe recursive member-generation refusals and unrelated-action control |
+| `f338cbfe9` | Generic transient-thread-local retention fix and deterministic utility regressions; independently extractable for master |
+| `b4d088a25` | Opt-in live histograms between workload edits and reproducible manual command |
+| `f0cc4412b` | X103 explicit open-document save and X60 closed-consumer persistence assertions; harness-only |
+| `ab8ac2aa1` | Bounded stale-readiness retry and removal of X127's redundant fixture write; no edit replay |
+| `9a37613dd` | Shared recursive-JSON X259 fixture, consumed by both editor drivers |
+
+The matching post-fix run, `platform-workload/l82-2026-10-05-retention-fixed`, passes all three
+400-cycle sessions with normal/EOF/normal exits, 1,200 successful cancellations, unchanged sources,
+no sampling errors and one compiler API thread at most. The live thread-local count stays at 3,212
+at every checkpoint in every process.
+
+| Session | Live histogram bytes at cycle 100 | At cycle 400 | Growth |
+| --- | ---: | ---: | ---: |
+| Normal shutdown | 90,952,304 | 91,004,032 | 51,728 bytes |
+| Transport EOF | 91,009,912 | 91,153,304 | 143,392 bytes |
+| Fresh process / normal shutdown | 90,953,384 | 91,012,304 | 58,920 bytes |
+
+This removes the repeatable 74,100-key growth over the same interval. Remaining histogram variation
+is small JVM/string/worker bookkeeping; this bounded observation is not a multi-hour leak guarantee.
+Compiler `compileModule(tree)` p50 is 193.8–194.6 ms and p95 is 212.0–214.8 ms. Edit-to-symbol replies,
+including debounce/compilation, have p95 329.4–336.5 ms; warm hover p95 stays below 1 ms. Initial
+workspace diagnostics take 4.91–5.09 seconds. Sampled peak heap/RSS are at most 615.5 MiB / 0.997 GiB;
+these sampled values are lower bounds, separate from live histogram totals. The owned processes all
+exit; none of these measurements comes from a simultaneous build or GUI workload.
+
+The current `semantic-workload/l82-2026-10-05` comparison passes plain/inferred-local controls at
+5,000 and 20,000 methods, two query cycles each. Each process records exactly one compiler API
+invocation; later queue jobs are graph queries, not extra compilations. First references take
+112/164 ms at 5,000 methods and 317/494 ms at 20,000; the largest full-file hint response takes
+83 ms and semantic tokens 300 ms. Cold compilation of the 20,000-method files takes 7.9–8.1 seconds.
+Every generated process exits normally. This server result does not close the UP17 native marker
+replacement freeze.
+
+Provisional local comparison budgets for these exact fixtures (macOS ARM64, Java 25, 2 GiB server
+heap, no concurrent build/GUI workload) are: platform edit-to-symbol p95 under 500 ms, warm-hover
+p95 under 20 ms, cold 11-module diagnostics under 10 seconds, first 20,000-method references under
+1 second after compilation, and live heap growth under 1 MiB from cycles 100 to 400 with stable
+transient-local counts. The current run meets those budgets. They describe controlled regression
+comparisons, not agreed hardware-independent SLAs; supported-platform and longer-duration targets
+remain release work. Sampled RSS/heap peaks are observations rather than hard peak-memory proof.
+
+The first Gradle full-playbook launch began re-running the just-completed backend tasks. It was
+canceled before GUI startup; both duplicate test workers exited. The successful combined XML was
+already preserved above. Native VS Code then uses the existing pinned-Node launcher directly,
+with all cases selected and `--cancel-ui`; that canceled duplicate is not another test result.
+
+VS Code `compiler-playbook/run-5flalU` completes the full expanded 264-case catalog on 1.140.0:
+**263 passed, X218 failed, zero unselected/skipped cases or suite-hook errors**. The visible-control
+Cancel mode passes X145; X259 passes with the recursive JSON signature. X130 passes its native
+Move/Undo/Redo/resource assertions this time; its earlier intermittent UP16 failures remain recorded.
+X218 reproduces the already accepted UP23 host Undo order failure, with `target already exists`
+after the forward move. It remains a failed assertion and the launcher exits 1. No full-green VS
+Code result is claimed. The report's default host XML references were affected by the canceled
+duplicate above; the complete successful backend evidence is the preserved `final-backend` copy.
+
+The first full IntelliJ attempt, `compiler-playbook/run-9819779843503311532`, records **80 passes
+(including START), X103 failed, 184 cases not run**, with zero independent IDE failures. X103
+completed the forward and reverse renames, but read the open member's disk contents before the
+editor had saved its reverse edit. Its client trace contains the restored `class Item {}` and all
+files match the original fixture after shutdown. This was an autosave-dependent harness assertion,
+not a focus timeout or a failed compiler proposal. The corrected assertion first checks the restored
+live buffer, explicitly saves it through IntelliJ, and then verifies disk contents. The continuation
+selects only X103 and the 184 unrun cases; the 79 completed feature cases are retained as evidence.
+
+That continuation also exposes a stale X60 expectation: it requires closed renamed consumers to
+remain unchanged on disk, contrary to the deliberate UP21 bridge added in `2ce6029cf`. The native
+rename correctly saves those closed edits so subsequent compiler requests can see them. X60 now
+checks that closed consumers are persisted **before opening them**, while the original open editor's
+disk text remains unchanged and its live text contains the rename. This preserves the unsaved-overlay
+assertion where it applies; it neither removes persistence coverage nor changes production code.
+
+X127/X134/X173/X175/X176/X216/X217/X218 also encounter `ContentModified` while their setup waits for document symbols.
+For X127, the trace shows `didOpen`, the readiness request, then same-text `didSave`/watched-file/
+`didChange` delivery that retires that request. Its redundant second fixture write is removed.
+The shared `settle` helper retries only this read-only readiness probe on `ContentModified`, within
+its deadline; other errors propagate. Feature queries, stale-result assertions, edits and native
+refactorings remain single-shot. This does not reclassify the original failed attempts as passes.
+
+IntelliJ continuation `run-5080670791887423538` completes all 185 selected cases in a 21-minute
+Gradle run: **174 feature passes, two partial cases and nine failures**, plus START passes.
+The original 79 completed feature cases are not replayed. X259 passes with the recursive JSON
+signature. X254 and X257 retain their documented UP25/UP26 partial status.
+
+The corrected nine-case follow-up, `run-14793635842897832756`, passes START and X60/X127/X134/
+X173/X175/X176/X216/X217/X218, with **zero IDE failures**. Across the three matching-catalog
+receipts, every scenario executes: **262 pass their assertions and two remain partial**.
+`checkpoint-2026-10-05/native-coverage.json` maps every scenario to its latest executed result and
+preserves the original per-run statuses and IDE errors. No initial failure is relabeled as a pass.
+
+**This is not clean combined native acceptance.** The long continuation independently records
+four IDE alerts: two `SubmissionTracker.preventTooManySubmissions` errors in LSP4IJ semantic-token/
+code-lens refresh (11 and 42 similar active submissions), and two freeze alerts. Saved freeze
+groups show the EDT waiting 6–11 seconds in `AbstractLSPFileListener.applyWorkspaceEdit` during
+VFS preflight, including a move inside our already guarded `XtcRenameEdit.apply`. Per-file refresh
+coalescing exists in 0.21.0; it does not bound distinct-file scheduling. UP27 tracks that overload;
+the UP03 continuation tracks the remaining synchronous VFS wait. The short clean rerun does not
+clear either long-session finding. Both repairs and their stress/native acceptance are explicit
+next tasks above; the independent error gate remains enabled.
+
+Root/lang formatting checks pass after the harness changes. All work remains on `lagergren/errs`;
+these are local checkpoints, not independent extracted-PR validation. UP16/UP23 host failures,
+UP25/UP26 partial native coverage, UP27/UP03 long-session findings, UP17 large-file platform repair
+and other-platform/prolonged-session acceptance remain explicit release gates.
