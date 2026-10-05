@@ -40,9 +40,7 @@ import java.util.concurrent.atomic.AtomicReference
 class XtcLanguageClient(
     project: Project,
 ) : LanguageClientImpl(project) {
-    // TODO LSP4IJ: UP27 — inherited semantic/lens refresh fans out across connected documents
-    // on an unbounded executor. Per-file coalescing does not bound distinct-file submissions.
-    // Retain the native IDE-error gate until bounded refresh scheduling passes a long session.
+    private val editorRefresh = EditorRefresh(project, this) { isDisposed }
     private val compilerWatches = CompilerVfsWatches()
     private val preferences = AtomicReference(LanguageServiceSettings.validated(project))
     private val updateQueued = AtomicBoolean()
@@ -158,6 +156,19 @@ class XtcLanguageClient(
             } else {
                 super.refreshDiagnostics()
             }
+        }
+
+    override fun refreshCodeLenses(): CompletableFuture<Void> = refreshEditors(EditorRefresh.Feature.LENSES)
+
+    override fun refreshInlayHints(): CompletableFuture<Void> = refreshEditors(EditorRefresh.Feature.HINTS)
+
+    override fun refreshSemanticTokens(): CompletableFuture<Void> = refreshEditors(EditorRefresh.Feature.TOKENS)
+
+    private fun refreshEditors(feature: EditorRefresh.Feature): CompletableFuture<Void> =
+        if (isDisposed || project.isDisposed) {
+            CompletableFuture.completedFuture(null)
+        } else {
+            editorRefresh.request(clientFeatures.serverWrapper, feature)
         }
 
     private fun semanticUpdate(update: () -> Unit): CompletableFuture<Void> =
