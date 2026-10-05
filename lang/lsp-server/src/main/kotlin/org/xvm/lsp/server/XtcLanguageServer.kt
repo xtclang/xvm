@@ -830,6 +830,9 @@ class XtcLanguageServer(
                     triggerCharacters = listOf(".", ":", "<")
                     resolveProvider = resolvesCompletionDocumentation
                 }
+            if (presentation.inlineCompletion && AdapterCapability.INLINE_COMPLETION in adapter.capabilities) {
+                inlineCompletionProvider = Either.forLeft(true)
+            }
             definitionProvider = Either.forLeft(true)
             referencesProvider =
                 if (adapter is XdkAdapter) {
