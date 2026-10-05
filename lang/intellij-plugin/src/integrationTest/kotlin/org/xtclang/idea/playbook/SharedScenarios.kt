@@ -205,7 +205,7 @@ class SharedScenarios(
                 json.getAsJsonObject("cases").entrySet().associate { (id, value) ->
                     id to gson.fromJson(value, Scenario::class.java)
                 }
-            val expected = (1..242).map { "X$it" } + listOf("CFG1", "CFG2", "CFG3", "7a.8", "7a.9")
+            val expected = (1..244).map { "X$it" } + listOf("CFG1", "CFG2", "CFG3", "7a.8", "7a.9")
             require(scenarios.keys.toList() == expected) {
                 "The catalog must describe the complete playbook in order"
             }

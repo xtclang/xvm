@@ -19,9 +19,13 @@ internal fun compilerSourceLinks(
             val imported =
                 when (node) {
                     is ImportStatement -> {
-                        if (node.isWildcard || node.childNodes().any()) return@mapNotNull null
-                        val token = node.aliasToken ?: return@mapNotNull null
-                        Triple(node.importedIdentity, token.startPosition, token.endPosition)
+                        // A wildcard resolves to its container, not to every exported child.
+                        // Conditional imports currently resolve unconditionally with COMPILER-29;
+                        // use that actual identity without interpreting the condition ourselves.
+                        val names = node.qualifiedNameTokens
+                        val first = node.aliasToken ?: names.firstOrNull() ?: return@mapNotNull null
+                        val last = node.aliasToken ?: names.lastOrNull() ?: return@mapNotNull null
+                        Triple(node.importedIdentity, first.startPosition, last.endPosition)
                     }
 
                     is NamedTypeExpression -> {

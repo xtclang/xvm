@@ -3018,3 +3018,11 @@ pass selected acceptance in both editors. The final combined backend/protocol ga
 **498 tests**, zero failures/errors/skips. L63 is closed within its documented supported/refused
 forms; this does not claim arbitrary refactorings or a full-catalog rerun. UP23 remains open.
 See the [closure and acceptance record](errs-integration-plan.md#l63-bounded-closure-and-acceptance-2026-10-04).
+
+### L66 import source spans (2026-10-05)
+
+`ImportStatement.getQualifiedNameTokens()` returns an immutable copy of its existing syntax tokens
+for exact wildcard container spans. The tokens already belong to the AST and follow its existing
+clone ownership; no new field, state or phase coupling is introduced. Kotlin copies the resolved
+identity and source range on the compiler worker. Conditional-import links retain the compiler's
+COMPILER-29 warning instead of inventing condition semantics.
