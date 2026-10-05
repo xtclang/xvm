@@ -11550,3 +11550,28 @@ Extraction boundaries: `4703a0f20` owns the VS Code 1.140 / Node 24 test baselin
 cache helper; `aa3d59f78` owns only the IntelliJ fixture-isolation repairs. Keep the latter with
 the editor acceptance harness when splitting PRs. The following documentation checkpoint
 records the complete validation and preserves the original failures.
+
+
+## Compiler workspace synchronization batch (UI5/UI6, 2026-10-05)
+
+- `9ff95c9d0`: refresh previously imported inputs after successful IntelliJ Gradle sync or a
+  successful VS Code Gradle task. IntelliJ now also consumes exported-model VFS changes.
+  Automatic refresh starts only after an initial import; VS Code requires workspace trust.
+  VS Code observes public task events, not a private Java/Gradle extension sync API.
+- `e8bdb540a`: both clients use the same evaluated Gradle init script to aggregate nested included
+  builds, including roots without the Ecstasy plugin. Each build exports its existing source-set
+  model; the composite report is atomically replaced only when every required export succeeds.
+  The report records build roots, preserves source ownership and resource order, and shows
+  processed-resource readiness. IntelliJ includes linked roots; VS Code includes workspace roots.
+  Exact duplicate owners from overlapping roots are deduplicated; conflicting owners are rejected.
+- `0f99df075`: project/folder retirement invalidates the import owner as well as cancelling the
+  producer. Late completion and validation cannot publish; unlinking IntelliJ roots creates a
+  distinct owner. Deferred server initialization reads current settings before publication.
+- Shared X263–X265 cover composite import, native Gradle synchronization plus exported-report
+  watching, and closure/removal during an import. Existing X260–X262 remain cancellation,
+  failure, malformed/missing output and retry regressions. Catalog: 270 scenarios.
+
+Tests were added with each implementation slice; combined validation is pending. These changes
+use Community APIs and public VS Code task/workspace events. No local LSP4IJ snapshot is required.
+Explicit source overrides are never rewritten by model refresh. Remote/restricted-workspace
+execution, library/source-attachment editing, advanced JVM settings and log export remain open.

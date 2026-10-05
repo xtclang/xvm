@@ -458,3 +458,9 @@ rendered consumer inlays across settings changes and restart. After building, ru
 check two windows in one Electron process, independent compiler ownership and real hot-exit
 restoration. Omit `--shared-process` for separate application instances. See the
 [manual playbook](../doc/manual-test-plan.md#native-project-lifetime-checks-l81) for the full checks.
+
+
+Compiler workspace synchronization now has shared X263–X265 cases for nested composite input
+aggregation, automatic Gradle refresh/export watching, and project/folder closure during import.
+Both clients preserve explicit settings and the last accepted inputs after failed refresh.
+Combined validation of this batch is pending; prior acceptance receipts remain historical.
