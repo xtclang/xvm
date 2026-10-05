@@ -62,6 +62,8 @@ internal class XdkProjectQueries(
     fun diagnostics(): List<CompilationResult> {
         val revision = revision()
         val previous = diagnosticCache.snapshot()
+        val previousNavigation = navigationIndex.snapshot()
+        val navigationBuilds = previousNavigation.builds.filterKeys { uri -> project.modules.values.any { it.uri == uri } }.toMutableMap()
         if (previous.revision == revision && isCurrent()) return previous.results
         val builds = linkedMapOf<String, XdkDiagnosticIndex.Build>()
         val artifacts = dependencies.modules.filterKeys { it !in project.modules }.toMutableMap()
@@ -120,6 +122,13 @@ internal class XdkProjectQueries(
                                 val errors = ErrorListener.cancellable(heard, cancelled)
                                 val compilation = compileTree(source, open.repository, errors)
                                 checkCurrent()
+                                val navigation =
+                                    if (compilation.succeeded() && !heard.hasSeriousErrors()) {
+                                        compilation.navigationFacts(open, errors)
+                                    } else {
+                                        null
+                                    }
+                                checkCurrent()
                                 val declarations =
                                     XdkAst.declarationLocations(
                                         compilation.sourceTrees(),
@@ -151,6 +160,13 @@ internal class XdkProjectQueries(
                                     } else {
                                         diagnostics
                                     }
+                                val validArtifact = artifact?.takeIf { it.module == module.name }
+                                navigationBuilds[module.uri] =
+                                    XdkNavigationIndex.Build(
+                                        XdkNavigationIndex.Key(module.name, source.inputs, inputs.mapValues { it.value.revision }),
+                                        navigation?.takeIf { validArtifact != null },
+                                        validArtifact,
+                                    )
                                 XdkDiagnosticIndex.Build(
                                     key,
                                     CompilationResult.withDiagnostics(
@@ -169,6 +185,7 @@ internal class XdkProjectQueries(
             }
         if (!isCurrent()) throw CancellationException()
         diagnosticCache.replace(XdkDiagnosticIndex.Snapshot(revision, results, builds.toMap()))
+        navigationIndex.publish(previousNavigation, navigationBuilds)
         return results
     }
 

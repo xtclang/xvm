@@ -10706,7 +10706,7 @@ Implementation sequence; validate as one batch after the checkpoints:
   and dependency artifact/source-index revisions. Reuse unaffected roots across graph changes,
   evict removed roots, fence stale publication, and keep complete references unavailable beside
   failed modules. Refactoring proofs continue to compile independently.
-- [ ] Seed the index from editor and diagnostic compilation so the first graph lookup does not
+- [x] Seed the index from editor and diagnostic compilation so the first graph lookup does not
   compile the same successful module again.
 - [ ] Exercise scale, compiler-object release, binary/source-index replacement, ambiguous library
   source matches and editor-visible replacement scenarios; record packaged-server measurements.
