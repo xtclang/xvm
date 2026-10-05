@@ -254,13 +254,17 @@ class XdkWorkspaceRefactoringTest {
             assertThat(adapter.compile(uri, changed).diagnostics).isEmpty()
             val hidden = text.replace("Widget", "Hidden")
             assertThat(adapter.compile(uri, hidden).diagnostics).isNotEmpty()
-            assertThat(
+            val actions =
                 adapter.getCodeActions(
                     uri,
                     Range(Position(0, 0), Position(0, hidden.length)),
                     emptyList(),
-                ),
-            ).isEmpty()
+                )
+            assertThat(actions).noneMatch { it.title.startsWith("Import 'Hidden'") }
+            // Creating a new local type is valid; importing the other module's private type is not.
+            val create = actions.single { it.title == "Create class 'Hidden'" }
+            val local = apply(hidden, requireNotNull(create.edit).changes.getValue(uri))
+            assertThat(adapter.compile(uri, local).diagnostics).isEmpty()
         }
     }
 
