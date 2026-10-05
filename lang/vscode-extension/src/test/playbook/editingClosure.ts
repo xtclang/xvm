@@ -74,3 +74,21 @@ export function structuralRecoveryCases(): void {
         assert.deepStrictEqual(symbolNames(await symbols(document)), ['Structure', 'repaired']);
     });
 }
+
+export function formattingBreadthCases(): void {
+    (['X249', 'X250'] as const).forEach(id => playbook(id, async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await noErrors(document.uri);
+        await vscode.commands.executeCommand('editor.action.formatDocument');
+        assert.strictEqual(document.getText(), data.expected);
+        await noErrors(document.uri);
+        const edits = await vscode.commands.executeCommand<vscode.TextEdit[]>('vscode.executeFormatDocumentProvider', document.uri, { tabSize: 4, insertSpaces: true });
+        assert.deepStrictEqual(edits, []);
+        await vscode.commands.executeCommand('undo');
+        assert.strictEqual(document.getText(), data.source);
+        await vscode.commands.executeCommand('redo');
+        assert.strictEqual(document.getText(), data.expected);
+        await vscode.commands.executeCommand('undo');
+        assert.strictEqual(document.getText(), data.source);
+    }));
+}
