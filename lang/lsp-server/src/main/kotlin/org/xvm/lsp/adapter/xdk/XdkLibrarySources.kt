@@ -1,6 +1,7 @@
 package org.xvm.lsp.adapter.xdk
 
 import org.xvm.asm.ClassStructure
+import org.xvm.asm.ConstantPool
 import org.xvm.asm.ErrorList
 import org.xvm.asm.MethodStructure
 import org.xvm.asm.constants.IdentityConstant
@@ -14,7 +15,10 @@ import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.compiler.ast.PropertyDeclarationStatement
 import org.xvm.compiler.ast.TypeCompositionStatement
+import org.xvm.lsp.adapter.ReadOnlyDocument
+import org.xvm.lsp.adapter.SymbolMoniker
 import org.xvm.lsp.util.ExecutionTrace
+import java.net.URI
 import java.nio.file.Files
 import java.security.MessageDigest
 import java.util.HexFormat
@@ -40,9 +44,17 @@ internal object XdkLibrarySources {
     )
 
     private data class SourceFile(
+        val module: String,
+        val path: String,
         val uri: String,
+        val document: ReadOnlyDocument,
         val declarations: List<Declaration>,
-    )
+    ) {
+        // Evaluated only on the compiler worker. The cached value contains copied ranges/IDs only.
+        val monikers by lazy { declarationMonikers(this) }
+    }
+
+    const val SCHEME = "ecstasy-library"
 
     private val entries by lazy {
         val archives =
@@ -72,10 +84,41 @@ internal object XdkLibrarySources {
     private val directory by lazy { Files.createTempDirectory("xtc-library-sources-") }
     private val sources = ConcurrentHashMap<String, SourceFile>()
 
-    fun owns(uri: String): Boolean {
-        if (sources.isEmpty()) return false
-        val canonical = XdkSources.file(uri)?.toURI()?.toString() ?: return false
-        return sources.values.any { it.uri == canonical }
+    private fun source(uri: String): SourceFile? {
+        if (sources.isEmpty()) return null
+        if (uri.startsWith("$SCHEME:")) return sources.values.find { it.document.uri == uri }
+        val canonical = XdkSources.file(uri)?.toURI()?.toString() ?: return null
+        return sources.values.find { it.uri == canonical }
+    }
+
+    fun owns(uri: String): Boolean = source(uri) != null
+
+    fun document(uri: String): ReadOnlyDocument? = source(uri)?.document
+
+    /** A parsed name is not proof: require one exact artifact declaration at this source range. */
+    fun monikers(uri: String, line: Int, column: Int): List<SymbolMoniker> {
+        if (line < 0 || column < 0) return emptyList()
+        val at = SemanticModel.Position(line, column)
+        return source(uri)?.monikers?.filterKeys { at in it }?.values?.singleOrNull()?.let(::listOf).orEmpty()
+    }
+
+    private fun declarationMonikers(source: SourceFile): Map<SemanticModel.Range, SymbolMoniker> {
+        val module = XdkLibraries.module(source.module) ?: return emptyMap()
+        val symbols = XdkLibraries.symbolIndex(source.module) ?: return emptyMap()
+        return ConstantPool.withPool(module.constantPool).use {
+            module.constantPool.constants.toList().filterIsInstance<IdentityConstant>()
+                .filter { it.moduleConstant.name == source.module }
+                .mapNotNull { identity ->
+                    val component = identity.component ?: return@mapNotNull null
+                    val owner = component as? ClassStructure ?: component.getContainingClass(false)
+                    if (owner?.sourcePath?.value != source.path) return@mapNotNull null
+                    val target = declaration(identity) ?: return@mapNotNull null
+                    val moniker = symbols.moniker(identity.position, imported = false) ?: return@mapNotNull null
+                    target.location.range to moniker
+                }.groupBy({ it.first }, { it.second })
+                .mapNotNull { (range, candidates) -> candidates.distinct().singleOrNull()?.let { range to it } }
+                .toMap()
+        }
     }
 
     fun sourceUri(name: String?): String? = name?.takeIf(::owns)
@@ -92,7 +135,7 @@ internal object XdkLibrarySources {
             component as? ClassStructure ?: component.getContainingClass(false) ?: return null
         val path = owner.sourcePath?.value ?: return null
         val entry = entries[path] ?: return null
-        val source = sources.computeIfAbsent(path) { parse(path, entry.text) }
+        val source = sources.computeIfAbsent(path) { parse(module, path, entry) }
         val namespace =
             generateSequence(binary) { it.namespace }
                 .takeWhile { it !is ModuleConstant }
@@ -116,9 +159,11 @@ internal object XdkLibrarySources {
     }
 
     private fun parse(
+        module: String,
         path: String,
-        text: String,
+        entry: Entry,
     ): SourceFile {
+        val text = entry.text
         val file = directory.resolve(path).normalize()
         require(file.startsWith(directory)) { "Invalid bundled source path" }
         Files.createDirectories(file.parent)
@@ -169,12 +214,16 @@ internal object XdkLibrarySources {
                     visit(root, path.substringBeforeLast('/', "").split('/').drop(1))
                 }
             }
+        val virtualUri = URI(SCHEME, module, "/${XdkLibraries.revision(module)}/${entry.revision}/$path", null).toASCIIString()
         return SourceFile(
+            module,
+            path,
             file
                 .toFile()
                 .canonicalFile
                 .toURI()
                 .toString(),
+            ReadOnlyDocument(virtualUri, text),
             declarations,
         )
     }
