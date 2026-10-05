@@ -25,6 +25,7 @@ class ParityScenarios(
         reliabilityCases()
         indexingCases()
         monikerCases()
+        libraryContentCases()
     }
 
     internal fun case(
