@@ -80,6 +80,8 @@ class XtcRenameEdit
                         graph?.beforeApply()
                         // TODO LSP4IJ: UP03 — 0.21 only renames the basename, ignoring a changed parent URI.
                         // Apply resource moves through VFS inside this same undo command.
+                        // Its VFS listener still waits for preflight on the EDT, including here.
+                        // Remove that duplicate wait only while preserving native Undo/Redo and guards.
                         edit.documentChanges.orEmpty().forEach { change ->
                             if (change.isRight && change.right is RenameFile) {
                                 val move = change.right as RenameFile
