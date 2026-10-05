@@ -74,6 +74,49 @@ class XdkNavigationIndexTest {
     }
 
     @Test
+    fun `first graph navigation reuses editor builds and unsaved source inputs`() {
+        val text = "module Library { class Box {} }"
+        val library = source("Library", text)
+        val consumerText = "module Consumer { package lib import Library; class Child extends lib.Box {} }"
+        val consumer = source("Consumer", consumerText, setOf("Library"))
+        val independent = source("Independent", "module Independent { class Unrelated {} }")
+        adapter().use { adapter ->
+            adapter.replaceSourceModules(listOf(library, consumer, independent))
+            assertThat(adapter.compile(consumer.uri, consumerText).diagnostics).isEmpty()
+            assertThat(compiled.values.sumOf { it.get() }).isEqualTo(2)
+            assertThat(adapter.findReferences(library.uri, 0, text.indexOf("Box"), true)).hasSize(2)
+            assertThat(compiled.values.sumOf { it.get() }).isEqualTo(3)
+            val changed = "module Library { class Box { Int added = 1; } }"
+            assertThat(adapter.compile(library.uri, changed).diagnostics).isEmpty()
+            assertThat(adapter.findWorkspaceSymbols("added")).hasSize(1)
+            assertThat(compiled.getValue("Library").get()).isEqualTo(2)
+            assertThat(compiled.getValue("Consumer").get()).isEqualTo(2)
+            assertThat(compiled.getValue("Independent").get()).isEqualTo(1)
+            assertThat(directory.resolve("Library.x").toFile().readText()).isEqualTo(text)
+        }
+    }
+
+    @Test
+    fun `graph diagnostics seed navigation including failed roots without duplicate compilation`() {
+        val library = source("Library", "module Library { class Box {} }")
+        val consumer =
+            source("Consumer", "module Consumer { package lib import Library; class Child extends lib.Box {} }", setOf("Library"))
+        val broken = source("Broken", "module Broken { Missing value; }")
+        adapter().use { adapter ->
+            adapter.replaceSourceModules(listOf(library, consumer, broken))
+            assertThat(adapter.workspaceDiagnosticsAsync().join()).hasSize(3).anyMatch { !it.success }
+            assertThat(compiled.values.sumOf { it.get() }).isEqualTo(3)
+            assertThat(adapter.findWorkspaceSymbols("Child")).hasSize(1)
+            assertThat(adapter.findReferences(library.uri, 0, 23, true)).isEmpty()
+            assertThat(compiled.values.sumOf { it.get() }).isEqualTo(3)
+            source("Broken", "module Broken {}")
+            assertThat(adapter.workspaceDiagnosticsAsync().join()).allMatch { it.success }
+            assertThat(adapter.findReferences(library.uri, 0, 23, true)).hasSize(2)
+            assertThat(compiled.values.sumOf { it.get() }).isEqualTo(4)
+        }
+    }
+
+    @Test
     fun `retirement and close reject publication from an older index generation`() {
         val index = XdkNavigationIndex()
         val beforeEdit = index.snapshot()
