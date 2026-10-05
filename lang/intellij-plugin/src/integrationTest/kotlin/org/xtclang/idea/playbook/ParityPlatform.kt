@@ -750,7 +750,7 @@ internal fun ParityScenarios.platformCases() {
         configure(
             listOf(SharedScenarios.SourceModule("Resolve", uri(data.string("file")), emptyList())),
         )
-        val document = open(data.string("file"), data.string("source"))
+        val document = open(data.string("file"))
         val action =
             query(
                 "textDocument/codeAction",
