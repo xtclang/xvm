@@ -555,4 +555,11 @@ UP15's error classification and L82's release/scale work remain explicit in the
 Compiler workspace synchronization now has shared X263–X265 cases for nested composite input
 aggregation, automatic Gradle refresh/export watching, and project/folder closure during import.
 Both clients preserve explicit settings and the last accepted inputs after failed refresh.
-Combined validation of this batch is pending; prior acceptance receipts remain historical.
+X129/X260–X265 now have passing selected receipts in both editors: VS Code `run-40itia`;
+IntelliJ `run-12471400462423684800` plus corrected `run-11279722985432501847` (zero IDE
+errors in the correction). Headless/client checks pass: 112 IntelliJ units, 37 VS Code extension
+tests, three Gradle model tests and five backend build-model tests. Late daemon publication after
+cancellation is guarded by import identity; the configuration cache is reused across identities.
+Automatic exports require an initial imported report; VS Code uses public Gradle task events in
+trusted local workspaces. The catalog has 270 cases; this was a selected run, not a full rerun.
+See the [contract, failures and commit map](../../../docs/errs-integration-plan.md#compiler-workspace-synchronization-batch-ui5ui6-2026-10-05).
