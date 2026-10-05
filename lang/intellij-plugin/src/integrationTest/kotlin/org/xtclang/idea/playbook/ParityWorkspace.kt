@@ -16,6 +16,7 @@ import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.components.common.codeEditorForFile
 import com.intellij.driver.sdk.ui.components.common.ideFrame
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -178,7 +179,17 @@ class ParityWorkspace(
 
     fun settle(document: Document) {
         flush(document)
-        query("textDocument/documentSymbol", document)
+        // File notifications can retire the first analysis even after didOpen has been sent.
+        // Retry only this read-only readiness probe; feature assertions and edits stay single-shot.
+        awaitUi("current analysis for $id/${document.file}", 45.seconds) {
+            try {
+                query("textDocument/documentSymbol", document)
+                true
+            } catch (failure: ClientRequestFailure) {
+                if (failure.code != ResponseErrorCode.ContentModified.value) throw failure
+                false
+            }
+        }
     }
 
     /** Wait for transport delivery without waiting for the compiler query that tests may cancel. */
