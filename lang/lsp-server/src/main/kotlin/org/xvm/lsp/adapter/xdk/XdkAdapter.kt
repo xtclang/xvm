@@ -579,6 +579,7 @@ class XdkAdapter
             projectQueries.values.toList().also { retired ->
                 projectQueries.clear()
                 navigationCache.set(emptyMap())
+                navigationIndex.retire(project.modules.values.mapTo(hashSetOf()) { it.uri })
                 retired.forEach { compiles.remove(it.task) }
             }
 
@@ -614,6 +615,7 @@ class XdkAdapter
                                                 navigationCache,
                                                 discoverImports = !discovery.get().explicit,
                                                 diagnosticCache = diagnosticCache,
+                                                navigationIndex = navigationIndex,
                                             ),
                                         )
                                     } catch (_: IOException) {
@@ -987,6 +989,7 @@ class XdkAdapter
                     projectQueries.clear()
                     navigationCache.set(emptyMap())
                     diagnosticCache.clear()
+                    navigationIndex.clear()
                     overlays.clear()
                     scopes.clear()
                     completed.clear()
@@ -2157,6 +2160,7 @@ class XdkAdapter
         private val renames = ConcurrentHashMap<String, RenameRequest>()
         private val projectQueries = ConcurrentHashMap<ProjectQueryKey, ProjectRequest<*>>()
         private val diagnosticCache = XdkDiagnosticIndex()
+        private val navigationIndex = XdkNavigationIndex()
         private val navigationCache = AtomicReference<Map<String, XdkWorkspaceNavigation>>(emptyMap())
 
         /**
