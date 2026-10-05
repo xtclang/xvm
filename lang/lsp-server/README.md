@@ -172,7 +172,7 @@ implementation retain their separate meanings. Indexed library sources remain re
 | Folding / selection | Basic / none | Syntax AST | Compiler AST; strictly nested selection spans and exact closing-brace fold columns |
 | Signature help | None | Same-file | Selected calls and compiler-fitted incomplete-call candidates |
 | Document links | Imports | Workspace index | HTTP(S) URLs in comments/literals plus resolved module/type/alias/wildcard import sources |
-| Workspace symbols | Limited | Workspace index | Discovered/configured source graph, including unopened modules; on-demand compiler indexing |
+| Workspace symbols | Limited | Workspace index | Discovered/configured source graph, including unopened modules; detached per-module index reused from editor/diagnostic compilation |
 | Semantic tokens | None | Syntax-based | Java lexical tokens plus resolved names and declaration/read-only/static/write modifiers |
 | Type-definition / implementations | None | None | Source type identities and nominal type/method implementation chains |
 | Call hierarchy | None | None | Static selected calls across the complete discovered/configured source graph |
@@ -188,6 +188,12 @@ folders unless an explicit source graph is configured. `sourceModules: []` disab
 `sourceModules: null` restores it. Discovery refreshes on startup, watched files, unsaved header edits, close and workspace-folder changes.
 Invalid edited graphs retire old semantic facts and report `SOURCE-GRAPH` until repaired. Workspace symbol
 search compiles unopened modules on demand and retains healthy independent modules when others fail.
+The navigation index holds one detached build per configured root, reused only when captured source
+text, resources and dependency binary/source-index revisions match. Editor and workspace-diagnostic
+compilation seed the same index; changing a module rebuilds its affected dependency closure. Removed
+roots are evicted, and stale/cancelled work cannot republish an older index generation. Refactoring
+proofs remain fresh compilations. There is no disk-persistent index or incremental compiler; warm
+queries still capture the graph inputs to detect closed-file changes without relying on watchers.
 Workspace implementation and type/call hierarchy queries also include unopened consumers, joining
 compiler identities across module artifacts. Hierarchy handles reject changed graph/source/binary
 revisions. Detached query results are reused for unchanged inputs; healthy modules remain navigable
