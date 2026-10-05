@@ -237,7 +237,7 @@ local or import-alias declarations and inherited written member contracts, prese
 | Save-time edits, incremental sync, multiple-range formatting | Negotiated save hooks, opt-in incremental UTF-16 updates and multiple-range formatting implemented; default Full/no save edits preserved. Backend/packaged transport and selected X132 pass in both editors. | L72 / X132 |
 | Server-side `workspace/executeCommand` | Module Run lenses invoke an existing client command | L73 |
 | Cross-project monikers | Artifact-based import/export/local identities; backend and selected acceptance pass in both editors | L74 |
-| Server-provided document content/refresh | Matching bundled/host-indexed source files, opened read-only | L75 |
+| Server-provided document content/refresh | Negotiated revision-owned bundled virtual content and refresh; protected file fallback in IntelliJ (UP25); host source indexes remain file locations | L75 |
 | Inline completion | Ordinary completion popup | L76 |
 | Document colors and color presentations | Ordinary token coloring; no color-value provider | L77 |
 | Notebook synchronization | File/module document sessions | L78 |
@@ -1460,9 +1460,9 @@ recompilation, checkout relocation, distinct same-name artifacts, visibility, in
 closed graph views and replacement. Selected acceptance passes in both editors; receipts below.
 
 Companion views share an immutable identity table per compilation, including after graph joining.
-Queries need a current semantic snapshot: parsed-only library source views still return no moniker
-when queried directly. Resolved imports in consumers have binary identities; semantic enrichment of
-read-only library documents is tracked with L75. This is not a claim of complete library-document
+At the L74 checkpoint, parsed-only library source views returned no moniker when queried directly.
+L75 adds exact artifact-backed declaration identities to those views; consumer imports already had
+binary identities. This is not a claim of complete library-document
 language support.
 
 L74 validation: **137 distinct backend/protocol unit cases** pass across the recorded selections,
@@ -1476,3 +1476,10 @@ its existing collection-response set fixes both. This was a harness omission, no
 The final method-local visibility refinement has backend/packaged coverage; it did not trigger
 another GUI run. No full-catalog run is claimed. The catalog has **258 cases**, SHA-256
 `7f4170148797ce5828bcb36ec96dd35ca9c4a0670768b7b7dcc81826535f91d5`.
+
+
+L75 implements negotiated library document content/refresh and direct bundled declaration monikers.
+VS Code uses its standard read-only virtual provider; IntelliJ retains protected file views until
+LSP4IJ implements the provider (UP25). X254 explicitly records this client difference. 58 distinct backend/protocol cases and the packaged content round trip pass. VS Code passes all
+six selected cases; IntelliJ passes five plus START and reports X254 partial with its file-fallback
+assertions successful and zero IDE failures; see the [contract and receipt](../../../docs/errs-integration-plan.md#l75-read-only-library-content-2026-10-05).
