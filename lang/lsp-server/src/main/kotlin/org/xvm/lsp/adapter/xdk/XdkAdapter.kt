@@ -28,6 +28,7 @@ import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.adapter.SelectionRange
 import org.xvm.lsp.adapter.SemanticTokens
 import org.xvm.lsp.adapter.SignatureHelp
+import org.xvm.lsp.adapter.SymbolMoniker
 import org.xvm.lsp.adapter.TextEdit
 import org.xvm.lsp.adapter.TypeHierarchyItem
 import org.xvm.lsp.adapter.WorkspaceEdit
@@ -1218,13 +1219,9 @@ class XdkAdapter
                 buildMap {
                     compilation.sourceTrees().forEach { putAll(XdkAst.rootsBySource(it)) }
                 }
-            val navigation =
-                if (moduleName != null && compilation.succeeded() && !heard.hasSeriousErrors()) {
-                    compilation.navigationFacts(dependencies, errs)
-                } else {
-                    null
-                }
-            val views = navigation?.models ?: compilation.semanticSnapshots(errs, dependencies)
+            val semantics = compilation.compiledSemantics(dependencies, errs, navigation = moduleName != null)
+            val navigation = semantics.navigation
+            val views = semantics.models
             val sourceUris = sources?.sourceUris ?: roots.keys.associateWith { it }
             val fallback = if (sources == null) source else Source("", sources.uri(sources.sourceFile))
             val declarations = XdkAst.declarationLocations(compilation.sourceTrees(), sourceUris)
@@ -1248,12 +1245,7 @@ class XdkAdapter
                         val uri = XdkSources.sourceUri(name)
                         uri?.let { name to it }
                     }.toMap()
-            val artifact =
-                if (moduleName != null && compilation.succeeded() && !heard.hasSeriousErrors()) {
-                    compilation.toDependency()
-                } else {
-                    null
-                }
+            val artifact = semantics.artifact?.takeIf { moduleName != null }
             if (artifact != null && artifact.module != moduleName) {
                 return unavailableProjectModule(
                     uri,
@@ -1612,6 +1604,21 @@ class XdkAdapter
                     ?.declarationLocationsAt(line, column)
                     .orEmpty(),
             )
+        }
+
+        override fun findMonikers(
+            uri: String,
+            line: Int,
+            column: Int,
+        ): List<SymbolMoniker> {
+            if (module(uri) == null && hasProject(uri)) {
+                return workspaceNavigation(uri)?.monikers(uri, line, column).orEmpty()
+            }
+            return module(uri)
+                ?.document(uri)
+                ?.semantics
+                ?.monikersAt(line, column)
+                .orEmpty()
         }
 
         override fun findReferences(
