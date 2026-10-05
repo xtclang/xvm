@@ -25,6 +25,7 @@ enum class AdapterCapability {
     TYPE_HIERARCHY,
     TYPE_DEFINITION,
     IMPLEMENTATION,
+    MONIKER,
     CALL_HIERARCHY,
     INLAY_HINT,
 }
