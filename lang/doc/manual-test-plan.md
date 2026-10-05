@@ -1,6 +1,6 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **267 scenarios**: X1–X262, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **270 scenarios**: X1–X265, CFG1–CFG3 and 7a.8/7a.9.
 
 Post-rebase acceptance (2026-10-05): VS Code `run-J054rk` passes 266 of all 267 cases;
 X218 remains the accepted UP23 host Undo failure. IntelliJ `run-1475359363733913185` plus
@@ -1439,7 +1439,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X262 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X265 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -3756,3 +3756,18 @@ also passes `run-SLwDJk`. IntelliJ passes START/X129/X261/X262 in `run-152519547
 then START/X260 in `run-11734301827775631328`, both with zero IDE errors. Its initial X260 failed
 only because the fixture waited for a `finally` marker from a terminated Gradle JVM; retirement
 now checks the recorded process as well. These are selected receipts, not a full 267-case rerun.
+
+
+### Compiler workspace synchronization (X263–X265)
+
+| Case | Action | Expected result |
+| --- | --- | --- |
+| X263 | Import a composite root with an included build that itself includes a nested build. Hold the parent export pending, then release it. | No partial model is published. All three source owners and build roots appear together; processed-resource status is visible. |
+| X264 | After initial import, run native Gradle synchronization in IntelliJ or a Gradle task in VS Code. Then replace the exported report, first with invalid JSON and then repaired inputs. | Automatic refresh changes diagnostics without resetting explicit settings. Invalid exports retain the accepted configuration; valid exports are observed without an explicit refresh command. |
+| X265 | Start an import in a second IntelliJ project or VS Code workspace folder. Close that project/remove the folder while the producer is gated, then permit late completion. | The producer retires; removed inputs cannot return. The original project and compiler process remain usable. |
+
+The shared Gradle init script produces `.gradle/xtc/lsp-workspace.json` for the complete composite;
+legacy single-build reports remain readable. Import does not parse Gradle script text or run the
+Ecstasy compiler. Preparing resources remains a separate explicit action. Automatic export is
+enabled by an existing imported report; VS Code additionally requires a trusted local workspace.
+Validation for this new batch is pending; the preceding full-suite receipt describes the old catalog.
