@@ -115,6 +115,7 @@ import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.fmt
 import org.xvm.lsp.model.fromLsp
 import org.xvm.lsp.model.toLsp
+import org.xvm.lsp.model.Location as AdapterLocation
 import org.xvm.lsp.model.toRange
 import org.xvm.lsp.util.ExecutionTrace
 import java.util.concurrent.CancellationException
@@ -384,7 +385,11 @@ class XtcTextDocumentService(
                 params.textDocument.uri,
                 params.textDocument.version,
             )
-            analyse(params.textDocument.uri, params.textDocument.text, params.textDocument.version)
+            analyse(
+                params.textDocument.uri,
+                adapter.readOnlyDocument(params.textDocument.uri)?.text ?: params.textDocument.text,
+                params.textDocument.version,
+            )
         }
     }
 
@@ -392,6 +397,7 @@ class XtcTextDocumentService(
         synchronized(lifecycle) {
             if (closed) return
             val uri = params.textDocument.uri
+            if (adapter.readOnlyDocument(uri) != null || adapter.readOnlyDocumentSchemes.any { uri.startsWith("$it:") }) return
             val previous = openDocuments[uri] ?: return
             val version = params.textDocument.version
             if (version <= previous.version) return
@@ -595,6 +601,7 @@ class XtcTextDocumentService(
         synchronized(lifecycle) {
             if (closed) return
             val affected = replace()
+            server.readOnlyDocuments.refresh()
             if (affected.isEmpty()) return
             diagnosticRevision++
             clearResolveReports()
@@ -1076,7 +1083,7 @@ class XtcTextDocumentService(
                             null
                         }
                     if (handle == null) {
-                        target = l.target
+                        target = l.target?.let(server.readOnlyDocuments::present)
                         tooltip = l.tooltip.takeIf { server.presentation.linkTooltips }
                     } else {
                         data = handle
@@ -1871,7 +1878,7 @@ class XtcTextDocumentService(
             requireResolve(server.resolvesDocumentLinkTarget, "Document link")
             if (link.data != null) {
                 val resolved = linkReports.resolve(link.data, diagnosticRevision, link.range.fmt())
-                link.target = resolved.target
+                link.target = resolved.target?.let(server.readOnlyDocuments::present)
                 link.tooltip = resolved.tooltip.takeIf { server.presentation.linkTooltips }
             }
             link
@@ -2031,13 +2038,16 @@ class XtcTextDocumentService(
     // Conversion helpers for hierarchy types
     // ====================================================================
 
+    private fun AdapterLocation.toLsp(): Location =
+        Location(server.readOnlyDocuments.present(uri), Range(Position(startLine, startColumn), Position(endLine, endColumn)))
+
     private fun AdapterTypeHierarchyItem.toLsp(defaultUri: String): org.eclipse.lsp4j.TypeHierarchyItem {
         val resolvedUri = this.uri.ifEmpty { defaultUri }
         return org.eclipse.lsp4j
             .TypeHierarchyItem(
                 this.name,
                 this.kind.toLsp(),
-                resolvedUri,
+                server.readOnlyDocuments.present(resolvedUri),
                 this.range.toLsp(),
                 this.selectionRange.toLsp(),
             ).apply {
@@ -2067,7 +2077,7 @@ class XtcTextDocumentService(
             org.eclipse.lsp4j.CallHierarchyItem(
                 this.name,
                 this.kind.toLsp(),
-                this.uri,
+                server.readOnlyDocuments.present(this.uri),
                 this.range.toLsp(),
                 this.selectionRange.toLsp(),
             )
