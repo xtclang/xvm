@@ -10586,3 +10586,16 @@ Commit extraction must include the acceptance corrections with their implementat
 Each extracted PR must pass independently. L63's bounded implementation is closed; UP07/UP22/UP23,
 wider protocol scopes and release/soak gates remain separate. In particular this text-edit batch
 neither changes nor claims to repair VS Code's overlapping file-move Undo failure (UP23).
+
+### L66 import source continuation (2026-10-05)
+
+Wildcard imports now link their resolved container. Conditional imports link the compiler-selected
+identity and preserve COMPILER-29: the ordinary compiler currently ignores the condition, so this
+does not claim conditional-import semantics. Missing/ambiguous/binary-only source targets still
+have no guessed link. Shared X243/X244 and backend regressions cover these forms; validation is
+batched after all four L66 implementation slices.
+
+`ImportStatement.getQualifiedNameTokens()` exposes an immutable copy of the existing written name
+tokens, excluding alias/star. This is syntax ownership in the AST, not LSP state or a new cache; it
+lets wildcard links retain exact source ranges without reparsing names. No mutable field or clone
+responsibility is added.

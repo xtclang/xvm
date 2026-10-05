@@ -1,6 +1,6 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **247 scenarios**: X1–X242, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **249 scenarios**: X1–X244, CFG1–CFG3 and 7a.8/7a.9.
 The preceding missing-method gate passes **X122/X209–X215** in VS Code `run-u5kDXk` and IntelliJ
 `run-4588144426201480586` (plus START), zero editor failures. It verifies required destination
 imports, exact signatures, atomic module-root/companion edits and diagnostic Undo/Redo. All 310
@@ -1389,7 +1389,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X242 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X244 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -3508,3 +3508,12 @@ substitutions, static-property initializers, mutable capture/control-flow extrac
 substitution for method inline, instance-property getters and public API deletion are not inferred.
 Private member inline keeps the declaration; safe delete is a separate action. UP23 remains the
 recorded VS Code overlapping-resource Undo defect; this text-edit batch does not repair it.
+
+### L66 structural and editing continuation
+
+New shared cases are implemented in both drivers; validation is batched after the four L66 slices.
+
+| Case | Action | Required result |
+| --- | --- | --- |
+| X243 | Open the wildcard import link on `lib.tools`. | The resolved container opens in Library; no child or filesystem path is guessed. |
+| X244 | Open the aliased import inside `if (true)`. | The compiler-selected source opens. COMPILER-29 still reports that import conditions are ignored. |
