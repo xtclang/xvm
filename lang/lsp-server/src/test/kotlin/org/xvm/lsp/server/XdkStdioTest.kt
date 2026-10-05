@@ -54,6 +54,8 @@ import org.eclipse.lsp4j.SignatureHelpParams
 import org.eclipse.lsp4j.SignatureInformationCapabilities
 import org.eclipse.lsp4j.SynchronizationCapabilities
 import org.eclipse.lsp4j.TextDocumentClientCapabilities
+import org.eclipse.lsp4j.TextDocumentContentCapabilities
+import org.eclipse.lsp4j.TextDocumentContentParams
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
@@ -108,6 +110,30 @@ class XdkStdioTest {
     }
 
     @TempDir lateinit var directory: Path
+
+    @Test
+    fun `packaged library content and direct monikers use negotiated immutable virtual documents`() {
+        Session(packagedJar(), directory).use { session ->
+            session.initialize(libraryContent = true)
+            val text = "module Stdio { String text = \"value\"; }"
+            session.open(text)
+            assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+            val documents = session.server.textDocumentService
+            val target = session.await(documents.definition(DefinitionParams(TextDocumentIdentifier(URI), Position(0, text.indexOf("String"))))).left.single()
+            assertThat(target.uri).startsWith("ecstasy-library:")
+            val workspace = session.server.workspaceService
+            val content = session.await(workspace.textDocumentContent(TextDocumentContentParams(target.uri))).text
+            assertThat(content.lines()[target.range.start.line]).contains("const String")
+            documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(target.uri, "xtc", 1, content)))
+            val imported = session.await(documents.moniker(MonikerParams(TextDocumentIdentifier(URI), Position(0, text.indexOf("String"))))).single()
+            val exported = session.await(documents.moniker(MonikerParams(TextDocumentIdentifier(target.uri), target.range.start))).single()
+            assertThat(exported.identifier).isEqualTo(imported.identifier)
+            assertThat(exported.kind).isEqualTo(MonikerKind.Export)
+            assertThatThrownBy { session.await(workspace.textDocumentContent(TextDocumentContentParams("ecstasy-library:///unknown.x"))) }
+                .hasCauseInstanceOf(ResponseErrorException::class.java)
+            session.shutdownAndExit()
+        }
+    }
 
     @Test
     fun `packaged monikers round trip stable identities partial results and changed artifacts`() {
@@ -1750,6 +1776,7 @@ class XdkStdioTest {
             sourceModules: List<Map<String, Any>>? = null,
             documentSync: Map<String, Boolean> = emptyMap(),
             richPresentation: Boolean = true,
+            libraryContent: Boolean = false,
         ) {
             val initialized =
                 await(
@@ -1809,6 +1836,7 @@ class XdkStdioTest {
                                         }
                                     workspace =
                                         WorkspaceClientCapabilities().apply {
+                                            if (libraryContent) textDocumentContent = TextDocumentContentCapabilities()
                                             workspaceEdit =
                                                 WorkspaceEditCapabilities().apply {
                                                     documentChanges = versionedEdits
