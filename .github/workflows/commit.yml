@@ -646,6 +646,12 @@ jobs:
                 inspect_gradle_cache "after manual tests"
                 echo "✅ Manual tests completed"
 
+            # Runs the launcher scripts of the distribution the build produced: the POSIX scripts on
+            # Ubuntu, the .bat scripts on Windows.
+            - name: Test the XDK launcher scripts
+              shell: bash
+              run: .github/scripts/test-launchers.sh xdk/build/distributions/xdk-*.zip
+
             # The main build ran the IntelliJ plugin checks (the lang composite attached, the Plugin
             # Verifier) and passed; later runs of this pull request on the same inputs skip them.
             - name: Record IntelliJ plugin checks pass
