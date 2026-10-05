@@ -1035,8 +1035,8 @@ class XdkAdapter
         )
 
         /**
-         * Capture the complete dependency closure before compiling any of it. Only artifacts are
-         * cached.
+         * Capture the complete dependency closure before compiling any of it. Retain detached
+         * dependency outputs; only the target analysis needs a live AST after this loop.
          */
         private fun compileNow(request: Request): ModuleAnalysis {
             request.problem?.let {
@@ -1267,10 +1267,12 @@ class XdkAdapter
                 synchronized(lifecycle) {
                     if (isStale(request)) throw CancellationException()
                     navigationIndex.record(
-                        uri,
+                        request.project.modules
+                            .getValue(artifact.module)
+                            .uri,
                         XdkNavigationIndex.Build(
                             XdkNavigationIndex.Key(
-                                requireNotNull(moduleName),
+                                artifact.module,
                                 sources.inputs,
                                 inputs.modules.mapValues { it.value.revision },
                             ),
