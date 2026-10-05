@@ -3,6 +3,7 @@ package org.xtclang.plugin;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -16,6 +17,7 @@ import groovy.json.JsonSlurper;
 import org.gradle.testkit.runner.BuildResult;
 import org.gradle.testkit.runner.GradleRunner;
 import org.gradle.testkit.runner.TaskOutcome;
+import org.gradle.testkit.runner.UnexpectedBuildFailure;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -106,6 +108,50 @@ class XtcLspModelTest {
 
     private String uri(final String path) {
         return directory.resolve(path).toFile().toURI().toString();
+    }
+
+    @Test
+    void compositeImportAggregatesNestedBuildsAndRetainsSnapshotOnFailure() throws IOException {
+        directory = directory.toRealPath();
+        write("settings.gradle.kts", "rootProject.name = \"root\"\nincludeBuild(\"library\")\nincludeBuild(\"application\")\n");
+        write("build.gradle.kts", "");
+        write("library/settings.gradle.kts", "rootProject.name = \"library\"\nincludeBuild(\"nested\")\n");
+        write("library/nested/settings.gradle.kts", "rootProject.name = \"nested\"\n");
+        write("application/settings.gradle.kts", "rootProject.name = \"application\"\n");
+        for (final var build : List.of("library", "library/nested", "application")) {
+            write(build + "/build.gradle.kts", """
+                plugins { id("org.xtclang.xtc-plugin") }
+                group = "sample"
+                version = "1.0"
+                """);
+        }
+        write("library/src/main/x/Library.x", "module Library {}");
+        write("library/nested/src/main/x/Nested.x", "module Nested {}");
+        write("application/src/main/x/App.x", "module App {}");
+        try (var script = getClass().getResourceAsStream("/compiler-model.init.gradle")) {
+            Files.copy(script, directory.resolve("compiler-model.init.gradle"));
+        }
+        final var first = runWorkspace();
+        assertTrue(first.getTasks().stream().noneMatch(task -> task.getPath().contains("compileXtc")));
+        final var report = directory.resolve(".gradle/xtc/lsp-workspace.json");
+        final var accepted = Files.readString(report);
+        final var model = (Map<?, ?>) new JsonSlurper().parseText(accepted);
+        assertEquals(6, ((List<?>) model.get("sourceSets")).size());
+        assertEquals(4, ((List<?>) model.get("buildRoots")).size());
+        assertTrue(runWorkspace().getOutput().contains("Configuration cache entry reused"));
+        write("library/nested/build.gradle.kts", "error(\"Deliberately broken nested build\")\n");
+        assertThrows(UnexpectedBuildFailure.class, this::runWorkspace);
+        assertEquals(accepted, Files.readString(report));
+        write("settings.gradle.kts", "rootProject.name = \"root\"\nincludeBuild(\"application\")\n");
+        runWorkspace();
+        assertEquals(2, ((List<?>) ((Map<?, ?>) new JsonSlurper().parse(report.toFile())).get("sourceSets")).size());
+    }
+
+    private BuildResult runWorkspace() {
+        return GradleRunner.create().withProjectDir(directory.toFile()).withPluginClasspath()
+            .withArguments("--init-script", "compiler-model.init.gradle", "exportEcstasyWorkspaceModel",
+                "--configuration-cache", "--configuration-cache-problems=fail", "--no-watch-fs", "--stacktrace")
+            .build();
     }
 
     private void write(final String path, final String content) throws IOException {

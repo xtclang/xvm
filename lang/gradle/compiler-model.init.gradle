@@ -1,0 +1,72 @@
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
+import java.nio.file.Files
+import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.StandardCopyOption
+
+/** One evaluated snapshot across a composite, including roots without the Ecstasy plugin. */
+abstract class EcstasyWorkspaceModel extends DefaultTask {
+    @InputFiles @PathSensitive(PathSensitivity.NONE)
+    abstract ConfigurableFileCollection getReports()
+
+    @Input
+    abstract ListProperty<String> getBuildRoots()
+
+    @OutputFile
+    abstract RegularFileProperty getModel()
+
+    @TaskAction
+    void exportModel() {
+        def owners = new LinkedHashMap<String, Object>()
+        def roots = new LinkedHashSet<String>(buildRoots.get())
+        reports.files.sort().each { file ->
+            if (!file.isFile()) throw new GradleException("Missing Ecstasy compiler model: $file")
+            def report = new JsonSlurper().parse(file)
+            if (report.schemaVersion != 1 || !(report.sourceSets instanceof List)) {
+                throw new GradleException("Invalid Ecstasy compiler model: $file")
+            }
+            roots.addAll(report.buildRoots ?: [])
+            report.sourceSets.each { entry ->
+                def key = JsonOutput.toJson([entry.projectId, entry.sourceSet])
+                def previous = owners.putIfAbsent(key, entry)
+                if (previous != null && previous != entry) {
+                    throw new GradleException("Conflicting Ecstasy compiler ownership: $key")
+                }
+            }
+        }
+        def output = model.get().asFile.toPath()
+        Files.createDirectories(output.parent)
+        def temporary = Files.createTempFile(output.parent, 'workspace-', '.json')
+        try {
+            Files.writeString(temporary, JsonOutput.prettyPrint(JsonOutput.toJson([
+                schemaVersion: 1, sourceSets: owners.values().toList(), buildRoots: roots.toList()
+            ])) + '\n')
+            try {
+                Files.move(temporary, output, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
+            } catch (AtomicMoveNotSupportedException ignored) {
+                Files.move(temporary, output, StandardCopyOption.REPLACE_EXISTING)
+            }
+        } finally {
+            Files.deleteIfExists(temporary)
+        }
+    }
+}
+
+gradle.beforeProject { project ->
+    if (project != project.rootProject) return
+    ['export', 'prepare'].each { mode ->
+        project.tasks.register("${mode}EcstasyWorkspaceModel", EcstasyWorkspaceModel) { task ->
+            task.group = 'IDE'
+            task.description = 'Import evaluated Ecstasy inputs from this build and included builds'
+            task.buildRoots.set([project.projectDir.toURI().toString()])
+            task.model.set(project.layout.projectDirectory.file(".gradle/xtc/lsp-workspace.json"))
+            def local = project.tasks.matching { it.name == 'exportXtcLspModel' }
+            task.dependsOn(project.tasks.matching { it.name == "${mode}XtcLspModel" })
+            task.reports.from(local.collect { project.layout.projectDirectory.file('.gradle/xtc/lsp-model.json') })
+            project.gradle.includedBuilds.each { included ->
+                task.dependsOn(included.task(":${mode}EcstasyWorkspaceModel"))
+                task.reports.from(new File(included.projectDir, ".gradle/xtc/lsp-workspace.json"))
+            }
+        }
+    }
+}

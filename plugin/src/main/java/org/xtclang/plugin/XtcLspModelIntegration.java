@@ -1,10 +1,13 @@
 package org.xtclang.plugin;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.gradle.api.Project;
-import org.gradle.api.artifacts.ProjectDependency;
 import org.gradle.api.artifacts.component.ProjectComponentIdentifier;
+import org.gradle.api.artifacts.result.ResolvedDependencyResult;
 import org.gradle.api.tasks.Copy;
 import org.gradle.api.tasks.SourceSet;
 import org.gradle.api.tasks.TaskProvider;
@@ -56,14 +59,24 @@ final class XtcLspModelIntegration {
             final var configurations = sourceSet.getName().equals(SourceSet.TEST_SOURCE_SET_NAME)
                 ? List.of(project.getConfigurations().getByName("xtcModule"), project.getConfigurations().getByName("xtcModuleTest"))
                 : List.of(project.getConfigurations().getByName(XtcProjectDelegate.incomingXtcModuleDependencies(sourceSet)));
-            task.getProjectDependencies().set(configurations.stream().flatMap(configuration ->
-                configuration.getAllDependencies().withType(ProjectDependency.class).stream())
-                .map(dependency -> buildId + dependency.getPath()).distinct().sorted().toList());
+            final var buildPath = root.getBuildTreePath();
+            final var buildDirectories = Stream.concat(
+                Stream.of(Map.entry(buildPath, root.getProjectDir().toURI().toString())),
+                root.getGradle().getIncludedBuilds().stream().map(included ->
+                    Map.entry(":" + included.getName(), included.getProjectDir().toURI().toString())))
+                .collect(Collectors.toUnmodifiableMap(Map.Entry::getKey, Map.Entry::getValue, (first, second) -> first));
+            configurations.forEach(configuration -> task.getProjectDependencies().addAll(
+                configuration.getIncoming().getResolutionResult().getRootComponent().map(component ->
+                    component.getDependencies().stream().filter(ResolvedDependencyResult.class::isInstance)
+                        .map(ResolvedDependencyResult.class::cast).map(dependency -> dependency.getSelected().getId())
+                        .filter(ProjectComponentIdentifier.class::isInstance).map(ProjectComponentIdentifier.class::cast)
+                        .filter(id -> buildDirectories.containsKey(id.getBuild().getBuildPath()))
+                        .map(id -> buildDirectories.get(id.getBuild().getBuildPath()) + '#' + id.getProjectPath())
+                        .distinct().sorted().toList())));
             final var mainOutput = XtcProjectDelegate.getXtcSourceSetOutputDirectory(project,
                 XtcProjectDelegate.getSourceSets(project).getByName(SourceSet.MAIN_SOURCE_SET_NAME));
-            final var buildPath = root.getBuildTreePath();
             configurations.forEach(configuration -> task.getModulePath().from(configuration.getIncoming().artifactView(view ->
-                view.componentFilter(id -> !(id instanceof ProjectComponentIdentifier component) || !component.getBuild().getBuildPath().equals(buildPath)))
+                view.componentFilter(id -> !(id instanceof ProjectComponentIdentifier component) || !buildDirectories.containsKey(component.getBuild().getBuildPath())))
                 .getFiles().filter(file -> !file.equals(mainOutput.get().getAsFile()))));
             task.getReport().set(project.getLayout().getBuildDirectory().file("xtc/lsp/" + sourceSet.getName() + ".json"));
             task.mustRunAfter(resources);

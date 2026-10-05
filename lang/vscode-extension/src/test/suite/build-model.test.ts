@@ -1,5 +1,5 @@
 import * as assert from 'node:assert';
-import { BuildSourceSet, parseBuildModel } from '../../build-model';
+import { BuildSourceSet, mergeBuildModels, parseBuildModel } from '../../build-model';
 
 suite('Evaluated compiler build model', () => {
     const entry: BuildSourceSet = {
@@ -22,5 +22,12 @@ suite('Evaluated compiler build model', () => {
         [text([entry], 2), text([entry, entry]), text([{ ...entry, sourceRoots: ['relative/path'] }]),
             text([{ ...entry, projectId: 42 }]), text([{ ...entry, resourceRoots: undefined }]),
             text([{ ...entry, projectDependencies: [1] }])].forEach(value => assert.throws(() => parseBuildModel(value)));
+    });
+
+    test('overlapping composite and workspace roots deduplicate only identical owners', () => {
+        const first = parseBuildModel(text());
+        const second = parseBuildModel(text([{ ...entry, projectId: 'file:///other/#:library' }]));
+        assert.strictEqual(mergeBuildModels([first, structuredClone(first), second]).sourceSets.length, 2);
+        assert.throws(() => mergeBuildModels([first, parseBuildModel(text([{ ...entry, resourceRoots: [] }]))]), /Conflicting/);
     });
 });
