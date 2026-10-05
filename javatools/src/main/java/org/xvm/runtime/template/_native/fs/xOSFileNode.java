@@ -31,6 +31,14 @@ import org.xvm.runtime.template.text.xString;
 
 /**
  * Native base for OSFile and OSDirectory implementations.
+ *
+ * TODO currently, all "native" file nodes are converted to absolute paths, which is not "wrong" --
+ *      per se -- but it seems like overkill at this point and we won't want to retain that behavior
+ *      in the JIT
+ * TODO design (standardize for Ecstasy representation) an appropriate escaping for path segments
+ *      and implement Path.x toString() accordingly, which may involve exposing the path into
+ *      Ecstasy as an array of String instead of as a String, and then (based on that work) simplify
+ *      the approach to the non-POSIX file handling
  */
 public class xOSFileNode
         extends xConst {
@@ -127,39 +135,6 @@ public class xOSFileNode
     }
 
     // ----- helper methods ------------------------------------------------------------------------
-
-    /**
-     * True iff the OS uses '\' as its path separator.
-     */
-    private static final boolean WINDOWS = File.separatorChar == '\\';
-
-    /**
-     * The separator of an Ecstasy {@code Path}; a path that starts with it is absolute.
-     */
-    private static final String SEPARATOR = "/";
-
-    /**
-     * A Windows path on a drive, such as "C:\" or "C:\a\b"; the groups are the drive, such as "C:",
-     * and the rest of the path, such as "a\b".
-     */
-    private static final Pattern WINDOWS_DRIVE_PATH = Pattern.compile("([A-Za-z]:)\\\\(.*)");
-
-    /**
-     * A Windows path rooted on the current drive, such as "\" or "\a\b" but not a UNC path such as
-     * "\\server\share"; the group is the rest of the path, such as "a\b".
-     */
-    private static final Pattern WINDOWS_ROOTED_PATH = Pattern.compile("\\\\(?!\\\\)(.*)");
-
-    /**
-     * A path on a drive in the form of an Ecstasy {@code Path}, such as "/C:" or "/C:/a"; the groups
-     * are the drive, such as "C:", and the optional rest of the path, such as "/a".
-     */
-    private static final Pattern DRIVE_STORE_PATH = Pattern.compile("/([A-Za-z]:)(/.*)?");
-
-    /**
-     * On Windows, the drive that holds the current directory, such as "D:"; otherwise null.
-     */
-    private static final String CURRENT_DRIVE = driveOf(Path.of("").toAbsolutePath().getRoot().toString());
 
     /**
      * Convert an OS path to the '/'-separated form of an Ecstasy {@code Path}, which does not
@@ -297,4 +272,39 @@ public class xOSFileNode
             return super.toString() + " " + f_path;
         }
     }
+
+    // ----- constants -----------------------------------------------------------------------------
+
+    /**
+     * True iff the OS uses '\' as its path separator.
+     */
+    private static final boolean WINDOWS = File.separatorChar == '\\';
+
+    /**
+     * The separator of an Ecstasy {@code Path}; a path that starts with it is absolute.
+     */
+    private static final String SEPARATOR = "/";
+
+    /**
+     * A Windows path on a drive, such as "C:\" or "C:\a\b"; the groups are the drive, such as "C:",
+     * and the rest of the path, such as "a\b".
+     */
+    private static final Pattern WINDOWS_DRIVE_PATH = Pattern.compile("([A-Za-z]:)\\\\(.*)");
+
+    /**
+     * A Windows path rooted on the current drive, such as "\" or "\a\b" but not a UNC path such as
+     * "\\server\share"; the group is the rest of the path, such as "a\b".
+     */
+    private static final Pattern WINDOWS_ROOTED_PATH = Pattern.compile("\\\\(?!\\\\)(.*)");
+
+    /**
+     * A path on a drive in the form of an Ecstasy {@code Path}, such as "/C:" or "/C:/a"; the groups
+     * are the drive, such as "C:", and the optional rest of the path, such as "/a".
+     */
+    private static final Pattern DRIVE_STORE_PATH = Pattern.compile("/([A-Za-z]:)(/.*)?");
+
+    /**
+     * On Windows, the drive that holds the current directory, such as "D:"; otherwise null.
+     */
+    private static final String CURRENT_DRIVE = driveOf(Path.of("").toAbsolutePath().getRoot().toString());
 }
