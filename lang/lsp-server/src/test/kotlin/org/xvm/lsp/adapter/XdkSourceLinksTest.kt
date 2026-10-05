@@ -32,7 +32,7 @@ class XdkSourceLinksTest {
     }
 
     @Test
-    fun `bundled import links have matching read only source and wildcard imports remain unsupported`() {
+    fun `bundled explicit and wildcard import links retain read only source ownership`() {
         val text = "module Links { import ecstasy.maps.ListMap as MapImpl; MapImpl<String, Int> value = new MapImpl(); }"
         XdkAdapter().use { adapter ->
             val uri = "untitled:Links.x"
@@ -43,7 +43,9 @@ class XdkSourceLinksTest {
             assertThat(adapter.formatDocument(link.target, "module ReadOnly {}", FormattingOptions(4, true))).isEmpty()
             val wildcard = "module Links { import ecstasy.collections.*; }"
             assertThat(adapter.compile(uri, wildcard).diagnostics).isEmpty()
-            assertThat(adapter.getDocumentLinks(uri, wildcard)).isEmpty()
+            val container = adapter.getDocumentLinks(uri, wildcard).single()
+            assertThat(spelling(wildcard, container.range)).isEqualTo("ecstasy.collections")
+            assertThat(XdkLibrarySources.owns(requireNotNull(container.target))).isTrue()
         }
     }
 
@@ -66,6 +68,34 @@ class XdkSourceLinksTest {
             assertThat(adapter.getLinkedEditingRanges(uri, 0, text.indexOf("Box"))).isNull()
             adapter.compile(uri, text.replace("new Item()", "new Missing()"))
             assertThat(adapter.getLinkedEditingRanges(uri, 1, text.lines()[1].indexOf("Item"))).isNull()
+        }
+    }
+
+    @Test
+    fun `wildcard and conditional imports link resolved containers and preserve compiler warnings`() {
+        val library = source("Library", "module Library { package tools { class Box {} } }")
+        listOf("import lib.tools.*;", "if (true) { import lib.tools.Box as Crate; }").forEach { statement ->
+            val text = """
+                module Consumer {
+                    package lib import Library;
+                    $statement
+                }
+            """.trimIndent().replace("\n", "\r\n")
+            val uri = source("Consumer", text)
+            XdkAdapter().use { adapter ->
+                adapter.initializeWorkspace(listOf(directory.toString()))
+                val result = adapter.compile(uri, text)
+                assertThat(result.success).isTrue()
+                assertThat(result.diagnostics.map { it.code }).containsExactlyElementsOf(
+                    if (statement.startsWith("if")) listOf("COMPILER-29") else emptyList(),
+                )
+                val links = adapter.getDocumentLinks(uri, text)
+                assertThat(links.map { it.target }).containsExactly(library, library)
+                assertThat(links.map { spelling(text, it.range) }).containsExactly(
+                    "Library", if (statement.startsWith("if")) "Crate" else "lib.tools",
+                )
+                assertThat(adapter.getDocumentLinks(uri, text.replace("lib.tools", "lib.missing"))).isEmpty()
+            }
         }
     }
 
