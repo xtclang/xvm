@@ -8,6 +8,8 @@ import org.eclipse.lsp4j.jsonrpc.Endpoint
 import org.eclipse.lsp4j.jsonrpc.services.ServiceEndpoints
 import org.eclipse.lsp4j.services.LanguageServer
 import org.junit.jupiter.api.Test
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
@@ -34,6 +36,32 @@ class PreflightedRenamesTest {
     private val from = Path.of("/project/Before.x")
     private val to = Path.of("/project/After.x")
     private val rename = RenameFilesParams(listOf(FileRename(from.toUri().toString(), to.toUri().toString())))
+
+    @Test
+    fun `production launcher derives the plugin proxy loader without a configured class loader`() {
+        val features = XtcClientFeatures()
+        val output = ByteArrayOutputStream()
+        Executors.newSingleThreadExecutor().use { worker ->
+            val server =
+                features
+                    .createLauncherBuilder<XtcLanguageServer>()
+                    .setLocalService(Any())
+                    .setRemoteInterface(XtcLanguageServer::class.java)
+                    .setInput(ByteArrayInputStream(ByteArray(0)))
+                    .setOutput(output)
+                    .setExecutorService(worker)
+                    .create()
+                    .remoteProxy
+            features.preflightedRenames.apply(from, to) {
+                assertThat(server.workspaceService.willRenameFiles(rename)).isCompletedWithValue(null)
+            }
+            assertThat(output.size()).isZero()
+            val status = server.languageServiceStatus()
+            assertThat(status).isNotDone()
+            assertThat(output.toString(Charsets.UTF_8)).contains("xtc/languageServiceStatus")
+            status.cancel(false)
+        }
+    }
 
     @Test
     fun `LSP service proxy preserves synchronous ownership through workspace service dispatch`() {
