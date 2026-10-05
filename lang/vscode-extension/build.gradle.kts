@@ -120,10 +120,15 @@ val npmInstall =
     }
 
 // Compile TypeScript
+val copyCompilerModelImport = tasks.register<Copy>("copyCompilerModelImport") {
+    from(rootProject.layout.projectDirectory.file("gradle/compiler-model.init.gradle"))
+    into(layout.projectDirectory.dir("resources"))
+}
+
 val npmCompile =
     tasks.register<NpmTask>("npmCompile") {
         description = "Compile TypeScript"
-        dependsOn(npmInstall)
+        dependsOn(npmInstall, copyCompilerModelImport)
         args.set(listOf("run", "compile"))
 
         inputs.dir(layout.projectDirectory.dir("src"))
@@ -172,6 +177,7 @@ val stagePackage =
             include("package.json", ".vscodeignore", "README.md", "snippets/**")
         }
         from(copyLicense, copyLanguageConfig)
+        from(copyCompilerModelImport) { into("resources") }
         from(copyTextMateGrammar) { into("syntaxes") }
         from(listOf(copyLspServer, copyDapServer)) { into("server") }
         from(generateIcons) { into("icons") }
