@@ -11459,8 +11459,25 @@ None of those deferrals blocks the current shared import-acceptance work.
   34/34 on both minimum 1.101.0 and stable 1.140.0. X7 completion and X129 evaluated Gradle
   paths passed in both editors; IntelliJ also passed startup with zero IDE failures. Receipts:
   VS Code `run-WnGbGA`; IntelliJ `run-12235295875731842159`. Full editor catalogs were not
-  rerun for this rebase. Subsequent VS Code runs will use the declared minimum version only,
-  as requested; this checkpoint records the already completed upstream matrix.
+  rerun for this rebase. Subsequent VS Code runs use the new 1.140.0 minimum only, as requested;
+  this checkpoint records the already completed upstream matrix.
 - The default build tool is Node 24.21.0 from master's catalog. TypeScript's Node16 module
-  resolution setting is separate from the Node runtime; its modernization is a followup after
-  the lease push, as is the requested IDE sandbox/cache cleanup.
+  resolution setting was separate from the Node runtime; the following checkpoint modernizes it
+  after the successful lease push. IDE sandbox/cache cleanup remains deferred.
+
+## Modern VS Code baseline and complete rebase acceptance (2026-10-05)
+
+The validated rebase was pushed with an explicit lease at `90abc6ce7`; the local and remote tips
+matched. Per the subsequent support decision, VS Code 1.140.0 is now the minimum supported
+release, with later versions supported. Every automated VS Code driver runs once on that minimum;
+there is no minimum-plus-stable matrix. Smoke, playbook, native Explorer probe and multi-window
+lifecycle drivers share the same version selection and locked download cache.
+
+The extension API types target 1.140.0, Node types and esbuild target Node 24, and TypeScript uses
+`NodeNext` module resolution. Gradle already selects Node 24.21.0. TypeScript compilation,
+bundling and ESLint pass (six existing unused-variable warnings outside this change).
+
+- [ ] Complete fresh headless compiler, Gradle plugin, language-module, IntelliJ plugin and stdio checks.
+- [ ] Run the VS Code smoke suite and entire 267-scenario playbook on 1.140.0.
+- [ ] Run the entire IntelliJ playbook, preserving any explicit upstream partial/refusal results.
+- [ ] Record failures, repairs and final receipts before declaring complete rebase acceptance.
