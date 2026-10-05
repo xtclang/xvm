@@ -12,6 +12,7 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { downloadAndUnzipVSCode, runTests } from '@vscode/test-electron';
 import { buildDirectory, markUsedAndPrune, removeCheckoutBuilds, sharedCachePath, withDownloadLock } from './vscodeCache';
+import { workbenchPort } from './workbenchUi';
 
 async function main(): Promise<void> {
     // __dirname at runtime resolves to <ext>/out/test, so the extension
@@ -34,6 +35,7 @@ async function main(): Promise<void> {
     const playbook = args.includes('--playbook');
     const multiRoot = args.includes('--multi-root');
     const cancelUi = args.includes('--cancel-ui');
+    const uiPort = await workbenchPort();
     if (multiRoot && !playbook) throw new Error('Use --multi-root with --playbook');
     if (cancelUi && !playbook) throw new Error('Use --cancel-ui with --playbook');
     const selections = args.filter(argument => argument.startsWith('--cases='));
@@ -117,12 +119,14 @@ async function main(): Promise<void> {
             // OUR behaviour, not the intersection of the user's installed
             // extensions and ours.
             launchArgs: [workspaceFile ?? fixturesPath, '--disable-extensions',
-                `--user-data-dir=${profile}`, '--skip-welcome', '--skip-release-notes'
+                `--user-data-dir=${profile}`, '--skip-welcome', '--skip-release-notes',
+                `--remote-debugging-port=${uiPort}`, '--remote-debugging-address=127.0.0.1'
             ],
             extensionTestsEnv: playbook ? {
                 XTC_PLAYBOOK_REPORT_DIR: runDirectory,
                 XTC_PLAYBOOK_CASES: selected.join(','),
                 XTC_PLAYBOOK_CANCEL_UI: String(cancelUi),
+                XTC_PLAYBOOK_UI_PORT: String(uiPort),
                 XTC_PLAYBOOK_COMMIT: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: extensionDevelopmentPath, encoding: 'utf8' }).trim(),
                 XTC_PLAYBOOK_DIRTY: execFileSync('git', ['status', '--porcelain'], { cwd: extensionDevelopmentPath, encoding: 'utf8' }).trim()
             } : explorerProbe ? { XTC_EXPLORER_PROBE_REPORT: runDirectory,
