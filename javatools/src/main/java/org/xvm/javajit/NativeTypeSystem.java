@@ -15,6 +15,7 @@ import java.lang.constant.ClassDesc;
 import java.lang.constant.ConstantDescs;
 
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
 
@@ -62,7 +63,13 @@ public class NativeTypeSystem
         super(xvm, shared, owned);
 
         URL  javatoolsURL  = ConstantPool.class.getProtectionDomain().getCodeSource().getLocation();
-        Path javatoolsPath = Paths.get(javatoolsURL.getPath());
+        Path javatoolsPath;
+        try {
+            // a URL path such as "/D:/xdk/javatools.jar" is not a valid Windows file path
+            javatoolsPath = Path.of(javatoolsURL.toURI());
+        } catch (URISyntaxException e) {
+            throw new IllegalStateException("Invalid location: " + javatoolsURL, e);
+        }
         Path bridgePath    = Files.isDirectory(javatoolsPath)
             ? Paths.get(javatoolsPath.toString().replace("javatools", "javatools_jitbridge"))
             : javatoolsPath.resolveSibling("javatools-jitbridge.jar");

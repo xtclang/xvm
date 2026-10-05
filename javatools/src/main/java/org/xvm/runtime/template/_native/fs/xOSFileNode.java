@@ -1,5 +1,6 @@
 package org.xvm.runtime.template._native.fs;
 
+import java.io.File;
 import java.io.IOException;
 
 import java.nio.file.Files;
@@ -38,6 +39,7 @@ public class xOSFileNode
     @Override
     public void initNative() {
         markNativeProperty("pathString");
+        markNativeProperty("storePathString");
         markNativeProperty("exists");
         markNativeProperty("readable");
         markNativeProperty("writable");
@@ -55,6 +57,9 @@ public class xOSFileNode
         switch (sPropName) {
         case "pathString":
             return frame.assignValue(iReturn, xString.makeHandle(hNode.f_path.toString()));
+
+        case "storePathString":
+            return frame.assignValue(iReturn, xString.makeHandle(toStorePath(hNode.f_path)));
 
         case "exists":
             return frame.assignValue(iReturn, xBoolean.makeHandle(hNode.f_path.toFile().exists()));
@@ -124,6 +129,63 @@ public class xOSFileNode
     }
 
     // ----- helper methods ------------------------------------------------------------------------
+
+    /**
+     * True iff the OS uses '\' as its path separator.
+     */
+    private static final boolean WINDOWS = File.separatorChar == '\\';
+
+    /**
+     * The root of the drive that holds the current directory.
+     */
+    private static final Path CURRENT_ROOT = Path.of("").toAbsolutePath().getRoot();
+
+    /**
+     * Convert an OS path to the '/'-separated form of an Ecstasy {@code Path}, which does not
+     * recognize '\' as a separator. On Windows, paths on the drive of the current directory are
+     * rooted at "/" ("D:\a\b" becomes "/a/b"), and other drives become a leading segment ("C:\a"
+     * becomes "/C:/a"). Elsewhere, the path is returned as is.
+     *
+     * @param path  an OS path
+     *
+     * @return the path in the form of an Ecstasy {@code Path}
+     */
+    public static String toStorePath(Path path) {
+        if (!WINDOWS) {
+            return path.toString();
+        }
+        Path root = path.getRoot();
+        if (root == null) {
+            return path.toString().replace('\\', '/');
+        }
+        String sRoot = root.toString();
+        String sRest = root.relativize(path).toString().replace('\\', '/');
+        if (sRoot.equals("\\") || root.equals(CURRENT_ROOT)) {
+            return "/" + sRest;
+        }
+        if (sRoot.length() == 3 && sRoot.charAt(1) == ':') {
+            String sDrive = "/" + sRoot.substring(0, 2);
+            return sRest.isEmpty() ? sDrive : sDrive + '/' + sRest;
+        }
+        return path.toString().replace('\\', '/');
+    }
+
+    /**
+     * Convert a path string to an OS path. Accepts both OS paths and the Ecstasy {@code Path} form
+     * produced by {@link #toStorePath}; on Windows, "/C:/a" becomes "C:/a" and "/C:" becomes "C:/".
+     *
+     * @param sPath  an OS path or a path in the form of an Ecstasy {@code Path}
+     *
+     * @return the OS path
+     */
+    public static Path toOSPath(String sPath) {
+        if (WINDOWS && sPath.length() >= 3 && sPath.charAt(0) == '/' && sPath.charAt(2) == ':'
+                && Character.isLetter(sPath.charAt(1))
+                && (sPath.length() == 3 || sPath.charAt(3) == '/')) {
+            return Path.of(sPath.substring(1, 3) + '/' + sPath.substring(Math.min(4, sPath.length())));
+        }
+        return Path.of(sPath);
+    }
 
     public static int raisePathException(Frame frame, Throwable e, Path path) {
         if (e instanceof ExecutionException ee) {
