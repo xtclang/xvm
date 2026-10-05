@@ -45,6 +45,13 @@ passing protocol assertions nor an unselected scenario count as full UI acceptan
 [integration receipt](../../docs/errs-integration-plan.md) are authoritative for current results
 and upstream limitations.
 
+Post-rebase acceptance covers the complete catalog across `run-1475359363733913185` and
+`run-7075359973250470210`: 265 passes, X254/X257 partial for UP25/UP26, zero IDE errors. The
+continuation repairs fixture graph ordering and stale closed dirty buffers; it does not replace
+native actions with direct edits. Startup, focus recovery and project lifecycle also pass.
+The opt-in UP17 large-file diagnostic is excluded. Original failures and exact counts remain in
+the [receipt](../../docs/errs-integration-plan.md#modern-vs-code-baseline-and-complete-rebase-acceptance-2026-10-05).
+
 From the composite root:
 
 ```bash

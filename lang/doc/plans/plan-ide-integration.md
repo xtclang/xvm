@@ -24,6 +24,11 @@ in the existing compiler helpers, preserving the adapter's public results. Their
 200-test validation and commit map are recorded in the
 [follow-up receipt](../../../docs/errs-integration-plan.md#scope-and-capture-helper-follow-ups-ast1-and-ast3).
 
+Post-rebase validation and the Node 24 / VS Code 1.140.0 baseline are recorded in the
+[complete acceptance receipt](../../../docs/errs-integration-plan.md#modern-vs-code-baseline-and-complete-rebase-acceptance-2026-10-05).
+No advertised LSP capability changed. Known UP23/UP25/UP26 limits remain explicit; IntelliJ
+fixture setup corrections are distinct from production behavior.
+
 This document describes the language tooling implemented in the `lang/` directory and what remains to be done.
 
 The L64 closure batch adds ordinary enclosing-instance proposals, useful inferred-local names and
