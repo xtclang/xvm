@@ -71,7 +71,7 @@ class SafeTarExtractorTest {
                 if (type == TarConstants.LF_NORMAL) size = "fixture".length.toLong()
                 if (isLink || isSymbolicLink) linkName = "../escaped"
             }
-            archive.putArchiveEntry(entry)
+            archive.putArchiveEntry(withExactName(entry, name))
             if (type == TarConstants.LF_NORMAL) archive.write("fixture".toByteArray())
             archive.closeArchiveEntry()
         }
@@ -79,5 +79,18 @@ class SafeTarExtractorTest {
         TarArchiveInputStream(bytes.toByteArray().inputStream()).use {
             SafeTarExtractor.extract(it, output.toFile())
         }
+    }
+
+    /**
+     * TarArchiveEntry's constructor rewrites the platform separator to '/', so on Windows it cannot
+     * name an entry with backslashes. Rebuild such an entry from its header, which keeps the name as is.
+     */
+    private fun withExactName(entry: TarArchiveEntry, name: String): TarArchiveEntry {
+        if (entry.name == name) return entry
+        val header = ByteArray(TarConstants.DEFAULT_RCDSIZE)
+        entry.writeEntryHeader(header)
+        header.fill(0, 0, TarConstants.NAMELEN)
+        name.toByteArray(Charsets.US_ASCII).copyInto(header)
+        return TarArchiveEntry(header)
     }
 }

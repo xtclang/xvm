@@ -14,6 +14,7 @@ import org.gradle.testfixtures.ProjectBuilder;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.api.io.TempDirDeletionStrategy;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -22,7 +23,9 @@ import org.xtclang.plugin.XtcProjectDelegate;
 import org.xtclang.plugin.XtcSourceDirectorySet;
 
 class SourceSetWiringTest {
-    @TempDir
+    // ProjectBuilder keeps cache files under the project directory open until the JVM exits,
+    // and Windows cannot delete open files.
+    @TempDir(deletionStrategy = TempDirDeletionStrategy.IgnoreFailures.class)
     Path directory;
 
     @ParameterizedTest

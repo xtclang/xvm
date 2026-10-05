@@ -3,6 +3,8 @@ import org.apache.commons.compress.archivers.tar.TarConstants
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
+import java.nio.file.LinkOption
+import java.nio.file.Path
 
 /** Extracts the regular files and directories used by the native tool distributions. */
 object SafeTarExtractor {
@@ -18,7 +20,7 @@ object SafeTarExtractor {
             }
             val target = root.resolve(name).normalize()
             val output = target.toFile()
-            if (!target.startsWith(root) || !output.canonicalFile.toPath().startsWith(canonicalRoot)) {
+            if (!target.startsWith(root) || !realExistingPrefix(target).startsWith(canonicalRoot)) {
                 throw IOException("Unsafe tar entry '$name': destination escapes the extraction directory")
             }
             val directory = entry.linkFlag == TarConstants.LF_DIR
@@ -37,5 +39,17 @@ object SafeTarExtractor {
             }
             entry = archive.nextEntry
         }
+    }
+
+    /**
+     * Resolves symbolic links in the longest existing prefix of [path]. Unlike File.canonicalFile,
+     * Path.toRealPath follows links on Windows too.
+     */
+    private fun realExistingPrefix(path: Path): Path {
+        var existing = path
+        while (Files.notExists(existing, LinkOption.NOFOLLOW_LINKS)) {
+            existing = existing.parent
+        }
+        return existing.toRealPath()
     }
 }

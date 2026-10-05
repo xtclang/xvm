@@ -31,6 +31,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import static org.xvm.util.Handy.quoted;
+
 /**
  * Tests for the "bundle" command: options parsing, launcher dispatch, and the multi-module
  * container round-trip through FileStructure and FileRepository.
@@ -210,7 +212,8 @@ class BundlerTest {
         var output = console.getAllOutput();
         assertTrue(output.contains("Duplicate explicit module selection"));
         assertTrue(output.contains("Dup"));
-        assertTrue(output.contains(fileSecond.getPath()));
+        // The error quotes the path as a string literal, so Windows backslashes appear escaped.
+        assertTrue(output.contains(quoted(fileSecond.getPath())));
     }
 
     // ----- reproducibility -----------------------------------------------------------------------
