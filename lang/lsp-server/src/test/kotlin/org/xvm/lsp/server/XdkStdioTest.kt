@@ -3,6 +3,7 @@ package org.xvm.lsp.server
 import com.google.gson.Gson
 import com.google.gson.JsonParser
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
 import org.eclipse.lsp4j.CallHierarchyOutgoingCallsParams
 import org.eclipse.lsp4j.CallHierarchyPrepareParams
@@ -55,8 +56,8 @@ import org.eclipse.lsp4j.SignatureInformationCapabilities
 import org.eclipse.lsp4j.SynchronizationCapabilities
 import org.eclipse.lsp4j.TextDocumentClientCapabilities
 import org.eclipse.lsp4j.TextDocumentContentCapabilities
-import org.eclipse.lsp4j.TextDocumentContentParams
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
+import org.eclipse.lsp4j.TextDocumentContentParams
 import org.eclipse.lsp4j.TextDocumentIdentifier
 import org.eclipse.lsp4j.TextDocumentItem
 import org.eclipse.lsp4j.TextDocumentSaveReason
@@ -119,13 +120,22 @@ class XdkStdioTest {
             session.open(text)
             assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
             val documents = session.server.textDocumentService
-            val target = session.await(documents.definition(DefinitionParams(TextDocumentIdentifier(URI), Position(0, text.indexOf("String"))))).left.single()
+            val target =
+                session
+                    .await(
+                        documents.definition(DefinitionParams(TextDocumentIdentifier(URI), Position(0, text.indexOf("String")))),
+                    ).left
+                    .single()
             assertThat(target.uri).startsWith("ecstasy-library:")
             val workspace = session.server.workspaceService
             val content = session.await(workspace.textDocumentContent(TextDocumentContentParams(target.uri))).text
             assertThat(content.lines()[target.range.start.line]).contains("const String")
             documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(target.uri, "xtc", 1, content)))
-            val imported = session.await(documents.moniker(MonikerParams(TextDocumentIdentifier(URI), Position(0, text.indexOf("String"))))).single()
+            val imported =
+                session
+                    .await(
+                        documents.moniker(MonikerParams(TextDocumentIdentifier(URI), Position(0, text.indexOf("String")))),
+                    ).single()
             val exported = session.await(documents.moniker(MonikerParams(TextDocumentIdentifier(target.uri), target.range.start))).single()
             assertThat(exported.identifier).isEqualTo(imported.identifier)
             assertThat(exported.kind).isEqualTo(MonikerKind.Export)
