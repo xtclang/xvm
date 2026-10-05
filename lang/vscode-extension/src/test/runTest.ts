@@ -19,12 +19,12 @@ async function main(): Promise<void> {
     // root and the fixtures directory are two levels up.
     const extensionRoot = path.resolve(__dirname, '..', '..');
     const args = process.argv.slice(2);
-    if (args.length === 1 && args[0] === '--project-lifecycle') {
-        await (await import('./runLifecycle.js')).runLifecycle(extensionRoot);
+    if (args.includes('--project-lifecycle') && args.every(arg => ['--project-lifecycle', '--shared-process'].includes(arg))) {
+        await (await import('./runLifecycle.js')).runLifecycle(extensionRoot, args.includes('--shared-process'));
         return;
     }
     if (args.some(argument => !['--playbook', '--multi-root', '--cancel-ui', '--explorer-move-probe', '--refresh-during-move'].includes(argument) && !argument.startsWith('--cases='))) {
-        throw new Error('Expected --playbook with optional --cases=ID[,ID], --multi-root and --cancel-ui, or --explorer-move-probe with optional --refresh-during-move');
+        throw new Error('Expected --playbook with optional --cases=ID[,ID], --multi-root and --cancel-ui, or --project-lifecycle with optional --shared-process, or --explorer-move-probe with optional --refresh-during-move');
     }
     const explorerProbe = args.includes('--explorer-move-probe');
     const refreshDuringMove = args.includes('--refresh-during-move');

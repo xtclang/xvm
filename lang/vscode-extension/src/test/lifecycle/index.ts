@@ -9,8 +9,18 @@ import { client, eventually } from '../playbook/support';
 /** Native windows with separate extension hosts; the launcher preserves the reopened profile. */
 export async function run(): Promise<void> {
     const directory = process.env.XTC_LIFECYCLE_REPORT!;
-    const role = process.env.XTC_LIFECYCLE_ROLE!;
+    const sharedProcess = process.env.XTC_LIFECYCLE_SHARED_PROCESS === 'true';
+    const folderName = vscode.workspace.workspaceFolders![0].name;
+    const previouslyClosed = await fs.stat(path.join(directory, 'closing.json')).then(() => true, error => {
+        if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false;
+        throw error;
+    });
+    // Later windows inherit the main process environment. Derive their phase from their workspace
+    // and the completed close receipt, never from the secondary CLI's environment.
+    const role = sharedProcess ? (folderName === 'primary' ? 'primary' : previouslyClosed ? 'reopened' : 'closing')
+        : process.env.XTC_LIFECYCLE_ROLE!;
     assert.ok(directory && ['primary', 'closing', 'reopened'].includes(role));
+    const applicationPid = process.ppid;
     const data = catalog.cases.X145.values;
     const folder = vscode.workspace.workspaceFolders![0].uri;
     const uri = vscode.Uri.joinPath(folder, data.file);
@@ -18,9 +28,9 @@ export async function run(): Promise<void> {
     const value = role === 'primary' ? '7' : '"second"';
     const text = `module ${data.module} {\n    static ${type} value = ${value};\n${Array.from({ length: data.methods }, (_, index) =>
         `    ${type} read${index}() { return value; }`).join('\n')}\n}\n// unsaved ${type}\n`;
-    const receipt = async (name: string, value: unknown) => {
+    const receipt = async (name: string, value: object) => {
         const file = path.join(directory, `${name}.json`);
-        await fs.writeFile(`${file}.tmp`, JSON.stringify(value, null, 2) + '\n');
+        await fs.writeFile(`${file}.tmp`, JSON.stringify({ applicationPid, ...value }, null, 2) + '\n');
         await fs.rename(`${file}.tmp`, file);
     };
     const wait = async (name: string) => {
@@ -35,6 +45,8 @@ export async function run(): Promise<void> {
         assert.fail(`Missing ${name} lifecycle receipt`);
     };
     try {
+        assert.strictEqual(vscode.workspace.getConfiguration('files').get('hotExit'), 'onExitAndWindowClose',
+            'Native window close requires the application-level hot-exit preference');
         const extension = vscode.extensions.all.find(item => item.packageJSON.name === 'xtc-language');
         assert.ok(extension);
         await extension.activate();
@@ -46,7 +58,9 @@ export async function run(): Promise<void> {
         const status = await client().sendRequest<{ pid: number }>('xtc/languageServiceStatus');
         const params = { textDocument: { uri: uri.toString() }, position: { line: 1, character: text.split('\n')[1].indexOf('value') } };
         if (role === 'reopened') {
-            await eventually(async () => document.getText() === text, Boolean, 'Hot exit restores the actual unsaved source');
+            await eventually(async () => ({ restored: document.getText() === text, length: document.getText().length,
+                dirty: document.isDirty, prefix: document.getText().slice(0, 100) }), value => value.restored,
+            'Hot exit restores the actual unsaved source');
             assert.ok(document.isDirty, 'The reopened buffer remains unsaved');
             const previous = await wait('closing');
             assert.notStrictEqual(status.pid, previous.pid);
@@ -76,8 +90,8 @@ export async function run(): Promise<void> {
             assert.ok(document.isDirty);
             await receipt('closing', { pid: status.pid, pending: true, unsaved: true });
             // The native window owns shutdown and hot-exit backup. No client.stop or process kill.
-            // Quit this single-window instance so macOS also exits the application after close.
-            await vscode.commands.executeCommand('workbench.action.quit');
+            // Keep the other window alive in shared mode; otherwise quit the disposable instance.
+            await vscode.commands.executeCommand(sharedProcess ? 'workbench.action.closeWindow' : 'workbench.action.quit');
             // Native shutdown owns backup and extension deactivation; this dies with the host.
             await new Promise<void>(() => {});
             return;
