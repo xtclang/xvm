@@ -216,15 +216,24 @@ tasks.register<NpmTask>("testCompilerPlaybook") {
     group = "verification"
     description = "Run XdkAdapter playbook in VS Code (requires -Plsp.adapter=compiler)"
     val selectedCases = providers.gradleProperty("compilerPlaybookCases")
-    val multiRoot = providers.gradleProperty("compilerPlaybookMultiRoot").map(String::toBoolean).orElse(false)
+    val multiRoot =
+        providers.gradleProperty("compilerPlaybookMultiRoot").map(String::toBoolean).orElse(false)
+    val cancelUi = providers.gradleProperty("compilerPlaybookCancelUi").map(String::toBoolean).orElse(false)
     dependsOn("assemble")
     if (!selectedCases.isPresent) {
         dependsOn(":lsp-server:test", ":lsp-server:compilerStdioTest")
     }
-    args.set(selectedCases.orElse("").zip(multiRoot) { cases, multipleRoots ->
-        listOf("run", "test:playbook", "--") +
-            listOfNotNull(cases.takeIf(String::isNotEmpty)?.let { "--cases=$it" }, "--multi-root".takeIf { multipleRoots })
-    })
+    args.set(
+        selectedCases
+            .orElse("")
+            .zip(multiRoot) { cases, multipleRoots ->
+                listOf("run", "test:playbook", "--") +
+                    listOfNotNull(
+                        cases.takeIf(String::isNotEmpty)?.let { "--cases=$it" },
+                        "--multi-root".takeIf { multipleRoots },
+                    )
+            }.zip(cancelUi) { arguments, visibleCancel -> arguments + listOfNotNull("--cancel-ui".takeIf { visibleCancel }) },
+    )
     inputs.dir(layout.projectDirectory.dir("src/test"))
     inputs.file(layout.projectDirectory.file("../doc/manual-test-plan.md"))
     inputs.file(rootProject.layout.projectDirectory.file("test-fixtures/compiler-playbook/scenarios.json"))
