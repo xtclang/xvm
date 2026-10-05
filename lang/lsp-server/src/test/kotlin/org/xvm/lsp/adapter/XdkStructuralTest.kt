@@ -13,7 +13,14 @@ class XdkStructuralTest {
     @ValueSource(strings = ["\n", "\r\n", "\r"])
     fun `damaged shared fixtures retain current structure and strictly nested selections`(newline: String) {
         val catalog = Path.of(System.getProperty("xtc.composite.root"), "lang/test-fixtures/compiler-playbook/scenarios.json")
-        val data = JsonParser.parseString(catalog.toFile().readText()).asJsonObject["cases"].asJsonObject["X248"].asJsonObject["values"].asJsonObject
+        val data =
+            JsonParser
+                .parseString(
+                    catalog.toFile().readText(),
+                ).asJsonObject["cases"]
+                .asJsonObject["X248"]
+                .asJsonObject["values"]
+                .asJsonObject
         XdkAdapter().use { adapter ->
             data["variants"].asJsonArray.forEach { row ->
                 val variant = row.asJsonObject
@@ -50,7 +57,10 @@ class XdkStructuralTest {
         }
     }
 
-    private fun compare(first: Position, second: Position) = compareValuesBy(first, second, Position::line, Position::column)
+    private fun compare(
+        first: Position,
+        second: Position,
+    ) = compareValuesBy(first, second, Position::line, Position::column)
 
     private companion object {
         const val URI = "untitled:Structure.x"
