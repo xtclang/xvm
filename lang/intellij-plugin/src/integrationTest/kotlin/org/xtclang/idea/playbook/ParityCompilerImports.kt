@@ -11,7 +11,61 @@ import kotlin.time.Duration.Companion.seconds
 
 /** Shared real Gradle producer; assertions go through installed settings, progress and diagnostics. */
 internal fun ParityScenarios.compilerImportCases() {
-    listOf("X260", "X261", "X262").forEach { id ->
+    case("X265") { data ->
+        val primary = with(driver) { singleProject() }
+        val root = Files.createDirectories(Path.of(primary.getBasePath()).parent.resolve("retired-import"))
+        val fixture = common["compilerImport"].asJsonObject
+        val shared = Path.of(System.getProperty("xtc.playbook.scenarios")).parent
+        val repository = shared.parent.parent.parent
+        val control = Files.createDirectories(root.resolve(".compiler-import-playbook"))
+        listOf("build.gradle.kts", "settings.gradle.kts", "gradle.properties", "gradlew", "gradlew.bat",
+            "gradle/wrapper/gradle-wrapper.jar", "gradle/wrapper/gradle-wrapper.properties").forEach { file ->
+            Files.createDirectories(root.resolve(file).parent)
+            Files.copy(if (file.contains("gradlew") || file.startsWith("gradle/")) repository.resolve(file)
+                else shared.resolve("compiler-import/$file"), root.resolve(file))
+        }
+        if (!System.getProperty("os.name").startsWith("Windows")) check(root.resolve("gradlew").toFile().setExecutable(true))
+        val model = fixture["model"].toString().replace("\${workspace}", root.toUri().toString().trimEnd('/'))
+        Files.writeString(root.resolve(fixture.string("file")), fixture.string("source"))
+        Files.createDirectories(root.resolve("processed"))
+        Files.writeString(root.resolve(fixture.string("resource")), fixture.string("contents"))
+        val report = root.resolve(".gradle/xtc/lsp-model.json")
+        Files.createDirectories(report.parent)
+        Files.writeString(report, model)
+        val operation = data.string("operation")
+        Files.writeString(control.resolve("model.json"), model)
+        Files.writeString(control.resolve("request.properties"), "operation=$operation\noutput=valid\noutcome=success\n")
+        val first = ClientProtocol(driver) { primary }
+        val firstPid = first.server().getCurrentProcessId()
+        val probe = with(driver) { utility(ProjectLifecycle::class) }
+        val opening = probe.open(root.toString())
+        awaitUi("Second native project opens", 60.seconds) { opening.isDone() }
+        val secondary = requireNotNull(opening.get())
+        try {
+            with(driver) { withContext(OnDispatcher.EDT) { utility(CompilerSettingsPage::class).useBuildModel(secondary) } }
+            val page = with(driver) { withContext(OnDispatcher.EDT) { utility(CompilerImportPage::class).open(secondary) } }
+            check(page.accepted() != "null")
+            with(driver) { withContext(OnDispatcher.EDT) { page.click("Refresh Gradle model") } }
+            awaitUi("Secondary project import is pending", 45.seconds) { Files.exists(control.resolve("$operation.started")) }
+            with(driver) { withContext(OnDispatcher.EDT) { page.closePage() } }
+            val closing = probe.close(secondary)
+            awaitUi("Project closes while its compiler import is pending", 30.seconds) { closing.isDone() }
+            check(closing.get())
+            Files.writeString(control.resolve("$operation.release"), "late completion\n")
+            val producer = Files.readString(control.resolve("$operation.pid")).toLong()
+            awaitUi("Closed project producer retires", 30.seconds) {
+                Files.exists(control.resolve("$operation.finished")) || !ProcessHandle.of(producer).map { it.isAlive }.orElse(false)
+            }
+            check(first.server().getCurrentProcessId() == firstPid)
+            first.query("xtc/healthCheck", emptyMap<String, Any>())
+            write("Survivor.x", "module Survivor {}\n")
+            clean(open("Survivor.x"))
+        } finally {
+            Files.writeString(control.resolve("$operation.release"), "cleanup\n")
+            runCatching { probe.close(secondary) }
+        }
+    }
+    listOf("X260", "X261", "X262", "X263", "X264").forEach { id ->
         case(id) { data ->
             val root = with(driver) { Path.of(singleProject().getBasePath()) }
             check(
@@ -38,6 +92,8 @@ internal fun ParityScenarios.compilerImportCases() {
             val control = Files.createDirectories(root.resolve(".compiler-import-playbook"))
             val report = root.resolve(".gradle/xtc/lsp-model.json")
             val previousReport = report.takeIf(Files::exists)?.let(Files::readAllBytes)
+            val aggregate = root.resolve(".gradle/xtc/lsp-workspace.json")
+            val previousAggregate = aggregate.takeIf(Files::exists)?.let(Files::readAllBytes)
             val model =
                 JsonParser
                     .parseString(
@@ -57,6 +113,7 @@ internal fun ParityScenarios.compilerImportCases() {
                 }
 
             try {
+                Files.deleteIfExists(aggregate)
                 Files.writeString(control.resolve("invocations.txt"), "")
                 files.forEach { file ->
                     val source =
@@ -71,6 +128,22 @@ internal fun ParityScenarios.compilerImportCases() {
                     Files.copy(source, root.resolve(file))
                 }
                 if (!System.getProperty("os.name").startsWith("Windows")) check(root.resolve("gradlew").toFile().setExecutable(true))
+                data["included"]?.rows()?.forEach { build ->
+                    val target = Files.createDirectories(root.resolve(build.string("folder")))
+                    val gate = Files.createDirectories(target.resolve(".compiler-import-playbook"))
+                    Files.copy(shared.resolve("compiler-import/build.gradle.kts"), target.resolve("build.gradle.kts"))
+                    Files.writeString(target.resolve("settings.gradle.kts"), "rootProject.name = \"${build.string("module")}\"\n" +
+                        if (build.string("folder") == "included") "includeBuild(\"nested\")\n" else "")
+                    val nested = fixture["model"].toString().replace("\${workspace}", target.toUri().toString().trimEnd('/'))
+                        .replace(fixture.string("module"), build.string("module"))
+                    Files.writeString(target.resolve("${build.string("module")}.x"), fixture.string("source").replace(fixture.string("module"), build.string("module")))
+                    Files.createDirectories(target.resolve("processed"))
+                    Files.writeString(target.resolve(fixture.string("resource")), fixture.string("contents"))
+                    Files.writeString(gate.resolve("model.json"), nested)
+                    Files.writeString(gate.resolve("request.properties"), "operation=included\noutput=valid\noutcome=success\n")
+                    Files.writeString(gate.resolve("included.release"), "release\n")
+                }
+                if (data.has("included")) Files.writeString(root.resolve("settings.gradle.kts"), "rootProject.name = \"composite\"\nincludeBuild(\"included\")\n")
                 write(fixture.string("file"), fixture.string("source"))
                 write(fixture.string("resource"), fixture.string("contents"))
                 Files.createDirectories(report.parent)
@@ -95,7 +168,9 @@ internal fun ParityScenarios.compilerImportCases() {
                             control.resolve("request.properties"),
                             "operation=$operation\noutput=${step.string("output")}\noutcome=${step.string("outcome")}\n",
                         )
-                        click(if (prepare) "Prepare generated resources" else "Refresh Gradle model")
+                        if (step.has("automatic")) {
+                            with(driver) { withContext(OnDispatcher.EDT) { page.sync() } }
+                        } else click(if (prepare) "Prepare generated resources" else "Refresh Gradle model")
                         awaitUi("$id real Gradle producer reached its publication gate", 45.seconds) {
                             control.resolve("$operation.started").takeIf(Files::exists)?.let(Files::readString) ==
                                 if (prepare) "prepareXtcLspModel" else "exportXtcLspModel"
@@ -145,6 +220,11 @@ internal fun ParityScenarios.compilerImportCases() {
                         }
                         if (step["accepted"].asBoolean) {
                             check(page.accepted() != baseline)
+                            data["included"]?.rows()?.let { included ->
+                                val accepted = JsonParser.parseString(page.accepted()).asJsonObject
+                                check(accepted["sourceSets"].asJsonArray.size() == included.size + 1)
+                                check(accepted["buildRoots"].asJsonArray.size() == included.size + 1)
+                            }
                             errors(document)
                         } else {
                             check(page.accepted() == baseline) { "Rejected report was accepted by a later consumer" }
@@ -153,7 +233,16 @@ internal fun ParityScenarios.compilerImportCases() {
                         check(Files.readAllLines(control.resolve("invocations.txt")).count { it.startsWith("$operation:") } == 1)
                         check(document.text == fixture.string("source"))
                     }
+                    if (id == "X264") {
+                        Files.writeString(aggregate, "{")
+                        with(driver) { withContext(OnDispatcher.EDT) { page.refreshReports() } }
+                        Files.writeString(aggregate, model.toString())
+                        with(driver) { withContext(OnDispatcher.EDT) { page.refreshReports() } }
+                        // Consume the real VFS notification; do not call publish from the driver.
+                        clean(document)
+                    }
                 } finally {
+                    if (id == "X264") with(driver) { withContext(OnDispatcher.EDT) { page.unlink() } }
                     with(driver) { withContext(OnDispatcher.EDT) { page.closePage() } }
                 }
             } finally {
@@ -161,6 +250,8 @@ internal fun ParityScenarios.compilerImportCases() {
                 with(driver) { withContext(OnDispatcher.EDT) { utility(ProgressUi::class).hide(singleProject()) } }
                 files.forEach { Files.deleteIfExists(root.resolve(it)) }
                 if (previousReport == null) Files.deleteIfExists(report) else Files.write(report, previousReport)
+                if (previousAggregate == null) Files.deleteIfExists(aggregate) else Files.write(aggregate, previousAggregate)
+                if (data.has("included")) root.resolve("included").toFile().deleteRecursively()
                 with(driver) { withContext(OnDispatcher.EDT) { utility(CompilerSettingsPage::class).clearProjectGraph(singleProject()) } }
                 refresh()
             }
@@ -181,6 +272,12 @@ internal interface CompilerImportPage {
     fun description(): String
 
     fun resetPage()
+
+    fun sync()
+
+    fun unlink()
+
+    fun refreshReports()
 
     fun closePage()
 }
