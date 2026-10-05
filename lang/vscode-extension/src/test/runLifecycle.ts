@@ -3,8 +3,8 @@ import { spawn } from 'node:child_process';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { downloadAndUnzipVSCode } from '@vscode/test-electron';
 import { catalog } from './playbook/shared';
+import { testVSCodeBuild } from './vscodeCache';
 
 interface LifecycleReceipt {
     pid: number;
@@ -16,6 +16,7 @@ interface LifecycleReceipt {
 
 /** Keep a second real window alive while another closes with pending work and reopens from backup. */
 export async function runLifecycle(extensionRoot: string, sharedProcess = false): Promise<void> {
+    const { version, executable } = await testVSCodeBuild(extensionRoot);
     const reports = path.join(extensionRoot, 'build/reports/project-lifecycle');
     await fs.mkdir(reports, { recursive: true });
     const directory = await fs.mkdtemp(path.join(reports, 'run-'));
@@ -26,7 +27,7 @@ export async function runLifecycle(extensionRoot: string, sharedProcess = false)
     await fs.symlink(extensionRoot, path.join(extensions, 'xtclang.xtc-language'), process.platform === 'win32' ? 'junction' : 'dir');
     await fs.writeFile(path.join(driver, 'package.json'), JSON.stringify({
         name: 'lifecycle', publisher: 'local-test', version: '0.0.0',
-        engines: { vscode: '^1.96.0' }, activationEvents: ['onStartupFinished'], main: './index.js'
+        engines: { vscode: `^${version}` }, activationEvents: ['onStartupFinished'], main: './index.js'
     }, null, 2) + '\n');
     await fs.writeFile(path.join(driver, 'index.js'), `
 const vscode = require('vscode');
@@ -38,7 +39,6 @@ exports.activate = () => {
     );
 };
 `);
-    const executable = await downloadAndUnzipVSCode();
     const data = catalog.cases.X145.values;
     for (const role of ['primary', 'secondary']) {
         const workspace = path.join(directory, role);
