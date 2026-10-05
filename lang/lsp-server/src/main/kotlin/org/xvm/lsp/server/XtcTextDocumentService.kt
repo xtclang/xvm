@@ -43,6 +43,10 @@ import org.eclipse.lsp4j.HoverParams
 import org.eclipse.lsp4j.ImplementationParams
 import org.eclipse.lsp4j.InlayHint
 import org.eclipse.lsp4j.InlayHintParams
+import org.eclipse.lsp4j.InlineCompletionItem
+import org.eclipse.lsp4j.InlineCompletionList
+import org.eclipse.lsp4j.InlineCompletionParams
+import org.eclipse.lsp4j.InlineCompletionTriggerKind
 import org.eclipse.lsp4j.InsertTextFormat
 import org.eclipse.lsp4j.InsertTextMode
 import org.eclipse.lsp4j.LinkedEditingRangeParams
@@ -104,8 +108,10 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.services.TextDocumentService
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.Adapter
+import org.xvm.lsp.adapter.AdapterCapability
 import org.xvm.lsp.adapter.CodeLensCommand
 import org.xvm.lsp.adapter.FormattingConfig
+import org.xvm.lsp.adapter.InlineCompletionContext
 import org.xvm.lsp.adapter.SymbolMoniker
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRenameProposal
@@ -130,6 +136,7 @@ import org.xvm.lsp.adapter.FormattingOptions as AdapterFormattingOptions
 import org.xvm.lsp.adapter.Position as AdapterPosition
 import org.xvm.lsp.adapter.Range as AdapterRange
 import org.xvm.lsp.adapter.SelectionRange as AdapterSelectionRange
+import org.xvm.lsp.adapter.TextEdit as AdapterTextEdit
 import org.xvm.lsp.adapter.TypeHierarchyItem as AdapterTypeHierarchyItem
 import org.xvm.lsp.adapter.WorkspaceEdit as AdapterWorkspaceEdit
 import org.xvm.lsp.model.Location as AdapterLocation
@@ -841,6 +848,39 @@ class XtcTextDocumentService(
                 }
             Either.forLeft(items)
         }
+
+    override fun inlineCompletion(params: InlineCompletionParams): CompletableFuture<Either<List<InlineCompletionItem>, InlineCompletionList>> {
+        if (!server.presentation.inlineCompletion || AdapterCapability.INLINE_COMPLETION !in adapter.capabilities) {
+            return CompletableFuture.failedFuture(
+                ResponseErrorException(ResponseError(ResponseErrorCode.MethodNotFound, "Inline completion was not negotiated", null)),
+            )
+        }
+        val context = InlineCompletionContext(
+            automatic = params.context.triggerKind == InlineCompletionTriggerKind.Automatic,
+            selectedCompletion = params.context.selectedCompletionInfo?.let {
+                AdapterTextEdit(toAdapterRange(it.range), it.text)
+            },
+        )
+        return queryAsync(
+            "textDocument/inlineCompletion",
+            params.textDocument.uri,
+            {
+                adapter.getInlineCompletionsAsync(
+                    params.textDocument.uri,
+                    AdapterPosition(params.position.line, params.position.character),
+                    context,
+                )
+            },
+            progress = params,
+        ) { edits ->
+            Either.forRight(InlineCompletionList(edits.map { edit ->
+                InlineCompletionItem(Either.forLeft(edit.newText)).apply {
+                    range = edit.range.toLsp()
+                    filterText = edit.newText
+                }
+            }))
+        }
+    }
 
     override fun resolveCompletionItem(item: CompletionItem): CompletableFuture<CompletionItem> =
         supplyAsync("completionItem/resolve", item.label) {

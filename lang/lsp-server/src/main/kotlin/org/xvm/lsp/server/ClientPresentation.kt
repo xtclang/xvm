@@ -19,6 +19,7 @@ internal data class ClientPresentation(
     val workspaceConfiguration: Boolean = false,
     val completionKinds: Set<CompletionItemKind> = legacyCompletionKinds,
     val completionSnippets: Boolean = false,
+    val inlineCompletion: Boolean = false,
     val completionAsIs: Boolean = false,
     val completionAdjustIndentation: Boolean = false,
     val actionLiterals: Boolean = false,
@@ -109,6 +110,7 @@ internal data class ClientPresentation(
                         ?: legacyCompletionKinds,
                 actionLiterals = text?.codeAction?.codeActionLiteralSupport != null,
                 completionSnippets = text?.completion?.completionItem?.snippetSupport == true,
+                inlineCompletion = text?.inlineCompletion != null,
                 completionAsIs =
                     text
                         ?.completion
