@@ -5,7 +5,11 @@ the exporting task succeeded, including output from a failed/cancelled task. Bot
 now hold immutable accepted reports behind an import owner, reject overlapping imports and cancel
 owned progress on project/folder retirement. Failure/cancellation retains the previous accepted
 report for the editor session. All 106 IntelliJ unit tests, 34 VS Code extension tests and shared
-X129 in both editors pass; native Gradle Cancel-button acceptance remains manual. See the
+X129 in both editors pass. Shared X260–X262 now pass both clients, including native Gradle
+Cancel-button acceptance. IntelliJ's first X260 receipt retains a test-only failure: expecting a
+`finally` marker from a terminated JVM. Its corrected PID/marker retirement check passes without
+production changes; see the [shared receipt](errs-integration-plan.md#shared-compiler-import-acceptance-and-remaining-ui-work-2026-10-05).
+See the
 [ownership contract and receipt](errs-integration-plan.md#compiler-import-progress-and-accepted-model-ownership-ui5ui6-2026-10-05).
 
 **L82 real-project audit (2026-10-05):** recursive typedefs reached a base-type accessor that
