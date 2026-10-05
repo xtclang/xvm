@@ -29,6 +29,7 @@ internal fun ParityScenarios.reliabilityCases() {
         val version = version(consumer)
         val support = with(driver) { semanticSupport(consumer.editor).getInlayHintsSupport() }
         val events = with(driver) { utility(RefreshRequests::class).listen(singleProject()) }
+        val tabLimit = with(driver) { withContext(OnDispatcher.EDT) { events.tabLimit(32) } }
         val negotiated = events.negotiated()
         check(negotiated.containsAll(listOf("workspace/inlayHint/refresh", "workspace/semanticTokens/refresh")))
 
@@ -55,6 +56,17 @@ internal fun ParityScenarios.reliabilityCases() {
         }
         try {
             verify(data.string("before"))
+            // Native-only UP27 stress: many distinct documents and repeated refresh requests
+            // used to overwhelm IntelliJ's read-action submission tracker. The shared semantic
+            // assertions below must still pass after this burst, with hints enabled.
+            repeat(16) { index ->
+                open("RefreshQueue$index.x", "module RefreshQueue$index {}\n")
+            }
+            with(driver) {
+                val refreshed = withContext(OnDispatcher.EDT) { events.burst() }
+                awaitUi("many-file refresh burst completes", 15.seconds) { refreshed.isDone() }
+                check(!refreshed.isCompletedExceptionally())
+            }
             listOf("changed" to "after", "original" to "before").forEach { (source, expected) ->
                 events.clear()
                 replace(library, data.string(source))
@@ -73,6 +85,7 @@ internal fun ParityScenarios.reliabilityCases() {
                 clean(consumer)
             }
         } finally {
+            with(driver) { withContext(OnDispatcher.EDT) { events.tabLimit(tabLimit) } }
             events.dispose()
         }
     }
@@ -157,6 +170,10 @@ interface RefreshRequests {
     fun negotiated(): List<String>
 
     fun clear()
+
+    fun tabLimit(value: Int): Int
+
+    fun burst(): ClientFuture
 
     fun dispose()
 }
