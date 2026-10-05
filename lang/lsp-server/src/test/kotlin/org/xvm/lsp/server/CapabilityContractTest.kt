@@ -91,6 +91,7 @@ class CapabilityContractTest {
             AdapterCapability.TYPE_HIERARCHY -> "typeHierarchyProvider"
             AdapterCapability.TYPE_DEFINITION -> "typeDefinitionProvider"
             AdapterCapability.IMPLEMENTATION -> "implementationProvider"
+            AdapterCapability.MONIKER -> "monikerProvider"
             AdapterCapability.CALL_HIERARCHY -> "callHierarchyProvider"
             AdapterCapability.INLAY_HINT -> "inlayHintProvider"
         }
