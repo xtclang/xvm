@@ -1410,8 +1410,24 @@ See the [closure and acceptance record](../../../docs/errs-integration-plan.md#l
 
 X243–X250 add resolved wildcard links and conditional-source refusal, lexical lambda/same-name alias
 ranges, typedef outlines and damaged-source structure, plus continuation/wrapping/comment-margin
-formatting. The current catalog has 255 cases. X132/X138/X139/X158/X243–X250 have passing selected
+formatting. That checkpoint had 255 cases. X132/X138/X139/X158/X243–X250 have passing selected
 receipts in both editors. Backend/protocol checks pass; the IntelliJ run exposed and repaired the
 standalone formatting Redo defect tracked as UP24. Conditional import source syntax is rejected by
 the existing parser. L66 is closed within its documented formatter/refactoring boundaries; see the
 [closure receipt](../../../docs/errs-integration-plan.md#l66-bounded-closure-and-acceptance-2026-10-05).
+
+
+### L67 detached navigation reuse (2026-10-05)
+
+X251 brings the current shared catalog to 256 cases and covers repeated graph lookup, unsaved
+changes, broken independent neighbors and configured-root removal/restoration in both editor
+drivers. The backend reuses exact per-module semantic builds seeded by editor/diagnostic compilation;
+complete references and edit proofs keep their existing requirements. No AST/embedding API changes,
+disk persistence or incremental compiler are introduced. See the
+[L67 receipt](../../../docs/errs-integration-plan.md#l67-module-navigation-index-2026-10-05) for measurements and acceptance.
+
+L67 is closed within this measured boundary: 120 backend and 78 packaged-protocol tests pass,
+followed by the canonical-key regression selection (19 tests). X45/X59/X63/X143/X251 pass in both
+editors. The 129-module control succeeds under the unchanged heap; 20,000-method first-reference
+queries now use one compile and take 0.4–0.6 s in the recorded workload. Persistent indexing is not
+justified by these measurements; prolonged release budgets remain L82.
