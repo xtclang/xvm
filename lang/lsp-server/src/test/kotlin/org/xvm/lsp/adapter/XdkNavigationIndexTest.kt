@@ -91,7 +91,15 @@ class XdkNavigationIndexTest {
         val independent = source("Independent", "module Independent { class Unrelated {} }")
         adapter().use { adapter ->
             adapter.replaceSourceModules(listOf(library, consumer, independent))
-            assertThat(adapter.compile(consumer.uri, consumerText).diagnostics).isEmpty()
+            // LSP clients use file:/// while File.toURI (the graph key) renders file:/.
+            val editorUri =
+                directory
+                    .resolve("Consumer.x")
+                    .toRealPath()
+                    .toUri()
+                    .toString()
+            assertThat(editorUri).isNotEqualTo(consumer.uri)
+            assertThat(adapter.compile(editorUri, consumerText).diagnostics).isEmpty()
             assertThat(compiled.values.sumOf { it.get() }).isEqualTo(2)
             assertThat(adapter.findReferences(library.uri, 0, text.indexOf("Box"), true)).hasSize(2)
             assertThat(compiled.values.sumOf { it.get() }).isEqualTo(3)
