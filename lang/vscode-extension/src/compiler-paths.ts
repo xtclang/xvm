@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { BuildModel, describeBuildModel, modelPath, parseBuildModel } from './build-model';
+import { BuildModel, describeBuildModel, mergeBuildModels, modelPath, parseBuildModel, readCompilerReport, workspaceModelPath } from './build-model';
 import { CompilerImport } from './compiler-import';
 import { runCompilerTask } from './compiler-task';
 import { getClient, updateCompilerConfiguration } from './lsp-client';
@@ -17,8 +17,7 @@ function importOwner(folder: vscode.WorkspaceFolder): CompilerImport {
     const existing = imports.get(key);
     if (existing) return existing;
     if (folder.uri.scheme !== 'file') throw new Error('Compiler build import requires a local workspace folder.');
-    const file = path.join(folder.uri.fsPath, modelPath);
-    const owner = new CompilerImport(() => fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : undefined, parseBuildModel);
+    const owner = new CompilerImport(() => readCompilerReport(folder.uri.fsPath), parseBuildModel);
     imports.set(key, owner);
     return owner;
 }
@@ -27,7 +26,7 @@ export function compilerBuildModels(): BuildModel[] {
     const folders = vscode.workspace.workspaceFolders ?? [];
     const active = new Set(folders.map(folder => folder.uri.toString()));
     for (const key of imports.keys()) if (!active.has(key)) imports.delete(key);
-    return folders.flatMap(folder => {
+    const models = folders.flatMap(folder => {
         if (folder.uri.scheme !== 'file') return [];
         const owner = importOwner(folder);
         try {
@@ -36,6 +35,7 @@ export function compilerBuildModels(): BuildModel[] {
         const text = owner.retained();
         return text === undefined ? [] : [parseBuildModel(text)];
     });
+    return models.length === 0 ? [] : [mergeBuildModels(models)];
 }
 
 async function folder(): Promise<vscode.WorkspaceFolder | undefined> {
@@ -61,7 +61,8 @@ export async function refreshCompilerBuild(prepare = false, selected?: vscode.Wo
         const operation = randomUUID();
         const task = new vscode.Task({ type: 'xtc-model', prepare, operation }, owner,
             prepare ? 'Prepare compiler inputs' : 'Refresh compiler paths', 'Ecstasy',
-            new vscode.ProcessExecution(wrapper.fsPath, [prepare ? 'prepareXtcLspModel' : 'exportXtcLspModel', '--console=plain'], { cwd: owner.uri.fsPath }));
+            new vscode.ProcessExecution(wrapper.fsPath, ['--init-script', path.resolve(__dirname, '../resources/compiler-model.init.gradle'),
+                prepare ? 'prepareEcstasyWorkspaceModel' : 'exportEcstasyWorkspaceModel', '--console=plain'], { cwd: owner.uri.fsPath }));
         const outcome = await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
             title: `Ecstasy — ${prepare ? 'preparing generated inputs' : 'refreshing compiler paths'} (${owner.name})`,
@@ -191,7 +192,7 @@ export function registerCompilerPaths(context: vscode.ExtensionContext): void {
     const watchers = new Map<string, vscode.Disposable>();
     const changed = () => { draftsChanged.fire(); void updateCompilerConfiguration().catch(error => output.appendLine(String(error))); };
     const watch = (owner: vscode.WorkspaceFolder) => {
-        const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(owner, modelPath));
+        const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(owner, '{' + modelPath + ',' + workspaceModelPath + '}'));
         watchers.set(owner.uri.toString(), vscode.Disposable.from(watcher, watcher.onDidCreate(changed), watcher.onDidChange(changed), watcher.onDidDelete(changed)));
     };
     (vscode.workspace.workspaceFolders ?? []).forEach(watch);
@@ -209,7 +210,7 @@ export function registerCompilerPaths(context: vscode.ExtensionContext): void {
             // Gradle extension. Our own xtc-model tasks cannot recursively trigger another export.
             if (event.exitCode !== 0 || task.definition.type !== 'gradle' || !owner || typeof owner === 'number' ||
                 !vscode.workspace.isTrusted || owner.uri.scheme !== 'file' || activeImports.has(owner.uri.toString()) ||
-                !fs.existsSync(path.join(owner.uri.fsPath, modelPath))) return;
+                readCompilerReport(owner.uri.fsPath) === undefined) return;
             void refreshCompilerBuild(false, owner).catch(error => output.appendLine(`Automatic compiler refresh failed: ${error}`));
         }),
         vscode.workspace.onDidChangeWorkspaceFolders(event => {

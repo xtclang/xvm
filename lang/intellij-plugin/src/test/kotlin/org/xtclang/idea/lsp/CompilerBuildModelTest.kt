@@ -40,6 +40,15 @@ class CompilerBuildModelTest {
     }
 
     @Test
+    fun `overlapping composite and linked roots deduplicate only identical owners`() {
+        val first = CompilerBuildModel.parse(text())
+        val second = CompilerBuildModel.parse(text(listOf(entry + ("projectId" to "file:///other/#:library"))))
+        assertThat(CompilerWorkspaceModels.merge(listOf(first, first.deepCopy(), second))["sourceSets"].asJsonArray).hasSize(2)
+        val conflict = CompilerBuildModel.parse(text(listOf(entry + ("resourceRoots" to emptyList<String>()))))
+        assertThatThrownBy { CompilerWorkspaceModels.merge(listOf(first, conflict)) }.hasMessageContaining("Conflicting")
+    }
+
+    @Test
     fun `unsupported malformed and duplicate models are refused before configuration changes`() {
         listOf(
             text(version = 2),
