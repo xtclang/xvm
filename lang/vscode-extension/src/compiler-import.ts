@@ -5,11 +5,13 @@ export class CompilerImport {
         observed?: Readonly<{ text?: string }>;
         operation?: Readonly<{ prepare: boolean }>;
         result?: ImportResult;
+        retired?: boolean;
     }> = {};
 
     constructor(private readonly read: () => string | undefined, private readonly validate: (text: string) => unknown) { }
 
     current(): string | undefined {
+        if (this.state.retired) return undefined;
         if (this.state.operation) return this.state.accepted;
         const text = this.read();
         if (this.state.observed && this.state.observed.text === text) return this.state.accepted;
@@ -20,9 +22,12 @@ export class CompilerImport {
 
     retained(): string | undefined { return this.state.accepted; }
 
+    retire(): void { this.state = { retired: true }; }
+
     isRunning(operation: Readonly<{ prepare: boolean }>): boolean { return this.state.operation === operation; }
 
     begin(prepare: boolean): Readonly<{ prepare: boolean }> {
+        if (this.state.retired) throw new Error('Compiler import owner has been retired.');
         if (this.state.operation) throw new Error('An Ecstasy compiler import is already running for this folder.');
         const operation = Object.freeze({ prepare });
         this.state = { ...this.state, operation };
@@ -30,6 +35,7 @@ export class CompilerImport {
     }
 
     finish(operation: Readonly<{ prepare: boolean }>, outcome: ImportResult['outcome'], detail?: string): ImportResult {
+        if (this.state.retired) return { outcome: 'cancelled', message: 'Compiler import owner has been retired.', finished: new Date().toISOString() };
         if (this.state.operation !== operation) throw new Error('Compiler import no longer owns this result.');
         let observed = this.state.observed;
         let accepted = this.state.accepted;
