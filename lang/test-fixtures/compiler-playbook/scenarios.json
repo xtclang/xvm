@@ -116,6 +116,43 @@
       ],
       "root": "Contracts.x",
       "referenceAnchor": "map("
+    },
+    "compilerImport": {
+      "file": "ImportAssets.x",
+      "module": "ImportAssets",
+      "source": "module ImportAssets {\n    String text = $./data.txt;\n}\n",
+      "resource": "processed/data.txt",
+      "contents": "Shared compiler import fixture\n",
+      "model": {
+        "schemaVersion": 1,
+        "sourceSets": [
+          {
+            "projectId": "${workspace}#:app",
+            "projectPath": ":app",
+            "projectDirectory": "${workspace}/",
+            "buildFile": "${workspace}/build.gradle.kts",
+            "sourceSet": "main",
+            "sourceRoots": [
+              "${workspace}/"
+            ],
+            "sourceFiles": [
+              "${workspace}/ImportAssets.x"
+            ],
+            "moduleRoots": [
+              "${workspace}/ImportAssets.x"
+            ],
+            "resourceSourceRoots": [
+              "${workspace}/raw/"
+            ],
+            "resourceRoots": [
+              "${workspace}/processed/"
+            ],
+            "resourceTask": ":app:processXtcResources",
+            "projectDependencies": [],
+            "modulePath": []
+          }
+        ]
+      }
     }
   },
   "cases": {
@@ -8176,6 +8213,112 @@
         "source": "module RefreshConsumer {\n    package lib import RefreshLibrary;\n    package json import json.xtclang.org;\n    import json.Doc;\n    private Doc echo(Doc value) = value;\n    void run() { var value = lib.make(); }\n}\n",
         "before": "Int",
         "after": "String"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X260": {
+      "title": "Cancel generated-input import, refuse overlap and retry through native controls",
+      "manual": [],
+      "values": {
+        "steps": [
+          {
+            "operation": "cancel",
+            "prepare": true,
+            "output": "valid",
+            "outcome": "success",
+            "cancel": true,
+            "duplicate": true,
+            "expected": "cancelled",
+            "accepted": false
+          },
+          {
+            "operation": "retry",
+            "prepare": false,
+            "output": "valid",
+            "outcome": "success",
+            "cancel": false,
+            "duplicate": false,
+            "expected": "imported",
+            "accepted": true
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X261": {
+      "title": "Failed Gradle output retains compiler paths until a successful retry",
+      "manual": [],
+      "values": {
+        "steps": [
+          {
+            "operation": "failed",
+            "prepare": false,
+            "output": "valid",
+            "outcome": "failure",
+            "cancel": false,
+            "duplicate": false,
+            "expected": "failed",
+            "accepted": false
+          },
+          {
+            "operation": "retry",
+            "prepare": false,
+            "output": "valid",
+            "outcome": "success",
+            "cancel": false,
+            "duplicate": false,
+            "expected": "imported",
+            "accepted": true
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X262": {
+      "title": "Successful tasks with malformed or missing models retain inputs and recover",
+      "manual": [],
+      "values": {
+        "steps": [
+          {
+            "operation": "malformed",
+            "prepare": false,
+            "output": "invalid",
+            "outcome": "success",
+            "cancel": false,
+            "duplicate": false,
+            "expected": "retained",
+            "accepted": false
+          },
+          {
+            "operation": "missing",
+            "prepare": false,
+            "output": "missing",
+            "outcome": "success",
+            "cancel": false,
+            "duplicate": false,
+            "expected": "retained",
+            "accepted": false
+          },
+          {
+            "operation": "repair",
+            "prepare": false,
+            "output": "valid",
+            "outcome": "success",
+            "cancel": false,
+            "duplicate": false,
+            "expected": "imported",
+            "accepted": true
+          }
+        ]
       },
       "intellij": {
         "coverage": "full",
