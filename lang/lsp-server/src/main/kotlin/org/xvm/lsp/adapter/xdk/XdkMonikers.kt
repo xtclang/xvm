@@ -7,6 +7,7 @@ import org.xvm.asm.FileStructure
 import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.MethodConstant
 import org.xvm.asm.constants.MultiMethodConstant
+import org.xvm.asm.constants.PropertyConstant
 import org.xvm.lsp.adapter.SymbolMoniker
 import org.xvm.lsp.util.ExecutionTrace
 import java.io.ByteArrayOutputStream
@@ -57,7 +58,8 @@ internal class XdkArtifactSymbols private constructor(
                             .filterIsInstance<IdentityConstant>()
                             .filter {
                                 it.moduleConstant == file.moduleId && it.format in FORMATS &&
-                                    (it !is MethodConstant || !it.isLambda) && it.component != null
+                                    (it !is MethodConstant || !it.isLambda) && it.component != null &&
+                                    (it !is PropertyConstant || !it.isFormalType)
                             }.associateBy { it.position }
                     file.moduleIds().forEach { id ->
                         file.getModule(id).apply {
