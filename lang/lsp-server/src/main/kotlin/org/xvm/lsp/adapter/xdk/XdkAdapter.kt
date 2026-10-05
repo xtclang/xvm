@@ -578,7 +578,6 @@ class XdkAdapter
         private fun retireProjectQueries(): List<QueryWork> =
             projectQueries.values.toList().also { retired ->
                 projectQueries.clear()
-                navigationCache.set(emptyMap())
                 navigationIndex.retire(project.modules.values.mapTo(hashSetOf()) { it.uri })
                 retired.forEach { compiles.remove(it.task) }
             }
@@ -612,7 +611,6 @@ class XdkAdapter
                                                 work.dependencies,
                                                 compiler::compileTree,
                                                 ::stale,
-                                                navigationCache,
                                                 discoverImports = !discovery.get().explicit,
                                                 diagnosticCache = diagnosticCache,
                                                 navigationIndex = navigationIndex,
@@ -987,7 +985,6 @@ class XdkAdapter
                     cursors.clear()
                     renames.clear()
                     projectQueries.clear()
-                    navigationCache.set(emptyMap())
                     diagnosticCache.clear()
                     navigationIndex.clear()
                     overlays.clear()
@@ -1073,80 +1070,84 @@ class XdkAdapter
                     .toMutableMap()
             val diagnostics = mutableListOf<Diagnostic>()
             val documents = linkedSetOf<String>()
-            val analyses =
-                order.map { module ->
-                    if (isStale(request)) throw CancellationException()
-                    val closure = request.project.buildOrder(module.uri).mapTo(hashSetOf()) { it.name }
-                    val inputs = XdkDependencies(artifacts.filterKeys { it !in request.project.modules || it in closure }.values.toList())
-                    val sources = captured.getValue(module).getOrNull()
-                    val uri = sources?.uri(module.root) ?: module.uri
-                    val missing =
-                        module.dependencies.filter { it !in artifacts && it !in XdkLibraries.moduleNames }
-                    val key =
-                        sources?.let {
-                            BuildKey(it.inputs, inputs.modules.mapValues { (_, artifact) -> artifact.revision })
-                        }
-                    val cached =
-                        builds[module.name]?.takeIf {
-                            key != null && it.key == key && module.uri != request.scope
-                        }
-                    val analysis =
-                        when {
-                            sources == null -> {
-                                val reason = captured.getValue(module).exceptionOrNull()?.message
-                                unavailableProjectModule(
-                                    uri,
-                                    inputs,
-                                    "SOURCE-UNAVAILABLE",
-                                    "Cannot read source for ${module.name}: $reason",
-                                )
-                            }
-
-                            missing.isNotEmpty() -> {
-                                unavailableProjectModule(
-                                    uri,
-                                    inputs,
-                                    "DEPENDENCY-FAILED",
-                                    "Dependencies unavailable: ${missing.joinToString()}",
-                                    sources.documentUris,
-                                )
-                            }
-
-                            cached != null -> {
-                                ModuleAnalysis(
-                                    documents = emptyMap(),
-                                    diagnostics = cached.diagnostics,
-                                    dependencies = emptySet(),
-                                    succeeded = cached.artifact != null,
-                                    dependencySources = emptyMap(),
-                                    inputs = inputs,
-                                    artifact = cached.artifact,
-                                    documentUris = cached.documentUris,
-                                )
-                            }
-
-                            else -> {
-                                compileOne(request, uri, sources, inputs, module.name)
-                            }
-                        }
-                    synchronized(lifecycle) {
+            val target =
+                order
+                    .asSequence()
+                    .map { module ->
                         if (isStale(request)) throw CancellationException()
-                        if (key != null) {
-                            builds[module.name] =
-                                CachedBuild(
-                                    key,
-                                    analysis.artifact,
-                                    analysis.diagnostics,
-                                    analysis.documentUris,
-                                )
+                        val closure = request.project.buildOrder(module.uri).mapTo(hashSetOf()) { it.name }
+                        val inputs =
+                            XdkDependencies(
+                                artifacts.filterKeys { it !in request.project.modules || it in closure }.values.toList(),
+                            )
+                        val sources = captured.getValue(module).getOrNull()
+                        val uri = sources?.uri(module.root) ?: module.uri
+                        val missing =
+                            module.dependencies.filter { it !in artifacts && it !in XdkLibraries.moduleNames }
+                        val key =
+                            sources?.let {
+                                BuildKey(it.inputs, inputs.modules.mapValues { (_, artifact) -> artifact.revision })
+                            }
+                        val cached =
+                            builds[module.name]?.takeIf {
+                                key != null && it.key == key && module.uri != request.scope
+                            }
+                        val analysis =
+                            when {
+                                sources == null -> {
+                                    val reason = captured.getValue(module).exceptionOrNull()?.message
+                                    unavailableProjectModule(
+                                        uri,
+                                        inputs,
+                                        "SOURCE-UNAVAILABLE",
+                                        "Cannot read source for ${module.name}: $reason",
+                                    )
+                                }
+
+                                missing.isNotEmpty() -> {
+                                    unavailableProjectModule(
+                                        uri,
+                                        inputs,
+                                        "DEPENDENCY-FAILED",
+                                        "Dependencies unavailable: ${missing.joinToString()}",
+                                        sources.documentUris,
+                                    )
+                                }
+
+                                cached != null -> {
+                                    ModuleAnalysis(
+                                        documents = emptyMap(),
+                                        diagnostics = cached.diagnostics,
+                                        dependencies = emptySet(),
+                                        succeeded = cached.artifact != null,
+                                        dependencySources = emptyMap(),
+                                        inputs = inputs,
+                                        artifact = cached.artifact,
+                                        documentUris = cached.documentUris,
+                                    )
+                                }
+
+                                else -> {
+                                    compileOne(request, uri, sources, inputs, module.name)
+                                }
+                            }
+                        synchronized(lifecycle) {
+                            if (isStale(request)) throw CancellationException()
+                            if (key != null) {
+                                builds[module.name] =
+                                    CachedBuild(
+                                        key,
+                                        analysis.artifact,
+                                        analysis.diagnostics,
+                                        analysis.documentUris,
+                                    )
+                            }
                         }
-                    }
-                    analysis.artifact?.let { artifacts[module.name] = it }
-                    diagnostics += analysis.diagnostics
-                    documents += analysis.documentUris
-                    analysis
-                }
-            val target = analyses.last()
+                        analysis.artifact?.let { artifacts[module.name] = it }
+                        diagnostics += analysis.diagnostics
+                        documents += analysis.documentUris
+                        analysis
+                    }.last()
             return ModuleAnalysis(
                 documents = target.documents,
                 diagnostics = diagnostics,
@@ -1202,7 +1203,7 @@ class XdkAdapter
                 if (sources == null) {
                     compiler.compileSource(source, dependencies.repository, errs)
                 } else {
-                    compiler.compileTree(sources, dependencies.repository, errs)
+                    compiler.compileTree(sources.freshCompilationInput(), dependencies.repository, errs)
                 }
             if (isStale(request)) throw CancellationException()
             if (sources != null && !sources.resourcesCurrent { isStale(request) }) {
@@ -2185,7 +2186,6 @@ class XdkAdapter
         private val projectQueries = ConcurrentHashMap<ProjectQueryKey, ProjectRequest<*>>()
         private val diagnosticCache = XdkDiagnosticIndex()
         private val navigationIndex = XdkNavigationIndex()
-        private val navigationCache = AtomicReference<Map<String, XdkWorkspaceNavigation>>(emptyMap())
 
         /**
          * A ThreadPoolExecutor rather than Executors.newSingleThreadExecutor, because the latter wraps
