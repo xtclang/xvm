@@ -82,6 +82,41 @@ class CompilerImportTest {
     }
 
     @Test
+    fun `retirement prevents late validation or completion from publishing into a closed project`() {
+        imports.current()
+        val operation = imports.begin(false)
+        disk.set("late report")
+        imports.retire()
+        assertThat(imports.finish(operation, CompilerImport.Outcome.SUCCEEDED).outcome).isEqualTo(CompilerImport.Outcome.CANCELLED)
+        assertThat(imports.current()).isNull()
+        assertThat(imports.retained()).isNull()
+        assertThatThrownBy { imports.begin(false) }.hasMessageContaining("retired")
+    }
+
+    @Test
+    fun `retirement during report validation wins over successful producer exit`() {
+        val validating = AtomicBoolean()
+        val captured = CountDownLatch(1)
+        val release = CountDownLatch(1)
+        val owner = CompilerImport(disk::get) {
+            if (validating.get()) {
+                captured.countDown()
+                check(release.await(5, SECONDS))
+            }
+        }
+        owner.current()
+        val operation = owner.begin(false)
+        validating.set(true)
+        val finished = CompletableFuture.supplyAsync { owner.finish(operation, CompilerImport.Outcome.SUCCEEDED) }
+        try {
+            assertThat(captured.await(5, SECONDS)).isTrue()
+            owner.retire()
+        } finally { release.countDown() }
+        assertThat(finished.get(5, SECONDS).outcome).isEqualTo(CompilerImport.Outcome.CANCELLED)
+        assertThat(owner.retained()).isNull()
+    }
+
+    @Test
     fun `a slow watcher cannot overwrite a newer accepted import`() {
         val blocked = AtomicBoolean()
         val captured = CountDownLatch(1)
