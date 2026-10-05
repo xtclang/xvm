@@ -1,7 +1,7 @@
 import * as assert from 'node:assert';
 import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
-import { LSPErrorCodes, TextDocumentEdit, WorkspaceEdit } from 'vscode-languageclient/node';
+import { LSPErrorCodes, Moniker, TextDocumentEdit, WorkspaceEdit } from 'vscode-languageclient/node';
 import { catalog, scenarioRegex, scenarioText } from './shared';
 import { client, diagnostics, eventually, fixture, hover, noErrors, playbook, position, symbols, Workspace } from './support';
 
@@ -141,4 +141,62 @@ export function indexingCases(): void {
         await eventually(() => search(data.symbol), items => items.length === data.roots, 'Restored root returns to the index');
     });
 
+}
+
+export function monikerCases(): void {
+    const monikers = async (uri: vscode.Uri, text: string, anchor: string) => {
+        const offset = text.indexOf(anchor);
+        assert.ok(offset >= 0, anchor);
+        return await client().sendRequest<Moniker[]>('textDocument/moniker', {
+            textDocument: { uri: uri.toString() },
+            position: { line: text.slice(0, offset).split('\n').length - 1, character: offset - text.lastIndexOf('\n', offset) - 1 }
+        });
+    };
+    playbook('X252', async (workspace, data) => {
+        await workspace.write(data.libraryFile, data.librarySource);
+        await workspace.write(data.consumerFile, data.consumerSource);
+        await workspace.configure(data.sourceModules.map(module => ({ ...module, uri: workspace.uri(module.uri).toString() })));
+        const consumer = await workspace.open(data.consumerFile);
+        await noErrors(consumer.uri);
+        const imported = (await monikers(consumer.uri, consumer.getText(), data.reference))[0];
+        const exported = (await monikers(workspace.uri(data.libraryFile), data.librarySource, data.declaration))[0];
+        assert.ok(imported && exported);
+        assert.strictEqual(imported.scheme, data.scheme);
+        assert.strictEqual(imported.unique, data.unique);
+        assert.strictEqual(exported.kind, 'export');
+        assert.deepStrictEqual(imported, { ...exported, kind: 'import' });
+        const overload = (await monikers(consumer.uri, consumer.getText(), data.overload))[0];
+        assert.ok(overload && overload.identifier !== imported.identifier);
+        const library = await workspace.open(data.libraryFile);
+        await noErrors(library.uri);
+        assert.deepStrictEqual(await monikers(library.uri, library.getText(), data.declaration), [exported]);
+        await workspace.replace(library, data.librarySource.replace(data.replaceFrom, data.replaceWith));
+        await noErrors(consumer.uri);
+        const changed = (await monikers(library.uri, library.getText(), data.declaration))[0];
+        assert.ok(changed && changed.identifier !== exported.identifier);
+        assert.deepStrictEqual(await monikers(consumer.uri, consumer.getText(), data.reference), [{ ...changed, kind: 'import' }]);
+        await workspace.replace(library, data.librarySource);
+        await noErrors(consumer.uri);
+        assert.deepStrictEqual(await monikers(consumer.uri, consumer.getText(), data.reference), [imported]);
+    });
+    playbook('X253', async (workspace, data) => {
+        await workspace.write(data.file, data.source);
+        const document = await workspace.open(data.file);
+        await noErrors(document.uri);
+        const own = (await monikers(document.uri, document.getText(), data.private))[0];
+        const bundled = (await monikers(document.uri, document.getText(), data.library))[0];
+        assert.ok(own && bundled);
+        assert.strictEqual(own.kind, 'local');
+        assert.strictEqual(bundled.kind, 'import');
+        assert.strictEqual(bundled.scheme, data.scheme);
+        assert.strictEqual(bundled.unique, data.unique);
+        assert.deepStrictEqual(await monikers(document.uri, document.getText(), data.local), []);
+        await workspace.replace(document, data.source.replace(data.replaceFrom, data.replaceWith));
+        await diagnostics(document.uri, items => items.some(item => item.severity === vscode.DiagnosticSeverity.Error), 'Broken moniker source');
+        assert.deepStrictEqual(await monikers(document.uri, document.getText(), data.private), []);
+        await workspace.replace(document, data.source);
+        await noErrors(document.uri);
+        assert.deepStrictEqual(await monikers(document.uri, document.getText(), data.private), [own]);
+        assert.deepStrictEqual(await monikers(document.uri, document.getText(), data.library), [bundled]);
+    });
 }
