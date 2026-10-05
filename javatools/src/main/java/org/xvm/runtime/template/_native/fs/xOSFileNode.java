@@ -8,6 +8,8 @@ import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 
 import java.util.concurrent.ExecutionException;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Op;
@@ -136,9 +138,25 @@ public class xOSFileNode
     private static final boolean WINDOWS = File.separatorChar == '\\';
 
     /**
+     * The separator of an Ecstasy {@code Path}; a path that starts with it is absolute.
+     */
+    private static final String SEPARATOR = "/";
+
+    /**
      * The root of the drive that holds the current directory.
      */
     private static final Path CURRENT_ROOT = Path.of("").toAbsolutePath().getRoot();
+
+    /**
+     * A Windows drive root, such as "C:\"; the group is the drive, such as "C:".
+     */
+    private static final Pattern DRIVE_ROOT = Pattern.compile("([A-Za-z]:)\\\\");
+
+    /**
+     * A path on a drive in the form of an Ecstasy {@code Path}, such as "/C:" or "/C:/a"; the groups
+     * are the drive, such as "C:", and the optional rest of the path, such as "/a".
+     */
+    private static final Pattern DRIVE_STORE_PATH = Pattern.compile("/([A-Za-z]:)(/.*)?");
 
     /**
      * Convert an OS path to the '/'-separated form of an Ecstasy {@code Path}, which does not
@@ -154,20 +172,21 @@ public class xOSFileNode
         if (!WINDOWS) {
             return path.toString();
         }
-        Path root = path.getRoot();
+        String sPath = path.toString().replace(File.separator, SEPARATOR);
+        Path   root  = path.getRoot();
         if (root == null) {
-            return path.toString().replace('\\', '/');
+            return sPath;
         }
-        String sRoot = root.toString();
-        String sRest = root.relativize(path).toString().replace('\\', '/');
-        if (sRoot.equals("\\") || root.equals(CURRENT_ROOT)) {
-            return "/" + sRest;
+        String sRest = root.relativize(path).toString().replace(File.separator, SEPARATOR);
+        if (root.equals(CURRENT_ROOT) || root.toString().equals(File.separator)) {
+            return SEPARATOR + sRest;
         }
-        if (sRoot.length() == 3 && sRoot.charAt(1) == ':') {
-            String sDrive = "/" + sRoot.substring(0, 2);
-            return sRest.isEmpty() ? sDrive : sDrive + '/' + sRest;
+        Matcher drive = DRIVE_ROOT.matcher(root.toString());
+        if (drive.matches()) {
+            String sDrive = SEPARATOR + drive.group(1);
+            return sRest.isEmpty() ? sDrive : sDrive + SEPARATOR + sRest;
         }
-        return path.toString().replace('\\', '/');
+        return sPath;
     }
 
     /**
@@ -179,10 +198,13 @@ public class xOSFileNode
      * @return the OS path
      */
     public static Path toOsPath(String sPath) {
-        if (WINDOWS && sPath.length() >= 3 && sPath.charAt(0) == '/' && sPath.charAt(2) == ':'
-                && Character.isLetter(sPath.charAt(1))
-                && (sPath.length() == 3 || sPath.charAt(3) == '/')) {
-            return Path.of(sPath.substring(1, 3) + '/' + sPath.substring(Math.min(4, sPath.length())));
+        if (WINDOWS) {
+            Matcher drive = DRIVE_STORE_PATH.matcher(sPath);
+            if (drive.matches()) {
+                // the root of a drive is "C:/"; a bare "C:" means the current directory on that drive
+                String sRest = drive.group(2);
+                return Path.of(drive.group(1) + (sRest == null ? SEPARATOR : sRest));
+            }
         }
         return Path.of(sPath);
     }
