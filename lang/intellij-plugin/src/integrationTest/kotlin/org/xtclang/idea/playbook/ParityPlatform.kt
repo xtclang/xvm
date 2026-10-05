@@ -80,6 +80,37 @@ internal fun ParityScenarios.platformCases() {
             }
         }
     }
+    case("X248") { data ->
+        val document = open(data.string("file"), data["variants"].asJsonArray.first().asJsonObject.string("source"))
+        data["variants"].asJsonArray.forEach { row ->
+            val variant = row.asJsonObject
+            replace(document, variant.string("source"))
+            errors(document)
+            val outline = query("textDocument/documentSymbol", document)
+            fun names(rows: List<JsonObject>): List<String> = rows.flatMap { symbol ->
+                listOf(symbol.string("name")) + symbol["children"]?.let { names(it.rows()) }.orEmpty()
+            }
+            check(names(outline.rows()).containsAll(variant.strings("symbols")))
+            val folds = query("textDocument/foldingRange", document).rows()
+            check(folds.any { it["startLine"].asInt == variant["foldLine"].asInt && it["endLine"].asInt > it["startLine"].asInt })
+            val at = document.at(variant.string("anchor"))
+            val selections = query("textDocument/selectionRange", document, extra = mapOf("positions" to listOf(document.params(at).getValue("position")))).rows()
+            val chain = generateSequence(selections.single()) { it["parent"]?.takeUnless { parent -> parent.isJsonNull }?.asJsonObject }.toList()
+            check(chain.size > 1)
+            val spans = chain.map { selection ->
+                val range = selection["range"].asJsonObject
+                ParityWorkspace.offset(document.text, range["start"].asJsonObject) to ParityWorkspace.offset(document.text, range["end"].asJsonObject)
+            }
+            check(spans.distinct() == spans)
+            val cursor = document.text.indexOf(variant.string("anchor"))
+            check(spans.all { cursor in it.first..it.second })
+            check(spans.zipWithNext().all { (child, parent) -> parent.first <= child.first && parent.second >= child.second })
+        }
+        replace(document, data.string("repaired"))
+        clean(document)
+        val outline = query("textDocument/documentSymbol", document).rows().single()
+        check(outline["children"].asJsonArray.map { it.asJsonObject.string("name") } == listOf("repaired"))
+    }
     case("X136") { data ->
         val document = open(data.string("file"), data.string("source"))
         clean(document)

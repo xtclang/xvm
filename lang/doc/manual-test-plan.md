@@ -1,6 +1,6 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **252 scenarios**: X1–X247, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **253 scenarios**: X1–X248, CFG1–CFG3 and 7a.8/7a.9.
 The preceding missing-method gate passes **X122/X209–X215** in VS Code `run-u5kDXk` and IntelliJ
 `run-4588144426201480586` (plus START), zero editor failures. It verifies required destination
 imports, exact signatures, atomic module-root/companion edits and diagnostic Undo/Redo. All 310
@@ -1389,7 +1389,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X247 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X248 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -3520,3 +3520,4 @@ New shared cases are implemented in both drivers; validation is batched after th
 | X245 | Request linked ranges for each lambda parameter and its nested capture. | Only that lambda's declaration and uses are included; the sibling parameter stays separate. |
 | X246 | Request linked editing for private/public method and primary constructor parameters. | No linked ranges: named callers and property contracts require graph Rename. |
 | X247 | Request linked ranges for `import types.Box as Box` in each method. | Include the explicit alias and its uses, excluding the imported target and other lexical scopes. |
+| X248 | Inspect outline, folds and selection in the shared damaged header/call/list/tuple variants, then repair. | Alias/current/later remain in the outline; method folds stay within source; selection strictly expands without duplicate spans; repair removes stale structure. |
