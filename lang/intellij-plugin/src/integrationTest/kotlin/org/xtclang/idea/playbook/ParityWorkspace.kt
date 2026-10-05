@@ -103,6 +103,15 @@ class ParityWorkspace(
                     .map { it.getFile() }
                     .distinctBy { it.getPath() }
                     .forEach(manager::closeFile)
+                // The common-workspace cases also leave closed dirty buffers. Retire them
+                // before this independent case, just as close() retires our own buffers;
+                // otherwise a later native Save All formats every preceding fixture first.
+                val documents = service<ParityDocuments>()
+                documents
+                    .getUnsavedDocuments()
+                    .filter {
+                        documents.getFile(it)?.getPath()?.startsWith(projectRoot.toString() + "/") == true
+                    }.forEach(documents::reloadFromDisk)
             }
         }
         configure(emptyList())
