@@ -147,6 +147,7 @@ class XdkAdapter
                 AdapterCapability.TYPE_HIERARCHY,
                 AdapterCapability.TYPE_DEFINITION,
                 AdapterCapability.IMPLEMENTATION,
+                AdapterCapability.MONIKER,
                 AdapterCapability.CALL_HIERARCHY,
                 AdapterCapability.SIGNATURE_HELP,
                 AdapterCapability.SEMANTIC_TOKENS,
@@ -507,6 +508,7 @@ class XdkAdapter
 
         private enum class ProjectQueryKind {
             REFERENCES,
+            MONIKERS,
             RENAME,
             RENAME_PROPOSAL,
             FILE_RENAME,
@@ -1610,15 +1612,26 @@ class XdkAdapter
             uri: String,
             line: Int,
             column: Int,
-        ): List<SymbolMoniker> {
-            if (module(uri) == null && hasProject(uri)) {
-                return workspaceNavigation(uri)?.monikers(uri, line, column).orEmpty()
+        ): List<SymbolMoniker> = findMonikersAsync(uri, line, column).join()
+
+        override fun findMonikersAsync(
+            uri: String,
+            line: Int,
+            column: Int,
+        ): CompletableFuture<List<SymbolMoniker>> {
+            val current = module(uri)
+            if (current == null && hasProject(uri)) {
+                return projectQuery(ProjectQueryKey(uri, ProjectQueryKind.MONIKERS), emptyList()) {
+                    it.navigation()?.monikers(uri, line, column).orEmpty()
+                }
             }
-            return module(uri)
-                ?.document(uri)
-                ?.semantics
-                ?.monikersAt(line, column)
-                .orEmpty()
+            return CompletableFuture.completedFuture(
+                current
+                    ?.document(uri)
+                    ?.semantics
+                    ?.monikersAt(line, column)
+                    .orEmpty(),
+            )
         }
 
         override fun findReferences(
