@@ -13,7 +13,7 @@ import { moduleCases } from './modules';
 import { navigationCases } from './navigation';
 import { platformCases } from './platform';
 import { progressCases } from './progress';
-import { reliabilityCases } from './reliability';
+import { refreshOverlapCases, reliabilityCases } from './reliability';
 import { propertyCases } from './properties';
 import { renameCases } from './rename';
 import { renameFamilyCases } from './renameFamilies';
@@ -75,6 +75,7 @@ suite('XdkAdapter playbook', function () {
     monikerCases();
     libraryContentCases();
     inlineCompletionCases();
+    refreshOverlapCases();
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {
