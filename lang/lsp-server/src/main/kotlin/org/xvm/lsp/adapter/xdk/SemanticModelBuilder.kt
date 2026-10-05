@@ -135,6 +135,30 @@ internal fun EmbeddingSupport.Compilation.renameFacts(
         }
     }
 
+/** Copy navigation identities alongside the editor models, without retaining proof-only facts. */
+internal fun EmbeddingSupport.Compilation.navigationFacts(
+    dependencies: XdkDependencies.Open,
+    errors: ErrorListener,
+): XdkNavigationIndex.Facts =
+    ExecutionTrace.api("Compilation.navigationFacts") {
+        ConstantPool.withPool(pool()).use {
+            val builder =
+                SemanticModelBuilder(
+                    dependencies.declarations.filterKeys { it.moduleConstant != file()?.moduleId },
+                )
+            val facts =
+                captureRenameFacts(
+                    builder.build(this, errors),
+                    builder.constantBindings(),
+                    dependencies,
+                    errors = errors,
+                    supers = builder.superBindings(),
+                    receivers = builder.receiverBindings(),
+                )
+            XdkNavigationIndex.Facts(facts.models, facts.constants)
+        }
+    }
+
 /** Graph proof facts retain dependency declaration associations and actual dispatch chains. */
 internal fun EmbeddingSupport.Compilation.projectRenameFacts(
     dependencies: XdkDependencies.Open,
