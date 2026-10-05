@@ -1,6 +1,6 @@
 # Upstream issues affecting Ecstasy language support
 
-This is the upstream dependency register for `lagergren/errs`, updated on 2026-10-04.
+This is the upstream dependency register for `lagergren/errs`, updated on 2026-10-05.
 It complements the [implementation plan](errs-integration-plan.md) and
 [manual playbook](../lang/doc/manual-test-plan.md). Local fixes do not mean an upstream
 release contains the repair. The entries below record the branch's source inspection,
@@ -320,3 +320,33 @@ coverage for repeated Undo/Redo.
 Do not retry a partially applied transaction. A host API for replacing the transaction, or a
 separate Ecstasy-owned Move command with complete undo ownership, is required to remove this limit.
 The marker is in `lang/vscode-extension/src/rename-proposal.ts`.
+
+
+### UP24: asynchronous IntelliJ formatting loses Redo
+
+IntelliJ `IU-262.10968.63` applies asynchronous formatting through
+`AsyncDocumentFormattingSupportImpl.FormattingRequestImpl.runAndAwaitTask` using
+`CommandProcessor.runUndoTransparentAction`. Inspection of the pinned platform bytecode and native
+X249/X250 show the same result: standalone Reformat produces the correct text and Undo restores the
+original, but no Redo change follows. This is the platform path used by LSP4IJ 0.21.0 and our existing
+UP12 formatting bridge; it is not a compiler formatting failure or a focus timeout.
+
+`XtcFormattingService` now applies asynchronous replies in a named write command on the EDT. It
+checks cancellation, project/file lifetime, document revision and original text before application.
+The compiler request remains asynchronous; the EDT never waits for its reply. Synchronous formatting
+continues through the platform's existing command, preserving Save behavior. Equal output creates no
+new command. No compiler or AST changes are involved. The workaround has a searchable
+`// TODO LSP4IJ: UP24` comment; this label identifies the integration boundary, not ownership of the
+platform implementation.
+
+Evidence:
+
+- `run-12440566880428489550`: ten selected cases and START passed; X249/X250 failed specifically at
+  Redo. Formatting, diagnostics, repeat-query idempotence and Undo had passed. No IDE failures.
+- `run-14744074393597958558`: START and X249/X250/X139/X132 pass with zero IDE failures. The two new
+  cases assert exact Format/Undo/Redo/Undo text; X139 retains native Save All for a closed document,
+  and X132 retains range/save coverage.
+
+Status: locally bridged. Remove the asynchronous write-command path only after native standalone
+formatting and range/save/closed-document acceptance retain history without it on a repaired platform.
+This run does not establish an upstream release fix or a general audit of all async formatters.
