@@ -1,21 +1,11 @@
 # Ecstasy LSP Server
 
-L56–L59 add IntelliJ startup message ordering and stale-fold guards, compiler-bound formal
-completion/hover in unfinished headers, compound argument validation with callable fallbacks,
-and inferred lambda/destructured-type hints. Shared X42/X97/X108 exercise the semantic additions;
-[validation and outstanding acceptance](../../docs/errs-integration-plan.md#l56-startup-synchronization-implementation-2026-09-28)
-are recorded separately from native IntelliJ execution. L56 now has a passing five-phase native
-startup check; queue/API/request timing and the X103 transport deadlock fix are described in the
-[current hardening record](../../docs/errs-integration-plan.md#native-startup-rename-deadlock-and-execution-tracing-2026-09-28).
-
-C27/L51 completes written type prefixes inside function parameters/returns and type-sequence
-arguments, with bounded missing-closer recovery and no invented header signatures. Shared X106 is
-implemented in both editors. IntelliJ now asserts X33/X35 navigation and the complete X101
-read-only checks; native execution receipts are tracked separately in the active validation plan.
-
-L50 adds compiler-proven property/accessor-family rename, explicit alias rename, simple member-file
-type moves and public-type auto-import repairs. See the
-[scope and proof boundaries](../../docs/errs-integration-plan.md#broader-refactoring-checkpoint-l50).
+Compiler mode provides compiler diagnostics and semantic editor features across configured source
+and binary dependencies. Tree-sitter remains the default shipped adapter. The
+[completion checklist](../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist)
+records bounded implementations, deliberate refusals and the remaining runtime/release work.
+The [L82 checkpoint](../../docs/errs-integration-plan.md#l82-combined-regression-and-retention-checkpoint-2026-10-05)
+tracks the combined tests, real-project retention fixes and current editor acceptance separately.
 
 Language Server Protocol (LSP) implementation for the Ecstasy programming language.
 
@@ -80,7 +70,7 @@ The selection is embedded in `lsp-version.properties` inside the JAR.
 |---------|-------|-------------|
 | **Mock** | `mock` | Regex-based parsing. No native dependencies. Good for testing. |
 | **Tree-sitter** (default) | `treesitter` | AST-based parsing using tree-sitter. Requires native library. |
-| **XDK** | `compiler` | Compiler diagnostics, semantic navigation and type hierarchy across a module. The full matching XDK library set is bundled. |
+| **XDK** | `compiler` | Compiler diagnostics, semantic navigation and hierarchy across source graphs and binary dependencies. The full matching XDK library set is bundled. |
 
 ### Build Commands
 
@@ -147,7 +137,9 @@ require an initializer; the action does not invent one. Property inline/delete r
 constant values without runtime initialization.
 
 Type spelling reuses resolved module imports and the compiler's implicit Ecstasy module constants;
-this does not restrict the module path to the core library. Both source and binary dependency types
+this does not restrict the module path to the core library. Recursive typedef identities support
+diagnostics and rename; member generation refuses aliases whose destination spelling/import route
+is not proven, without suppressing unrelated actions. Both source and binary dependency types
 have extraction regression coverage. Shared X221–X242 pass selected acceptance in both editor
 drivers; the combined backend/protocol gate passes 498 tests without skips. The
 [bounded closure and receipts](../../docs/errs-integration-plan.md#l63-bounded-closure-and-acceptance-2026-10-04)
@@ -169,8 +161,8 @@ implementation retain their separate meanings. Indexed library sources remain re
 | Highlights | By spelling | Syntax, read/write distinction | Resolved identities, read/write distinction |
 | Completion | Basic | Context-aware | Bounded scope/member/static completion and compatible argument values |
 | Inline completion | No | No | Compiler names/argument values; automatic ambiguity suppression and explicit alternatives |
-| Rename | Basic | Implemented with syntax limits | Locals/private parameters; graph method/property families, types, static members and aliases; simple member-file moves; compiler proof and versioned edits |
-| Code actions / formatting | Basic | Implemented with syntax limits | Proven ordinary-import cleanup and unresolved public-type imports; Java-lexer indentation, continuations and token-boundary wrapping with literal-preservation checks |
+| Rename | Basic | Implemented with syntax limits | Proven source families, parameter slots, aliases and cross-module/resource moves; graph proofs and versioned edits |
+| Code actions / formatting | Basic | Implemented with syntax limits | Proven import/member/local fixes and bounded refactorings; lexer indentation, continuations and token-boundary wrapping with literal-preservation checks |
 | Folding / selection | Basic / none | Syntax AST | Compiler AST; strictly nested selection spans and exact closing-brace fold columns |
 | Signature help | None | Same-file | Selected calls and compiler-fitted incomplete-call candidates |
 | Document links | Imports | Workspace index | HTTP(S) URLs in comments/literals plus resolved module/type/alias/wildcard import sources |
@@ -206,9 +198,11 @@ imports while retaining comments; they use versioned edits. Source property/acce
 explicit import aliases and member-file type/package moves also use compiler proof. Resource moves
 include existing companion directories and simple discovery-owned module roots, updating closed
 imports while retaining local package aliases. Versioned text edits precede file/directory moves.
-They require client resource-operation support and reject collisions, symlinks, qualified module
-names and module roots owned by explicit host configuration. Implicit package directories without
-written declarations, constructor keywords and public parameter contracts remain unsupported.
+They require client resource-operation support and reject collisions and symlinks. Qualified modules,
+implicit package directories and bounded cross-module ownership moves use the L62 graph proof.
+Explicit source-graph replacement is available through guarded native `xtc/rename` and
+`xtc/renameFiles` proposals with configuration persistence and Undo; generic LSP clients cannot
+apply that configuration change through a standard rename. The `construct` keyword stays unchanged.
 Compiler mode handles `workspace/didRenameFiles` for local XTC files, refreshing old and new
 locations even without watcher events. This also enables LSP4IJ's close/open sequence for renamed
 buffers, preventing stale overlays when an open member is renamed again.
@@ -344,8 +338,8 @@ fails. Explicit queries complete visible types in `extends`, `implements`, `dele
 `incorporates` and `into`, including qualified/generic leaf names. Empty composition slots also
 work. The retained type has no compiler component or inheritance facts; its body never registers
 against the enclosing type. Suggestions prove visibility, while normal compilation checks legal
-inheritance and constraints. Shared X95 exercises both editor consumers; native IntelliJ execution
-is still pending. Shared X96 adds eight generic/formal and whole-token acceptance variants.
+inheritance and constraints. Shared X95 exercises both editor consumers; native acceptance receipts
+are in the integration plan. Shared X96 adds eight generic/formal and whole-token acceptance variants.
 See [C24/L41](../../docs/errs-integration-plan.md#generic-type-completion-batch) and [C23/L39](../../docs/errs-integration-plan.md#class-and-interface-composition-headers).
 
 Static call hierarchy groups selected source call sites by method/lambda, including unopened source
@@ -355,22 +349,18 @@ Inlay hints show inferred local/destructured types, inferred lambda parameters a
 lambda return types after successful compilation, plus selected positional
 parameter names, omitting named arguments and synthetic defaults. These queries use copied facts
 and expire with the module snapshot.
+Both editor plugins enable compiler hints by default; native editor inlay settings also control
+their display. Tree-sitter does not advertise inferred-type hints because it has no compiler type
+model. Its negative capability test is active; compiler hint coverage is separate (X42/X259).
 
-Rename covers locals and private ordinary-method parameters, including captures and selected named
-argument labels. It recompiles proposed edits and compares all recorded bindings and selected calls;
-untouched names must keep their targets. The client must support versioned document edits. Source
-edits, dependency replacement, cancellation and close invalidate pending rename work. Unknown
-bindings, failed compilation, public/lambda/constructor parameters and method-value escapes remain
-unsupported for parameter rename. A discovered/configured source graph additionally enables ordinary instance-
-method override rename: it recompiles all configured modules and checks dispatch chains as well as
-written bindings. Generic interface contracts and closed/transitive consumers are covered. Binary
-contracts (including source overrides of bundled XDK methods), constructors and mixin/delegating/capped
-chains fail closed. Source property/accessor families, inline types and static members use the same
-graph proof. Simple member-file type renames include a capability-gated, nonoverwriting file move. Ordinary `super(...)` calls
-retain their selected written parent body for navigation/hierarchy and rename proof; the keyword
-itself is not renamed. The graph must
-include every source consumer. Workspace discovery supplies roots/import edges, but cannot prove
-anything about external clients outside those folders.
+Rename covers locals, lambda and method/constructor parameter slots, source method/property
+families, primary-header properties, types, static members and aliases. Configured graphs also
+support bounded mixin/delegation/annotation routes, qualified module/package moves and cross-module
+ownership changes. Every proposal recompiles the affected graph and compares bindings and dispatch;
+binary contracts and unsupported runtime/generated routes remain read-only or refused. The
+[L62 closure](../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist) specifies the
+exact boundaries. Versioned edits, current source/resource snapshots and complete graph proof are
+mandatory. An explicit graph declares the proof boundary; omitted consumers remain unknown.
 Completed function-valued calls expose signature types without invented runtime targets or parameter
 names. Explicit cursor analysis also retains binary/conditional expressions and following call
 arguments, while incomplete values still cannot emit code. Structure-only diagnostics map to source
