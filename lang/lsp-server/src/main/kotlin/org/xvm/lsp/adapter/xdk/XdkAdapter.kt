@@ -21,6 +21,7 @@ import org.xvm.lsp.adapter.FoldingRange
 import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.FormattingOptions
 import org.xvm.lsp.adapter.InlayHint
+import org.xvm.lsp.adapter.InlineCompletionContext
 import org.xvm.lsp.adapter.LinkedEditingRanges
 import org.xvm.lsp.adapter.Position
 import org.xvm.lsp.adapter.PrepareRenameResult
@@ -136,6 +137,7 @@ class XdkAdapter
         override val capabilities: Set<AdapterCapability> =
             setOf(
                 AdapterCapability.COMPLETION,
+                AdapterCapability.INLINE_COMPLETION,
                 AdapterCapability.HOVER,
                 AdapterCapability.DEFINITION,
                 AdapterCapability.DECLARATION,
@@ -530,6 +532,7 @@ class XdkAdapter
         private enum class CursorKind {
             PROBE,
             COMPLETION,
+            INLINE_COMPLETION,
             SIGNATURE,
         }
 
@@ -2200,6 +2203,24 @@ class XdkAdapter
                             if (isStale(compilation)) emptyList() else ordinary + imports
                         }
                     }
+                }
+        }
+
+        override fun getInlineCompletionsAsync(
+            uri: String,
+            position: Position,
+            context: InlineCompletionContext,
+        ): CompletableFuture<List<TextEdit>> {
+            val compilation = synchronized(lifecycle) { requests[analysisScope(uri)] }
+                ?: return CompletableFuture.completedFuture(emptyList())
+            val text = compilation.overlays[uri] ?: return CompletableFuture.completedFuture(emptyList())
+            if (isLibraryDocument(uri) || !XdkInlineCompletions.eligible(text, position, context)) {
+                return CompletableFuture.completedFuture(emptyList())
+            }
+            return analyzeAtAsync(CursorKey(uri, CursorKind.INLINE_COMPLETION), position)
+                .mapCancellable { partial ->
+                    if (partial == null || isStale(compilation)) emptyList()
+                    else XdkInlineCompletions.project(text, position, context, XdkCursorQueries.completions(partial))
                 }
         }
 
