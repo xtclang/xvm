@@ -1,5 +1,4 @@
 import { randomUUID } from 'node:crypto';
-import * as fs from 'node:fs';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { BuildModel, describeBuildModel, mergeBuildModels, modelPath, parseBuildModel, readCompilerReport, workspaceModelPath } from './build-model';
@@ -17,7 +16,7 @@ function importOwner(folder: vscode.WorkspaceFolder): CompilerImport {
     const existing = imports.get(key);
     if (existing) return existing;
     if (folder.uri.scheme !== 'file') throw new Error('Compiler build import requires a local workspace folder.');
-    const owner = new CompilerImport(() => readCompilerReport(folder.uri.fsPath), parseBuildModel);
+    const owner = new CompilerImport(() => readCompilerReport(folder.uri.fsPath), parseBuildModel, text => parseBuildModel(text).importId);
     imports.set(key, owner);
     return owner;
 }
@@ -54,6 +53,7 @@ export async function refreshCompilerBuild(prepare = false, selected?: vscode.Wo
     if (!vscode.workspace.isTrusted) throw new Error('Trust this workspace before running its Gradle build.');
     if (owner.uri.scheme !== 'file') throw new Error('Compiler build import requires a local workspace folder.');
     const key = owner.uri.toString();
+    if (activeImports.has(key)) throw new Error('An Ecstasy compiler import is already running for this folder.');
     const model = importOwner(owner);
     compilerBuildModels();
     const claim = model.begin(prepare);
@@ -66,7 +66,8 @@ export async function refreshCompilerBuild(prepare = false, selected?: vscode.Wo
         const task = new vscode.Task({ type: 'xtc-model', prepare, operation }, owner,
             prepare ? 'Prepare compiler inputs' : 'Refresh compiler paths', 'Ecstasy',
             new vscode.ProcessExecution(wrapper.fsPath, ['--init-script', path.resolve(__dirname, '../resources/compiler-model.init.gradle'),
-                prepare ? 'prepareEcstasyWorkspaceModel' : 'exportEcstasyWorkspaceModel', '--console=plain'], { cwd: owner.uri.fsPath }));
+                prepare ? 'prepareEcstasyWorkspaceModel' : 'exportEcstasyWorkspaceModel', '--console=plain'],
+            { cwd: owner.uri.fsPath, env: { XTC_COMPILER_IMPORT_ID: claim.id } }));
         const outcome = await vscode.window.withProgress({
             location: vscode.ProgressLocation.Notification,
             title: `Ecstasy — ${prepare ? 'preparing generated inputs' : 'refreshing compiler paths'} (${owner.name})`,

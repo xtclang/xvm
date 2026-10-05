@@ -17,7 +17,7 @@ export interface BuildSourceSet {
     projectDependencies: string[];
     modulePath: string[];
 }
-export interface BuildModel { schemaVersion: 1; sourceSets: BuildSourceSet[]; buildRoots?: string[] }
+export interface BuildModel { schemaVersion: 1; sourceSets: BuildSourceSet[]; buildRoots?: string[]; importId?: string }
 export const modelPath = '.gradle/xtc/lsp-model.json';
 export const workspaceModelPath = '.gradle/xtc/lsp-workspace.json';
 
@@ -29,7 +29,9 @@ export function mergeBuildModels(models: BuildModel[]): BuildModel {
         if (previous && !isDeepStrictEqual(previous, entry)) throw new Error('Conflicting Gradle source-set ownership.');
         entries.set(key, entry);
     }
-    return { schemaVersion: 1, sourceSets: [...entries.values()], buildRoots: [...new Set(models.flatMap(model => model.buildRoots ?? []))] };
+    const identities = [...new Set(models.flatMap(model => model.importId ? [model.importId] : []))];
+    return { schemaVersion: 1, sourceSets: [...entries.values()], buildRoots: [...new Set(models.flatMap(model => model.buildRoots ?? []))],
+        ...(identities.length === 0 ? {} : { importId: identities.join(',') }) };
 }
 
 export function readCompilerReport(folder: string): string | undefined {
@@ -47,6 +49,7 @@ export function parseBuildModel(text: string): BuildModel {
     const model = JSON.parse(text) as BuildModel;
     if (model.schemaVersion !== 1 || !Array.isArray(model.sourceSets)) throw new Error('Unsupported Ecstasy Gradle model; refresh build configuration.');
     const owners = new Set<string>();
+    if (model.importId !== undefined && typeof model.importId !== 'string') throw new Error('Invalid Gradle import identity.');
     if (model.buildRoots !== undefined && (!Array.isArray(model.buildRoots) ||
         model.buildRoots.some(uri => typeof uri !== 'string' || new URL(uri).protocol !== 'file:'))) throw new Error('Invalid Gradle build roots.');
     for (const entry of model.sourceSets) {

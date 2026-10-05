@@ -74,11 +74,13 @@ async function main(): Promise<void> {
     }, null, 2));
     console.log(`[vscode-test] Reports and isolated workspace: ${runDirectory}`);
     await fs.writeFile(path.join(reports, 'latest-run.txt'), runDirectory + '\n');
-    const workspaceFile = multiRoot ? path.join(runDirectory, 'compiler.code-workspace') : undefined;
+    // Folder retirement needs an existing workspace container. Converting a single-folder
+    // extension-test window into a new workspace would replace the running test host itself.
+    const workspaceFile = multiRoot || selected.includes('X265') ? path.join(runDirectory, 'compiler.code-workspace') : undefined;
     if (workspaceFile) {
         await fs.mkdir(path.join(runDirectory, 'external'), { recursive: true });
         await fs.writeFile(workspaceFile, JSON.stringify({
-            folders: [{ path: 'workspace' }, { path: 'external' }], settings: {}
+            folders: [{ path: 'workspace' }, ...(multiRoot ? [{ path: 'external' }] : [])], settings: {}
         }, null, 2) + '\n');
     }
 
