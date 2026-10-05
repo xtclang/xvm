@@ -107,12 +107,16 @@ class XtcClientFeatures : LSPClientFeatures() {
     override fun <S : LanguageServer> createLauncherBuilder(): Launcher.Builder<S> =
         object : DefaultLauncherBuilder<S>(this) {
             @Suppress("UNCHECKED_CAST") // LSP4J's multiple-interface proxy factory returns Object.
-            override fun createProxy(remoteEndpoint: RemoteEndpoint): S =
-                ServiceEndpoints.toServiceObject(
-                    preflightedRenames.endpoint(remoteEndpoint),
-                    remoteInterfaces.toList<Class<*>>(),
-                    classLoader,
-                ) as S
+            override fun createProxy(remoteEndpoint: RemoteEndpoint): S {
+                val endpoint = preflightedRenames.endpoint(remoteEndpoint)
+                // Match Launcher.Builder: the single-interface overload derives its loader from
+                // that interface. The optional builder classLoader is normally null in LSP4IJ.
+                return if (localServices.size == 1 && remoteInterfaces.size == 1) {
+                    ServiceEndpoints.toServiceObject(endpoint, remoteInterfaces.single())
+                } else {
+                    ServiceEndpoints.toServiceObject(endpoint, remoteInterfaces.toList<Class<*>>(), classLoader) as S
+                }
+            }
 
             private fun snapshot(uri: String): DocumentStartupMessages.Snapshot? {
                 if (project.isDisposed || serverWrapper.isDisposed) return null
