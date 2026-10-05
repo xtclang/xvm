@@ -1903,3 +1903,15 @@ pass selected acceptance in both editors. The final combined backend/protocol ga
 **498 tests**, zero failures/errors/skips. L63 is closed within its documented supported/refused
 forms; this does not claim arbitrary refactorings or a full-catalog rerun. UP23 remains open.
 See the [closure and acceptance record](errs-integration-plan.md#l63-bounded-closure-and-acceptance-2026-10-04).
+
+### L66 structural/editing batch (2026-10-05)
+
+The four local slices add wildcard source targets, lexical lambda/same-name alias linked ranges,
+typedef outline/strict selection recovery, and token-preserving continuation/wrapping/comment-margin
+formatting. One AST accessor exposes immutable written import-name tokens; there is no new mutable
+AST state or semantic cache. X243–X250 pass selected acceptance in both editors. The backend gate
+passed 129 tests, followed by seven formatter checks and two packaged protocol checks. Unsupported
+conditional import source syntax is an explicit parser refusal. Native testing found and repaired
+IntelliJ formatting Redo (UP24); closed-document Save remains covered. The [closure receipt](errs-integration-plan.md#l66-bounded-closure-and-acceptance-2026-10-05)
+records failed attempts, final passes, exclusions and extraction checkpoints. L66 is closed within
+those bounds; this does not claim a full-catalog or release run.

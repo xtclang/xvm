@@ -7768,9 +7768,9 @@
       }
     },
     "X244": {
-      "title": "link a conditional import while retaining the compiler warning",
+      "title": "refuse guessed import links for unsupported conditional source syntax",
       "manual": [
-        "Open the linked import target and verify the matching Library source. Conditional imports still show COMPILER-29; the condition is not applied."
+        "Open the conditional import fixture. The parser must report an ordinary error; no guessed semantic import link is returned. Conditional import syntax is not currently supported."
       ],
       "values": {
         "file": "ImportLinks.x",
@@ -7780,10 +7780,7 @@
         "libraryModule": "LinkLibrary",
         "library": "module LinkLibrary { package tools { class Box {} } }",
         "alias": "",
-        "linkNames": [
-          "LinkLibrary",
-          "Crate"
-        ],
+        "linkNames": [],
         "aliasUses": []
       },
       "intellij": {
@@ -7902,7 +7899,7 @@
         "file": "Structure.x",
         "variants": [
           {
-            "source": "module Structure {\n    typedef Int Alias;\n    Object current(String value) {\n        /* \ud83d\ude00 */ return [value.si;\n    }\n    Int later() = 42;\n}",
+            "source": "module Structure {\n    typedef Int as Alias;\n    Object current(String value) {\n        /* \ud83d\ude00 */ return [value.si;\n    }\n    Int later() = 42;\n}",
             "symbols": [
               "Structure",
               "Alias",
@@ -7913,7 +7910,7 @@
             "foldLine": 2
           },
           {
-            "source": "module Structure {\n    typedef Int Alias;\n    Object current(String value) {\n        /* \ud83d\ude00 */ return (1, value.si;\n    }\n    Int later() = 42;\n}",
+            "source": "module Structure {\n    typedef Int as Alias;\n    Object current(String value) {\n        /* \ud83d\ude00 */ return (1, value.si;\n    }\n    Int later() = 42;\n}",
             "symbols": [
               "Structure",
               "Alias",
@@ -7924,7 +7921,7 @@
             "foldLine": 2
           },
           {
-            "source": "module Structure {\n    typedef Int Alias;\n    Object current(String value) {\n        /* \ud83d\ude00 */ return use(value.si;\n    }\n    Int later() = 42;\n}",
+            "source": "module Structure {\n    typedef Int as Alias;\n    Object current(String value) {\n        /* \ud83d\ude00 */ return use(value.si;\n    }\n    Int later() = 42;\n}",
             "symbols": [
               "Structure",
               "Alias",
@@ -7935,7 +7932,7 @@
             "foldLine": 2
           },
           {
-            "source": "module Structure {\n    typedef Int Alias;\n    void current(Int value, Str) {\n        /* \ud83d\ude00 */ Int retained = 1;\n    }\n    Int later() = 42;\n}",
+            "source": "module Structure {\n    typedef Int as Alias;\n    void current(Int value, Str) {\n        /* \ud83d\ude00 */ Int retained = 1;\n    }\n    Int later() = 42;\n}",
             "symbols": [
               "Structure",
               "Alias",
@@ -7962,7 +7959,7 @@
       ],
       "values": {
         "file": "Layout.x",
-        "source": "module Layout {\nInt run() {\nString literal = \"two  spaces\";\nInt value =\n1 +\n2;\n/* comment\n * keep relative layout and { braces }\n */\nreturn value;\n}\n}",
+        "source": "module Layout {\nInt run() {\nString literal = \"two  spaces\";\nInt value =\n1 +\n2;\n/* comment\n * keep relative layout and { braces }\n */\nreturn value;\n}\n}\n",
         "expected": "module Layout {\n    Int run() {\n        String literal = \"two  spaces\";\n        Int value =\n                1 +\n                2;\n        /* comment\n         * keep relative layout and { braces }\n         */\n        return value;\n    }\n}\n"
       },
       "intellij": {
@@ -7977,7 +7974,7 @@
       ],
       "values": {
         "file": "Wrap.x",
-        "source": "module Wrap {\nString run() {\nreturn \"1111111111111111111111111111111111111111\" + \"2222222222222222222222222222222222222222\" + \"3333333333333333333333333333333333333333\";\n}\n}",
+        "source": "module Wrap {\nString run() {\nreturn \"1111111111111111111111111111111111111111\" + \"2222222222222222222222222222222222222222\" + \"3333333333333333333333333333333333333333\";\n}\n}\n",
         "expected": "module Wrap {\n    String run() {\n        return \"1111111111111111111111111111111111111111\" + \"2222222222222222222222222222222222222222\" +\n                \"3333333333333333333333333333333333333333\";\n    }\n}\n"
       },
       "intellij": {

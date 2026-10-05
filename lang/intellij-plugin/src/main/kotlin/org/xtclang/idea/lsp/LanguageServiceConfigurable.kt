@@ -72,7 +72,7 @@ open class LanguageServiceConfigurable(
                 JBLabel(
                     "<html>Full is the default. Incremental sends changed text; it does not enable incremental compilation.<br>" +
                         "Server save edits are unavailable in LSP4IJ. Use Tools → Actions on Save → Reformat code.<br>" +
-                        "Indentation is configured under Editor → Code Style → Ecstasy. Line wrapping is not implemented.<br>" +
+                        "Indentation and the compiler wrapping margin are configured under Editor → Code Style → Ecstasy.<br>" +
                         "Compiler paths remain under Ecstasy Compiler. Trace and runtime controls remain in Language Servers.</html>",
                 ),
                 BorderLayout.CENTER,
