@@ -11,6 +11,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import groovy.json.JsonSlurper;
 
@@ -117,7 +119,7 @@ class XtcLspModelTest {
         write("build.gradle.kts", "");
         write("library/settings.gradle.kts", "rootProject.name = \"library\"\nincludeBuild(\"nested\")\n");
         write("library/nested/settings.gradle.kts", "rootProject.name = \"nested\"\n");
-        write("application/settings.gradle.kts", "rootProject.name = \"application\"\n");
+        write("application/settings.gradle.kts", "rootProject.name = \"application\"\nincludeBuild(\"../library\")\n");
         for (final var build : List.of("library", "library/nested", "application")) {
             write(build + "/build.gradle.kts", """
                 plugins { id("org.xtclang.xtc-plugin") }
@@ -128,27 +130,47 @@ class XtcLspModelTest {
         write("library/src/main/x/Library.x", "module Library {}");
         write("library/nested/src/main/x/Nested.x", "module Nested {}");
         write("application/src/main/x/App.x", "module App {}");
+        Files.writeString(directory.resolve("application/build.gradle.kts"), """
+            plugins { id("org.xtclang.xtc-plugin") }
+            group = "sample"
+            version = "1.0"
+            dependencies { add("xtcModule", "sample:library:1.0") }
+            """);
         try (var script = getClass().getResourceAsStream("/compiler-model.init.gradle")) {
             Files.copy(script, directory.resolve("compiler-model.init.gradle"));
         }
-        final var first = runWorkspace();
+        final var first = runWorkspace("first-import");
         assertTrue(first.getTasks().stream().noneMatch(task -> task.getPath().contains("compileXtc")));
         final var report = directory.resolve(".gradle/xtc/lsp-workspace.json");
-        final var accepted = Files.readString(report);
-        final var model = (Map<?, ?>) new JsonSlurper().parseText(accepted);
+        final var model = (Map<?, ?>) new JsonSlurper().parse(report.toFile());
+        assertEquals("first-import", model.get("importId"));
         assertEquals(6, ((List<?>) model.get("sourceSets")).size());
         assertEquals(4, ((List<?>) model.get("buildRoots")).size());
-        assertTrue(runWorkspace().getOutput().contains("Configuration cache entry reused"));
+        final var application = ((List<?>) model.get("sourceSets")).stream().map(value -> (Map<?, ?>) value)
+            .filter(entry -> entry.get("projectId").equals(uri("application") + "#:"))
+            .filter(entry -> entry.get("sourceSet").equals("main")).findFirst().orElseThrow();
+        assertEquals(List.of(uri("library") + "#:"), application.get("projectDependencies"));
+        assertTrue(runWorkspace("second-import").getOutput().contains("Configuration cache entry reused"));
+        final var accepted = Files.readString(report);
+        assertEquals("second-import", ((Map<?, ?>) new JsonSlurper().parseText(accepted)).get("importId"));
         write("library/nested/build.gradle.kts", "error(\"Deliberately broken nested build\")\n");
         assertThrows(UnexpectedBuildFailure.class, this::runWorkspace);
         assertEquals(accepted, Files.readString(report));
         write("settings.gradle.kts", "rootProject.name = \"root\"\nincludeBuild(\"application\")\n");
+        write("application/settings.gradle.kts", "rootProject.name = \"application\"\n");
+        write("application/build.gradle.kts", "plugins { id(\"org.xtclang.xtc-plugin\") }\nversion = \"1.0\"\n");
         runWorkspace();
         assertEquals(2, ((List<?>) ((Map<?, ?>) new JsonSlurper().parse(report.toFile())).get("sourceSets")).size());
     }
 
     private BuildResult runWorkspace() {
+        return runWorkspace("");
+    }
+
+    private BuildResult runWorkspace(final String importId) {
         return GradleRunner.create().withProjectDir(directory.toFile()).withPluginClasspath()
+            .withEnvironment(Stream.concat(System.getenv().entrySet().stream(), Stream.of(Map.entry("XTC_COMPILER_IMPORT_ID", importId)))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (previous, replacement) -> replacement)))
             .withArguments("--init-script", "compiler-model.init.gradle", "exportEcstasyWorkspaceModel",
                 "--configuration-cache", "--configuration-cache-problems=fail", "--no-watch-fs", "--stacktrace")
             .build();

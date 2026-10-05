@@ -11,59 +11,6 @@ import { client, diagnostics, eventually, noErrors, playbook } from './support';
 
 /** Same real Gradle producer and gated outcomes as the IntelliJ driver; no mocked task/progress. */
 export function compilerImportCases(): void {
-    playbook('X265', async (workspace, data) => {
-        const primary = vscode.workspace.workspaceFolders![0];
-        const root = path.join(path.dirname(primary.uri.fsPath), 'retired-import');
-        const fixture = catalog.common.compilerImport;
-        const shared = path.dirname(sharedScenarioPath);
-        const repository = path.resolve(shared, '../../..');
-        const control = path.join(root, '.compiler-import-playbook');
-        await fs.mkdir(control, { recursive: true });
-        for (const file of ['build.gradle.kts', 'settings.gradle.kts', 'gradle.properties', 'gradlew', 'gradlew.bat',
-            'gradle/wrapper/gradle-wrapper.jar', 'gradle/wrapper/gradle-wrapper.properties']) {
-            await fs.mkdir(path.dirname(path.join(root, file)), { recursive: true });
-            await fs.copyFile(file.includes('gradlew') || file.startsWith('gradle/') ? path.join(repository, file) :
-                path.join(shared, 'compiler-import', file), path.join(root, file));
-        }
-        if (process.platform !== 'win32') await fs.chmod(path.join(root, 'gradlew'), 0o755);
-        const model = JSON.parse(JSON.stringify(fixture.model).split('${workspace}').join(vscode.Uri.file(root).toString()));
-        await fs.writeFile(path.join(root, fixture.file), fixture.source);
-        await fs.mkdir(path.join(root, 'processed'), { recursive: true });
-        await fs.writeFile(path.join(root, fixture.resource), fixture.contents);
-        await fs.mkdir(path.dirname(path.join(root, modelPath)), { recursive: true });
-        await fs.writeFile(path.join(root, modelPath), JSON.stringify(model));
-        await fs.writeFile(path.join(control, 'model.json'), JSON.stringify(model));
-        await fs.writeFile(path.join(control, 'request.properties'), `operation=${data.operation}\noutput=valid\noutcome=success\n`);
-        const original = await client().sendRequest<{ pid: number }>('xtc/languageServiceStatus');
-        const uri = vscode.Uri.file(root);
-        assert.ok(vscode.workspace.updateWorkspaceFolders(vscode.workspace.workspaceFolders!.length, 0, { uri }));
-        await eventually(async () => vscode.workspace.workspaceFolders?.find(folder => folder.uri.toString() === uri.toString()), Boolean, 'Second compiler workspace folder added');
-        const secondary = vscode.workspace.workspaceFolders!.find(folder => folder.uri.toString() === uri.toString())!;
-        const pending = refreshCompilerBuild(false, secondary);
-        try {
-            await eventually(async () => fs.stat(path.join(control, `${data.operation}.started`)).then(() => true, () => false), Boolean, 'Secondary import is pending');
-            assert.ok(vscode.workspace.updateWorkspaceFolders(secondary.index, 1));
-            await eventually(async () => !vscode.workspace.workspaceFolders?.some(folder => folder.uri.toString() === uri.toString()), Boolean, 'Folder removed through native workspace API');
-            await pending;
-            await fs.writeFile(path.join(control, `${data.operation}.release`), 'late completion\n');
-            const producer = Number(await fs.readFile(path.join(control, `${data.operation}.pid`), 'utf8'));
-            await eventually(async () => {
-                if (await fs.stat(path.join(control, `${data.operation}.finished`)).then(() => true, () => false)) return true;
-                try { process.kill(producer, 0); return false; }
-                catch (error) { return (error as NodeJS.ErrnoException).code === 'ESRCH'; }
-            }, Boolean, 'Removed folder producer retired');
-            assert.ok(compilerBuildModels().flatMap(item => item.sourceSets).every(entry => entry.projectDirectory !== model.sourceSets[0].projectDirectory));
-            assert.strictEqual((await client().sendRequest<{ pid: number }>('xtc/languageServiceStatus')).pid, original.pid);
-            await workspace.write('Survivor.x', 'module Survivor {}\n');
-            const survivor = await workspace.open('Survivor.x');
-            await noErrors(survivor.uri);
-        } finally {
-            await fs.writeFile(path.join(control, `${data.operation}.release`), 'cleanup\n');
-            const remaining = vscode.workspace.workspaceFolders?.find(folder => folder.uri.toString() === uri.toString());
-            if (remaining) vscode.workspace.updateWorkspaceFolders(remaining.index, 1);
-            await pending.catch(() => {});
-        }
-    });
     for (const id of ['X260', 'X261', 'X262', 'X263', 'X264'] as const) {
         playbook(id, async (workspace, data) => {
             const root = vscode.workspace.workspaceFolders![0].uri.fsPath;
@@ -218,4 +165,62 @@ export function compilerImportCases(): void {
             }
         });
     }
+    playbook('X265', async (workspace, data) => {
+        const primary = vscode.workspace.workspaceFolders![0];
+        const root = path.join(path.dirname(primary.uri.fsPath), 'retired-import');
+        const fixture = catalog.common.compilerImport;
+        const shared = path.dirname(sharedScenarioPath);
+        const repository = path.resolve(shared, '../../..');
+        const control = path.join(root, '.compiler-import-playbook');
+        await fs.mkdir(control, { recursive: true });
+        for (const file of ['build.gradle.kts', 'settings.gradle.kts', 'gradle.properties', 'gradlew', 'gradlew.bat',
+            'gradle/wrapper/gradle-wrapper.jar', 'gradle/wrapper/gradle-wrapper.properties']) {
+            await fs.mkdir(path.dirname(path.join(root, file)), { recursive: true });
+            await fs.copyFile(file.includes('gradlew') || file.startsWith('gradle/') ? path.join(repository, file) :
+                path.join(shared, 'compiler-import', file), path.join(root, file));
+        }
+        if (process.platform !== 'win32') await fs.chmod(path.join(root, 'gradlew'), 0o755);
+        const model = JSON.parse(JSON.stringify(fixture.model).split('${workspace}').join(vscode.Uri.file(root).toString()));
+        await fs.writeFile(path.join(root, fixture.file), fixture.source);
+        await fs.mkdir(path.join(root, 'processed'), { recursive: true });
+        await fs.writeFile(path.join(root, fixture.resource), fixture.contents);
+        await fs.mkdir(path.dirname(path.join(root, modelPath)), { recursive: true });
+        await fs.writeFile(path.join(root, modelPath), JSON.stringify(model));
+        await fs.writeFile(path.join(control, 'model.json'), JSON.stringify(model));
+        await fs.writeFile(path.join(control, 'request.properties'), `operation=${data.operation}\noutput=valid\noutcome=success\n`);
+        const original = await client().sendRequest<{ pid: number }>('xtc/languageServiceStatus');
+        const uri = vscode.Uri.file(root);
+        const added = new Promise<void>(resolve => {
+            const listener = vscode.workspace.onDidChangeWorkspaceFolders(event => {
+                if (event.added.some(folder => folder.uri.toString() === uri.toString())) { listener.dispose(); resolve(); }
+            });
+        });
+        assert.ok(vscode.workspace.updateWorkspaceFolders(vscode.workspace.workspaceFolders!.length, 0, { uri }));
+        await added;
+        const secondary = vscode.workspace.workspaceFolders!.find(folder => folder.uri.toString() === uri.toString())!;
+        const pending = refreshCompilerBuild(false, secondary);
+        try {
+            await eventually(async () => fs.stat(path.join(control, `${data.operation}.started`)).then(() => true, () => false), Boolean, 'Secondary import is pending');
+            assert.ok(vscode.workspace.updateWorkspaceFolders(secondary.index, 1));
+            await eventually(async () => !vscode.workspace.workspaceFolders?.some(folder => folder.uri.toString() === uri.toString()), Boolean, 'Folder removed through native workspace API');
+            await pending;
+            await fs.writeFile(path.join(control, `${data.operation}.release`), 'late completion\n');
+            const producer = Number(await fs.readFile(path.join(control, `${data.operation}.pid`), 'utf8'));
+            await eventually(async () => {
+                if (await fs.stat(path.join(control, `${data.operation}.finished`)).then(() => true, () => false)) return true;
+                try { process.kill(producer, 0); return false; }
+                catch (error) { return (error as NodeJS.ErrnoException).code === 'ESRCH'; }
+            }, Boolean, 'Removed folder producer retired');
+            assert.ok(compilerBuildModels().flatMap(item => item.sourceSets).every(entry => entry.projectDirectory !== model.sourceSets[0].projectDirectory));
+            assert.strictEqual((await client().sendRequest<{ pid: number }>('xtc/languageServiceStatus')).pid, original.pid);
+            await workspace.write('Survivor.x', 'module Survivor {}\n');
+            const survivor = await workspace.open('Survivor.x');
+            await noErrors(survivor.uri);
+        } finally {
+            await fs.writeFile(path.join(control, `${data.operation}.release`), 'cleanup\n');
+            const remaining = vscode.workspace.workspaceFolders?.find(folder => folder.uri.toString() === uri.toString());
+            if (remaining) vscode.workspace.updateWorkspaceFolders(remaining.index, 1);
+            await pending.catch(() => {});
+        }
+    });
 }

@@ -120,10 +120,11 @@ val npmInstall =
     }
 
 // Compile TypeScript
-val copyCompilerModelImport = tasks.register<Copy>("copyCompilerModelImport") {
-    from(rootProject.layout.projectDirectory.file("gradle/compiler-model.init.gradle"))
-    into(layout.projectDirectory.dir("resources"))
-}
+val copyCompilerModelImport =
+    tasks.register<Copy>("copyCompilerModelImport") {
+        from(rootProject.layout.projectDirectory.file("gradle/compiler-model.init.gradle"))
+        into(layout.projectDirectory.dir("resources"))
+    }
 
 val npmCompile =
     tasks.register<NpmTask>("npmCompile") {

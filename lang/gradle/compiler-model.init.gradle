@@ -1,7 +1,7 @@
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
-import java.nio.file.Files
 import java.nio.file.AtomicMoveNotSupportedException
+import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
 /** One evaluated snapshot across a composite, including roots without the Ecstasy plugin. */
@@ -11,6 +11,9 @@ abstract class EcstasyWorkspaceModel extends DefaultTask {
 
     @Input
     abstract ListProperty<String> getBuildRoots()
+
+    @Input
+    abstract Property<String> getImportId()
 
     @OutputFile
     abstract RegularFileProperty getModel()
@@ -38,9 +41,11 @@ abstract class EcstasyWorkspaceModel extends DefaultTask {
         Files.createDirectories(output.parent)
         def temporary = Files.createTempFile(output.parent, 'workspace-', '.json')
         try {
-            Files.writeString(temporary, JsonOutput.prettyPrint(JsonOutput.toJson([
+            def snapshot = [
                 schemaVersion: 1, sourceSets: owners.values().toList(), buildRoots: roots.toList()
-            ])) + '\n')
+            ]
+            if (!importId.get().isEmpty()) snapshot.importId = importId.get()
+            Files.writeString(temporary, JsonOutput.prettyPrint(JsonOutput.toJson(snapshot)) + '\n')
             try {
                 Files.move(temporary, output, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
             } catch (AtomicMoveNotSupportedException ignored) {
@@ -59,6 +64,7 @@ gradle.beforeProject { project ->
             task.group = 'IDE'
             task.description = 'Import evaluated Ecstasy inputs from this build and included builds'
             task.buildRoots.set([project.projectDir.toURI().toString()])
+            task.importId.convention(project.providers.environmentVariable('XTC_COMPILER_IMPORT_ID').orElse(''))
             task.model.set(project.layout.projectDirectory.file(".gradle/xtc/lsp-workspace.json"))
             def local = project.tasks.matching { it.name == 'exportXtcLspModel' }
             task.dependsOn(project.tasks.matching { it.name == "${mode}XtcLspModel" })

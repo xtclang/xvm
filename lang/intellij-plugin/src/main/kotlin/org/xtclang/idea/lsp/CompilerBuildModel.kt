@@ -30,6 +30,7 @@ object CompilerBuildModel {
             "Unsupported Gradle compiler model; refresh build configuration"
         }
         val entries = model["sourceSets"].asJsonArray.map { it.asJsonObject }
+        model["importId"]?.let { require(it.isJsonPrimitive && it.asJsonPrimitive.isString) { "Invalid Gradle import identity" } }
         model["buildRoots"]?.let { roots ->
             require(roots.isJsonArray && roots.asJsonArray.all { URI(it.asString).scheme == "file" }) { "Invalid Gradle build roots" }
         }
@@ -86,12 +87,14 @@ object CompilerBuildModel {
         return model
     }
 
-    fun read(project: Project): JsonObject? =
-        project
-            .service<CompilerImportService>()
-            .model
-            .current()
-            ?.let(::parse)
+    fun read(project: Project): JsonObject? {
+        val imports = project.service<CompilerImportService>().model
+        return runCatching { imports.current() }
+            .getOrElse {
+                logger<CompilerBuildModel>().warn("Cannot read Gradle compiler inputs; retaining previous import", it)
+                imports.retained()
+            }?.let(::parse)
+    }
 
     fun settings(
         project: Project,
@@ -99,18 +102,7 @@ object CompilerBuildModel {
     ): JsonObject {
         val settings =
             Gson().toJsonTree(current).takeIf { it.isJsonObject }?.asJsonObject ?: JsonObject()
-        val model =
-            runCatching {
-                read(project)
-            }.getOrElse {
-                logger<CompilerBuildModel>()
-                    .warn("Cannot read Gradle compiler inputs; retaining previous import", it)
-                project
-                    .service<CompilerImportService>()
-                    .model
-                    .retained()
-                    ?.let(::parse)
-            }
+        val model = read(project)
         val xtc =
             settings["xtc"]?.takeIf { it.isJsonObject }?.asJsonObject
                 ?: JsonObject().also { settings.add("xtc", it) }
@@ -229,17 +221,20 @@ object CompilerBuildModel {
                 val builds = roots.filter { Files.isRegularFile(it.resolve(wrapperName)) }
                 require(builds.isNotEmpty()) { "No Gradle wrapper here; configure manual paths instead" }
                 indicator.text = if (prepare) "Preparing generated sources and resources" else "Reading evaluated Gradle inputs"
-                val outputs = builds.asSequence().map { root ->
-                    indicator.checkCanceled()
-                    indicator.text2 = root.toString()
-                    val command = GeneralCommandLine(
-                        root.resolve(wrapperName).toString(),
-                        "--init-script", CompilerWorkspaceModels.importScript().toString(),
-                        if (prepare) "prepareEcstasyWorkspaceModel" else "exportEcstasyWorkspaceModel",
-                        "--console=plain",
-                    ).withWorkDirectory(root.toFile())
-                    CapturingProcessHandler(command).runProcessWithProgressIndicator(indicator)
-                }
+                val outputs =
+                    builds.asSequence().map { root ->
+                        indicator.checkCanceled()
+                        indicator.text2 = root.toString()
+                        val command =
+                            GeneralCommandLine(
+                                root.resolve(wrapperName).toString(),
+                                "--init-script",
+                                CompilerWorkspaceModels.importScript().toString(),
+                                if (prepare) "prepareEcstasyWorkspaceModel" else "exportEcstasyWorkspaceModel",
+                                "--console=plain",
+                            ).withWorkDirectory(root.toFile()).withEnvironment("XTC_COMPILER_IMPORT_ID", operation.id)
+                        CapturingProcessHandler(command).runProcessWithProgressIndicator(indicator)
+                    }
                 val output = outputs.firstOrNull { it.isCancelled || it.isTimeout || it.exitCode != 0 }
                 when {
                     output?.isCancelled == true || indicator.isCanceled -> {
