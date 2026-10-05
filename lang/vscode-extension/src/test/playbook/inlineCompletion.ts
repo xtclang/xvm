@@ -18,7 +18,13 @@ export function inlineCompletionCases(): void {
                 const query = (triggerKind: InlineCompletionTriggerKind, selectedCompletionInfo?: { range: vscode.Range; text: string }) =>
                     client().sendRequest<InlineCompletionList>('textDocument/inlineCompletion', {
                         textDocument: { uri: document.uri.toString() }, position: at,
-                        context: { triggerKind, selectedCompletionInfo }
+                        context: {
+                            triggerKind,
+                            selectedCompletionInfo: selectedCompletionInfo && {
+                                ...selectedCompletionInfo,
+                                range: client().code2ProtocolConverter.asRange(selectedCompletionInfo.range)
+                            }
+                        }
                     });
                 assert.ok(client().initializeResult?.capabilities.inlineCompletionProvider);
                 if (data.mode === 'selection') {

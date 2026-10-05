@@ -352,6 +352,8 @@ dependencies {
     add(integrationTestSourceSet.runtimeOnlyConfigurationName, libs.lang.intellij.service.messages)
     // Driver-side protocol assertions use named error codes outside the IDE/plugin classloader.
     add(integrationTestSourceSet.runtimeOnlyConfigurationName, libs.lang.lsp4j.jsonrpc)
+    // Protocol enums in the external playbook driver are not loaded through the IDE plugin loader.
+    add(integrationTestSourceSet.runtimeOnlyConfigurationName, libs.lang.lsp4j)
 
     // LSP server fat JAR for out-of-process execution
     lspServerJar(project(path = ":lsp-server", configuration = "lspServerElements"))
