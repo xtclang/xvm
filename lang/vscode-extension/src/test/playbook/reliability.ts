@@ -1,5 +1,6 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
+import { WorkbenchUi } from '../workbenchUi';
 import { CloseAction } from 'vscode-languageclient/node';
 import { client, eventually, noErrors, playbook } from './support';
 
@@ -101,6 +102,59 @@ export function reliabilityCases(): void {
             connection.sendRequest = originalRequest;
             releases.forEach(release => release());
             await config.update('inlayHints.enabled', originalSettings, vscode.ConfigurationTarget.Workspace);
+        }
+    });
+}
+
+export function refreshOverlapCases(): void {
+    playbook('X259', async (workspace, data) => {
+        await workspace.write(data.library, data.original);
+        await workspace.write(data.consumer, data.source);
+        await workspace.configure([
+            { name: data.libraryModule, uri: workspace.uri(data.library).toString() },
+            { name: data.consumerModule, uri: workspace.uri(data.consumer).toString(), dependencies: [data.libraryModule] }
+        ]);
+        const library = await workspace.open(data.library);
+        const consumer = await workspace.open(data.consumer);
+        const version = consumer.version;
+        const config = vscode.workspace.getConfiguration('xtc');
+        const original = config.inspect('inlayHints.enabled')?.workspaceValue;
+        const ui = await WorkbenchUi.connect();
+        const hints = (enabled: boolean) => config.update('inlayHints.enabled', enabled, vscode.ConfigurationTarget.Workspace);
+        async function visible(expected?: string) {
+            // Inspect the renderer's installed hint labels, without executing an inlay provider.
+            await eventually(() => ui.inlayLabels(), labels => expected === undefined ? labels.length === 0 :
+                labels.some(label => label.includes(expected)) &&
+                !labels.some(label => label.includes(expected === data.before ? data.after : data.before)),
+            `Untouched consumer displays ${expected ?? 'no'} inlay hints`);
+            assert.strictEqual(consumer.getText(), data.source);
+            assert.strictEqual(consumer.version, version);
+            await ui.screenshot(`X259-${expected ?? 'disabled'}`);
+        }
+        try {
+            await hints(true);
+            await visible(data.before);
+            await hints(false);
+            await visible();
+            const previous = await client().sendRequest<{ pid: number }>('xtc/languageServiceStatus');
+            await workspace.replace(library, data.changed, false);
+            await hints(true);
+            await vscode.commands.executeCommand('xtc.restartServer');
+            await eventually(async () => {
+                try { process.kill(previous.pid, 0); return false; }
+                catch (error) { if ((error as NodeJS.ErrnoException).code === 'ESRCH') return true; throw error; }
+            }, Boolean, 'Retired refresh producer exits');
+            assert.notStrictEqual((await client().sendRequest<{ pid: number }>('xtc/languageServiceStatus')).pid, previous.pid);
+            await visible(data.after);
+            await noErrors(consumer.uri);
+            await hints(false);
+            await workspace.replace(library, data.original, false);
+            await hints(true);
+            await visible(data.before);
+            await noErrors(consumer.uri);
+        } finally {
+            await config.update('inlayHints.enabled', original, vscode.ConfigurationTarget.Workspace);
+            await ui.close();
         }
     });
 }

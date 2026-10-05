@@ -1,6 +1,12 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **263 scenarios**: X1–X258, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **264 scenarios**: X1–X259, CFG1–CFG3 and 7a.8/7a.9.
+
+L81 selected acceptance: VS Code `run-VeotM0` and IntelliJ `run-15703196975306829056`
+pass X145/X146/X147/X259 (IntelliJ also passes START, with zero IDE errors). VS Code now clicks the
+actual displayed Cancel control automatically. Shared-process lifecycle passes in `run-Sh7ro5`;
+the separate-instance regression passes in `run-xOLpd6`. The 19 focused backend/transport tests
+pass without failures/skips. See the [L81 closure receipt](../../docs/errs-integration-plan.md#l81-native-acceptance-closure-2026-10-05).
 
 L76 validation: 46 backend/protocol tests and the packaged UTF-16 round trip pass, without failures
 or skips. VS Code `run-B6sogF` passes X7/X31/X255–X258. IntelliJ
@@ -1408,7 +1414,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X258 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X259 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -2394,7 +2400,7 @@ module Advanced {
 | X142 | Open configured `FoldedInitializer.x`; hover and navigate from `Int copy = value`, find references, rename `value` to `number`, then Undo. | The declaration, folded initializer and method body share one semantic identity; all three rename together, compile cleanly and restore on Undo. |
 | X143 | Configure `PartialSymbols.x` with 130 classes. Compare ordinary workspace symbols with a request carrying a partial-result token. | Ordered progress batches contain at most 64 symbols each; their combined names match the ordinary result exactly and the final response is empty. |
 | X144 | Apply a current versioned text edit through the installed client, Undo it, then send a two-document edit with one stale version. | Current edit and native Undo succeed. A stale target refuses the whole batch and preserves both current buffers. Drivers invoke the installed application handler; packaged tests separately exercise server-to-client transport. |
-| X145 | Replace ProgressWork with the shared workload and request references. Verify the progress source/activity text, cancel, then check hover; repeat and restart while pending. | Cancellation terminates only the request; progress disappears. Restart preserves unsaved text, retires the pending reader and exits the old PID. Manual VS Code Cancel-control checks use 20,000 methods; automatic IntelliJ Cancel, the ordinary VS Code callback and restart use 5,000. A request finishing too early fails as unexercised. Historical model-cancellation receipts and current visible-control acceptance are distinguished in the L81 section below. |
+| X145 | Replace ProgressWork with the shared workload and request references. Verify the progress source/activity text, cancel, then check hover; repeat and restart while pending. | Cancellation terminates only the request; progress disappears. Restart preserves unsaved text, retires the pending reader and exits the old PID. Visible VS Code Cancel-control checks use 20,000 methods; automatic IntelliJ Cancel, the ordinary VS Code callback and restart use 5,000. A request finishing too early fails as unexercised. Historical model-cancellation receipts and current visible-control acceptance are distinguished in the L81 section below. |
 | X146 | Open RefreshConsumer with inferred `var value = lib.make()`. Change only RefreshLibrary from returning Int to String, then restore it. | Both clients receive provider refreshes and show the changed inferred-type hint. Consumer text/version stays unchanged. IntelliJ reads the native cached inlay result; VS Code observes the registered provider's refresh events and result. |
 | X147 | Hold an older settings report while requesting a newer one, changing settings, restarting or closing the settings page. Complete the old reply last. | Older reports cannot overwrite current or disposed UI state. VS Code delays a real server reply; IntelliJ drives the real settings component with controlled asynchronous report data and an EDT completion barrier. Restart retires the old PID and preserves source. |
 | X148 | Open the shared Extract.x fixture, select exactly `42` in the return statement, and choose Extract literal to local variable. Undo, Redo, then Undo. Repeat with a string/character literal; try selecting a call or only part of a literal. | The action inserts `val extractedValue = 42;` immediately before the return, which uses that local. Existing identifiers force a fresh suffix. Exact text, indentation and diagnostics survive Undo/Redo. Unsupported selections offer no extraction. Selected X148 acceptance passes in both editors. |
@@ -3024,24 +3030,30 @@ cd lang/vscode-extension
 node scripts/run-vscode-tests.cjs --playbook --cases=X145 --cancel-ui
 ```
 
-When prompted, click **Cancel on “Finding references”**, not the independent workspace-check
-notification. This manual workload uses the shared 20,000-method `uiMethods` setting so there
-is time to act. Missing the click or completing before cancellation is a failure; the report records
-`visible-control` separately from `native-token`. IntelliJ's driver activates the actual displayed
-control through its accessibility action, bound to the target task and project, without moving the
-pointer; it uses the normal 5,000-method workload. Both still verify subsequent hover, progress
-removal, unsaved restart and old-PID exit.
+The `--cancel-ui` driver activates **Cancel on “Finding references”** through the isolated window's
+Chromium renderer. It uses `playwright-core` against the existing Electron instance: no browser
+download, desktop pointer movement, private cancellation fallback or arbitrary window selection.
+The shared 20,000-method `uiMethods` workload must still be pending when the actual button is
+clicked. A request completing before cancellation fails. Reports record `visible-control` separately
+from `native-token` and retain a pre-click screenshot. The Gradle equivalent is
+`-PcompilerPlaybookCases=X145 -PcompilerPlaybookCancelUi=true`.
+IntelliJ activates its displayed control through its accessibility action, bound to the task and
+project, with the normal 5,000-method workload. Both verify continued hover, progress removal,
+unsaved restart and old-PID exit.
 The IntelliJ popup keeps the IDE's standard width; there is no Ecstasy-specific size override.
 The 20,000-method IntelliJ diagnostic attempt exposed a 21-second bulk-replacement UI freeze;
 that failed receipt and the separate L82 large-file investigation remain in the integration plan.
 
 X146 now observes all five refresh families in VS Code and all providers actually negotiated by
-IntelliJ; dependency changes must update the untouched consumer in both directions. Broader visual
-provider presentation and simultaneous windows/project close remain P2–P4 manual checks.
+IntelliJ; dependency changes must update the untouched consumer in both directions. X259 additionally
+checks rendered consumer inlays while toggling settings and restarting after a dependency edit.
+The consumer must remain unedited, disabled hints must disappear, and the displayed type must
+change Int → String → Int. X147 separately controls late report callbacks. Other per-provider visual
+appearance remains manual; these cases do not claim exhaustive pixel-level presentation coverage.
 The [L81 receipt](../../docs/errs-integration-plan.md#l81-progress-refresh-and-transport-checkpoint-2026-10-01)
 retains failed attempts separately from passing refresh/restart cases. IntelliJ
 `run-6551466376631163236` passes visible Cancel and restart in 7.2 seconds with zero IDE errors;
-VS Code's manual visible-control mode still needs a successful click receipt.
+VS Code `run-VeotM0` passes its automated visible-control check in 17.6 seconds, plus X146/X147/X259.
 
 All upstream compatibility issues are collected in [errs-upstream-issues.md](../../docs/errs-upstream-issues.md).
 Source `TODO LSP4IJ:` / `TODO VSCODE:` markers carry matching UP IDs and removal conditions.
@@ -3091,13 +3103,17 @@ After building the VS Code extension, run from `lang/vscode-extension`:
 
 ```bash
 node scripts/run-vscode-tests.cjs --project-lifecycle
+node scripts/run-vscode-tests.cjs --project-lifecycle --shared-process
 ```
 
 Both reuse X145's shared workload with different types in the two projects. Watch one close while
 references are pending, then reopen with a new compiler PID. The other must keep its unsaved text,
 original PID, correct hover and reference count. IntelliJ uses two frames in one IDE and saves the
-closing project. VS Code uses two separate normal application instances and restores the closing
-window's dirty buffer through hot exit; this is not shared-Electron-process coverage. Its disposable
+closing project. VS Code's default mode uses two separate normal application instances; the
+`--shared-process` mode opens two windows in one Electron process and proves their common parent PID.
+Both restore the closing window's dirty buffer through hot exit. The isolated profile configures
+`files.hotExit` at application scope, where VS Code reads it; workspace settings cannot set it.
+The still-open window retains its original compiler PID and unsaved source throughout. Its disposable
 extensions directory contains the local extension and a test controller because development windows
 intentionally have no persistent backup path. Neither driver kills a compiler to satisfy the checks.
 
@@ -3105,8 +3121,10 @@ IntelliJ trusts only the generated fixture path inside its disposable IDE, avoid
 dialog without changing normal trust defaults. The commands do not move the pointer. Passing receipts
 are IntelliJ `run-3852388644684425549` and VS Code `project-lifecycle/run-zI8fT9`; see the
 [lifetime record](../../docs/errs-integration-plan.md#l81-native-projectwindow-lifetime-batch-2026-10-01).
-VS Code visible Cancel still needs a passing control-click receipt: `run-6JOJx7` failed because the
-request finished before the UI tool could select the correct native window; no cancellation was faked.
+VS Code shared-process lifecycle passes in `project-lifecycle/run-Sh7ro5`. The first attempt,
+`run-NXMUZj`, failed hot-exit restoration because the harness placed an application setting in the
+workspace. That failure is retained. The older Cancel attempt `run-6JOJx7` failed to select the right
+window before work finished; `run-VeotM0` now passes using the isolated renderer.
 
 Keep longer workload sessions bounded and announce their expected duration. The latest platform run
 completed two 1,200-cycle sessions with preserved source hashes and compiler retirement, then was
@@ -3627,6 +3645,7 @@ It does not change the earlier native normal-text acceptance; no full-catalog re
 | X256 | Dismiss ghost text and keep suggestions current while typing. Use the shared `X256/InlineValues.x` source. | Dismissal leaves source unchanged; further typing produces a current suggestion. |
 | X257 | Respect ambiguity and the selected completion item. Use the shared `X257/InlineValues.x` source. | Automatic ambiguity yields nothing; explicit alternatives and selection constraints match the source. IntelliJ native trigger/selection limits are UP26. |
 | X258 | Complete a type-compatible value in an unfinished call. Use the shared `X258/InlineValues.x` source. | Only the Int-compatible answer is suggested; missing delimiters remain untouched. |
+| X259 | Keep RefreshConsumer open. Disable inlay hints, change RefreshLibrary.make from Int to String, re-enable hints and restart. Restore the dependency while toggling hints again. | Visible consumer hints disappear when disabled, then show String and Int in order. The consumer text/version stays unchanged and the old server exits. X146 separately verifies all five refresh families; X147 covers late report publication. |
 
 Ghost suggestions are plain compiler names/values. No imports or placeholder bodies are inserted.
 VS Code uses its Inline Suggest commands (Tab to accept, Escape to dismiss); IntelliJ uses
