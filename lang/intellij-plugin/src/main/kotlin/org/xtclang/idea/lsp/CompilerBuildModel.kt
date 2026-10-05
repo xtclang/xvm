@@ -6,23 +6,23 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
-import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.logger
+import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.progress.Task
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.Key
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import org.eclipse.lsp4j.DidChangeConfigurationParams
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicReference
 
 /** Portable evaluated Gradle contract. Uses only Community platform APIs. */
 object CompilerBuildModel {
     const val PATH = ".gradle/xtc/lsp-model.json"
-    private val lastGoodModel = Key.create<JsonObject>("xtc.compiler.buildModel")
 
     fun parse(text: String): JsonObject {
         val model = JsonParser.parseString(text).asJsonObject
@@ -84,11 +84,11 @@ object CompilerBuildModel {
     }
 
     fun read(project: Project): JsonObject? =
-        project.basePath?.let { root ->
-            Path.of(root).resolve(PATH).takeIf(Files::isRegularFile)?.let {
-                parse(Files.readString(it))
-            }
-        }
+        project
+            .service<CompilerImportService>()
+            .model
+            .current()
+            ?.let(::parse)
 
     fun settings(
         project: Project,
@@ -98,11 +98,15 @@ object CompilerBuildModel {
             Gson().toJsonTree(current).takeIf { it.isJsonObject }?.asJsonObject ?: JsonObject()
         val model =
             runCatching {
-                read(project).also { project.putUserData(lastGoodModel, it) }
+                read(project)
             }.getOrElse {
                 logger<CompilerBuildModel>()
                     .warn("Cannot read Gradle compiler inputs; retaining previous import", it)
-                project.getUserData(lastGoodModel)
+                project
+                    .service<CompilerImportService>()
+                    .model
+                    .retained()
+                    ?.let(::parse)
             }
         val xtc =
             settings["xtc"]?.takeIf { it.isJsonObject }?.asJsonObject
@@ -122,11 +126,13 @@ object CompilerBuildModel {
             } else {
                 "Gradle model when imported; workspace conventions otherwise"
             }
+        val imports = project.service<CompilerImportService>().model
+        val status = imports.description()
         val model =
             read(project)
-                ?: return "$origin\nNo Gradle model imported. Manual paths also work without a build file."
+                ?: return "$origin\n$status\nNo Gradle model imported. Manual paths also work without a build file."
         return origin +
-            "\n\n" +
+            "\n$status\n\n" +
             model["sourceSets"].asJsonArray.joinToString("\n\n") { value ->
                 val entry = value.asJsonObject
                 buildList {
@@ -157,53 +163,100 @@ object CompilerBuildModel {
         prepare: Boolean,
         finished: (String?) -> Unit,
     ) {
+        val service = project.service<CompilerImportService>()
         ProgressManager
             .getInstance()
             .run(
-                object : Task.Backgroundable(project, "Import Ecstasy compiler paths", true) {
+                object : Task.Backgroundable(
+                    project,
+                    if (prepare) "Prepare Ecstasy compiler inputs" else "Refresh Ecstasy compiler paths",
+                    true,
+                ) {
+                    private val result =
+                        AtomicReference(
+                            CompilerImport.Result(
+                                CompilerImport.Outcome.CANCELLED,
+                                "Import cancelled; previous compiler configuration retained.",
+                            ),
+                        )
+
                     override fun run(indicator: ProgressIndicator) {
-                        val failure =
-                            runCatching {
-                                val root = Path.of(requireNotNull(project.basePath))
-                                val wrapper =
-                                    root.resolve(
-                                        if (System.getProperty("os.name").startsWith("Windows")) {
-                                            "gradlew.bat"
-                                        } else {
-                                            "gradlew"
-                                        },
-                                    )
-                                require(Files.isRegularFile(wrapper)) {
-                                    "No Gradle wrapper here; configure manual paths instead"
+                        val completed =
+                            try {
+                                service.run(indicator) {
+                                    importModel(project, service.model, indicator, prepare)
                                 }
-                                val command =
-                                    GeneralCommandLine(
-                                        wrapper.toString(),
-                                        if (prepare) "prepareXtcLspModel" else "exportXtcLspModel",
-                                        "--console=plain",
-                                    ).withWorkDirectory(root.toFile())
-                                val result =
-                                    CapturingProcessHandler(command)
-                                        .runProcessWithProgressIndicator(indicator)
-                                check(
-                                    !result.isCancelled && !result.isTimeout && result.exitCode == 0,
-                                ) {
-                                    "Gradle import failed; previous configuration retained.\n" +
-                                        (result.stdout + result.stderr).takeLast(8000)
-                                }
-                                requireNotNull(read(project)) {
-                                    "Gradle did not export an Ecstasy compiler model"
-                                }
-                            }.exceptionOrNull()
-                                ?.message
-                        ApplicationManager.getApplication().invokeLater {
-                            if (project.isDisposed) return@invokeLater
-                            if (failure == null) publish(project)
-                            finished(failure)
-                        }
+                            } catch (cancelled: ProcessCanceledException) {
+                                throw cancelled
+                            } catch (failure: Exception) {
+                                CompilerImport.Result(CompilerImport.Outcome.FAILED, failure.message ?: "Compiler import failed")
+                            }
+                        result.set(completed)
+                    }
+
+                    override fun onSuccess() = complete()
+
+                    override fun onCancel() = complete()
+
+                    private fun complete() {
+                        if (project.isDisposed) return
+                        val completed = result.get()
+                        if (completed.outcome == CompilerImport.Outcome.SUCCEEDED) publish(project)
+                        finished(completed.message.takeUnless { completed.outcome == CompilerImport.Outcome.SUCCEEDED })
                     }
                 },
             )
+    }
+
+    private fun importModel(
+        project: Project,
+        model: CompilerImport,
+        indicator: ProgressIndicator,
+        prepare: Boolean,
+    ): CompilerImport.Result {
+        // A malformed existing report must not prevent an explicit refresh from repairing it.
+        runCatching { model.current() }
+        val operation = model.begin(prepare)
+        val result =
+            try {
+                val root = Path.of(requireNotNull(project.basePath))
+                indicator.text = if (prepare) "Preparing generated sources and resources" else "Reading evaluated Gradle inputs"
+                indicator.text2 = root.toString()
+                val wrapper = root.resolve(if (System.getProperty("os.name").startsWith("Windows")) "gradlew.bat" else "gradlew")
+                require(Files.isRegularFile(wrapper)) { "No Gradle wrapper here; configure manual paths instead" }
+                val command =
+                    GeneralCommandLine(
+                        wrapper.toString(),
+                        if (prepare) "prepareXtcLspModel" else "exportXtcLspModel",
+                        "--console=plain",
+                    ).withWorkDirectory(root.toFile())
+                val output = CapturingProcessHandler(command).runProcessWithProgressIndicator(indicator)
+                when {
+                    output.isCancelled || indicator.isCanceled -> {
+                        model.finish(operation, CompilerImport.Outcome.CANCELLED)
+                    }
+
+                    output.isTimeout || output.exitCode != 0 -> {
+                        model.finish(
+                            operation,
+                            CompilerImport.Outcome.FAILED,
+                            "Gradle import failed; previous compiler configuration retained.\n" +
+                                (output.stdout + output.stderr).takeLast(8000),
+                        )
+                    }
+
+                    else -> {
+                        model.finish(operation, CompilerImport.Outcome.SUCCEEDED, cancelled = { indicator.isCanceled })
+                    }
+                }
+            } catch (cancelled: ProcessCanceledException) {
+                model.finish(operation, CompilerImport.Outcome.CANCELLED)
+                throw cancelled
+            } catch (failure: Exception) {
+                model.finish(operation, CompilerImport.Outcome.FAILED, "${failure.message}; previous compiler configuration retained.")
+            }
+        if (result.outcome == CompilerImport.Outcome.CANCELLED) throw ProcessCanceledException()
+        return result
     }
 
     fun publish(project: Project) {
