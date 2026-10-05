@@ -1279,7 +1279,7 @@ public class ConstantPool
 
     /** The language's implicit import names, without resolving or loading their components. */
     public static Set<String> getImplicitImportNames() {
-        return Set.copyOf(s_implicits.keySet());
+        return IMPLICITS.byName().keySet();
     }
 
     /**
