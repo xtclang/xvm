@@ -10610,3 +10610,13 @@ use the compiler's resolved scope and retain COMPILER-29. Read-only indexed sour
 Shared X245–X247 and backend regressions cover exact ranges, sibling separation, UTF-16/CRLF, broken
 replacement and close. Combined testing remains after all four L66 slices. Import checkpoint:
 `b5bf3ebe9`. No AST field or new semantic cache is introduced.
+
+### L66 structural recovery continuation (2026-10-05)
+
+Selections now omit duplicate AST spans and select the most specific source-owned child at an
+overlapping/boundary position, without escaping its parent's written extent. Typedefs now appear
+in the structural outline using their existing AST name and span. Shared X248 exercises damaged
+headers, calls, list/tuple literals, folding, strict selection expansion and repair; backend tests
+repeat with LF/CRLF/bare CR and UTF-16 comments, then close the document. Existing parser recovery
+is reused; no Java AST change is introduced here. Linked-editing checkpoint: `2383ed9ec`. All
+validation remains batched after the formatter slice.
