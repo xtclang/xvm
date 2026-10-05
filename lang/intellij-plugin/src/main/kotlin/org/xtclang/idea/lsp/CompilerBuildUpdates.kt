@@ -20,8 +20,8 @@ class CompilerBuildUpdates : ProjectActivity {
             VirtualFileManager.VFS_CHANGES,
             object : BulkFileListener {
                 override fun after(events: List<VFileEvent>) {
-                    val root = project.basePath ?: return
-                    if (events.none { affectsModel(Path.of(root), Path.of(it.path)) }) return
+                    val roots = CompilerWorkspaceModels.roots(project)
+                    if (events.none { event -> roots.any { affectsModel(it, Path.of(event.path)) } }) return
                     ApplicationManager.getApplication().executeOnPooledThread {
                         if (!project.isDisposed) CompilerBuildModel.publish(project)
                     }
@@ -32,7 +32,9 @@ class CompilerBuildUpdates : ProjectActivity {
 
     companion object {
         internal fun affectsModel(root: Path, changed: Path): Boolean =
-            root.resolve(CompilerBuildModel.PATH).normalize().startsWith(changed.normalize())
+            listOf(CompilerBuildModel.PATH, CompilerWorkspaceModels.PATH).any {
+                root.resolve(it).normalize().startsWith(changed.normalize())
+            }
     }
 }
 
@@ -44,7 +46,7 @@ class CompilerGradleSync : ExternalSystemTaskNotificationListener {
         val root = Path.of(projectPath)
         // Opt into automatic export after the first explicit import. Do not run arbitrary builds
         // merely because a folder is open, and do not interpret a Gradle script to guess its tasks.
-        if (!Files.isRegularFile(root.resolve(CompilerBuildModel.PATH))) return
+        if (listOf(CompilerBuildModel.PATH, CompilerWorkspaceModels.PATH).none { Files.isRegularFile(root.resolve(it)) }) return
         CompilerBuildModel.refresh(project, false) { failure ->
             if (failure != null) logger<CompilerGradleSync>().warn(failure)
         }
