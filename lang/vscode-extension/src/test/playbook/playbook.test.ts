@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { getClient } from '../../lsp-client';
 import { advancedCases, pullDiagnosticCases, typeHeaderCases } from './advanced';
 import { completionCases } from './completion';
-import { editingClosureCases, linkedScopeCases, structuralRecoveryCases } from './editingClosure';
+import { editingClosureCases, formattingBreadthCases, linkedScopeCases, structuralRecoveryCases } from './editingClosure';
 import { configurationCases, dependencyCases } from './dependencies';
 import { graphCases } from './graph';
 import { liveWorkspaceCases } from './liveWorkspace';
@@ -69,6 +69,7 @@ suite('XdkAdapter playbook', function () {
     editingClosureCases(['X243', 'X244']);
     linkedScopeCases();
     structuralRecoveryCases();
+    formattingBreadthCases();
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {

@@ -10620,3 +10620,18 @@ headers, calls, list/tuple literals, folding, strict selection expansion and rep
 repeat with LF/CRLF/bare CR and UTF-16 comments, then close the document. Existing parser recovery
 is reused; no Java AST change is introduced here. Linked-editing checkpoint: `2383ed9ec`. All
 validation remains batched after the formatter slice.
+
+### L66 formatting continuation (2026-10-05)
+
+The Java-lexer formatter now uses the existing indentation/continuation/margin settings for operator
+continuations and width wrapping at expression or delimited-list token boundaries. Standalone block
+comment margins shift together; relative interior layout remains unchanged. Literal/template bytes
+are never rewritten. Every proposal is re-lexed to verify identical code/literal tokens and comment
+content apart from leading margins. On-type indentation does not introduce line wrapping. Range
+formatting changes only the requested lines and keeps their original line-ending convention.
+
+Shared X249/X250 check installed format actions, exact output, repeat stability and Undo/Redo/Undo;
+backend regressions cover LF/CRLF/bare CR, range boundaries, margin changes, literal preservation
+and lexical refusal. Typedef/selection checkpoint: `db8fefb53`. The four implementation checkpoints
+now precede one combined backend gate and selected editor acceptance. Arbitrary comment reflow,
+literal splitting, brace relocation and type-argument wrapping remain outside these safe rules.
