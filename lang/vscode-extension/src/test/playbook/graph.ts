@@ -101,4 +101,41 @@ export function graphCases(): void {
         await noErrors(consumer.uri);
         assert.strictEqual((await references(document)).length, data.referenceCount);
     });
+    playbook('X251', async (workspace, data) => {
+        const roots = Array.from({ length: data.roots }, (_, index) => ({
+            name: scenarioText(data.rootName, index), uri: workspace.uri(scenarioText(data.rootFile, index)).toString(), dependencies: [] as string[]
+        }));
+        for (let index = 0; index < data.roots; index++) {
+            await workspace.write(scenarioText(data.rootFile, index), scenarioText(data.rootSource, index));
+        }
+        await workspace.write(data.consumer.uri, data.consumer.source);
+        const graph = [...roots, { ...data.consumer, uri: workspace.uri(data.consumer.uri).toString() }];
+        await workspace.configure(graph);
+        const document = await workspace.open(data.file);
+        await noErrors(document.uri);
+        const refs = async () => await vscode.commands.executeCommand<vscode.Location[]>('vscode.executeReferenceProvider', document.uri, position(document, data.anchor)) ?? [];
+        const search = async (query: string) => await vscode.commands.executeCommand<vscode.SymbolInformation[]>('vscode.executeWorkspaceSymbolProvider', query) ?? [];
+        assert.strictEqual((await refs()).length, data.referenceCount);
+        assert.ok(!vscode.workspace.textDocuments.some(item => item.uri.toString() === workspace.uri(data.consumer.uri).toString()), 'Consumer remains closed');
+        assert.strictEqual((await search(data.symbol)).length, data.roots);
+        assert.strictEqual((await search(data.symbol)).length, data.roots);
+        await workspace.replace(document, document.getText().replace(data.replaceFrom, data.replacement));
+        await noErrors(document.uri);
+        assert.strictEqual((await search(data.addedSymbol)).length, 1);
+        assert.strictEqual((await refs()).length, data.referenceCount);
+        const last = data.roots - 1;
+        const broken = await workspace.open(scenarioText(data.rootFile, last));
+        await workspace.replace(broken, scenarioText(data.brokenSource, last));
+        await diagnostics(broken.uri, items => items.some(item => item.severity === vscode.DiagnosticSeverity.Error), 'Broken independent root');
+        assert.deepStrictEqual(await refs(), []);
+        assert.strictEqual((await search(data.addedSymbol)).length, 1);
+        await workspace.replace(broken, scenarioText(data.rootSource, last));
+        await noErrors(broken.uri);
+        assert.strictEqual((await refs()).length, data.referenceCount);
+        await workspace.configure(graph.filter(item => item.name !== roots[last].name));
+        await eventually(() => search(data.symbol), items => items.length === data.roots - 1, 'Removed root leaves the index');
+        await workspace.configure(graph);
+        await eventually(() => search(data.symbol), items => items.length === data.roots, 'Restored root returns to the index');
+    });
+
 }
