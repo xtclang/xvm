@@ -122,6 +122,13 @@ public class ImportStatement
     }
 
     /**
+     * @return an immutable view of the written name tokens, excluding the alias and wildcard
+     */
+    public List<Token> getQualifiedNameTokens() {
+        return List.copyOf(qualifiedName);
+    }
+
+    /**
      * @return the imported name as a dot-delimited name
      */
     public String getQualifiedNameString() {
