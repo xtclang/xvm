@@ -21,41 +21,49 @@ import java.nio.file.Path
 import kotlin.time.Duration.Companion.seconds
 
 internal fun ParityScenarios.platformCases() {
-    case("X158") { data ->
-        write(data.string("libraryFile"), data.string("library"))
-        write(data.string("file"), data.string("source"))
-        configure(
-            listOf(
-                SharedScenarios.SourceModule(data.string("libraryModule"), uri(data.string("libraryFile")), emptyList()),
-                SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), listOf(data.string("libraryModule"))),
-            ),
-        )
-        val document = open(data.string("file"))
-        clean(document)
-        val links =
-            query("textDocument/documentLink", document).rows().map {
-                if (it.has("data")) protocol.query("documentLink/resolve", it).asJsonObject else it
-            }
-        check(links.size == data.strings("linkNames").size)
-        check(links.all { Path.of(URI(it.string("target"))) == directory.resolve(data.string("libraryFile")) })
-        links.zip(data.strings("linkNames")).forEach { (link, name) ->
-            val range = link["range"].asJsonObject
-            val start = range["start"].asJsonObject
-            val end = range["end"].asJsonObject
-            check(start["line"] == end["line"])
-            check(
-                document.text
-                    .lines()[start["line"].asInt]
-                    .substring(start["character"].asInt, end["character"].asInt) == name,
+    listOf("X158", "X243", "X244").forEach { id ->
+        case(id) { data ->
+            write(data.string("libraryFile"), data.string("library"))
+            write(data.string("file"), data.string("source"))
+            configure(
+                listOf(
+                    SharedScenarios.SourceModule(data.string("libraryModule"), uri(data.string("libraryFile")), emptyList()),
+                    SharedScenarios.SourceModule(data.string("module"), uri(data.string("file")), listOf(data.string("libraryModule"))),
+                ),
             )
+            val document = open(data.string("file"))
+            if (id == "X244") {
+                diagnostics(document) { items -> items.any { it.code == "COMPILER-29" } && items.none { it.severity == "Error" } }
+            } else {
+                clean(document)
+            }
+            val links =
+                query("textDocument/documentLink", document).rows().map {
+                    if (it.has("data")) protocol.query("documentLink/resolve", it).asJsonObject else it
+                }
+            check(links.size == data.strings("linkNames").size)
+            check(links.all { Path.of(URI(it.string("target"))) == directory.resolve(data.string("libraryFile")) })
+            links.zip(data.strings("linkNames")).forEach { (link, name) ->
+                val range = link["range"].asJsonObject
+                val start = range["start"].asJsonObject
+                val end = range["end"].asJsonObject
+                check(start["line"] == end["line"])
+                check(
+                    document.text
+                        .lines()[start["line"].asInt]
+                        .substring(start["character"].asInt, end["character"].asInt) == name,
+                )
+            }
+            if (data.string("alias").isNotEmpty()) {
+                val ranges =
+                    query("textDocument/linkedEditingRange", document, document.at(data.string("alias")))
+                        .asJsonObject["ranges"]
+                        .asJsonArray
+                val expected = data.strings("aliasUses").map { document.text.indexOf(it) }
+                check(ranges.map { ParityWorkspace.offset(document.text, it.asJsonObject["start"].asJsonObject) } == expected)
+            }
+            check(open(data.string("libraryFile")).text == data.string("library"))
         }
-        val ranges =
-            query("textDocument/linkedEditingRange", document, document.at(data.string("alias")))
-                .asJsonObject["ranges"]
-                .asJsonArray
-        val expected = data.strings("aliasUses").map { document.text.indexOf(it) }
-        check(ranges.map { ParityWorkspace.offset(document.text, it.asJsonObject["start"].asJsonObject) } == expected)
-        check(open(data.string("libraryFile")).text == data.string("library"))
     }
     case("X136") { data ->
         val document = open(data.string("file"), data.string("source"))
