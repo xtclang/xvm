@@ -37,6 +37,7 @@ class XdkMonikerTest {
             .isEqualTo(moniker(second, LIBRARY, "pick(Int"))
             .isNotEqualTo(moniker(changed, LIBRARY, "pick(Int"))
         assertThat(first.artifact!!.bytes()).isNotEqualTo(second.artifact!!.bytes())
+        assertThat(monikers(first.models.single(), LIBRARY, "T>")).isEmpty()
     }
 
     @Test
@@ -47,7 +48,13 @@ class XdkMonikerTest {
         assertThat(source.revision).isNotEqualTo(binary.revision)
         listOf(source, binary).forEach { dependency ->
             val consumer = compile(CONSUMER, dependencies = listOf(dependency))
-            listOf("pick(Int" to "pick(1)", "pick(String" to "pick(\"x\")", "Box<T>" to "Box<Int>").forEach { (declaration, use) ->
+            listOf(
+                "pick(Int" to "pick(1)",
+                "pick(String" to "pick(\"x\")",
+                "Box<T>" to "Box<Int>",
+                "echo(T" to "echo(1)",
+                "echo(T" to "echo(\"x\")",
+            ).forEach { (declaration, use) ->
                 val exported = moniker(library, LIBRARY, declaration)
                 assertThat(moniker(consumer, CONSUMER, use))
                     .isEqualTo(exported.copy(kind = SymbolMoniker.Kind.IMPORT))
@@ -182,6 +189,7 @@ class XdkMonikerTest {
             module Library {
                 static Int pick(Int n) = n;
                 static String pick(String s) = s;
+                static <T> T echo(T value) = value;
                 class Box<T> {}
             }
             """.trimIndent()
@@ -192,6 +200,8 @@ class XdkMonikerTest {
                 Int number() = lib.pick(1);
                 String text() = lib.pick("x");
                 lib.Box<Int>? box = Null;
+                Int echoed() = lib.echo(1);
+                String echoedText() = lib.echo("x");
             }
             """.trimIndent()
     }
