@@ -42,6 +42,12 @@ data class TextEdit(
     val newText: String,
 )
 
+/** Inline suggestions may extend a selected popup item, but cannot make additional edits. */
+data class InlineCompletionContext(
+    val automatic: Boolean,
+    val selectedCompletion: TextEdit? = null,
+)
+
 /** Completion item for code completion. */
 data class CompletionItem(
     val label: String,
