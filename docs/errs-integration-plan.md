@@ -10708,7 +10708,8 @@ Implementation sequence; validate as one batch after the checkpoints:
   failed modules. Refactoring proofs continue to compile independently.
 - [x] Seed the index from editor and diagnostic compilation so the first graph lookup does not
   compile the same successful module again.
-- [ ] Exercise scale, compiler-object release, binary/source-index replacement, ambiguous library
-  source matches and editor-visible replacement scenarios; record packaged-server measurements.
+- [x] Exercise scale, compiler-object release, binary/source-index replacement, ambiguous library
+  source matches and editor-visible replacement scenarios (X251). Packaged-server measurements and
+  execution of these added regressions remain part of the combined validation below.
 - [ ] Run the combined backend and selected editor acceptance batch, update capability/playbook
   receipts and commit extraction mapping, and decide whether disk persistence is justified.
