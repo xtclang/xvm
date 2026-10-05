@@ -125,6 +125,9 @@ internal fun ParityScenarios.graphCases() {
         clean(consumer)
         check(graphReferences(document).size == data.int("referenceCount"))
     }
+}
+
+internal fun ParityScenarios.indexingCases() {
     case("X251") { data ->
         val roots =
             (0 until data.int("roots")).map { index ->
