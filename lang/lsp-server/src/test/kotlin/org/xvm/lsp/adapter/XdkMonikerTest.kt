@@ -70,7 +70,9 @@ class XdkMonikerTest {
                 private Int hidden = 1;
                 private class Hidden { Int value = 2; }
                 Int read(Int argument) {
-                    Int local = argument;
+                    class Nested { Int answer = 1; }
+                    Nested nested = new Nested();
+                    Int local = argument + nested.answer;
                     return local + hidden;
                 }
             }
@@ -78,6 +80,8 @@ class XdkMonikerTest {
         val result = compile(text)
         assertThat(moniker(result, text, "hidden =").kind).isEqualTo(SymbolMoniker.Kind.LOCAL)
         assertThat(moniker(result, text, "value =").kind).isEqualTo(SymbolMoniker.Kind.LOCAL)
+        assertThat(moniker(result, text, "Nested {").kind).isEqualTo(SymbolMoniker.Kind.LOCAL)
+        assertThat(moniker(result, text, "answer =").kind).isEqualTo(SymbolMoniker.Kind.LOCAL)
         listOf("argument)", "local =", "local +").forEach { marker ->
             assertThat(monikers(result.models.single(), text, marker)).isEmpty()
         }
