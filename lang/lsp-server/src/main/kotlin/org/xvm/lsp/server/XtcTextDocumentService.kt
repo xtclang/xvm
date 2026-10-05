@@ -115,7 +115,6 @@ import org.xvm.lsp.model.SymbolInfo
 import org.xvm.lsp.model.fmt
 import org.xvm.lsp.model.fromLsp
 import org.xvm.lsp.model.toLsp
-import org.xvm.lsp.model.Location as AdapterLocation
 import org.xvm.lsp.model.toRange
 import org.xvm.lsp.util.ExecutionTrace
 import java.util.concurrent.CancellationException
@@ -387,7 +386,7 @@ class XtcTextDocumentService(
             )
             analyse(
                 params.textDocument.uri,
-                adapter.readOnlyDocument(params.textDocument.uri)?.text ?: params.textDocument.text,
+                params.textDocument.text,
                 params.textDocument.version,
             )
         }
@@ -397,7 +396,6 @@ class XtcTextDocumentService(
         synchronized(lifecycle) {
             if (closed) return
             val uri = params.textDocument.uri
-            if (adapter.readOnlyDocument(uri) != null || adapter.readOnlyDocumentSchemes.any { uri.startsWith("$it:") }) return
             val previous = openDocuments[uri] ?: return
             val version = params.textDocument.version
             if (version <= previous.version) return
@@ -1614,7 +1612,20 @@ class XtcTextDocumentService(
         queryAsync(
             "textDocument/moniker",
             params.textDocument.uri,
-            request = { adapter.findMonikersAsync(params.textDocument.uri, params.position.line, params.position.character) },
+            request = {
+                val uri = params.textDocument.uri
+                val library = adapter.readOnlyDocument(uri)
+                val rendered = openDocuments[uri]?.content
+
+                // LSP 3.18 permits client whitespace normalization in read-only views. EOL
+                // normalization preserves positions; other rewrites cannot reuse binary ranges.
+                fun lines(text: String) = text.replace("\r\n", "\n").replace('\r', '\n')
+                if (library != null && rendered != null && lines(rendered) != lines(library.text)) {
+                    CompletableFuture.completedFuture(emptyList())
+                } else {
+                    adapter.findMonikersAsync(uri, params.position.line, params.position.character)
+                }
+            },
             progress = params,
             partial = PartialResults::list,
         ) { monikers ->
