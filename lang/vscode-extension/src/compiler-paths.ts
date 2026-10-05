@@ -1,25 +1,40 @@
-import * as path from 'node:path';
 import { randomUUID } from 'node:crypto';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import * as vscode from 'vscode';
-import { BuildModel, describeBuildModel, modelPath, readBuildModel } from './build-model';
+import { BuildModel, describeBuildModel, modelPath, parseBuildModel } from './build-model';
+import { CompilerImport } from './compiler-import';
+import { runCompilerTask } from './compiler-task';
 import { getClient, updateCompilerConfiguration } from './lsp-client';
 import { compilerSourceModules } from './rename-proposal';
 import { SourceModule } from './source-graph-configuration';
 
-const lastGoodModels = new Map<string, BuildModel>();
+const imports = new Map<string, CompilerImport>();
+const activeImports = new Map<string, vscode.CancellationTokenSource>();
+
+function importOwner(folder: vscode.WorkspaceFolder): CompilerImport {
+    const key = folder.uri.toString();
+    const existing = imports.get(key);
+    if (existing) return existing;
+    if (folder.uri.scheme !== 'file') throw new Error('Compiler build import requires a local workspace folder.');
+    const file = path.join(folder.uri.fsPath, modelPath);
+    const owner = new CompilerImport(() => fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : undefined, parseBuildModel);
+    imports.set(key, owner);
+    return owner;
+}
 
 export function compilerBuildModels(): BuildModel[] {
     const folders = vscode.workspace.workspaceFolders ?? [];
     const active = new Set(folders.map(folder => folder.uri.toString()));
-    for (const key of lastGoodModels.keys()) if (!active.has(key)) lastGoodModels.delete(key);
+    for (const key of imports.keys()) if (!active.has(key)) imports.delete(key);
     return folders.flatMap(folder => {
-        const key = folder.uri.toString();
+        if (folder.uri.scheme !== 'file') return [];
+        const owner = importOwner(folder);
         try {
-            const model = readBuildModel(folder.uri.fsPath);
-            if (model) lastGoodModels.set(key, model); else lastGoodModels.delete(key);
+            owner.current();
         } catch (error) { console.warn(`Invalid Ecstasy Gradle model; retaining previous import: ${error}`); }
-        const model = lastGoodModels.get(key);
-        return model ? [model] : [];
+        const text = owner.retained();
+        return text === undefined ? [] : [parseBuildModel(text)];
     });
 }
 
@@ -33,23 +48,44 @@ export async function refreshCompilerBuild(prepare = false): Promise<void> {
     const owner = await folder();
     if (!owner) return;
     if (!vscode.workspace.isTrusted) throw new Error('Trust this workspace before running its Gradle build.');
-    const wrapper = vscode.Uri.joinPath(owner.uri, process.platform === 'win32' ? 'gradlew.bat' : 'gradlew');
-    await vscode.workspace.fs.stat(wrapper);
-    const operation = randomUUID();
-    const task = new vscode.Task({ type: 'xtc-model', prepare, operation }, owner,
-        prepare ? 'Prepare compiler inputs' : 'Refresh compiler paths', 'Ecstasy',
-        new vscode.ProcessExecution(wrapper.fsPath, [prepare ? 'prepareXtcLspModel' : 'exportXtcLspModel', '--console=plain'], { cwd: owner.uri.fsPath }));
-    await new Promise<void>((resolve, reject) => {
-        const ended = vscode.tasks.onDidEndTaskProcess(event => {
-            if (event.execution.task.definition.operation !== operation) return;
-            ended.dispose();
-            if (event.exitCode === 0) resolve();
-            else reject(new Error(`Gradle model export failed (${event.exitCode}); previous compiler configuration retained.`));
+    if (owner.uri.scheme !== 'file') throw new Error('Compiler build import requires a local workspace folder.');
+    const key = owner.uri.toString();
+    const model = importOwner(owner);
+    compilerBuildModels();
+    const claim = model.begin(prepare);
+    const cancellation = new vscode.CancellationTokenSource();
+    activeImports.set(key, cancellation);
+    try {
+        const wrapper = vscode.Uri.joinPath(owner.uri, process.platform === 'win32' ? 'gradlew.bat' : 'gradlew');
+        await vscode.workspace.fs.stat(wrapper);
+        const operation = randomUUID();
+        const task = new vscode.Task({ type: 'xtc-model', prepare, operation }, owner,
+            prepare ? 'Prepare compiler inputs' : 'Refresh compiler paths', 'Ecstasy',
+            new vscode.ProcessExecution(wrapper.fsPath, [prepare ? 'prepareXtcLspModel' : 'exportXtcLspModel', '--console=plain'], { cwd: owner.uri.fsPath }));
+        const outcome = await vscode.window.withProgress({
+            location: vscode.ProgressLocation.Notification,
+            title: `Ecstasy — ${prepare ? 'preparing generated inputs' : 'refreshing compiler paths'} (${owner.name})`,
+            cancellable: true,
+        }, async (progress, token) => {
+            const cancel = token.onCancellationRequested(() => cancellation.cancel());
+            try {
+                if (token.isCancellationRequested) cancellation.cancel();
+                progress.report({ message: owner.uri.fsPath });
+                return await runCompilerTask(task, cancellation.token, message => progress.report({ message }));
+            } finally { cancel.dispose(); }
         });
-        vscode.tasks.executeTask(task).then(undefined, error => { ended.dispose(); reject(error); });
-    });
-    if (!readBuildModel(owner.uri.fsPath)) throw new Error('Gradle did not export an Ecstasy compiler model.');
-    await updateCompilerConfiguration();
+        const result = model.finish(claim, cancellation.token.isCancellationRequested ? 'cancelled' : outcome.outcome, outcome.message);
+        if (result.outcome === 'failed') throw new Error(result.message);
+        if (result.outcome === 'succeeded') await updateCompilerConfiguration();
+    } catch (error) {
+        // finish only while this operation still owns the model; a validation failure already
+        // retired it. Errors are rethrown below after recording the terminal model state.
+        if (model.isRunning(claim)) model.finish(claim, cancellation.token.isCancellationRequested ? 'cancelled' : 'failed', String(error));
+        if (!cancellation.token.isCancellationRequested) throw error;
+    } finally {
+        if (activeImports.get(key) === cancellation) activeImports.delete(key);
+        cancellation.dispose();
+    }
 }
 
 /** A dialog owns a settings snapshot only until another edit, import or connection replaces it. */
@@ -95,6 +131,10 @@ export function registerCompilerPaths(context: vscode.ExtensionContext): void {
         const modules = await getClient()?.sendRequest<SourceModule[]>('xtc/compilerSourceModules');
         output.appendLine(JSON.stringify(modules ?? [], null, 2));
         compilerBuildModels().forEach(model => output.appendLine(describeBuildModel(model)));
+        (vscode.workspace.workspaceFolders ?? []).forEach(folder => {
+            const model = imports.get(folder.uri.toString());
+            if (model) output.appendLine(`${folder.name}: ${model.description()}`);
+        });
         output.show(true);
     };
     const configure = async () => {
@@ -159,9 +199,16 @@ export function registerCompilerPaths(context: vscode.ExtensionContext): void {
         draftsChanged.fire();
         draftsChanged.dispose();
         watchers.forEach(watcher => watcher.dispose());
+        activeImports.forEach(cancellation => cancellation.cancel());
+        imports.clear();
     } },
         vscode.workspace.onDidChangeWorkspaceFolders(event => {
-            event.removed.forEach(owner => { watchers.get(owner.uri.toString())?.dispose(); watchers.delete(owner.uri.toString()); });
+            event.removed.forEach(owner => {
+                const key = owner.uri.toString();
+                activeImports.get(key)?.cancel();
+                imports.delete(key);
+                watchers.get(key)?.dispose(); watchers.delete(key);
+            });
             event.added.forEach(watch);
             changed();
         }),
