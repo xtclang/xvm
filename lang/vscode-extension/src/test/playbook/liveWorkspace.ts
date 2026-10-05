@@ -83,7 +83,7 @@ export function liveWorkspaceCases(): void {
         for (const type of data.types) {
             const found = await targets(document, 'Definition', position(document, type));
             assert.deepStrictEqual(await targetNames(found), [type]);
-            assert.strictEqual((await fs.stat(found[0].uri.fsPath)).mode & 0o222, 0, 'Bundled source is read-only');
+            assert.strictEqual(found[0].uri.scheme, 'ecstasy-library', 'Bundled source uses the read-only content provider');
             const edits = await vscode.commands.executeCommand<vscode.TextEdit[]>(
                 'vscode.executeFormatDocumentProvider', found[0].uri, { tabSize: 4, insertSpaces: true });
             assert.deepStrictEqual(edits ?? [], []);

@@ -3,7 +3,7 @@ import * as fs from 'node:fs/promises';
 import * as vscode from 'vscode';
 import { LSPErrorCodes, Moniker, TextDocumentEdit, WorkspaceEdit } from 'vscode-languageclient/node';
 import { catalog, scenarioRegex, scenarioText } from './shared';
-import { client, diagnostics, eventually, fixture, hover, noErrors, playbook, position, symbols, Workspace } from './support';
+import { client, diagnostics, eventually, fixture, hover, noErrors, playbook, position, symbols, targets, Workspace } from './support';
 
 async function graph(workspace: Workspace): Promise<vscode.TextDocument> {
     const setup = catalog.common.graph;
@@ -198,5 +198,38 @@ export function monikerCases(): void {
         await noErrors(document.uri);
         assert.deepStrictEqual(await monikers(document.uri, document.getText(), data.private), [own]);
         assert.deepStrictEqual(await monikers(document.uri, document.getText(), data.library), [bundled]);
+    });
+}
+
+export function libraryContentCases(): void {
+    playbook('X254', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await noErrors(document.uri);
+        assert.ok(client().initializeResult?.capabilities.workspace?.textDocumentContent?.schemes.includes(data.scheme));
+        for (const name of data.types) {
+            const at = position(document, name);
+            const imported = await client().sendRequest<Moniker[]>('textDocument/moniker', {
+                textDocument: { uri: document.uri.toString() }, position: at
+            });
+            const [target] = await targets(document, 'Definition', at);
+            assert.strictEqual(target.uri.scheme, data.scheme);
+            const library = await vscode.workspace.openTextDocument(target.uri);
+            const editor = await vscode.window.showTextDocument(library);
+            const text = library.getText();
+            assert.strictEqual(library.getText(target.range), name);
+            const supplied = await client().sendRequest<{ text: string }>('workspace/textDocumentContent', { uri: target.uri.toString() });
+            assert.strictEqual(text.replace(/\r\n/g, '\n'), supplied.text.replace(/\r\n/g, '\n'));
+            const exported = await client().sendRequest<Moniker[]>('textDocument/moniker', {
+                textDocument: { uri: target.uri.toString() }, position: target.range.start
+            });
+            assert.deepStrictEqual(exported, [{ ...imported[0], kind: 'export' }]);
+            assert.strictEqual(exported[0].scheme, data.monikerScheme);
+            const edited = await editor.edit(builder => builder.insert(new vscode.Position(0, 0), '// forbidden\n')).catch(() => false);
+            assert.strictEqual(edited, false, 'Native virtual editor is read-only');
+            assert.strictEqual(library.getText(), text);
+            assert.strictEqual(library.isDirty, false);
+            assert.deepStrictEqual(await vscode.commands.executeCommand('vscode.executeFormatDocumentProvider', target.uri,
+                { tabSize: 4, insertSpaces: true }), []);
+        }
     });
 }
