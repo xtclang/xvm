@@ -849,18 +849,22 @@ class XtcTextDocumentService(
             Either.forLeft(items)
         }
 
-    override fun inlineCompletion(params: InlineCompletionParams): CompletableFuture<Either<List<InlineCompletionItem>, InlineCompletionList>> {
+    override fun inlineCompletion(
+        params: InlineCompletionParams,
+    ): CompletableFuture<Either<List<InlineCompletionItem>, InlineCompletionList>> {
         if (!server.presentation.inlineCompletion || AdapterCapability.INLINE_COMPLETION !in adapter.capabilities) {
             return CompletableFuture.failedFuture(
                 ResponseErrorException(ResponseError(ResponseErrorCode.MethodNotFound, "Inline completion was not negotiated", null)),
             )
         }
-        val context = InlineCompletionContext(
-            automatic = params.context.triggerKind == InlineCompletionTriggerKind.Automatic,
-            selectedCompletion = params.context.selectedCompletionInfo?.let {
-                AdapterTextEdit(toAdapterRange(it.range), it.text)
-            },
-        )
+        val context =
+            InlineCompletionContext(
+                automatic = params.context.triggerKind == InlineCompletionTriggerKind.Automatic,
+                selectedCompletion =
+                    params.context.selectedCompletionInfo?.let {
+                        AdapterTextEdit(toAdapterRange(it.range), it.text)
+                    },
+            )
         return queryAsync(
             "textDocument/inlineCompletion",
             params.textDocument.uri,
@@ -873,12 +877,16 @@ class XtcTextDocumentService(
             },
             progress = params,
         ) { edits ->
-            Either.forRight(InlineCompletionList(edits.map { edit ->
-                InlineCompletionItem(Either.forLeft(edit.newText)).apply {
-                    range = edit.range.toLsp()
-                    filterText = edit.newText
-                }
-            }))
+            Either.forRight(
+                InlineCompletionList(
+                    edits.map { edit ->
+                        InlineCompletionItem(Either.forLeft(edit.newText)).apply {
+                            range = edit.range.toLsp()
+                            filterText = edit.newText
+                        }
+                    },
+                ),
+            )
         }
     }
 
