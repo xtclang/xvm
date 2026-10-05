@@ -125,6 +125,54 @@ internal fun ParityScenarios.graphCases() {
         clean(consumer)
         check(graphReferences(document).size == data.int("referenceCount"))
     }
+    case("X251") { data ->
+        val roots =
+            (0 until data.int("roots")).map { index ->
+                val file = SharedScenarios.text(data.string("rootFile"), index)
+                write(file, SharedScenarios.text(data.string("rootSource"), index))
+                SharedScenarios.SourceModule(SharedScenarios.text(data.string("rootName"), index), uri(file), emptyList())
+            }
+        val consumer = data["consumer"].asJsonObject
+        write(consumer.string("uri"), consumer.string("source"))
+        val graph =
+            roots + SharedScenarios.SourceModule(consumer.string("name"), uri(consumer.string("uri")), consumer.strings("dependencies"))
+        configure(graph)
+        val document = open(data.string("file"))
+        clean(document)
+
+        fun refs() =
+            query(
+                "textDocument/references",
+                document,
+                document.at(data.string("anchor")),
+                mapOf("context" to mapOf("includeDeclaration" to true)),
+            ).rows()
+
+        fun search(value: String) = protocol.query("workspace/symbol", mapOf("query" to value)).rows()
+        check(refs().size == data.int("referenceCount"))
+        check(
+            protocol.server().getOpenedDocuments().none { it.getFile().getPath() == directory.resolve(consumer.string("uri")).toString() },
+        )
+        check(search(data.string("symbol")).size == data.int("roots"))
+        check(search(data.string("symbol")).size == data.int("roots"))
+        replace(document, document.text.replace(data.string("replaceFrom"), data.string("replacement")))
+        clean(document)
+        check(search(data.string("addedSymbol")).size == 1)
+        check(refs().size == data.int("referenceCount"))
+        val last = data.int("roots") - 1
+        val broken = open(SharedScenarios.text(data.string("rootFile"), last))
+        replace(broken, SharedScenarios.text(data.string("brokenSource"), last))
+        errors(broken)
+        check(refs().isEmpty())
+        check(search(data.string("addedSymbol")).size == 1)
+        replace(broken, SharedScenarios.text(data.string("rootSource"), last))
+        clean(broken)
+        check(refs().size == data.int("referenceCount"))
+        configure(graph.filter { it.name != roots.last().name })
+        with(driver) { awaitUi("removed root leaves index") { search(data.string("symbol")).size == data.int("roots") - 1 } }
+        configure(graph)
+        with(driver) { awaitUi("restored root returns to index") { search(data.string("symbol")).size == data.int("roots") } }
+    }
 }
 
 private fun ParityWorkspace.graph(): ParityWorkspace.Document {

@@ -1,6 +1,6 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **255 scenarios**: X1–X250, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **256 scenarios**: X1–X251, CFG1–CFG3 and 7a.8/7a.9.
 The preceding missing-method gate passes **X122/X209–X215** in VS Code `run-u5kDXk` and IntelliJ
 `run-4588144426201480586` (plus START), zero editor failures. It verifies required destination
 imports, exact signatures, atomic module-root/companion edits and diagnostic Undo/Redo. All 310
@@ -1390,7 +1390,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X250 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X251 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -3531,3 +3531,16 @@ Ecstasy Code Style or VS Code `xtc.formatting.*` to verify custom indentation an
 | X248 | Inspect outline, folds and selection in the shared damaged header/call/list/tuple variants, then repair. | Alias/current/later remain in the outline; method folds stay within source; selection strictly expands without duplicate spans; repair removes stale structure. |
 | X249 | Format continuation expressions and standalone block comments, repeat, then Undo/Redo/Undo. | Shared indentation is exact and stable; literal contents and relative comment layout remain intact. |
 | X250 | Format the shared long concatenation, repeat, then Undo/Redo/Undo. | Wrap at token boundaries at the configured 120-column margin; preserve every literal and native history. |
+
+
+### L67 graph-index acceptance (2026-10-05)
+
+| Case | Actions | Expected result |
+| --- | --- | --- |
+| X251 | Configure the shared 16 independent roots and Consumer; open Node0 and find references to Box while Consumer stays closed. Repeat workspace-symbol search; add the shared field without saving. Break and repair an independent root, then remove and restore it in the configured graph. | References include the closed consumer. The new field appears immediately. Broken neighbors suppress complete references, while healthy symbols remain available. Repair restores references; graph replacement removes/restores the root's symbols. |
+
+Both drivers implement X251 from the same catalog. IntelliJ assertions use its connected client for
+references/workspace symbols and native documents/diagnostics; this does not assert References-panel
+layout. Backend compile counters establish reuse, exact dependency-closure invalidation and resource
+changes despite unchanged timestamps. Weak-reference checks establish that the retained navigation
+index does not own compiler attempts, constant pools or ASTs. Selected acceptance is pending.
