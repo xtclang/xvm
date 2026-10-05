@@ -233,7 +233,7 @@ local or import-alias declarations and inherited written member contracts, prese
 | Pull document/workspace diagnostics | Implemented for negotiated compiler clients: result IDs, related/closed documents, refresh and removal reports. Shared X123 and updated X76/X118 pass in both editors; push remains for other clients. PLAT1's source-location crash is fixed. The native demo also corrected a closed standalone-member pull gap; X27/X123 pass after that correction. | L68 implemented; demo receipts and nine pull-diagnostic tests |
 | Semantic-token range/delta requests | Negotiated range/delta with bounded result history; backend/protocol and both host checks pass | L69 / X126 |
 | Completion/action/lens/link/inlay/workspace-symbol resolve requests | All six endpoints implemented with bounded revision guards. IntelliJ selects and applies lazy actions through its undo-aware bridge. Backend/protocol and selected acceptance pass in both editors. | L70 / X127, X131 |
-| File-operation pre-edit requests; explicit create/delete notifications | All six hooks pass backend/protocol checks; native file/package Rename passes. Batch native Move/Undo/Redo and resource assertions pass X130, but the current full VS Code run fails that case on the host's post-Paste Explorer repaint. IntelliJ passes. Bounded cross-package qualification passes X161; explicit graph replacement now uses `xtc/renameFiles` and shared X162/X163. | L71 / X128, X130 |
+| File-operation pre-edit requests; explicit create/delete notifications | All six hooks pass backend/protocol checks; native file/package Rename passes. X130's Move/Undo/Redo/resource assertions pass the October 5 full VS Code run; its earlier intermittent Explorer repaint failure remains UP16. X218 still fails VS Code overlapping-move Undo (UP23). IntelliJ supports the ordered transaction. Bounded cross-package qualification passes X161; explicit graph replacement uses `xtc/renameFiles` and shared X162/X163. | L71 / X128, X130 |
 | Save-time edits, incremental sync, multiple-range formatting | Negotiated save hooks, opt-in incremental UTF-16 updates and multiple-range formatting implemented; default Full/no save edits preserved. Backend/packaged transport and selected X132 pass in both editors. | L72 / X132 |
 | Server-side `workspace/executeCommand` | Module Run lenses invoke an existing client command | L73 |
 | Cross-project monikers | Artifact-based import/export/local identities; backend and selected acceptance pass in both editors | L74 |
@@ -265,7 +265,15 @@ not additional language capabilities. L81 progress/trace controls and bounded na
 Dynamic watcher registration now waits for `initialized` and negotiated support. The final L80 producer/capability audit and L81 bounded progress/refresh acceptance are complete;
 full-catalog, scale and other-platform release evidence remain under L82.
 
-**Implementation and validation are separate.** The shared playbook now has 128 cases with
+**Current combined checkpoint (2026-10-05):** 2,991 backend tests pass (44 existing skips).
+VS Code exercises all 264 scenarios: 263 pass, X218 retains UP23. IntelliJ's resumed coverage has
+262 passing feature assertions and two explicit partial cases (UP25/UP26). Its long continuation
+also records UP27 refresh overload and UP03 native VFS waits; the short clean follow-up does not
+clear those independent IDE failures. Recursive typedef diagnostics/rename and bounded worker
+retention are repaired without new AST/embedding APIs. See the
+[L82 evidence and next tasks](../../../docs/errs-integration-plan.md#l82-combined-regression-and-retention-checkpoint-2026-10-05).
+
+**Historical acceptance (2026-09-29):** the shared playbook then had 128 cases with
 assertions in both drivers. The [current IntelliJ demo record](../../../docs/errs-integration-plan.md#native-intellij-demo-continuation-2026-09-29)
 tracks resumed execution and focused corrections; it does not replace the historical full-run receipt.
 All 128 cases have passing receipts across resumed runs. The final X105/X122/X123 native recheck
