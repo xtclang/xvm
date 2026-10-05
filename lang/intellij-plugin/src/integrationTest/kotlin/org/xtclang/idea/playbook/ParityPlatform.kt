@@ -65,6 +65,21 @@ internal fun ParityScenarios.platformCases() {
             check(open(data.string("libraryFile")).text == data.string("library"))
         }
     }
+    listOf("X245", "X246", "X247").forEach { id ->
+        case(id) { data ->
+            val document = open(data.string("file"), data.string("source"))
+            clean(document)
+            data["queries"].asJsonArray.forEach { row ->
+                val request = row.asJsonObject
+                val result = query("textDocument/linkedEditingRange", document, document.at(request.string("anchor")))
+                val starts = if (result.isJsonNull) emptyList() else result.asJsonObject["ranges"].asJsonArray.map {
+                    ParityWorkspace.offset(document.text, it.asJsonObject["start"].asJsonObject)
+                }
+                check(starts == request.strings("occurrences").map { document.text.indexOf(it) })
+                check(document.text == data.string("source"))
+            }
+        }
+    }
     case("X136") { data ->
         val document = open(data.string("file"), data.string("source"))
         clean(document)
