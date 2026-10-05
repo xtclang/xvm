@@ -218,11 +218,10 @@
                 "xtc.formatting.maxLineWidth": {
                     "type": "integer",
                     "default": 120,
-                    "description": "Reserved legacy value; currently does not wrap or align source lines.",
+                    "description": "Compiler adapter target width for expression and list wrapping at safe token boundaries; literals and comments are not split.",
                     "scope": "window",
                     "minimum": 1,
-                    "maximum": 1000,
-                    "deprecationMessage": "Line wrapping is not implemented. Use editor.rulers for a visual right margin."
+                    "maximum": 1000
                 },
                 "xtc.compiler.sourceModules": {
                     "type": [

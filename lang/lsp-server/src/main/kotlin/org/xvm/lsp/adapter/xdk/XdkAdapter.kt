@@ -1459,8 +1459,10 @@ class XdkAdapter
                     // Method parameters have callable slots and may have named callers elsewhere;
                     // those require the complete graph rename operation, even for private methods.
                     it.renameable && it.declarationSource == model.sourceName &&
-                        (it.kind == SemanticModel.SymbolKind.VARIABLE ||
-                            it.kind == SemanticModel.SymbolKind.PARAMETER && it.id !in model.parameters)
+                        (
+                            it.kind == SemanticModel.SymbolKind.VARIABLE ||
+                                (it.kind == SemanticModel.SymbolKind.PARAMETER && it.id !in model.parameters)
+                        )
                 } ?: return null
             val ranges =
                 model.occurrences

@@ -168,17 +168,17 @@ implementation retain their separate meanings. Indexed library sources remain re
 | Highlights | By spelling | Syntax, read/write distinction | Resolved identities, read/write distinction |
 | Completion | Basic | Context-aware | Bounded scope/member/static completion and compatible argument values |
 | Rename | Basic | Implemented with syntax limits | Locals/private parameters; graph method/property families, types, static members and aliases; simple member-file moves; compiler proof and versioned edits |
-| Code actions / formatting | Basic | Implemented with syntax limits | Proven ordinary-import cleanup and unresolved public-type imports; Java-lexer indentation and whitespace edits with token-preservation checks |
-| Folding / selection | Basic / none | Syntax AST | Compiler AST; folds retain the actual closing-brace column |
+| Code actions / formatting | Basic | Implemented with syntax limits | Proven ordinary-import cleanup and unresolved public-type imports; Java-lexer indentation, continuations and token-boundary wrapping with literal-preservation checks |
+| Folding / selection | Basic / none | Syntax AST | Compiler AST; strictly nested selection spans and exact closing-brace fold columns |
 | Signature help | None | Same-file | Selected calls and compiler-fitted incomplete-call candidates |
-| Document links | Imports | Workspace index | HTTP(S) URLs inside Java-lexer comments/literals |
+| Document links | Imports | Workspace index | HTTP(S) URLs in comments/literals plus resolved module/type/alias/wildcard import sources |
 | Workspace symbols | Limited | Workspace index | Discovered/configured source graph, including unopened modules; on-demand compiler indexing |
 | Semantic tokens | None | Syntax-based | Java lexical tokens plus resolved names and declaration/read-only/static/write modifiers |
 | Type-definition / implementations | None | None | Source type identities and nominal type/method implementation chains |
 | Call hierarchy | None | None | Static selected calls across the complete discovered/configured source graph |
 | Inlay hints | None | None | Inferred local/destructured types, lambda parameters/returns and selected positional parameter names |
 | Type hierarchy | None | None | Declared extends/implements across the source graph, with generic parents |
-| Code lenses / linked editing | Basic | Implemented | Module run command / identity-based local-variable ranges |
+| Code lenses / linked editing | Basic | Implemented | Module run command / identity-based local/lambda ranges and lexical import aliases |
 | Native library | Not needed | Required | Not needed |
 
 The compiler backend bundles the same complete library set as the XDK distribution through a shared
@@ -665,13 +665,21 @@ The LSP server provides three levels of formatting support:
 
 | Capability | Trigger | What It Does |
 |------------|---------|--------------|
-| **Document Formatting** | Reformat action (`Ctrl+Alt+L`) | Cleans trailing whitespace and final newline |
-| **Range Formatting** | Format selection | Same cleanup on a selected region |
-| **On-Type Formatting** | Typing `Enter`, `}`, `;` | AST-aware auto-indentation as you type |
+| **Document Formatting** | Reformat action (`Ctrl+Alt+L`) | Adapter-specific indentation/layout plus configured whitespace cleanup |
+| **Range Formatting** | Format selection | The same rules, confined to the selected lines |
+| **On-Type Formatting** | Typing `Enter`, `}`, `;` | Auto-indentation using the adapter's syntax model; compiler mode uses its Java lexer |
+
+Compiler mode uses the Java lexer for nesting/operator continuation indentation, wrapping at
+expression/list token boundaries using `maxLineWidth`, and standalone block-comment margins.
+Code and literal token spellings are verified after formatting. Literal/template contents and
+relative comment layout are preserved; comments are not reflowed and literals are not split.
+Range formatting is confined to selected lines. On-type formatting adjusts indentation without
+wrapping lines. A lexical error refuses formatting. Shared X249/X250 cover exact output and history;
+the L66 batch acceptance record is maintained in the integration plan.
 
 ### On-Type Formatting (Auto-Indent)
 
-When you type a trigger character, the LSP server uses tree-sitter AST context to
+In Tree-sitter mode, typing a trigger character uses the Tree-sitter AST context to
 determine the correct indentation and sends back edits to fix it. This is strictly
 better than regex-based TextMate indentation rules because it understands:
 
