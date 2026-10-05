@@ -3098,3 +3098,12 @@ its existing collection-response set fixes both. This was a harness omission, no
 The final method-local visibility refinement has backend/packaged coverage; it did not trigger
 another GUI run. No full-catalog run is claimed. The catalog has **258 cases**, SHA-256
 `7f4170148797ce5828bcb36ec96dd35ca9c4a0670768b7b7dcc81826535f91d5`.
+
+### L76 compiler inline completion
+
+Implementation adds a 27th, compiler-only adapter capability, using existing copied cursor facts.
+Unique automatic name/argument suggestions and explicit alternatives are single-range plain text;
+selection context, cancellation and document versions constrain publication. Shared X255–X258
+cover native accept/undo, dismissal/continued typing, ambiguity/selection and incomplete calls.
+LSP4IJ's missing invocation/selection context is UP26; IntelliJ X257 is explicitly partial.
+Validation is pending the batch. No embedding or AST changes were needed.

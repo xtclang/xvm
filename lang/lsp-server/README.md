@@ -122,9 +122,9 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 
 ### Backend Comparison
 
-Compiler mode has implementations for all 26 capabilities in this project's adapter interface,
+Compiler mode has implementations for all 27 capabilities in this project's adapter interface,
 plus push/pull diagnostics and document/workspace synchronization. Several implementations remain
-bounded; the interface does not cover every LSP feature. Inline completion/values, colors, notebooks and broader refactorings are
+bounded; the interface does not cover every LSP feature. Debug inline values, colors, notebooks and broader refactorings are
 among the missing features. See the [explicit absent-feature inventory](../doc/plans/plan-ide-integration.md#compiler-completeness-snapshot)
 and [active L55–L83 completion checklist](../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist).
 Capability coverage, semantic completeness and native test coverage are tracked separately.
@@ -168,6 +168,7 @@ implementation retain their separate meanings. Indexed library sources remain re
 | Hover | Declaration | Declaration | Declaration and validated type |
 | Highlights | By spelling | Syntax, read/write distinction | Resolved identities, read/write distinction |
 | Completion | Basic | Context-aware | Bounded scope/member/static completion and compatible argument values |
+| Inline completion | No | No | Compiler names/argument values; automatic ambiguity suppression and explicit alternatives |
 | Rename | Basic | Implemented with syntax limits | Locals/private parameters; graph method/property families, types, static members and aliases; simple member-file moves; compiler proof and versioned edits |
 | Code actions / formatting | Basic | Implemented with syntax limits | Proven ordinary-import cleanup and unresolved public-type imports; Java-lexer indentation, continuations and token-boundary wrapping with literal-preservation checks |
 | Folding / selection | Basic / none | Syntax AST | Compiler AST; strictly nested selection spans and exact closing-brace fold columns |
@@ -850,3 +851,15 @@ Selected X31/X252/X253 pass in both editors; full-catalog/release acceptance rem
 L75 passes 58 distinct backend/protocol cases and the packaged content round trip. X31/X101/X158/
 X252–X254 pass in VS Code; IntelliJ passes five plus START and X254's file-fallback checks, with
 X254 explicitly partial for UP25 and no IDE errors. See the [L75 receipt](../../docs/errs-integration-plan.md#l75-read-only-library-content-2026-10-05).
+
+## Compiler inline completion
+
+Compiler mode negotiates `textDocument/inlineCompletion` separately from popup completion.
+Suggestions reuse copied semantic facts and replace only a prefix ending at the caret. Automatic
+requests offer one unambiguous name/value; explicit requests can offer alternatives. Selected
+popup items constrain both range and extension. Imports requiring additional edits, snippets with
+placeholders, mid-token edits and read-only libraries are excluded. Cancellation and newer
+versions retire pending suggestions. No new embedding/AST API or generative service is involved.
+
+Both editor clients have native providers. IntelliJ's direct invocation currently sends Automatic
+and omits popup selection (UP26); shared X255–X258 distinguish native from protocol coverage.

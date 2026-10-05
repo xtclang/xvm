@@ -1483,3 +1483,12 @@ VS Code uses its standard read-only virtual provider; IntelliJ retains protected
 LSP4IJ implements the provider (UP25). X254 explicitly records this client difference. 58 distinct backend/protocol cases and the packaged content round trip pass. VS Code passes all
 six selected cases; IntelliJ passes five plus START and reports X254 partial with its file-fallback
 assertions successful and zero IDE failures; see the [contract and receipt](../../../docs/errs-integration-plan.md#l75-read-only-library-content-2026-10-05).
+
+### L76 compiler inline completion
+
+Implementation adds a 27th, compiler-only adapter capability, using existing copied cursor facts.
+Unique automatic name/argument suggestions and explicit alternatives are single-range plain text;
+selection context, cancellation and document versions constrain publication. Shared X255–X258
+cover native accept/undo, dismissal/continued typing, ambiguity/selection and incomplete calls.
+LSP4IJ's missing invocation/selection context is UP26; IntelliJ X257 is explicitly partial.
+Validation is pending the batch. No embedding or AST changes were needed.
