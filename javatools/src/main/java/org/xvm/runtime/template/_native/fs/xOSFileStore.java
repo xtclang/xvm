@@ -85,7 +85,7 @@ public class xOSFileStore
         case "dirFor": { // (pathString)
             StringHandle hPathString = (StringHandle) hArg;
             try {
-                Path path = xOSFileNode.toOSPath(hPathString.getStringValue());
+                Path path = xOSFileNode.toOsPath(hPathString.getStringValue());
                 return xOSFileNode.createHandle(frame, hTarget, path, true, iReturn);
             } catch (InvalidPathException e) {
                 return frame.raiseException(xException.ioException(frame, e.getMessage()));
@@ -94,7 +94,7 @@ public class xOSFileStore
         case "fileFor": { // (pathString)
             StringHandle hPathString = (StringHandle) hArg;
             try {
-                Path path = xOSFileNode.toOSPath(hPathString.getStringValue());
+                Path path = xOSFileNode.toOsPath(hPathString.getStringValue());
                 return xOSFileNode.createHandle(frame, hTarget, path, false, iReturn);
             } catch (InvalidPathException e) {
                 return frame.raiseException(xException.ioException(frame, e.getMessage()));
@@ -117,14 +117,14 @@ public class xOSFileStore
 
             Path pathResult;
             try {
-                Path    pathSrc = xOSFileNode.toOSPath(sSrc);
+                Path    pathSrc = xOSFileNode.toOsPath(sSrc);
                 boolean fDir    = Files.isDirectory(pathSrc);
                 if (Files.notExists(pathSrc)) {
                     return frame.raiseException(xException.fileNotFoundException(
                             frame, "Could not find file or directory: " + sSrc, hSrc));
                 }
 
-                Path pathDest = xOSFileNode.toOSPath(sDest);
+                Path pathDest = xOSFileNode.toOsPath(sDest);
                 if (Files.exists(pathDest) && !Files.isDirectory(pathDest)) {
                     return frame.raiseException(xException.fileAlreadyExistsException(
                             frame, "Could not overwrite file or directory: " + sDest, hDest));
@@ -156,7 +156,7 @@ public class xOSFileStore
         case "linkAsFile": { // pathString
             StringHandle hPathString = (StringHandle) ahArg[0];
             try {
-                Path path  = xOSFileNode.toOSPath(hPathString.getStringValue());
+                Path path  = xOSFileNode.toOsPath(hPathString.getStringValue());
 
                 if (Files.isSymbolicLink(path)) {
                     // TODO: implement native support for link files

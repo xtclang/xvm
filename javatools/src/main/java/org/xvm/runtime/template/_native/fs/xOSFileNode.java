@@ -178,7 +178,7 @@ public class xOSFileNode
      *
      * @return the OS path
      */
-    public static Path toOSPath(String sPath) {
+    public static Path toOsPath(String sPath) {
         if (WINDOWS && sPath.length() >= 3 && sPath.charAt(0) == '/' && sPath.charAt(2) == ':'
                 && Character.isLetter(sPath.charAt(1))
                 && (sPath.length() == 3 || sPath.charAt(3) == '/')) {

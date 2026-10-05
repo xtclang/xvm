@@ -18,8 +18,8 @@ public class OSPathConversionTest {
     public void pathsAreUnchangedOutsideWindows() {
         assertEquals("/a/b", xOSFileNode.toStorePath(Path.of("/a/b")));
         assertEquals("/", xOSFileNode.toStorePath(Path.of("/")));
-        assertEquals(Path.of("/a/b"), xOSFileNode.toOSPath("/a/b"));
-        assertEquals(Path.of("/C:/a"), xOSFileNode.toOSPath("/C:/a"));
+        assertEquals(Path.of("/a/b"), xOSFileNode.toOsPath("/a/b"));
+        assertEquals(Path.of("/C:/a"), xOSFileNode.toOsPath("/C:/a"));
     }
 
     @Test
@@ -29,7 +29,7 @@ public class OSPathConversionTest {
 
         assertEquals("/", xOSFileNode.toStorePath(root));
         assertEquals("/a/b", xOSFileNode.toStorePath(root.resolve("a\\b")));
-        assertEquals(root.resolve("a\\b"), xOSFileNode.toOSPath("/a/b").toAbsolutePath());
+        assertEquals(root.resolve("a\\b"), xOSFileNode.toOsPath("/a/b").toAbsolutePath());
     }
 
     @Test
@@ -40,14 +40,14 @@ public class OSPathConversionTest {
 
         assertEquals("/" + drive, xOSFileNode.toStorePath(Path.of(drive + "\\")));
         assertEquals("/" + drive + "/a/b", xOSFileNode.toStorePath(Path.of(drive + "\\a\\b")));
-        assertEquals(Path.of(drive + "\\"), xOSFileNode.toOSPath("/" + drive));
-        assertEquals(Path.of(drive + "\\a\\b"), xOSFileNode.toOSPath("/" + drive + "/a/b"));
+        assertEquals(Path.of(drive + "\\"), xOSFileNode.toOsPath("/" + drive));
+        assertEquals(Path.of(drive + "\\a\\b"), xOSFileNode.toOsPath("/" + drive + "/a/b"));
     }
 
     @Test
     @EnabledOnOs(OS.WINDOWS)
     public void osPathsPassThrough() {
-        assertEquals(Path.of("C:\\a\\b"), xOSFileNode.toOSPath("C:\\a\\b"));
+        assertEquals(Path.of("C:\\a\\b"), xOSFileNode.toOsPath("C:\\a\\b"));
         assertEquals("a/b", xOSFileNode.toStorePath(Path.of("a\\b")));
     }
 }
