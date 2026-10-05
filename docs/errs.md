@@ -3043,3 +3043,30 @@ L67 acceptance is closed for this bounded implementation: 33/129-module compile-
 retention controls pass under the existing heap, including collection during a still-running graph
 query. Packaged first references on 20,000-method fixtures improve from 8–11 s to 0.4–0.6 s.
 X45/X59/X63/X143/X251 pass in both editors; no full-catalog rerun or disk-persistent index is claimed.
+
+### L74 artifact identities (2026-10-05; validation pending)
+
+`textDocument/moniker` now has a compiler-only provider. The `ecstasy-artifact-v1` scheme
+uses a SHA-256 digest of the normalized emitted module plus its normalized constant-table index.
+Normalization removes build timestamps and checkout directories in a private deserialized copy;
+actual module bytes, version, code, signatures, embedded resources and relative source/debug data
+otherwise participate in identity. Unchanged recompilation and relocating a checkout should keep
+IDs; changing an artifact changes its symbol IDs. Identical normalized artifacts intentionally
+share IDs across projects. Equal names in different artifacts do not establish identity.
+Source-index metadata is not part of this portable key, so attaching/removing matching sources
+cannot change binary identity. Existing source-index revisions and fresh rename proofs are unchanged.
+
+Public/protected declarations with externally visible owners export their identity; consumers
+import the same identity. Private components are local. The uniqueness is `scheme`, not a claim
+of an independently registered global identifier. Missing emitted entries, register locals,
+parameters, lambdas, unresolved names and unsuccessful compilations return no moniker. The feature
+is an exact artifact identity API, not a fuzzy symbol search or an LSIF exporter. Compiler-generated
+routes without an exact emitted declaration remain unavailable. No Java/AST API was added.
+
+Extraction runs on the serialized compiler worker; retained tables contain only immutable scalar
+facts. The request uses the existing document/configuration guards, cancellation and optional
+partial-result path. Shared X252/X253 and updated X31 exercise the connected clients in both IDEs;
+there is no native moniker browser in either editor, and protocol checks must not be described as
+native moniker UI coverage. Backend tests cover source/binary matching, overloads, unchanged
+recompilation, checkout relocation, distinct same-name artifacts, visibility, incomplete source,
+closed graph views and replacement. Acceptance is pending the batched run.

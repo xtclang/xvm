@@ -1203,7 +1203,7 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 | L71 file operations | Six negotiated pre/post hooks and compiler-proven file/package/container operations; backend and selected X128/X130 checks pass in both editors. | Bounded same-module type moves now rewrite package qualifications; X161 Move/Undo/Redo passes in both editors. Explicit graph relocation now uses the host proposal/persistence path (X162/X163). Retain the VS Code file-operation refusal limitation. |
 | L72 save/sync/formatting | Negotiated save hooks, opt-in incremental patches and multiple-range formatting pass backend and selected X132/X137–X139 checks; Full remains default. | Broaden workspace/save ownership coverage; IntelliJ uses native save formatting because LSP4IJ lacks `willSaveWaitUntil`. Save edits remain version guarded and independent of compilation. |
 | L73 server commands | Run lenses invoke client commands; negotiated legacy code actions have a bounded one-use resolve/apply command. | Broader server commands and embedded Run remain separate scopes; define typed commands, edit failure handling and cancellation. Embedded execution depends on the accepted R2–R5 service design, not another command-line assembly path. |
-| L74 monikers | Compiler/graph identities exist but are not cross-project identifiers. | Define module/artifact-version identity, import/export relationships and matches across source and binary consumers. |
+| L74 monikers | Artifact-based identities and standard request implemented; acceptance pending. | Verify normalized artifact stability, source/binary equality, dependency replacement and shared X252/X253. No name-based joins or snapshot IDs. |
 | L75 document content | Matching indexed sources open as read-only files. | Establish client support and URI/revision ownership for virtual or archived sources; define refresh and stale-content behavior. |
 | L76 inline completion | No inline provider exists. | Decide useful compiler/snippet use cases and client support first; no generative service is implied. Implement and test the agreed scope or record an explicit exclusion. |
 | L77 colors | No color-value provider exists. | Decide which XTC values have unambiguous color meaning and reversible source edits. Implement that scope or record why it is inapplicable. |
@@ -10778,3 +10778,30 @@ Selected editor acceptance:
   not a new full-catalog GUI receipt. Existing UP23 host Undo and other recorded host limits remain.
 - Kotlin formatting, TypeScript compilation and `git diff --check` pass. No Gradle configuration,
   Java embedding API, compiler AST fields or production explicit-GC calls were added.
+
+### L74 artifact identities (2026-10-05; validation pending)
+
+`textDocument/moniker` now has a compiler-only provider. The `ecstasy-artifact-v1` scheme
+uses a SHA-256 digest of the normalized emitted module plus its normalized constant-table index.
+Normalization removes build timestamps and checkout directories in a private deserialized copy;
+actual module bytes, version, code, signatures, embedded resources and relative source/debug data
+otherwise participate in identity. Unchanged recompilation and relocating a checkout should keep
+IDs; changing an artifact changes its symbol IDs. Identical normalized artifacts intentionally
+share IDs across projects. Equal names in different artifacts do not establish identity.
+Source-index metadata is not part of this portable key, so attaching/removing matching sources
+cannot change binary identity. Existing source-index revisions and fresh rename proofs are unchanged.
+
+Public/protected declarations with externally visible owners export their identity; consumers
+import the same identity. Private components are local. The uniqueness is `scheme`, not a claim
+of an independently registered global identifier. Missing emitted entries, register locals,
+parameters, lambdas, unresolved names and unsuccessful compilations return no moniker. The feature
+is an exact artifact identity API, not a fuzzy symbol search or an LSIF exporter. Compiler-generated
+routes without an exact emitted declaration remain unavailable. No Java/AST API was added.
+
+Extraction runs on the serialized compiler worker; retained tables contain only immutable scalar
+facts. The request uses the existing document/configuration guards, cancellation and optional
+partial-result path. Shared X252/X253 and updated X31 exercise the connected clients in both IDEs;
+there is no native moniker browser in either editor, and protocol checks must not be described as
+native moniker UI coverage. Backend tests cover source/binary matching, overloads, unchanged
+recompilation, checkout relocation, distinct same-name artifacts, visibility, incomplete source,
+closed graph views and replacement. Acceptance is pending the batched run.
