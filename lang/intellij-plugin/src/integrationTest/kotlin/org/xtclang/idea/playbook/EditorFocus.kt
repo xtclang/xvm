@@ -103,6 +103,7 @@ internal class PopupInspection(
     private val stamp = document.getModificationStamp()
     private val originalText = editor.text
     private val nativeEditor = editor.editor
+    private val caretOffset = driver.withContext(OnDispatcher.EDT) { nativeEditor.getCaretModel().getOffset() }
 
     fun recover() {
         if (driver.restorePopupFocus(nativeEditor)) {
@@ -122,6 +123,9 @@ internal class PopupInspection(
         }
         driver.dismissPopups()
         driver.focusEditor(editor)
+        // Focusing another component can move the caret without changing the source. Reopen
+        // this unapplied query at its captured position, never at an unrelated click location.
+        driver.withContext(OnDispatcher.EDT) { nativeEditor.getCaretModel().moveToOffset(caretOffset) }
         reopen()
     }
 }
