@@ -3,6 +3,7 @@ package org.xtclang.idea.playbook
 import com.intellij.driver.client.Driver
 import com.intellij.driver.client.impl.DriverCallException
 import com.intellij.driver.client.service
+import com.intellij.driver.model.LockSemantics
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.FileEditorManager
 import com.intellij.driver.sdk.HIGHLIGHTING_PANEL_ID
@@ -1513,9 +1514,18 @@ class CompilerPlaybook(
                         reopened.text == data.text("source")
                 }
                 reopened.awaitDiagnostics(emptyList())
+                val restored = open("X103/${data.text("member")}")
+                check(restored.text == data.text("memberSource")) {
+                    "Reverse rename must restore the member declaration in the open editor"
+                }
+                // Refactoring updates an open document; persistence must not depend on autosave.
+                withContext(OnDispatcher.EDT, semantics = LockSemantics.WRITE_ACTION) {
+                    service<ParityDocuments>()
+                        .saveDocument(cast(restored.document, ParityDocument::class))
+                }
                 check(
                     Files.readString(root.resolve(data.text("member"))) == data.text("memberSource"),
-                )
+                ) { "Saving the reverse rename must persist the restored member declaration" }
                 check(
                     Files.readString(root.resolve(data.text("companion"))) ==
                         data.text("companionSource"),
