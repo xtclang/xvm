@@ -70,6 +70,7 @@ class CapabilityContractTest {
         when (feature) {
             AdapterCapability.HOVER -> "hoverProvider"
             AdapterCapability.COMPLETION -> "completionProvider"
+            AdapterCapability.INLINE_COMPLETION -> "inlineCompletionProvider"
             AdapterCapability.DEFINITION -> "definitionProvider"
             AdapterCapability.DECLARATION -> "declarationProvider"
             AdapterCapability.REFERENCES -> "referencesProvider"
