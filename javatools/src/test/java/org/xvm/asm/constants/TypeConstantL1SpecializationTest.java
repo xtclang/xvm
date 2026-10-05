@@ -1,7 +1,7 @@
 package org.xvm.asm.constants;
 
-import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -638,12 +638,8 @@ public class TypeConstantL1SpecializationTest {
 
     private static ConstantPool loadConstantPool()
             throws IOException {
-        File file = new File("xdk/build/install/xdk/lib/ecstasy.xtc");
-        if (!file.isFile()) {
-            file = new File("../xdk/build/install/xdk/lib/ecstasy.xtc");
+        try (InputStream in = TypeConstantL1SpecializationTest.class.getResourceAsStream("/ecstasy.xtc")) {
+            return new FileStructure(in).getConstantPool();
         }
-        assertTrue(file.isFile(), "Build the XDK first with ./gradlew xdk:installDist");
-
-        return new FileStructure(file).getConstantPool();
     }
 }
