@@ -1522,4 +1522,13 @@ unsaved source after close while work is pending. The 19 focused backend/transpo
 UP15 remains upstream; full-catalog/scale/cross-platform evidence remains L82. This closes acceptance
 for existing providers and adds no AST, embedding or production language capability. See the
 [receipt and commit map](../../../docs/errs-integration-plan.md#l81-native-acceptance-closure-2026-10-05).
-The current shared catalog has 264 scenarios (X1–X259 plus the five configuration/stress IDs).
+The current shared catalog has 267 scenarios (X1–X262 plus the five configuration/stress IDs).
+
+
+The October 5 UI5–UI7 continuation adds shared X260–X262 for real Gradle import cancellation,
+overlap refusal, failed/invalid output retention and retry. Both editors use a common gated
+producer and native controls; acceptance receipts are recorded in the integration plan.
+The current remaining settings work is listed explicitly in
+[the UI remainder](../../../docs/errs-integration-plan.md#shared-compiler-import-acceptance-and-remaining-ui-work-2026-10-05).
+L77 color support awaits an applicable recognized Ecstasy library API; the user explicitly deferred
+L78 notebooks while file-based tooling is completed. L79 follows the runtime/DAP track.

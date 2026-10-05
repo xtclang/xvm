@@ -33,9 +33,11 @@ watch ownership, source graphs, lifecycle/process cleanup, edit/move guards, sta
 messages, capabilities, manifest wiring and bundled resources.
 The eight new compiler-import tests cover accepted-report ownership, cancellation/failure,
 delayed watcher completion, overlapping imports and project-owned progress disposal. The progress
-owner tests use application-free indicators; they do not claim native Cancel-button acceptance.
+owner tests use application-free indicators; shared X260 separately exercises the visible native
+Cancel button. X261/X262 cover failed/invalid Gradle output and retry. See the
+[shared import receipt](../../docs/errs-integration-plan.md#shared-compiler-import-acceptance-and-remaining-ui-work-2026-10-05).
 
-The native suite uses the shared 264-scenario catalog (X1–X259, CFG1–CFG3, 7a.8/7a.9).
+The native suite uses the shared 267-scenario catalog (X1–X262, CFG1–CFG3, 7a.8/7a.9).
 It launches an isolated Community-capable IntelliJ environment with Ultimate disabled. Selected
 runs preserve explicit `partial` statuses where LSP4IJ cannot exercise a native feature; neither
 passing protocol assertions nor an unselected scenario count as full UI acceptance. The
