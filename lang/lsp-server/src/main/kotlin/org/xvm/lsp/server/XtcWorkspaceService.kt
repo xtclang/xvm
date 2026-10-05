@@ -10,6 +10,8 @@ import org.eclipse.lsp4j.FileChangeType
 import org.eclipse.lsp4j.FileEvent
 import org.eclipse.lsp4j.RenameFilesParams
 import org.eclipse.lsp4j.SymbolInformation
+import org.eclipse.lsp4j.TextDocumentContentParams
+import org.eclipse.lsp4j.TextDocumentContentResult
 import org.eclipse.lsp4j.WorkspaceDiagnosticParams
 import org.eclipse.lsp4j.WorkspaceDiagnosticReport
 import org.eclipse.lsp4j.WorkspaceEdit
@@ -34,6 +36,9 @@ class XtcWorkspaceService(
     }
 
     private val fileChanges = FileChangeSnapshots()
+
+    override fun textDocumentContent(params: TextDocumentContentParams): CompletableFuture<TextDocumentContentResult> =
+        server.readOnlyDocuments.content(params.uri)
 
     override fun diagnostic(params: WorkspaceDiagnosticParams): CompletableFuture<WorkspaceDiagnosticReport> =
         server.workspaceDiagnostics(params)
