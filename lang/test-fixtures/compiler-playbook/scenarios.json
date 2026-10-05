@@ -8417,6 +8417,78 @@
         "coverage": "full",
         "limitations": []
       }
+    },
+    "X263": {
+      "title": "Import nested composite builds atomically and report generated-resource readiness",
+      "manual": [
+        "Refresh compiler paths in a root with nested included builds. Check all three source owners, resource status and no partial publication while Gradle is pending."
+      ],
+      "values": {
+        "steps": [
+          {
+            "operation": "refresh",
+            "prepare": false,
+            "output": "valid",
+            "outcome": "success",
+            "cancel": false,
+            "duplicate": false,
+            "expected": "imported",
+            "accepted": true
+          }
+        ],
+        "included": [
+          {
+            "folder": "included",
+            "module": "ImportIncluded"
+          },
+          {
+            "folder": "included/nested",
+            "module": "ImportNested"
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X264": {
+      "title": "Refresh imported compiler inputs after native Gradle synchronization",
+      "manual": [
+        "After an initial import, synchronize Gradle in IntelliJ or finish a Gradle task in VS Code. Changed inputs must reach diagnostics automatically without changing explicit settings."
+      ],
+      "values": {
+        "steps": [
+          {
+            "operation": "refresh",
+            "prepare": false,
+            "output": "valid",
+            "outcome": "success",
+            "cancel": false,
+            "duplicate": false,
+            "expected": "imported",
+            "accepted": true,
+            "automatic": true
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X265": {
+      "title": "Close a project or remove a workspace folder during compiler import",
+      "manual": [
+        "Start a gated import in a second project/folder and close/remove it. The producer must retire, late output must not restore its inputs, and the original project must remain usable."
+      ],
+      "values": {
+        "operation": "retirement"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
     }
   }
 }
