@@ -9,6 +9,15 @@ import org.xvm.lsp.model.SymbolInfo
 // from the internal compiler types.
 // ============================================================================
 
+/** Portable artifact identity. The scheme owns the identifier format, independently of snapshots. */
+data class SymbolMoniker(
+    val scheme: String,
+    val identifier: String,
+    val kind: Kind,
+) {
+    enum class Kind { IMPORT, EXPORT, LOCAL }
+}
+
 /** A position in a text document (0-based line and column). */
 data class Position(
     val line: Int,

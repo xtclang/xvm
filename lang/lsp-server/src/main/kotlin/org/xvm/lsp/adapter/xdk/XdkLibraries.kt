@@ -13,7 +13,12 @@ import java.util.Set.copyOf as immutableSet
 internal object XdkLibraries {
     private data class Bundle(
         val repository: BuildRepository,
-        val revisions: Map<String, String>,
+        val artifacts: Map<String, Artifact>,
+    )
+
+    private data class Artifact(
+        val revision: String,
+        val symbols: Lazy<XdkArtifactSymbols>,
     )
 
     /**
@@ -32,7 +37,7 @@ internal object XdkLibraries {
         val names =
             checkNotNull(index.getProperty("modules")) { "Bundled XDK module index is missing" }
         val repository = BuildRepository()
-        val revisions =
+        val artifacts =
             names.split(',').associate { name ->
                 val bytes = resource(name).use { it.readBytes() }
                 val module =
@@ -41,12 +46,15 @@ internal object XdkLibraries {
                     }
                 repository.storeModule(module)
                 module.name to
-                    HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes))
+                    Artifact(
+                        HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)),
+                        lazy { XdkArtifactSymbols.capture(resource(name).use { it.readBytes() }) },
+                    )
             }
         for (module in listOf("ecstasy.xtclang.org", "mack.xtclang.org", "_native.xtclang.org")) {
             checkNotNull(repository.loadModule(module)) { "Bundled XDK is missing $module" }
         }
-        Bundle(repository, revisions)
+        Bundle(repository, artifacts)
     }
 
     /**
@@ -62,7 +70,9 @@ internal object XdkLibraries {
 
     internal fun module(name: String) = bundle.repository.loadModule(name)
 
-    internal fun revision(name: String): String = bundle.revisions.getValue(name)
+    internal fun revision(name: String): String = bundle.artifacts.getValue(name).revision
+
+    internal fun symbolIndex(name: String): XdkArtifactSymbols? = bundle.artifacts[name]?.symbols?.value
 
     fun configure() {
         configured
