@@ -20,3 +20,8 @@ repositories {
     gradlePluginPortal()
     mavenCentral()
 }
+
+// Hold these local plugins to the stricter validation Gradle applies to published plugins.
+tasks.validatePlugins {
+    enableStricterValidation = true
+}

@@ -5,6 +5,7 @@ import com.vanniktech.maven.publish.JavadocJar
 import com.vanniktech.maven.publish.SourcesJar
 import org.gradle.api.attributes.plugin.GradlePluginApiVersion
 import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.plugin.compatibility.compatibility
 
 plugins {
     alias(libs.plugins.xdk.build.java)
@@ -129,6 +130,12 @@ gradlePlugin {
             displayName = pluginDisplayNameValue
             description = pluginDescriptionValue
             tags = listOf("xtc", "language", "compiler", "ecstasy")
+            // Declared to the Plugin Portal; covered by ConfigurationCacheCompatibilityTest.
+            compatibility {
+                features {
+                    configurationCache = true
+                }
+            }
         }
     }
 }

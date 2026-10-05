@@ -195,6 +195,7 @@ abstract class DockerTask : DefaultTask() {
     }
 }
 
+@UntrackedTask(because = "Deletes package versions from the remote registry, which has no local state to track")
 abstract class DockerCleanupTask : DefaultTask() {
     @get:Inject
     abstract val execOps: ExecOperations

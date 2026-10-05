@@ -103,7 +103,7 @@ class XdkDistribution(
                         |        for %%F in ("%~f0") do set "APP_ID=%%~fF"
                         |        if /I not "%XDK_ID%"=="%APP_ID%" (
                         |            "%XDK_ID%" %*
-                        |            goto end
+                        |            goto exitWithErrorLevel
                         |        )
                         |    )
                         |    rem === use the libraries specified by XDK_HOME ===
@@ -112,7 +112,8 @@ class XdkDistribution(
                         |
                         |if not exist %APP_HOME%\javatools\javatools.jar (
                         |    echo Unable to locate a valid XDK in "%APP_HOME%"; set XDK_HOME to the "xdk" directory containing "bin\", "lib\", and "javatools\"
-                        |    goto fail
+                        |    "%COMSPEC%" /c exit 1
+                        |    goto exitWithErrorLevel
                         |)
                         |
                         |set CLASSPATH=%APP_HOME%\javatools\javatools.jar

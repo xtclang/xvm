@@ -5,6 +5,7 @@ import org.gradle.api.provider.Provider
 import org.gradle.api.tasks.Input
 import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.TaskAction
+import org.gradle.work.DisableCachingByDefault
 import javax.inject.Inject
 
 /**
@@ -67,6 +68,7 @@ abstract class XdkPublishingCredentials @Inject constructor(xdkProperties: Proje
  * Validates GitHub, Maven Central, Gradle Plugin Portal, and signing credentials.
  * Provides detailed error messages with setup instructions when credentials are missing.
  */
+@DisableCachingByDefault(because = "Publishing credentials must be checked on every invocation")
 abstract class ValidateCredentialsTask : DefaultTask() {
     @get:Input
     abstract val projectName: Property<String>
