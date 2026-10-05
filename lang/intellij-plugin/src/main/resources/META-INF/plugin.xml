@@ -43,6 +43,8 @@
     </actions>
 
     <extensions defaultExtensionNs="com.intellij">
+        <postStartupActivity implementation="org.xtclang.idea.lsp.CompilerBuildUpdates"/>
+        <externalSystemTaskNotificationListener implementation="org.xtclang.idea.lsp.CompilerGradleSync"/>
         <applicationConfigurable id="xtc.service.defaults" parentId="language"
                                  displayName="Ecstasy Language Service Defaults"
                                  instance="org.xtclang.idea.lsp.LanguageServiceApplicationConfigurable"/>
