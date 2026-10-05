@@ -9,6 +9,12 @@ import org.xvm.lsp.model.SymbolInfo
 // from the internal compiler types.
 // ============================================================================
 
+/** Exact matching library source; its virtual URI includes the artifact/source revision. */
+data class ReadOnlyDocument(
+    val uri: String,
+    val text: String,
+)
+
 /** Portable artifact identity. The scheme owns the identifier format, independently of snapshots. */
 data class SymbolMoniker(
     val scheme: String,
