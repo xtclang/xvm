@@ -200,15 +200,26 @@ internal fun ParityScenarios.monikerCases() {
         configure(data["sourceModules"])
         val consumer = open(data.string("consumerFile"))
         clean(consumer)
+
         fun imports() = query("textDocument/moniker", consumer, consumer.at(data.string("reference"))).rows()
         val imported = imports().single()
         val text = data.string("librarySource")
         val offset = text.indexOf(data.string("declaration"))
         check(offset >= 0)
-        val exported = protocol.query("textDocument/moniker", mapOf(
-            "textDocument" to mapOf("uri" to uri(data.string("libraryFile"))),
-            "position" to mapOf("line" to text.take(offset).count { it == '\n' }, "character" to offset - text.lastIndexOf('\n', offset) - 1),
-        )).rows().single()
+        val exported =
+            protocol
+                .query(
+                    "textDocument/moniker",
+                    mapOf(
+                        "textDocument" to mapOf("uri" to uri(data.string("libraryFile"))),
+                        "position" to
+                            mapOf(
+                                "line" to text.take(offset).count { it == '\n' },
+                                "character" to offset - text.lastIndexOf('\n', offset) - 1,
+                            ),
+                    ),
+                ).rows()
+                .single()
         check(imported.string("scheme") == data.string("scheme"))
         check(imported.string("unique") == data.string("unique"))
         check(exported.string("kind") == "export")
@@ -217,6 +228,7 @@ internal fun ParityScenarios.monikerCases() {
         check(overload.string("identifier") != imported.string("identifier"))
         val library = open(data.string("libraryFile"))
         clean(library)
+
         fun exports() = query("textDocument/moniker", library, library.at(data.string("declaration"))).rows().single()
         check(exports() == exported)
         replace(library, text.replace(data.string("replaceFrom"), data.string("replaceWith")))
@@ -232,6 +244,7 @@ internal fun ParityScenarios.monikerCases() {
         write(data.string("file"), data.string("source"))
         val document = open(data.string("file"))
         clean(document)
+
         fun monikers(key: String) = query("textDocument/moniker", document, document.at(data.string(key))).rows()
         val own = monikers("private").single()
         val bundled = monikers("library").single()
