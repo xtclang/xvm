@@ -4,6 +4,7 @@ package org.xvm.lsp.adapter
 enum class AdapterCapability {
     HOVER,
     COMPLETION,
+    INLINE_COMPLETION,
     DEFINITION,
     DECLARATION,
     REFERENCES,
