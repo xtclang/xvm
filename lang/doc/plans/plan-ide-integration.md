@@ -242,7 +242,7 @@ local or import-alias declarations and inherited written member contracts, prese
 | Document colors and color presentations | Ordinary token coloring; no color-value provider | L77 |
 | Notebook synchronization | File/module document sessions | L78 |
 | Debug inline values | Compiler type/parameter inlay hints; no runtime values | L79 |
-| Application work-done progress, refresh, partial results and trace controls | Negotiated progress/create/cancel, lifecycle gating, coalesced refresh and runtime trace are implemented and tested. Bounded partial-result batches, actual Tree-sitter scan progress and shared X143 pass. X145 verifies native progress-model cancellation and restart during pending work in both editors. IntelliJ visible Cancel passes; VS Code physical-button selection and broader P3/P4 checks remain manual. | L81 / X141, X143, X145; [coverage map](../manual-test-plan.md#protocol-and-lifecycle-coverage-map) |
+| Application work-done progress, refresh, partial results and trace controls | Negotiated progress/create/cancel, lifecycle gating, coalesced refresh and runtime trace are implemented and tested. Bounded partial-result batches, actual Tree-sitter scan progress and shared X143 pass. X145 verifies native progress-model cancellation and restart during pending work in both editors. Both editors pass visible Cancel, X146/X147 refresh/report ownership and X259 rendered settings/restart overlap. Shared-process native window lifetime passes; UP15 retains its upstream classification gap. | L81 / X141, X143, X145–X147, X259; [coverage map](../manual-test-plan.md#protocol-and-lifecycle-coverage-map) |
 | Constant-folded property initializer facts | Detached initializer facts survive constant folding; backend and shared X142 pass in both editors | L83 |
 
 Every absent feature above has an explicit task and a
@@ -261,9 +261,9 @@ and remaining native acceptance are recorded in the integration plan. L56's dedi
 native startup test now passes; X103 also passes after fixing the transport snapshot read-lock/VFS
 write-lock deadlock on reverse rename. Execution tracing includes queue sizes and ordered job
 lists, compiler/API durations and server request-to-reply times. These are diagnostics improvements,
-not additional LSP capabilities or a completed L81 progress/trace-controls implementation.
-Dynamic watcher registration now waits for `initialized` and negotiated support. The final L80 producer/capability audit is complete; broader progress/refresh manual
-acceptance remains under L81.
+not additional language capabilities. L81 progress/trace controls and bounded native acceptance are now complete.
+Dynamic watcher registration now waits for `initialized` and negotiated support. The final L80 producer/capability audit and L81 bounded progress/refresh acceptance are complete;
+full-catalog, scale and other-platform release evidence remain under L82.
 
 **Implementation and validation are separate.** The shared playbook now has 128 cases with
 assertions in both drivers. The [current IntelliJ demo record](../../../docs/errs-integration-plan.md#native-intellij-demo-continuation-2026-09-29)
@@ -1498,3 +1498,14 @@ or skips. VS Code `run-B6sogF` passes X7/X31/X255–X258. IntelliJ
 `run-13088584184602426732` passes START/X7/X31/X255/X256/X258, with X257 explicitly partial for
 UP26 and zero IDE failures. Both drivers compile and formatting checks pass. See the
 [L76 contract and commit map](../../../docs/errs-integration-plan.md#l76-compiler-inline-completion-2026-10-05).
+
+L81 native acceptance closure (2026-10-05): both editors pass X145/X146/X147 and new X259.
+VS Code now activates the real visible Cancel control through the isolated renderer, without moving
+the mouse; its ordinary SDK cancellation mode stays distinct. X259 verifies installed consumer
+hints across dependency edits, setting changes and restart without editing that consumer.
+Both VS Code lifecycle modes pass, including two windows sharing one Electron process and restoring
+unsaved source after close while work is pending. The 19 focused backend/transport tests pass.
+UP15 remains upstream; full-catalog/scale/cross-platform evidence remains L82. This closes acceptance
+for existing providers and adds no AST, embedding or production language capability. See the
+[receipt and commit map](../../../docs/errs-integration-plan.md#l81-native-acceptance-closure-2026-10-05).
+The current shared catalog has 264 scenarios (X1–X259 plus the five configuration/stress IDs).
