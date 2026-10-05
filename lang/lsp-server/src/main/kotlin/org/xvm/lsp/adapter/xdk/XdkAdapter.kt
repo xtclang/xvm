@@ -1444,6 +1444,7 @@ class XdkAdapter
             line: Int,
             column: Int,
         ): LinkedEditingRanges? {
+            if (XdkLibrarySources.owns(uri)) return null
             val model =
                 analysis(uri)?.semantics?.takeIf { it.status == SemanticModel.Status.COMPLETE }
                     ?: return null
@@ -1453,13 +1454,19 @@ class XdkAdapter
             }
             val symbol =
                 model.symbolAt(line, column)?.takeIf {
-                    it.renameable && it.kind == SemanticModel.SymbolKind.VARIABLE
+                    // Lambda arguments are positional and their names are local to this source.
+                    // Method parameters have callable slots and may have named callers elsewhere;
+                    // those require the complete graph rename operation, even for private methods.
+                    it.renameable && it.declarationSource == model.sourceName &&
+                        (it.kind == SemanticModel.SymbolKind.VARIABLE ||
+                            it.kind == SemanticModel.SymbolKind.PARAMETER && it.id !in model.parameters)
                 } ?: return null
             val ranges =
                 model.occurrences
                     .filter { it.symbol == symbol.id && it.name == symbol.name }
                     .map { it.range.toRange() }
                     .distinct()
+                    .sortedWith(compareBy({ it.start.line }, { it.start.column }))
             return ranges.takeIf { it.size > 1 }?.let { LinkedEditingRanges(it) }
         }
 
