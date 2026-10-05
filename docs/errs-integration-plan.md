@@ -10599,3 +10599,14 @@ batched after all four L66 implementation slices.
 tokens, excluding alias/star. This is syntax ownership in the AST, not LSP state or a new cache; it
 lets wildcard links retain exact source ranges without reparsing names. No mutable field or clone
 responsibility is added.
+
+### L66 linked editing continuation (2026-10-05)
+
+Lambda parameters and normalized nested captures now join lexical local variables in document-only
+linked editing. Callable parameter slots, constructor/property contracts and members remain on the
+complete graph Rename path because named callers can be outside this document. Explicit aliases
+whose name equals the imported terminal are recognized from token ownership; conditional aliases
+use the compiler's resolved scope and retain COMPILER-29. Read-only indexed sources refuse editing.
+Shared X245–X247 and backend regressions cover exact ranges, sibling separation, UTF-16/CRLF, broken
+replacement and close. Combined testing remains after all four L66 slices. Import checkpoint:
+`b5bf3ebe9`. No AST field or new semantic cache is introduced.

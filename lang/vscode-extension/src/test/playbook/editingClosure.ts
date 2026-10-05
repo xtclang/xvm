@@ -30,3 +30,18 @@ export function editingClosureCases(ids: readonly ('X158' | 'X243' | 'X244')[] =
         assert.strictEqual(library.getText(), data.library);
     }));
 }
+
+export function linkedScopeCases(): void {
+    (['X245', 'X246', 'X247'] as const).forEach(id => playbook(id, async (workspace, data) => {
+        const document = await workspace.open(data.file, data.source);
+        await noErrors(document.uri);
+        for (const query of data.queries) {
+            const result = await client().sendRequest<import('vscode-languageclient/node').LinkedEditingRanges | null>('textDocument/linkedEditingRange', {
+                textDocument: { uri: document.uri.toString() }, position: position(document, query.anchor)
+            });
+            const starts = result?.ranges.map(range => document.offsetAt(new vscode.Position(range.start.line, range.start.character))) ?? [];
+            assert.deepStrictEqual(starts, query.occurrences.map(anchor => data.source.indexOf(anchor)));
+            assert.strictEqual(document.getText(), data.source);
+        }
+    }));
+}

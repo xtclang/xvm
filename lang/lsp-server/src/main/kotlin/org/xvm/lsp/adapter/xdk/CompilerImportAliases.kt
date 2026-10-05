@@ -25,7 +25,9 @@ internal fun compilerImportAliases(
             it.source?.fileName == source && !it.isWildcard
         }
     return imports
-        .filter { it.aliasName != it.qualifiedName.lastOrNull() && it.childNodes().none() }
+        // A written "as Box" is an alias even when it currently matches the imported name.
+        // Conditional imports use the compiler's resolved scope and retain its warning.
+        .filter { it.aliasToken !== it.qualifiedNameTokens.lastOrNull() }
         .mapNotNull { alias ->
             val token = alias.aliasToken ?: return@mapNotNull null
             val identity = alias.importedIdentity ?: return@mapNotNull null
