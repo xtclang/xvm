@@ -122,10 +122,9 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 
 ### Backend Comparison
 
-Compiler mode has implementations for all 25 capabilities in this project's adapter interface,
+Compiler mode has implementations for all 26 capabilities in this project's adapter interface,
 plus push/pull diagnostics and document/workspace synchronization. Several implementations remain
-bounded; the interface does not cover every LSP feature. Monikers,
-inline completion/values, colors, notebooks and broader refactorings are
+bounded; the interface does not cover every LSP feature. Inline completion/values, colors, notebooks and broader refactorings are
 among the missing features. See the [explicit absent-feature inventory](../doc/plans/plan-ide-integration.md#compiler-completeness-snapshot)
 and [active L55–L83 completion checklist](../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist).
 Capability coverage, semantic completeness and native test coverage are tracked separately.
@@ -164,6 +163,7 @@ implementation retain their separate meanings. Indexed library sources remain re
 | Semantic diagnostics | None | None | Compiler errors and warnings |
 | Incomplete syntax | Limited | Error-tolerant parse | Recovers surrounding declarations/blocks; parse errors stop semantic compilation |
 | Definition / references | By spelling | Syntax and workspace index | Source identities across discovered/configured graphs; definitions also use host-supplied dependency source indices |
+| Symbol monikers | None | None | Artifact-versioned import/export/local identities; matching source and binary consumers |
 | Hover | Declaration | Declaration | Declaration and validated type |
 | Highlights | By spelling | Syntax, read/write distinction | Resolved identities, read/write distinction |
 | Completion | Basic | Context-aware | Bounded scope/member/static completion and compatible argument values |
@@ -823,3 +823,13 @@ semantics and partial symbols and pass in both editors. X140/X141 retain their e
 passing UTF-16/runtime-trace receipts. See the manual playbook for dated execution evidence.
 Completion kinds and code-action forms/preferred metadata follow negotiation; legacy action clients
 use one-use, revision-checked commands only if they support `workspace.applyEdit`.
+
+### Portable compiler symbol identities
+
+`textDocument/moniker` uses the `ecstasy-artifact-v1` scheme and scheme-level uniqueness.
+Exported declarations and their binary consumers match by normalized artifact content and constant
+index. Build timestamps, absolute checkout paths and optional source attachments do not define the
+identity; code/signature/resource changes do. Private components are local. Register locals,
+lambdas, unresolved bindings and unsuccessful compilations supply no IDs. Identical normalized
+artifacts intentionally match across projects; module-name spelling alone never establishes a match.
+See [L74's contract and acceptance](../../docs/errs-integration-plan.md#l74-artifact-identities-2026-10-05-validation-pending).
