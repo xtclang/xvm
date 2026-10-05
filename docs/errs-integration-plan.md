@@ -3,7 +3,8 @@
 Latest feature checkpoint: [L76 inline completion](#l76-compiler-inline-completion-2026-10-05)
 passes backend, packaged transport and selected acceptance in both editors. IntelliJ native explicit
 invocation/selection context remains UP26; read-only virtual content remains UP25. L77–L79 retain
-explicit product/runtime scope decisions; L81/L82 retain broader acceptance and release work.
+explicit product/runtime scope decisions. [L81 native acceptance](#l81-native-acceptance-closure-2026-10-05)
+now passes its bounded scope; L82 retains full-catalog, scale and release work.
 
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
@@ -1215,7 +1216,7 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 | L78 notebooks | Current ownership is file/module based; there are no notebook sessions. | Decide whether XTC notebooks are a product requirement, then define cell/module identity and execution order before synchronization. Record an explicit exclusion if out of scope. |
 | L79 debug inline values | Compiler inlay hints are not runtime values; DAP remains a stub. | Depend on R6–R7 real sessions, stack/source mapping and stop-state ownership; define evaluation safety before exposing values. |
 | L80 negotiation | Current producer/provider audit is complete, including link-tooltip, per-signature parameter and pull-related-info gates. Generic IntelliJ text-edit guarding and shared X144 retain their passing receipts. | Generic resource/snippet/confirmation edits remain refused; native Rename/Move owns resource edits. New producers must extend negotiation and tests; host/release acceptance remains under L81/L82. |
-| L81 progress/trace/refresh | Partial batches and actual Tree-sitter scan progress join owned progress/cancellation, refresh and trace. X143 and X145 pass both hosts, including cancellation and restart during pending work. | X146/X147 now automate bounded P3/P4 refresh and late reports; acceptance follows this batch. IntelliJ visible Cancel passes; VS Code button selection and broader multi-window/settings interaction remain manual. |
+| L81 progress/trace/refresh | Implemented and accepted for the current providers. Visible Cancel, X146/X147 refresh/report ownership and X259 rendered settings/restart overlap pass both hosts. IntelliJ same-process projects and both VS Code window modes pass lifecycle checks. | UP15 still classifies typed-parameter failures as ParseError; reader recovery passes. Full-catalog, extended scale and cross-platform release evidence belong to L82. |
 | L83 initializer facts | Detached successful initializer facts are implemented with no new AST fields; backend regressions and shared X142 are added. | Backend and shared X142 pass; preserve the explicit eight-component record-pattern migration note. |
 
 L77–L79 require explicit scope decisions; their presence in this inventory does not make notebooks,
@@ -1316,22 +1317,25 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
   [validation receipt](#l80-final-capability-contract-audit-2026-10-01). Generic IntelliJ
   resource/snippet/confirmation edits remain intentionally refused; native Rename/Move owns
   its supported resource operations. Future producers must extend negotiation and its tests.
-- [ ] **L81 — Progress, refresh, tracing and transport lifecycle.** Implementation is in place;
-  broader native acceptance remains explicit below. The final audit adds late progress-creation
-  retirement, all-five-provider refresh regressions, malformed-request recovery and independent
-  connection ownership. Progress identifies the source/workspace and updates from compiler queue
-  metadata. See the [L81 checkpoint](#l81-progress-refresh-and-transport-checkpoint-2026-10-01)
-  and [upstream register](errs-upstream-issues.md) for remaining acceptance and UP15's error-code gap.
+- [x] **L81 — Progress, refresh, tracing and transport lifecycle.** Implementation and bounded
+  native acceptance are complete for the current providers. Progress identifies the source/workspace
+  and live compiler queue activity. See the [closure receipt](#l81-native-acceptance-closure-2026-10-05)
+  and [upstream register](errs-upstream-issues.md) for UP15's retained error-code limitation.
   - [x] Negotiated creation/cancel, partial results, trace levels and connection/request ownership.
   - [x] Shutdown/exit, initialization retry, unknown/malformed requests and two real server connections.
   - [x] All five refresh providers: negotiation, coalescing, refusal, pending replies and close.
   - [x] Audit current client-request producers; no additional showDocument/message-choice/folder
-    request is needed for the currently implemented features.
-  - [x] IntelliJ visible Cancel button, continued hover, pending restart and old-process exit.
-  - [ ] VS Code visible Cancel button; its real SDK cancellation callback is covered separately.
+    request is needed for currently implemented features.
+  - [x] Visible Cancel in both editors, continued hover, pending restart and old-process exit.
+    VS Code's renderer automation clicks the actual control in the isolated window; the ordinary
+    SDK-callback mode remains separate. Neither moves the desktop pointer.
+  - [x] X146/X147 refresh and late reports; X259 displayed consumer hints across settings/dependency
+    changes and restart. The consumer stays unedited and retired producers exit.
   - [x] Overlapping project close/reopen and multiple native windows: IntelliJ uses two frames in
-    one IDE; VS Code uses two normal installed-extension instances and real hot-exit restoration.
-    See the native lifetime receipt below. Shared-Electron-process windows remain separate coverage.
+    one IDE; VS Code covers separate instances and two windows sharing one Electron process,
+    with real hot-exit restoration and independent compiler ownership.
+  - [x] Recheck UP15 against current LSP4J release/source and rerun packaged reader recovery.
+    No released fix exists; retain the upstream issue instead of forking production parameter parsing.
 - [ ] **L82 — Completion evidence and API closure.** For every applicable task, require a
   meaningful backend regression, advertised-capability/protocol test and shared editor scenario
   where observable. Cover supported, rejected, canceled and stale requests. Re-run the combined
@@ -1364,7 +1368,7 @@ partial batches and actual asynchronous scan progress pass their regressions. Ge
 text edits have an ownership guard; X144 and X145 progress/cancel/restart acceptance pass both clients.
 The current batch is validated: IntelliJ passes all 150 cases plus startup in one run; VS Code passes
 149/150, with X130's host Explorer repaint exception still failing the test. L80's final producer
-audit is now complete; L81 retains broader manual acceptance scope. L82 retains that host failure,
+audit is now complete; L81 bounded native acceptance is also complete. L82 retains that host failure,
 representative-workspace
 performance targets, peak-memory and prolonged lifecycle gates. Their unchecked headings do not
 mean the implemented protocol paths above are absent.
@@ -10966,3 +10970,70 @@ Current shared catalog: **263 scenarios** (X1–X258, CFG1–CFG3, 7a.8/7a.9), S
 These are selected acceptance runs, not a full-suite or whole-LSP completeness claim. Remaining
 work proceeds through L81/L82 acceptance/release gates and the separately scoped L73/R2–R5 runtime;
 L77 colors, L78 notebooks and L79 debug inline values retain their product/runtime decisions.
+
+### L81 native acceptance closure (2026-10-05)
+
+The remaining acceptance work adds test infrastructure and shared X259; it requires no compiler,
+AST, embedding API or production LSP changes.
+
+1. **Visible VS Code Cancel:** `playwright-core` attaches only to the disposable test instance's
+   loopback Chromium endpoint. It finds the actual “Finding references” notification, captures a
+   screenshot and clicks Cancel once. The existing assertions require request cancellation,
+   continued hover, retired progress, unsaved restart and old-process exit. A workload completing
+   too soon still fails; there is no token-cancellation fallback. No extra browser is downloaded.
+2. **Shared-process windows:** `--project-lifecycle --shared-process` proves two extension hosts
+   have the same Electron parent PID and different compiler PIDs. One closes during a reference
+   request and reopens from VS Code's actual hot-exit backup; the other retains its dirty buffer,
+   PID, hover and 5,001 references. Later windows inherit the main process environment, so their
+   phases derive from the workspace and atomic completion receipts, not secondary CLI variables.
+   The ordinary separate-instance mode remains available. Neither mode kills a compiler to pass.
+3. **Visible refresh/settings overlap:** shared X259 disables displayed hints, changes the library
+   return type, re-enables hints and restarts, then restores the type while toggling hints again.
+   Both editors prove Int → hidden → String → Int with unchanged consumer text/version. VS Code
+   reads installed renderer labels; IntelliJ combines its automatic native provider with actual
+   installed editor inlays. X146 verifies all five refresh families; X147 controls late report
+   publication. This is representative displayed-state acceptance, not pixel coverage of every
+   provider presentation or a long-running stress test.
+4. **UP15:** LSP4J 1.0.0 is still the latest release and upstream main retains the same
+   `MessageTypeAdapter` classification. The packaged malformed-parameter/unknown-method recovery
+   regression passes. Invalid typed parameters still receive `ParseError`; the upstream defect
+   stays open and no local parser fork is introduced.
+
+Validation:
+
+- VS Code **`run-VeotM0`**: X145/X146/X147/X259 pass, zero failures, with
+  `progressCancellation=visible-control`. X145 takes 17.6s and X259 4.0s; screenshots retain the
+  actual Cancel control and displayed/disabled consumer hints.
+- IntelliJ **`run-15703196975306829056`**: START and the same four cases pass, zero IDE failures,
+  with Ultimate disabled. This is selected acceptance, not a new full-catalog claim.
+- VS Code **`project-lifecycle/run-Sh7ro5`**: shared Electron PID 49464; primary compiler 49884,
+  closed compiler 49904 and reopened compiler 49920. Hot-exit restoration and all process-exit
+  assertions pass. The first attempt **`run-NXMUZj`** failed because the harness set
+  application-scoped `files.hotExit` in workspace settings, where VS Code ignores it. The launcher
+  now writes the disposable profile's user settings and the driver asserts the effective value
+  before editing. This was a harness configuration defect, not an LSP/compiler failure.
+- VS Code **`project-lifecycle/run-xOLpd6`**: the existing separate-instance mode also passes
+  with the corrected application settings; hot-exit recovery and compiler exit are verified.
+- **19 backend/transport tests pass, with zero failures/errors/skips:** `ConnectionProgressTest`
+  (10), `ClientNotificationsTest` (7), `ProgressLabelsTest` (1), and the selected packaged
+  `XdkStdioTest` malformed-reader recovery case (1). XML timestamps are 2026-10-05 11:09 UTC.
+- Both drivers compile. Root and lang Spotless checks pass; the real npm compilation/check run
+  stores its Gradle configuration cache successfully.
+
+Extraction map (local `lagergren/errs` checkpoints):
+
+| Commit | Scope | Extraction dependency |
+| --- | --- | --- |
+| `d2ff6d5ae` | Isolated renderer automation and actual VS Code Cancel button; test-only dependency and Gradle option | Follow the existing X145/progress harness. No production browser dependency. |
+| `a85c231e6` | Shared-process lifecycle and application-scoped hot-exit settings | Extends the earlier native project-lifetime runner. Can be extracted independently of compiler changes; keep the effective-setting assertion with the launcher fix. |
+| `aaceddbfc` | Shared X259, both native drivers, catalog/report scope and manual playbook | Requires the renderer helper from `d2ff6d5ae`; extract both editors and shared data together. |
+
+The accompanying documentation checkpoint records the UP15 recheck, passing receipts and scope
+closure. These integrated-branch results do not establish that future extracted PRs pass alone;
+each PR must run its own appropriate checks.
+
+The shared catalog now has **264 scenarios** (X1–X259, CFG1–CFG3, 7a.8/7a.9), SHA-256
+`e9c038d87183957f4fd86ce7459ea421ab1bae718aab3abd05c02970fa18edfa`.
+L81's bounded work is closed with UP15 explicitly retained. L82 still owns the full combined
+checkpoint, declared scale budgets, prolonged workloads, other-platform acceptance and UP17's
+large decorated-file freeze. Existing upstream host limitations are not relabeled as fixes.

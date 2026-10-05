@@ -544,3 +544,9 @@ an LSP client. The decorated native replacement still fails the freeze gate; the
 [probe and receipts](../../../docs/errs-integration-plan.md#l82-large-file-intellij-freeze-investigation-2026-10-01)
 separate marker-update time from compiler time. Large-file responsiveness remains open; no
 advertised language capability or AST/embedding API changes as a result of this diagnosis.
+
+L81 acceptance update (2026-10-05): the earlier visible-Cancel and shared-process window gaps are
+closed. Both editors pass X145/X146/X147/X259; VS Code also passes real hot-exit restoration in both
+separate-instance and shared-Electron-process modes. No new compiler/API feature is implied.
+UP15's error classification and L82's release/scale work remain explicit in the
+[current receipt](../../../docs/errs-integration-plan.md#l81-native-acceptance-closure-2026-10-05).
