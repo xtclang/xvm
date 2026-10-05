@@ -238,7 +238,7 @@ local or import-alias declarations and inherited written member contracts, prese
 | Server-side `workspace/executeCommand` | Module Run lenses invoke an existing client command | L73 |
 | Cross-project monikers | Artifact-based import/export/local identities; backend and selected acceptance pass in both editors | L74 |
 | Server-provided document content/refresh | Negotiated revision-owned bundled virtual content and refresh; protected file fallback in IntelliJ (UP25); host source indexes remain file locations | L75 |
-| Inline completion | Ordinary completion popup | L76 |
+| Inline completion | Compiler names/values, automatic ambiguity suppression and explicit alternatives; selected-range and revision guards | L76; native IntelliJ invocation/selection remains UP26 |
 | Document colors and color presentations | Ordinary token coloring; no color-value provider | L77 |
 | Notebook synchronization | File/module document sessions | L78 |
 | Debug inline values | Compiler type/parameter inlay hints; no runtime values | L79 |
@@ -1491,4 +1491,10 @@ Unique automatic name/argument suggestions and explicit alternatives are single-
 selection context, cancellation and document versions constrain publication. Shared X255–X258
 cover native accept/undo, dismissal/continued typing, ambiguity/selection and incomplete calls.
 LSP4IJ's missing invocation/selection context is UP26; IntelliJ X257 is explicitly partial.
-Validation is pending the batch. No embedding or AST changes were needed.
+No embedding or AST changes were needed.
+
+L76 validation: 46 backend/protocol tests and the packaged UTF-16 round trip pass, without failures
+or skips. VS Code `run-B6sogF` passes X7/X31/X255–X258. IntelliJ
+`run-13088584184602426732` passes START/X7/X31/X255/X256/X258, with X257 explicitly partial for
+UP26 and zero IDE failures. Both drivers compile and formatting checks pass. See the
+[L76 contract and commit map](../../../docs/errs-integration-plan.md#l76-compiler-inline-completion-2026-10-05).

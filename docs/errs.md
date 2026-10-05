@@ -1,3 +1,9 @@
+L76 validation: 46 backend/protocol tests and the packaged UTF-16 round trip pass, without failures
+or skips. VS Code `run-B6sogF` passes X7/X31/X255–X258. IntelliJ
+`run-13088584184602426732` passes START/X7/X31/X255/X256/X258, with X257 explicitly partial for
+UP26 and zero IDE failures. Both drivers compile and formatting checks pass. See the
+[L76 contract and commit map](errs-integration-plan.md#l76-compiler-inline-completion-2026-10-05).
+
 L75 is implemented and validated: negotiated read-only library content/refresh and direct artifact
 monikers in matching bundled source views. VS Code passes all six selected cases; IntelliJ passes
 five plus startup, and X254 passes its file-fallback checks with explicit partial status (UP25).
@@ -206,7 +212,7 @@ independent of the compiler error-listener/AST changes.
 
 The active [full compiler LSP completion checklist (L55–L83)](errs-integration-plan.md#full-compiler-lsp-completion-checklist)
 now distinguishes remaining semantic coverage, reliability investigations, unimplemented LSP
-operations and native validation. The compiler now implements 26 adapter capability categories, including declaration lookup and monikers;
+operations and native validation. The compiler now implements 27 adapter capability categories, including declaration lookup, monikers and inline completion;
 that is not full protocol or language coverage. See the
 [current capability/absence inventory](../lang/doc/plans/plan-ide-integration.md#compiler-completeness-snapshot).
 L55's real-workspace acceptance, the bounded L56–L59 work and native parity checkpoint are
@@ -3106,4 +3112,4 @@ Unique automatic name/argument suggestions and explicit alternatives are single-
 selection context, cancellation and document versions constrain publication. Shared X255–X258
 cover native accept/undo, dismissal/continued typing, ambiguity/selection and incomplete calls.
 LSP4IJ's missing invocation/selection context is UP26; IntelliJ X257 is explicitly partial.
-Validation is pending the batch. No embedding or AST changes were needed.
+No embedding or AST changes were needed.

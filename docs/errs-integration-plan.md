@@ -1,9 +1,9 @@
 # Integrating the embedding diagnostics work
 
-Latest feature checkpoint: [L75 library content](#l75-read-only-library-content-2026-10-05) passes
-backend, packaged transport and selected editor acceptance. IntelliJ retains its tested read-only
-file fallback; virtual content/refresh remains UP25. L76–L79 retain their explicit product/runtime
-scope decisions; L81/L82 retain broader acceptance and release work.
+Latest feature checkpoint: [L76 inline completion](#l76-compiler-inline-completion-2026-10-05)
+passes backend, packaged transport and selected acceptance in both editors. IntelliJ native explicit
+invocation/selection context remains UP26; read-only virtual content remains UP25. L77–L79 retain
+explicit product/runtime scope decisions; L81/L82 retain broader acceptance and release work.
 
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
@@ -1208,9 +1208,9 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 | L71 file operations | Six negotiated pre/post hooks and compiler-proven file/package/container operations; backend and selected X128/X130 checks pass in both editors. | Bounded same-module type moves now rewrite package qualifications; X161 Move/Undo/Redo passes in both editors. Explicit graph relocation now uses the host proposal/persistence path (X162/X163). Retain the VS Code file-operation refusal limitation. |
 | L72 save/sync/formatting | Negotiated save hooks, opt-in incremental patches and multiple-range formatting pass backend and selected X132/X137–X139 checks; Full remains default. | Broaden workspace/save ownership coverage; IntelliJ uses native save formatting because LSP4IJ lacks `willSaveWaitUntil`. Save edits remain version guarded and independent of compilation. |
 | L73 server commands | Run lenses invoke client commands; negotiated legacy code actions have a bounded one-use resolve/apply command. | Broader server commands and embedded Run remain separate scopes; define typed commands, edit failure handling and cancellation. Embedded execution depends on the accepted R2–R5 service design, not another command-line assembly path. |
-| L74 monikers | Implemented and validated: normalized artifact identities, source/binary equality, overload/generic calls, replacement, private/local visibility and shared X252/X253. | Bounded to current successful semantic snapshots. Parsed-only library document enrichment remains with L75; no LSIF exporter or native moniker browser is claimed. |
-| L75 document content | Matching indexed sources open as read-only files. | Establish client support and URI/revision ownership for virtual or archived sources; define refresh and stale-content behavior. |
-| L76 inline completion | No inline provider exists. | Decide useful compiler/snippet use cases and client support first; no generative service is implied. Implement and test the agreed scope or record an explicit exclusion. |
+| L74 monikers | Implemented and validated: normalized artifact identities, source/binary equality, overload/generic calls, replacement, private/local visibility and shared X252/X253. | Bounded to current successful semantic snapshots. L75 adds direct library document monikers; no LSIF exporter or native moniker browser is claimed. |
+| L75 document content | Negotiated immutable virtual source content/refresh and direct library monikers pass backend, packaged and selected acceptance. | IntelliJ uses protected file fallback until LSP4IJ implements content providers (UP25). |
+| L76 inline completion | Compiler cursor projection, capability negotiation, cancellation and shared X255–X258 pass batched backend and selected editor validation. | Plain names/expected-type values only. LSP4IJ native invocation/selection constraints are UP26; no generative service is implied. |
 | L77 colors | No color-value provider exists. | Decide which XTC values have unambiguous color meaning and reversible source edits. Implement that scope or record why it is inapplicable. |
 | L78 notebooks | Current ownership is file/module based; there are no notebook sessions. | Decide whether XTC notebooks are a product requirement, then define cell/module identity and execution order before synchronization. Record an explicit exclusion if out of scope. |
 | L79 debug inline values | Compiler inlay hints are not runtime values; DAP remains a stub. | Depend on R6–R7 real sessions, stack/source mapping and stop-state ownership; define evaluation safety before exposing values. |
@@ -1218,7 +1218,7 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 | L81 progress/trace/refresh | Partial batches and actual Tree-sitter scan progress join owned progress/cancellation, refresh and trace. X143 and X145 pass both hosts, including cancellation and restart during pending work. | X146/X147 now automate bounded P3/P4 refresh and late reports; acceptance follows this batch. IntelliJ visible Cancel passes; VS Code button selection and broader multi-window/settings interaction remain manual. |
 | L83 initializer facts | Detached successful initializer facts are implemented with no new AST fields; backend regressions and shared X142 are added. | Backend and shared X142 pass; preserve the explicit eight-component record-pattern migration note. |
 
-L76–L79 require explicit scope decisions; their presence in this inventory does not make notebooks,
+L77–L79 require explicit scope decisions; their presence in this inventory does not make notebooks,
 color editing or every optional protocol extension mandatory for the compiler-only release.
 An exclusion must state its reason and keep the corresponding capability unadvertised. L62 and
 L64–L67 separately track gaps inside already implemented feature families; R1–R8 track execution
@@ -1281,7 +1281,7 @@ and debugging. Neither feature counts nor a selected passing playbook establish 
 These need explicit language/product scope as well as code. Keep them open until implemented
 and tested, or record a deliberate exclusion from the full XTC editor target.
 
-- [ ] **L76 — Inline completion.** Implement `textDocument/inlineCompletion` for justified
+- [x] **L76 — Inline completion (bounded compiler scope; UP26 client limit).** Implement `textDocument/inlineCompletion` for justified
   compiler/snippet suggestions and trigger/selection behavior. Ordinary completion is separate;
   this does not imply adding a generative service.
   Accepted implementation scope: plain-text ghost completions of compiler-resolved names and
@@ -10913,3 +10913,56 @@ The current catalog has **259 scenarios**, SHA-256
 Remaining boundaries: LSP4IJ virtual providers (UP25), verified text attachments for external host
 binary indexes if that API is introduced, and broader semantic features inside library bodies.
 These do not require moving any compiler or AST implementation for this slice.
+
+
+### L76 compiler inline completion (2026-10-05)
+
+The negotiated compiler-only `textDocument/inlineCompletion` endpoint reuses existing copied
+cursor facts. Names, members and expected-type argument values become plain-text ghost suggestions.
+Automatic requests require a nonempty prefix and one distinct insertion; explicit requests may
+return alternatives or fill an empty value slot. Popup selection requires an identical replacement
+range and a strict text extension. Every edit ends at the caret, remains on one source line and
+preserves the existing suffix. Mid-token edits, imports requiring other edits, placeholder snippets
+and library documents are excluded. Inline and popup completion own independent cursor requests;
+server document-version guards and cancellation prevent stale publication. No Java, AST or embedding
+API changes were necessary.
+
+Both clients already have native providers. VS Code supports explicit alternatives and popup context.
+LSP4IJ 0.21.0 sends Automatic even for a DirectCall and omits selectedCompletionInfo (UP26), so X257
+passes its protocol assertions but remains explicitly partial in IntelliJ. We do not broaden automatic
+requests to hide that limitation. IntelliJ's native ghost display, acceptance, Undo, dismissal and
+continued typing pass X255/X256/X258 using Community-platform APIs with Ultimate disabled.
+
+| Extraction slice | Commits | Contents |
+|---|---|---|
+| Contract | `696b7c67b` | Accepted scope, client support, safety and validation boundary. |
+| Semantic API/projection | `6e84c6797` | Immutable context, compiler-only capability, independent cursor owner and pure fact projection. |
+| Protocol | `55d1c8533` | Negotiation, standard endpoint, selection conversion, version/cancellation tests and packaged round trip. |
+| Shared editor acceptance | `7aa37f870` + `4bd34a3c4` | X255–X258, both drivers, protocol constants at driver runtime, proper native typing lock, expanded backend coverage and formatting corrections. Keep corrections with the implementation when extracting. |
+| Independent harness fix | `d1ef87549` | Restore the captured caret before reopening an unapplied completion popup after focus loss; retain the source-change guard. |
+
+Validation:
+
+- **46 backend/protocol tests pass**, zero failures/errors/skips: nine compiler inline tests,
+  three protocol tests, 29 capability tests and five presentation tests. This includes member/Boolean
+  values, empty explicit arguments, ambiguity, incomplete/named calls, selected ranges, duplicate
+  insertions, unsupported clients, canceled/obsolete results and unopened/library refusals.
+- The packaged-server UTF-16 inline completion round trip passes, including an emoji before the
+  prefix and unchanged source suffix. Both editor drivers compile. Root and changed-module
+  `spotlessCheck` pass; the IntelliJ runtime dependency change executes with configuration cache.
+- VS Code **`run-B6sogF`** passes **X7/X31/X255–X258**, zero failures. This includes native
+  alternative cycling/acceptance. The earlier X257 failure was a harness Range serialization error;
+  the standard converter fixes it, and both its isolated and final combined rerun pass.
+- IntelliJ **`run-13088584184602426732`** passes **START/X7/X31/X255/X256/X258**, with **X257
+  partial** solely for UP26 and **zero IDE failures**. An earlier run passed case assertions but
+  failed the IDE-error gate because the synthetic typing probe omitted WriteIntentReadAction;
+  the final run includes that correction. No failing run is counted as a passing receipt.
+- The earlier X7 interruption received the correct `size` reply in about 170 ms. Focus/caret
+  movement and later input invalidated the unapplied-popup guard. The independent harness fix
+  preserves the original caret on focus recovery and never replays an edit after source changes.
+
+Current shared catalog: **263 scenarios** (X1–X258, CFG1–CFG3, 7a.8/7a.9), SHA-256
+`309bbf7f242632dcfe508e11f16954b8e1d452c147f79ac4345ab13d9f6f5031`.
+These are selected acceptance runs, not a full-suite or whole-LSP completeness claim. Remaining
+work proceeds through L81/L82 acceptance/release gates and the separately scoped L73/R2–R5 runtime;
+L77 colors, L78 notebooks and L79 debug inline values retain their product/runtime decisions.
