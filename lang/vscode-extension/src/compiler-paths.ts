@@ -25,7 +25,11 @@ function importOwner(folder: vscode.WorkspaceFolder): CompilerImport {
 export function compilerBuildModels(): BuildModel[] {
     const folders = vscode.workspace.workspaceFolders ?? [];
     const active = new Set(folders.map(folder => folder.uri.toString()));
-    for (const key of imports.keys()) if (!active.has(key)) imports.delete(key);
+    for (const [key, owner] of imports) if (!active.has(key)) {
+        owner.retire();
+        activeImports.get(key)?.cancel();
+        imports.delete(key);
+    }
     const models = folders.flatMap(folder => {
         if (folder.uri.scheme !== 'file') return [];
         const owner = importOwner(folder);
@@ -77,7 +81,7 @@ export async function refreshCompilerBuild(prepare = false, selected?: vscode.Wo
         });
         const result = model.finish(claim, cancellation.token.isCancellationRequested ? 'cancelled' : outcome.outcome, outcome.message);
         if (result.outcome === 'failed') throw new Error(result.message);
-        if (result.outcome === 'succeeded') await updateCompilerConfiguration();
+        if (result.outcome === 'succeeded' && imports.get(key) === model) await updateCompilerConfiguration();
     } catch (error) {
         // finish only while this operation still owns the model; a validation failure already
         // retired it. Errors are rethrown below after recording the terminal model state.
@@ -201,6 +205,7 @@ export function registerCompilerPaths(context: vscode.ExtensionContext): void {
         draftsChanged.dispose();
         watchers.forEach(watcher => watcher.dispose());
         activeImports.forEach(cancellation => cancellation.cancel());
+        imports.forEach(model => model.retire());
         imports.clear();
     } },
         vscode.tasks.onDidEndTaskProcess(event => {
@@ -217,6 +222,7 @@ export function registerCompilerPaths(context: vscode.ExtensionContext): void {
             event.removed.forEach(owner => {
                 const key = owner.uri.toString();
                 activeImports.get(key)?.cancel();
+                imports.get(key)?.retire();
                 imports.delete(key);
                 watchers.get(key)?.dispose(); watchers.delete(key);
             });
