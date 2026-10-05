@@ -1692,6 +1692,11 @@ public class CommonBuilder
                 continue; // not our responsibility
             }
 
+            if (method.isCapped() && method.containsVirtualConstructor()) {
+                // the class of class routes the virtual constructor to its narrowing implementation
+                continue;
+            }
+
             if (assembleDeclared &&
                     method.getHead().getImplementation() == Implementation.Declared) {
                 assembleMethod(classBuilder, method);
@@ -4466,8 +4471,7 @@ public class CommonBuilder
         Map.entry("org.xtclang.ecstasy.collections.deferred.DeferredCollection",
             Set.of("calc")),         // TODO: need support for @Lazy
         Map.entry("org.xtclang.ecstasy.collections.deferred.DistinctCollection",
-            Set.of("calc",           // TODO: need support for @Lazy
-                   "evaluateInto")), // TODO: MapSet's capped constructor has no reserved native name
+            Set.of("calc")), // TODO: need support for @Lazy
         Map.entry("org.xtclang.ecstasy.maps.DiscreteEntry",
             Set.of("construct")), // TODO: verify specialized constructor return with a conditional mixin
         Map.entry("org.xtclang.ecstasy.Timeout",

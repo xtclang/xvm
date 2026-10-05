@@ -563,6 +563,11 @@ public abstract class OpInvocable extends Op {
                 infoMethod = infoTarget.getMethodBySignature(sig, true);
             }
 
+            if (infoMethod == null && typeTarget instanceof CastTypeConstant cast) {
+                // an inferred union may omit a method guaranteed by its base type
+                infoMethod = bctx.getTypeInfo(cast.getBaseType()).getMethodById(idMethod, true);
+            }
+
             if (infoMethod == null) {
                 // private and nested (they are always private) mixin methods can be absent from the
                 // target's TypeInfo
