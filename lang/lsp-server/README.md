@@ -863,3 +863,9 @@ versions retire pending suggestions. No new embedding/AST API or generative serv
 
 Both editor clients have native providers. IntelliJ's direct invocation currently sends Automatic
 and omits popup selection (UP26); shared X255–X258 distinguish native from protocol coverage.
+
+L76 validation: 46 backend/protocol tests and the packaged UTF-16 round trip pass, without failures
+or skips. VS Code `run-B6sogF` passes X7/X31/X255–X258. IntelliJ
+`run-13088584184602426732` passes START/X7/X31/X255/X256/X258, with X257 explicitly partial for
+UP26 and zero IDE failures. Both drivers compile and formatting checks pass. See the
+[L76 contract and commit map](../../docs/errs-integration-plan.md#l76-compiler-inline-completion-2026-10-05).
