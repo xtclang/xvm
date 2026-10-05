@@ -1,3 +1,12 @@
+**Compiler workspace synchronization (2026-10-05):** both clients now aggregate evaluated nested
+Gradle builds, refresh previously imported inputs after successful native Gradle sync/tasks, show
+processed-resource readiness, and retire imports when their project/folder closes. Shared
+X129/X260–X265 pass both editors (IntelliJ across the initial run and focused corrections).
+The batch passes 112 IntelliJ units, 37 VS Code extension tests, three Gradle model tests and five
+backend build-model tests. Testing exposed late daemon publication after cancellation and an
+IntelliJ malformed-report summary failure; both are fixed with regressions. The catalog now has
+270 cases; this batch did not rerun all 270. See the [contract, receipts and commit map](errs-integration-plan.md#compiler-workspace-synchronization-batch-ui5ui6-2026-10-05).
+
 **Post-rebase acceptance (2026-10-05):** master `7a4e29e577` is integrated and lease-pushed.
 The fresh headless batch passes 3,068 tests with 54 existing skips. VS Code 1.140.0 is the sole
 minimum/test baseline: 34 smoke tests pass; the 267-case catalog passes 266 and retains X218/UP23.
@@ -15,8 +24,8 @@ pass both editors, including the visible import Cancel button, overlap refusal, 
 and retry. The first IntelliJ X260 attempt exposed a fixture retirement assumption, corrected in
 its focused rerun with zero IDE errors. See the [implementation and receipt](errs-integration-plan.md#compiler-import-progress-and-accepted-model-ownership-ui5ui6-2026-10-05).
 The [shared acceptance receipt and remaining UI list](errs-integration-plan.md#shared-compiler-import-acceptance-and-remaining-ui-work-2026-10-05)
-keeps automatic build sync, advanced runtime/source-attachment controls and broader settings
-acceptance open. Color support awaits a recognized Ecstasy API; notebooks are explicitly deferred.
+keeps advanced runtime/source-attachment controls and broader settings acceptance open;
+automatic build sync and import retirement are now covered by the synchronization batch above. Color support awaits a recognized Ecstasy API; notebooks are explicitly deferred.
 Five separately committed local LSP4IJ repairs are recorded in the [upstream register](errs-upstream-issues.md);
 they are unpushed and not installed in this branch. UP17 remains an open IntelliJ Platform defect.
 
