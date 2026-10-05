@@ -6,7 +6,7 @@ type moves and public-type auto-import repairs. See the
 
 Live workspace/source navigation (L47–L49): unsaved headers and workspace-folder changes refresh the
 compiler graph; detached graph queries are reused, and healthy modules remain navigable beside a
-broken neighbor. Matching bundled XDK declarations open read-only source files. Complete reference
+broken neighbor. Matching bundled XDK declarations open read-only source files with artifact-backed declaration monikers. LSP4IJ virtual content/refresh support remains UP25. Complete reference
 and refactoring proofs still fail closed. This adds no AST state or compiler listener changes.
 See [scope, ownership and validation](../../docs/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
 
@@ -137,7 +137,7 @@ uses JetBrains' `IdeaUltimate` artifact name, but the tested features require on
 Community feature set. No personal settings or license are copied into the test profile.
 See [JetBrains' unified distribution explanation](https://www.jetbrains.com/help/idea/intellij-idea-single-distribution.html).
 
-The suite reads all 258 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
+The suite reads all 259 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
 and source fixtures from the [manual playbook](../doc/manual-test-plan.md#xdkadapter-playbook).
 The earlier protocol selection, `run-15914309414363009017`, passes START and X136/X137/X140/X141
 with zero IDE errors: settings, restart, UTF-16 hover/rename ranges and runtime server tracing.
@@ -198,7 +198,7 @@ LSP4IJ would display `<no parameters>`. X81/X82 inspect Property-kind metadata f
 completion request. X20/X81/X82 pass natively. Problems-row clicking and visual
 layout remain manual.
 
-Every report lists all 258 scenario IDs and distinguishes failed/unselected cases from passing
+Every report lists all 259 scenario IDs and distinguishes failed/unselected cases from passing
 ones. The [L60 checklist](../../docs/errs-integration-plan.md#intellij-parity-backlog-l60) keeps each
 new case open until it has a pass receipt and records client limitations found during validation.
 The new protocol checks use the installed language-client connection. Synthetic nonexistent-file
