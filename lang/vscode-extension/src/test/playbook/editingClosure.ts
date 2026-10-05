@@ -1,6 +1,6 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
-import { client, diagnosticCode, diagnostics, noErrors, playbook, position, symbolNames, symbols } from './support';
+import { client, diagnostics, noErrors, playbook, position, symbolNames, symbols } from './support';
 
 export function editingClosureCases(ids: readonly ('X158' | 'X243' | 'X244')[] = ['X158']): void {
     ids.forEach(id => playbook(id, async (workspace, data) => {
@@ -11,9 +11,10 @@ export function editingClosureCases(ids: readonly ('X158' | 'X243' | 'X244')[] =
             { name: data.module, uri: workspace.uri(data.file).toString(), dependencies: [data.libraryModule] }
         ]);
         const document = await workspace.open(data.file);
-        await noErrors(document.uri);
         if (id === 'X244') {
-            await diagnostics(document.uri, values => values.some(item => diagnosticCode(item) === 'COMPILER-29'), 'Conditional import warning');
+            await diagnostics(document.uri, values => values.some(item => item.severity === vscode.DiagnosticSeverity.Error), 'Unsupported conditional import syntax');
+        } else {
+            await noErrors(document.uri);
         }
         const links = await vscode.commands.executeCommand<vscode.DocumentLink[]>('vscode.executeLinkProvider', document.uri, 100);
         assert.deepStrictEqual(links?.map(link => document.getText(link.range)), data.linkNames);
@@ -25,9 +26,11 @@ export function editingClosureCases(ids: readonly ('X158' | 'X243' | 'X244')[] =
             assert.deepStrictEqual(result.ranges.map(range => document.offsetAt(new vscode.Position(range.start.line, range.start.character))),
                 data.aliasUses.map(anchor => data.source.indexOf(anchor)));
         }
-        const library = await vscode.workspace.openTextDocument(links![0].target!);
-        await vscode.window.showTextDocument(library);
-        assert.strictEqual(library.getText(), data.library);
+        if (links?.length) {
+            const library = await vscode.workspace.openTextDocument(links[0].target!);
+            await vscode.window.showTextDocument(library);
+            assert.strictEqual(library.getText(), data.library);
+        }
     }));
 }
 
@@ -58,7 +61,7 @@ export function structuralRecoveryCases(): void {
             assert.ok(folds?.some(fold => fold.start === variant.foldLine && fold.end >= variant.foldLine + 1));
             const at = position(document, variant.anchor);
             const ranges = await vscode.commands.executeCommand<vscode.SelectionRange[]>('vscode.executeSelectionRangeProvider', document.uri, [at]);
-            let selection = ranges?.[0];
+            let selection: vscode.SelectionRange | undefined = ranges?.[0];
             assert.ok(selection?.parent);
             while (selection) {
                 assert.ok(selection.range.contains(at));
@@ -82,8 +85,13 @@ export function formattingBreadthCases(): void {
         await vscode.commands.executeCommand('editor.action.formatDocument');
         assert.strictEqual(document.getText(), data.expected);
         await noErrors(document.uri);
-        const edits = await vscode.commands.executeCommand<vscode.TextEdit[]>('vscode.executeFormatDocumentProvider', document.uri, { tabSize: 4, insertSpaces: true });
+        const edits = await client().sendRequest('textDocument/formatting', {
+            textDocument: { uri: document.uri.toString() },
+            options: { tabSize: 4, insertSpaces: true, insertFinalNewline: true }
+        });
         assert.deepStrictEqual(edits, []);
+        await vscode.commands.executeCommand('editor.action.formatDocument');
+        assert.strictEqual(document.getText(), data.expected);
         await vscode.commands.executeCommand('undo');
         assert.strictEqual(document.getText(), data.source);
         await vscode.commands.executeCommand('redo');

@@ -34,7 +34,8 @@ import java.util.concurrent.atomic.AtomicReference
  * When the LSP server sends a `workspace/configuration` request for section `"xtc.formatting"`,
  * this client reads the current IntelliJ Code Style settings for the Ecstasy language and returns
  * them as a JSON-compatible map. Code Style changes refresh the server's immutable formatting
- * snapshot. `xtc-format.toml` and line wrapping are not implemented.
+ * snapshot. Compiler mode uses the right margin for bounded expression/list wrapping;
+ * `xtc-format.toml` is not implemented.
  */
 class XtcLanguageClient(
     project: Project,

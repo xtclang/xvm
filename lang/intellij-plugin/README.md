@@ -795,7 +795,8 @@ share LSP4IJ storage and preserve compiler graph/Undo ownership. Changing Full/I
 transport restarts the service and restores unsaved buffers. Inlay changes and Code Style settings
 apply live. The read-only effective view includes PID, runtime, capabilities, bundled read-only XDK
 libraries and compiler queue names/count. Server save edits are unavailable in LSP4IJ 0.21.0; use
-native **Actions on Save → Reformat code**. Line wrapping is not implemented.
+native **Actions on Save → Reformat code**. Compiler mode wraps expressions/lists at safe token
+boundaries using the Code Style right margin; literal splitting and comment reflow are not supported.
 
 The follow-up catalog now contains 148 scenarios. New X142 verifies constant-initializer semantic
 navigation and rename/undo; X143 compares partial workspace-symbol batches with the ordinary
