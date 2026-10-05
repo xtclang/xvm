@@ -87,9 +87,10 @@ class OptionsTest {
         assertTrue(contains(args, "--rebuild"));
         assertTrue(contains(args, "--strict"));
         assertTrue(contains(args, "-L"));
-        assertTrue(contains(args, "/lib1"));
+        // File.getPath() uses the platform separator, e.g. "\lib1" on Windows.
+        assertTrue(contains(args, new File("/lib1").getPath()));
         assertTrue(contains(args, "-o"));
-        assertTrue(contains(args, "/tmp/out"));
+        assertTrue(contains(args, new File("/tmp/out").getPath()));
         assertTrue(contains(args, "foo.x"));
     }
 
