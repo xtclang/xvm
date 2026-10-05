@@ -41,6 +41,7 @@ interface Adapter : Closeable {
                             AdapterCapability.TYPE_HIERARCHY,
                             AdapterCapability.TYPE_DEFINITION,
                             AdapterCapability.IMPLEMENTATION,
+                            AdapterCapability.MONIKER,
                             AdapterCapability.CALL_HIERARCHY,
                             AdapterCapability.INLAY_HINT,
                         )
@@ -806,6 +807,12 @@ interface Adapter : Closeable {
         line: Int,
         column: Int,
     ): List<SymbolMoniker> = emptyList()
+
+    fun findMonikersAsync(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): CompletableFuture<List<SymbolMoniker>> = CompletableFuture.completedFuture(findMonikers(uri, line, column))
 
     /** All written contracts when a member overrides more than one declaration. */
     fun findDeclarations(
