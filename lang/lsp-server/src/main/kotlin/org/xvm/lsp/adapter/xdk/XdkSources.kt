@@ -66,6 +66,9 @@ internal class XdkSources
 
         fun uri(file: File): String = aliases[file] ?: file.toURI().toString()
 
+        /** ModuleInfo memoizes parsed trees. Keep graph captures free of compiler-owned state. */
+        fun freshCompilationInput(): XdkSources = replay(root, inputs, text.mapKeys { it.key.path })
+
         fun resourcesCurrent(cancelled: () -> Boolean): Boolean =
             resources == XdkResources.capture(root, configuredResourceRoots, text.values, cancelled)
 
