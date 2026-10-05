@@ -1682,7 +1682,7 @@ class XdkStdioTest {
             session.shutdownAndExit()
         }
         assertThat(Files.readString(directory.resolve("stderr.log")))
-            .contains("Bundled XDK resource is missing: javatools_turtle.xtc")
+            .contains("Bundled XDK resource is missing: mack.xtc")
     }
 
     @Test
@@ -2036,6 +2036,6 @@ class XdkStdioTest {
         const val REOPENED =
             "module Stdio { String run() { String label = \"ok\"; return label; } }"
         const val BROKEN = "module Stdio { Int run() { return missing; } }"
-        const val BOOTSTRAP = "org/xvm/lsp/xdk/javatools_turtle.xtc"
+        const val BOOTSTRAP = "org/xvm/lsp/xdk/mack.xtc"
     }
 }

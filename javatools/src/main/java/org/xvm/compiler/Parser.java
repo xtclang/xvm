@@ -6265,7 +6265,6 @@ public class Parser {
         Token   putBack;
         Token   lastMatch;
         Token   doc;
-        boolean noRec;
     }
 
     protected Mark mark() {
@@ -6275,17 +6274,17 @@ public class Parser {
         mark.putBack   = m_tokenPutBack == null ? null : m_tokenPutBack.clone();
         mark.lastMatch = m_tokenPrev    == null ? null : m_tokenPrev   .clone();
         mark.doc       = m_doc;
-        mark.noRec     = m_fAvoidRecovery;
         return mark;
     }
 
     protected void restore(Mark mark) {
+        // A nesting-limit or listener abort ends this parse, including after speculative rewind.
+        // Token backtracking must not re-enable recovery from an exhausted parser budget.
         m_lexer.restore(mark.pos);
         m_token          = mark.token;
         m_tokenPutBack   = mark.putBack;
         m_tokenPrev      = mark.lastMatch;
         m_doc            = mark.doc;
-        m_fAvoidRecovery = mark.noRec;
     }
 
     /**
@@ -6475,6 +6474,7 @@ public class Parser {
      */
     private Nesting nest() {
         if (m_cNesting >= MAX_NESTING_DEPTH) {
+            m_fAvoidRecovery = true;
             Token token = peek();
             log(Severity.ERROR, NESTING_TOO_DEEP, token.getStartPosition(), token.getEndPosition(),
                     MAX_NESTING_DEPTH);

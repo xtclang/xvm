@@ -12,6 +12,11 @@ and both segments have zero IDE errors/freeze dumps. A corrected X185 popup-harn
 calling this one uninterrupted clean run. VS Code UP23, generic upstream VFS waits and the
 scale/release gates remain explicit.
 
+The branch was rebased onto master `7a4e29e577` on 2026-10-05. Historical commit references
+below remain unchanged; [the rebase commit map](errs-rebase-2026-10-05.tsv) maps all 590 old
+commits to the 588 replayed commits and two changes absorbed upstream. See
+[the rebase checkpoint](#master-rebase-checkpoint-2026-10-05) for integration and validation.
+
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
 Plan prepared on 2026-09-22 from `lagergren/errs` at `a8213cf04`, against the local
@@ -4540,7 +4545,7 @@ and `IncompleteStatement` children. The parser queries their ownership instead o
 state on AST nodes. Missing ends use zero-width tokens at existing source positions; grouping and
 index validation keep the normal contexts, and the existing hole prevents emission. No AST class,
 mutable field, clone/reset rule, listener interface or public record component is added. The explicit
-EOF attempt uses `PARSER-30` for its unfinished suffix; normal parsing still reports missing braces.
+EOF attempt uses `PARSER-31` for its unfinished suffix; normal parsing still reports missing braces.
 Kotlin remains a consumer and compiler mode remains Java-only. Tree-sitter is still the shipped default.
 
 **Bounded scope.** Missing operands, declaration headers, tuple/literal delimiters and unrelated
@@ -4711,7 +4716,7 @@ where the live Context is available; editor presentation stays in Kotlin.
 
 **Compatibility and listeners.** Existing constructors remain unchanged. `CursorBinding` stays
 at eight components; this step adds no record-pattern migration. It reuses `argumentValues` and the
-existing attempt-owned collector. The explicit probe still reports `PARSER-30` once; private,
+existing attempt-owned collector. The explicit probe still reports `PARSER-31` once; private,
 cancellable PROBE errors reject unsuitable values without reaching normal document diagnostics.
 The query never publishes a selected complete call or emits the incomplete method.
 
@@ -5059,7 +5064,7 @@ Task 2's first slice adds `analyzeIncomplete(Source, cursor, ...)` and
 the source overload remains the convenience case. Cursors are compiler Source position tokens
 for the exact input text. Standalone member/call sites before closing braces or a semicolon retain
 the rest of the file and validate in the original lexical/flow context. Module parsing uses the
-existing assembly and overlay hooks. Only the selected cursor's `PARSER-30` is deferred through
+existing assembly and overlay hooks. Only the selected cursor's `PARSER-31` is deferred through
 assembly; other syntax errors, host budgets and cancellation prevent semantic work. Validation
 replays the diagnostic internally, without duplicate host delivery or emitting the damaged method.
 The copied Kotlin partial view includes shared module facts and selects the site source's ranges.
@@ -11420,3 +11425,42 @@ L77 awaits a real recognized color API; no color library is added solely for LSP
 explicitly deferred by the user. L79 runtime inline values follows Run/DAP. L73's existing legacy
 code-action command is implemented; its concrete remaining command family is embedded Run.
 None of those deferrals blocks the current shared import-acceptance work.
+
+## Master rebase checkpoint (2026-10-05)
+
+- Original branch tip: `524adf963e866b7ad436a6fdcab97aa705e579a5`; original base:
+  `4a1eae6f7430bda4204f0b4ec8248f942d58d6ba`. New base:
+  `7a4e29e5776617e265a78db799789c5e0e638ed4`.
+- Recovery: local branch `backup/errs-pre-master-rebase-20261005`, a verified complete Git
+  bundle, tracked-source archive and refs snapshot in
+  `/private/tmp/xtclang2-errs-pre-rebase-20261005`. Other worktrees and branches were not rewritten.
+- Of 590 old commits, 588 were replayed; startup cancellation `8e976f868` was absorbed by
+  the upstream lifecycle fix, and the obsolete ktfmt migration `63edf658c` was omitted because
+  master already uses Spotless with ktlint. The TSV map preserves future PR extraction boundaries.
+- Retained master's immutable implicit-import table, parser nesting guards, atomic shutdown state,
+  provider-backed Gradle inputs, shared IDE caches, updated dependencies and centralized CI
+  input fingerprints. Compiler/XDK/plugin changes also invalidate the compiler LSP consumer gate.
+- Conflict followups: implicit-name enumeration reads the immutable table; fatal parser budgets
+  survive speculative token rewind instead of being swallowed by partial recovery; the partial
+  cursor diagnostic moves to `PARSER-31`, since master's nesting diagnostic occupies `PARSER-30`.
+  The packaged-bootstrap corruption test targets the variant's `mack.xtc`, not the distribution's
+  renamed `javatools_turtle.xtc`. VS Code's minimum/stable matrix uses a fresh profile and fixture
+  workspace for each version. The manual delegation fixture now has a second written override
+  on master; implementation lookup must return both, while still excluding synthetic delegates.
+- Backend validation: the full batch discovered 3,071 tests (54 existing disabled/opt-in skips).
+  Its five failures were the three nesting-limit assertions and the two fixture assertions above.
+  After repairs and one new partial-parser guard test, the full compiler suite passed 578 tests
+  (40 existing skips), 149 selected LSP recovery/dependency/composition tests passed, and all 81
+  packaged stdio/lifecycle tests passed. The original remaining LSP suites, utility tests,
+  Gradle plugin tests and IntelliJ plugin tests had no failures. XML receipts are saved with the backup;
+  this is a full initial pass plus targeted reruns, not a second complete run.
+- Root and lang `spotlessCheck`, TypeScript compilation and runner ESLint checks passed;
+  real Gradle tasks stored the configuration cache. VS Code startup/consumer smoke tests passed
+  34/34 on both minimum 1.101.0 and stable 1.140.0. X7 completion and X129 evaluated Gradle
+  paths passed in both editors; IntelliJ also passed startup with zero IDE failures. Receipts:
+  VS Code `run-WnGbGA`; IntelliJ `run-12235295875731842159`. Full editor catalogs were not
+  rerun for this rebase. Subsequent VS Code runs will use the declared minimum version only,
+  as requested; this checkpoint records the already completed upstream matrix.
+- The default build tool is Node 24.21.0 from master's catalog. TypeScript's Node16 module
+  resolution setting is separate from the Node runtime; its modernization is a followup after
+  the lease push, as is the requested IDE sandbox/cache cleanup.

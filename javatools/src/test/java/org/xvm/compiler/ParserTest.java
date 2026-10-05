@@ -120,6 +120,23 @@ public class ParserTest {
     }
 
     @Test
+    public void testPartialAnalysisCannotRecoverPastNestingLimit() {
+        int       cNesting = Parser.MAX_NESTING_DEPTH * 64;
+        ErrorList errlist  = new ErrorList(5);
+        Parser    parser   = Parser.forPartialAnalysis(new Source("""
+                module TestSimple {
+                    void damaged(%sInt%s value) {}
+                    void sibling() {}
+                }
+                """.formatted("List<".repeat(cNesting), ">".repeat(cNesting))), errlist);
+
+        assertThrows(CompilerException.class, parser::parseSource);
+
+        assertEquals(1, errlist.getSeriousErrorCount());
+        assertEquals(Parser.NESTING_TOO_DEEP, errlist.getErrors().getFirst().getCode());
+    }
+
+    @Test
     public void testDeeplyNestedTypeIsReported() {
         // types recurse through their own chain, not through the expression chain. The code is
         // not asserted here: a type is parsed inside a SafeLookAhead, which discards the errors
