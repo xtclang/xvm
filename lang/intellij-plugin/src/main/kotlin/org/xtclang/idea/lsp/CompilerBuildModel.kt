@@ -270,9 +270,7 @@ object CompilerBuildModel {
     }
 
     fun publish(project: Project) {
-        val current =
-            CompilerSettings.store(project).getLanguageServerSettings(CompilerSettings.SERVER_ID)
-        val config = settings(project, current?.getLanguageServerConfiguration(project))
+        if (project.isDisposed) return
         // The evaluated inputs changed, but persisted user settings did not. LSP4IJ suppresses
         // no-op settings updates, so notify the existing connection directly.
         LanguageServiceAccessor
@@ -282,8 +280,9 @@ object CompilerBuildModel {
             .forEach { wrapper ->
                 wrapper.initializedServer.thenAccept { server ->
                     if (!project.isDisposed) {
+                        val current = CompilerSettings.store(project).getLanguageServerSettings(CompilerSettings.SERVER_ID)
                         server.workspaceService.didChangeConfiguration(
-                            DidChangeConfigurationParams(config),
+                            DidChangeConfigurationParams(settings(project, current?.getLanguageServerConfiguration(project))),
                         )
                     }
                 }

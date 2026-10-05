@@ -10,16 +10,25 @@ import java.util.concurrent.atomic.AtomicReference
 
 @Service(Service.Level.PROJECT)
 internal class CompilerImportService(
-    project: Project,
+    private val project: Project,
 ) : Disposable {
-    val model =
+    private fun createModel() =
         CompilerImport(
             read = { CompilerWorkspaceModels.read(CompilerWorkspaceModels.roots(project)) },
             validate = { CompilerBuildModel.parse(it) },
         )
 
+    private val owner = AtomicReference(createModel())
+    val model: CompilerImport get() = owner.get()
+
     private val disposed = AtomicBoolean()
     private val active = AtomicReference<ProgressIndicator?>()
+
+    fun rootsRemoved() {
+        // Keep a retired owner distinct from its replacement: the old producer still holds it.
+        owner.getAndSet(createModel()).retire()
+        active.get()?.cancel()
+    }
 
     fun <T> run(
         indicator: ProgressIndicator,
@@ -39,6 +48,7 @@ internal class CompilerImportService(
 
     override fun dispose() {
         disposed.set(true)
+        model.retire()
         active.get()?.cancel()
     }
 }

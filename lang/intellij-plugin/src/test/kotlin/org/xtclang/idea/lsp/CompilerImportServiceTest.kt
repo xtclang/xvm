@@ -47,6 +47,21 @@ class CompilerImportServiceTest {
     }
 
     @Test
+    fun `unlinking a root cancels its producer and replaces rather than reuses its owner`() {
+        val service = service()
+        val owner = service.model
+        val operation = owner.begin(false)
+        val indicator = Indicator()
+        service.run(indicator) {
+            service.rootsRemoved()
+            assertThat(indicator.isCanceled).isTrue()
+        }
+        assertThat(service.model).isNotSameAs(owner)
+        assertThat(owner.finish(operation, CompilerImport.Outcome.SUCCEEDED).outcome).isEqualTo(CompilerImport.Outcome.CANCELLED)
+        service.dispose()
+    }
+
+    @Test
     fun `concurrent imports are refused and a completed owner releases the progress slot`() {
         val service = service()
         val started = CountDownLatch(1)
