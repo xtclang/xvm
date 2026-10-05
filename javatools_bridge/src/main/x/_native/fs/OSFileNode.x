@@ -15,7 +15,7 @@ const OSFileNode
     OSFileStore store;
 
     @Override
-    @Lazy Path path.calc() = new Path(storePathString);
+    @Lazy Path path.calc() = new Path(pathString);
 
     @Override
     Boolean exists.get() = TODO("Native");
@@ -97,11 +97,6 @@ const OSFileNode
     // ----- native --------------------------------------------------------------------------------
 
     String pathString.get() = TODO("Native");
-
-    /**
-     * The path in the '/'-separated form of a `Path`; differs from [pathString] on Windows.
-     */
-    String storePathString.get() = TODO("Native");
 
     private Int createdMillis.get()  = TODO("Native");
     private Int accessedMillis.get() = TODO("Native");

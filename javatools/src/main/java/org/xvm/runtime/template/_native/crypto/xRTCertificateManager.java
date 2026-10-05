@@ -5,8 +5,6 @@ import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 
-import java.nio.file.Path;
-
 import java.security.GeneralSecurityException;
 import java.security.Key;
 import java.security.KeyPair;
@@ -61,6 +59,8 @@ import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
 import org.xvm.runtime.template._native.crypto.xRTKeyStore.KeyStoreHandle;
+
+import org.xvm.runtime.template._native.fs.xOSFileNode;
 
 /**
  * Native implementation of the xRTCertificateManager.x service.
@@ -201,7 +201,7 @@ public class xRTCertificateManager
         String       sName       = ((StringHandle) ahArg[2]).getStringValue();
         String       sDName      = ((StringHandle) ahArg[3]).getStringValue();
         String       sProvider   = ((StringHandle) hMgr.getField(0)).getStringValue();
-        String       sStorePath  = hStorePath.getStringValue();
+        String       sStorePath  = osPath(hStorePath);
         char[]       achPwd      = hPwd.getValue();
 
         try {
@@ -367,7 +367,7 @@ public class xRTCertificateManager
      */
     private ExceptionHandle invokeRevokeCertificate(Frame frame, ServiceHandle hMgr,
                                                     ObjectHandle[] ahArg) {
-        String sPath     = ((StringHandle) ahArg[0]).getStringValue();
+        String sPath     = osPath(ahArg[0]);
         char[] achPwd    = xRTKeyStore.getPassword(frame, ahArg[1]).getValue();
         String sName     = ((StringHandle) ahArg[2]).getStringValue();
         String sProvider = ((StringHandle) hMgr.getField(0)).getStringValue();
@@ -437,7 +437,7 @@ public class xRTCertificateManager
      * {@code SecretKeyEntry} in the PKCS12 keystore is identical in format.
      */
     private ExceptionHandle invokeCreateSymmetricKey(Frame frame, ObjectHandle[] ahArg) {
-        String sPath  = ((StringHandle) ahArg[0]).getStringValue();
+        String sPath  = osPath(ahArg[0]);
         char[] achPwd = xRTKeyStore.getPassword(frame, ahArg[1]).getValue();
         String sName  = ((StringHandle) ahArg[2]).getStringValue();
 
@@ -465,7 +465,7 @@ public class xRTCertificateManager
      * — the same internal representation that keytool's {@code -importpass} produces.
      */
     private ExceptionHandle invokeCreatePassword(Frame frame, ObjectHandle[] ahArg) {
-        String sPath     = ((StringHandle) ahArg[0]).getStringValue();
+        String sPath     = osPath(ahArg[0]);
         char[] achPwd    = xRTKeyStore.getPassword(frame, ahArg[1]).getValue();
         String sName     = ((StringHandle) ahArg[2]).getStringValue();
         String sPwdValue = ((StringHandle) ahArg[3]).getStringValue();
@@ -518,7 +518,7 @@ public class xRTCertificateManager
         KeyStore keyStore;
         if (hPathOrStore instanceof StringHandle hPath) {
             keyStore = KeyStore.getInstance("PKCS12");
-            keyStore.load(new FileInputStream(hPath.getStringValue()), achPwd);
+            keyStore.load(new FileInputStream(osPath(hPath)), achPwd);
         } else {
             keyStore = ((KeyStoreHandle) hPathOrStore).f_keyStore;
         }
@@ -546,7 +546,7 @@ public class xRTCertificateManager
      * {@link java.security.KeyStore} API.
      */
     private ExceptionHandle invokeEncryptKeystore(Frame frame, ObjectHandle[] ahArg) {
-        String sPath     = ((StringHandle) ahArg[0]).getStringValue();
+        String sPath     = osPath(ahArg[0]);
         char[] achPwd    = xRTKeyStore.getPassword(frame, ahArg[1]).getValue();
         char[] achPwdNew = ((StringHandle) ahArg[2]).getValue();
 
@@ -592,7 +592,14 @@ public class xRTCertificateManager
     }
 
     private File getChallengePath(StringHandle hPath) {
-        return new File(Path.of(hPath.getStringValue()).toFile().getParentFile(), ".challenge");
+        return new File(xOSFileNode.toOsPath(hPath.getStringValue()).toFile().getParentFile(), ".challenge");
+    }
+
+    /**
+     * @return the OS path of a keystore, which arrives as the {@code pathString} of an OS file
+     */
+    private static String osPath(ObjectHandle hPath) {
+        return xOSFileNode.toOsPath(((StringHandle) hPath).getStringValue()).toString();
     }
 
     // ----- data fields and constants -------------------------------------------------------------

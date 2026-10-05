@@ -41,7 +41,6 @@ public class xOSFileNode
     @Override
     public void initNative() {
         markNativeProperty("pathString");
-        markNativeProperty("storePathString");
         markNativeProperty("exists");
         markNativeProperty("readable");
         markNativeProperty("writable");
@@ -58,9 +57,6 @@ public class xOSFileNode
         NodeHandle hNode = (NodeHandle) hTarget;
         switch (sPropName) {
         case "pathString":
-            return frame.assignValue(iReturn, xString.makeHandle(hNode.f_path.toString()));
-
-        case "storePathString":
             return frame.assignValue(iReturn, xString.makeHandle(toStorePath(hNode.f_path)));
 
         case "exists":
