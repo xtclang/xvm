@@ -26,7 +26,7 @@ val processLauncherResources = tasks.register<Copy>("processLauncherResources") 
         relativePath = RelativePath(true, name)
     }
     includeEmptyDirs = false
-    into(layout.buildDirectory.file("bin"))
+    into(layout.buildDirectory.dir("bin"))
 }
 
 val assemble = tasks.named("assemble") {
