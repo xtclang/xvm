@@ -37,15 +37,20 @@ class LibraryContentProtocolTest {
         listOf(false, true).forEach { supported ->
             XtcLanguageServer(XdkAdapter()).use { server ->
                 server.connect(mock(LanguageClient::class.java))
-                val params = editorInitializeParams().apply {
-                    if (supported) capabilities.workspace.textDocumentContent = TextDocumentContentCapabilities()
-                }
+                val params =
+                    editorInitializeParams().apply {
+                        if (supported) capabilities.workspace.textDocumentContent = TextDocumentContentCapabilities()
+                    }
                 val capabilities = server.initialize(params).join().capabilities
                 assertThat(capabilities.workspace.textDocumentContent != null).isEqualTo(supported)
                 val target = definition(server)
                 if (supported) {
                     assertThat(URI(target.uri).scheme).isEqualTo("ecstasy-library")
-                    val content = server.workspaceService.textDocumentContent(TextDocumentContentParams(target.uri)).join().text
+                    val content =
+                        server.workspaceService
+                            .textDocumentContent(TextDocumentContentParams(target.uri))
+                            .join()
+                            .text
                     assertThat(content.lines()[target.range.start.line]).contains("const String")
                     XtcLanguageServer(XdkAdapter()).use { other ->
                         other.initialize(params).join()
@@ -64,12 +69,18 @@ class LibraryContentProtocolTest {
         }
         XtcLanguageServer(MockAdapter()).use { server ->
             val params = editorInitializeParams().apply { capabilities.workspace.textDocumentContent = TextDocumentContentCapabilities() }
-            assertThat(server.initialize(params).join().capabilities.workspace?.textDocumentContent).isNull()
+            assertThat(
+                server
+                    .initialize(params)
+                    .join()
+                    .capabilities.workspace
+                    ?.textDocumentContent,
+            ).isNull()
         }
     }
 
     @Test
-    fun `fetched library views refresh once per outstanding reply and ignore editor modifications`() {
+    fun `fetched library views refresh and untrusted client presentations never replace artifact content`() {
         val notifications = LinkedBlockingQueue<TextDocumentContentRefreshParams>()
         val reply = CompletableFuture<Void>()
         val client = mock(LanguageClient::class.java)
@@ -79,7 +90,13 @@ class LibraryContentProtocolTest {
         }.`when`(client).refreshTextDocumentContent(any())
         XtcLanguageServer(XdkAdapter()).use { server ->
             server.connect(client)
-            server.initialize(editorInitializeParams().apply { capabilities.workspace.textDocumentContent = TextDocumentContentCapabilities() }).join()
+            server
+                .initialize(
+                    editorInitializeParams().apply {
+                        capabilities.workspace.textDocumentContent =
+                            TextDocumentContentCapabilities()
+                    },
+                ).join()
             server.initialized(InitializedParams())
             val target = definition(server)
             server.readOnlyDocuments.refresh()
@@ -92,14 +109,33 @@ class LibraryContentProtocolTest {
             val moniker = MonikerParams(TextDocumentIdentifier(target.uri), target.range.start)
             val original = documents.moniker(moniker).get(30, SECONDS)
             assertThat(original).hasSize(1)
-            documents.didChange(DidChangeTextDocumentParams(VersionedTextDocumentIdentifier(target.uri, 2), listOf(TextDocumentContentChangeEvent("module Forged {}"))))
+            documents.didChange(
+                DidChangeTextDocumentParams(
+                    VersionedTextDocumentIdentifier(target.uri, 2),
+                    listOf(TextDocumentContentChangeEvent("module Forged {}")),
+                ),
+            )
+            assertThat(documents.moniker(moniker).get(30, SECONDS)).isEmpty()
+            assertThat(workspace.textDocumentContent(params).join().text).isEqualTo(text)
+            documents.didChange(
+                DidChangeTextDocumentParams(
+                    VersionedTextDocumentIdentifier(target.uri, 3),
+                    listOf(TextDocumentContentChangeEvent(text.replace("const String", "const  String"))),
+                ),
+            )
+            assertThat(documents.moniker(moniker).get(30, SECONDS)).isEmpty()
+            documents.didChange(
+                DidChangeTextDocumentParams(VersionedTextDocumentIdentifier(target.uri, 4), listOf(TextDocumentContentChangeEvent(text))),
+            )
             assertThat(documents.moniker(moniker).get(30, SECONDS)).isEqualTo(original)
             server.replaceCompilerDependencies(emptyList())
             assertThat(notifications.poll(10, SECONDS)?.uri).isEqualTo(target.uri)
             server.readOnlyDocuments.refresh()
             assertThat(notifications).isEmpty()
             assertThat(workspace.textDocumentContent(params).join().text).isEqualTo(text)
+            val acknowledged = server.readOnlyDocuments.refresh()
             reply.complete(null)
+            acknowledged.get(10, SECONDS)
             server.readOnlyDocuments.refresh()
             assertThat(notifications.poll(10, SECONDS)?.uri).isEqualTo(target.uri)
             server.close()
@@ -112,10 +148,18 @@ class LibraryContentProtocolTest {
         val uri = "file:///App.x"
         val text = "module App { String text = \"value\"; }"
         server.textDocumentService.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, text)))
-        return server.textDocumentService.definition(DefinitionParams(TextDocumentIdentifier(uri), Position(0, text.indexOf("String")))).get(30, SECONDS).left.single()
+        return server.textDocumentService
+            .definition(
+                DefinitionParams(TextDocumentIdentifier(uri), Position(0, text.indexOf("String"))),
+            ).get(30, SECONDS)
+            .left
+            .single()
     }
 
-    private fun refused(server: XtcLanguageServer, uri: String) {
+    private fun refused(
+        server: XtcLanguageServer,
+        uri: String,
+    ) {
         assertThatThrownBy { server.workspaceService.textDocumentContent(TextDocumentContentParams(uri)).join() }
             .hasCauseInstanceOf(ResponseErrorException::class.java)
     }
