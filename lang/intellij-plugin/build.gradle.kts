@@ -277,9 +277,10 @@ sourceSets.main {
 }
 
 val processResources =
-    tasks.named("processResources") {
+    tasks.named<ProcessResources>("processResources") {
         dependsOn(syncGradleWrapperResources)
         dependsOn(copyLspVersionProperties)
+        from(rootProject.layout.projectDirectory.file("gradle/compiler-model.init.gradle"))
     }
 
 // =============================================================================
