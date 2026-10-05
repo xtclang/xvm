@@ -6,8 +6,11 @@ invocation/selection context remains UP26; read-only virtual content remains UP2
 explicit product/runtime scope decisions. [L81 native acceptance](#l81-native-acceptance-closure-2026-10-05)
 now passes its bounded scope. The [L82 checkpoint](#l82-combined-regression-and-retention-checkpoint-2026-10-05)
 passes 2,991 backend tests and removes repeatable compiler-worker retention. Both full editor
-catalogs have been exercised, but clean native acceptance remains open: VS Code UP23 and IntelliJ
-UP27/UP03 are explicit failures, alongside the existing partial coverage and scale/release gates.
+catalogs have been exercised. The [local IntelliJ repairs](#l82-intellij-refresh-and-vfs-repair-2026-10-05)
+now cover all 264 scenarios across two segments: 262 pass, two retain UP25/UP26 partial status,
+and both segments have zero IDE errors/freeze dumps. A corrected X185 popup-harness failure prevents
+calling this one uninterrupted clean run. VS Code UP23, generic upstream VFS waits and the
+scale/release gates remain explicit.
 
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
@@ -1358,14 +1361,16 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
     assertion. X130, visible Cancel and the recursive-JSON X259 extension pass this run.
   - [x] Exercise the matching 264-case IntelliJ catalog across recorded continuations: 262 cases
     pass their assertions, X254/X257 retain UP25/UP26 partial status. Preserve the initial failures.
-  - [ ] Obtain clean combined native IntelliJ acceptance. The long continuation records four
-    independent IDE alerts despite resumed feature-case coverage: two refresh overload errors
-    (UP27) and two freeze alerts in VFS file preflight (UP03). The nine-case rerun is clean but
-    does not clear the long-session gate.
-  - [ ] Bound native refresh work across distinct connected files, preserving latest-state refresh
-    and disposal; add a many-file dependency/settings/close-reopen stress regression (UP27).
-  - [ ] Prevent redundant VFS preflight inside verified native refactoring transactions without
-    bypassing generic events, guards or Undo/Redo; verify delayed replies and cancellation (UP03).
+  - [ ] Obtain one uninterrupted clean full-catalog IntelliJ run. The repaired plugin now has
+    262 passing scenarios and two known partial cases across two segments, both without IDE
+    errors/freeze dumps. X185 stopped the first segment; its popup recovery ordering was corrected
+    and the 172-case continuation passes. Preserve the original UP27/UP03 alerts and this failure.
+  - [x] Bound native refresh work across distinct connected files, preserving latest-state refresh
+    and disposal. X146 adds the many-file burst/dependency regression; X259 covers hint settings
+    and restart, and native case transitions close/reopen editors. The long continuation is clean.
+  - [x] Prevent redundant VFS preflight for exact verified operations and local same-path requests;
+    blocked-reply/cancellation tests and native Undo/Redo pass. Generic meaningful VFS requests
+    still use upstream's UI-wait path, explicitly retained under UP03.
   - [ ] Agree release budgets across supported hardware/platforms and complete prolonged-session
     acceptance. The current receipt defines provisional local comparison budgets only.
   - [ ] Resolve the recorded host gates or retain explicit release exceptions: UP16/UP23 resource
@@ -11241,3 +11246,63 @@ Root/lang formatting checks pass after the harness changes. All work remains on 
 these are local checkpoints, not independent extracted-PR validation. UP16/UP23 host failures,
 UP25/UP26 partial native coverage, UP27/UP03 long-session findings, UP17 large-file platform repair
 and other-platform/prolonged-session acceptance remain explicit release gates.
+
+
+## L82 IntelliJ refresh and VFS repair (2026-10-05)
+
+Two local client repairs address the October 5 long-session findings without changing the compiler,
+embedding/AST API, advertised features or default inlay-hint setting:
+
+- **UP27:** `EditorRefresh` coalesces a whole connection/feature read/UI pass. Distinct documents
+  no longer each submit a read action to the global executor. Live editors use LSP4IJ's existing
+  cache/rendering bridges; disposed connections and editors retire their pending work. X146 adds
+  16 documents and a 64-request burst for each of lenses, hints and tokens before checking real
+  untouched-consumer hints. X259 covers settings changes and restart ownership.
+- **UP03:** `PreflightedRenames` handles local same-path requests immediately and scopes exact
+  compiler-approved physical operations with `ScopedValue`. LSP4IJ's Move callback sends old-path
+  to same-path preflight, including on Undo/Redo. The real proposal still precedes the guarded
+  write command; generic meaningful requests and did/watch notifications remain unchanged.
+  Upstream's generic UI wait remains open for genuine basename renames outside the owned scope.
+
+The first native attempt, `run-2406379153883211212`, exposed a local startup regression: using
+LSP4J's multiple-interface proxy overload with its optional null class loader could not see
+`XtcLanguageServer` in the plugin loader. The follow-up restores the base builder's single-interface
+loader selection and adds a regression through the actual production launcher, not just a standalone
+endpoint. Preserve this failed receipt; it was unrelated to desktop focus or the Ecstasy compiler.
+
+Validation:
+
+- Plugin unit tests: **98 passed, zero failures/errors/skips**, including eight endpoint/launcher
+  regressions. Native driver compilation and plugin formatting pass.
+- IntelliJ `run-11532602109763278599`: **START + 16 selected cases pass, zero IDE errors**:
+  X103/X118/X130/X146/X161/X162/X163/X169/X173/X174/X175/X176/X216/X217/X218/X259.
+  This covers native refactoring, closed consumers, resources, graph replacement, overlap moves,
+  Undo/Redo and enabled hint refresh/restart. X130 takes 2,467 ms; the many-file X146 takes 15,923 ms.
+- Full-catalog attempt `run-2714960219503858740` passes START and 92 scenarios, then X185
+  cannot find its native intention popup. There are zero IDE errors and zero freeze-dump groups.
+  The client trace contains the expected missing-method action, and the source is unchanged.
+  Capture popup recovery state before dispatching its first action; previously the action could
+  move the caret before the harness captured its recovery position. The continuation starts at
+  the 172 remaining cases rather than replaying completed refactorings.
+- Continuation `run-13878115092192383073` executes the 172 remaining scenarios plus START:
+  **171 passed, two known partial cases, zero IDE errors and zero freeze-dump groups**. Combined
+  with the first segment, all **264 scenarios** have receipts on the repaired production plugin:
+  **262 passed, two partial** (X254/UP25, X257/UP26), with nothing unselected across the pair.
+  X146's stress passes in 15,812 ms and X259 in 6,667 ms. No original overload/freeze recurs.
+- This is successful long-session coverage across continuations, **not one uninterrupted clean
+  full run**. Preserve that remaining acceptance distinction. Genuine basename renames outside
+  the approved scope still use upstream preflight. No VS Code or backend/compiler behavior changed.
+- Root and plugin formatting pass. Copied unit XML, original/selected/native receipts, traffic
+  evidence and the per-case coverage map are under
+  `lang/build/reports/l82/upstream-repair-2026-10-05/`; the map retains `singleCleanFullRun: false`.
+
+Extraction map (all local on `lagergren/errs`; not pushed):
+
+| Commit | Future PR grouping |
+| --- | --- |
+| `f8a7d6c77` | IntelliJ UP27 bounded refresh and native stress acceptance. |
+| `b24d07470` + `8f8166fa7` | IntelliJ UP03 redundant VFS preflight bridge plus required production-launcher class-loader correction and tests. Extract together. |
+| `bb074972a` | Native intention harness: capture recovery state before the first action; preserve edit replay guards. |
+
+Retain the original overload/freeze receipts and `TODO LSP4IJ` markers. A future upstream repair
+must cover real generic operations without UI waits before these bridges can be removed.

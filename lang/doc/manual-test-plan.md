@@ -11,6 +11,14 @@ overload and UP03 VFS waits), so this is **not clean combined native acceptance*
 failures, harness corrections and remaining gates are in the
 [L82 receipt](../../docs/errs-integration-plan.md#l82-combined-regression-and-retention-checkpoint-2026-10-05).
 
+The later [IntelliJ repair receipt](../../docs/errs-integration-plan.md#l82-intellij-refresh-and-vfs-repair-2026-10-05)
+supersedes that native result: `run-2714960219503858740` plus `run-13878115092192383073` cover
+all 264 scenarios on the repaired plugin, with 262 passes and the two existing partial cases.
+Both have zero IDE errors/freeze dumps. X185 stopped the first segment; its popup recovery state
+is now captured before dispatch, and the 172-case continuation passes. This remains acceptance
+across continuations, not a single uninterrupted clean run. X146 includes the many-file refresh
+stress with hints enabled. Generic UP03 VFS waits outside approved/no-op operations remain open.
+
 L81 selected acceptance: VS Code `run-VeotM0` and IntelliJ `run-15703196975306829056`
 pass X145/X146/X147/X259 (IntelliJ also passes START, with zero IDE errors). VS Code now clicks the
 actual displayed Cancel control automatically. Shared-process lifecycle passes in `run-Sh7ro5`;

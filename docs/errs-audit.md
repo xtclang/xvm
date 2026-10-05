@@ -7,9 +7,14 @@ keys retained on the compiler worker. The utility fix is independently extractab
 its pre-fix file matches the local master reference exactly. The combined post-fix gate passes
 2,991 tests with 44 existing skips and no failures. See the
 [current diagnoses, measurements and extraction map](errs-integration-plan.md#l82-combined-regression-and-retention-checkpoint-2026-10-05).
-Editor acceptance remains separate: the full VS Code catalog retains UP23, and the IntelliJ
-continuation exposes UP27 refresh overload plus UP03 UI-thread VFS waits. All native feature
-cases now have executed receipts, but the independent IDE-error gate remains open.
+Editor acceptance remains separate: the full VS Code catalog retains UP23. IntelliJ's recorded
+UP27 refresh overload and redundant UP03 VFS waits now have local bridges; the repaired plugin
+covers all 264 scenarios across two segments (262 passed, two known partial), without IDE errors
+or freeze dumps. The 14-minute continuation passes. Preserve the first segment's X185 popup failure
+and its harness correction: one uninterrupted full run remains pending, as do generic upstream
+VFS waits. Eight endpoint/launcher regressions and all 98 plugin tests pass; the startup class-loader
+regression introduced during this repair is fixed and preserved in the
+[repair receipt](errs-integration-plan.md#l82-intellij-refresh-and-vfs-repair-2026-10-05).
 
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
