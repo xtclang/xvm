@@ -8173,7 +8173,7 @@
         "consumerModule": "RefreshConsumer",
         "original": "module RefreshLibrary { static Int make() = 1; }\n",
         "changed": "module RefreshLibrary { static String make() = \"one\"; }\n",
-        "source": "module RefreshConsumer {\n    package lib import RefreshLibrary;\n    void run() { var value = lib.make(); }\n}\n",
+        "source": "module RefreshConsumer {\n    package lib import RefreshLibrary;\n    package json import json.xtclang.org;\n    import json.Doc;\n    private Doc echo(Doc value) = value;\n    void run() { var value = lib.make(); }\n}\n",
         "before": "Int",
         "after": "String"
       },
