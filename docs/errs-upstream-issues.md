@@ -35,7 +35,7 @@ not a claim that every referenced suite was rerun for this documentation change.
 | --- | --- | --- | --- |
 | **UP01 — LSP4IJ — bridged** | Process `stop()` can precede `start()`; later startup creates a child that subsequent stop does not reap. | [Provider](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcLspServerSupportProvider.kt) uses `ConnectionLifetime`. Real child reproduction and separate server EOF bug are documented in the [lifecycle diagnosis](errs-lsp-process-lifecycle.md). | Upstream atomically owns start/stop and rejects post-stop startup; `ConnectionLifetimeTest` and packaged process regressions still pass without the guard. |
 | **UP02 — LSP4IJ — constrained** | Native synchronization does not dispatch the advertised server save hooks, including `willSaveWaitUntil`. | [Client capabilities](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcClientFeatures.kt), [provider](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcLspServerSupportProvider.kt) and [settings](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/LanguageServiceConfigurable.kt) disable these hooks/server save formatting. Native Actions on Save remains available. | Observe real pre-save requests, apply version-checked edits before persistence, then enable the UI/capabilities and extend X139. |
-| **UP03 — LSP4IJ — bridged** | Native file rename/move preflight happens too late; resource rename handling changes the basename but ignores a changed parent URI. | [File rename](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcFileRenameHandler.kt), [Move](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcFileMoveHandler.kt) and [resource edits](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcRenameEdit.kt) preflight old paths and apply names/parents in one guarded undo command. | Native upstream Rename/Move passes X103/X130, including consumers, resources, Undo/Redo and refusals, without our entry points. |
+| **UP03 — LSP4IJ — bridged; UI wait open** | Native file rename/move preflight happens too late; resource rename handling changes the basename but ignores a changed parent URI. The upstream VFS listener still waits on the EDT during physical moves. | [File rename](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcFileRenameHandler.kt), [Move](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcFileMoveHandler.kt) and [resource edits](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcRenameEdit.kt) preflight old paths and apply names/parents in one guarded undo command. The October 5 long run retains 6–11-second native wait stacks. | Native upstream Rename/Move passes X103/X130, including consumers, resources, Undo/Redo and refusals, without our entry points or UI-thread waits. |
 | **UP04 — LSP4IJ — bridged** | Rename and generic `workspace/applyEdit` can apply stale edits without checking transmitted document versions/epochs. | [Rename handler](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcRenameHandler.kt), [snapshot guard](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcRenameEdit.kt) and [client edit handler](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcClientFeatures.kt) validate inside the write command. Unsupported generic resource/snippet/confirmation edits are refused. | Equivalent upstream ownership/version checks pass stale/closed/reopened document tests and X144; supported Rename/Move remains atomic and undoable. |
 | **UP05 — LSP4IJ — bridged** | Dynamic filesystem watcher registrations do not alone establish/refresh unknown or missing external VFS roots while the IDE stays focused. | [CompilerRootWatches](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/CompilerRootWatches.kt) owns roots and their disposal; `CompilerRootWatchesTest` and X124 cover resources. | Upstream observes creation/deletion/change under configured external roots while focused and releases watchers on disposal. |
 | **UP06 — LSP4J, bundled by LSP4IJ — bridged** | `relatedDocuments` diagnostic unions are not reliably decoded by their `kind` discriminator. | [DiagnosticReportJson](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/DiagnosticReportJson.kt) supplies the adapter; `DiagnosticReportJsonTest` checks full/unchanged reports. | Correct full/unchanged wire round trips without the adapter in the actual bundled client library. |
@@ -63,6 +63,7 @@ not a claim that every referenced suite was rerun for this documentation change.
 | --- | --- | --- | --- |
 | **UP25 — LSP4IJ — constrained** | No LSP 3.18 document-content provider or refresh handler. | Matching read-only file fallback and direct library monikers; X254 executes those assertions with explicit partial status. [Details below](#up25-lsp4ij-has-no-lsp-318-library-content-provider). | Upstream virtual URI resolution, read-only views, refresh and disposal pass native X254 before advertising the capability. |
 | **UP26 — LSP4IJ — constrained** | Inline requests always use Automatic and omit selected popup context. | Native unique suggestions work; X257 has protocol-only explicit alternatives/selection. [Details below](#up26-lsp4ij-inline-completion-loses-invocation-and-popup-selection-context). | Forward invocation kind and selection, then pass native X257. |
+| **UP27 — LSP4IJ — open** | Semantic-token and code-lens refresh fan out across connected files on the application executor, exceeding IntelliJ's concurrent non-blocking read-action limit in a long session. | October 5 continuation `run-5080670791887423538` records two IDE errors, at 11 and 42 active similar submissions. Per-file coalescing already exists; no repair or suppression is installed. | Bound pending/running refresh work across distinct files, preserve the latest refresh and disposal, then pass a long native session and its independent IDE-error gate. |
 
 
 ## UP19: directory moves retain old document connections
@@ -187,6 +188,11 @@ pre-existing unsaved closed buffers that the server could not have included in i
 open editor buffers under ordinary LSP synchronization, and records persistence at the final
 step of each Undo/Redo direction. It never performs Save All. Native move assertions now inspect
 closed files on disk as well as IntelliJ documents and compiler diagnostics.
+
+The October 5 full-catalog continuation exposed X60's older expectation that even closed rename
+targets stay unsaved. Its corrected assertion checks persisted closed consumers before opening
+them and separately preserves the open editor's unsaved-buffer check. This aligns the test with
+the UP21 contract rather than weakening that contract.
 
 Repaired IntelliJ `run-14394987299477639656` passes START and all six selected move cases
 (X161/X163/X169–X172), including exact closed-file disk content, clean diagnostics and native
@@ -322,6 +328,11 @@ the child's old path. The host reports `EntryNotFound` and returns false after p
 before the parent; the newly created parent directory causes `target already exists`
 (`run-S7CfWP`). Both native failures remain failures in X218. This is distinct from UP16's Explorer Cut highlighting failure.
 
+The full 264-case VS Code run `run-5flalU` on 2026-10-05 reproduces the same native Undo defect:
+263 cases pass and X218 fails after forward movement. No failure is suppressed or reclassified;
+X130 independently passes this run. The observed `target already exists` error is the same UP23
+ordering problem, not renewed compiler proof failure.
+
 The compiler proposal normalizes both input orders to child-first and coalesces inherited child
 paths. IntelliJ applies that complete ordered transaction. VS Code's participant cannot replace,
 reorder or veto host-owned moves. X218 submits the child first to reach and expose the Undo defect;
@@ -397,3 +408,39 @@ to extend the selected item. Native X257 must pass before removing the partial m
 No production workaround broadens Automatic requests into speculative alternatives.
 
 Source: [LSP4IJ support at 0.21.0](https://github.com/redhat-developer/lsp4ij/blob/0.21.0/src/main/java/com/redhat/devtools/lsp4ij/features/inlineCompletion/LSPInlineCompletionSupport.java).
+
+
+## UP27: native refresh overload during a long session
+
+IntelliJ continuation `run-5080670791887423538` (2026-10-05, LSP4IJ 0.21.0) records two
+`SubmissionTracker.preventTooManySubmissions` errors. The first has 11 similar active read actions
+from `LanguageClientImpl.refreshSemanticTokensForAllOpenedFiles`; the second has 42 from
+`refreshCodeLensForAllOpenedFiles`. Both go through `EditorFeatureManager.refreshEditorFeature`.
+The report's independent `ideFailures` gate fails even when individual feature assertions pass.
+
+Inspection of the installed 0.21.0 bytecode confirms the manager already coalesces by file,
+feature and cache-clearing flag. It submits each distinct file to the application executor and
+returns without exposing that completion to the client. Adding the same coalescing key again,
+serializing only calls that schedule work, or suppressing the IDE error would not establish a bound.
+
+Next repair: characterize pending refresh work across many connected documents versus actual
+open editors; bound outstanding work across files and merge repeated refreshes without losing the
+latest state. Preserve cancellation/disposal and untouched-consumer updates. Add a stress scenario
+with many files, dependency/settings changes and close/reopen, then rerun the long catalog and its
+independent IDE-error gate. The passing nine-case follow-up does not close this issue.
+
+## UP03 continuation: native VFS preflight blocks the UI
+
+The same long run records two independent freeze alerts and seven freeze-dump groups lasting
+6 or 11 seconds. Their EDT stacks wait in `AbstractLSPFileListener.applyWorkspaceEdit` via
+`beforeVfsChange`. The first also contains `XtcRenameEdit.apply` and `XtcFileOperations.submit`:
+our guarded operation has already obtained a proposal, but its physical VFS move invokes the
+upstream preflight listener again while the write command owns the UI thread.
+
+The existing entry-point bridge preserves correct edits; it does not eliminate this upstream
+wait. Characterize the duplicate preflight and Undo/Redo paths, then prevent the redundant request
+only for a verified owned transaction. Generic file events must retain required preflight and
+notifications. Validate delayed compiler replies, cancellation, current-version guards, resources,
+closed consumers and native Undo/Redo before claiming the freeze fixed. Keep the original dump
+artifacts under `XtcCompilerPlaybook-run-5080670791887423538/log/threadDumps-freeze-*`.
+This is separate from UP17's large-file interval-tree cost and UP27's refresh scheduling error.

@@ -1,5 +1,16 @@
 # Failures with nowhere to go
 
+**L82 real-project audit (2026-10-05):** recursive typedefs reached a base-type accessor that
+intentionally throws; diagnostics/rename identity and two code-generation paths now have regressions
+that fail before the fix and pass afterwards. Live heap histograms also exposed empty `TransientThreadLocal`
+keys retained on the compiler worker. The utility fix is independently extractable for master;
+its pre-fix file matches the local master reference exactly. The combined post-fix gate passes
+2,991 tests with 44 existing skips and no failures. See the
+[current diagnoses, measurements and extraction map](errs-integration-plan.md#l82-combined-regression-and-retention-checkpoint-2026-10-05).
+Editor acceptance remains separate: the full VS Code catalog retains UP23, and the IntelliJ
+continuation exposes UP27 refresh overload plus UP03 UI-thread VFS waits. All native feature
+cases now have executed receipts, but the independent IDE-error gate remains open.
+
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
 **Current watch/rename audit:** missing external roots need a flat watch at their nearest existing
