@@ -1632,7 +1632,7 @@ module.exports = grammar({
 
         // Identifiers and names
         // type_name can be a simple identifier or a qualified name (e.g., ecstasy.io.Channel)
-        identifier: $ => /[a-zA-Z_][a-zA-Z0-9_]*/,
+        identifier: $ => /[\p{L}_][\p{L}\p{M}\p{N}\p{Sc}_]*/,
         // Context keywords (val, var, etc.) can be used as identifiers in some contexts
         // Use alias to create visible identifier nodes when keywords are used as names
         _identifier_or_context_keyword: $ => choice($.identifier, alias('val', $.identifier), alias('var', $.identifier)),
