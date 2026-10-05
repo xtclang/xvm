@@ -5,6 +5,7 @@ import org.xvm.lsp.adapter.CallHierarchyItem
 import org.xvm.lsp.adapter.CallHierarchyOutgoingCall
 import org.xvm.lsp.adapter.Position
 import org.xvm.lsp.adapter.Range
+import org.xvm.lsp.adapter.SymbolMoniker
 import org.xvm.lsp.adapter.TypeHierarchyItem
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
@@ -91,6 +92,12 @@ internal class XdkWorkspaceNavigation(
             }.distinct()
             .sortedWith(compareBy(Location::uri, Location::startLine, Location::startColumn))
     }
+
+    fun monikers(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): List<SymbolMoniker> = views[sourceUri(uri)]?.monikersAt(line, column).orEmpty()
 
     fun definition(
         uri: String,
