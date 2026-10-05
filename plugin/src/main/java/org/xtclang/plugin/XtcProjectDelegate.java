@@ -399,9 +399,9 @@ public class XtcProjectDelegate {
     }
 
     public static Provider<@NotNull Directory> getXtcResourceOutputDirectory(final Project project, final SourceSet sourceSet) {
-        // Follow the producer's evaluated destination, including later Copy.into(...) overrides.
+        // Follow the producer's destination property, including later Copy.into(...) overrides.
         final var resources = project.getTasks().named(getProcessResourcesTaskName(sourceSet), Copy.class);
-        return project.getLayout().dir(resources.map(Copy::getDestinationDir));
+        return resources.flatMap(Copy::getDestinationDirectory);
     }
 
     public static String getCompileTaskName(final SourceSet sourceSet) {

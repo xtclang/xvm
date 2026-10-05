@@ -391,7 +391,7 @@ distributions {
             }
 
             // Include launcher scripts directly in bin/
-            from(prepareDistributionScripts.map { it.destinationDir }) {
+            from(prepareDistributionScripts.flatMap { it.destinationDirectory }) {
                 include("xcc")
                 include("xcc.bat")
                 include("xec")

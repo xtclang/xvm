@@ -178,7 +178,7 @@ val packageExtension = tasks.register<NodeTask>("packageExtension") {
     description = "Package the staged VS Code extension"
     dependsOn(npmInstall)
     script.set(layout.projectDirectory.file("node_modules/@vscode/vsce/vsce"))
-    workingDir.set(layout.dir(stagePackage.map { it.destinationDir }))
+    workingDir.set(stagePackage.flatMap { it.destinationDirectory })
     args.set(extensionArchive.map { listOf("package", "--no-dependencies", "--out", it.asFile.absolutePath) })
     inputs.files(stagePackage)
     inputs.file(layout.projectDirectory.file("package-lock.json"))

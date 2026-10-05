@@ -559,8 +559,8 @@ val buildPlugin =
 val prepareSandbox = tasks.named<Sync>("prepareSandbox")
 
 // Derive TextMate destination from prepareSandbox's output (works with any IDE version)
-// prepareSandbox.destinationDir is the plugins/ directory, we need plugins/<plugin-name>/lib/textmate
-val sandboxPluginTextMate: Provider<File> = prepareSandbox.map { it.destinationDir.resolve("intellij-plugin/lib/textmate") }
+// prepareSandbox.destinationDirectory is the plugins/ directory, we need plugins/<plugin-name>/lib/textmate
+val sandboxPluginTextMate: Provider<Directory> = prepareSandbox.flatMap { it.destinationDirectory.dir("intellij-plugin/lib/textmate") }
 
 val copyTextMateToSandbox =
     tasks.register<Sync>("copyTextMateToSandbox") {
@@ -574,7 +574,7 @@ val copyTextMateToSandbox =
         mustRunAfter(project(":dsl").tasks.named("compileTestJava"))
 
         val rootDir = project.rootDir // local capture for CC safety
-        doLastTask { logCopiedFiles("textmate", destinationDir, rootDir) }
+        doLastTask { logCopiedFiles("textmate", destinationDirectory.get().asFile, rootDir) }
     }
 
 // =============================================================================
@@ -586,7 +586,7 @@ val copyTextMateToSandbox =
 //
 // Location: plugins/intellij-plugin/bin/xtc-lsp-server.jar (off classpath)
 
-val sandboxPluginBin: Provider<File> = prepareSandbox.map { it.destinationDir.resolve("intellij-plugin/bin") }
+val sandboxPluginBin: Provider<Directory> = prepareSandbox.flatMap { it.destinationDirectory.dir("intellij-plugin/bin") }
 
 val copyLspServerToSandbox =
     tasks.register<Copy>("copyLspServerToSandbox") {
@@ -602,10 +602,10 @@ val copyLspServerToSandbox =
         val binDir = sandboxPluginBin
         val rootDir = project.rootDir
         doFirstTask {
-            binDir.get().mkdirs()
+            binDir.get().asFile.mkdirs()
         }
         doLastTask {
-            logCopiedFiles("lsp", binDir.get(), rootDir, "Adapter: tree-sitter (out-of-process, off classpath)")
+            logCopiedFiles("lsp", binDir.get().asFile, rootDir, "Adapter: tree-sitter (out-of-process, off classpath)")
         }
     }
 
@@ -629,8 +629,8 @@ val prepareJarSearchableOptions =
 // load cleanly in the sandbox. Disable them to avoid spurious errors.
 
 // Derive sandbox config dir from prepareSandbox (handles versioned sandbox directories like IU-2025.3.1.1)
-// prepareSandbox.destinationDir is the plugins/ directory, config/ is a sibling
-val sandboxConfigDir: Provider<File> = prepareSandbox.map { it.destinationDir.parentFile.resolve("config") }
+// prepareSandbox.destinationDirectory is the plugins/ directory, config/ is a sibling
+val sandboxConfigDir: Provider<Directory> = prepareSandbox.flatMap { it.destinationDirectory.dir("../config") }
 
 // Plugins to disable in sandbox (Ultimate-only or problematic split-architecture plugins)
 val disabledSandboxPlugins =
@@ -652,10 +652,10 @@ val configureDisabledPlugins =
         val configDir = sandboxConfigDir // Capture for configuration cache
         val pluginsList = disabledSandboxPlugins
         inputs.property("disabledPlugins", pluginsList)
-        outputs.file(configDir.map { it.resolve("disabled_plugins.txt") })
+        outputs.file(configDir.map { it.file("disabled_plugins.txt") })
 
         doLast {
-            val disabledPluginsFile = configDir.get().resolve("disabled_plugins.txt")
+            val disabledPluginsFile = configDir.get().file("disabled_plugins.txt").asFile
             disabledPluginsFile.parentFile.mkdirs()
             disabledPluginsFile.writeText(pluginsList.joinToString("\n") + "\n")
             logger.info("[sandbox] Disabled ${pluginsList.size} Ultimate-only plugins in sandbox config")
@@ -673,10 +673,10 @@ val configureSandboxLogging =
         mustRunAfter(prepareSandbox)
 
         val configDir = sandboxConfigDir
-        outputs.file(configDir.map { it.resolve("options/log-categories.xml") })
+        outputs.file(configDir.map { it.file("options/log-categories.xml") })
 
         doLast {
-            val optionsDir = configDir.get().resolve("options")
+            val optionsDir = configDir.get().dir("options").asFile
             optionsDir.mkdirs()
             val logCategoriesFile = optionsDir.resolve("log-categories.xml")
             logCategoriesFile.writeText(
@@ -702,7 +702,7 @@ val configureSandboxAppearance =
         doNotTrackState("Removes invalid overrides from user-managed sandbox settings on each IDE launch")
 
         doLast {
-            val colorsSchemeFile = configDir.get().resolve("options/colors.scheme.xml")
+            val colorsSchemeFile = configDir.get().file("options/colors.scheme.xml").asFile
             if (!colorsSchemeFile.isFile) {
                 return@doLast
             }
@@ -752,7 +752,7 @@ val runIdeInfo =
         lsp4ijVersion.set(runIdeCapturedLsp4ijVersion)
         pluginVersion.set(runIdeCapturedPluginVersion)
         semanticTokensEnabled.set(runIdeCapturedSemanticTokens)
-        sandboxDir.set(layout.dir(sandboxConfigDir.map { it.parentFile }))
+        sandboxDir.set(sandboxConfigDir.map { it.dir("..") })
         val mavenLocalRoot =
             providers
                 .systemProperty("maven.repo.local")
@@ -760,8 +760,9 @@ val runIdeInfo =
         this.mavenLocalRoot.set(layout.dir(mavenLocalRoot.map(::File)))
         pluginNames.set(
             sandboxConfigDir.map { configDir ->
-                configDir.parentFile
-                    .resolve("plugins")
+                configDir
+                    .dir("../plugins")
+                    .asFile
                     .listFiles()
                     ?.map { it.name }
                     ?.sorted() ?: emptyList()
