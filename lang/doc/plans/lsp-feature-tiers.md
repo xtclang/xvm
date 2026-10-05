@@ -550,3 +550,9 @@ closed. Both editors pass X145/X146/X147/X259; VS Code also passes real hot-exit
 separate-instance and shared-Electron-process modes. No new compiler/API feature is implied.
 UP15's error classification and L82's release/scale work remain explicit in the
 [current receipt](../../../docs/errs-integration-plan.md#l81-native-acceptance-closure-2026-10-05).
+
+
+Compiler workspace synchronization now has shared X263–X265 cases for nested composite input
+aggregation, automatic Gradle refresh/export watching, and project/folder closure during import.
+Both clients preserve explicit settings and the last accepted inputs after failed refresh.
+Combined validation of this batch is pending; prior acceptance receipts remain historical.
