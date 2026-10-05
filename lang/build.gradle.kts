@@ -83,24 +83,25 @@ subprojects {
 // after modifying the language model or generators.
 // =============================================================================
 
-val updateGeneratedExamples = tasks.register<Copy>("updateGeneratedExamples") {
-    group = "generation"
-    description = "Update the generated-examples directory with freshly generated files"
+val updateGeneratedExamples =
+    tasks.register<Copy>("updateGeneratedExamples") {
+        group = "generation"
+        description = "Update the generated-examples directory with freshly generated files"
 
-    dependsOn(project(":dsl").tasks.named("generateEditorSupport"))
+        dependsOn(project(":dsl").tasks.named("generateEditorSupport"))
 
-    from(project(":dsl").layout.buildDirectory.dir("generated")) {
-        include("xtc.tmLanguage.json")
-        include("language-configuration.json")
-        include("xtc.vim")
-        include("xtc-mode.el")
-        include("grammar.js")
-        include("highlights.scm")
-        include("xtc.sublime-syntax")
+        from(project(":dsl").layout.buildDirectory.dir("generated")) {
+            include("xtc.tmLanguage.json")
+            include("language-configuration.json")
+            include("xtc.vim")
+            include("xtc-mode.el")
+            include("grammar.js")
+            include("highlights.scm")
+            include("xtc.sublime-syntax")
+        }
+
+        into(layout.projectDirectory.dir("generated-examples"))
     }
-
-    into(layout.projectDirectory.dir("generated-examples"))
-}
 
 // =============================================================================
 // Aggregate subproject tasks
@@ -144,12 +145,13 @@ val allProjects =
     listOf(":dsl", ":tree-sitter", ":lsp-server", ":dap-server", ":intellij-plugin", ":vscode-extension")
 
 // Map of aggregate task -> subproject task (null means same name)
-val taskMappings = mapOf(
-    "build" to mapOf(":intellij-plugin" to "buildPlugin"),  // intellij uses buildPlugin
-    "assemble" to emptyMap(),
-    "check" to emptyMap(),
-    "clean" to emptyMap()
-)
+val taskMappings =
+    mapOf(
+        "build" to mapOf(":intellij-plugin" to "buildPlugin"), // intellij uses buildPlugin
+        "assemble" to emptyMap(),
+        "check" to emptyMap(),
+        "clean" to emptyMap(),
+    )
 
 taskMappings.forEach { (aggregateTask, overrides) ->
     val projects = if (aggregateTask == "clean") allProjects else coreProjects
@@ -165,14 +167,16 @@ taskMappings.forEach { (aggregateTask, overrides) ->
 // IDE run tasks - convenience aliases for subproject tasks
 // =============================================================================
 
-val runIntellijPlugin = tasks.register("runIntellijPlugin") {
-    group = "run"
-    description = "Launch IntelliJ IDEA with the XTC plugin loaded for testing"
-    dependsOn(project(":intellij-plugin").tasks.named("runIde"))
-}
+val runIntellijPlugin =
+    tasks.register("runIntellijPlugin") {
+        group = "run"
+        description = "Launch IntelliJ IDEA with the XTC plugin loaded for testing"
+        dependsOn(project(":intellij-plugin").tasks.named("runIde"))
+    }
 
-val runVsCodeExtension = tasks.register("runVsCodeExtension") {
-    group = "run"
-    description = "Launch VS Code with the XTC extension loaded for testing"
-    dependsOn(project(":vscode-extension").tasks.named("runCode"))
-}
+val runVsCodeExtension =
+    tasks.register("runVsCodeExtension") {
+        group = "run"
+        description = "Launch VS Code with the XTC extension loaded for testing"
+        dependsOn(project(":vscode-extension").tasks.named("runCode"))
+    }

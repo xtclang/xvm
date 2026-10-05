@@ -516,7 +516,7 @@ subsequent Java-only recovery pass supplies structural source trees after parse 
    remain authoritative, with no type-fitting rules copied into Kotlin. See the
    [argument-value audit](errs-audit.md#argument-value-completion-2026-09-24).
    Direct final bare-name argument prefixes now use that same fitter. The explicit cursor parser
-   retains the source token on its call site and reports `PARSER-30` once; it never validates the
+   retains the source token on its call site and reports `PARSER-31` once; it never validates the
    unfinished spelling as an actual argument. Trial errors remain private and cannot replace normal
    diagnostics. Accepting an editor replacement triggers an ordinary compilation. This requires
    syntax metadata, not another listener policy or semantic cache; see the
@@ -590,7 +590,7 @@ contract; annotated-output and snapshot-purity regressions guard the inspection 
 ### Cursor recovery and normal diagnostics
 
 Explicit cursor analysis now retains missing enclosing call/group parentheses and index brackets,
-plus missing block braces when the cursor is at EOF. Its existing `PARSER-30` diagnostic covers the
+plus missing block braces when the cursor is at EOF. Its existing `PARSER-31` diagnostic covers the
 selected unfinished expression and that closing suffix. Only this opt-in attempt defers that
 diagnostic during assembly; normal compilation still reports the actual syntax errors and remains
 the source of published Problems entries. Other syntax errors, cancellation and listener budgets
@@ -606,7 +606,7 @@ final candidate TypeInfo lookup uses an explicit forwarding listener. The normal
 compilation remains the source of published diagnostics. Provisional signatures do not select an
 overload or replace those diagnostics, and copied array argument offsets carry no compiler objects.
 
-Declaration recovery keeps the existing `PARSER-30` cursor boundary. Only explicit cursor analysis
+Declaration recovery keeps the existing `PARSER-31` cursor boundary. Only explicit cursor analysis
 defers it for assembly; unrelated parser errors and abort budgets still stop the attempt. A property
 initializer containing the hole is validated as source-owned syntax with the attempt's collectors
 and listener, instead of losing facts in its disposable constant-evaluation clone. This uses the
@@ -624,7 +624,7 @@ an explicit collecting forwarder to the host. Arguments are fitted speculatively
 select a constructor nor replace the normal document's diagnostics. No forwarding-constructor
 creation, capture analysis, bytecode emission or new listener API is required for these signatures.
 
-The `PARSER-30` boundary still prevents emission of the incomplete method. Tests check that the
+The `PARSER-31` boundary still prevents emission of the incomplete method. Tests check that the
 retained class and enclosing method have no emitted operations/AST, the source is unchanged, and
 cancellation/first-error budgets stop analysis. Normal repaired compilation performs captures and
 reports real body errors. See [C18/L31](errs-integration-plan.md#anonymous-constructor-cursor-support).

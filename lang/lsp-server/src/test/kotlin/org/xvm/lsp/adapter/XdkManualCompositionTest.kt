@@ -38,7 +38,10 @@ class XdkManualCompositionTest {
             val at = text.positionOf("String showText();", "showText")
             val targets = adapter.findImplementation(uri, at.line, at.column)
             assertThat(targets.map { Position(it.startLine, it.startColumn) })
-                .containsExactly(text.positionOf("@Override String showText()", "showText"))
+                .containsExactlyInAnyOrder(
+                    text.positionOf("@Override String showText() = name;", "showText"),
+                    text.positionOf("@Override String showText() = super()", "showText"),
+                )
             targets.forEach { target ->
                 val line = text.lines()[target.startLine]
                 assertThat(line.substring(target.startColumn, target.endColumn)).isEqualTo("showText")

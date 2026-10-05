@@ -1,5 +1,10 @@
 # Failures with nowhere to go
 
+**Master rebase (2026-10-05):** integrated `origin/master` at `7a4e29e577`, repaired
+nesting-limit recovery and updated master-dependent fixture assertions. Backend checks and
+selected editor smoke checks pass. The [integration checkpoint](errs-integration-plan.md#master-rebase-checkpoint-2026-10-05)
+and [commit map](errs-rebase-2026-10-05.tsv) preserve validation and future PR boundaries.
+
 **Compiler import ownership (2026-10-05):** model-file watchers could publish Gradle output before
 the exporting task succeeded, including output from a failed/cancelled task. Both editor clients
 now hold immutable accepted reports behind an import owner, reject overlapping imports and cancel
@@ -769,7 +774,7 @@ The parser previously discarded an intact cursor site when an enclosing grouping
 index bracket was absent. A retained site followed by a real inner closer could also lose its outer
 call. Recovery now follows existing syntax ownership, retains only the missing closing suffix at
 statement/outer-delimiter boundaries, and leaves actual closing tokens for their owning constructs.
-An explicit EOF cursor covers missing block ends under its existing `PARSER-30` diagnostic. The
+An explicit EOF cursor covers missing block ends under its existing `PARSER-31` diagnostic. The
 ordinary compilation still reports its usual errors; a cursor request never replaces that cache.
 
 This adds no error-listener interface, AST field or semantic collector. Speculation, cancellation
@@ -803,7 +808,7 @@ separate pending named label where present. Complete earlier arguments remain so
 the selected prefix is syntax to replace, not a value to validate. Compiler fitting uses the same
 immutable accepted-value list as empty slots, with no new semantic node state or record components.
 
-The explicit probe still reports `PARSER-30` once and cannot emit the incomplete method. Rejected
+The explicit probe still reports `PARSER-31` once and cannot emit the incomplete method. Rejected
 proposals use the existing cancellable private PROBE listener; ordinary diagnostics remain cached
 until an actual source edit. Same-prefix incompatible variables, overload alternatives, inference,
 conversions, narrowing, unsaved signatures and cancellation have regression coverage. Exact token
