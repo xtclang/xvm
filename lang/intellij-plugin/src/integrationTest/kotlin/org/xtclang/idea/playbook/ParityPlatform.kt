@@ -111,6 +111,26 @@ internal fun ParityScenarios.platformCases() {
         val outline = query("textDocument/documentSymbol", document).rows().single()
         check(outline["children"].asJsonArray.map { it.asJsonObject.string("name") } == listOf("repaired"))
     }
+    listOf("X249", "X250").forEach { id ->
+        case(id) { data ->
+            val document = open(data.string("file"), data.string("source"))
+            clean(document)
+            with(driver) {
+                focusEditor(document.editor)
+                invokeAction("ReformatCode", now = false, component = document.editor.component)
+                awaitUi("$id native formatting matches shared layout", 30.seconds) { document.text == data.string("expected") }
+            }
+            clean(document)
+            check(query("textDocument/formatting", document, extra = mapOf("options" to mapOf("tabSize" to 4, "insertSpaces" to true, "insertFinalNewline" to true))).rows().isEmpty())
+            listOf("\$Undo" to "source", "\$Redo" to "expected", "\$Undo" to "source").forEach { (action, state) ->
+                with(driver) {
+                    focusEditor(document.editor)
+                    invokeAction(action, now = false, component = document.editor.component)
+                    awaitUi("$id $action restores exact text", 15.seconds) { document.text == data.string(state) }
+                }
+            }
+        }
+    }
     case("X136") { data ->
         val document = open(data.string("file"), data.string("source"))
         clean(document)
