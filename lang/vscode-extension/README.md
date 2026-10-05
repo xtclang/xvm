@@ -355,6 +355,11 @@ the left of the test window's status bar. **Ecstasy tests** identifies the smoke
 playbook runs use the selected total. Both runners use isolated workspaces and profiles; smoke
 logs remain under `build/reports/extension-tests/run-*/`.
 
+Post-rebase acceptance on 1.140.0: the 34 smoke tests pass; `run-J054rk` completes the 267-case
+catalog with 266 passes and the existing X218/UP23 native Undo failure. Separate-instance and
+shared-process lifecycle checks also pass. X218 remains a failed assertion, not an accepted pass;
+see the [current receipt](../../docs/errs-integration-plan.md#modern-vs-code-baseline-and-complete-rebase-acceptance-2026-10-05).
+
 The compiler playbook uses the same launcher and display requirements. It reads fixtures from the
 [XdkAdapter playbook](../doc/manual-test-plan.md#automated-vs-code-run), fails if compiler mode is
 missing, and records remaining visual/manual checks explicitly. `latest-run.txt` points to its

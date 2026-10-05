@@ -2,6 +2,14 @@
 
 The current catalog has **267 scenarios**: X1–X262, CFG1–CFG3 and 7a.8/7a.9.
 
+Post-rebase acceptance (2026-10-05): VS Code `run-J054rk` passes 266 of all 267 cases;
+X218 remains the accepted UP23 host Undo failure. IntelliJ `run-1475359363733913185` plus
+`run-7075359973250470210` covers all 267: 265 pass and X254/X257 retain UP25/UP26 partial status,
+with zero IDE errors. Discovery setup and stale dirty-buffer failures were fixed in the harness;
+the original failures/interruption remain in the [receipt](../../docs/errs-integration-plan.md#modern-vs-code-baseline-and-complete-rebase-acceptance-2026-10-05).
+This is full coverage with a corrected continuation, not one uninterrupted green run. Fresh
+headless, smoke, IntelliJ startup/focus and both editors' project-lifecycle checks pass as recorded there.
+
 L82 combined checkpoint (2026-10-05): 2,991 backend tests pass with 44 existing skips. VS Code
 `run-5flalU` completes all 264 cases: 263 pass and X218 retains its UP23 Undo failure. IntelliJ
 `run-9819779843503311532`, `run-5080670791887423538` and the nine-case follow-up
