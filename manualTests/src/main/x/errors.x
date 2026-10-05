@@ -212,7 +212,7 @@ module TestCompilerErrors {
         }
     }
 
-    package testInvalidAnnoation {
+    package testInvalidAnnotation {
         void test() {
             @AutoFreezable
             immutable Test t = new Test();
