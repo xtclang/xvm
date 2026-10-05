@@ -58,6 +58,12 @@ not a claim that every referenced suite was rerun for this documentation change.
 
 | **UP22 — LSP4IJ — open** | A document-change callback can restart a failed connection, dispose its own synchronizer, then create a pull-diagnostic Alarm owned by that disposed synchronizer. | X202 exposed `DocumentContentSynchronizer.sendDidChangeEvents` → connection restart → `getDebouncePullDiagnosticsAlarm`. The triggering report-copy exception was our UP07 bridge bug and is fixed locally; no patch to the upstream disposal path is installed. Details below. | A document change after transport failure safely retires the old callback without creating resources under a disposed parent. Native reconnect/typing acceptance must accompany an upstream lifecycle fix. |
 
+
+| ID / owner / status | Defect or missing behavior | Local handling and evidence | Removal gate |
+| --- | --- | --- | --- |
+| **UP25 — LSP4IJ — constrained** | No LSP 3.18 document-content provider or refresh handler. | Matching read-only file fallback and direct library monikers; X254 executes those assertions with explicit partial status. [Details below](#up25-lsp4ij-has-no-lsp-318-library-content-provider). | Upstream virtual URI resolution, read-only views, refresh and disposal pass native X254 before advertising the capability. |
+
+
 ## UP19: directory moves retain old document connections
 
 LSP4IJ 0.21.0's [LSPFileListener.onFileRenameAfter](https://github.com/redhat-developer/lsp4ij/blob/0.21.0/src/main/java/com/redhat/devtools/lsp4ij/LSPFileListener.java)
@@ -364,3 +370,8 @@ matching read-only files and gains the same artifact-backed declaration monikers
 is in `XtcClientFeatures.initializeParams`. This is a supported fallback, not a failed native
 virtual-document acceptance. Upstream support must cover URI resolution, read-only editor
 content, refresh, document synchronization and disposal before changing the IntelliJ capability.
+
+Selected receipt: IntelliJ `run-16728311754487527222` executes X254 and passes protected-file,
+matching-source, direct-moniker and no-formatting assertions. It reports partial for virtual
+content/refresh, with zero IDE failures. VS Code `run-e4dCrP` passes its virtual provider path,
+including native typing refusal. Both also pass X31/X101/X158/X252/X253.
