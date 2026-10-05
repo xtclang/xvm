@@ -44,7 +44,10 @@ class CompilerBuildUpdates : ProjectActivity {
     }
 
     companion object {
-        internal fun affectsModel(root: Path, changed: Path): Boolean =
+        internal fun affectsModel(
+            root: Path,
+            changed: Path,
+        ): Boolean =
             listOf(CompilerBuildModel.PATH, CompilerWorkspaceModels.PATH).any {
                 root.resolve(it).normalize().startsWith(changed.normalize())
             }
@@ -53,7 +56,10 @@ class CompilerBuildUpdates : ProjectActivity {
 
 /** Community Gradle sync has a public completion event; failed/cancelled syncs do not refresh. */
 class CompilerGradleSync : ExternalSystemTaskNotificationListener {
-    override fun onSuccess(projectPath: String, id: ExternalSystemTaskId) {
+    override fun onSuccess(
+        projectPath: String,
+        id: ExternalSystemTaskId,
+    ) {
         if (id.projectSystemId.id != "GRADLE" || id.type != ExternalSystemTaskType.RESOLVE_PROJECT) return
         val project = id.findProject() ?: return
         val root = Path.of(projectPath)

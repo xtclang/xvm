@@ -74,4 +74,21 @@ suite('Compiler import ownership', () => {
         assert.strictEqual(owner.retained(), undefined);
         assert.throws(() => owner.begin(false), /retired/);
     });
+
+    test('late daemon output stays rejected and cannot complete a different import', () => {
+        let disk = JSON.stringify({ value: 'initial' });
+        const owner = new CompilerImport(() => disk, JSON.parse, text => JSON.parse(text).importId);
+        owner.current();
+        const first = owner.begin(true);
+        owner.finish(first, 'cancelled');
+        disk = JSON.stringify({ value: 'late', importId: first.id });
+        assert.strictEqual(JSON.parse(owner.current()!).value, 'initial');
+        const second = owner.begin(false);
+        assert.strictEqual(owner.finish(second, 'succeeded').outcome, 'failed');
+        assert.strictEqual(JSON.parse(owner.current()!).value, 'initial');
+        const retry = owner.begin(false);
+        disk = JSON.stringify({ value: 'accepted', importId: retry.id });
+        assert.strictEqual(owner.finish(retry, 'succeeded').outcome, 'succeeded');
+        assert.strictEqual(JSON.parse(owner.current()!).value, 'accepted');
+    });
 });

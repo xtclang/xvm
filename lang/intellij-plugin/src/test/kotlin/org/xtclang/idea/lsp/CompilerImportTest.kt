@@ -82,6 +82,23 @@ class CompilerImportTest {
     }
 
     @Test
+    fun `late daemon output remains rejected and cannot complete a different import`() {
+        val owner = CompilerImport(disk::get, importId = { it.substringAfter("@", "").takeIf(String::isNotEmpty) }) {}
+        owner.current()
+        val first = owner.begin(true)
+        owner.finish(first, CompilerImport.Outcome.CANCELLED)
+        disk.set("late@${first.id}")
+        assertThat(owner.current()).isEqualTo("original")
+        val second = owner.begin(false)
+        assertThat(owner.finish(second, CompilerImport.Outcome.SUCCEEDED).outcome).isEqualTo(CompilerImport.Outcome.FAILED)
+        assertThat(owner.current()).isEqualTo("original")
+        val retry = owner.begin(false)
+        disk.set("accepted@${retry.id}")
+        assertThat(owner.finish(retry, CompilerImport.Outcome.SUCCEEDED).outcome).isEqualTo(CompilerImport.Outcome.SUCCEEDED)
+        assertThat(owner.current()).isEqualTo("accepted@${retry.id}")
+    }
+
+    @Test
     fun `retirement prevents late validation or completion from publishing into a closed project`() {
         imports.current()
         val operation = imports.begin(false)
@@ -98,12 +115,13 @@ class CompilerImportTest {
         val validating = AtomicBoolean()
         val captured = CountDownLatch(1)
         val release = CountDownLatch(1)
-        val owner = CompilerImport(disk::get) {
-            if (validating.get()) {
-                captured.countDown()
-                check(release.await(5, SECONDS))
+        val owner =
+            CompilerImport(disk::get) {
+                if (validating.get()) {
+                    captured.countDown()
+                    check(release.await(5, SECONDS))
+                }
             }
-        }
         owner.current()
         val operation = owner.begin(false)
         validating.set(true)
@@ -111,7 +129,9 @@ class CompilerImportTest {
         try {
             assertThat(captured.await(5, SECONDS)).isTrue()
             owner.retire()
-        } finally { release.countDown() }
+        } finally {
+            release.countDown()
+        }
         assertThat(finished.get(5, SECONDS).outcome).isEqualTo(CompilerImport.Outcome.CANCELLED)
         assertThat(owner.retained()).isNull()
     }

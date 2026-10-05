@@ -16,6 +16,7 @@ internal class CompilerImportService(
         CompilerImport(
             read = { CompilerWorkspaceModels.read(CompilerWorkspaceModels.roots(project)) },
             validate = { CompilerBuildModel.parse(it) },
+            importId = { CompilerBuildModel.parse(it)["importId"]?.asString },
         )
 
     private val owner = AtomicReference(createModel())
@@ -25,8 +26,10 @@ internal class CompilerImportService(
     private val active = AtomicReference<ProgressIndicator?>()
 
     fun rootsRemoved() {
+        if (disposed.get()) return
         // Keep a retired owner distinct from its replacement: the old producer still holds it.
         owner.getAndSet(createModel()).retire()
+        if (disposed.get()) model.retire()
         active.get()?.cancel()
     }
 
