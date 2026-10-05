@@ -1267,7 +1267,10 @@ and debugging. Neither feature counts nor a selected passing playbook establish 
 - [ ] **L73 — Server commands and edit application.** Implement an explicit
   `workspace/executeCommand` registry if server-run actions are required, with negotiated
   `workspace/applyEdit` and failure handling. Current module Run lenses use a client command;
-  the only negotiated server command resolves/applies a one-use legacy code action. Broader commands remain open. Do not conflate running XTC with debugging.
+  the only negotiated server command resolves/applies a one-use legacy code action. This non-Run
+  command path already exists; a generic registry is not an independent missing language feature.
+  The concrete remaining delivery is the embedded Run command family below. Additional non-Run
+  commands require a named user action and acceptance cases rather than placeholder handlers.
   Embedded Run commands must route to the shared build/execution service defined by R2–R5,
   rather than assembling another CLI command or duplicating compilation in a protocol handler.
 - [x] **L74 — Cross-project symbol identities.** `textDocument/moniker` supplies normalized
@@ -1301,12 +1304,18 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
   read-only libraries, canceled and obsolete results. Whole-method generation and an AI service
   are outside this compiler feature. Commit the contract, semantic projection/tests, protocol/tests,
   then shared native acceptance cases; batch validation after implementation.
-- [ ] **L77 — Color support.** Define supported XTC color values, then implement
+- [ ] **L77 — Color support (deferred; outside the current compiler/file-editor completion gate).** Define supported XTC color values, then implement
   `textDocument/documentColor` and `textDocument/colorPresentation`, including exact round-trip
-  edits. No color provider is currently advertised.
-- [ ] **L78 — Notebook documents.** Define XTC cell/module semantics and implement
+  edits. No color provider is currently advertised. The user chose recognized Ecstasy color APIs
+  only (2026-10-05), not arbitrary color-looking strings. No applicable standard color API was found
+  in the checked XDK/platform sources. Do not invent a graphics library solely to fill this LSP
+  checkbox. A future ordinary library on the module path supplies the type/API; an explicit
+  semantic mapping then enables swatches and safe picker edits.
+- [ ] **L78 — Notebook documents (explicitly deferred).** Define XTC cell/module semantics and implement
   `notebookDocument/didOpen`, `didChange`, `didSave`, `didClose` and notebook synchronization
-  capabilities. Current source trees/file overlays do not constitute notebook support.
+  capabilities. Current source trees/file overlays do not constitute notebook support. The user
+  chose to finish file-based tooling first (2026-10-05); notebooks are outside this branch's
+  compiler/file-editor completion gate.
 - [ ] **L79 — Debug inline values.** Define a debugger integration, then implement
   `textDocument/inlineValue` and `workspace/inlineValue/refresh`. Compiler type inlay hints do
   not provide runtime values. DAP breakpoints, stepping and evaluation remain a separate project.
@@ -7309,8 +7318,9 @@ compilation passes; ESLint reports zero errors and five existing unused-fixture-
 in untouched playbook files. The native launcher’s shutdown-supervisor message is normal teardown;
 its JUnit result and IDE failure report are clean.
 
-Remaining broader UI items are explicit: advanced JVM controls, build progress/cancel
-presentation, source attachment editors, log export/retention and remote/untrusted-workspace coverage.
+Remaining broader UI items are explicit: advanced JVM controls, source attachment editors,
+log export/retention and remote/untrusted-workspace coverage. Build progress/cancel presentation
+was implemented on October 5; its shared native acceptance is tracked below.
 X136–X139 exercise the local shipped controls, not those planned extensions.
 
 
@@ -11362,3 +11372,51 @@ Extraction map (local commits on `lagergren/errs`; not pushed):
 These client changes share the existing evaluated Gradle model contract and can be extracted
 independently once that contract and each client's import controls exist. Neither requires the
 local LSP4IJ repair archive or changes the embedding API.
+
+
+## Shared compiler import acceptance and remaining UI work (2026-10-05)
+
+X260–X262 extend the shared catalog to 267 scenarios. Both drivers use the same gated real Gradle
+producer, report contract and expected outcomes. X260 exercises visible native Cancel, overlap
+refusal and successful retry; X261 holds valid changed output before failing, then retries the
+identical output; X262 exercises malformed and absent reports from successful tasks, then repair.
+Compiler resource diagnostics must follow accepted inputs, not the report already on disk.
+Source text and explicit graph ownership remain independent; X129 remains the explicit-override
+regression. Validation is complete for this selected batch:
+
+- VS Code `run-t4aYi4`: X129/X260/X261/X262 all pass, with zero failures. They take about 2.1,
+  5.3, 2.8 and 4.1 seconds respectively. Corrected producer-retirement observation also passes
+  X260 in `run-SLwDJk` (9.1 seconds), with zero failures.
+- IntelliJ `run-15251954735937319371`: START/X129/X261/X262 pass with zero IDE errors. X260
+  reaches native cancellation but fails a harness-only retirement assumption: the fixture required
+  its `finally` marker even after cancellation terminated the Gradle JVM. Preserve this failed
+  receipt; the visible “already running” message was the intentional overlap assertion, not an
+  IDE freeze or compiler failure.
+- The fixture now records its producer PID before publishing readiness. Cancellation retirement
+  requires either the task's completion marker or that exact JVM to have exited; successful and
+  failed non-cancelled tasks still require their completion marker. Corrected IntelliJ X260 plus
+  START passes in `run-11734301827775631328`, with zero IDE errors. Completed X129/X261/X262
+  were not replayed. No production compiler/plugin behavior changed for this correction.
+- Both drivers compile; changed TypeScript files pass ESLint. Root/lang formatting checks pass.
+  The standalone real Gradle fixture succeeds and explicitly reuses its configuration cache.
+  Catalog SHA-256: `9c0ca71168064feb5b04f61dfedd581180b2c4c87cac936fba534309880c8486`.
+- These are selected receipts, not a rerun of the complete 267-case catalog or the backend suite.
+  Project/folder closure during import, automatic build sync and remote/restricted-workspace
+  acceptance remain explicit follow-ups.
+
+The following is the current UI1–UI7 remainder; older broad checklist entries describe total scope,
+not a claim that the existing settings pages have never been implemented:
+
+| Area | Implemented | Remaining work |
+| --- | --- | --- |
+| UI1/UI2 contract and ownership | Validated settings, inherited project service values, graph precedence, last-valid state and guarded updates. | Complete option/consumer inventory as controls expand; remote/restricted-workspace and broader multi-root precedence acceptance. |
+| UI3/UI4 settings | Community IntelliJ Compiler/Code Style/Language Service pages; VS Code native Settings, commands and path selection. | Ordered library/source-attachment editing, improved ordered resource/path editing and consistent origin/inheritance presentation. |
+| UI5 build/apply lifecycle | Live formatting/hints, restart-owned transport options, explicit build-model import/preparation, cancellation and accepted-report ownership. | Automatic Gradle-sync refresh, nested/composite root aggregation, generated-input status, and project/folder retirement during imports in native shared acceptance. |
+| UI5 runtime | Effective bundled server/runtime, VS Code Java home and restart actions. | Validated advanced JVM options with machine-local scope and an explicit restart boundary. |
+| UI6 support | Effective settings/queue reports, log toggle, import outcome/time. | Source-attachment/library presentation, log export/retention and links from failures to settings/logs. |
+| UI7 acceptance | Shared local settings/restart/save/refresh scenarios and new X260–X262 import cases. | Broader persistence/multi-root/remote/restricted-workspace and adapter parity; adding a scenario does not itself establish a passing receipt. |
+
+L77 awaits a real recognized color API; no color library is added solely for LSP. L78 notebooks are
+explicitly deferred by the user. L79 runtime inline values follows Run/DAP. L73's existing legacy
+code-action command is implemented; its concrete remaining command family is embedded Run.
+None of those deferrals blocks the current shared import-acceptance work.
