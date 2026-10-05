@@ -30,6 +30,9 @@ object CompilerBuildModel {
             "Unsupported Gradle compiler model; refresh build configuration"
         }
         val entries = model["sourceSets"].asJsonArray.map { it.asJsonObject }
+        model["buildRoots"]?.let { roots ->
+            require(roots.isJsonArray && roots.asJsonArray.all { URI(it.asString).scheme == "file" }) { "Invalid Gradle build roots" }
+        }
         entries.forEach { entry ->
             listOf(
                 "projectId",
@@ -140,6 +143,8 @@ object CompilerBuildModel {
                         "${entry["projectPath"].asString} / ${entry["sourceSet"].asString} [Gradle model]",
                     )
                     add("Build: ${entry["buildFile"].asString}")
+                    val missing = entry["resourceRoots"].asJsonArray.count { !Files.exists(Path.of(URI(it.asString))) }
+                    add("Processed resources: " + if (missing == 0) "ready" else "$missing missing; prepare generated resources")
                     listOf("sourceRoots", "resourceSourceRoots", "resourceRoots", "modulePath")
                         .forEach { kind ->
                             entry[kind].asJsonArray.forEach { item ->
@@ -219,24 +224,29 @@ object CompilerBuildModel {
         val operation = model.begin(prepare)
         val result =
             try {
-                val root = Path.of(requireNotNull(project.basePath))
+                val roots = CompilerWorkspaceModels.roots(project)
+                val wrapperName = if (System.getProperty("os.name").startsWith("Windows")) "gradlew.bat" else "gradlew"
+                val builds = roots.filter { Files.isRegularFile(it.resolve(wrapperName)) }
+                require(builds.isNotEmpty()) { "No Gradle wrapper here; configure manual paths instead" }
                 indicator.text = if (prepare) "Preparing generated sources and resources" else "Reading evaluated Gradle inputs"
-                indicator.text2 = root.toString()
-                val wrapper = root.resolve(if (System.getProperty("os.name").startsWith("Windows")) "gradlew.bat" else "gradlew")
-                require(Files.isRegularFile(wrapper)) { "No Gradle wrapper here; configure manual paths instead" }
-                val command =
-                    GeneralCommandLine(
-                        wrapper.toString(),
-                        if (prepare) "prepareXtcLspModel" else "exportXtcLspModel",
+                val outputs = builds.asSequence().map { root ->
+                    indicator.checkCanceled()
+                    indicator.text2 = root.toString()
+                    val command = GeneralCommandLine(
+                        root.resolve(wrapperName).toString(),
+                        "--init-script", CompilerWorkspaceModels.importScript().toString(),
+                        if (prepare) "prepareEcstasyWorkspaceModel" else "exportEcstasyWorkspaceModel",
                         "--console=plain",
                     ).withWorkDirectory(root.toFile())
-                val output = CapturingProcessHandler(command).runProcessWithProgressIndicator(indicator)
+                    CapturingProcessHandler(command).runProcessWithProgressIndicator(indicator)
+                }
+                val output = outputs.firstOrNull { it.isCancelled || it.isTimeout || it.exitCode != 0 }
                 when {
-                    output.isCancelled || indicator.isCanceled -> {
+                    output?.isCancelled == true || indicator.isCanceled -> {
                         model.finish(operation, CompilerImport.Outcome.CANCELLED)
                     }
 
-                    output.isTimeout || output.exitCode != 0 -> {
+                    output != null -> {
                         model.finish(
                             operation,
                             CompilerImport.Outcome.FAILED,
