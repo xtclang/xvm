@@ -2114,8 +2114,8 @@ roots may be outside workspace folders. A scope receipt does not authorize apply
   dependencies. **Apply** saves through LSP4IJ's project settings and refreshes the running server.
   The resource-root column accepts a JSON array such as `["assets/templates", "shared/resources"]`.
   Leave it blank for compiler layout deduction; `[]` explicitly disables resources. Relative paths
-  use the project root. Custom build-defined paths must currently be entered explicitly; automatic
-  Gradle model import remains planned. In VS Code, use the same `resourceRoots` array within
+  use the project root. **Refresh Gradle model** imports evaluated build-defined paths; automatic
+  Gradle-sync refresh remains a follow-up. In VS Code, use the same `resourceRoots` array within
   `xtc.compiler.sourceModules`. Change/delete/recreate a referenced resource on disk and check
   dependency diagnostics refresh; a resource file is not an extra XTC source root.
   Blank fields and duplicate roots are refused. **Reset** discards pending edits. The legacy LSP4IJ
@@ -2442,6 +2442,31 @@ source/resource override must survive refresh. Missing or malformed reports must
 server. Invoking the real Gradle wrapper from these controls is a manual check; X129 covers the
 import/settings lifecycle and TestKit covers the actual producer tasks. Automatic IntelliJ Gradle
 sync and nested/composite build aggregation are still follow-ups.
+
+**Build import cancellation and ownership (UI5/UI6):** both controls now keep the previous
+accepted model while Gradle runs. Use a project whose generated-input task is long enough to
+cancel; generated files themselves are not rolled back by cancelling an import.
+
+1. Import a valid model and note the effective resource roots and current diagnostics.
+2. Start **Prepare generated resources**. VS Code shows a cancellable Ecstasy notification and
+   the owned task terminal; IntelliJ shows a cancellable background task with the project path.
+   Invoke Refresh again while it runs: the second request must refuse without starting another
+   task for that folder/project. Other workspace folders retain independent ownership.
+3. Cancel through the native progress control. The operation must finish as cancelled, retain
+   the previous compiler inputs, and remain available for retry. Cancellation is not a compiler
+   diagnostic or an error notification. Inspect **Show Compiler Paths** in VS Code or reopen the
+   IntelliJ Compiler page for the last import result/time.
+4. Exercise a task that writes a valid new model and then fails. Watcher/configuration callbacks
+   must not publish that model during the task or after its failure. A successful explicit retry
+   may accept it. Existing explicit source/resource overrides must still be preserved.
+5. Remove the owning VS Code folder or close the IntelliJ project during preparation. Its owned
+   progress is cancelled; an old callback must not replace another operation's model. Also try
+   a missing wrapper and malformed/missing output, then repair and retry.
+
+Automated ownership regressions cover failed/cancelled output and stale callbacks; VS Code task
+tests additionally exercise real process success/cancellation. X129 retains model/settings
+acceptance. Clicking native import progress controls and a real project's long generated-input
+task are manual acceptance steps, not additional passing shared scenarios.
 
 **Current hardening batch:** updated X76/X118 and new X123 pass in both editors with shared
 scenario SHA-256 `959c3e71f68b00f58e6cc5cc22e275b20623442600175975ed1ab36a718567d3`.
