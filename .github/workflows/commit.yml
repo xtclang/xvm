@@ -1169,7 +1169,9 @@ jobs:
                     echo "❌ build-and-test failed or was cancelled"
                     exit 1
                   fi
-                  if [ "$INTEGRATION_RESULT" != "success" ]; then
+                  if [ "$INTEGRATION_RESULT" = "skipped" ] && [ "${{ github.event.inputs.platforms }}" = "windows-latest" ]; then
+                    echo "✅ integration-test skipped: it needs the Ubuntu build, which a Windows-only run does not have"
+                  elif [ "$INTEGRATION_RESULT" != "success" ]; then
                     echo "❌ integration-test failed or was cancelled"
                     exit 1
                   fi
@@ -1181,7 +1183,9 @@ jobs:
         name: Plugin integration test
         needs: build-and-test
         runs-on: ubuntu-latest
-        if: success()
+        # Tests the consumer Maven repository that only the Ubuntu build uploads, so a
+        # Windows-only dispatch has nothing to test.
+        if: success() && github.event.inputs.platforms != 'windows-latest'
 
         steps:
             - name: Checkout XVM
