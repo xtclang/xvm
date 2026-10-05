@@ -4,10 +4,13 @@ import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkNavigationIndex
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import org.xvm.lsp.adapter.xdk.XdkWorkspaceNavigation
 import java.lang.ref.WeakReference
 import java.nio.file.Files
 import java.nio.file.Path
@@ -21,9 +24,11 @@ class XdkNavigationIndexTest {
 
     private val compiled = ConcurrentHashMap<String, AtomicInteger>()
 
-    @Test
-    fun `navigation reuses 32 independent roots and rebuilds only an edited dependency closure`() {
-        val roots = (0 until 32).map { source("Node$it", "module Node$it { class Box {} }") }
+    @ParameterizedTest
+    @ValueSource(ints = [32, 128])
+    fun `navigation reuses independent roots and rebuilds only an edited dependency closure`(count: Int) {
+        val last = "Node${count - 1}"
+        val roots = (0 until count).map { source("Node$it", "module Node$it { class Box {} }") }
         val consumer =
             source(
                 "Consumer",
@@ -39,13 +44,13 @@ class XdkNavigationIndexTest {
         adapter().use { adapter ->
             adapter.replaceSourceModules(graph)
             val cold = TimeSource.Monotonic.markNow()
-            assertThat(adapter.findWorkspaceSymbols("Box")).hasSize(32)
+            assertThat(adapter.findWorkspaceSymbols("Box")).hasSize(count)
             val coldTime = cold.elapsedNow()
-            assertThat(compiled.values.sumOf { it.get() }).isEqualTo(33)
+            assertThat(compiled.values.sumOf { it.get() }).isEqualTo(count + 1)
             val warm = TimeSource.Monotonic.markNow()
-            assertThat(adapter.findWorkspaceSymbols("Box")).hasSize(32)
+            assertThat(adapter.findWorkspaceSymbols("Box")).hasSize(count)
             val warmTime = warm.elapsedNow()
-            assertThat(compiled.values.sumOf { it.get() }).isEqualTo(33)
+            assertThat(compiled.values.sumOf { it.get() }).isEqualTo(count + 1)
             val hierarchy = adapter.prepareTypeHierarchy(roots.first().uri, 0, 21).single()
             assertThat(adapter.getSubtypes(hierarchy).single().uri).isEqualTo(consumer.uri)
 
@@ -57,22 +62,22 @@ class XdkNavigationIndexTest {
             assertThat(adapter.getSubtypes(hierarchy)).isEmpty()
 
             // Broken independent roots allow partial navigation but never complete references.
-            source("Node31", "module Node31 { Missing broken; }")
+            source(last, "module $last { Missing broken; }")
             assertThat(adapter.findWorkspaceSymbols("Child")).hasSize(1)
             assertThat(adapter.findReferences(roots.first().uri, 0, 21, true)).isEmpty()
-            assertThat(adapter.findWorkspaceSymbols("Box")).hasSize(31)
-            assertThat(compiled.getValue("Node31").get()).isEqualTo(2)
-            source("Node31", "module Node31 { class Box {} }")
+            assertThat(adapter.findWorkspaceSymbols("Box")).hasSize(count - 1)
+            assertThat(compiled.getValue(last).get()).isEqualTo(2)
+            source(last, "module $last { class Box {} }")
             assertThat(adapter.findReferences(roots.first().uri, 0, 21, true)).hasSize(2)
-            assertThat(compiled.getValue("Node31").get()).isEqualTo(3)
+            assertThat(compiled.getValue(last).get()).isEqualTo(3)
 
-            adapter.replaceSourceModules(graph.filter { it.name != "Node31" })
-            assertThat(adapter.findWorkspaceSymbols("Box")).hasSize(31)
+            adapter.replaceSourceModules(graph.filter { it.name != last })
+            assertThat(adapter.findWorkspaceSymbols("Box")).hasSize(count - 1)
             adapter.replaceSourceModules(graph)
-            assertThat(adapter.findWorkspaceSymbols("Box")).hasSize(32)
-            assertThat(compiled.getValue("Node31").get()).isEqualTo(4)
+            assertThat(adapter.findWorkspaceSymbols("Box")).hasSize(count)
+            assertThat(compiled.getValue(last).get()).isEqualTo(4)
             println(
-                "Navigation graph: roots=33, cold=$coldTime, warm=$warmTime, initialCompiles=33, unchangedCompiles=0, editedClosureCompiles=2",
+                "Navigation graph: roots=${count + 1}, cold=$coldTime, warm=$warmTime, initialCompiles=${count + 1}, unchangedCompiles=0, editedClosureCompiles=2",
             )
         }
     }
@@ -143,8 +148,9 @@ class XdkNavigationIndexTest {
         }
     }
 
-    @Test
-    fun `retained graph navigation releases all compilation pools and ASTs`() {
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `retained graph navigation releases all compilation pools and ASTs`(diagnosticsFirst: Boolean) {
         CompilerTestSupport.configure()
         val observed = mutableListOf<WeakReference<Any>>()
         val roots = (0 until 32).map { source("Node$it", "module Node$it { class Box {} }") }
@@ -152,6 +158,12 @@ class XdkNavigationIndexTest {
             { source, repository, errors -> EmbeddingSupport.instance().compileModule(source, repository, errors) },
             { sources, repository, errors ->
                 assertThat(repository?.moduleNames).isEmpty()
+                if (observed.size == 48) {
+                    System.gc()
+                    assertThat(observed.count { it.get() != null })
+                        .describedAs("earlier compiler attempts retained while the graph is still compiling")
+                        .isZero()
+                }
                 EmbeddingSupport.instance().compileModule(sources, repository, errors).also { result ->
                     observed += WeakReference(result)
                     result.pool()?.let { observed += WeakReference(it) }
@@ -161,6 +173,7 @@ class XdkNavigationIndexTest {
             { _, _, _, _, _ -> error("No cursor analysis") },
         ).use { adapter ->
             adapter.replaceSourceModules(roots)
+            if (diagnosticsFirst) assertThat(adapter.workspaceDiagnosticsAsync().join()).allMatch { it.success }
             assertThat(adapter.findWorkspaceSymbols("Box")).hasSize(32)
             assertThat(observed).hasSizeGreaterThanOrEqualTo(96)
             await().atMost(Duration.ofSeconds(20)).untilAsserted {
@@ -175,13 +188,17 @@ class XdkNavigationIndexTest {
     @Test
     fun `retirement and close reject publication from an older index generation`() {
         val index = XdkNavigationIndex()
+        val navigation = mapOf("graph" to XdkWorkspaceNavigation(emptyMap(), "graph", true, emptyMap()))
         val beforeEdit = index.snapshot()
         index.retire(emptySet())
-        assertThat(index.publish(beforeEdit, emptyMap())).isFalse()
+        assertThat(index.publish(beforeEdit, emptyMap(), navigation)).isFalse()
         val beforeClose = index.snapshot()
         index.clear()
-        assertThat(index.publish(beforeClose, emptyMap())).isFalse()
-        assertThat(index.publish(index.snapshot(), emptyMap())).isTrue()
+        assertThat(index.publish(beforeClose, emptyMap(), navigation)).isFalse()
+        assertThat(index.snapshot().navigation).isEmpty()
+        assertThat(index.publish(index.snapshot(), emptyMap(), navigation)).isTrue()
+        index.retire(emptySet())
+        assertThat(index.snapshot().navigation).isEmpty()
     }
 
     private fun adapter(): XdkAdapter {

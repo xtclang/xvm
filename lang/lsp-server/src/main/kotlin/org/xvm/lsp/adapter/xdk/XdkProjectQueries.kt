@@ -23,7 +23,6 @@ import java.nio.file.Files
 import java.security.MessageDigest
 import java.util.HexFormat
 import java.util.concurrent.CancellationException
-import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Worker-only whole-graph queries. Capture every configured module before compiling any of them.
@@ -36,8 +35,6 @@ internal class XdkProjectQueries(
     private val dependencies: XdkDependencies,
     private val compileTree: (ModuleInfo, ModuleRepository?, ErrorListener) -> EmbeddingSupport.Compilation,
     private val cancelled: () -> Boolean,
-    private val cache: AtomicReference<Map<String, XdkWorkspaceNavigation>> =
-        AtomicReference(emptyMap()),
     private val discoverImports: Boolean = false,
     private val diagnosticCache: XdkDiagnosticIndex = XdkDiagnosticIndex(),
     private val navigationIndex: XdkNavigationIndex = XdkNavigationIndex(),
@@ -120,7 +117,7 @@ internal class XdkProjectQueries(
                                 val open = XdkDependencies(inputs.values.toList()).open()
                                 val heard = ErrorList()
                                 val errors = ErrorListener.cancellable(heard, cancelled)
-                                val compilation = compileTree(source, open.repository, errors)
+                                val compilation = compileTree(source.freshCompilationInput(), open.repository, errors)
                                 checkCurrent()
                                 val navigation =
                                     if (compilation.succeeded() && !heard.hasSeriousErrors()) {
@@ -191,11 +188,11 @@ internal class XdkProjectQueries(
 
     fun navigation(): XdkWorkspaceNavigation? {
         val revision = revision()
-        val previous = cache.get()
-        previous[revision]?.let {
+        val previous = navigationIndex.snapshot()
+        previous.navigation[revision]?.let {
             return if (isCurrent()) it else null
         }
-        val builds = navigationBuilds()
+        val builds = navigationBuilds(previous) ?: return null
         val models = builds.values.flatMap { it.facts?.models.orEmpty() }
         val constants =
             builds.values
@@ -235,13 +232,12 @@ internal class XdkProjectQueries(
                 .mapNotNull { name -> XdkSources.sourceUri(name)?.let { name to it } }
                 .toMap()
         return XdkWorkspaceNavigation(views, revision, complete, dependencySources).also {
-            cache.compareAndSet(previous, mapOf(revision to it))
+            navigationIndex.publish(previous, builds, mapOf(revision to it))
         }
     }
 
     /** Navigation may reuse exact detached builds; edit/refactoring proofs below always compile. */
-    private fun navigationBuilds(): Map<String, XdkNavigationIndex.Build> {
-        val previous = navigationIndex.snapshot()
+    private fun navigationBuilds(previous: XdkNavigationIndex.Snapshot): Map<String, XdkNavigationIndex.Build>? {
         val artifacts = dependencies.modules.filterKeys { it !in project.modules }.toMutableMap()
         val builds =
             buildMap {
@@ -257,7 +253,7 @@ internal class XdkProjectQueries(
                             val open = XdkDependencies(inputs.values.toList()).open()
                             val heard = ErrorList()
                             val errors = ErrorListener.cancellable(heard, cancelled)
-                            val compilation = compileTree(source, open.repository, errors)
+                            val compilation = compileTree(source.freshCompilationInput(), open.repository, errors)
                             checkCurrent()
                             val facts =
                                 if (compilation.succeeded() && !heard.hasSeriousErrors() &&
@@ -278,8 +274,7 @@ internal class XdkProjectQueries(
                     build.artifact?.let { artifacts[module.name] = it }
                 }
             }
-        if (!isCurrent()) throw CancellationException()
-        navigationIndex.publish(previous, builds)
+        if (!isCurrent()) return null
         return builds
     }
 

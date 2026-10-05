@@ -128,9 +128,9 @@ internal fun ParityScenarios.graphCases() {
     case("X251") { data ->
         val roots =
             (0 until data.int("roots")).map { index ->
-                val file = SharedScenarios.text(data.string("rootFile"), index)
-                write(file, SharedScenarios.text(data.string("rootSource"), index))
-                SharedScenarios.SourceModule(SharedScenarios.text(data.string("rootName"), index), uri(file), emptyList())
+                val file = SharedScenarios.text(data.string("rootFile"), index.toString())
+                write(file, SharedScenarios.text(data.string("rootSource"), index.toString()))
+                SharedScenarios.SourceModule(SharedScenarios.text(data.string("rootName"), index.toString()), uri(file), emptyList())
             }
         val consumer = data["consumer"].asJsonObject
         write(consumer.string("uri"), consumer.string("source"))
@@ -160,12 +160,12 @@ internal fun ParityScenarios.graphCases() {
         check(search(data.string("addedSymbol")).size == 1)
         check(refs().size == data.int("referenceCount"))
         val last = data.int("roots") - 1
-        val broken = open(SharedScenarios.text(data.string("rootFile"), last))
-        replace(broken, SharedScenarios.text(data.string("brokenSource"), last))
+        val broken = open(SharedScenarios.text(data.string("rootFile"), last.toString()))
+        replace(broken, SharedScenarios.text(data.string("brokenSource"), last.toString()))
         errors(broken)
         check(refs().isEmpty())
         check(search(data.string("addedSymbol")).size == 1)
-        replace(broken, SharedScenarios.text(data.string("rootSource"), last))
+        replace(broken, SharedScenarios.text(data.string("rootSource"), last.toString()))
         clean(broken)
         check(refs().size == data.int("referenceCount"))
         configure(graph.filter { it.name != roots.last().name })
