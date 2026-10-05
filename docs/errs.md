@@ -1,3 +1,8 @@
+L74 is implemented and validated: portable artifact identities now match source declarations and
+binary consumers through `textDocument/moniker`. Shared X31/X252/X253 pass in both editors.
+No AST changes were needed. The next compiler feature is L75 read-only document content/refresh;
+see the [contract, limits and receipts](errs-integration-plan.md#l74-artifact-identities-2026-10-05).
+
 L81 now has late progress-registration cleanup, all-provider refresh/lifecycle regressions and
 more useful live progress details identifying the source/workspace and compiler queue activity.
 The focused backend and packaged transport checks pass. IntelliJ visible Cancel/restart passes;
@@ -5,7 +10,7 @@ VS Code physical-click and broader native-window acceptance remain open. See the
 
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
-L80 final capability audit: current response producers and all 25 adapter provider gates are now
+L80 final capability audit: current response producers and all 26 adapter provider gates are now
 reviewed. Missing link-tooltip, per-signature active-parameter and pull-related-information gates
 are fixed; legacy signature highlighting is preserved, and compiler rename proposals are advertised
 only in compiler mode. No AST/embedding change is needed. See the
@@ -196,7 +201,7 @@ independent of the compiler error-listener/AST changes.
 
 The active [full compiler LSP completion checklist (L55–L83)](errs-integration-plan.md#full-compiler-lsp-completion-checklist)
 now distinguishes remaining semantic coverage, reliability investigations, unimplemented LSP
-operations and native validation. The compiler now implements 25 adapter capability categories, including declaration lookup;
+operations and native validation. The compiler now implements 26 adapter capability categories, including declaration lookup and monikers;
 that is not full protocol or language coverage. See the
 [current capability/absence inventory](../lang/doc/plans/plan-ide-integration.md#compiler-completeness-snapshot).
 L55's real-workspace acceptance, the bounded L56–L59 work and native parity checkpoint are
@@ -3044,20 +3049,20 @@ retention controls pass under the existing heap, including collection during a s
 query. Packaged first references on 20,000-method fixtures improve from 8–11 s to 0.4–0.6 s.
 X45/X59/X63/X143/X251 pass in both editors; no full-catalog rerun or disk-persistent index is claimed.
 
-### L74 artifact identities (2026-10-05; validation pending)
+### L74 artifact identities (2026-10-05)
 
 `textDocument/moniker` now has a compiler-only provider. The `ecstasy-artifact-v1` scheme
 uses a SHA-256 digest of the normalized emitted module plus its normalized constant-table index.
 Normalization removes build timestamps and checkout directories in a private deserialized copy;
-actual module bytes, version, code, signatures, embedded resources and relative source/debug data
-otherwise participate in identity. Unchanged recompilation and relocating a checkout should keep
+module versions, code, signatures, embedded resources and relative source/debug data otherwise
+participate in identity. Unchanged recompilation and relocating a checkout keep
 IDs; changing an artifact changes its symbol IDs. Identical normalized artifacts intentionally
 share IDs across projects. Equal names in different artifacts do not establish identity.
 Source-index metadata is not part of this portable key, so attaching/removing matching sources
 cannot change binary identity. Existing source-index revisions and fresh rename proofs are unchanged.
 
 Public/protected declarations with externally visible owners export their identity; consumers
-import the same identity. Private components are local. The uniqueness is `scheme`, not a claim
+import the same identity. Private components, method-local types and their members are local. The uniqueness is `scheme`, not a claim
 of an independently registered global identifier. Missing emitted entries, register locals,
 parameters, lambdas, unresolved names and unsuccessful compilations return no moniker. The feature
 is an exact artifact identity API, not a fuzzy symbol search or an LSIF exporter. Compiler-generated
@@ -3069,4 +3074,22 @@ partial-result path. Shared X252/X253 and updated X31 exercise the connected cli
 there is no native moniker browser in either editor, and protocol checks must not be described as
 native moniker UI coverage. Backend tests cover source/binary matching, overloads, unchanged
 recompilation, checkout relocation, distinct same-name artifacts, visibility, incomplete source,
-closed graph views and replacement. Acceptance is pending the batched run.
+closed graph views and replacement. Selected acceptance passes in both editors; receipts below.
+
+Companion views share an immutable identity table per compilation, including after graph joining.
+Queries need a current semantic snapshot: parsed-only library source views still return no moniker
+when queried directly. Resolved imports in consumers have binary identities; semantic enrichment of
+read-only library documents is tracked with L75. This is not a claim of complete library-document
+language support.
+
+L74 validation: **137 distinct backend/protocol unit cases** pass across the recorded selections,
+plus all **64 packaged `XdkStdioTest` cases**. The final visibility/table-sharing check reruns 39
+backend cases and the packaged moniker case successfully. All have zero failures/errors/skips.
+LSP and IntelliJ Spotless checks, TypeScript compilation and IntelliJ harness compilation pass.
+VS Code `run-EGMh6B` passes X31/X252/X253. IntelliJ `run-10438075944069511128` passes the same three
+plus START, with no IDE failures. Its first run (`run-11826261276184041200`) passed X31 but failed
+the two new cases because the test driver decoded `Moniker[]` as an object; adding the method to
+its existing collection-response set fixes both. This was a harness omission, not an LSP4IJ defect.
+The final method-local visibility refinement has backend/packaged coverage; it did not trigger
+another GUI run. No full-catalog run is claimed. The catalog has **258 cases**, SHA-256
+`7f4170148797ce5828bcb36ec96dd35ca9c4a0670768b7b7dcc81826535f91d5`.
