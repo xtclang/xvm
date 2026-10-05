@@ -7955,6 +7955,36 @@
         ]
       }
     },
+    "X249": {
+      "title": "format continuation and standalone comment margins without changing literals",
+      "manual": [
+        "Run Format Document, inspect the shared expected layout, repeat to check stability, then Undo/Redo/Undo. Literal contents must stay unchanged."
+      ],
+      "values": {
+        "file": "Layout.x",
+        "source": "module Layout {\nInt run() {\nString literal = \"two  spaces\";\nInt value =\n1 +\n2;\n/* comment\n * keep relative layout and { braces }\n */\nreturn value;\n}\n}",
+        "expected": "module Layout {\n    Int run() {\n        String literal = \"two  spaces\";\n        Int value =\n                1 +\n                2;\n        /* comment\n         * keep relative layout and { braces }\n         */\n        return value;\n    }\n}\n"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X250": {
+      "title": "wrap a long expression at token boundaries using the configured margin",
+      "manual": [
+        "Run Format Document, inspect the shared expected layout, repeat to check stability, then Undo/Redo/Undo. Literal contents must stay unchanged."
+      ],
+      "values": {
+        "file": "Wrap.x",
+        "source": "module Wrap {\nString run() {\nreturn \"1111111111111111111111111111111111111111\" + \"2222222222222222222222222222222222222222\" + \"3333333333333333333333333333333333333333\";\n}\n}",
+        "expected": "module Wrap {\n    String run() {\n        return \"1111111111111111111111111111111111111111\" + \"2222222222222222222222222222222222222222\" +\n                \"3333333333333333333333333333333333333333\";\n    }\n}\n"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
