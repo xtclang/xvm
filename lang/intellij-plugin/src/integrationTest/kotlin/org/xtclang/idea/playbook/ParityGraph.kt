@@ -1,7 +1,9 @@
 package org.xtclang.idea.playbook
 
 import com.google.gson.JsonObject
+import java.net.URI
 import java.nio.file.Files
+import java.nio.file.Path
 
 internal fun ParityScenarios.graphCases() {
     case("X59") { data ->
@@ -260,5 +262,34 @@ internal fun ParityScenarios.monikerCases() {
         clean(document)
         check(monikers("private").single() == own)
         check(monikers("library").single() == bundled)
+    }
+}
+
+internal fun ParityScenarios.libraryContentCases() {
+    case("X254") { data ->
+        val document = open(data.string("file"), data.string("source"))
+        clean(document)
+        data.strings("types").forEach { name ->
+            val at = document.at(name)
+            val imported = query("textDocument/moniker", document, at).rows().single()
+            val target = query("textDocument/definition", document, at).rows().single()
+            val uri = target.string("uri")
+            // TODO LSP4IJ: UP25 — retain native read-only file acceptance until upstream supports
+            // workspace/textDocumentContent, virtual URI resolution and refresh.
+            check(URI(uri).scheme == "file")
+            val path = Path.of(URI(uri))
+            check(!Files.isWritable(path))
+            val library = open(path.toString())
+            val text = library.text
+            val start = target["range"].asJsonObject["start"].asJsonObject
+            check(text.lines()[start.int("line")].substring(start.int("character")).startsWith(name))
+            val exported = protocol.query("textDocument/moniker", mapOf(
+                "textDocument" to mapOf("uri" to uri), "position" to start,
+            )).rows().single()
+            check(exported == imported.deepCopy().apply { addProperty("kind", "export") })
+            check(exported.string("scheme") == data.string("monikerScheme"))
+            check(query("textDocument/formatting", library, extra = mapOf("options" to mapOf("tabSize" to 4, "insertSpaces" to true))).rows().isEmpty())
+            check(library.text == text && Files.readString(path) == text)
+        }
     }
 }
