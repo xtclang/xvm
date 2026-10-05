@@ -1396,6 +1396,7 @@ class XdkAdapter
                             Position(line, 0),
                             Position(line, text.lines().getOrNull(line)?.length ?: column),
                         ),
+                        wrapLines = false,
                     )
                 }.orEmpty()
 
