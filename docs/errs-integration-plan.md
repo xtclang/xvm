@@ -10693,7 +10693,7 @@ Commit extraction map:
 | `9f27e5293` | L66 configured continuation/wrapping/comment-margin formatter | Include nesting at each wrap boundary, custom-indent/tab tests, active margin setting/UI, shared newline policy and native idempotence/history corrections. |
 | `60b5acf9e` | IntelliJ asynchronous formatting history / UP24 | Keep with native formatting acceptance; compiler-only extraction does not need this editor repair. |
 
-The following local acceptance checkpoint contains the corrections above and this receipt. Extracted
+Acceptance checkpoint `998267de6` contains the corrections above and this receipt. Extracted
 PRs must include their applicable corrections and pass independently. The only new Java AST API in
 L66 is an immutable copy of existing import-name tokens; all other implementation stays in the LSP
 or editor libraries. No new mutable AST state, semantic cache or clone responsibility is introduced.
