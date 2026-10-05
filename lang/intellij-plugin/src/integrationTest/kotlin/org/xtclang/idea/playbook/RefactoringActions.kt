@@ -100,6 +100,9 @@ fun Driver.choosePopup(
     reopen: () -> Unit,
 ) {
     val inspection = PopupInspection(this, editor, reopen)
+    // Capture the source/caret before dispatch: an intention can move the caret while it
+    // discovers actions. Recovery must retain the requested location, not that later position.
+    reopen()
     val popup = ui.popup("//div[@class='HeavyWeightWindow'][.//div[@class='MyList']]")
     awaitUi(
         "native popup contains $expected",
@@ -181,7 +184,6 @@ fun Driver.quickFix(
     // TODO LSP4IJ: UP07 — overlapping full pulls can cancel an old lazy fix during discovery.
     // Dispatch through the UI queue so the platform handles ProcessCanceledException normally;
     // the bounded popup wait may reopen an unapplied inspection, never replay a chosen edit.
-    invokeAction("ShowIntentionActions", now = false, component = editor.component)
     choosePopup(editor, listOf(title), title) {
         invokeAction("ShowIntentionActions", now = false, component = editor.component)
     }
