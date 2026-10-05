@@ -7,17 +7,9 @@ import java.math.RoundingMode;
 import org.xtclang.ecstasy.nEnum;
 import org.xtclang.ecstasy.OutOfBounds;
 
-import org.xtclang.ecstasy.collections.ArrayᐸObjectᐳ;
-
-import org.xtclang.ecstasy.reflect.Enumeration;
-
 import org.xtclang.ecstasy.text.String;
 
-import org.xvm.asm.ConstantPool;
-import org.xvm.asm.constants.TypeConstant;
-
 import org.xvm.javajit.Ctx;
-import org.xvm.javajit.ModuleLoader;
 
 /**
  * Native FPNumber wrapper.
@@ -467,28 +459,11 @@ public abstract class FPNumber extends Number {
 
         private final RoundingMode $roundingMode;
 
-        @Override public TypeConstant $xvmType(Ctx ctx) {
-            ConstantPool pool = ctx.pool();
-            return switch ((int) $ordinal) {
-                case 0  -> pool.valTiesToEven()    .getType();
-                case 1  -> pool.valTiesToAway()    .getType();
-                case 2  -> pool.valTowardPositive().getType();
-                case 3  -> pool.valTowardZero()    .getType();
-                case 4  -> pool.valTowardNegative().getType();
-                default -> throw new IllegalStateException();
-            };
-        }
-
         /**
          * @return the {@link MathContext} to use for this Rounding enumeration value
          */
         RoundingMode $roundingMode() {
             return $roundingMode;
-        }
-
-        @Override
-        public Enumeration enumeration$get(Ctx ctx) {
-            return eRounding.$INSTANCE;
         }
 
         @Override
@@ -534,50 +509,6 @@ public abstract class FPNumber extends Number {
                 super(4, String.of(null, "TowardNegative"), RoundingMode.FLOOR);
             }
             public static TowardNegative $INSTANCE = new TowardNegative();
-        }
-    }
-
-    public static class eRounding extends Enumeration {
-        private eRounding(Ctx ctx, TypeConstant type) {
-            super(ctx, type);
-        }
-
-        static {
-            Ctx          ctx  = ((ModuleLoader) eRounding.class.getClassLoader()).getCtx();
-            TypeConstant type = ctx.pool().typeRounding();
-
-            $INSTANCE = new eRounding(ctx, type);
-
-            $names  = ArrayᐸObjectᐳ.$makeStringArray(ctx, Rounding.TiesToEven.$INSTANCE.$name,
-                                                           Rounding.TiesToAway.$INSTANCE.$name,
-                                                           Rounding.TowardPositive.$INSTANCE.$name,
-                                                           Rounding.TowardZero.$INSTANCE.$name,
-                                                           Rounding.TowardNegative.$INSTANCE.$name);
-
-            $values = ArrayᐸObjectᐳ.$makeArray(ctx, type, Rounding.TiesToEven.$INSTANCE,
-                                                           Rounding.TiesToAway.$INSTANCE,
-                                                           Rounding.TowardPositive.$INSTANCE,
-                                                           Rounding.TowardZero.$INSTANCE,
-                                                           Rounding.TowardNegative.$INSTANCE);
-        }
-
-        public static final eRounding $INSTANCE;
-        public static final ArrayᐸObjectᐳ $names;
-        public static final ArrayᐸObjectᐳ $values;
-
-        @Override
-        public long count$get$p(Ctx ctx) {
-            return 5;
-        }
-
-        @Override
-        public ArrayᐸObjectᐳ names$get(Ctx ctx) {
-            return $names;
-        }
-
-        @Override
-        public ArrayᐸObjectᐳ values$get(Ctx ctx) {
-            return $values;
         }
     }
 }

@@ -425,7 +425,7 @@ public class xRTClassTemplate
      */
     public int getPropertyHasDefault(Frame frame, ComponentTemplateHandle hComponent, int iReturn) {
         ClassStructure clz      = (ClassStructure) hComponent.getComponent();
-        boolean        fDefault = clz.getCanonicalType().getDefaultValue() != null;
+        boolean        fDefault = clz.getNormalizedType().getDefaultValue() != null;
         return frame.assignValue(iReturn, xBoolean.makeHandle(fDefault));
     }
 

@@ -43,7 +43,7 @@ module TestNesting {
     }
 
     class PB {              // P is for "parent" and B is for Base
-        class A {            // A is for "abstract"
+        class A {           // A is for "abstract"
             void foo() {
                 console.print("PB.A.foo() this=" + this);
             }
@@ -86,7 +86,7 @@ module TestNesting {
             //     {
             //     }
 
-            // implied mixin M
+            // implied annotation M
             //     {
             //     }
 

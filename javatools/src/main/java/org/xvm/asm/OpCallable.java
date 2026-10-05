@@ -51,7 +51,7 @@ import static java.lang.constant.ConstantDescs.CD_void;
 
 import static org.xvm.javajit.Builder.CD_Class;
 import static org.xvm.javajit.Builder.CD_Ctx;
-import static org.xvm.javajit.Builder.CD_Exception;
+import static org.xvm.javajit.Builder.CD_TypeConstant;
 import static org.xvm.javajit.Builder.CD_nFunction;
 import static org.xvm.javajit.Builder.CD_nType;
 import static org.xvm.javajit.Builder.md;
@@ -511,7 +511,7 @@ public abstract class OpCallable extends Op {
             typeTarget = structChild.isInnerChild()
                     ? pool.ensureInnerChildTypeConstant(typeParent,
                         (ClassConstant) structChild.getIdentityConstant())
-                    : structChild.getCanonicalType();
+                    : structChild.getNormalizedType();
         } else {
             typeTarget = typeChild;
         }
@@ -604,6 +604,7 @@ public abstract class OpCallable extends Op {
 
             TypeConstant typeThis = bctx.typeMatrix.getType(A_THIS, getAddress());
             atypeResult = bodySuper.getSignature().
+                            resolveAutoNarrowing(bctx.pool(), typeThis, null).
                             resolveGenericTypes(bctx.pool(), typeThis).getRawReturns();
         } else if (m_nFunctionId <= CONSTANT_OFFSET) {
             MethodConstant idMethod = bctx.getConstant(m_nFunctionId, MethodConstant.class);
@@ -639,8 +640,14 @@ public abstract class OpCallable extends Op {
             TypeConstant type = atypeResult[i];
             if (type.containsTypeParameter(true)) {
                 if (resolver == null) {
-                    resolver = bctx.createTypeResolver(
-                            (MethodStructure) idMethod.getComponent(), anArgValue);
+                    MethodStructure method = (MethodStructure) idMethod.getComponent();
+                    if (method == null && idMethod.getNamespace() instanceof FormalConstant idFormal) {
+                        // a call on a formal type; transform to a call on the constraint type
+                        TypeInfo   infoConstraint = bctx.getTypeInfo(idFormal.getConstraintType());
+                        MethodInfo methodInfo     = infoConstraint.getMethodBySignature(sig);
+                        method = methodInfo.getTopmostMethodStructure(infoConstraint);
+                    }
+                    resolver = bctx.createTypeResolver(method, anArgValue);
                     atypeResult = atypeResult.clone();
                 }
                 atypeResult[i] = type.resolveGenerics(bctx.pool(), resolver);
@@ -661,7 +668,7 @@ public abstract class OpCallable extends Op {
         ClassStructure  structChild = (ClassStructure) idCtor.getComponent().getParent().getParent();
         TypeConstant    typeChild   = structChild.isVirtualChild()
                 ? pool.ensureVirtualChildTypeConstant(typeParent, structChild.getName())
-                : structChild.getCanonicalType();
+                : structChild.getNormalizedType();
 
         bctx.typeMatrix.assign(getAddress(), m_nRetValue, typeChild);
     }
@@ -931,21 +938,28 @@ public abstract class OpCallable extends Op {
     }
 
     /**
-     * Support for NEW_ ops.
+     * Support for NEW_ and NEW_C ops.
+     *
+     * @param nParentArg  the parent argument, or {@link #A_IGNORE} for a non-child
      */
-    protected int buildNew(BuildContext bctx, CodeBuilder code, int[] anArgValue) {
+    protected int buildNew(BuildContext bctx, CodeBuilder code, int nParentArg, int[] anArgValue) {
         MethodConstant idCtor     = bctx.getConstant(m_nFunctionId, MethodConstant.class);
-        TypeConstant   typeTarget = idCtor.getNamespace().getType();
+        TypeConstant   typeTarget = nParentArg == A_IGNORE
+                ? idCtor.getNamespace().getType()
+                : bctx.getReturnType(m_nRetValue);
 
-        JitMethodDesc jmdNew = bctx.buildNew(code, typeTarget, idCtor, anArgValue);
+        JitMethodDesc jmdNew = bctx.buildNew(code, typeTarget, idCtor, nParentArg, anArgValue);
         bctx.assignReturns(code, jmdNew, 1, new int[] {m_nRetValue});
         return -1;
     }
 
     /**
-     * Support for NEW_G ops.
+     * Support for NEW_G and NEW_CG ops.
+     *
+     * @param nParentArg  the parent argument, or {@link #A_IGNORE} for a non-child
      */
-    protected int buildNewG(BuildContext bctx, CodeBuilder code, int nTypeArg, int[] anArgValue) {
+    protected int buildNewG(BuildContext bctx, CodeBuilder code, int nParentArg, int nTypeArg,
+                            int[] anArgValue) {
         TypeConstant typeTarget;
         if (nTypeArg <= CONSTANT_OFFSET) {
             typeTarget = bctx.getTypeConstant(nTypeArg);
@@ -957,17 +971,8 @@ public abstract class OpCallable extends Op {
         }
 
         MethodConstant idCtor = (MethodConstant) bctx.getConstant(m_nFunctionId);
-        JitMethodDesc  jmdNew = bctx.buildNew(code, typeTarget, idCtor, anArgValue);
+        JitMethodDesc  jmdNew = bctx.buildNew(code, typeTarget, idCtor, nParentArg, anArgValue);
         bctx.assignReturns(code, jmdNew, 1, new int[] {m_nRetValue});
-        return -1;
-    }
-
-    /**
-     * Support for NEW_C ops.
-     */
-    protected int buildNewC(BuildContext bctx, CodeBuilder code, int nParentArg, int[] anArgValue) {
-        Builder.throwException(code, CD_Exception, "Not implemented: " + toName(getOpCode()),
-                bctx.ctxSlot(code));
         return -1;
     }
 
@@ -975,16 +980,24 @@ public abstract class OpCallable extends Op {
      * Support for NEW_V ops.
      */
     protected int buildNewV(BuildContext bctx, CodeBuilder code, int nTypeArg, int[] anArgValue) {
-        // find the virtual origin of the concrete constructor recorded by the op, then invoke the
-        // corresponding "$new" method on the runtime class-of-class through that origin interface
-        MethodConstant idCtor        = bctx.getConstant(m_nFunctionId, MethodConstant.class);
-        TypeConstant   typeTarget    = idCtor.getNamespace().getType();
-        TypeInfo       infoTarget    = bctx.getTypeInfo(typeTarget);
-        MethodInfo     infoCtor      = infoTarget.findVirtualConstructor(idCtor.getSignature());
-        MethodBody     bodyCtor      = infoCtor.getVirtualConstructor();
-        TypeConstant   typeInterface = bodyCtor.getIdentity().getNamespace().getType();
-        TypeInfo       infoInterface = bctx.getTypeInfo(typeInterface);
-        ClassDesc      cdInterface   = bctx.builder.ensureClassDesc(typeInterface);
+        MethodConstant idCtor  = bctx.getConstant(m_nFunctionId, MethodConstant.class);
+        TypeConstant   typeArg = bctx.getArgumentType(nTypeArg);
+        assert typeArg.isTypeOfType();
+
+        // similar to getTypeConstructor(), resolve the constructor against the type being
+        // instantiated; find its virtual origin and invoke the corresponding "$new" method on the
+        // runtime class-of-class through that origin's interface
+        TypeConstant typeTarget = typeArg.getParamType(0);
+        TypeInfo     infoTarget = bctx.getTypeInfo(typeTarget);
+        MethodInfo   infoCtor   = infoTarget.getMethodBySignature(idCtor.getSignature(), true);
+        if (infoCtor == null || !infoCtor.containsVirtualConstructor()) {
+            throw new IllegalStateException("No virtual constructor for " + idCtor + " in " +
+                    typeTarget);
+        }
+        MethodBody   bodyCtor      = infoCtor.getVirtualConstructor();
+        TypeConstant typeInterface = bodyCtor.getIdentity().getNamespace().getType();
+        TypeInfo     infoInterface = bctx.getTypeInfo(typeInterface);
+        ClassDesc    cdInterface   = bctx.builder.ensureClassDesc(typeInterface);
 
         JitMethodDesc jmdNew = Builder.convertConstructToNew(infoInterface, cdInterface,
                 (JitCtorDesc) bodyCtor.getJitDesc(bctx.builder, typeInterface));
@@ -1007,6 +1020,11 @@ public abstract class OpCallable extends Op {
         code.invokevirtual(CD_nType, "$xvmClass", md(CD_Class, CD_Ctx))
             .checkcast(cdInterface);
         bctx.loadCtx(code);
+
+        if (infoInterface.hasGenericTypes()) {
+            bctx.loadArgument(code, nTypeArg);
+            code.getfield(CD_nType, Builder.DataType, CD_TypeConstant);
+        }
         bctx.loadCallArguments(code, jmdNew, anArgValue);
         code.invokeinterface(cdInterface, jitName, mdNew);
 

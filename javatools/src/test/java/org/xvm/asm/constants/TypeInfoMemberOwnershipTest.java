@@ -34,7 +34,7 @@ public class TypeInfoMemberOwnershipTest {
                 Access.PUBLIC, Format.CLASS, "Test", null);
 
         PropertyStructure structProperty = struct.createProperty(false, Access.PUBLIC,
-                Access.PUBLIC, struct.getCanonicalType(), "value");
+                Access.PUBLIC, struct.getNormalizedType(), "value");
         PropertyConstant idProperty = structProperty.getIdentityConstant();
         PropertyBody body = new PropertyBody(structProperty, Implementation.Native, null,
                 structProperty.getType(), true, false, false, Effect.None, Effect.None,
@@ -90,7 +90,7 @@ public class TypeInfoMemberOwnershipTest {
         children.put("alias.Child", child);
 
         return new TypeInfoReal(
-                struct.getCanonicalType(), 0, struct, 0, false,
+                struct.getNormalizedType(), 0, struct, 0, false,
                 Collections.emptyMap(), Annotation.NO_ANNOTATIONS, Annotation.NO_ANNOTATIONS,
                 null, null, null, Collections.emptyList(), new ListMap<>(), new ListMap<>(),
                 Map.of(idProperty, property), Collections.emptyMap(),

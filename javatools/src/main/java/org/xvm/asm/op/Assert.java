@@ -203,7 +203,7 @@ public class Assert
             anArgs[0] = A_STACK;
             Arrays.fill(anArgs, 1, anArgs.length, Op.A_DEFAULT);
 
-            bctx.buildNew(code, typeEx, idCtor, anArgs);
+            bctx.buildNew(code, typeEx, idCtor, A_IGNORE, anArgs);
             code.getfield(bctx.builder.ensureClassDesc(typeEx), "$exception", CD_nException)
                 .athrow();
         }

@@ -213,6 +213,26 @@ public class UnresolvedTypeConstant
     }
 
     @Override
+    public boolean isCanonicalType() {
+        if (isTypeResolved()) {
+            return getResolvedType().isCanonicalType();
+        }
+
+        // not a valid question
+        throw new IllegalStateException();
+    }
+
+    @Override
+    public TypeConstant getCanonicalType() {
+        if (isTypeResolved()) {
+            return getResolvedType().getCanonicalType();
+        }
+
+        // not a valid question
+        throw new IllegalStateException();
+    }
+
+    @Override
     public boolean isNullable() {
         return isTypeResolved() && getResolvedType().isNullable();
     }

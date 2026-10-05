@@ -1,5 +1,7 @@
 package org.xvm.compiler.ast;
 
+import java.util.List;
+
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
@@ -177,6 +179,16 @@ public abstract class DelegatingExpression
     @Override
     protected SideEffect mightAffect(Expression exprLeft, Argument arg) {
         return expr.mightAffect(exprLeft, arg);
+    }
+
+    @Override
+    protected Argument ensurePointInTime(Code code, Argument arg, List<Expression> listExprs, int iExpr) {
+        return expr.ensurePointInTime(code, arg, listExprs, iExpr);
+    }
+
+    @Override
+    protected Argument ensurePointInTime(Code code, Argument arg, Expression exprRight) {
+        return expr.ensurePointInTime(code, arg, exprRight);
     }
 
     // ----- debugging assistance ------------------------------------------------------------------

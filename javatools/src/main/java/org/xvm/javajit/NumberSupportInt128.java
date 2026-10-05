@@ -6,8 +6,6 @@ import java.lang.classfile.Label;
 import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
-import org.xvm.javajit.registers.MultiSlot;
-
 import static java.lang.constant.ConstantDescs.CD_int;
 import static java.lang.constant.ConstantDescs.CD_long;
 
@@ -93,14 +91,14 @@ public interface NumberSupportInt128 {
      * @param regTarget  the register containing the target of the operation
      * @param nArgValue  the register containing the operation argument
      */
-    default void buildLongLongAdd(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+    default void buildLongLongAdd(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget,
                                   int nArgValue) {
-        MultiSlot regArg = (MultiSlot) bctx.ensureRegister(code, nArgValue);
+        RegisterInfo regArg = bctx.ensureRegister(code, nArgValue);
 
-        int slotL1 = regTarget.slot(0);
-        int slotH1 = regTarget.slot(1);
-        int slotL2 = regArg.slot(0);
-        int slotH2 = regArg.slot(1);
+        int slotL1 = regTarget.slots()[0];
+        int slotH1 = regTarget.slots()[1];
+        int slotL2 = regArg.slots()[0];
+        int slotH2 = regArg.slots()[1];
         buildLongLongAdd(bctx, code, slotL1, slotH1, slotL2, slotH2);
     }
 
@@ -209,14 +207,14 @@ public interface NumberSupportInt128 {
      * @param regTarget  the register containing the target of the operation
      * @param nArgValue  the register containing the operation argument
      */
-    default void buildLongLongAnd(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+    default void buildLongLongAnd(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget,
                                   int nArgValue) {
-        MultiSlot regArg = (MultiSlot) bctx.ensureRegister(code, nArgValue);
+        RegisterInfo regArg = bctx.ensureRegister(code, nArgValue);
 
-        int slotL1 = regTarget.slot(0);
-        int slotH1 = regTarget.slot(1);
-        int slotL2 = regArg.slot(0);
-        int slotH2 = regArg.slot(1);
+        int slotL1 = regTarget.slots()[0];
+        int slotH1 = regTarget.slots()[1];
+        int slotL2 = regArg.slots()[0];
+        int slotH2 = regArg.slots()[1];
 
         // and the low long values
         Builder.load(code, CD_long, slotL1);
@@ -237,9 +235,9 @@ public interface NumberSupportInt128 {
      * @param code       the code builder to add the op codes to
      * @param regTarget  the register containing the target of the operation
      */
-    default void buildLongLongCompl(CodeBuilder code, MultiSlot regTarget) {
-        int slotLow  = regTarget.slot(0);
-        int slotHigh = regTarget.slot(1);
+    default void buildLongLongCompl(CodeBuilder code, RegisterInfo regTarget) {
+        int slotLow  = regTarget.slots()[0];
+        int slotHigh = regTarget.slots()[1];
         Builder.load(code, CD_long, slotLow);
         code.ldc(-1L).lxor();
         Builder.load(code, CD_long, slotHigh);
@@ -258,13 +256,13 @@ public interface NumberSupportInt128 {
      * @param regTarget  the register containing the target of the operation
      * @param nArgId     the identifier of the register containing the operation argument
      */
-    default void buildLongLongDiv(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+    default void buildLongLongDiv(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget,
                                   int nArgId) {
-        MultiSlot regArg = (MultiSlot) bctx.ensureRegister(code, nArgId);
-        int slotL1 = regTarget.slot(0);
-        int slotH1 = regTarget.slot(1);
-        int slotL2 = regArg.slot(0);
-        int slotH2 = regArg.slot(1);
+        RegisterInfo regArg = bctx.ensureRegister(code, nArgId);
+        int slotL1 = regTarget.slots()[0];
+        int slotH1 = regTarget.slots()[1];
+        int slotL2 = regArg.slots()[0];
+        int slotH2 = regArg.slots()[1];
 
         // ToDo Use a static helper method on Int128 to perform the division.
         // Doing this in Java Ops is quite complex so we will optimize later
@@ -291,13 +289,13 @@ public interface NumberSupportInt128 {
      * @param regTarget  the register containing the target of the operation
      * @param nArgId     the identifier of the register containing the operation argument
      */
-    default void buildLongLongMod(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+    default void buildLongLongMod(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget,
                                   int nArgId) {
-        MultiSlot regArg = (MultiSlot) bctx.ensureRegister(code, nArgId);
-        int slotL1 = regTarget.slot(0);
-        int slotH1 = regTarget.slot(1);
-        int slotL2 = regArg.slot(0);
-        int slotH2 = regArg.slot(1);
+        RegisterInfo regArg = bctx.ensureRegister(code, nArgId);
+        int slotL1 = regTarget.slots()[0];
+        int slotH1 = regTarget.slots()[1];
+        int slotL2 = regArg.slots()[0];
+        int slotH2 = regArg.slots()[1];
 
         // ToDo Use a static helper method on Int128 to perform the division.
         // Doing this in Java Ops is quite complex so we will optimize later
@@ -324,32 +322,32 @@ public interface NumberSupportInt128 {
      * @param regTarget  the register containing the target of the operation
      * @param nArgId     the identifier of the register containing the operation argument
      */
-    default void buildLongLongMul(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+    default void buildLongLongMul(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget,
                                   int nArgId) {
-        MultiSlot regArg = (MultiSlot) bctx.ensureRegister(code, nArgId);
+        RegisterInfo regArg = bctx.ensureRegister(code, nArgId);
 
-        int slotL1 = regTarget.slot(0);
-        int slotH1 = regTarget.slot(1);
-        int slotL2 = regArg.slot(0);
-        int slotH2 = regArg.slot(1);
+        int slotL1 = regTarget.slots()[0];
+        int slotH1 = regTarget.slots()[1];
+        int slotL2 = regArg.slots()[0];
+        int slotH2 = regArg.slots()[1];
 
         // 1. Calculate low long result (l1 * l2)
-        code.lload(slotL1) // Load l1
-            .lload(slotL2) // Load l2
-            .lmul();       // low long result (stack: [low, low_2])
+        code.lload(slotL1) // load l1
+            .lload(slotL2) // load l2
+            .lmul();       // low long result; stack: (low, low_2)
 
         // 2. Calculate high long result
-        code.lload(slotL1) // Load l1
-            .lload(slotL2) // Load l2
+        code.lload(slotL1) // load l1
+            .lload(slotL2) // load l2
             .invokestatic(CD_Math, Math_UnsignedMultiplyHigh, MD_UnsignedMultiplyHigh) // High bits of l1*l2
-            .lload(slotL1) // Load l1
-            .lload(slotH2) // Load h2
-            .lmul()        // Low bits of l1*h2
+            .lload(slotL1) // load l1
+            .lload(slotH2) // load h2
+            .lmul()        // low bits of l1*h2
             .ladd()        // accumulate
-            .lload(slotH1) // Load h1
-            .lload(slotL2) // Load l2
+            .lload(slotH1) // load h1
+            .lload(slotL2) // load l2
             .lmul()        // low bits of h1*l2
-            .ladd();       // high long result (stack: [low, low_2, high, high_2])
+            .ladd();       // high long result; stack: low, low_2, high, high_2)
     }
 
     /**
@@ -362,20 +360,20 @@ public interface NumberSupportInt128 {
      * @param code       the code builder to add the op codes to
      * @param regTarget  the register containing the target of the operation
      */
-    default void buildLongLongNeg(CodeBuilder code, MultiSlot regTarget) {
-        int   slotLow      = regTarget.slot(0);
-        int   slotHigh     = regTarget.slot(1);
+    default void buildLongLongNeg(CodeBuilder code, RegisterInfo regTarget) {
+        int   slotLow      = regTarget.slots()[0];
+        int   slotHigh     = regTarget.slots()[1];
         Label labelNotZero = code.newLabel();
         Label labelDone    = code.newLabel();
 
         // 1. Calculate resLow
         code.lload(slotLow) // load the low long value
-            .lneg();        //  low result is -low (stack: [low, low_2])
+            .lneg();        // low result is -low; stack: (low, low_2)
 
         // 2. Prepare for high calculation
-        code.lload(slotLow)      // Load low again for comparison
+        code.lload(slotLow)      // load low again for comparison
             .lconst_0()
-            .lcmp()              // Compare low to 0
+            .lcmp()              // compare low to 0
             .ifne(labelNotZero); // If low != 0, jump to high bit inversion
 
         // 3. Case: low == 0
@@ -385,12 +383,12 @@ public interface NumberSupportInt128 {
 
         // 4. Case: low != 0
         code.labelBinding(labelNotZero)
-            .lload(slotHigh)          // Load high
-            .loadConstant(-1L)  // Load -1 (all ones)
-            .lxor();                  // high result = ~high
+            .lload(slotHigh)    // load high
+            .loadConstant(-1L)  // load -1 (all ones)
+            .lxor();            // high result = ~high
 
         // Done
-        code.labelBinding(labelDone); // the stack is [low, low_2, high, high_2]
+        code.labelBinding(labelDone); // stack: (low, low_2, high, high_2)
     }
 
     /**
@@ -405,14 +403,14 @@ public interface NumberSupportInt128 {
      * @param regTarget  the register containing the target of the operation
      * @param nArgValue  the register containing the operation argument
      */
-    default void buildLongLongOr(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+    default void buildLongLongOr(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget,
                                  int nArgValue) {
-        MultiSlot regArg = (MultiSlot) bctx.ensureRegister(code, nArgValue);
+        RegisterInfo regArg = bctx.ensureRegister(code, nArgValue);
 
-        int slotL1 = regTarget.slot(0);
-        int slotH1 = regTarget.slot(1);
-        int slotL2 = regArg.slot(0);
-        int slotH2 = regArg.slot(1);
+        int slotL1 = regTarget.slots()[0];
+        int slotH1 = regTarget.slots()[1];
+        int slotL2 = regArg.slots()[0];
+        int slotH2 = regArg.slots()[1];
 
         // or the low long values
         Builder.load(code, CD_long, slotL1);
@@ -441,11 +439,11 @@ public interface NumberSupportInt128 {
      * @param regTarget  the register containing the target of the operation
      * @param nArgId     the register containing the operation argument
      */
-    default void buildLongLongShl(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+    default void buildLongLongShl(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget,
                                   int nArgId) {
         RegisterInfo regArg    = bctx.ensureRegister(code, nArgId);
-        int          slotLow   = regTarget.slot(0);
-        int          slotHigh  = regTarget.slot(1);
+        int          slotLow   = regTarget.slots()[0];
+        int          slotHigh  = regTarget.slots()[1];
         Label        labelLt64 = code.newLabel();
         Label        labelZero = code.newLabel();
         Label        labelEnd  = code.newLabel();
@@ -466,12 +464,12 @@ public interface NumberSupportInt128 {
         code.if_icmplt(labelLt64);
 
         // Case: arg >= 64, we shift the low which becomes the high, the new low will be zero
-        code.lconst_0()           // the new low long will be zero, so load zero to the stack
-            .lload(slotLow)       // load the low long value
-            .iload(slotArg)       // load the arg
+        code.lconst_0()        // the new low long will be zero, so load zero to the stack
+            .lload(slotLow)    // load the low long value
+            .iload(slotArg)    // load the arg
             .bipush(64).isub() // arg - 64
-            .lshl()               // low << (n - 64)
-            .goto_(labelEnd);     // done, stack is [new_low, new_low2, new_high, new_high2]
+            .lshl()            // low << (n - 64)
+            .goto_(labelEnd);  // done, stack is (new_low, new_low2, new_high, new_high2)
 
         // Case: 0 < n < 64
         code.labelBinding(labelLt64)
@@ -482,12 +480,12 @@ public interface NumberSupportInt128 {
             .iload(slotArg)
             .lshl()           // left shift the high long value
             .lload(slotLow)   // Load low
-            .bipush(64)    // load int 64
+            .bipush(64)       // load int 64
             .iload(slotArg)   // load the arg
             .isub()           // top of stack is (64 - arg)
             .lushr()          // low unsigned right shift by (64 - arg)
             .lor()            // new shifted high value OR'ed by right shifted low value
-            .goto_(labelEnd); // the stack is [new_low, new_low2, new_high, new_high2]
+            .goto_(labelEnd); // the stack is (new_low, new_low2, new_high, new_high2)
 
         // Case n == 0 (effectively a no-op shift)
         code.labelBinding(labelZero)
@@ -516,11 +514,11 @@ public interface NumberSupportInt128 {
      * @param nArgId     the register containing the operation argument
      * @param fUnsigned  true if the shift is unsigned, false if signed
      */
-    default void buildLongLongShr(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+    default void buildLongLongShr(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget,
                                   int nArgId, boolean fUnsigned) {
         RegisterInfo regArg    = bctx.ensureRegister(code, nArgId);
-        int          slotLow   = regTarget.slot(0);
-        int          slotHigh  = regTarget.slot(1);
+        int          slotLow   = regTarget.slots()[0];
+        int          slotHigh  = regTarget.slots()[1];
         Label        labelLt64 = code.newLabel();
         Label        labelZero = code.newLabel();
         Label        labelEnd  = code.newLabel();
@@ -544,20 +542,20 @@ public interface NumberSupportInt128 {
             // Case: arg >= 64, we shift the high which becomes the low, the new high will be zero
             code.lload(slotHigh)      // load the high long value
                 .iload(slotArg)       // load the arg
-                .bipush(64).isub() // arg - 64
-                .lushr()              // high >>> (n - 64) - stack now has [new_low, new_low2]
+                .bipush(64).isub()    // arg - 64
+                .lushr()              // high >>> (n - 64) - stack now has (new_low, new_low2)
                 .lconst_0()           // the new high is zero for an unsigned shift
-                .goto_(labelEnd);     // done, stack is [new_low, new_low2, new_high, new_high2]
+                .goto_(labelEnd);     // done, stack is (new_low, new_low2, new_high, new_high2)
         } else {
             // Case: arg >= 64, we shift the high which becomes the low,
             // the new high will be sign extended
             code.lload(slotHigh)      // load the high long value
                 .iload(slotArg)       // load the arg
-                .bipush(64).isub() // arg - 64
-                .lshr()               // high >> (n - 64) - stack now has [new_low, new_low2]
+                .bipush(64).isub()    // arg - 64
+                .lshr()               // high >> (n - 64) - stack now has (new_low, new_low2)
                 .lload(slotHigh)      // load the high long value
-                .bipush(63).lshr() // high >> 63 results in all 0s or all 1s depending on sign bit
-                .goto_(labelEnd);     // done, stack is [new_low, new_low2, new_high, new_high2]
+                .bipush(63).lshr()    // high >> 63 results in all 0s or all 1s depending on sign bit
+                .goto_(labelEnd);     // done, stack is (new_low, new_low2, new_high, new_high2)
         }
 
         // Case: 0 < n < 64
@@ -566,11 +564,11 @@ public interface NumberSupportInt128 {
             .iload(slotArg)
             .lushr()          // shift the low long value by the arg
             .lload(slotHigh)  // load the high long value
-            .bipush(64)    // load 64
+            .bipush(64)       // load 64
             .iload(slotArg)   // load the argument
             .isub()           // top of stack is (64 - arg)
             .lshl().lor()     // or the shifted low by the shifted high
-            // the new low is on the stack [new_low, new_low2]
+            // the new low is on the stack (new_low, new_low2)
             .lload(slotHigh)  // High part calculation
             .iload(slotArg);
 
@@ -580,7 +578,7 @@ public interface NumberSupportInt128 {
             code.lshr();      // signed right shift of the high part
         }
 
-        code.goto_(labelEnd); // the stack is [new_low, new_low2, new_high, new_high2]
+        code.goto_(labelEnd); // the stack is (new_low, new_low2, new_high, new_high2)
 
         // Case n == 0 (effectively a no-op shift)
         code.labelBinding(labelZero)
@@ -626,14 +624,14 @@ public interface NumberSupportInt128 {
      * @param regTarget  the register containing the target of the operation
      * @param nArgValue  the register containing the operation argument
      */
-    default void buildLongLongSub(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+    default void buildLongLongSub(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget,
                                   int nArgValue) {
-        MultiSlot regArg = (MultiSlot) bctx.ensureRegister(code, nArgValue);
+        RegisterInfo regArg = bctx.ensureRegister(code, nArgValue);
 
-        int slotL1 = regTarget.slot(0);
-        int slotH1 = regTarget.slot(1);
-        int slotL2 = regArg.slot(0);
-        int slotH2 = regArg.slot(1);
+        int slotL1 = regTarget.slots()[0];
+        int slotH1 = regTarget.slots()[1];
+        int slotL2 = regArg.slots()[0];
+        int slotH2 = regArg.slots()[1];
         buildLongLongSub(bctx, code, slotL1, slotH1, slotL2, slotH2);
     }
 
@@ -753,14 +751,14 @@ public interface NumberSupportInt128 {
      * @param regTarget  the register containing the target of the operation
      * @param nArgValue  the register containing the operation argument
      */
-    default void buildLongLongXor(BuildContext bctx, CodeBuilder code, MultiSlot regTarget,
+    default void buildLongLongXor(BuildContext bctx, CodeBuilder code, RegisterInfo regTarget,
                                   int nArgValue) {
-        MultiSlot regArg = (MultiSlot) bctx.ensureRegister(code, nArgValue);
+        RegisterInfo regArg = bctx.ensureRegister(code, nArgValue);
 
-        int slotL1 = regTarget.slot(0);
-        int slotH1 = regTarget.slot(1);
-        int slotL2 = regArg.slot(0);
-        int slotH2 = regArg.slot(1);
+        int slotL1 = regTarget.slots()[0];
+        int slotH1 = regTarget.slots()[1];
+        int slotL2 = regArg.slots()[0];
+        int slotH2 = regArg.slots()[1];
 
         // xor the low long values
         Builder.load(code, CD_long, slotL1);

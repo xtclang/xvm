@@ -84,8 +84,9 @@ II. Ecstasy to Java Classfile compiler (JIT) class naming conventions:
     a) The JIT uses the JCC(T) to determine the approximate class to instantiate, which could in
        theory be the same as the JIC(T), but is likely to point to a super-class (or interface) of
        the JIC(T) as it would be resolved at runtime;
-    b) To implement the "NEW*" ops, the JIT will produce code that resolves T at run time and obtains
-       the class-of-class for JIC(T), accessed through the class-of-class contract for JCC(T);
+    b) To implement the "NEW*" ops, the JIT will produce code that resolves T at run time and
+       obtains the class-of-class for JIC(T), accessed through the class-of-class contract for
+       JCC(T);
     c) the JIT invokes a virtual method named "$dnew" on that object, passing the fully resolved T
        followed by the same arguments that will be passed to JIC(T).$new; see also the doc on the
        CommonBuilder.assembleNew method;
@@ -171,8 +172,8 @@ II. Ecstasy to Java Classfile compiler (JIT) class naming conventions:
      B<T1, T2>, then D is an initial specialization; JCC(D<T1, T2, T3>) extends the Central JCC(D),
      which extends JCC(B<T1, T2>).
 
-11. Below are some examples of canonical types and corresponding Java class names (note: we are using
-   special characters for '<' and '>' etc.)
+11. Below are some examples of canonical types and corresponding Java class names (note: we are
+    using special characters for '<' and '>' etc.)
 
      Ecstasy type           JIT-Instance Class Name       JIT-Call class names    Notes
      ---------------------|-----------------------------|----------------------|----------
@@ -273,7 +274,8 @@ class C {
 // Java
 class C {
     void foo(Ctx ctx, Range<Orderable> range) {...} // or (Ctx ctx, Range#0 range)
-    void bar(Ctx ctx, Range range) {...}            // or (Ctx ctx, iRange range) if Range extended Specializable
+    void bar(Ctx ctx, Range range) {...}            // or (Ctx ctx, iRange range) if Range extended
+                                                    // Specializable
     Range baz(Ctx ctx, nType type, Orderable t1, Orderable t2) {
         return ((cRange) type.$class()).$dnew(ctx, type, t1, t2);
     }

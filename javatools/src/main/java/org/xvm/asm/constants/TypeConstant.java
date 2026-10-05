@@ -105,7 +105,7 @@ import static org.xvm.javajit.JitFlavor.Specific;
 import static org.xvm.javajit.JitFlavor.Widened;
 import static org.xvm.javajit.JitFlavor.XvmPrimitive;
 
-import static org.xvm.javajit.TypeSystem.HASH;
+import static org.xvm.javajit.TypeSystem.HASH_MARKER;
 
 import static org.xvm.util.Handy.lazyAdd;
 import static org.xvm.util.Handy.lazyAddAll;
@@ -690,6 +690,70 @@ public abstract class TypeConstant
     }
 
     /**
+     * Determine if this type is a canonical type as defined by {@link #getCanonicalType()}, without
+     * strictly guaranteeing that "this" type is itself the type that would be returned by
+     * {@link #getCanonicalType()}. In other words, this test indicates that the type is either
+     * unspecialized or matches a layer one specialization, but in the case of layer one
+     * specialization, this type may lack the type parameter normalization (etc.) that would be
+     * provided by {@link #getCanonicalType()}.
+     *
+     * @return true iff this type could be returned as (or be equivalent to) a canonical type
+     *
+     * @see #getCanonicalType()
+     */
+    public boolean isCanonicalType() {
+        return getUnderlyingType().isCanonicalType();
+    }
+
+    /**
+     * Obtain the canonical type for this type. This method may be used by the linker and runtime,
+     * but should not be used within the Ecstasy compiler, because this method requires the type
+     * system to be fully resolved.
+     * <p/>
+     * For a class that has type parameters and uses the "incorporates conditional" feature, there
+     * exists more than one canonical type, because the class composition is specialized for each
+     * conditional incorporation being incorporated vs not-incorporated. (For context, this
+     * specialization is referred to as "layer one specialization".) By way of example, the Range
+     * class implies two specializations: (0) when Element is NOT Sequential ("Range<Orderable>"),
+     * and (1) when Element IS Sequential ("Range<Sequential>"). Another example is ListMap, which
+     * has four specializations: (00) when Key is NOT immutable Hashable and Value is NOT Shareable
+     * ("ListMap<Object, Object>"), (01) when Key is NOT immutable Hashable but Key IS immutable
+     * Object and Value IS Shareable  ("ListMap<immutable Object, Shareable>"), (10) when Key IS
+     * immutable Hashable and Value is NOT Shareable ("ListMap<immutable Hashable, Object>"), and
+     * (11) when Key IS immutable Hashable and Value IS Shareable ("ListMap<immutable Hashable,
+     * Shareable>").
+     * <p/>
+     * A class with no reachable conditional incorporations has only one canonical type, with no
+     * type parameters specified; for example, "KeyBasedMap" is used as the canonical form, rather
+     * than the normalized "KeyBasedMap<Object, Object>".
+     * <p/>
+     * With virtual child relationships, this is additionally complicated by the ability of a child
+     * class to (i) specify "incorporates conditional" clauses that reference a formal type
+     * parameter from a parent class, and (ii) specify formal type parameter constraints that are
+     * defined using a formal type parameter from a parent class. In these cases, the parent class
+     * canonical types must reflect the specializations of the virtual child classes (and their
+     * virtual child classes, and so on).
+     * <p/>
+     * The "true" canonical type for a given type is the simplest form of the type that represents
+     * the compositional shape of that type. For a type to be canonicalizable, it must correspond to
+     * a single underlying class (including interfaces). Access and immutability modifiers would be
+     * stripped away. However, this method does not attempt to provide the "true" canonical type in
+     * that sense, because so many types (such as relational types) do not have a true canonical
+     * type, but still require an answer to this question. Instead, this method provides a "usable"
+     * canonical type. Access and immutability modifiers (etc.) are not removed, and relational
+     * types simply have their underlying types canonicalized.
+     *
+     * @return the canonical form of this type
+     */
+    public TypeConstant getCanonicalType() {
+        TypeConstant typeOriginal  = getUnderlyingType();
+        TypeConstant typeCanonical = typeOriginal.getCanonicalType();
+        return typeCanonical == typeOriginal
+                ? this
+                : cloneSingle(getConstantPool(), typeCanonical);
+    }
+
+    /**
      * @return true iff this TypeConstant is a "const" type
      */
     public boolean isConst() {
@@ -861,7 +925,8 @@ public abstract class TypeConstant
         }
 
         // There are two scenarios of non-combinable types:
-        // - class types (not interfaces or annotations or mixins) in which one doesn't extend the other
+        // - class types (not interfaces or annotations or mixins) in which one doesn't extend the
+        //   other
         // - one is a class type that is "final" (Null, True, package/module etc.) and known to not
         //   be the other type
         return !typeThis.isA(typeThat) && !typeThat.isA(typeThis) &&
@@ -1000,7 +1065,7 @@ public abstract class TypeConstant
                 return null;
             }
 
-            TypeConstant[] atype2 = clz2.getCanonicalType().getParamTypesArray();
+            TypeConstant[] atype2 = clz2.getNormalizedType().getParamTypesArray();
             boolean        fClone = false;
             for (int i = 0, c = Math.min(atype1.length, atype2.length); i < c; i++) {
                 TypeConstant te1 = atype1[i];
@@ -2134,7 +2199,7 @@ public abstract class TypeConstant
             ModuleStructure module = pkg.getImportedModule();
             module = module.isFingerprint() ? module.getFingerprintOrigin() : module;
 
-            return pool.ensureAccessTypeConstant(module.getCanonicalType(), Access.PRIVATE).
+            return pool.ensureAccessTypeConstant(module.getNormalizedType(), Access.PRIVATE).
                     buildTypeInfoImpl(errs);
         }
 
@@ -7106,7 +7171,7 @@ public abstract class TypeConstant
      * @see doc/jit_class_names.txt
      */
     public ClassDesc getCallableClassDesc(TypeSystem ts) {
-        return ClassDesc.of(getCallableJitType().ensureJitClassName(ts));
+        return ClassDesc.of(getJitCCType().ensureJitClassName(ts));
     }
 
     /**
@@ -7116,7 +7181,7 @@ public abstract class TypeConstant
      * @see doc/jit_class_names.txt
      */
     public ClassDesc getInstanceeClassDesc(TypeSystem ts) {
-        return ClassDesc.of(getInstanceJitType().ensureJitClassName(ts));
+        return ClassDesc.of(getJitICType().ensureJitClassName(ts));
     }
 
     /**
@@ -7147,6 +7212,12 @@ public abstract class TypeConstant
 
         ConstantPool     pool = loader.module.getConstantPool();
         IdentityConstant id   = getSingleUnderlyingClass(true);
+
+        if (id instanceof ModuleConstant) {
+            // the module class uses a synthetic name, not a user-supplied identifier
+            return loader.prefix + Builder.MODULE;
+        }
+
         if (id.equals(pool.clzArray())) {
             // see ParameterizedTypeConstant#buildJitClassName
             TypeConstant typeEl = getParamType(0);
@@ -7184,16 +7255,15 @@ public abstract class TypeConstant
             return Builder.N_nFunction;
         }
 
-        StringBuilder sb = new StringBuilder()
-                .append(loader.prefix)
-                .append(id.getClassJitName(ts));
+        StringBuilder sb = new StringBuilder(id.getClassJitName(ts));
 
-        TypeConstant typeCanonical = getCallableJitType();
-        if (typeCanonical.getParamsCount() > 0) {
+        TypeConstant typeCanonical = getJitCCType();
+        if (typeCanonical.getParamsCount() > 0 || sb.indexOf(HASH_MARKER) >= 0) {
             // it's critical here to use the class module loader's pool
-            sb.appendCodePoint(HASH).append(pool.register(typeCanonical).getPosition());
+            TypeSystem.appendJitSuffix(sb, pool.register(typeCanonical).getPosition());
         }
-        return sb.toString();
+        // the loader's module prefix is already escaped
+        return loader.prefix + TypeSystem.escapeJitName(sb.toString(), true);
     }
 
     /**
@@ -7244,7 +7314,7 @@ public abstract class TypeConstant
         // the class is parameterized; it must be generic for this question to make any sense
         assert containsGenericType(true);
 
-        for (TypeConstant typeConstraint : clz.getCanonicalType().getParamTypes()) {
+        for (TypeConstant typeConstraint : clz.getNormalizedType().getParamTypes()) {
             for (TypeConstant typePrimitive : getConstantPool().getJitPrimitiveTypes()) {
                 if (typePrimitive.isA(typeConstraint)) {
                     return true;
@@ -7261,11 +7331,11 @@ public abstract class TypeConstant
      * @see doc/jit_class_names.txt
      */
     public boolean isJitL2Specialized() {
-        TypeConstant   jitType     = getCallableJitType();
+        TypeConstant   jitType     = getJitCCType();
         ClassStructure classStruct = (ClassStructure)
                 jitType.getSingleUnderlyingClass(true).getComponent();
 
-        return jitType.isParamsSpecified() && !jitType.equals(classStruct.getCanonicalType());
+        return jitType.isParamsSpecified() && !jitType.equals(classStruct.getNormalizedType());
     }
 
     /**
@@ -7273,12 +7343,12 @@ public abstract class TypeConstant
      *         requires a "checkcast"
      */
     public boolean isJitAssignableTo(TypeConstant that) {
-        TypeConstant typeThatJit = that.getCallableJitType();
+        TypeConstant typeThatJit = that.getJitCCType();
         if (typeThatJit.equals(getConstantPool().typeObject())) {
             return true;
         }
 
-        TypeConstant typeThisJit = getCallableJitType();
+        TypeConstant typeThisJit = getJitCCType();
 
         // Let's say C = ListMap<K,V>; M = ListMapIndex<K,V>
         // Ecstasy: M --into--> C, so M.isA(C), but
@@ -7296,11 +7366,9 @@ public abstract class TypeConstant
      *         cast explicitly to {@code nObject} class to invoke its methods
      */
     public boolean isJitInterface() {
-        // Ref/Var, Tuple and Type are always represented by native classes
-        ConstantPool pool    = getConstantPool();
-        TypeConstant typeJit = getCallableJitType();
+        // Tuple and Type are always represented by native classes
+        TypeConstant typeJit = getJitCCType();
         return typeJit.isInterfaceType()
-                && !typeJit.isA(pool.typeRef())
                 && !typeJit.isTuple()
                 && !typeJit.isTypeOfType();
     }
@@ -7311,29 +7379,30 @@ public abstract class TypeConstant
     public JitTypeDesc getJitDesc(Builder builder) {
         ClassDesc cd;
         if ((cd = JitTypeDesc.getJavaPrimitive(this)) != null) {
-            return new JitTypeDesc(getCallableJitType(), Primitive, cd);
+            return new JitTypeDesc(getJitCCType(), Primitive, cd);
         }
         if ((cd = JitTypeDesc.getNullablePrimitiveClass(this)) != null) {
-            return new JitTypeDesc(this.removeNullable().getCallableJitType(), NullablePrimitive, cd);
+            return new JitTypeDesc(this.removeNullable().getJitCCType(), NullablePrimitive, cd);
         }
         if ((cd = JitTypeDesc.getXvmPrimitiveClass(this)) != null) {
-            return new JitTypeDesc(getCallableJitType(), XvmPrimitive, cd);
+            return new JitTypeDesc(getJitCCType(), XvmPrimitive, cd);
         }
         if ((cd = JitTypeDesc.getNullableXvmPrimitiveClass(this)) != null) {
-            return new JitTypeDesc(getCallableJitType(), NullableXvmPrimitive, cd);
+            return new JitTypeDesc(getJitCCType(), NullableXvmPrimitive, cd);
         }
         if ((cd = JitTypeDesc.getWidenedClass(builder, this)) != null) {
-            return new JitTypeDesc(getCallableJitType(), Widened, cd);
+            return new JitTypeDesc(getJitCCType(), Widened, cd);
         }
         assert isSingleUnderlyingClass(true);
 
-        return new JitTypeDesc(getCallableJitType(), Specific, builder.ensureClassDesc(this));
+        return new JitTypeDesc(getJitCCType(), Specific, builder.ensureClassDesc(this));
     }
 
     /**
-     * Callable JIT type for an arbitrary Ecstasy type represents a type that JIT compiler uses for
-     * Java variables and properties that hold non-primitive instances of the corresponding type.
-     * It's the minimal (the widest) type that produces the same "JIT Call Class Name' CC(T).
+     * Determine the JIT Callable Class (JCC) type for an arbitrary Ecstasy type represents a type
+     * that JIT compiler uses for Java variables and properties that hold non-primitive instances of
+     * the corresponding type. It's the minimal (the widest) type that produces the same "JIT Call
+     * Class Name' CC(T).
      *
      * <p>The canonical type C(T) is always a {@link #isSingleUnderlyingClass single underlying
      * class} that could parameterized by non-parameterized callable JIT types as parameters.
@@ -7345,9 +7414,9 @@ public abstract class TypeConstant
      *    <li>for any type T, the CC(T) == CC(C(T)))</li>
      *  </ul>
      *
-     * <p>For every non-parameterized type of {@link #isSingleUnderlyingClass single underlying class}
-     * (regardless of access and immutability modifications) the canonical type is the corresponding
-     * {@link TerminalTypeConstant}.
+     * <p>For every non-parameterized type of {@link #isSingleUnderlyingClass single underlying
+     * class} (regardless of access and immutability modifications) the canonical type is the
+     * corresponding {@link TerminalTypeConstant}.
      * <br/>
      * For a parameterized type with parameters of non-primitive types with trivial constraints,
      * the canonical type is also the corresponding {@link TerminalTypeConstant}; otherwise it s
@@ -7361,9 +7430,9 @@ public abstract class TypeConstant
      *
      * @see doc/jit_class_names.txt
      */
-    public TypeConstant getCallableJitType() {
+    public TypeConstant getJitCCType() {
         if (isModifyingType()) {
-            return getUnderlyingType().getCallableJitType();
+            return getUnderlyingType().getJitCCType();
         }
 
         // Terminal, Virtual or InnerChild
@@ -7372,19 +7441,17 @@ public abstract class TypeConstant
     }
 
     /**
-     * Instance JIT type for a "newable" Ecstasy type represents a type that JIT compiler uses to
-     * create an instance of the corresponding type. It's the minimal (the widest) type that
-     * produces the same "JIT Instance Class Name' IC(T).
+     * Determine the JIT Instance Class (JIC) type for a "newable" Ecstasy type, which represents a
+     * type that JIT compiler uses to create an instance of the corresponding type. It's the minimal
+     * (the widest) type that produces the same "JIT Instance Class Name' IC(T).
      *
      * @see doc/jit_class_names.txt
      */
-    public TypeConstant getInstanceJitType() {
-        if (isModifyingType()) {
-            return getUnderlyingType().getInstanceJitType();
-        }
-
-        assert ensureTypeInfo().isNewable(false, ErrorListener.BLACKHOLE);
-        return removeAutoNarrowing();
+    public TypeConstant getJitICType() {
+        // TODO CP: plug in the new logic
+        TypeConstant type = getJitCCType();
+        assert type.ensureTypeInfo().isNewable(false, ErrorListener.BLACKHOLE);
+        return type;
     }
 
     /**
@@ -7446,7 +7513,7 @@ public abstract class TypeConstant
             ClassDesc cdCommon = JitTypeDesc.requireJavaPrimitive(this);
             String    desc     = cdCommon.descriptorString();
 
-            reg1.load(code);
+            reg1 = reg1.load(code); // a Ref load can unbox its referent
             if (!reg1.cd().isPrimitive()) {
                 Builder.unbox(code, this);
             }

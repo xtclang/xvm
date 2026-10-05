@@ -376,6 +376,44 @@ public class MethodInfo
     }
 
     /**
+     * Find the base constructor that defines a virtual child's constructor signature.
+     *
+     * TODO CP: this should be a part of the MethodInfo already; unlike the virtual constructors
+     *          we seem to discard the virtual child constructors from the chains
+     *
+     * @return the base MethodInfo
+     */
+    public MethodInfo getChildConstructorOrigin() {
+        assert isConstructor() &&
+                getHead().getMethodStructure().getContainingClass().isVirtualChild();
+
+        MethodInfo ctor      = this;
+        TypeInfo   childInfo = getTypeInfo();
+        if (childInfo.getType().isPhantom()) {
+            // an undeclared inherited child has no constructor contract of its own
+            TypeConstant typeChild = childInfo.getType();
+            childInfo = childInfo.getClassStructure().getFormalType().
+                    resolveGenerics(typeChild.getConstantPool(), typeChild).
+                    ensureAccess(Access.PRIVATE).ensureTypeInfo();
+            ctor = childInfo.getMethodBySignature(getSignature());
+            assert ctor != null;
+        }
+        while (childInfo.getClassStructure().isExplicitlyOverride()) {
+            TypeConstant superType = childInfo.getExtends();
+            assert superType != null && superType.isVirtualChild();
+
+            TypeInfo   superInfo = superType.ensureAccess(Access.PROTECTED).ensureTypeInfo();
+            MethodInfo superCtor = superInfo.getMethodBySignature(ctor.getSignature());
+            if (superCtor == null) {
+                break;
+            }
+            ctor      = superCtor;
+            childInfo = superInfo;
+        }
+        return ctor;
+    }
+
+    /**
      * In terms of the "glass planes" metaphor, the glass plane from "this" (contribution) is to
      * replace the glass plane of "that" (base), with the resulting combination of glass planes
      * returned as a MethodInfo.
@@ -1193,6 +1231,9 @@ public class MethodInfo
                         break;
                     }
                     // fall through
+                case Capped:
+                    // TODO CP: similarly to the comment in computeJitDesc(), this shouldn't happen
+                    //          remove this case when the other is fixed
                 case Implicit:
                 case Declared:
                 case Abstract:
@@ -1269,7 +1310,6 @@ public class MethodInfo
                     }
                     break;
 
-                case Capped:
                 default:
                     throw new IllegalStateException();
                 }
@@ -1553,7 +1593,7 @@ public class MethodInfo
         ConstantPool pool = typeContainer.getConstantPool();
         if (typeContainer.isA(pool.typeRef()) &&
                 NativeNames.findReservedJitName(getJitIdentity()) != null) {
-            // all Ref and Var specializations share nRef, whose native methods use erased signatures
+            // all Ref and Var specializations share the native interfaces' erased signatures
             TypeConstant typeBase = typeContainer.isA(pool.typeVar())
                     ? pool.typeVar()
                     : pool.typeRef();
@@ -1572,6 +1612,12 @@ public class MethodInfo
         MethodBody head = getHead();
         return switch (head.getImplementation()) {
             case Capped -> {
+                // TODO CP: quite unexpectedly we produce a capped cap:
+                // void construct(this:class(Duplicable))
+                //    [0] maps.HashMap.construct(this:class(Duplicable)) {sig=void construct(this:class(Duplicable)), impl=Capped, target=void construct(this:class(HashMap)<Int, Object>)}
+                //    [1] maps.HasherMap.construct(this:class(Duplicable)) {sig=void construct(this:class(Duplicable)), impl=Capped, target=void construct(this:class(ecstasy:maps.HasherMap)<Int, Object>)}
+                //    [*] Duplicable.construct(this:class(Duplicable)) {sig=void construct(this:class(Duplicable)), impl=Declared}
+
                 // successive subclasses can cap the same declaration more than once;
                 // retain its wider signature by skipping all synthetic caps
                 MethodBody[] aBody = getChain();

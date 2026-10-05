@@ -9,6 +9,8 @@ import java.lang.constant.MethodTypeDesc;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.TypeConstant;
 
+import org.xvm.javajit.registers.Ref;
+
 import static org.xvm.asm.Op.*;
 
 import static org.xvm.javajit.Builder.CD_Ctx;
@@ -36,6 +38,14 @@ public interface InPlaceSupport
      */
     default void buildLocalInPlace(BuildContext bctx, CodeBuilder code, RegisterInfo reg,
                                    boolean assign, int resultId) {
+        if (reg instanceof Ref ref) {
+            // mutate the referent in a temporary, then write it back without replacing the nRef
+            RegisterInfo valueReg = bctx.storeTempRegister(code, A_STACK, ref.load(code));
+            buildLocalInPlace(bctx, code, valueReg, assign, resultId);
+            bctx.moveRegister(code, valueReg.load(code), ref, false);
+            return;
+        }
+
         if (reg.cd().isPrimitive()) {
             assert reg.isSingle();
             buildPrimitiveLocal(bctx, code, reg);

@@ -101,7 +101,7 @@ public class UIntN extends UIntNumber {
      * }</pre>
      */
     public static Boolean range(Ctx ctx) {
-        return Boolean.False;
+        return Boolean.False.$INSTANCE;
     }
 
     /**

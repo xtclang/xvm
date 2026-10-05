@@ -15,8 +15,6 @@ import java.lang.constant.MethodTypeDesc;
 
 import java.util.List;
 
-import org.xvm.asm.constants.IdentityConstant;
-import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.TypeConstant;
@@ -61,9 +59,8 @@ public class AugmentingBuilder extends CommonBuilder {
 
     @Override
     public boolean assembleClass(ClassBuilder classBuilder) {
-        // do not augment Object and since nRef is both Ref and Var, ignore "Var" interface; it
-        // causes circular initialization
-        if (thisId.equals(pool().clzObject()) || thisId.equals(pool().clzVar())) {
+        // do not augment Object
+        if (thisId.equals(pool().clzObject())) {
             return false;
         }
 
@@ -85,18 +82,7 @@ public class AugmentingBuilder extends CommonBuilder {
             new ExceptionBuilder(typeSystem, art).assembleCreateException(classBuilder);
         }
 
-        switch (typeInfo.getFormat()) {
-        case ENUMVALUE:
-            // for now, native enum values need to be fully functional (no code gen)
-            return false;
-
-        case ENUM:
-            // for all native enums generate the "equals" and "compare"
-            EnumBuilder.generateOrderable(classBuilder, this);
-            // fall through
-        default:
-            return true;
-        }
+        return true;
     }
 
     @Override
@@ -132,7 +118,7 @@ public class AugmentingBuilder extends CommonBuilder {
             ClassBuilder classBuilder,
             List<PropertyInfo> props) {
         MethodModel mm = findMethod(INIT_NAME, MD_xvmVoid);
-        if (mm == null) { // TODO && !ENUM ?? or !isPrimitive ??
+        if (mm == null) {
             super.assembleInit(classBuilder, props);
         }
     }
@@ -294,18 +280,6 @@ public class AugmentingBuilder extends CommonBuilder {
 
     // ----- helper methods ------------------------------------------------------------------------
 
-    @Override protected boolean shouldGenerate(IdentityConstant id) {
-        // we do not generate constructors for native enums
-        if (id instanceof MethodConstant methodId && methodId.isConstructor()) {
-            TypeConstant type = getThisType();
-            if (type.isEnum() || type.isEnumValue()) {
-                return false;
-            }
-        }
-
-        return super.shouldGenerate(id);
-    }
-
     /**
      * Find a FieldModel for the specified property.
      */
@@ -377,10 +351,9 @@ public class AugmentingBuilder extends CommonBuilder {
     }
 
     @Override
-    protected boolean isNativeField(String jitName, ClassDesc cd) {
+    protected boolean isNativeField(String jitName) {
         FieldModel fm = findField(jitName);
         if (fm != null) {
-            assert fm.fieldTypeSymbol().equals(cd);
             return true;
         }
         return false;

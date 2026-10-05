@@ -39,6 +39,13 @@ public class NativeNames {
         reservedMethodName.put("Boolean/xor/1",    "xor");
         reservedMethodName.put("Boolean/toByte/0", "toByte");
 
+        reservedMethodName.put("Sequential/next/0",    "next");
+        reservedMethodName.put("Sequential/prev/0",    "prev");
+        reservedMethodName.put("Sequential/skip/1",    "skip");
+        reservedMethodName.put("Sequential/stepsTo/1", "stepsTo");
+        reservedMethodName.put("Enum/next/0",          "next"); // narrowed Sequential return type
+        reservedMethodName.put("Enum/prev/0",          "prev"); // ditto
+
         reservedMethodName.put("numbers.Bit/not/0", "not");
         reservedMethodName.put("numbers.Bit/and/1", "and");
         reservedMethodName.put("numbers.Bit/or/1",  "or");

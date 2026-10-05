@@ -59,7 +59,7 @@ public class xEnum
             int iOrdinal = 0;
             for (Component child : listAll) {
                 if (child.getFormat() == Format.ENUMVALUE) {
-                    TypeConstant type   = ((ClassStructure) child).getCanonicalType();
+                    TypeConstant type   = ((ClassStructure) child).getNormalizedType();
                     EnumHandle   hValue = makeEnumHandle(ensureClass(f_container, type, type), iOrdinal++);
 
                     listNames.add(child.getName());
@@ -169,13 +169,11 @@ public class xEnum
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle hArg, int iReturn) {
         EnumHandle hThis = (EnumHandle) hTarget;
-
-        if (method.getName().equals("stepsTo")) {
-            EnumHandle hThat = (EnumHandle) hTarget;
-            return frame.assignValue(iReturn,
-                    xInt64.makeHandle(hThis.getOrdinal() - hThat.getOrdinal()));
-        }
-        return super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        return switch (method.getName()) {
+            case "stepsTo" -> invokeStepsTo(frame, hThis, hArg, iReturn);
+            case "skip"    -> invokeSkip(frame, hThis, hArg, iReturn);
+            default        -> super.invokeNative1(frame, method, hTarget, hArg, iReturn);
+        };
     }
 
     @Override
@@ -257,6 +255,34 @@ public class xEnum
 
         return RANGE_TEMPLATE.construct(frame, RANGE_CTOR, typeRange.ensureClass(frame),
                 null, ahVar, iReturn);
+    }
+
+    /**
+     * Invoke the Enum.skip() method.
+     */
+    private int invokeStepsTo(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
+        EnumHandle hThis   = (EnumHandle) hTarget;
+        EnumHandle hThat   = (EnumHandle) hArg;
+        long       ordinal = hThat.getOrdinal() - hThis.getOrdinal();
+        return frame.assignValue(iReturn, xInt64.makeHandle(ordinal));
+    }
+
+    /**
+     * Invoke the Enum.skip() method.
+     */
+    private int invokeSkip(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
+        EnumHandle hThis = (EnumHandle) hTarget;
+        long steps = ((ObjectHandle.JavaLong) hArg).getValue();
+        if (steps == 0) {
+            return frame.assignValue(iReturn, hThis);
+        }
+        long ordinal = hThis.getOrdinal();
+        long result  = ordinal + steps;
+        if (result < 0L || result >= m_listHandles.size()) {
+            return frame.raiseException(xException.outOfBounds(frame,
+                    "Cannot step by " + steps + " from " + hThis.getName()));
+        }
+        return frame.assignValue(iReturn, m_listHandles.get((int) result));
     }
 
     // ----- helper methods ------------------------------------------------------------------------

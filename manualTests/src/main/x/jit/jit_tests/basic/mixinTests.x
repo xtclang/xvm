@@ -9,6 +9,7 @@ package mixinTests {
         test4();
         test5();
         test6();
+        test7();
     }
 
     void test1() {
@@ -51,6 +52,14 @@ package mixinTests {
 
         Base base = new Base();
         assert base.self().value() == 42;
+    }
+
+    void test7() {
+        import t7.*;
+
+        Base base = new Base();
+        assert base.nestedValue() == 41;
+        assert base.privateValue() == 1;
     }
 
     package t1 {
@@ -146,5 +155,21 @@ package mixinTests {
         mixin Mix into Base {
             Mix! self() = this;
         }
+    }
+
+    package t7 {
+        class Base incorporates Mix1 {}
+
+        mixin Mix0 into Base {
+            Int nestedValue() {
+                private Int nested() = 41;
+                return nested();
+            }
+
+            Int privateValue() = privateHelper();
+            private Int privateHelper() = 1;
+        }
+
+        mixin Mix1 extends Mix0 {}
     }
 }

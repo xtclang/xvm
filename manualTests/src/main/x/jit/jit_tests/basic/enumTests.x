@@ -3,13 +3,11 @@ package enumTests {
     import ecstasy.io.IOException;
 
     void run() {
-        @Inject Console console;
-
         Color c = Blue;
         assert c.ordinal == 2;
         assert c.text == "B";
         assert c.rgb == 65_025;
-        console.print(c);
+        assert c.toString() == "Blue";
 
         assert c != Green;
         assert c > Green;
@@ -108,10 +106,9 @@ package enumTests {
     }
 
     void testBooleanValues() {
-// TODO eBoolean.java values$get(Ctx ctx) must return ArrayᐸBooleanᐳ
-//        assert Boolean.values.size == 2;
-//        assert Boolean.values[0] == False;
-//        assert Boolean.values[1] == True;
+        assert Boolean.values.size == 2;
+        assert Boolean.values[0] == False;
+        assert Boolean.values[1] == True;
     }
 
     void testNullableCount() {

@@ -617,7 +617,7 @@ public class PropertyDeclarationStatement
                 }
                 typeAnno = clzAnno.getFormalType().resolveGenerics(pool, GenericTypeResolver.of(mapResolved));
             } else {
-                typeAnno = clzAnno.getCanonicalType();
+                typeAnno = clzAnno.getNormalizedType();
             }
 
             TypeConstant typeInto = typeAnno.getExplicitClassInto(true);

@@ -156,7 +156,8 @@ public class NumberBuilder extends AugmentingBuilder {
      */
     protected boolean useNaturalImplementation(MethodInfo method) {
         String name = method.getJitIdentity().getName();
-        return name.equals("fixedBitLength") ||
+        return name.equals("converterTo")    ||
+               name.equals("fixedBitLength") ||
                name.equals("range")          ||
                name.equals("one")            ||
                name.equals("zero");

@@ -145,7 +145,7 @@ public abstract class ClassTemplate
      * Obtain the canonical type that is represented by this {@link ClassTemplate}
      */
     public TypeConstant getCanonicalType() {
-        return f_struct.getCanonicalType();
+        return f_struct.getNormalizedType();
     }
 
     /**
@@ -1969,7 +1969,7 @@ public abstract class ClassTemplate
      * Invalidate the TypeInfo for the canonical type.
      */
     protected void invalidateTypeInfo() {
-        getStructure().getCanonicalType().invalidateTypeInfo();
+        getStructure().getNormalizedType().invalidateTypeInfo();
     }
 
     /**

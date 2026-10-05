@@ -191,6 +191,23 @@ public abstract class RelationalTypeConstant
     }
 
     @Override
+    public boolean isCanonicalType() {
+        return m_constType1.isCanonicalType()
+            && m_constType2.isCanonicalType();
+    }
+
+    @Override
+    public TypeConstant getCanonicalType() {
+        TypeConstant typeOriginal1 = m_constType1;
+        TypeConstant typeOriginal2 = m_constType2;
+        TypeConstant typeResolved1 = typeOriginal1.getCanonicalType();
+        TypeConstant typeResolved2 = typeOriginal2.getCanonicalType();
+        return typeResolved1 == typeOriginal1 && typeResolved2 == typeOriginal2
+                ? this
+                : cloneRelational(getConstantPool(), typeResolved1, typeResolved2);
+    }
+
+    @Override
     public boolean isOnlyNullable() {
         return m_constType1.isOnlyNullable()
             && m_constType2.isOnlyNullable();
@@ -615,7 +632,7 @@ public abstract class RelationalTypeConstant
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getCallableJitType() {
+    public TypeConstant getJitCCType() {
         return getConstantPool().typeObject();
     }
 

@@ -295,6 +295,8 @@ public abstract class OpTest
             typeCmp = typeCmp.removeNullable();
         }
 
+        assert !typeCmp.isEnumValue() : "Comparison for Enum values must be a constant";
+
         typeCmp.buildCompare(bctx, code, nOp, reg1, reg2, /*lblTrue*/ null);
 
         code.labelBinding(lblEnd);
@@ -385,11 +387,19 @@ public abstract class OpTest
     }
 
     private void buildNullCheck(BuildContext bctx, CodeBuilder code) {
-        RegisterInfo regArg = bctx.loadArgument(code, m_nValue1);
+        RegisterInfo regArg = bctx.ensureRegister(code, m_nValue1);
+        TypeConstant type   = regArg.type().resolveConstraints();
+        boolean      fNot   = getOpCode() == OP_IS_NNULL;
 
-        Label   labelTrue = code.newLabel();
-        Label   labelEnd  = code.newLabel();
-        boolean fNot      = getOpCode() == OP_IS_NNULL;
+        if (!bctx.pool().typeNull().isA(type)) {
+            // specialization can leave a null test on a type that cannot be Null, which allows us
+            // statically compute the result
+            Builder.loadBoolean(code, fNot);
+            return;
+        }
+
+        Label labelTrue = code.newLabel();
+        Label labelEnd  = code.newLabel();
         if (regArg instanceof ExtendedSlot slotExt) {
             assert slotExt.flavor() == JitFlavor.NullablePrimitive;
 
@@ -409,9 +419,7 @@ public abstract class OpTest
                 code.ifne(labelTrue);
             }
         } else {
-            TypeConstant type = regArg.type().resolveConstraints();
-            assert type.isNullable() || type.isOnlyNullable();
-
+            regArg.load(code);
             Builder.loadNull(code);
             if (fNot) {
                 code.if_acmpne(labelTrue);
@@ -428,9 +436,10 @@ public abstract class OpTest
     }
 
     private void buildTypeCheck(BuildContext bctx, CodeBuilder code) {
-        TypeConstant typeTarget = bctx.getArgumentType(m_nValue1);
         if (m_nValue2 <= CONSTANT_OFFSET) {
-            TypeConstant typeTest = bctx.getArgumentType(m_nValue2);
+            RegisterInfo regTarget  = bctx.ensureRegister(code, m_nValue1);
+            TypeConstant typeTarget = regTarget.type();
+            TypeConstant typeTest   = bctx.getArgumentType(m_nValue2);
             assert typeTest.isTypeOfType();
             typeTest = typeTest.getParamType(0);
 
@@ -443,7 +452,7 @@ public abstract class OpTest
                 }
                 return;
             } else {
-                bctx.loadArgument(code, m_nValue1);
+                regTarget.load(code);
                 if (typeTarget.isJitInterface()) {
                     code.checkcast(CD_nObject);
                 }

@@ -87,8 +87,8 @@ public class ArrayBuilder extends AugmentingBuilder {
     }
 
     @Override
-    protected boolean isNativeField(String jitName, ClassDesc cd) {
-        return jitName.equals("$type") || super.isNativeField(jitName, cd);
+    protected boolean isNativeField(String jitName) {
+        return jitName.equals("$type") || super.isNativeField(jitName);
     }
 
     @Override

@@ -100,6 +100,6 @@ public class New_0
 
     @Override
     public int build(BuildContext bctx, CodeBuilder code) {
-        return buildNew(bctx, code, NO_ARGS);
+        return buildNew(bctx, code, A_IGNORE, NO_ARGS);
     }
 }

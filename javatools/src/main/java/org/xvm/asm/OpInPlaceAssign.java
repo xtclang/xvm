@@ -233,9 +233,8 @@ public abstract class OpInPlaceAssign
             default -> throw new UnsupportedOperationException(toName(getOpCode()));
         }
 
-        TypeConstant  typeArg = bctx.getArgumentType(m_nArgValue);
-        MethodInfo    method  = bctx.getTypeInfo(typeTarget).findOpMethod(sName, sOp, typeArg);
-        return method;
+        TypeConstant typeArg = bctx.getArgumentType(m_nArgValue);
+        return bctx.getTypeInfo(typeTarget).findOpMethod(sName, sOp, typeArg);
     }
 
     @Override

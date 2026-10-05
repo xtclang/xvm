@@ -1396,7 +1396,6 @@ interface List<Element>
     void quickSort(Orderer order, Int low, Int high) {
 
         if (low < high) {
-
             Int partitionIndex = partition(order, low, high);
 
             quickSort(order, low, partitionIndex - 1);

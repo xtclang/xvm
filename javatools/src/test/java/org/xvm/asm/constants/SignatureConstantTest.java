@@ -29,23 +29,23 @@ public class SignatureConstantTest {
         ClassStructure box = module.createClass(
                 Component.Access.PUBLIC, Component.Format.CLASS, "Box", null);
 
-        PropertyStructure typeParameter = box.addTypeParam("T", actual.getCanonicalType());
+        PropertyStructure typeParameter = box.addTypeParam("T", actual.getNormalizedType());
         TypeConstant formalType = typeParameter.getIdentityConstant().getFormalType();
         PropertyStructure value = box.createProperty(
                 false, Component.Access.PUBLIC, Component.Access.PUBLIC, formalType, "value");
 
         SignatureConstant propertySignature = value.getIdentityConstant().getSignature();
         SignatureConstant resolved = propertySignature.resolveGenericTypes(
-                pool, ignored -> actual.getCanonicalType());
+                pool, ignored -> actual.getNormalizedType());
         SignatureConstant resolvedAgain = propertySignature.resolveGenericTypes(
-                pool, ignored -> actual.getCanonicalType());
+                pool, ignored -> actual.getNormalizedType());
 
         assertTrue(resolved.isProperty());
         assertSame(resolved, pool.getConstant(resolved));
         assertSame(resolved, resolvedAgain);
 
         SignatureConstant methodSignature = pool.ensureSignatureConstant(
-                "value", ConstantPool.NO_TYPES, new TypeConstant[] {actual.getCanonicalType()});
+                "value", ConstantPool.NO_TYPES, new TypeConstant[] {actual.getNormalizedType()});
         assertFalse(methodSignature.isProperty());
         assertNotSame(resolved, methodSignature);
     }

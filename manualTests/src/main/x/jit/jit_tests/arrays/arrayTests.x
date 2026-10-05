@@ -1,12 +1,11 @@
 import ecstasy.collections.Aggregator;
 
 package arrayTests {
-    @Inject Console console;
-
     void run() {
 
         testStringAsArray();
         testStringArray();
+        testDefaultElements();
         testConstStringArray();
         testAnonArrayVar();
         testNamedArrayVar();
@@ -27,14 +26,26 @@ package arrayTests {
     void testStringArray() {
         String[] strings = new Array<String>(3);
         strings.add("hello");
-        console.print(strings[0]);
+        assert strings[0] == "hello";
 
         strings.add("?");
         strings[1] = "world";
-        console.print(strings[1]);
+        assert strings[1] == "world";
 
         strings = strings.delete(0);
         assert strings[0] == "world";
+    }
+
+    void testDefaultElements() {
+        // the omitted array supplier must use the element type's default value
+        String?[] values = new String?[2];
+        assert values.size == 2;
+        assert values[0] == Null;
+        assert values[1] == Null;
+
+        values[0] = "first";
+        assert values[0] == "first";
+        assert values[1] == Null;
     }
 
     void testConstStringArray() {

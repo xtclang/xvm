@@ -182,6 +182,16 @@ public class ParameterizedTypeConstant
     }
 
     @Override
+    public boolean isCanonicalType() {
+        return TypeCanonicalizer.isCanonical(this);
+    }
+
+    @Override
+    public TypeConstant getCanonicalType() {
+        return new TypeCanonicalizer(this).canonicalize(this);
+    }
+
+    @Override
     public TypeConstant resolveFormalType(FormalConstant constFormal) {
         switch (constFormal.getFormat()) {
         case Property:
@@ -794,7 +804,7 @@ public class ParameterizedTypeConstant
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public TypeConstant getCallableJitType() {
+    public TypeConstant getJitCCType() {
         assert isSingleUnderlyingClass(true);
 
         TypeConstant typeJit = m_typeJitCallable;
@@ -844,16 +854,20 @@ public class ParameterizedTypeConstant
                     : this;
         }
 
-        TypeConstant typeResolved = typeOrig.getCallableJitType();
+        TypeConstant typeResolved = typeOrig.getJitCCType();
         boolean      fTrivial     = true;
 
-        TypeConstant[] aconstOriginal  = m_atypeParams;
+        // we need to normalize the parameters, since omitted defaults must produce the same JCC as
+        // the normalized type; take for example MapCollector's declaration:
+        //      MapCollector<Key, Value, Result extends Map<Key, Value>>
+        // naturally JCC for MC<Int, Object> must be identical to MC<Int, Object, Map<Int, Object>>
+        TypeConstant[] aconstOriginal  = normalizeParameters().getParamTypesArray();
         TypeConstant[] aconstCanonical = aconstOriginal;
         for (int i = 0, c = aconstOriginal.length; i < c; ++i) {
             TypeConstant typeParamOriginal = aconstOriginal[i];
             if (typeParamOriginal.isJitPrimitive()) {
                 aconstCanonical = cow(aconstOriginal, aconstCanonical, i,
-                        aconstOriginal[i].getCallableJitType());
+                        aconstOriginal[i].getJitCCType());
                 fTrivial = false;
             } else {
                 var            entryParam     = listTypeParams.get(i);
@@ -894,7 +908,7 @@ public class ParameterizedTypeConstant
 
         return m_typeJitCallable = fTrivial
                 ? typeResolved // TerminalTypeConstant
-                : typeResolved == typeOrig && aconstCanonical == aconstOriginal
+                : typeResolved == typeOrig && aconstCanonical == m_atypeParams
                     ? this
                     : pool.ensureParameterizedTypeConstant(typeResolved, aconstCanonical);
     }
@@ -905,7 +919,7 @@ public class ParameterizedTypeConstant
     private TypeConstant[] toCallableTypes(TypeConstant[] atype) {
         TypeConstant[] atypeCanonical = atype;
         for (int i = 0, c = atype.length; i < c; ++i) {
-            atypeCanonical = cow(atype, atypeCanonical, i, atype[i].getCallableJitType());
+            atypeCanonical = cow(atype, atypeCanonical, i, atype[i].getJitCCType());
         }
         return atypeCanonical;
     }

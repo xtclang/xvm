@@ -101,7 +101,7 @@ public class IntN extends IntNumber {
      * }</pre>
      */
     public static Boolean range(Ctx ctx) {
-        return Boolean.False;
+        return Boolean.False.$INSTANCE;
     }
 
     /**

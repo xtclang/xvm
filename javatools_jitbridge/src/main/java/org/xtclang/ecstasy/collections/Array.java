@@ -9,16 +9,11 @@ import org.xtclang.ecstasy.Object;
 import org.xtclang.ecstasy.OutOfBounds;
 import org.xtclang.ecstasy.ReadOnly;
 
-import org.xtclang.ecstasy.reflect.Enumeration;
-
 import org.xtclang.ecstasy.text.String;
-
-import org.xvm.asm.ConstantPool;
 
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Ctx;
-import org.xvm.javajit.ModuleLoader;
 
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.Iterable;
@@ -90,26 +85,12 @@ public abstract class Array
     public static class Mutability extends nEnum {
         private Mutability(long ordinal, String name) {
             super(null);
-
-            ConstantPool pool = $owner().typeSystem.pool();
-
-            $type    = pool.ensureTerminalTypeConstant(pool.ensureEcstasyClassConstant(
-                        "collections.Array.Mutability." + name));
             $ordinal = ordinal;
             $name    = name;
         }
 
-        public final TypeConstant $type;
-        public final long         $ordinal;
-        public final String       $name;
-
-        @Override public TypeConstant $xvmType(Ctx ctx) {
-            return $type;
-        }
-
-        public Enumeration enumeration$get(Ctx ctx) {
-            return eMutability.$INSTANCE;
-        }
+        public final long   $ordinal;
+        public final String $name;
 
         @Override
         public String name$get(Ctx ctx) {
@@ -154,46 +135,6 @@ public abstract class Array
             public Mutable() {
                 super(3, String.of(null, "Mutable"));
             }
-        }
-    }
-
-    public static class eMutability extends Enumeration {
-        private eMutability(Ctx ctx, TypeConstant type) {
-            super(ctx, type);
-        }
-
-        static {
-            Ctx          ctx  = ((ModuleLoader) eMutability.class.getClassLoader()).getCtx();
-            TypeConstant type = ctx.pool().ensureEcstasyTypeConstant("collections.Array.Mutability");
-            $INSTANCE = new eMutability(ctx, type);
-            $names    = ArrayᐸObjectᐳ.$makeStringArray(ctx, Mutability.Constant.$INSTANCE.$name,
-                                                 Mutability.Persistent.$INSTANCE.$name,
-                                                 Mutability.Fixed.$INSTANCE.$name,
-                                                 Mutability.Mutable.$INSTANCE.$name);
-
-            $values   = ArrayᐸObjectᐳ.$makeArray(ctx, type, Mutability.Constant.$INSTANCE,
-                                                       Mutability.Persistent.$INSTANCE,
-                                                       Mutability.Fixed.$INSTANCE,
-                                                       Mutability.Mutable.$INSTANCE);
-        }
-
-        public static final eMutability $INSTANCE;
-        public static final ArrayᐸObjectᐳ $names;
-        public static final ArrayᐸObjectᐳ $values;
-
-        @Override
-        public long count$get$p(Ctx ctx) {
-            return 4;
-        }
-
-        @Override
-        public ArrayᐸObjectᐳ values$get(Ctx ctx) {
-            return $values;
-        }
-
-        @Override
-        public ArrayᐸObjectᐳ names$get(Ctx ctx) {
-            return $names;
         }
     }
 

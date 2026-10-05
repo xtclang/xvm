@@ -16,7 +16,6 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ModuleStructure;
 
-import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.ModuleConstant;
 import org.xvm.asm.constants.SignatureConstant;
@@ -181,6 +180,9 @@ public class TypeSystem {
     public static final int  MIN_ESC  = min(ESC, min(HASH, min(DOT, min(OR, min(ADD,
             min(SUB, min(QUESTION, min(BANG, min(AT, min(SPACE, min(COMMA,  min(L_PAREN,
             min(R_PAREN, min(L_ANGLE, R_ANGLE))))))))))))));
+
+    public static final String HASH_STRING = String.valueOf(HASH);
+    public static final String HASH_MARKER = ";"; // internal suffix marker, replaced by HASH after escaping
 
     /**
      * @return the ConstantPool associated with this TypeSystem
@@ -434,7 +436,6 @@ public class TypeSystem {
         }
 
         if (art.shape == ClassfileShape.Enum) {
-            TypeConstant enumerationType = art.clz.getIdentityConstant().getValueType(pool(), null);
             return new EnumerationBuilder(this, art);
         }
 
@@ -521,7 +522,7 @@ public class TypeSystem {
     public Artifact deduceArtifact(ModuleStructure module, String prefix, String suffix) {
         String className = prefix + suffix;
         if (suffix.equals(MODULE)) {
-            return new Artifact(module.getCanonicalType(), module, ClassfileShape.Impl, className);
+            return new Artifact(module.getNormalizedType(), module, ClassfileShape.Impl, className);
         }
 
         ClassfileShape shape    = ClassfileShape.Impl;
@@ -539,43 +540,27 @@ public class TypeSystem {
             }
         }
 
-        TypeConstant type     = null;
-        int          idOffset = suffix.indexOf(HASH);
+        int idOffset = findJitSuffix(suffix);
         if (idOffset > 0) {
-            // the name represents a parameterized type with primitive actual type(s),
-            // a class constant for inner classes or a combination of the two, for example:
-            // org.xtclang.ecstasy.numbers.Number$compare$Familyꖛ7503$UInteger
-            int idEnd = suffix.indexOf('$', idOffset);
-            if (idEnd < 0) {
-                idEnd = suffix.length();
-            }
-            Constant constant = pool().getConstant(
-                    Integer.valueOf(suffix.substring(idOffset + 1, idEnd)));
-            if (constant instanceof TypeConstant constType) {
-                type = constType;
-            } else if (constant instanceof ClassConstant constClass) {
-                ClassStructure struct = (ClassStructure) constClass.getComponent();
-                if (idEnd < suffix.length()) {
-                    String childName = unescapeJitName(suffix.substring(idEnd + 1))
-                            .replace('$', '.');
-                    if (!(struct.getChildByPath(childName) instanceof ClassStructure child)) {
-                        return null;
-                    }
-                    struct = child;
+            // the final suffix identifies the complete type, including any nested class path,
+            // e.g. org.xtclang.ecstasy.numbers.Number$compare$Family$UIntegerꖛ7503
+            Constant constant = pool().getConstant(Integer.parseInt(suffix.substring(idOffset + 1)));
+            if (constant instanceof TypeConstant type) {
+                // the type suffix identifies the class even when it is nested inside a method
+                ClassStructure struct = (ClassStructure) type.getSingleUnderlyingClass(true).getComponent();
+                if (struct.isParameterized() && type.getParamsCount() == 0) {
+                    // the builder requires the formal type to compile a generic parameterized class
+                    type = struct.getFormalType();
                 }
-                return new Artifact(struct.getFormalType(), struct, shape, className);
+                return new Artifact(type, struct, shape, className);
             } else {
                 throw new IllegalArgumentException("Unsupported suffix: " + constant.toString());
             }
-            suffix = suffix.substring(0, idOffset);
         }
 
         String xvmName = unescapeJitName(suffix).replace('$', '.');
         if (module.getChildByPath(xvmName) instanceof ClassStructure struct) {
-            if (type == null) {
-                type = struct.getFormalType();
-            }
-            return new Artifact(type, struct, shape, className);
+            return new Artifact(struct.getFormalType(), struct, shape, className);
         }
         return null;
     }
@@ -639,15 +624,22 @@ public class TypeSystem {
     }
 
     /**
-     * @param name  a class name to be used as part of a Java ClassFile
+     * @param name         a class or package name to be used as part of a Java ClassFile
+     * @param checkPrefix  true iff the leading character of each class segment must be checked for
+     *                     a reserved JIT prefix
      *
-     * @return the passed in name but with any special characters (reserved by the JIT) escaped
+     * @return the passed in name but with any special characters (reserved by the JIT) escaped and
+     *         the internal suffix marker replaced by {@link #HASH}
      */
-    public static String escapeJitClassName(String name) {
-        StringBuilder buf = null;
-        int classStart = name.lastIndexOf('.') + 1;
+    public static String escapeJitName(String name, boolean checkPrefix) {
+        StringBuilder buf        = null;
+        int           classStart = checkPrefix ? name.lastIndexOf('.') + 1 : -1;
         for (int index = 0, size = name.length(); index < size; index = name.offsetByCodePoints(index, 1)) {
             int ch = name.codePointAt(index);
+            if (checkPrefix && ch == '$') {
+                // nested class segments also need prefix escaping, e.g. Outer$entry -> Outer$\entry
+                classStart = index + 1;
+            }
             if (ch >= MIN_ESC || index == classStart) {
                 switch (ch) {
                 case ESC:
@@ -664,35 +656,7 @@ public class TypeSystem {
                 buf.appendCodePoint(ch);
             }
         }
-        return buf == null ? name : buf.toString();
-    }
-
-    // TODO CP - must we escape field/method names?
-    /**
-     * @param name  a method or field name to be used as part of a Java ClassFile
-     *
-     * @return the passed in `name` but with any special characters (reserved by the JIT) escaped
-     */
-    public static String escapeJitMemberName(String name) {
-        StringBuilder buf = null;
-        for (int index = 0, size = name.length(); index < size; index = name.offsetByCodePoints(index, 1)) {
-            int ch = name.codePointAt(index);
-            if (ch >= MIN_ESC) {
-                switch (ch) {
-                case ESC:
-                case HASH, DOT, OR, ADD, SUB, QUESTION, BANG, AT, SPACE, COMMA:
-                case L_PAREN, R_PAREN, L_ANGLE, R_ANGLE:
-                    if (buf == null) {
-                        buf = new StringBuilder(size + 8).append(name, 0, index);
-                    }
-                    buf.appendCodePoint(ESC);
-                }
-            }
-            if (buf != null) {
-                buf.appendCodePoint(ch);
-            }
-        }
-        return buf == null ? name : buf.toString();
+        return (buf == null ? name : buf.toString()).replace(HASH_MARKER, HASH_STRING);
     }
 
     /**
@@ -716,5 +680,46 @@ public class TypeSystem {
             }
         }
         return buf == null ? name : buf.toString();
+    }
+
+    /**
+     * Append a constant-id suffix at the end, replacing the existing suffix while retaining nested
+     * class paths. The name must contain at most one internal suffix marker.
+     *
+     * @param name  the unescaped class name to update
+     * @param id    the new constant id
+     *
+     * @throws IllegalArgumentException if the name contains more than one internal suffix marker
+     */
+    public static void appendJitSuffix(StringBuilder name, int id) {
+        int start = name.indexOf(HASH_MARKER);
+        if (start >= 0) {
+            if (start != name.lastIndexOf(HASH_MARKER)) {
+                throw new IllegalArgumentException("Multiple suffix markers in class name: " + name);
+            }
+            int end = start + 1;
+            while (end < name.length() && name.charAt(end) >= '0' && name.charAt(end) <= '9') {
+                end++;
+            }
+            name.delete(start, end);
+        }
+        name.append(HASH_MARKER).append(id);
+    }
+
+    /**
+     * Find the final generated suffix, ignoring an escaped marker in a user-supplied name.
+     *
+     * @param name  the escaped class name
+     *
+     * @return the index of the unescaped suffix marker, or -1 if absent
+     */
+    public static int findJitSuffix(String name) {
+        int     suffix  = name.lastIndexOf(HASH);
+        boolean escaped = false;
+        for (int index = suffix; index > 0 && name.codePointBefore(index) == ESC;
+                index -= Character.charCount(ESC)) {
+            escaped = !escaped;
+        }
+        return escaped ? -1 : suffix;
     }
 }

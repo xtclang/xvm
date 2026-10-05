@@ -1,5 +1,7 @@
 package org.xtclang.ecstasy;
 
+import org.xvm.asm.ConstantPool;
+
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.javajit.Container;
@@ -78,6 +80,23 @@ public abstract class nObject
     public nType $typeForName(Ctx ctx, java.lang.String name) {
         TypeConstant type = $xvmType(ctx).resolveGenericType(name);
         return type == null ? null : nType.$ensureType(ctx, type);
+    }
+
+    /**
+     * Resolve a virtual child's type against this runtime parent, preserving its own parameters.
+     * Used by {@link org.xvm.javajit.builders.CommonBuilder#assembleVirtualChildFactory} when a
+     * child's "$new" requires a TypeConstant.
+     * Also used by generated "$xvmType" methods on non-generic virtual children.
+     */
+    public TypeConstant $childType(Ctx ctx, TypeConstant childType) {
+        TypeConstant parentType = $xvmType(ctx);
+        ConstantPool pool       = ctx.pool();
+        TypeConstant targetType = pool.ensureVirtualChildTypeConstant(parentType,
+                childType.getSingleUnderlyingClass(true).getName());
+        if (childType.isParamsSpecified()) {
+            targetType = pool.ensureParameterizedTypeConstant(targetType, childType.getParamTypesArray());
+        }
+        return targetType.resolveGenerics(pool, parentType);
     }
 
     public boolean $isImmut() {

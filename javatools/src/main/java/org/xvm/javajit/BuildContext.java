@@ -127,8 +127,8 @@ public class BuildContext {
         this.className     = builder.art.className();
         this.typeInfo      = typeInfo;
         this.thisType      = typeInfo.getType();
-        this.jitType       = thisType.getCallableJitType();
-        this.callChain     = methodInfo.getChain();
+        this.jitType       = thisType.getJitCCType();
+        this.callChain     = methodInfo.ensureOptimizedMethodChain(typeInfo);
         this.methodStruct  = callChain[0].getMethodStructure();
         this.callDepth     = 0;
         this.methodDesc    = jmd;
@@ -154,7 +154,7 @@ public class BuildContext {
         this.className     = builder.art.className();
         this.typeInfo      = typeInfo;
         this.thisType      = typeInfo.getType();
-        this.jitType       = thisType.getCallableJitType();
+        this.jitType       = thisType.getJitCCType();
         this.callDepth     = 0;
         this.callChain     = isGetter
                 ? propInfo.ensureOptimizedGetChain(typeInfo, null)
@@ -1162,7 +1162,7 @@ public class BuildContext {
                 PropertyInfo prop = typeInfo.findProperty(propId);
                 assert prop != null;
 
-                type = prop.inferImmutable(thisType);
+                type = prop.inferImmutable(thisType).resolveAutoNarrowing(pool(), false, thisType, null);
                 type = typeMatrix.augmentPropertyType(type, addr);
             } else if (isSpecialized &&
                     constant instanceof MethodConstant methodId && methodId.isLambda()) {
@@ -1185,6 +1185,8 @@ public class BuildContext {
 
         return switch (argId) {
             case Op.A_THIS,
+                 Op.A_PROTECTED,
+                 Op.A_PRIVATE,
                  Op.A_STRUCT -> typeMatrix.getType(Op.A_THIS, currOpAddr);
             case Op.A_SUPER  -> {
                 TypeConstant typeSuper = callChain[callDepth + 1].getIdentity().getType();
@@ -1267,7 +1269,12 @@ public class BuildContext {
                 return reg;
             }
 
-            assert mtxType.isA(regType);
+            // while it seems natural to assume the following invariant here:
+            //      assert mtxType.isA(regType);
+            // it may not work for pure consumer types; for example, after Key.is(Type<Orderable>),
+            //      function Ordered(Object, Object)
+            // becomes
+            //      function Ordered(Orderable, Orderable)
 
             // keep the register's canonical representation; the narrowed view is only used by the
             // current op to select and invoke the appropriate boxed implementation
@@ -1317,14 +1324,15 @@ public class BuildContext {
      * Ensure an unnamed {@link RegisterInfo} for the specified register id and an optimized
      * ClassDesc for the specified type.
      */
-    public RegisterInfo ensureRegister(int regId, TypeConstant type) {
-        return ensureRegister(regId, type, JitTypeDesc.getJitClass(builder, type), "");
+    public RegisterInfo ensureRegister(CodeBuilder code, int regId, TypeConstant type) {
+        return ensureRegister(code, regId, type, JitTypeDesc.getJitClass(builder, type), "");
     }
 
     /**
      * Ensure a {@link RegisterInfo} for the specified register id, type, ClassDesc and name.
      */
-    public RegisterInfo ensureRegister(int regId, TypeConstant type, ClassDesc cd, String name) {
+    public RegisterInfo ensureRegister(CodeBuilder code, int regId, TypeConstant type,
+                                       ClassDesc cd, String name) {
         return regId == Op.A_IGNORE
             ? new SingleSlot(regId, -2, Specific, type, cd, name)
             : registerInfos.computeIfAbsent(regId, ix -> {
@@ -1362,7 +1370,10 @@ public class BuildContext {
                                 "Unsupported register flavor: " + flavor);
                     }
                 } else {
-                    throw new UnsupportedOperationException("buildCreateRef");
+                    int slot = scope.allocateLocal(regId, TypeKind.REFERENCE);
+                    Ref ref  = new Ref(this, regId, slot, name, isVar, type, jitDesc.flavor);
+                    ref.addStartLabel(code.newLabel());
+                    return ref;
                 }
             }
         );
@@ -1526,6 +1537,8 @@ public class BuildContext {
             return reg.load(code);
 
         case Op.A_THIS:
+        case Op.A_PROTECTED:
+        case Op.A_PRIVATE:
             return loadThis(code);
 
         case Op.A_STRUCT: {
@@ -1661,7 +1674,7 @@ public class BuildContext {
             // the register represents a property that the value(s) on the stack must be stored into
             buildSetPropertyFromStack(code, regId, type, jitDesc.flavor);
         } else {
-            RegisterInfo reg = adjustRegister(code, ensureRegister(regId, type));
+            RegisterInfo reg = adjustRegister(code, ensureRegister(code, regId, type));
             reg.store(this, code, type);
             ensureRegisterScope(code, reg);
         }
@@ -1809,7 +1822,7 @@ public class BuildContext {
      */
     public void moveRegister(CodeBuilder code, int fromVarId, int toVarId, boolean allowUpcast) {
         RegisterInfo regFrom = loadArgument(code, fromVarId);
-        RegisterInfo regTo   = ensureRegister(toVarId, regFrom.type());
+        RegisterInfo regTo   = ensureRegister(code, toVarId, regFrom.type());
 
         moveRegister(code, regFrom, regTo, allowUpcast);
     }
@@ -1855,8 +1868,9 @@ public class BuildContext {
             }
         }
 
+        // a captured local stores a referent value; Ref.store() handles the backing nRef
         JitFlavor srcFlavor = regFrom.flavor();
-        JitFlavor dstFlavor = regTo.flavor();
+        JitFlavor dstFlavor = regTo instanceof Ref ref ? ref.referentFlavor() : regTo.flavor();
 
         if (srcFlavor == AlwaysNull) {
             // a narrowed Null is loaded as the boxed singleton, just like a Null constant
@@ -1879,9 +1893,8 @@ public class BuildContext {
                 Builder.unbox(code, typeTo);
                 break;
 
-            case "Specific->Widened",
-                 "Specific->Ref":
-                // nothing to do
+            case "Specific->Widened":
+                // no additional transformations
                 break;
 
             case "Specific->NullablePrimitive":
@@ -1902,6 +1915,7 @@ public class BuildContext {
 
             case "Primitive->Specific",
                  "Primitive->Widened",
+                 "XvmPrimitive->Specific",
                  "XvmPrimitive->Widened":
                 Builder.box(code, typeFrom);
                 break;
@@ -1928,10 +1942,6 @@ public class BuildContext {
                  "NullableXvmPrimitive->XvmPrimitive":
                 // the boolean and the value(s) are on the Java stack; just pop the boolean
                 code.pop();
-                break;
-
-            case "XvmPrimitive->Specific":
-                Builder.box(code, typeTo);
                 break;
 
             default:
@@ -2010,13 +2020,13 @@ public class BuildContext {
             }
         }
 
-        int          slot  = scope.allocateLocal(regId, TypeKind.REFERENCE);
-        JitTypeDesc  jtd   = type.getJitDesc(builder);
-        RegisterInfo ref   = new Ref(this, regId, slot, name, isVar, type.getParamType(0), jtd.flavor);
-        Label        label = code.newLabel();
+        TypeConstant referentType = type.getParamType(0);
+        int          slot         = scope.allocateLocal(regId, TypeKind.REFERENCE);
+        JitTypeDesc  jtd          = referentType.getJitDesc(builder);
+        RegisterInfo ref          = new Ref(this, regId, slot, name, isVar, referentType, jtd.flavor);
 
         registerInfos.put(regId, ref);
-        ref.addStartLabel(label);
+        ref.addStartLabel(code.newLabel());
         return ref;
     }
 
@@ -2088,12 +2098,13 @@ public class BuildContext {
                     break;
                 }
 
-                case Widened: {
+                case Specific, Widened: {
                     // in general, this should not happen, but there is one place where the
                     // Ecstasy compiler generates a default argument for a non-default signature -
                     // for fix size Array constructor (see  NewExpression.java):
                     //      construct(Int size, Element | function Element (Int) supply)
-                    // we need to replace it with the default value for the Element type
+                    // we need to replace it with the default value for the Element type;
+                    // when Element resolves to Object, the union collapses to a Specific parameter
                     if (typeTarget != null && typeTarget.isArray() &&
                             typeTarget.getParamType(0).getDefaultValue() instanceof Constant dfltValue) {
                         RegisterInfo regValue = loadConstant(code, dfltValue);
@@ -2115,6 +2126,10 @@ public class BuildContext {
 
             RegisterInfo srcReg    = loadArgument(code, iArg);
             JitFlavor    srcFlavor = srcReg.flavor();
+            if (srcFlavor == AlwaysNull) {
+                // a narrowed Null is loaded as the boxed singleton, just like a Null constant
+                srcFlavor = Specific;
+            }
             if (srcFlavor == dstFlavor) {
                 if (srcFlavor == Specific && !srcReg.cd().equals(pd.cd) &&
                         !srcReg.type().isJitAssignableTo(pd.type)) {
@@ -2130,6 +2145,8 @@ public class BuildContext {
             //  - Primitive -> Widened            (Int n; f(n) with f(Int|String))
             //  - Primitive -> NullablePrimitive  (Int n; f(n) with f(Int?))
             //  - NullablePrimitive -> Specific   (Int? n; f(n) with f(Object)
+            //  - Widened -> Primitive            (Int|String n narrowed to Int; f(n) with f(Int))
+            //  - Widened -> NullablePrimitive    (Int?|String n narrowed to Int?; f(n) with f(Int?))
             switch (srcFlavor.name() + "->" + dstFlavor.name()) {
             case "Specific->SpecificWithDefault":
             case "Widened->Specific",
@@ -2140,6 +2157,20 @@ public class BuildContext {
                 continue;
 
             case "Widened->WidenedWithDefault":
+                continue;
+
+            case "Widened->Primitive",
+                 "Widened->XvmPrimitive":
+                if (!srcReg.cd().equals(builder.ensureClassDesc(pd.type))) {
+                    generateCheckCast(code, pd.type);
+                }
+                Builder.unbox(code, pd.type);
+                continue;
+
+            case "Widened->NullablePrimitive",
+                 "Widened->NullableXvmPrimitive":
+                Builder.unboxNullable(code, pd.type,
+                        builder.ensureClassDesc(pd.type.removeNullable()));
                 continue;
 
             case "Specific->Widened",
@@ -3059,14 +3090,16 @@ public class BuildContext {
     }
 
     /**
-     * Call the "new$" [static] method.
+     * Call the "new$" [static] method, optionally supplying the enclosing object.
      *
-     * @param argIds  the ids for the argument values
+     * @param outerId  the outer object's register id, or {@link Op#A_IGNORE} for a non-child
+     * @param argIds   the ids for the argument values
      */
     public JitMethodDesc buildNew(CodeBuilder code, TypeConstant typeTarget,
-                                  MethodConstant idCtor, int[] argIds) {
-        return buildNew(code, typeTarget, idCtor, jmdNew ->
-            loadCallArguments(code, jmdNew, argIds, typeTarget));
+                                  MethodConstant idCtor, int outerId, int[] argIds) {
+        RegisterInfo outer = outerId == Op.A_IGNORE ? null : ensureRegister(code, outerId);
+        return builder.buildNew(this, code, typeTarget, idCtor, outer,
+                jmdNew -> loadCallArguments(code, jmdNew, argIds, typeTarget), ctxSlot(code));
     }
 
     /**
@@ -3172,7 +3205,7 @@ public class BuildContext {
             TypeConstant destType = getReturnType(regId);
             assert destType != null;
 
-            RegisterInfo reg = ensureRegister(regId, destType);
+            RegisterInfo reg = ensureRegister(code, regId, destType);
             if (typeMatrix.needsInitialization(regId, currOpAddr)) {
                 // the False path still needs initialized slots for the Java verifier
                 Builder.defaultStore(code, reg);

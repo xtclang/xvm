@@ -123,6 +123,18 @@ public class TypeSequenceTypeConstant
     }
 
     @Override
+    public boolean isCanonicalType() {
+        // TODO GG
+        return false;
+    }
+
+    @Override
+    public TypeConstant getCanonicalType() {
+        // TODO GG
+        return getConstantPool().typeTuple();
+    }
+
+    @Override
     public boolean isConst() {
         return false;
     }

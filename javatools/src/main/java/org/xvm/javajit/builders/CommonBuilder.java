@@ -31,6 +31,7 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 
+import org.xvm.asm.constants.ChildInfo;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodBody;
 import org.xvm.asm.constants.LiteralConstant;
@@ -44,6 +45,7 @@ import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
+import org.xvm.asm.constants.TypeInfo.MethodKind;
 import org.xvm.asm.constants.UnionTypeConstant;
 
 import org.xvm.javajit.BuildContext;
@@ -102,7 +104,7 @@ public class CommonBuilder
         this.structInfo    = thisType.ensureAccess(Access.STRUCT).ensureTypeInfo();
         this.thisId        = classStruct.getIdentityConstant();
         this.isInterface   = classStruct.getFormat() == Format.INTERFACE;
-        this.jitType       = thisType.getCallableJitType();
+        this.jitType       = thisType.getJitCCType();
         this.isSpecialized = jitType.isJitL2Specialized();
         this.isPrimitive   = type.isJitPrimitive();
     }
@@ -472,7 +474,12 @@ public class CommonBuilder
      * should override this method augmenting the memory requirement accordingly.
      */
     protected int computeInstanceSize() {
-        int size = 0;
+        if (isInterface) {
+            return 0;
+        }
+        int size = classStruct.isInstanceChild()
+                ? ShallowSizeOf.fieldOf(Object.class)
+                : 0;
         for (Map.Entry<PropertyConstant, PropertyInfo> entry :
                     structInfo.getProperties().entrySet()) {
             PropertyInfo infoProp = entry.getValue();
@@ -567,7 +574,7 @@ public class CommonBuilder
 
         if (isInterface && isSpecialized) {
             // make the specialized interface to extend the canonical interface
-            interfaces.add(ensureClassDesc(classStruct.getCanonicalType()));
+            interfaces.add(ensureClassDesc(classStruct.getNormalizedType()));
         }
 
         for (Contribution contrib : typeInfo.getContributionList()) {
@@ -600,7 +607,12 @@ public class CommonBuilder
      * Assemble properties for the "Impl" shape.
      */
     protected void assembleProperties(ClassBuilder classBuilder) {
-        List<PropertyInfo> initProps = null;
+        List<PropertyInfo> initProps       = null;
+        boolean            isInstanceChild = !isInterface && classStruct.isInstanceChild();
+
+        if (isInstanceChild) {
+            classBuilder.withField(Outer, CD_nObject, ClassFile.ACC_PUBLIC | ClassFile.ACC_FINAL);
+        }
 
         for (PropertyInfo prop : structInfo.getProperties().values()) {
             MethodConstant initializer = prop.getInitializer();
@@ -623,21 +635,22 @@ public class CommonBuilder
 
             assembleField(classBuilder, prop);
 
+            if (initializer != null && extraMethods.add(initializer)) {
+                MethodInfo methodInfo = typeInfo.getMethodById(initializer);
+                assert methodInfo != null;
+                assembleMethod(classBuilder, methodInfo,
+                        initializer.ensureJitMethodName(typeSystem), methodInfo.getJitDesc(this));
+            }
+
             if (prop.isConstant()) {
                 constProperties = lazyAdd(constProperties, prop);
-
-                if (initializer != null && extraMethods.add(initializer)) {
-                    MethodInfo methodInfo = typeInfo.getMethodById(initializer);
-                    assembleMethod(classBuilder, methodInfo,
-                            initializer.ensureJitMethodName(typeSystem), methodInfo.getJitDesc(this));
-                }
             } else if (prop.isInitialized() ||
                       !prop.isImplicitlyAssigned() && prop.getType().getDefaultValue() != null) {
                 initProps = lazyAdd(initProps, prop);
             }
         }
 
-        if (typeInfo.isSingleton()) {
+        if (typeInfo.isSingleton() && !isNativeField(Instance)) {
             // public static final $INSTANCE;
             ClassDesc cd = isContainerScoped(thisType) ? CD_MethodHandle : art.CD();
             classBuilder.withField(Instance, cd,
@@ -657,7 +670,9 @@ public class CommonBuilder
                 continue;
             }
 
-            if (shouldGenerate(prop.getIdentity())) {
+            if (isInstanceChild && prop.getName().equals("outer")) {
+                assembleOuterGetter(classBuilder, prop);
+            } else if (shouldGenerate(prop.getIdentity())) {
                 assembleProperty(classBuilder, prop);
             }
         }
@@ -930,7 +945,7 @@ public class CommonBuilder
                 }
             }
 
-            if (typeInfo.isSingleton()) {
+            if (typeInfo.isSingleton() && !isNativeField(Instance)) {
                 if (isScoped) {
                     // store the singleton construction handle; each container computes its instance
                     code.ldc(MethodHandleDesc.ofMethod(
@@ -942,7 +957,7 @@ public class CommonBuilder
                     // $INSTANCE = new Singleton($ctx);
                     // $ctx.allocated(implSize);
                     // $INSTANCE.$init($ctx);
-                    invokeDefaultConstructor(code, CD_this, ctxSlot);
+                    invokeDefaultConstructor(code, CD_this, ctxSlot, -1);
                     code.dup()
                         .putstatic(CD_this, Instance, CD_this);
                     initializeSingleton(code, CD_this, ctxSlot);
@@ -975,7 +990,7 @@ public class CommonBuilder
                 ClassFile.ACC_PRIVATE | ClassFile.ACC_STATIC, code -> {
             int ctxSlot = code.parameterSlot(0);
 
-            invokeDefaultConstructor(code, CD_this, ctxSlot);
+            invokeDefaultConstructor(code, CD_this, ctxSlot, -1);
             initializeSingleton(code, CD_this, ctxSlot);
             code.areturn();
         });
@@ -1017,21 +1032,33 @@ public class CommonBuilder
     protected void appendCLInit(CodeBuilder code, int ctxSlot) {}
 
     /**
-     * Add fields initialization to the Java constructor {@code void <init>(Ctx ctx)}.
+     * Add fields initialization to the Java constructor {@code void <init>(Ctx ctx)} or, for an
+     * instance child, {@code void <init>(Ctx ctx, nObject outer)}.
      */
     protected void assembleInit(ClassBuilder classBuilder, List<PropertyInfo> props) {
+        boolean hasOuter = classStruct.isInstanceChild();
+
         classBuilder.withMethodBody(INIT_NAME,
-            MD_xvmVoid,
+            hasOuter ? MD_xvmOuterVoid : MD_xvmVoid,
             ClassFile.ACC_PUBLIC,
             code -> {
                 Label startScope = code.newLabel();
                 Label endScope   = code.newLabel();
                 code.labelBinding(startScope);
+
                 if (isDebugInfo()) {
                     code.localVariable(code.parameterSlot(0), "$ctx", CD_Ctx, startScope, endScope);
+                    if (hasOuter) {
+                        code.localVariable(code.parameterSlot(1), "outer", CD_nObject, startScope, endScope);
+                    }
                 }
 
                 callSuperInitializer(code);
+                if (hasOuter) {
+                    code.aload(0)
+                        .aload(code.parameterSlot(1))
+                        .putfield(art.CD(), Outer, CD_nObject);
+                }
                 initializeFields(code, props);
 
                 code.labelBinding(endScope)
@@ -1047,33 +1074,72 @@ public class CommonBuilder
         ClassDesc CD_this = art.CD();
 
         for (PropertyInfo prop : props) {
-            if (prop.getInitializer() != null) {
-                throw new UnsupportedOperationException("Field initializer");
+            TypeConstant   type        = prop.getType();
+            TypeConstant   baseType    = type.removeNullable();
+            ClassDesc      cdProp      = type.getCallableClassDesc(typeSystem);
+            String         jitName     = prop.getIdentity().ensureJitPropertyName(typeSystem);
+            MethodConstant initializer = prop.getInitializer();
+            Label          doneLbl     = null;
+            RegisterInfo   valueReg;
+
+            if (initializer == null) {
+                Constant initValue = prop.getInitialValue();
+                if (initValue == null) {
+                    initValue = type.getDefaultValue();
+                    assert initValue != null;
+                }
+                code.aload(0);
+                valueReg = loadConstant(code, initValue);
+            } else {
+                // call the instance property initializer
+                MethodInfo methodInfo = typeInfo.getMethodById(initializer);
+                assert methodInfo != null;
+
+                JitMethodDesc jmd = methodInfo.getJitDesc(this);
+                assert !jmd.isStandardStatic;
+
+                code.aload(0)
+                    .dup()
+                    .aload(code.parameterSlot(0))
+                    .invokevirtual(CD_this, initializer.ensureJitMethodName(typeSystem), jmd.standardMD);
+
+                JitFlavor flavor = type.getJitDesc(this).flavor;
+                if (flavor == NullablePrimitive || flavor == NullableXvmPrimitive) {
+                    Label nonNull = code.newLabel();
+                    doneLbl = code.newLabel();
+
+                    code.dup();
+                    loadNull(code);
+                    code.if_acmpne(nonNull)
+                        .pop()
+                        .iconst_1()
+                        .putfield(CD_this, jitName + EXT, CD_boolean)
+                        .goto_(doneLbl)
+                        .labelBinding(nonNull);
+                }
+
+                if (baseType.isJitPrimitive()) {
+                    code.checkcast(ensureClassDesc(baseType));
+                    unbox(code, baseType);
+                    valueReg = baseType.isJavaPrimitive()
+                            ? new SingleSlot(baseType, JitFlavor.Primitive,
+                                    JitTypeDesc.requireJavaPrimitive(baseType), "")
+                            : new MultiSlot(JitFlavor.XvmPrimitive, baseType, ensureClassDesc(baseType),
+                                    JitTypeDesc.getXvmPrimitiveClasses(baseType));
+                } else {
+                    valueReg = new SingleSlot(type, JitFlavor.Specific, jmd.standardMD.returnType(), "");
+                }
             }
 
-            code.aload(0); // Stack: { this }
-
-            TypeConstant type      = prop.getType();
-            TypeConstant baseType  = type.removeNullable();
-            ClassDesc    cdProp    = type.getCallableClassDesc(typeSystem);
-            Constant     initValue = prop.getInitialValue();
-
-            if (initValue == null) {
-                initValue = type.getDefaultValue();
-                assert initValue != null;
-            }
-
-            RegisterInfo reg        = loadConstant(code, initValue);
-            String       jitName    = prop.getIdentity().ensureJitPropertyName(typeSystem);
-            JitFlavor    regFlavor  = reg.flavor();
-            JitFlavor    propFlavor = baseType.isJavaPrimitive()
+            JitFlavor regFlavor  = valueReg.flavor();
+            JitFlavor propFlavor = baseType.isJavaPrimitive()
                                         ? JitFlavor.Primitive
                                         : baseType.isXvmPrimitive()
                                             ? JitFlavor.XvmPrimitive
                                             : JitFlavor.Specific;
 
-            // Switch on the register flavor (the value being set into the property)
-            // and then switch on the property flavor
+            // switch on the register flavor (the value being set into the property)
+            // and then switch on the property flavor:
             //
             // Specific     -> Specific     e.g. String s = "Foo" or String? s = Null
             // Specific     -> Primitive    must be setting primitive property to Null
@@ -1084,12 +1150,17 @@ public class CommonBuilder
             // XvmPrimitive -> Specific     e.g. Int128 | String is = 100
 
             switch (regFlavor.name() + "->" + propFlavor.name()) {
-            case "Specific->Specific" ->
+            case "Specific->Specific" -> {
+                // stack: (this, value)
+                if (initializer != null && !valueReg.cd().equals(cdProp)) {
+                    code.checkcast(cdProp);
+                }
                 code.putfield(CD_this, jitName, cdProp);
+            }
 
             case "Specific->Primitive" -> {
-                // must be setting a primitive to Null
-                assert reg.type().isOnlyNullable();
+                // stack: (this, Null)
+                assert valueReg.type().isOnlyNullable();
                 code.pop();
                 ClassDesc cd = JitTypeDesc.requirePrimitiveFieldClass(baseType);
                 Builder.defaultLoad(code, cd);
@@ -1100,8 +1171,8 @@ public class CommonBuilder
             }
 
             case "Specific->XvmPrimitive" -> {
-                // must be setting a XVM primitive to Null
-                assert reg.type().isOnlyNullable();
+                // stack: (this, Null)
+                assert valueReg.type().isOnlyNullable();
                 code.pop();
                 ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(baseType);
                 for (int i = 0; i < cds.length; i++) {
@@ -1114,27 +1185,39 @@ public class CommonBuilder
             }
 
             case "Primitive->Primitive" ->
+                // stack: (this, primitive value)
                 code.putfield(CD_this, jitName, JitTypeDesc.requirePrimitiveFieldClass(baseType));
 
             case "Primitive->Specific", "XvmPrimitive->Specific" -> {
-                Builder.box(code, reg);
+                // stack: (this, primitive value) or (this, v0, ..., vN)
+                Builder.box(code, valueReg);
                 code.putfield(CD_this, jitName, cdProp);
             }
 
             case "XvmPrimitive->XvmPrimitive" -> {
-                ClassDesc[] cds = reg.slotCds();
+                // stack: (this, v0, ..., vN)
+                ClassDesc[] cds   = valueReg.slotCds();
+                int[]       slots = new int[cds.length];
                 for (int i = cds.length - 1; i >= 0; i--) {
-                    code.aload(0) // Stack: { this }
-                        .dup_x2()
-                        .pop()
-                        .putfield(CD_this, jitName + "$" + i, cds[i]);
+                    slots[i] = code.allocateLocal(toTypeKind(cds[i]));
+                    store(code, cds[i], slots[i]);
                 }
-                code.pop(); // pop the extra "aload(0)" from the stack
+                for (int i = 0; i < cds.length; i++) {
+                    if (i > 0) {
+                        code.aload(0);
+                    }
+                    load(code, cds[i], slots[i]);
+                    code.putfield(CD_this, jitName + "$" + i, cds[i]);
+                }
             }
 
             default ->
                 throw new IllegalStateException("Invalid register flavor: " + regFlavor +
                     " for property: " + propFlavor);
+            }
+
+            if (doneLbl != null) {
+                code.labelBinding(doneLbl);
             }
         }
     }
@@ -1143,10 +1226,18 @@ public class CommonBuilder
      * Assemble the super class constructor call.
      */
     protected void callSuperInitializer(CodeBuilder code) {
-        // super($ctx);
+        // super($ctx) or super($ctx, outer)
         code.aload(0)
-            .aload(code.parameterSlot(0))
-            .invokespecial(getSuperCD(), INIT_NAME, MD_xvmVoid);
+            .aload(code.parameterSlot(0));
+
+        TypeConstant superType = typeInfo.getExtends();
+        boolean      hasOuter  = superType != null &&
+                superType.getSingleUnderlyingClass(true).getComponent()
+                        instanceof ClassStructure superClass && superClass.isInstanceChild();
+        if (hasOuter) {
+            code.aload(code.parameterSlot(1));
+        }
+        code.invokespecial(getSuperCD(), INIT_NAME, hasOuter ? MD_xvmOuterVoid : MD_xvmVoid);
     }
 
     /**
@@ -1216,6 +1307,20 @@ public class CommonBuilder
             jitName += OPT;
         }
         assemblePropertyAccessor(classBuilder, prop, jitName, jmDesc, false);
+    }
+
+    private void assembleOuterGetter(ClassBuilder classBuilder, PropertyInfo prop) {
+        JitMethodDesc jmd = prop.getGetterJitDesc(this, thisType);
+        assert !jmd.isOptimized && !jmd.isStandardStatic;
+
+        MethodTypeDesc md = jmd.standardMD;
+        classBuilder.withMethodBody(prop.ensureGetterJitMethodName(typeSystem), md,
+                ClassFile.ACC_PUBLIC, code ->
+            code.aload(0)
+                .getfield(art.CD(), Outer, CD_nObject)
+                .checkcast(md.returnType())
+                .areturn()
+        );
     }
 
     protected void generateTrivialGetter(ClassBuilder classBuilder, PropertyInfo prop) {
@@ -1587,6 +1692,11 @@ public class CommonBuilder
                 continue; // not our responsibility
             }
 
+            if (method.isCapped() && method.containsVirtualConstructor()) {
+                // the class of class routes the virtual constructor to its narrowing implementation
+                continue;
+            }
+
             if (assembleDeclared &&
                     method.getHead().getImplementation() == Implementation.Declared) {
                 assembleMethod(classBuilder, method);
@@ -1599,11 +1709,138 @@ public class CommonBuilder
 
         if (!isInterface) {
             assembleXvmType(classBuilder);
+            assembleVirtualChildFactory(classBuilder);
         }
 
         if (typeInfo.getFormat() == Format.CONST) {
             assembleConstMethods(classBuilder);
         }
+    }
+
+    /**
+     * Assemble virtual child factory methods on the virtual child parent. Consider the following
+     * example:
+     *  <pre>
+     *    class Base {
+     *         class Child {}
+     *    }
+     *    class Derived extends Base {
+     *         @Override class Child {}
+     *    }
+     *  </pre>
+     * In that case, we generate the factory method "Base.Child Child$new()" on Base class that
+     * returns a new instance of the Base.Child, and an identical method on Derived class that
+     * returns an instance of the Derived.Child instead.
+     */
+    protected void assembleVirtualChildFactory(ClassBuilder classBuilder) {
+        for (ChildInfo child : typeInfo.getChildInfosByName().values()) {
+            if (child == null || !child.isVirtualClass()) {
+                continue;
+            }
+
+            TypeConstant   childType   = pool().ensureVirtualChildTypeConstant(jitType, child.getName());
+            ClassStructure childStruct = (ClassStructure) child.getComponent();
+            TypeConstant   childJIC    = childStruct.getFormalType().
+                                            resolveGenerics(pool(), childType).getJitICType();
+            TypeInfo       infoJIC     = childJIC.ensureAccess(Access.PRIVATE).ensureTypeInfo();
+            if (infoJIC.isAbstract()) {
+                continue;
+            }
+
+            ClassDesc childCD   = ensureClassDesc(childJIC);
+            String    childName = child.getName();
+
+            for (MethodConstant ctorId : infoJIC.findMethods("construct", -1, MethodKind.Constructor)) {
+                MethodInfo ctor     = infoJIC.getMethodById(ctorId);
+                MethodInfo baseCtor = ctor.getChildConstructorOrigin();
+                TypeInfo   baseInfo = baseCtor.getTypeInfo();
+                ClassDesc  baseCD   = baseInfo.getType().getCallableClassDesc(typeSystem);
+
+                // Notes:
+                // 1) baseCD represents the compile-time return type for the factory methods
+                // 2) it's possible that while the parent is not generic, the child is
+
+                String factoryName = childName +
+                        baseCtor.ensureJitMethodName(typeSystem).replace("construct", NEW);
+                String instorName  = ctor.ensureJitMethodName(typeSystem).replace("construct", NEW);
+
+                JitMethodDesc instorJmd = convertConstructToNew(infoJIC, childCD,
+                        (JitCtorDesc) ctor.getJitDesc(this, childJIC));
+
+                assembleChildConstructorRouting(classBuilder, factoryName,
+                        baseCD, baseInfo.hasGenericTypes(), childJIC, infoJIC.hasGenericTypes(),
+                        instorName, instorJmd.standardMD);
+                if (instorJmd.isOptimized) {
+                    assembleChildConstructorRouting(classBuilder, factoryName + OPT,
+                            baseCD, baseInfo.hasGenericTypes(), childJIC, infoJIC.hasGenericTypes(),
+                            instorName + OPT, instorJmd.optimizedMD);
+                }
+            }
+        }
+    }
+
+    /**
+     * Assemble one parent-side route, retaining the ancestor's name and return descriptor.
+     *
+     * For a generic Derived.Child overriding a non-generic Base.Child, the factory on Derived
+     * looks like this (CHILD_TYPE represents the Derived.Child TypeConstant):
+     *
+     *     Base.Child Child$new#17$p(Ctx ctx, long value) {
+     *         TypeConstant actualType = $childType(ctx, CHILD_TYPE);
+     *         return Derived.Child.$new#17$p(ctx, actualType, this, value);
+     *     }
+     *
+     * Here factoryHasType is false and hasType is true. If factoryHasType is true, the factory
+     * accepts a TypeConstant argument and resolves that instead of CHILD_TYPE. If hasType is
+     * false, both the type resolution and the instantiator's TypeConstant argument are omitted.
+     *
+     * @param factoryName      the factory name shared by all parent overrides
+     * @param baseCD           the original child declaration's return class, retained by every override
+     * @param isGenericParent  whether the factory contract includes a TypeConstant argument
+     * @param childType        the actual, non-phantom child implementation type
+     * @param isGenericChild   whether the actual child's instantiator requires a TypeConstant argument
+     * @param instorName       the child's instantiator method name
+     * @param instorMD         the child's instantiator descriptor
+     */
+    private void assembleChildConstructorRouting(
+            ClassBuilder   classBuilder,
+            String         factoryName,
+            ClassDesc      baseCD,
+            boolean        isGenericParent,
+            TypeConstant   childType,
+            boolean        isGenericChild,
+            String         instorName,
+            MethodTypeDesc instorMD) {
+        // the explicit parameters are identical; only the return and implicit arguments differ
+        MethodTypeDesc paramsMD = instorMD.dropParameterTypes(1, isGenericChild ? 3 : 2)
+                                          .changeReturnType(baseCD);
+        MethodTypeDesc factoryMD = isGenericParent
+                ? paramsMD.insertParameterTypes(1, CD_TypeConstant)
+                : paramsMD;
+
+        classBuilder.withMethodBody(factoryName, factoryMD, ClassFile.ACC_PUBLIC, code -> {
+            int ctxSlot = code.parameterSlot(0);
+            code.aload(ctxSlot);
+            if (isGenericChild) {
+                code.aload(0).aload(ctxSlot);
+                if (isGenericParent) {
+                    code.aload(code.parameterSlot(1));
+                } else {
+                    loadTypeConstant(code, childType);
+                }
+                code.invokevirtual(CD_nObject, "$childType", md(CD_TypeConstant, CD_Ctx, CD_TypeConstant));
+            } else {
+                // if the parent was generic, the child must've been too
+                assert !isGenericParent;
+            }
+            int paramStart = isGenericParent ? 2 : 1;
+            code.aload(0);
+            for (int i = paramStart; i < factoryMD.parameterCount(); i++) {
+                load(code, factoryMD.parameterType(i), code.parameterSlot(i));
+            }
+            code.invokestatic(instorMD.returnType(), instorName, instorMD)
+                .areturn();
+        });
     }
 
     /**
@@ -1616,7 +1853,7 @@ public class CommonBuilder
     protected void assembleXvmType(ClassBuilder classBuilder) {
         boolean hasType = typeInfo.hasGenericTypes();
 
-        if (hasType && !isNativeField("$type", CD_TypeConstant)) {
+        if (hasType && !isNativeField("$type")) {
             classBuilder.withField("$type", CD_TypeConstant, ClassFile.ACC_PUBLIC);
         }
 
@@ -1628,8 +1865,19 @@ public class CommonBuilder
                 code.aload(0)
                     .getfield(CD_this, "$type", CD_TypeConstant);
             } else {
-                // the static field is initialized in assembleCLInit()
-                code.getstatic(CD_this, CONST_PROP + '0', CD_TypeConstant);
+                // the static <CONST_PROP + '0'> field is initialized in assembleCLInit()
+                String sc0 = CONST_PROP + '0';
+                if (classStruct.isVirtualChild()) {
+                    // this.$outer.$childType(ctx, $sc0)
+                    code.aload(0)
+                        .getfield(CD_this, Outer, CD_nObject)
+                        .aload(code.parameterSlot(0))
+                        .getstatic(CD_this, sc0, CD_TypeConstant)
+                        .invokevirtual(CD_nObject, "$childType",
+                            md(CD_TypeConstant, CD_Ctx, CD_TypeConstant));
+                } else {
+                    code.getstatic(CD_this, sc0, CD_TypeConstant);
+                }
             }
             code.areturn();
         });
@@ -2039,7 +2287,7 @@ public class CommonBuilder
                 }
 
                 case XvmPrimitive: {
-                    assert optDesc.index != -1; // TODO CP -1 == thi$
+                    assert optDesc.index != -1;
                     int[] optIndexes = jmd.getAllOptimizedReturnIndexes(optDesc.index);
                     optIx -= optIndexes.length - 1; // skip the Opt returns we will process
                     idx =  optDesc.index == 0 ? 1 : 0;
@@ -2063,7 +2311,7 @@ public class CommonBuilder
                     Label ifNull = code.newLabel();
                     Label endIf  = code.newLabel();
 
-                    assert optDesc.index != -1; // TODO CP -1 == thi$
+                    assert optDesc.index != -1;
                     int[] optIndexes = jmd.getAllOptimizedReturnIndexes(optDesc.index);
                     optIx -= optIndexes.length - 2; // skip the Opt returns we will process
                     optExt = optReturns[optIndexes[optIndexes.length - 1]];
@@ -2145,7 +2393,7 @@ public class CommonBuilder
      *
      * @return {@code true} if the specified field exists for the native (augmented) class
      */
-    protected boolean isNativeField(String jitName, ClassDesc cd) {
+    protected boolean isNativeField(String jitName) {
         return false;
     }
 
@@ -3416,7 +3664,7 @@ public class CommonBuilder
             JitParamDesc[] dstParams = jmdDst.standardParams;
             for (int i = 0, c = srcParams.length; i < c; i++) {
                 JitParamDesc srcPd        = srcParams[i];
-                assert srcPd.index != -1; // TODO CP -1 == thi$
+                assert srcPd.index != -1;
                 int          srcParamSlot = code.parameterSlot(extraCount + srcPd.index);
                 TypeConstant srcParamType = srcPd.type;
                 JitParamDesc dstPd        = dstParams[i];
@@ -3656,7 +3904,7 @@ public class CommonBuilder
                         int     index    = doReturn ? i + 1 : i;
                         while (index < dstReturns.length
                                && dstReturns[index].index == dstPd.index) {
-                            assert dstPd.index != -1; // TODO CP -1 == thi$
+                            assert dstPd.index != -1;
                             loadFromContext(code, dstReturns[index].cd,
                                     dstReturns[index].altIndex, ctxSlot);
                             index++;
@@ -3776,6 +4024,11 @@ public class CommonBuilder
      *      C o = C.$new$17($ctx, $type, x, y, z);
      * where TC is a TypeConstant for the actual type C&lt;A&gt;.
      *
+     * For a non-generic instance child:
+     *      C o = C.$new$17($ctx, outer, x, y, z);
+     * For a generic instance child, the enclosing object is passed after the type:
+     *      C o = C.$new$17($ctx, $type, outer, x, y, z);
+     *
      * For singletons, referencing the instance of the singleton for the first time causes it to be
      * created using the well-known "Java singleton pattern" that leverages the Java ClassLoader
      * and memory model guarantees to ensure that only one instance is created, and that accessing
@@ -3785,9 +4038,14 @@ public class CommonBuilder
      * singletons have a non-static "$init()" method that is signature-wise identical to the
      * "$new()" method and performs everything in the following list of steps starting with step 4.
      *
-     * public static C $new$17(Ctx $ctx, X x, Y y, Z z)
-     * or
-     * public static C $new$17(Ctx $ctx, TC $type, X x, Y y, Z z)
+     *      public static C $new$17(Ctx $ctx, X x, Y y, Z z)
+     * or, for a generic class:
+     *      public static C $new$17(Ctx $ctx, TC $type, X x, Y y, Z z)
+     * or, for a non-generic instance child:
+     *      public static C $new$17(Ctx $ctx, nObject outer, X x, Y y, Z z)
+     * or, for a generic instance child:
+     *      public static C $new$17(Ctx $ctx, TC $type, nObject outer, X x, Y y, Z z)
+     *
      *    // note: singletons use this signature instead:
      *    public C $init$17(Ctx ctx)
      *
@@ -3803,7 +4061,8 @@ public class CommonBuilder
      *    // - this inits any fields that are not supposed to be null (reference
      *    //   types) or not supposed to be 0 etc. (primitive types)
      *    // note: singletons move this step to the Java static initializer
-     *    C thi$ = new C(ctx);
+     *    C thi$ = new C(ctx);        // ordinary class
+     *    C thi$ = new C(ctx, outer); // instance child
      *
      *    // step 3a (optional) if the type is specified, assign the "$sc0" field
      *    thi$.$sc0 = $type;
@@ -3886,6 +4145,7 @@ public class CommonBuilder
             JitMethodDesc jmd) {
         boolean   isSingleton = typeInfo.isSingleton();
         boolean   hasType     = typeInfo.hasGenericTypes();
+        boolean   hasOuter    = classStruct.isInstanceChild();
         ClassDesc CD_this     = art.CD();
 
         // Note: the "$init" is a virtual method for singletons and "$new" is static otherwise;
@@ -3927,6 +4187,7 @@ public class CommonBuilder
             int ctxSlot    = code.parameterSlot(0);
             int extraSlots = 1;
             int typeSlot   = -1;
+            int outerSlot  = -1;
 
             if (debugInfo) {
                 code.localVariable(ctxSlot, "$ctx", CD_Ctx, startScope, endScope);
@@ -3935,6 +4196,9 @@ public class CommonBuilder
             if (hasType) {
                 typeSlot = code.parameterSlot(1);
                 extraSlots++;
+            }
+            if (hasOuter) {
+                outerSlot = code.parameterSlot(extraSlots++);
             }
 
             // for singleton classes the steps 0-2 are performed by the static initializer;
@@ -3955,7 +4219,7 @@ public class CommonBuilder
                 if (debugInfo) {
                     code.localVariable(thisSlot, "thi$", CD_this, startScope, endScope);
                 }
-                invokeDefaultConstructor(code, CD_this);
+                invokeDefaultConstructor(code, CD_this, ctxSlot, outerSlot);
                 code.astore(thisSlot);
 
                 if (hasType) {
@@ -4078,8 +4342,7 @@ public class CommonBuilder
             md = jmd.standardMD;
         }
 
-        if (method.isFunction() || method.isCtorOrValidator() ||
-                method.getHead().getMethodStructure().isPropertyInitializer()) {
+        if (jmd.isStandardStatic) {
             if (isInterface && method.isVirtualConstructor()) {
                 // virtual constructors only generate the "new$" virtual method declarations
                 return;
@@ -4088,6 +4351,11 @@ public class CommonBuilder
         } else if (jmd.isOptimizedStatic) {
             // a primitive class generates functions not methods, because "this" is primitive
             flags |= ClassFile.ACC_STATIC;
+        }
+
+        if (method.isAbstract()) {
+            classBuilder.withMethod(jitName, md, flags, ignored -> {});
+            return;
         }
 
         BuildContext bctx = new BuildContext(this,
@@ -4134,26 +4402,12 @@ public class CommonBuilder
     }
 
     protected void generateCode(MethodTypeDesc md, BuildContext bctx, CodeBuilder code) {
-
-        String moduleName = thisId.getModuleConstant().getName();
-        int    baseIndex  = bctx.className.lastIndexOf(TypeSystem.HASH);
-        String className  = baseIndex > 0
+        int    baseIndex = TypeSystem.findJitSuffix(bctx.className);
+        String className = baseIndex > 0
                 ? bctx.className.substring(0, baseIndex)
                 : bctx.className;
 
-        GenerateStub:
-        if (Arrays.stream(JIT_LIST).anyMatch(name -> {
-            if (name.endsWith("*")) {
-                name = name.substring(0, name.length() - 1);
-                return className.contains(name) || moduleName.contains(name);
-            } else {
-                return className.endsWith(name) || moduleName.endsWith(name);
-            }})) {
-
-            if (Arrays.stream(NO_JIT_LIST).anyMatch(className::endsWith)) {
-                break GenerateStub;
-            }
-
+        if (Arrays.stream(NO_JIT_LIST).noneMatch(className::endsWith)) {
             // use the enclosing Ecstasy method name to cover all overloads and nested lambdas
             MethodConstant methodId = bctx.methodStruct.getIdentityConstant();
             while (methodId.isLambda() &&
@@ -4163,22 +4417,13 @@ public class CommonBuilder
 
             // a signature entry exempts one overload without disabling the others
             Set<String> excluded = NO_JIT_METHODS.get(className);
-            if (excluded != null && (excluded.contains(methodId.getName()) ||
-                    excluded.contains(methodId.getSignature().getValueString()))) {
-                if (METHOD_SKIP_SET.add(className)) {
-                    System.err.println("*** Skipping some methods for " + className);
-                }
-                SKIP_SET.add(className); // stops the skipping class log message
-                break GenerateStub;
+            if (excluded == null || !(excluded.contains(methodId.getName()) ||
+                                      excluded.contains(methodId.getSignature().getValueString()))) {
+                bctx.assembleCode(code);
+                return;
             }
-
-            bctx.assembleCode(code);
-            return;
         }
 
-        if (SKIP_SET.add(className)) {
-            System.err.println("*** Skipping code gen for " + className);
-        }
         defaultLoad(code, md.returnType());
         addReturn(code, md.returnType());
     }
@@ -4215,151 +4460,21 @@ public class CommonBuilder
      */
     private static final String InstanceInit = Instance + "$=";
 
-    private static final String[] JIT_LIST = new String[] {
-            "Test*", "test*",
-            "anon*",                        // covers simple tests and examples
-
-            // ecstasy
-            "org.xtclang.ecstasy.Appender",
-            "org.xtclang.ecstasy.AppenderᐸCharᐳ",
-            "org.xtclang.ecstasy.Assertion",
-            "org.xtclang.ecstasy.Boolean",
-            "org.xtclang.ecstasy.Closed",
-            "org.xtclang.ecstasy.Comparable",
-            "org.xtclang.ecstasy.ConcurrentModification",
-            "org.xtclang.ecstasy.Const",
-            "org.xtclang.ecstasy.Deadlock",
-            "org.xtclang.ecstasy.Duplicable",
-            "org.xtclang.ecstasy.Exception*",
-            "org.xtclang.ecstasy.Freezable",
-            "org.xtclang.ecstasy.IllegalArgument",
-            "org.xtclang.ecstasy.IllegalState",
-            "org.xtclang.ecstasy.Iterable*",
-            "org.xtclang.ecstasy.Iterator*",
-            "org.xtclang.ecstasy.NotAssigned",
-            "org.xtclang.ecstasy.NotImplemented",
-            "org.xtclang.ecstasy.NotShareable",
-            "org.xtclang.ecstasy.Nullable",
-            "org.xtclang.ecstasy.Orderable",
-            "org.xtclang.ecstasy.Ordered",
-            "org.xtclang.ecstasy.OutOfBounds",
-            "org.xtclang.ecstasy.OutOfMemory",
-            "org.xtclang.ecstasy.Range",
-            "org.xtclang.ecstasy.ReadOnly",
-            "org.xtclang.ecstasy.Sequential",
-            "org.xtclang.ecstasy.Service",
-            "org.xtclang.ecstasy.Service$Aware",
-            "org.xtclang.ecstasy.Sliceable*",
-            "org.xtclang.ecstasy.StackOverflow",
-            "org.xtclang.ecstasy.TimedOut",
-            "org.xtclang.ecstasy.Timeout",
-            "org.xtclang.ecstasy.TypeMismatch",
-            "org.xtclang.ecstasy.Unsupported",
-
-            // collections
-            "org.xtclang.ecstasy.collections.Array",
-            "org.xtclang.ecstasy.collections.Array$Mutability",
-            "org.xtclang.ecstasy.collections.Collection",
-            "org.xtclang.ecstasy.collections.List",
-            "org.xtclang.ecstasy.collections.NaturalHasher",
-            "org.xtclang.ecstasy.collections.Set",
-            "org.xtclang.ecstasy.collections.Tuple",
-            "org.xtclang.ecstasy.collections.UniformIndexed*",
-            "org.xtclang.ecstasy.collections.VirtualHasher",
-            "org.xtclang.ecstasy.collections.deferred.DeferredCollection",
-            "org.xtclang.ecstasy.collections.deferred.DistinctCollection",
-
-            // io
-            "org.xtclang.ecstasy.io.Reader",
-            "org.xtclang.ecstasy.io.TextPosition",
-            "org.xtclang.ecstasy.io.IOException",
-            "org.xtclang.ecstasy.io.IllegalUTF",
-
-            // maps
-            "org.xtclang.ecstasy.maps.CollectImmutableMap",
-            "org.xtclang.ecstasy.maps.CopyableMap",
-            "org.xtclang.ecstasy.maps.CursorEntry",
-            "org.xtclang.ecstasy.maps.DiscreteEntry*",
-            "org.xtclang.ecstasy.maps.HashMap",
-            "org.xtclang.ecstasy.maps.KeyEntry",
-            "org.xtclang.ecstasy.maps.ListMapCollector",
-            "org.xtclang.ecstasy.maps.Map",
-            "org.xtclang.ecstasy.maps.Map$Entry",
-            "org.xtclang.ecstasy.maps.MapAppender",
-            "org.xtclang.ecstasy.maps.MapCollector",
-            "org.xtclang.ecstasy.maps.StringableEntry",
-            "org.xtclang.ecstasy.maps.deferred.DeferredMap",
-
-            // numbers
-            "org.xtclang.ecstasy.numbers.BFloat16",
-            "org.xtclang.ecstasy.numbers.BinaryFPNumber",
-            "org.xtclang.ecstasy.numbers.Bit",
-            "org.xtclang.ecstasy.numbers.Dec*",
-            "org.xtclang.ecstasy.numbers.Float8e4",
-            "org.xtclang.ecstasy.numbers.Float8e5",
-            "org.xtclang.ecstasy.numbers.Float16",
-            "org.xtclang.ecstasy.numbers.Float32",
-            "org.xtclang.ecstasy.numbers.Float64",
-            "org.xtclang.ecstasy.numbers.Float128",
-            "org.xtclang.ecstasy.numbers.FPConvertible",
-            "org.xtclang.ecstasy.numbers.FPLiteral",
-            "org.xtclang.ecstasy.numbers.Int*",
-            "org.xtclang.ecstasy.numbers.Number",
-            "org.xtclang.ecstasy.numbers.FPNumber",
-            "org.xtclang.ecstasy.numbers.Nibble",
-            "org.xtclang.ecstasy.numbers.Number$compare$Family*",
-            "org.xtclang.ecstasy.numbers.Number$Signum*",
-            "org.xtclang.ecstasy.numbers.Random",
-            "org.xtclang.ecstasy.numbers.UInt*",
-
-            // reflect
-            "org.xtclang.ecstasy.reflect.Module",
-            "org.xtclang.ecstasy.reflect.Package",
-
-            // text
-            "org.xtclang.ecstasy.text.Char*",
-            "org.xtclang.ecstasy.text.String",
-            "org.xtclang.ecstasy.text.Stringable",
-            "org.xtclang.ecstasy.text.StringBuffer",
-
-            // temporal
-            "org.xtclang.ecstasy.temporal.Date*",
-            "org.xtclang.ecstasy.temporal.Duration",
-            "org.xtclang.ecstasy.temporal.Time*",
-
-            // _native.io
-            "_native.io.TerminalConsole",
-            "_native.temporal.LocalClock",
-    };
+    // ----- TEMPORARY -----------------------------------------------------------------------------
 
     private static final String[] NO_JIT_LIST = new String[] {
+        "org.xtclang.ecstasy.reflect.Class",
+        "org.xtclang.ecstasy.reflect.Type",
     };
 
     private static final Map<String, Set<String>> NO_JIT_METHODS = Map.ofEntries(
         Map.entry("org.xtclang.ecstasy.collections.deferred.DeferredCollection",
-            Set.of("calc")), // TODO: applied @Lazy property state is not available on the host
+            Set.of("calc")),         // TODO: need support for @Lazy
         Map.entry("org.xtclang.ecstasy.collections.deferred.DistinctCollection",
-            Set.of("calc",        // TODO: applied @Lazy property state is not available on the host
-                   "evaluateInto")), // TODO: requires HashSet compilation
-        Map.entry("org.xtclang.ecstasy.collections.UniformIndexed",
-            Set.of("elementAt")), // TODO: NEWCG_N is not implemented
+            Set.of("calc")), // TODO: need support for @Lazy
         Map.entry("org.xtclang.ecstasy.maps.DiscreteEntry",
-            Set.of("construct")),  // TODO: specialized return is incompatible with a conditional mixin
-        Map.entry("org.xtclang.ecstasy.maps.HashMap",
-            Set.of("clear",       // TODO: virtual construction result is incompatible with ReplicableCopier
-                   "duplicate")), // TODO: virtual constructor lookup returns no MethodInfo
-        Map.entry("org.xtclang.ecstasy.maps.Map",
-            Set.of("defaultCollector", // TODO: virtual constructor method constant
-                   "map",              // TODO: incompatible formal result types in TypeMatrix
-                   "removeAll")),      // TODO: key's formal type is tracked as Object
-        Map.entry("org.xtclang.ecstasy.maps.deferred.DeferredMap",
-            Set.of("fromEntry")),      // TODO: A_SUPER argument for a virtual construction
+            Set.of("construct")), // TODO: verify specialized constructor return with a conditional mixin
         Map.entry("org.xtclang.ecstasy.Timeout",
-            Set.of("construct")), // TODO: native Service is a Java class, but the call expects an interface
-        Map.entry("org.xtclang.ecstasy.numbers.Number",
-            Set.of("converterFor", "converterTo"))
+            Set.of("construct")) // TODO: invokes nService with invokeinterface although nService is a Java class
     );
-
-    private static final HashSet<String> SKIP_SET = new HashSet<>();
-    private static final HashSet<String> METHOD_SKIP_SET = new HashSet<>();
 }

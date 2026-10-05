@@ -11,6 +11,7 @@ import java.lang.constant.ClassDesc;
 import java.lang.constant.MethodTypeDesc;
 
 import org.xvm.asm.Constants.Access;
+import org.xvm.asm.Component.Format;
 
 import org.xvm.asm.constants.CastTypeConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -481,18 +482,19 @@ public abstract class OpInvocable extends Op {
             jmd = jmd.standardOnly();
         }
 
-        boolean       fOptimized = jmd.isOptimized;
-        boolean       fPrimitive = jmd.isPrimitivized();
-        int           cReturns   = infoMethod.getSignature().getReturnCount();
-        boolean       fCond      = infoMethod.isConditionalReturn(infoTarget);
+        boolean fOptimized = jmd.isOptimized;
+        boolean fPrimitive = jmd.isPrimitivized();
+        int     cReturns   = infoMethod.getSignature().getReturnCount();
+        boolean fCond      = infoMethod.isConditionalReturn(infoTarget);
 
         if (fPrimitive && !fUnboxed) {
             // the register contains a boxed primitive, but the optimized method takes thi$
             Builder.unbox(code, typeInvoke);
         }
 
-        if (bodyHead.getIdentity().getNestedDepth() > 2) {
-            // methods nested inside methods need to be built on-the-spot
+        if (bodyHead.getIdentity().getNestedDepth() > 2 || infoMethod.getTypeInfo() == null) {
+            // nested and private mixin methods absent from TypeInfo need to be built here;
+            // the second check is based on the synthetic info produced by computeMethodInfo()
             bctx.buildMethod(methodName, bodyHead);
         }
 
@@ -529,8 +531,17 @@ public abstract class OpInvocable extends Op {
 
     protected MethodInfo computeMethodInfo(BuildContext bctx, TypeConstant typeTarget) {
         if (typeTarget.containsFormalType(true)) {
-            typeTarget = typeTarget.resolveConstraints().ensureAccess(Access.PRIVATE);
+            for (TypeConstant typeParam : typeTarget.getParamTypesArray()) {
+                if (typeParam.isRelationalType()) {
+                    // if the specialization combines the concrete and formal parameter (e.g. Bit +
+                    // List.Element), its TypeInfo signature is not a usable invocation signature
+                    // TODO: this is a vert blunt compensation; may need to reconsider
+                    typeTarget = typeTarget.resolveConstraints().ensureAccess(Access.PRIVATE);
+                    break;
+                }
+            }
         }
+
         TypeInfo        infoTarget = bctx.getTypeInfo(typeTarget);
         MethodConstant  idMethod   = bctx.getConstant(m_nMethodId, MethodConstant.class);
         MethodInfo      infoMethod = infoTarget.getMethodById(idMethod, true); // runtime hack
@@ -551,7 +562,23 @@ public abstract class OpInvocable extends Op {
                 // its Object constraint; allow addAll(Iterable<Char>) to match Iterable<Object>
                 infoMethod = infoTarget.getMethodBySignature(sig, true);
             }
-            assert infoMethod != null;
+
+            if (infoMethod == null && typeTarget instanceof CastTypeConstant cast) {
+                // an inferred union may omit a method guaranteed by its base type
+                infoMethod = bctx.getTypeInfo(cast.getBaseType()).getMethodById(idMethod, true);
+            }
+
+            if (infoMethod == null) {
+                // private and nested (they are always private) mixin methods can be absent from the
+                // target's TypeInfo
+                MethodStructure method = (MethodStructure) idMethod.getComponent();
+
+                assert method != null : "Failed to find MethodInfo for " + idMethod.getValueString();
+                assert method.getContainingClass().getFormat() == Format.MIXIN &&
+                       method.getAccess() == Access.PRIVATE;
+
+                infoMethod = new MethodInfo(new MethodBody(method), -1);
+            }
         }
         return infoMethod;
     }

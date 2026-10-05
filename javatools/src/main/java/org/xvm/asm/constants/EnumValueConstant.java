@@ -142,6 +142,10 @@ public class EnumValueConstant
                 return pool.valOf(this.getPresumedOrdinal() >=
                     ((EnumValueConstant) that).getPresumedOrdinal());
 
+            case COMP_ORD:
+                return pool.valOrd(this.getPresumedOrdinal() -
+                    ((EnumValueConstant) that).getPresumedOrdinal());
+
             default:
                 break;
             }

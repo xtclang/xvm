@@ -17,18 +17,22 @@ class NumberTests {
         testMagnitude();
         testAbs();
         testAbsMinValue();
-// TODO: JIT calls $hasOptMethod() with a null nFunction context
-//        testConverterFor();
+        testNarrowed(7, UInt64.MaxValue, 1.5);
+        testConverterFor();
     }
 
-//    void testConverterFor() {
-//        function Byte(Int) toByte = Number.converterFor(Int, Byte);
-//        assert toByte(3) == 3;
-//        assert toByte(45) == 45;
-//
-//        function Float64(Int) toFloat64 = Number.converterFor(Int, Float64);
-//        assert toFloat64(42) == 42.0;
-//    }
+    void testConverterFor() {
+        function Byte(Int) toByte = Number.converterFor(Int, Byte);
+        assert toByte(3) == 3;
+        assert toByte(45) == 45;
+
+        function Float64(Int) toFloat64 = Number.converterFor(Int, Float64);
+        assert toFloat64(42) == 42.0;
+
+        function Int128(Int) toInt128 = Number.converterFor(Int, Int128);
+        Int128 converted = toInt128(3);
+        assert converted == 3;
+    }
 
     void testBitLength() {
         assert Dec32.one().bitLength == 32;
@@ -1421,6 +1425,25 @@ class NumberTests {
             assert as "Expected OutOfBounds";
         } catch (OutOfBounds e) {
             // expected
+        }
+    }
+
+    void testNarrowed(Int128? value, UInt64? unsigned, Dec128? decimal) {
+        if (value != Null, unsigned != Null, decimal != Null) {
+            // use the narrowed operands directly, outside assert's diagnostic-copy generation
+            Int128 sum        = value + value;
+            UInt64 quotient   = unsigned / 2;
+            UInt64 remainder  = unsigned % 3;
+            UInt64 shifted    = unsigned >> 1;
+            Dec128 decimalSum = decimal + decimal;
+
+            assert sum        == 14;
+            assert quotient   == 0x7FFF_FFFF_FFFF_FFFF;
+            assert remainder  == 0;
+            assert shifted    == 0x7FFF_FFFF_FFFF_FFFF;
+            assert decimalSum == 3.0;
+        } else {
+            assert;
         }
     }
 }

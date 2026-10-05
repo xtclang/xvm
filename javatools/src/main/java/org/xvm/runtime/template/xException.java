@@ -17,6 +17,8 @@ import org.xvm.runtime.TypeComposition;
 
 import org.xvm.runtime.template.collections.xArray;
 
+import org.xvm.runtime.template.numbers.xInt64;
+
 import org.xvm.runtime.template.text.xString;
 import org.xvm.runtime.template.text.xString.StringHandle;
 
@@ -82,6 +84,27 @@ public class xException
             return frame.assignValue(iReturn, hText);
         }
         return super.getFieldValue(frame, hTarget, idProp, iReturn);
+    }
+
+    // ----- Const support -------------------------------------------------------------------------
+
+    @Override
+    protected int callEqualsImpl(Frame frame, TypeComposition clazz,
+                                 ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
+        return frame.assignValue(iReturn, xBoolean.makeHandle(hValue1 == hValue2));
+    }
+
+    @Override
+    protected int callCompareImpl(Frame frame, TypeComposition clazz,
+                                  ObjectHandle hValue1, ObjectHandle hValue2, int iReturn) {
+        return frame.assignValue(iReturn, xOrdered.makeHandle(Integer.compare(
+                System.identityHashCode(hValue1), System.identityHashCode(hValue2))));
+    }
+
+    @Override
+    protected int buildHashCode(Frame frame, TypeComposition clazz,
+                                ObjectHandle hTarget, int iReturn) {
+        return frame.assignValue(iReturn, xInt64.makeHandle(System.identityHashCode(hTarget)));
     }
 
     // ---- stock exceptions -----------------------------------------------------------------------

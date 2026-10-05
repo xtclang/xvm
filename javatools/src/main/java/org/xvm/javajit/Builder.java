@@ -337,6 +337,13 @@ public abstract class Builder {
             if (singleton.getClassConstant() instanceof PropertyConstant propId) {
                 TypeConstant ownerType = propId.getClassIdentity().getType();
                 PropertyInfo propInfo  = propId.getPropertyInfo(ownerType);
+                if (!propInfo.isConstant()) {
+                    // an instance property on a runtime constant (e.g. singleton)
+                    RegisterInfo targetReg = loadConstant(bctx, code,
+                            pool().ensureSingletonConstConstant(propId.getClassIdentity()));
+                    return loadPropertyValue(code, targetReg, propId, bctx.ctxSlot(code));
+                }
+
                 TypeConstant propType  = singleton.getType();
                 JitTypeDesc  jtd       = propType.getJitDesc(this);
 
@@ -385,7 +392,7 @@ public abstract class Builder {
                 ConstantPool pool = constant.getConstantPool();
                 if (enumConstant.getType().isOnlyNullable()) {
                     loadNull(code);
-                    return new SingleSlot(pool.typeNullable(), Specific, CD_Nullable, "");
+                    return new SingleSlot(pool.typeNullable(), Specific, CD_Null, "");
                 }
                 else if (enumConstant.getType().isA(pool.typeBoolean())) {
                     if (enumConstant.getIntValue().getInt() == 0) {
@@ -448,40 +455,8 @@ public abstract class Builder {
 
         case PropertyConstant propId: {
             // support for the "local property" mode
-            RegisterInfo targetReg = bctx.loadThis(code);
-            int          ctxSlot   = bctx.ctxSlot(code);
-            PropertyInfo info      = isPrimitivePseudoField(targetReg.type(), propId)
-                    ? loadPrimitivePseudoField(code, targetReg, propId, ctxSlot)
-                    : loadProperty(code, targetReg.type(), propId, true, ctxSlot);
-
-            TypeConstant type = info.getType();
-            JitTypeDesc  jtd  = type.getJitDesc(this);
-            switch (jtd.flavor) {
-                case NullablePrimitive:
-                    // load the null flag value from the context to the stack
-                    loadFromContext(code, CD_boolean, 0, ctxSlot);
-                    return new ExtendedSlot(Op.A_STACK, 0, 0, jtd.flavor, type, jtd.cd, "");
-
-                case XvmPrimitive:
-                case NullableXvmPrimitive:
-                    // for XVM primitives, the first value is on the stack, but we need to load any
-                    // remaining values from the context onto the stack
-                    ClassDesc[] cds  = JitTypeDesc.getXvmPrimitiveClasses(type);
-                    int         slot = 0;
-                    for (int i = 1; i < cds.length; i++) {
-                        loadFromContext(code, cds[i], slot++, ctxSlot);
-                    }
-                    if (jtd.flavor == NullableXvmPrimitive) {
-                        // load the boolean Null flag from the context
-                        loadFromContext(code, CD_boolean, slot, ctxSlot);
-                    }
-                    return new MultiSlot(jtd.flavor, type, jtd.cd, cds);
-                case Specific, Primitive, Widened:
-                    // single property value is on the stack
-                    return new SingleSlot(type, jtd.flavor, jtd.cd, "");
-                default:
-                    throw new IllegalStateException("TODO Unsupported flavor: " + jtd.flavor);
-            }
+            RegisterInfo regThis = bctx.loadThis(code);
+            return loadPropertyValue(code, regThis, propId, bctx.ctxSlot(code));
         }
 
         case MethodConstant methodId: {
@@ -645,6 +620,48 @@ public abstract class Builder {
         }
 
         throw new UnsupportedOperationException(constant.toString());
+    }
+
+    /**
+     * Load a property value. The target is already on the Java stack.
+     *
+     * @return the register description of the value on the stack
+     */
+    private RegisterInfo loadPropertyValue(CodeBuilder code, RegisterInfo targetReg,
+                                           PropertyConstant propId, int ctxSlot) {
+        PropertyInfo info = isPrimitivePseudoField(targetReg.type(), propId)
+                ? loadPrimitivePseudoField(code, targetReg, propId, ctxSlot)
+                : loadProperty(code, targetReg.type(), propId, true, ctxSlot);
+
+        TypeConstant type = info.getType();
+        JitTypeDesc  jtd  = type.getJitDesc(this);
+        switch (jtd.flavor) {
+        case NullablePrimitive:
+            // load the null flag value from the context to the stack
+            loadFromContext(code, CD_boolean, 0, ctxSlot);
+            return new ExtendedSlot(Op.A_STACK, 0, 0, jtd.flavor, type, jtd.cd, "");
+
+        case XvmPrimitive, NullableXvmPrimitive:
+            // for XVM primitives, the first value is on the stack, but we need to load any
+            // remaining values from the context onto the stack
+            ClassDesc[] cds  = JitTypeDesc.getXvmPrimitiveClasses(type);
+            int         slot = 0;
+            for (int i = 1; i < cds.length; i++) {
+                loadFromContext(code, cds[i], slot++, ctxSlot);
+            }
+            if (jtd.flavor == NullableXvmPrimitive) {
+                // load the boolean Null flag from the context
+                loadFromContext(code, CD_boolean, slot, ctxSlot);
+            }
+            return new MultiSlot(jtd.flavor, type, jtd.cd, cds);
+
+        case Specific, Primitive, Widened:
+            // single property value is on the stack
+            return new SingleSlot(type, jtd.flavor, jtd.cd, "");
+
+        default:
+            throw new IllegalStateException("TODO Unsupported flavor: " + jtd.flavor);
+        }
     }
 
     /**
@@ -996,7 +1013,7 @@ public abstract class Builder {
         }
 
         PropertyInfo xvmInfo = propId.getPropertyInfo(typeContainer);
-        TypeConstant typeJit = typeContainer.getCallableJitType().ensureAccess(Access.PRIVATE);
+        TypeConstant typeJit = typeContainer.getJitCCType().ensureAccess(Access.PRIVATE);
         PropertyInfo jitInfo = typeJit.ensureTypeInfo().findProperty(propId, true);
         if (jitInfo == null) {
             // a relational type can collapse to Object, which may not expose the property
@@ -1011,7 +1028,7 @@ public abstract class Builder {
         if (!invokeStatic) {
             // resolve the descriptor against the implementation owner
             typeOwner = jitInfo.getOwnerType(this, typeContainer);
-            typeOwner = typeOwner.getCallableJitType();
+            typeOwner = typeOwner.getJitCCType();
             jitInfo   = propId.getPropertyInfo(typeOwner);
             jmdGet    = jitInfo.getGetterJitDesc(this, typeOwner);
         }
@@ -1180,31 +1197,6 @@ public abstract class Builder {
     }
 
     /**
-     * Build the byte codes to convert a primitive value on the stack into a Java {@code long}
-     * value on the stack.
-     *
-     * @param cd    the type of the primitive to convert
-     * @param code  the code builder to which the byte codes should be appended
-     */
-    public static void buildPrimitiveToLong(ClassDesc cd, CodeBuilder code) {
-        switch (cd.descriptorString()) {
-            case "Z", "B", "S", "I":
-                code.i2l();
-                break;
-            case "J":
-                // already long
-                break;
-            case "F":
-                code.invokestatic(CD_JavaFloat, "floatToRawIntBits", md(CD_int, CD_float));
-                code.i2l();
-                break;
-            case "D":
-                code.invokestatic(CD_JavaDouble, "doubleToRawLongBits", md(CD_long, CD_double));
-                break;
-        }
-    }
-
-    /**
      * Generate a "Null" check for the specified register.
      *
      * @param code     the {@link CodeBuilder} to use
@@ -1262,7 +1254,7 @@ public abstract class Builder {
      * Generate a "load" for the XTC `Null` value.
      */
     public static CodeBuilder loadNull(CodeBuilder code) {
-        code.getstatic(CD_Nullable, "Null", CD_Nullable);
+        code.getstatic(CD_Null, Instance, CD_Null);
         return code;
     }
 
@@ -1324,25 +1316,26 @@ public abstract class Builder {
     }
 
     /**
-     * Call the default constructor for the target class.
+     * Call the default constructor for the target class using the Ctx in the specified slot,
+     * optionally supplying an instance child's outer object.
      *
-     * @param cd the target ClassDesc
+     * @param cd         the target ClassDesc
+     * @param ctxSlot    the slot containing the Ctx
+     * @param outerSlot  the slot containing the outer object, or -1 for a non-child
      */
-    public static CodeBuilder invokeDefaultConstructor(CodeBuilder code, ClassDesc cd) {
-        invokeDefaultConstructor(code, cd, code.parameterSlot(0));
-        return code;
-    }
-
-    /**
-     * Call the default constructor for the target class using the Ctx in the specified slot.
-     */
-    public static CodeBuilder invokeDefaultConstructor(CodeBuilder code, ClassDesc cd, int ctxSlot) {
+    public static CodeBuilder invokeDefaultConstructor(CodeBuilder code, ClassDesc cd,
+                                                       int ctxSlot, int outerSlot) {
         code.new_(cd)
             .dup()
-            .aload(ctxSlot)
-            .invokespecial(cd, INIT_NAME, MD_xvmVoid);
+            .aload(ctxSlot);
+        if (outerSlot >= 0) {
+            code.aload(outerSlot);
+            code.invokespecial(cd, INIT_NAME, MD_xvmOuterVoid);
+        } else {
+            code.invokespecial(cd, INIT_NAME, MD_xvmVoid);
+        }
         return code;
-   }
+    }
 
     /**
      * Generate a "pop()" opcode for a type, assuming the corresponding value is already on the Java
@@ -1472,19 +1465,21 @@ public abstract class Builder {
         switch (name) {
             case "Bit"     -> code.getfield(CD_Bit,     "$value",    CD_int);
             case "Boolean" -> code.getfield(CD_Boolean, "$value",    CD_boolean);
+            case "True"    -> code.iconst_1();
+            case "False"   -> code.iconst_0();
             case "Char"    -> code.getfield(CD_Char,    "codepoint", CD_int);
             case "Dec32"   -> code.getfield(CD_Dec32,   "$bits",     CD_int);
             case "Dec64"   -> code.getfield(CD_Dec64,   "$bits",     CD_long);
             case "Dec128"  -> {
                 // stack is Dec128
                 code.dup();
-                // stack is Dec128 Dec128
+                // stack is (Dec128, Dec128)
                 code.getfield(CD_Dec128, "$lowBits", CD_long);
-                // stack is Dec128 long long_2
+                // stack is (Dec128, long, long_2)
                 code.dup2_x1().pop2();
-                // stack is long long_2 Dec128
+                // stack is (long, long_2, Dec128)
                 code.getfield(CD_Dec128, "$highBits", CD_long);
-                // stack is long long_2 long long_2
+                // stack is (long, long_2, long, long_2)
             }
             case "Float8e4" -> code.getfield(CD_Float8e4, "$value", CD_byte).ldc(0xFF).iand();
             case "Float8e5" -> code.getfield(CD_Float8e5, "$value", CD_byte).ldc(0xFF).iand();
@@ -1499,13 +1494,13 @@ public abstract class Builder {
             case "Int128"  -> {
                 // stack is Int128
                 code.dup();
-                // stack is Int128 Int128
+                // stack is (Int128, Int128)
                 code.getfield(CD_Int128, "$lowValue", CD_long);
-                // stack is Int128 long
+                // stack is (Int128, long)
                 code.dup2_x1().pop2();
-                // stack is long Int128
+                // stack is (long, Int128)
                 code.getfield(CD_Int128, "$highValue", CD_long);
-                // stack is long long_2
+                // stack is (long, long_2)
             }
             case "Nibble"  -> code.getfield(CD_Nibble, "$value", CD_int);
             case "UInt8"   -> code.getfield(CD_UInt8,  "$value", CD_int);
@@ -1515,25 +1510,25 @@ public abstract class Builder {
             case "UInt128" -> {
                 // stack is UInt128
                 code.dup();
-                // stack is UInt128, UInt128
+                // stack is (UInt128, UInt128)
                 code.getfield(CD_UInt128, "$lowValue", CD_long);
-                // stack is UInt128, long
+                // stack is (UInt128, long)
                 code.dup2_x1().pop2();
-                // stack is long, UInt128
+                // stack is (long, UInt128)
                 code.getfield(CD_UInt128, "$highValue", CD_long);
-                // stack is long, long_2
+                // stack is (long, long_2)
             }
             case "Date"     -> code.getfield(CD_Date,   "epochDay", CD_int);
             case "Duration" -> {
                 // stack is Duration
                 code.dup();
-                // stack is Duration Duration
+                // stack is (Duration, Duration)
                 code.getfield(CD_Duration, "picoseconds$0", CD_long);
-                // stack is Duration long
+                // stack is (Duration, long)
                 code.dup2_x1().pop2();
-                // stack is long Duration
+                // stack is (long, Duration)
                 code.getfield(CD_Duration, "picoseconds$1", CD_long);
-                // stack is long long_2
+                // stack is (long, long_2)
             }
             default -> throw new UnsupportedOperationException("Cannot unbox " + name);
         }
@@ -1848,7 +1843,7 @@ public abstract class Builder {
      * Add the code to throw an Ecstasy exception using the Ctx in the specified slot.
      */
     public static CodeBuilder throwException(CodeBuilder code, ClassDesc exCD, String text, int ctxSlot) {
-        invokeDefaultConstructor(code, exCD, ctxSlot);
+        invokeDefaultConstructor(code, exCD, ctxSlot, -1);
         code.aload(ctxSlot);
         code.loadConstant(text)
             .aconst_null()
@@ -1900,9 +1895,11 @@ public abstract class Builder {
 
         JitParamDesc[] standardReturns  = new JitParamDesc[] {retDesc};
         JitParamDesc[] optimizedReturns = jmdCtor.isOptimized ? standardReturns : null;
-        return typeInfo.hasGenericTypes()
+        boolean        hasType          = typeInfo.hasGenericTypes();
+        boolean        hasOuter         = typeInfo.getClassStructure().isInstanceChild();
+        return hasType || hasOuter
             ? new JitCtorDesc(typeInfo.getType(),
-                    /*targetCD*/ null, /*addCtorCtx*/ false, /*addType*/ true,
+                    /*targetCD*/ null, /*addCtorCtx*/ false, hasType, hasOuter,
                     standardReturns,  jmdCtor.standardParams,
                     optimizedReturns, jmdCtor.optimizedParams)
             : new JitMethodDesc(typeInfo.getType(),
@@ -1919,42 +1916,102 @@ public abstract class Builder {
     public JitMethodDesc buildNew(BuildContext bctx, CodeBuilder code, TypeConstant typeTarget,
                                   MethodConstant idCtor, Consumer<JitMethodDesc> argsLoader,
                                   int ctxSlot) {
-        TypeInfo   infoTarget = typeTarget.ensureTypeInfo();
-        MethodInfo infoCtor   = infoTarget.getMethodById(idCtor);
+        return buildNew(bctx, code, typeTarget, idCtor, null, argsLoader, ctxSlot);
+    }
 
-        if (infoCtor == null) {
-            infoTarget = typeTarget.ensureAccess(Access.PRIVATE).ensureTypeInfo();
-            infoCtor   = infoTarget.getMethodById(idCtor);
+    /**
+     * Call the "$new" (instantiator) static method, optionally supplying the outer (parent) object.
+     * Virtual children dispatch through a factory on the parent; other classes use the
+     * instantiator directly.
+     */
+    public JitMethodDesc buildNew(BuildContext bctx, CodeBuilder code, TypeConstant targetType,
+                                  MethodConstant ctorId, RegisterInfo outer,
+                                  Consumer<JitMethodDesc> argsLoader, int ctxSlot) {
+        TypeConstant targetJIC  = targetType.getJitICType();
+        TypeInfo     targetInfo = targetJIC.ensureTypeInfo();
+        MethodInfo   ctor       = targetInfo.getMethodById(ctorId);
+
+        if (ctor == null) {
+            targetInfo = targetJIC.ensureAccess(Access.PRIVATE).ensureTypeInfo();
+            ctor       = targetInfo.getMethodById(ctorId);
         }
 
-        if (infoCtor == null) {
+        if (ctor == null) {
             throw new RuntimeException("Unresolvable constructor \"" +
-                    idCtor.getValueString() + "\" for " + typeTarget.getValueString());
+                    ctorId.getValueString() + "\" for " + targetType.getValueString());
         }
 
-        ClassDesc     cdTarget = ensureClassDesc(typeTarget);
-        JitMethodDesc jmdNew   = convertConstructToNew(infoTarget, cdTarget,
-                (JitCtorDesc) infoCtor.getJitDesc(this, typeTarget));
+        ClassDesc     targetCD   = ensureClassDesc(targetType);
+        String        instorName = ctor.ensureJitMethodName(typeSystem).replace("construct", NEW);
+        JitMethodDesc instorMD;
 
-        boolean fOptimized = jmdNew.isOptimized;
-        String  sJitNew    = infoCtor.ensureJitMethodName(typeSystem).replace("construct", NEW);
-        MethodTypeDesc md;
-        if (fOptimized) {
-            md       = jmdNew.optimizedMD;
-            sJitNew += Builder.OPT;
-        }
-        else {
-            md = jmdNew.standardMD;
-        }
+        if (targetJIC.isVirtualChild()) {
+            assert outer != null : "Virtual child without an outer";
 
-        code.aload(ctxSlot);
-        if (infoTarget.hasGenericTypes()) {
-            loadTypeConstant(bctx, code, typeTarget); // TODO Chet - is "bctx" required here?
-        }
-        argsLoader.accept(jmdNew);
+            // dispatch to the parent's factory so inherited code constructs the overridden child
+            TypeInfo     baseInfo = ctor.getChildConstructorOrigin().getTypeInfo();
+            TypeConstant baseType = baseInfo.getType().getJitICType();
 
-        code.invokestatic(cdTarget, sJitNew, md);
-        return jmdNew;
+            instorMD = convertConstructToNew(baseInfo, ensureClassDesc(baseType),
+                        (JitCtorDesc) ctor.getJitDesc(this, baseType));
+
+            MethodTypeDesc md;
+            if (instorMD.isOptimized) {
+                md          = instorMD.optimizedMD;
+                instorName += Builder.OPT;
+            } else {
+                md = instorMD.standardMD;
+            }
+
+            TypeConstant parentType = targetJIC.getParentType();
+            ClassDesc    parentCD   = ensureClassDesc(parentType);
+
+            RegisterInfo outerReg = outer.load(code);
+            if (!outerReg.type().isJitAssignableTo(parentType)) {
+                code.checkcast(parentCD);
+            }
+            code.aload(ctxSlot);
+            if (baseInfo.hasGenericTypes()) {
+                loadTypeConstant(bctx, code, targetType);
+            }
+            argsLoader.accept(instorMD);
+
+            // the routing method can be extracted from the constructor's MethodDesc
+            int    outerIndex  = baseInfo.hasGenericTypes() ? 2 : 1;
+            String factoryName = targetJIC.getSingleUnderlyingClass(true).getName() + instorName;
+
+            code.invokevirtual(parentCD, factoryName, md.dropParameterTypes(outerIndex, outerIndex + 1));
+
+            if (!md.returnType().equals(targetCD)) {
+                // every override returns the base child type in its Java descriptor
+                code.checkcast(targetCD);
+            }
+        } else {
+            instorMD = convertConstructToNew(targetInfo, targetCD,
+                        (JitCtorDesc) ctor.getJitDesc(this, targetType));
+
+            MethodTypeDesc md;
+            if (instorMD.isOptimized) {
+                md          = instorMD.optimizedMD;
+                instorName += Builder.OPT;
+            } else {
+                md = instorMD.standardMD;
+            }
+
+            code.aload(ctxSlot);
+            if (targetInfo.hasGenericTypes()) {
+                loadTypeConstant(bctx, code, targetType);
+            }
+            if (outer != null) {
+                outer.load(code);
+                if (!outer.cd().equals(CD_nObject)) {
+                    code.checkcast(CD_nObject);
+                }
+            }
+            argsLoader.accept(instorMD);
+            code.invokestatic(targetCD, instorName, md);
+        }
+        return instorMD;
     }
 
     /**
@@ -2119,8 +2176,7 @@ public abstract class Builder {
     public static final String N_ArrayUInt64  = "org.xtclang.ecstasy.collections.ArrayᐸUInt64ᐳ";
     public static final String N_ArrayUInt128 = "org.xtclang.ecstasy.collections.ArrayᐸUInt128ᐳ";
     public static final String N_ArrayDate    = "org.xtclang.ecstasy.collections.ArrayᐸDateᐳ";
-    public static final String N_ArrayDuration =
-            "org.xtclang.ecstasy.collections.ArrayᐸDurationᐳ";
+    public static final String N_ArrayDuration = "org.xtclang.ecstasy.collections.ArrayᐸDurationᐳ";
     public static final String N_ArrayObj     = "org.xtclang.ecstasy.collections.ArrayᐸObjectᐳ";
     public static final String N_Bit          = "org.xtclang.ecstasy.numbers.Bit";
     public static final String N_Boolean      = "org.xtclang.ecstasy.Boolean";
@@ -2133,7 +2189,6 @@ public abstract class Builder {
     public static final String N_Enumeration  = "org.xtclang.ecstasy.reflect.Enumeration";
     public static final String N_Exception    = "org.xtclang.ecstasy.Exception";
     public static final String N_Hashable     = "org.xtclang.ecstasy.collections.Hashable";
-    public static final String N_FPLiteral    = "org.xtclang.ecstasy.numbers.FPLiteral";
     public static final String N_Float8e4     = "org.xtclang.ecstasy.numbers.Float8e4";
     public static final String N_Float8e5     = "org.xtclang.ecstasy.numbers.Float8e5";
     public static final String N_BFloat16     = "org.xtclang.ecstasy.numbers.BFloat16";
@@ -2146,17 +2201,15 @@ public abstract class Builder {
     public static final String N_Int32        = "org.xtclang.ecstasy.numbers.Int32";
     public static final String N_Int64        = "org.xtclang.ecstasy.numbers.Int64";
     public static final String N_Int128       = "org.xtclang.ecstasy.numbers.Int128";
-    public static final String N_IntN         = "org.xtclang.ecstasy.numbers.IntN";
     public static final String N_IllegalState = "org.xtclang.ecstasy.IllegalState";
     public static final String N_IterableChar = "org.xtclang.ecstasy.IterableᐸCharᐳ";
-    public static final String N_IteratorChar = "org.xtclang.ecstasy.IteratorᐸCharᐳ";
     public static final String N_Nibble       = "org.xtclang.ecstasy.numbers.Nibble";
-    public static final String N_Nullable     = "org.xtclang.ecstasy.Nullable";
+    public static final String N_Null         = "org.xtclang.ecstasy.Nullable$Null";
     public static final String N_Object       = "org.xtclang.ecstasy.Object";
-    public static final String N_Orderable    = "org.xtclang.ecstasy.Orderable";
     public static final String N_Ordered      = "org.xtclang.ecstasy.Ordered";
     public static final String N_OutOfBounds  = "org.xtclang.ecstasy.OutOfBounds";
     public static final String N_ReadOnly     = "org.xtclang.ecstasy.ReadOnly";
+    public static final String N_Ref          = "org.xtclang.ecstasy.reflect.Ref";
     public static final String N_String       = "org.xtclang.ecstasy.text.String";
     public static final String N_TypeMismatch = "org.xtclang.ecstasy.TypeMismatch";
     public static final String N_UInt8        = "org.xtclang.ecstasy.numbers.UInt8";
@@ -2164,7 +2217,7 @@ public abstract class Builder {
     public static final String N_UInt32       = "org.xtclang.ecstasy.numbers.UInt32";
     public static final String N_UInt64       = "org.xtclang.ecstasy.numbers.UInt64";
     public static final String N_UInt128      = "org.xtclang.ecstasy.numbers.UInt128";
-    public static final String N_UIntN        = "org.xtclang.ecstasy.numbers.UIntN";
+    public static final String N_Var          = "org.xtclang.ecstasy.reflect.Var";
     public static final String N_Date         = "org.xtclang.ecstasy.temporal.Date";
     public static final String N_Duration     = "org.xtclang.ecstasy.temporal.Duration";
     public static final String N_AppenderChar = "org.xtclang.ecstasy.AppenderᐸCharᐳ";
@@ -2226,7 +2279,7 @@ public abstract class Builder {
     public static final String LAMBDA         = "lambda¤"; // the base of the lambda function name
     public static final String EXT            = "$ext";    // a multi-slot extension field of a primitive field
     public static final String INIT           = "$init";   // the singleton initialization instance method
-    public static final String NEW            = "$new";    // the instance creation static method
+    public static final String NEW            = "$new";    // the instance creation static method (i.e. instantiator)
     public static final String OPT            = "$p";      // methods that contains primitive types
     public static final String DELEGATE       = "$d";      // methods that delegates to an underlying property
 
@@ -2288,18 +2341,15 @@ public abstract class Builder {
     public static final ClassDesc CD_Float16             = ClassDesc.of(N_Float16);
     public static final ClassDesc CD_Float32             = ClassDesc.of(N_Float32);
     public static final ClassDesc CD_Float64             = ClassDesc.of(N_Float64);
-    public static final ClassDesc CD_FPLiteral           = ClassDesc.of(N_FPLiteral);
     public static final ClassDesc CD_Int8                = ClassDesc.of(N_Int8);
     public static final ClassDesc CD_Int16               = ClassDesc.of(N_Int16);
     public static final ClassDesc CD_Int32               = ClassDesc.of(N_Int32);
     public static final ClassDesc CD_Int64               = ClassDesc.of(N_Int64);
     public static final ClassDesc CD_Int128              = ClassDesc.of(N_Int128);
-    public static final ClassDesc CD_IntN                = ClassDesc.of(N_IntN);
     public static final ClassDesc CD_IntLiteral          = ClassDesc.of(N_IntLiteral);
     public static final ClassDesc CD_Nibble              = ClassDesc.of(N_Nibble);
-    public static final ClassDesc CD_Nullable            = ClassDesc.of(N_Nullable);
+    public static final ClassDesc CD_Null                = ClassDesc.of(N_Null);
     public static final ClassDesc CD_Object              = ClassDesc.of(N_Object);
-    public static final ClassDesc CD_Orderable           = ClassDesc.of(N_Orderable);
     public static final ClassDesc CD_Ordered             = ClassDesc.of(N_Ordered);
     public static final ClassDesc CD_String              = ClassDesc.of(N_String);
     public static final ClassDesc CD_UInt8               = ClassDesc.of(N_UInt8);
@@ -2307,7 +2357,6 @@ public abstract class Builder {
     public static final ClassDesc CD_UInt32              = ClassDesc.of(N_UInt32);
     public static final ClassDesc CD_UInt64              = ClassDesc.of(N_UInt64);
     public static final ClassDesc CD_UInt128             = ClassDesc.of(N_UInt128);
-    public static final ClassDesc CD_UIntN               = ClassDesc.of(N_UIntN);
     public static final ClassDesc CD_Date                = ClassDesc.of(N_Date);
     public static final ClassDesc CD_Duration            = ClassDesc.of(N_Duration);
     public static final ClassDesc CD_AppenderChar        = ClassDesc.of(N_AppenderChar);
@@ -2318,7 +2367,6 @@ public abstract class Builder {
     public static final ClassDesc CD_CtorCtx             = ClassDesc.of(Ctx.CtorCtx.class.getName());
     public static final ClassDesc CD_GenericTypeResolver = ClassDesc.of(GenericTypeResolver.class.getName());
     public static final ClassDesc CD_TypeConstant        = ClassDesc.of(TypeConstant.class.getName());
-    public static final ClassDesc CD_TypeSystem          = ClassDesc.of(TypeSystem.class.getName());
 
     public static final ClassDesc CD_JavaSystem          = ClassDesc.of(java.lang.System.class.getName());
     public static final ClassDesc CD_JavaByte            = ClassDesc.of(java.lang.Byte.class.getName());
@@ -2350,6 +2398,11 @@ public abstract class Builder {
      * The name of the field on nType object holding the underlying TypeConstant.
      */
     public static final String DataType = "$dataType";
+
+    /**
+     * The name of the field holding an instance child's enclosing object.
+     */
+    public static final String Outer = "$outer";
 
     // various commonly used MethodDesc constants
     public static final MethodTypeDesc MD_Bit_box      = md(CD_Bit, CD_int);
@@ -2394,5 +2447,6 @@ public abstract class Builder {
     public static final MethodTypeDesc MD_I2F          = md(CD_float, CD_int);
     public static final MethodTypeDesc MD_xvmType      = md(CD_TypeConstant, CD_Ctx);
     public static final MethodTypeDesc MD_xvmVoid      = md(CD_void, CD_Ctx);
+    public static final MethodTypeDesc MD_xvmOuterVoid = md(CD_void, CD_Ctx, CD_nObject);
     public static final MethodTypeDesc MD_xvmInitType  = md(CD_void, CD_Ctx, CD_TypeConstant);
 }
