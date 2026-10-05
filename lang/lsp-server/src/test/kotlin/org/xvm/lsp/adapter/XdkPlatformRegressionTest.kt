@@ -2,6 +2,9 @@ package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.asm.MethodStructure
@@ -10,10 +13,49 @@ import org.xvm.compiler.Source
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import java.nio.file.Path
 import java.util.concurrent.TimeUnit.SECONDS
 
 /** Minimized real-source failures from the platform demo, without a sibling checkout dependency. */
 class XdkPlatformRegressionTest {
+    @ParameterizedTest
+    @ValueSource(strings = ["typedef (Int | Array<Doc>) as Doc;", "package json import json.xtclang.org; import json.Doc;"])
+    fun `recursive local and bundled types retain workspace diagnostics and rename proofs`(
+        declaration: String,
+        @TempDir directory: Path,
+    ) {
+        val source =
+            """
+            module Demo {
+                $declaration
+                private Doc echo(Doc input) = input;
+                Doc run(Doc value) = echo(input = value);
+            }
+            """.trimIndent()
+        val file =
+            directory
+                .toRealPath()
+                .resolve("Demo.x")
+                .toFile()
+                .apply { writeText(source) }
+        val uri = file.toURI().toString()
+        XdkAdapter().use { adapter ->
+            adapter.replaceSourceModules(listOf(XdkSourceModule("Demo", uri)))
+            val reports = adapter.workspaceDiagnosticsAsync().get(30, SECONDS)
+            assertThat(reports).isNotEmpty().allMatch { it.success }
+            assertThat(adapter.compile(uri, source).diagnostics).isEmpty()
+            val edit = requireNotNull(adapter.rename(uri, 2, source.lines()[2].indexOf("input"), "renamed"))
+            assertThat(edit.changes.keys).containsExactly(uri)
+            assertThat(edit.changes.getValue(uri)).hasSize(3).allSatisfy {
+                assertThat(it.newText).isEqualTo("renamed")
+                assertThat(it.range.start.line).isEqualTo(it.range.end.line)
+                assertThat(source.lines()[it.range.start.line].substring(it.range.start.column, it.range.end.column)).isEqualTo("input")
+            }
+            assertThat(adapter.compile(uri, source.replace("input", "renamed")).diagnostics).isEmpty()
+        }
+    }
+
     @Test
     fun `platform CircularBuffer compiles and keeps anonymous enclosing receivers and named signatures`() {
         val source = javaClass.getResource("/platform/CircularBuffer.x")!!.readText()
