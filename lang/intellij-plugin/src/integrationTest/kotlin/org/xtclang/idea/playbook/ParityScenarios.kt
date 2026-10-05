@@ -23,6 +23,7 @@ class ParityScenarios(
         typeMoveCases()
         progressCases()
         reliabilityCases()
+        indexingCases()
     }
 
     internal fun case(

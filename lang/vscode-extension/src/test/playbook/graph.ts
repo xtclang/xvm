@@ -101,6 +101,9 @@ export function graphCases(): void {
         await noErrors(consumer.uri);
         assert.strictEqual((await references(document)).length, data.referenceCount);
     });
+}
+
+export function indexingCases(): void {
     playbook('X251', async (workspace, data) => {
         const roots = Array.from({ length: data.roots }, (_, index) => ({
             name: scenarioText(data.rootName, index), uri: workspace.uri(scenarioText(data.rootFile, index)).toString(), dependencies: [] as string[]
