@@ -181,3 +181,88 @@ interface CompilerReportPage {
 
     fun dispose()
 }
+
+internal fun ParityScenarios.refreshOverlapCases() {
+    case("X259") { data ->
+        write(data.string("library"), data.string("original"))
+        write(data.string("consumer"), data.string("source"))
+        configure(
+            listOf(
+                SharedScenarios.SourceModule(data.string("libraryModule"), uri(data.string("library")), emptyList()),
+                SharedScenarios.SourceModule(
+                    data.string("consumerModule"),
+                    uri(data.string("consumer")),
+                    listOf(data.string("libraryModule")),
+                ),
+            ),
+        )
+        val library = open(data.string("library"))
+        val consumer = open(data.string("consumer"))
+        val version = version(consumer)
+        with(driver) {
+            val page = utility(LanguageServicePage::class)
+            val settings = page.content(singleProject())
+
+            fun hints(enabled: Boolean) {
+                withContext(OnDispatcher.EDT) { page.inlayHints(singleProject(), enabled) }
+            }
+
+            fun visible(expected: String? = null) {
+                val editor = consumer.editor
+                awaitUi("untouched consumer displays ${expected ?: "no"} hints", 45.seconds) {
+                    val installed =
+                        withContext(OnDispatcher.EDT) {
+                            cast(editor.editor, NativeInlayEditor::class)
+                                .getInlayModel()
+                                .getInlineElementsInRange(0, consumer.text.length)
+                                .filter { it.isValid() && it.getWidthInPixels() > 0 }
+                                .map { it.getOffset() }
+                        }
+                    if (expected == null) {
+                        installed.isEmpty()
+                    } else {
+                        // Reacquire after restart, read the automatic provider and prove its hints
+                        // are installed in the real editor. Never query inlays from the harness.
+                        val values =
+                            semanticSupport(editor)
+                                .getInlayHintsSupport()
+                                .getValidLSPFuture()
+                                ?.takeIf { it.isDone() && !it.isCompletedExceptionally() }
+                                ?.get()
+                                ?.map { protocol.copy(it.inlayHint()).asJsonObject }
+                                .orEmpty()
+                        val other = if (expected == data.string("before")) data.string("after") else data.string("before")
+                        values.any { it["label"].toString().contains(expected) } &&
+                            values.none { it["label"].toString().contains(other) } &&
+                            values.all { ParityWorkspace.offset(consumer.text, it.getAsJsonObject("position")) in installed }
+                    }
+                }
+                check(consumer.text == data.string("source"))
+                check(version(consumer) == version)
+            }
+            try {
+                hints(true)
+                visible(data.string("before"))
+                hints(false)
+                visible()
+                val previous = requireNotNull(protocol.server().getCurrentProcessId())
+                replace(library, data.string("changed"), settle = false)
+                hints(true)
+                protocol.server().restart()
+                awaitUi("retired refresh producer exits", 45.seconds) {
+                    protocol.server().getCurrentProcessId()?.let { it != previous } == true &&
+                        !ProcessHandle.of(previous).map { it.isAlive }.orElse(false)
+                }
+                visible(data.string("after"))
+                clean(consumer)
+                hints(false)
+                replace(library, data.string("original"), settle = false)
+                hints(true)
+                visible(data.string("before"))
+                clean(consumer)
+            } finally {
+                withContext(OnDispatcher.EDT) { page.restore(singleProject(), settings) }
+            }
+        }
+    }
+}
