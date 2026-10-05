@@ -851,3 +851,9 @@ covers all 264 scenarios, but a corrected X185 popup-harness failure means this 
 uninterrupted clean run. Keep the full-suite IDE-error gate; do not suppress upstream alerts. `PreflightedRenamesTest` also tests the production launcher with an unset
 optional class loader, preventing the startup regression seen in `run-2406379153883211212`.
 See the [repair receipt and extraction map](../../docs/errs-integration-plan.md#l82-intellij-refresh-and-vfs-repair-2026-10-05).
+
+
+Compiler workspace synchronization now has shared X263–X265 cases for nested composite input
+aggregation, automatic Gradle refresh/export watching, and project/folder closure during import.
+Both clients preserve explicit settings and the last accepted inputs after failed refresh.
+Combined validation of this batch is pending; prior acceptance receipts remain historical.
