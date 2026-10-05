@@ -350,3 +350,17 @@ Evidence:
 Status: locally bridged. Remove the asynchronous write-command path only after native standalone
 formatting and range/save/closed-document acceptance retain history without it on a repaired platform.
 This run does not establish an upstream release fix or a general audit of all async formatters.
+
+
+### UP25: LSP4IJ has no LSP 3.18 library content provider
+
+LSP4IJ 0.21.0 does not advertise `workspace.textDocumentContent`, register virtual content
+providers, or implement `workspace/textDocumentContent/refresh`. Its LSP4J 1.0.0 dependency
+contains the protocol types; that alone does not implement the editor feature. VS Code's
+language client already registers a read-only content provider and handles refresh.
+
+L75 negotiates virtual `ecstasy-library` views only with supporting clients. IntelliJ keeps
+matching read-only files and gains the same artifact-backed declaration monikers. The marker
+is in `XtcClientFeatures.initializeParams`. This is a supported fallback, not a failed native
+virtual-document acceptance. Upstream support must cover URI resolution, read-only editor
+content, refresh, document synchronization and disposal before changing the IntelliJ capability.

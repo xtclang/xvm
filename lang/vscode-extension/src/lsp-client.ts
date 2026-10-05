@@ -104,7 +104,7 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
     };
 
     const clientOptions: LanguageClientOptions = {
-        documentSelector: [{ scheme: 'file', language: 'xtc' }],
+        documentSelector: [{ scheme: 'file', language: 'xtc' }, { scheme: 'ecstasy-library', language: 'xtc' }],
         outputChannel,
         traceOutputChannel: outputChannel,
         synchronize: {
