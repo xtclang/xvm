@@ -16,6 +16,26 @@ import java.nio.file.Path
 class XdkMemberActionsTest {
     @TempDir lateinit var directory: Path
 
+    @Test
+    fun `recursive inherited signatures do not suppress unrelated member actions`() {
+        val text =
+            """
+            module App {
+                typedef (Int | Array<Doc>) as Doc;
+                class Base<T> {
+                    T read(T value) = value;
+                    Int count() = 1;
+                }
+                class Box extends Base<Doc> {}
+            }
+            """.trimIndent()
+        workspace(text) { adapter, uri ->
+            val offered = actions(adapter, uri, text)
+            assertThat(offered.map { it.title }).contains("Override Int64 count()")
+            assertThat(offered).noneMatch { it.title.startsWith("Override ") && " read(" in it.title }
+        }
+    }
+
     @ParameterizedTest
     @ValueSource(strings = ["Int read(Int value);", "void read();", "String read(String value);"])
     fun `implement ordinary abstract source contracts with compiler proven stubs`(signature: String) {

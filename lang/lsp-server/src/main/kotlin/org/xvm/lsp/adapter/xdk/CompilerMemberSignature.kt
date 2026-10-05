@@ -10,6 +10,7 @@ import org.xvm.asm.constants.IntConstant
 import org.xvm.asm.constants.IntersectionTypeConstant
 import org.xvm.asm.constants.ParameterizedTypeConstant
 import org.xvm.asm.constants.PropertyConstant
+import org.xvm.asm.constants.RecursiveTypeConstant
 import org.xvm.asm.constants.RelationalTypeConstant
 import org.xvm.asm.constants.SignatureConstant
 import org.xvm.asm.constants.SingletonConstant
@@ -115,8 +116,8 @@ internal fun memberSignature(
 }
 
 /**
- * Recursive named types and this method's own formals; other source spellings remain explicit
- * refusals.
+ * Supported type constructors and this method's own formals. Recursive aliases require a proven
+ * destination spelling and import route before code generation can support them.
  */
 internal fun TypeConstant.memberSourceType(
     owner: IdentityConstant,
@@ -124,6 +125,11 @@ internal fun TypeConstant.memberSourceType(
     modules: Map<String, String>,
 ): String? {
     return when (this) {
+        // A recursive alias is a TerminalTypeConstant without a single defining constant.
+        is RecursiveTypeConstant -> {
+            null
+        }
+
         is ParameterizedTypeConstant -> {
             val base = underlyingType.memberSourceType(owner, formals, modules) ?: return null
             val arguments =
@@ -203,6 +209,10 @@ internal fun TypeConstant.memberSourceType(
 /** Inspect only type structures whose source spelling the renderer understands. */
 internal fun TypeConstant.memberClasses(): List<ClassConstant> =
     when (this) {
+        is RecursiveTypeConstant -> {
+            emptyList()
+        }
+
         is ParameterizedTypeConstant -> {
             underlyingType.memberClasses() + paramTypes.flatMap { it.memberClasses() }
         }
