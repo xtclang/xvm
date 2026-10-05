@@ -2,7 +2,13 @@
 
 The current catalog has **263 scenarios**: X1–X258, CFG1–CFG3 and 7a.8/7a.9.
 
-Latest selection (L75): VS Code `run-e4dCrP` passes X31/X101/X158/X252–X254. IntelliJ
+L76 validation: 46 backend/protocol tests and the packaged UTF-16 round trip pass, without failures
+or skips. VS Code `run-B6sogF` passes X7/X31/X255–X258. IntelliJ
+`run-13088584184602426732` passes START/X7/X31/X255/X256/X258, with X257 explicitly partial for
+UP26 and zero IDE failures. Both drivers compile and formatting checks pass. See the
+[L76 contract and commit map](../../docs/errs-integration-plan.md#l76-compiler-inline-completion-2026-10-05).
+
+Previous selection (L75): VS Code `run-e4dCrP` passes X31/X101/X158/X252–X254. IntelliJ
 `run-16728311754487527222` passes START and X31/X101/X158/X252/X253; X254 passes its read-only
 file-fallback/moniker checks with explicit partial status for UP25. No IDE failures. See the
 [L75 playbook](#read-only-library-documents--l75). The final whitespace guard has subsequent
@@ -3625,4 +3631,4 @@ It does not change the earlier native normal-text acceptance; no full-catalog re
 Ghost suggestions are plain compiler names/values. No imports or placeholder bodies are inserted.
 VS Code uses its Inline Suggest commands (Tab to accept, Escape to dismiss); IntelliJ uses
 Insert Inline Completion and Escape. Explicit ambiguous suggestions are a VS Code native check;
-LSP4IJ currently sends Automatic even for a direct invocation (UP26). Validation pending.
+LSP4IJ currently sends Automatic even for a direct invocation (UP26).
