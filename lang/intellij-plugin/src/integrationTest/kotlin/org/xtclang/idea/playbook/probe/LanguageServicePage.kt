@@ -81,6 +81,22 @@ object LanguageServicePage {
     }
 
     @JvmStatic
+    fun inlayHints(
+        project: Project,
+        enabled: Boolean,
+    ) {
+        val page = LanguageServiceProjectConfigurable(project)
+        try {
+            val components = children(page.createComponent()).filterIsInstance<JBCheckBox>().toList()
+            components.single { it.name == "xtc.service.inherit" }.isSelected = false
+            components.single { it.name == "xtc.service.hints" }.isSelected = enabled
+            page.apply()
+        } finally {
+            page.disposeUIResources()
+        }
+    }
+
+    @JvmStatic
     fun transport(
         project: Project,
         value: String,
