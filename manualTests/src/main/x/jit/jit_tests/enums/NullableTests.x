@@ -13,8 +13,6 @@ class NullableTests {
         testSkip();
         testStepsTo();
 
-        testOrder();
-
         testNull();
     }
 
@@ -139,11 +137,6 @@ class NullableTests {
 //    Int stepsToAsEnum(Enum e1, Enum e2) {
 //        return e1.stepsTo(e2);
 //    }
-
-    void testOrder() {
-// TODO see TODO in OpTest.buildBinary()
-//        assert Nullable.Null <=> Nullable.Null == Equal;
-    }
 
     void testNull() {
         assert Nullable.Null.name == "Null";

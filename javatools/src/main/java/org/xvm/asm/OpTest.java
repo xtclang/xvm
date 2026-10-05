@@ -295,7 +295,7 @@ public abstract class OpTest
             typeCmp = typeCmp.removeNullable();
         }
 
-        assert !typeCmp.isEnumValue() : "TODO GG fix the compiler";
+        assert !typeCmp.isEnumValue() : "Comparison for Enum values must be a constant";
 
         typeCmp.buildCompare(bctx, code, nOp, reg1, reg2, /*lblTrue*/ null);
 

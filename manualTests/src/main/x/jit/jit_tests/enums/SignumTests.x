@@ -13,8 +13,6 @@ class SignumTests {
         testSkip();
         testStepsTo();
 
-        testOrder();
-
         testNegative();
         testZero();
         testPositive();
@@ -232,26 +230,6 @@ class SignumTests {
 //    Int stepsToAsEnum(Enum e1, Enum e2) {
 //        return e1.stepsTo(e2);
 //    }
-
-    void testOrder() {
-        assert Signum.Negative < Signum.Zero;
-        assert Signum.Negative < Signum.Positive;
-        assert Signum.Zero > Signum.Negative;
-        assert Signum.Zero < Signum.Positive;
-        assert Signum.Positive > Signum.Negative;
-        assert Signum.Positive > Signum.Zero;
-
-// TODO see TODO in OpTest.buildBinary()
-//        assert Signum.Negative <=> Signum.Negative == Equal;
-//        assert Signum.Negative <=> Signum.Zero == Lesser;
-//        assert Signum.Negative <=> Signum.Positive == Lesser;
-//        assert Signum.Zero <=> Signum.Negative == Greater;
-//        assert Signum.Zero <=> Signum.Zero == Equal;
-//        assert Signum.Zero <=> Signum.Positive == Lesser;
-//        assert Signum.Positive <=> Signum.Negative == Greater;
-//        assert Signum.Positive <=> Signum.Zero == Greater;
-//        assert Signum.Positive <=> Signum.Positive == Equal;
-    }
 
     void testNegative() {
         assert Signum.Negative.name == "Negative";

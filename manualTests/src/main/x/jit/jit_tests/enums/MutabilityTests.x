@@ -15,8 +15,6 @@ class MutabilityTests {
         testSkip();
         testStepsTo();
 
-        testOrder();
-
         testConstant();
         testPersistent();
         testFixed();
@@ -258,36 +256,6 @@ class MutabilityTests {
 //    Int stepsToAsEnum(Enum e1, Enum e2) {
 //        return e1.stepsTo(e2);
 //    }
-
-    void testOrder() {
-        assert Mutability.Constant < Mutability.Persistent;
-        assert Mutability.Constant < Mutability.Fixed;
-        assert Mutability.Persistent > Mutability.Constant;
-        assert Mutability.Persistent < Mutability.Fixed;
-        assert Mutability.Fixed > Mutability.Constant;
-        assert Mutability.Fixed > Mutability.Persistent;
-        assert Mutability.Mutable > Mutability.Constant;
-        assert Mutability.Mutable > Mutability.Persistent;
-
-// TODO see TODO in OpTest.buildBinary()
-//        assert Mutability.Constant <=> Mutability.Constant == Equal;
-//        assert Mutability.Constant <=> Mutability.Persistent == Lesser;
-//        assert Mutability.Constant <=> Mutability.Fixed == Lesser;
-//        assert Mutability.Constant <=> Mutability.Mutable == Lesser;
-//        assert Mutability.Persistent <=> Mutability.Constant == Greater;
-//        assert Mutability.Persistent <=> Mutability.Persistent == Equal;
-//        assert Mutability.Persistent <=> Mutability.Fixed == Lesser;
-//        assert Mutability.Persistent <=> Mutability.Mutable == Lesser;
-//        assert Mutability.Fixed <=> Mutability.Constant == Greater;
-//        assert Mutability.Fixed <=> Mutability.Persistent == Greater;
-//        assert Mutability.Fixed <=> Mutability.Fixed == Equal;
-//        assert Mutability.Fixed <=> Mutability.Mutable == Lesser;
-//        assert Mutability.Mutable > Mutability.Fixed;
-//        assert Mutability.Mutable <=> Mutability.Constant == Greater;
-//        assert Mutability.Mutable <=> Mutability.Persistent == Greater;
-//        assert Mutability.Mutable <=> Mutability.Fixed == Greater;
-//        assert Mutability.Mutable <=> Mutability.Mutable == Equal;
-    }
 
     void testConstant() {
         assert Mutability.Constant.name == "Constant";

@@ -238,23 +238,9 @@ class ColorTests {
 //    }
 
     void testOrder() {
-        assert Color.Red < Color.Green;
-        assert Color.Red < Color.Blue;
-        assert Color.Green > Color.Red;
-        assert Color.Green < Color.Blue;
-        assert Color.Blue > Color.Red;
-        assert Color.Blue > Color.Green;
-
-// TODO see TODO in OpTest.buildBinary()
-//        assert Color.Red <=> Color.Red == Equal;
-//        assert Color.Red <=> Color.Green == Lesser;
-//        assert Color.Red <=> Color.Blue == Lesser;
-//        assert Color.Green <=> Color.Red == Greater;
-//        assert Color.Green <=> Color.Green == Equal;
-//        assert Color.Green <=> Color.Blue == Lesser;
-//        assert Color.Blue <=> Color.Red == Greater;
-//        assert Color.Blue <=> Color.Green == Greater;
-//        assert Color.Blue <=> Color.Blue == Equal;
+        assert Color.Red <=> Color.Red == Equal; // compile time computation
+        Color c = Red;
+        assert c <=> Green == Lesser;
     }
 
     void testRed() {

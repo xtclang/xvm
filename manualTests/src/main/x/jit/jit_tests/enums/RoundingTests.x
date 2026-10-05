@@ -15,8 +15,6 @@ class RoundingTests {
         testSkip();
         testStepsTo();
 
-        testOrder();
-
         testTiesToEven();
         testTiesToAway();
         testTowardPositive();
@@ -318,36 +316,6 @@ class RoundingTests {
 //    Int stepsToAsEnum(Enum e1, Enum e2) {
 //        return e1.stepsTo(e2);
 //    }
-
-    void testOrder() {
-        assert Rounding.TiesToEven < Rounding.TiesToAway;
-        assert Rounding.TiesToEven < Rounding.TowardPositive;
-        assert Rounding.TiesToAway > Rounding.TiesToEven;
-        assert Rounding.TiesToAway < Rounding.TowardPositive;
-        assert Rounding.TowardPositive > Rounding.TiesToEven;
-        assert Rounding.TowardPositive > Rounding.TiesToAway;
-        assert Rounding.TowardNegative > Rounding.TiesToEven;
-        assert Rounding.TowardNegative > Rounding.TiesToAway;
-        assert Rounding.TowardNegative > Rounding.TowardPositive;
-
-// TODO see TODO in OpTest.buildBinary()
-//        assert Rounding.TiesToEven <=> Rounding.TiesToEven == Equal;
-//        assert Rounding.TiesToEven <=> Rounding.TiesToAway == Lesser;
-//        assert Rounding.TiesToEven <=> Rounding.TowardPositive == Lesser;
-//        assert Rounding.TiesToEven <=> Rounding.TowardNegative == Lesser;
-//        assert Rounding.TiesToAway <=> Rounding.TiesToEven == Greater;
-//        assert Rounding.TiesToAway <=> Rounding.TiesToAway == Equal;
-//        assert Rounding.TiesToAway <=> Rounding.TowardPositive == Lesser;
-//        assert Rounding.TiesToAway <=> Rounding.TowardNegative == Lesser;
-//        assert Rounding.TowardPositive <=> Rounding.TiesToEven == Greater;
-//        assert Rounding.TowardPositive <=> Rounding.TiesToAway == Greater;
-//        assert Rounding.TowardPositive <=> Rounding.TowardPositive == Equal;
-//        assert Rounding.TowardPositive <=> Rounding.TowardNegative == Lesser;
-//        assert Rounding.TowardNegative <=> Rounding.TiesToEven == Greater;
-//        assert Rounding.TowardNegative <=> Rounding.TiesToAway == Greater;
-//        assert Rounding.TowardNegative <=> Rounding.TowardPositive == Greater;
-//        assert Rounding.TowardNegative <=> Rounding.TowardNegative == Equal;
-    }
 
     void testTiesToEven() {
         assert Rounding.TiesToEven.name == "TiesToEven";

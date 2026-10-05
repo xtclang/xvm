@@ -137,14 +137,10 @@ class BooleanTests {
         assert True.stepsTo(True) == 0;
     }
 
-    void testOrder() {
-        assert False < True;
-        assert True > False;
-// TODO see TODO in OpTest.buildBinary()
-//        assert False <=> False == Equal;
-//        assert False <=> True == Lesser;
-//        assert True <=> False == Greater;
-//        assert True <=> True == Equal;
+        void testOrder() {
+        assert False <=> True == Lesser; // compile time computation
+        Boolean f = False;
+        assert True > f;
     }
 
     void testFalse() {

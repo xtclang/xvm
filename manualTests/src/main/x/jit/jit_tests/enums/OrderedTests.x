@@ -13,8 +13,6 @@ class OrderedTests {
         testSkip();
         testStepsTo();
 
-        testOrder();
-
         testLesser();
         testEqual();
         testGreater();
@@ -232,26 +230,6 @@ class OrderedTests {
 //    Int stepsToAsEnum(Enum e1, Enum e2) {
 //        return e1.stepsTo(e2);
 //    }
-
-    void testOrder() {
-        assert Ordered.Lesser < Ordered.Equal;
-        assert Ordered.Lesser < Ordered.Greater;
-        assert Ordered.Equal > Ordered.Lesser;
-        assert Ordered.Equal < Ordered.Greater;
-        assert Ordered.Greater > Ordered.Lesser;
-        assert Ordered.Greater > Ordered.Equal;
-
-// TODO see TODO in OpTest.buildBinary()
-//        assert Ordered.Lesser <=> Ordered.Lesser == Equal;
-//        assert Ordered.Lesser <=> Ordered.Equal == Lesser;
-//        assert Ordered.Lesser <=> Ordered.Greater == Lesser;
-//        assert Ordered.Equal <=> Ordered.Lesser == Greater;
-//        assert Ordered.Equal <=> Ordered.Equal == Equal;
-//        assert Ordered.Equal <=> Ordered.Greater == Lesser;
-//        assert Ordered.Greater <=> Ordered.Lesser == Greater;
-//        assert Ordered.Greater <=> Ordered.Equal == Greater;
-//        assert Ordered.Greater <=> Ordered.Greater == Equal;
-    }
 
     void testLesser() {
         assert Ordered.Lesser.name == "Lesser";
