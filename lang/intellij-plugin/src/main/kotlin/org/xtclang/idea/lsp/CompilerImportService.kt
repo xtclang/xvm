@@ -5,8 +5,6 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.progress.ProgressIndicator
 import com.intellij.openapi.project.Project
-import java.nio.file.Files
-import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
@@ -16,15 +14,7 @@ internal class CompilerImportService(
 ) : Disposable {
     val model =
         CompilerImport(
-            read = {
-                project.basePath?.let { root ->
-                    Path
-                        .of(root)
-                        .resolve(CompilerBuildModel.PATH)
-                        .takeIf(Files::isRegularFile)
-                        ?.let(Files::readString)
-                }
-            },
+            read = { CompilerWorkspaceModels.read(CompilerWorkspaceModels.roots(project)) },
             validate = { CompilerBuildModel.parse(it) },
         )
 
