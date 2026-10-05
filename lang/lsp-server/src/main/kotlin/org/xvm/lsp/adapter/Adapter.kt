@@ -50,6 +50,7 @@ interface Adapter : Closeable {
                             AdapterCapability.MONIKER,
                             AdapterCapability.CALL_HIERARCHY,
                             AdapterCapability.INLAY_HINT,
+                            AdapterCapability.INLINE_COMPLETION,
                         )
                 }.toSet()
 
@@ -241,6 +242,13 @@ interface Adapter : Closeable {
         } catch (e: Exception) {
             CompletableFuture.failedFuture(e)
         }
+
+    /** Plain-text ghost suggestions, with single-line replacement ranges and no other edits. */
+    fun getInlineCompletionsAsync(
+        uri: String,
+        position: Position,
+        context: InlineCompletionContext,
+    ): CompletableFuture<List<TextEdit>> = CompletableFuture.completedFuture(emptyList())
 
     /**
      * Find the definition of the symbol at a position.
