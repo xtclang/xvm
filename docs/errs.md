@@ -14,10 +14,12 @@ binary consumers through `textDocument/moniker`. Shared X31/X252/X253 pass in bo
 No AST changes were needed. L75 subsequently adds read-only document content/refresh;
 see the [contract, limits and receipts](errs-integration-plan.md#l74-artifact-identities-2026-10-05).
 
-L81 now has late progress-registration cleanup, all-provider refresh/lifecycle regressions and
-more useful live progress details identifying the source/workspace and compiler queue activity.
-The focused backend and packaged transport checks pass. IntelliJ visible Cancel/restart passes;
-VS Code physical-click and broader native-window acceptance remain open. See the [checkpoint](errs-integration-plan.md#l81-progress-refresh-and-transport-checkpoint-2026-10-01).
+L81's bounded acceptance is complete: both editors pass real visible Cancel, dependency refresh,
+late report ownership and new X259 displayed-inlay/settings/restart overlap. VS Code now also passes
+two windows sharing one Electron process, with independent compiler PIDs and hot-exit restoration.
+The 19 focused backend/transport checks pass without failures or skips. UP15 remains an explicitly
+recorded upstream error-classification defect; reader recovery is verified. Full-catalog, scale and
+cross-platform release acceptance remain in L82. See the [closure receipt and extraction map](errs-integration-plan.md#l81-native-acceptance-closure-2026-10-05).
 
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
@@ -26,7 +28,7 @@ reviewed. Missing link-tooltip, per-signature active-parameter and pull-related-
 are fixed; legacy signature highlighting is preserved, and compiler rename proposals are advertised
 only in compiler mode. No AST/embedding change is needed. See the
 [audit and validation](errs-integration-plan.md#l80-final-capability-contract-audit-2026-10-01).
-The existing X130 upstream failure and L81/L82 acceptance work remain open.
+The existing X130 upstream failure and L82 release acceptance remain open.
 
 X130 follow-up: the repaint exception is now reproduced twice **without Ecstasy or any LSP server**
 by refreshing Explorer while a rename participant is pending. The normal X118–X130 run passes the
