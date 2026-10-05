@@ -97,17 +97,17 @@ class XdkDistribution(
                         |
                         |rem Variables are expanded when a parenthesized block is parsed, so one statement per line
                         |if not defined XDK_HOME goto xdkHomeChecked
-                        |rem === if a same-named script is in XDK_HOME, use it instead of this script ===
-                        |set "XDK_CMD=%XDK_HOME%\bin\%~nx0"
-                        |if not exist "%XDK_CMD%" goto xdkHomeLibs
-                        |for %%F in ("%XDK_CMD%") do set "XDK_ID=%%~fF"
-                        |for %%F in ("%~f0") do set "APP_ID=%%~fF"
-                        |if /I "%XDK_ID%"=="%APP_ID%" goto xdkHomeLibs
-                        |"%XDK_ID%" %*
-                        |goto exitWithErrorLevel
+                        |    rem === if a same-named script is in XDK_HOME, use it instead of this script ===
+                        |    set "XDK_CMD=%XDK_HOME%\bin\%~nx0"
+                        |    if not exist "%XDK_CMD%" goto xdkHomeLibs
+                        |        for %%F in ("%XDK_CMD%") do set "XDK_ID=%%~fF"
+                        |        for %%F in ("%~f0") do set "APP_ID=%%~fF"
+                        |        if /I "%XDK_ID%"=="%APP_ID%" goto xdkHomeLibs
+                        |            "%XDK_ID%" %*
+                        |            goto exitWithErrorLevel
                         |:xdkHomeLibs
-                        |rem === use the libraries specified by XDK_HOME ===
-                        |set "APP_HOME=%XDK_HOME%"
+                        |    rem === use the libraries specified by XDK_HOME ===
+                        |    set "APP_HOME=%XDK_HOME%"
                         |:xdkHomeChecked
                         |
                         |if not exist "%APP_HOME%\javatools\javatools.jar" (
