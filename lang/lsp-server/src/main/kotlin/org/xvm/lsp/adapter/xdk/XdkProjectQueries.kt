@@ -40,6 +40,7 @@ internal class XdkProjectQueries(
         AtomicReference(emptyMap()),
     private val discoverImports: Boolean = false,
     private val diagnosticCache: XdkDiagnosticIndex = XdkDiagnosticIndex(),
+    private val navigationIndex: XdkNavigationIndex = XdkNavigationIndex(),
 ) {
     private val captured =
         project.buildOrder().associateWith { module ->
@@ -173,17 +174,26 @@ internal class XdkProjectQueries(
 
     fun navigation(): XdkWorkspaceNavigation? {
         val revision = revision()
-        cache.get()[revision]?.let {
+        val previous = cache.get()
+        previous[revision]?.let {
             return if (isCurrent()) it else null
         }
-        val facts = compile(texts, Proof.NAVIGATION) ?: return null
-        val models = facts.models
+        val builds = navigationBuilds()
+        val models = builds.values.flatMap { it.facts?.models.orEmpty() }
+        val constants =
+            builds.values
+                .flatMap {
+                    it.facts
+                        ?.constants
+                        .orEmpty()
+                        .entries
+                }.associate { it.toPair() }
         val declared = models.associate { it.sourceName to it.id }
         val aliases =
             models
                 .flatMap { it.symbols }
                 .distinctBy { it.id }
-                .groupBy { symbol -> facts.constants[symbol.id] ?: symbol.location() ?: symbol.id }
+                .groupBy { symbol -> constants[symbol.id] ?: symbol.location() ?: symbol.id }
                 .values
                 .flatMap { group ->
                     val canonical =
@@ -208,8 +218,52 @@ internal class XdkProjectQueries(
                 .mapNotNull { name -> XdkSources.sourceUri(name)?.let { name to it } }
                 .toMap()
         return XdkWorkspaceNavigation(views, revision, complete, dependencySources).also {
-            cache.set(mapOf(revision to it))
+            cache.compareAndSet(previous, mapOf(revision to it))
         }
+    }
+
+    /** Navigation may reuse exact detached builds; edit/refactoring proofs below always compile. */
+    private fun navigationBuilds(): Map<String, XdkNavigationIndex.Build> {
+        val previous = navigationIndex.snapshot()
+        val artifacts = dependencies.modules.filterKeys { it !in project.modules }.toMutableMap()
+        val builds =
+            buildMap {
+                project.buildOrder().forEach { module ->
+                    checkCurrent()
+                    val source = sources[module] ?: return@forEach
+                    if (module.dependencies.any { it !in artifacts && it !in XdkLibraries.moduleNames }) return@forEach
+                    val closure = project.buildOrder(module.uri).mapTo(hashSetOf()) { it.name }
+                    val inputs = artifacts.filterKeys { it !in project.modules || it in closure }
+                    val key = XdkNavigationIndex.Key(module.name, source.inputs, inputs.mapValues { it.value.revision })
+                    val build =
+                        previous.builds[module.uri]?.takeIf { it.key == key } ?: run {
+                            val open = XdkDependencies(inputs.values.toList()).open()
+                            val heard = ErrorList()
+                            val errors = ErrorListener.cancellable(heard, cancelled)
+                            val compilation = compileTree(source, open.repository, errors)
+                            checkCurrent()
+                            val facts =
+                                if (compilation.succeeded() && !heard.hasSeriousErrors() &&
+                                    compilation.file()?.module?.name == module.name
+                                ) {
+                                    compilation.navigationFacts(open, errors)
+                                } else {
+                                    null
+                                }
+                            checkCurrent()
+                            if (facts != null && !heard.hasSeriousErrors()) {
+                                XdkNavigationIndex.Build(key, facts, compilation.toDependency())
+                            } else {
+                                XdkNavigationIndex.Build(key, null, null)
+                            }
+                        }
+                    put(module.uri, build)
+                    build.artifact?.let { artifacts[module.name] = it }
+                }
+            }
+        if (!isCurrent()) throw CancellationException()
+        navigationIndex.publish(previous, builds)
+        return builds
     }
 
     private fun revision(): String {
@@ -1241,7 +1295,6 @@ internal class XdkProjectQueries(
 
     private enum class Proof {
         COMPLETE,
-        NAVIGATION,
         REPAIR,
     }
 
@@ -1375,7 +1428,6 @@ internal class XdkProjectQueries(
                                 }
                             return@mapNotNull module.uri to repaired
                         }
-                        if (proof == Proof.NAVIGATION) return@mapNotNull null
                         return null
                     }
                     val facts =
