@@ -119,12 +119,13 @@ internal class XdkProjectQueries(
                                 val errors = ErrorListener.cancellable(heard, cancelled)
                                 val compilation = compileTree(source.freshCompilationInput(), open.repository, errors)
                                 checkCurrent()
-                                val navigation =
+                                val semantics =
                                     if (compilation.succeeded() && !heard.hasSeriousErrors()) {
-                                        compilation.navigationFacts(open, errors)
+                                        compilation.compiledSemantics(open, errors, navigation = true)
                                     } else {
                                         null
                                     }
+                                val navigation = semantics?.navigation
                                 checkCurrent()
                                 val declarations =
                                     XdkAst.declarationLocations(
@@ -136,12 +137,7 @@ internal class XdkProjectQueries(
                                     heard.errors.map {
                                         it.toDiagnostic(fallback, source.sourceUris, declarations)
                                     }
-                                val artifact =
-                                    if (compilation.succeeded() && !heard.hasSeriousErrors()) {
-                                        compilation.toDependency()
-                                    } else {
-                                        null
-                                    }
+                                val artifact = semantics?.artifact
                                 val items =
                                     if (artifact != null && artifact.module != module.name) {
                                         listOf(
@@ -255,17 +251,17 @@ internal class XdkProjectQueries(
                             val errors = ErrorListener.cancellable(heard, cancelled)
                             val compilation = compileTree(source.freshCompilationInput(), open.repository, errors)
                             checkCurrent()
-                            val facts =
+                            val semantics =
                                 if (compilation.succeeded() && !heard.hasSeriousErrors() &&
                                     compilation.file()?.module?.name == module.name
                                 ) {
-                                    compilation.navigationFacts(open, errors)
+                                    compilation.compiledSemantics(open, errors, navigation = true)
                                 } else {
                                     null
                                 }
                             checkCurrent()
-                            if (facts != null && !heard.hasSeriousErrors()) {
-                                XdkNavigationIndex.Build(key, facts, compilation.toDependency())
+                            if (semantics != null && !heard.hasSeriousErrors()) {
+                                XdkNavigationIndex.Build(key, semantics.navigation, semantics.artifact)
                             } else {
                                 XdkNavigationIndex.Build(key, null, null)
                             }

@@ -1,5 +1,6 @@
 package org.xvm.lsp.adapter.xdk
 
+import org.xvm.lsp.adapter.SymbolMoniker
 import java.util.UUID
 import java.util.List.copyOf as immutableList
 import java.util.Map.copyOf as immutableMap
@@ -23,7 +24,31 @@ class SemanticModel
         imports: List<ImportAlias> = emptyList(),
         lambdas: List<LambdaSite> = emptyList(),
         sourceLinks: List<SourceLink> = emptyList(),
+        monikers: Map<SymbolId, SymbolMoniker> = emptyMap(),
     ) {
+        private val monikers = immutableMap(monikers)
+
+        fun monikersAt(
+            line: Int,
+            column: Int,
+        ): List<SymbolMoniker> = listOfNotNull(symbolAt(line, column)?.id?.let(monikers::get))
+
+        internal fun withMonikers(values: Map<SymbolId, SymbolMoniker>): SemanticModel =
+            SemanticModel(
+                id,
+                status,
+                sourceName,
+                facts,
+                occurrences,
+                expressions,
+                calls,
+                functionCalls,
+                imports,
+                lambdas,
+                sourceLinks,
+                values,
+            )
+
         enum class Status {
             UNAVAILABLE,
             PARTIAL,
@@ -501,6 +526,7 @@ class SemanticModel
                         model.imports,
                         lambdas = model.lambdas,
                         sourceLinks = model.sourceLinks,
+                        monikers = model.monikers.mapKeys { canonical(it.key) },
                     )
                 }
             }
