@@ -328,7 +328,7 @@ vscode-extension/
 
 | Task | Command | What it does |
 |------|---------|--------------|
-| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs all 263 shared cases (X1–X258, CFG1–CFG3 and 7a.8–7a.9) in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
+| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs all 264 shared cases (X1–X259, CFG1–CFG3 and 7a.8–7a.9) in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
 | **Headless integration test** | `./gradlew :lang:vscode-extension:testVscodeExtension -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Spawns a real VS Code instance via `@vscode/test-electron`, loads the extension from the build tree, opens `src/test/fixtures/hello.x`, and asserts the document's `languageId === "xtc"`. The primary regression guard for the file-association pipeline. |
 | **Interactive smoke test** | `./gradlew :lang:vscode-extension:runCode -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Launches VS Code in Extension Development Host mode with `src/test/fixtures/` open. Use this to verify highlighting, hover, completion, etc. by eye. |
 | **Compile only** | `./gradlew :lang:vscode-extension:npmCompile -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Runs `tsc -p ./`; fastest feedback when editing TypeScript. |
@@ -438,3 +438,12 @@ response. X124/X131/X134/X142/X143 pass in both editors across selected runs and
 IntelliJ X142 correction; this does not establish a full 148-case checkpoint. See the
 [follow-up receipt](../../docs/errs-integration-plan.md#follow-up-validation-receipt-2026-09-30) for
 run IDs, failed attempts and the remaining L80/L81 acceptance limits.
+
+For the L81 visible-control check, select X145 with `-PcompilerPlaybookCancelUi=true`.
+The test clicks the actual Cancel button through the isolated Electron renderer using
+`playwright-core`; it does not move the desktop pointer or download a browser. Shared X259 checks
+rendered consumer inlays across settings changes and restart. After building, run
+`node scripts/run-vscode-tests.cjs --project-lifecycle --shared-process` from this directory to
+check two windows in one Electron process, independent compiler ownership and real hot-exit
+restoration. Omit `--shared-process` for separate application instances. See the
+[manual playbook](../doc/manual-test-plan.md#native-project-lifetime-checks-l81) for the full checks.

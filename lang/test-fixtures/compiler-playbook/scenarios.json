@@ -8160,6 +8160,28 @@
         "limitations": []
       }
     },
+    "X259": {
+      "title": "rendered consumer hints follow dependency and settings changes across restart",
+      "manual": [
+        "Disable inlay hints, change the dependency return type, re-enable hints and restart the server without editing the consumer.",
+        "Verify visible hints change from Int to String and back; disabling hints removes them."
+      ],
+      "values": {
+        "library": "RefreshLibrary.x",
+        "consumer": "RefreshConsumer.x",
+        "libraryModule": "RefreshLibrary",
+        "consumerModule": "RefreshConsumer",
+        "original": "module RefreshLibrary { static Int make() = 1; }\n",
+        "changed": "module RefreshLibrary { static String make() = \"one\"; }\n",
+        "source": "module RefreshConsumer {\n    package lib import RefreshLibrary;\n    void run() { var value = lib.make(); }\n}\n",
+        "before": "Int",
+        "after": "String"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
