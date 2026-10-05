@@ -17,6 +17,7 @@ import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.services.LanguageClient
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.xvm.lsp.adapter.Adapter
@@ -24,6 +25,7 @@ import org.xvm.lsp.adapter.AdapterCapability
 import org.xvm.lsp.adapter.TextEdit
 import org.xvm.lsp.adapter.mock.MockAdapter
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CompletionException
 import java.util.concurrent.TimeUnit.SECONDS
 import org.xvm.lsp.adapter.InlineCompletionContext as AdapterContext
 import org.xvm.lsp.adapter.Position as AdapterPosition
@@ -33,23 +35,32 @@ class InlineCompletionProtocolTest {
     @Test
     fun `inline completion negotiates independently and round trips selection trigger and plain edits`() {
         val received = CompletableFuture<AdapterContext>()
-        val adapter = inlineAdapter { context ->
-            received.complete(context)
-            CompletableFuture.completedFuture(listOf(TextEdit(AdapterRange(AdapterPosition(0, 0), AdapterPosition(0, 2)), "answer")))
-        }
+        val adapter =
+            inlineAdapter { context ->
+                received.complete(context)
+                CompletableFuture.completedFuture(listOf(TextEdit(AdapterRange(AdapterPosition(0, 0), AdapterPosition(0, 2)), "answer")))
+            }
         XtcLanguageServer(adapter).use { server ->
             server.connect(mock(LanguageClient::class.java))
             val capabilities = server.initialize(editorInitializeParams()).join().capabilities
             assertThat(capabilities.inlineCompletionProvider.left).isTrue()
-            val request = params().apply {
-                context.selectedCompletionInfo = SelectedCompletionInfo(Range(Position(0, 0), Position(0, 2)), "ans")
-            }
-            val item = server.textDocumentService.inlineCompletion(request).get(5, SECONDS).right.items.single()
+            val request =
+                params().apply {
+                    context.selectedCompletionInfo = SelectedCompletionInfo(Range(Position(0, 0), Position(0, 2)), "ans")
+                }
+            val item =
+                server.textDocumentService
+                    .inlineCompletion(request)
+                    .get(5, SECONDS)
+                    .right.items
+                    .single()
             assertThat(item.insertText.left).isEqualTo("answer")
             assertThat(item.filterText).isEqualTo("answer")
             assertThat(item.range).isEqualTo(request.context.selectedCompletionInfo.range)
             assertThat(item.command).isNull()
-            assertThat(received.join()).isEqualTo(AdapterContext(false, TextEdit(AdapterRange(AdapterPosition(0, 0), AdapterPosition(0, 2)), "ans")))
+            assertThat(received.join()).isEqualTo(
+                AdapterContext(false, TextEdit(AdapterRange(AdapterPosition(0, 0), AdapterPosition(0, 2)), "ans")),
+            )
         }
     }
 
@@ -59,12 +70,19 @@ class InlineCompletionProtocolTest {
             val adapter = if (advertised) inlineAdapter { error("Unnegotiated request reached adapter") } else MockAdapter()
             XtcLanguageServer(adapter).use { server ->
                 val initialize = editorInitializeParams().apply { if (advertised) capabilities.textDocument.inlineCompletion = null }
-                assertThat(server.initialize(initialize).join().capabilities.inlineCompletionProvider).isNull()
-                assertThatThrownBy { server.textDocumentService.inlineCompletion(params()).join() }
-                    .hasCauseInstanceOf(ResponseErrorException::class.java)
-                    .satisfies { failure ->
-                        assertThat((failure.cause as ResponseErrorException).responseError.code).isEqualTo(ResponseErrorCode.MethodNotFound.value)
+                assertThat(
+                    server
+                        .initialize(initialize)
+                        .join()
+                        .capabilities.inlineCompletionProvider,
+                ).isNull()
+                val failure =
+                    assertThrows(CompletionException::class.java) {
+                        server.textDocumentService.inlineCompletion(params()).join()
                     }
+                assertThat(failure.cause).isInstanceOf(ResponseErrorException::class.java)
+                assertThat((failure.cause as ResponseErrorException).responseError.code)
+                    .isEqualTo(ResponseErrorCode.MethodNotFound.value)
             }
         }
     }
@@ -74,10 +92,15 @@ class InlineCompletionProtocolTest {
         listOf(false, true).forEach { cancel ->
             val entered = CompletableFuture<Unit>()
             val canceled = CompletableFuture<Unit>()
-            val pending = CompletableFuture<List<TextEdit>>().apply {
-                whenComplete { _, _ -> if (isCancelled) canceled.complete(Unit) }
-            }
-            val adapter = inlineAdapter { entered.complete(Unit); pending }
+            val pending =
+                CompletableFuture<List<TextEdit>>().apply {
+                    whenComplete { _, _ -> if (isCancelled) canceled.complete(Unit) }
+                }
+            val adapter =
+                inlineAdapter {
+                    entered.complete(Unit)
+                    pending
+                }
             XtcLanguageServer(adapter).use { server ->
                 server.connect(mock(LanguageClient::class.java))
                 server.initialize(editorInitializeParams()).join()
@@ -85,8 +108,16 @@ class InlineCompletionProtocolTest {
                 documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(URI, "xtc", 1, "module App {}")))
                 val result = documents.inlineCompletion(params())
                 entered.get(5, SECONDS)
-                if (cancel) result.cancel(false)
-                else documents.didChange(DidChangeTextDocumentParams(VersionedTextDocumentIdentifier(URI, 2), listOf(TextDocumentContentChangeEvent("module Changed {}"))))
+                if (cancel) {
+                    result.cancel(false)
+                } else {
+                    documents.didChange(
+                        DidChangeTextDocumentParams(
+                            VersionedTextDocumentIdentifier(URI, 2),
+                            listOf(TextDocumentContentChangeEvent("module Changed {}")),
+                        ),
+                    )
+                }
                 assertThatThrownBy { result.get(5, SECONDS) }.isInstanceOf(Exception::class.java)
                 canceled.get(5, SECONDS)
                 assertThat(pending.isCancelled).isTrue()
@@ -94,12 +125,23 @@ class InlineCompletionProtocolTest {
         }
     }
 
-    private fun inlineAdapter(query: (AdapterContext) -> CompletableFuture<List<TextEdit>>) = object : Adapter by MockAdapter() {
-        override val capabilities = setOf(AdapterCapability.INLINE_COMPLETION)
-        override fun getInlineCompletionsAsync(uri: String, position: AdapterPosition, context: AdapterContext) = query(context)
-    }
+    private fun inlineAdapter(query: (AdapterContext) -> CompletableFuture<List<TextEdit>>) =
+        object : Adapter by MockAdapter() {
+            override val capabilities = setOf(AdapterCapability.INLINE_COMPLETION)
 
-    private fun params() = InlineCompletionParams(TextDocumentIdentifier(URI), Position(0, 2), InlineCompletionContext(InlineCompletionTriggerKind.Invoked))
+            override fun getInlineCompletionsAsync(
+                uri: String,
+                position: AdapterPosition,
+                context: AdapterContext,
+            ) = query(context)
+        }
+
+    private fun params() =
+        InlineCompletionParams(
+            TextDocumentIdentifier(URI),
+            Position(0, 2),
+            InlineCompletionContext(InlineCompletionTriggerKind.Invoked),
+        )
 
     companion object {
         private const val URI = "file:///App.x"

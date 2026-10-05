@@ -2211,16 +2211,20 @@ class XdkAdapter
             position: Position,
             context: InlineCompletionContext,
         ): CompletableFuture<List<TextEdit>> {
-            val compilation = synchronized(lifecycle) { requests[analysisScope(uri)] }
-                ?: return CompletableFuture.completedFuture(emptyList())
+            val compilation =
+                synchronized(lifecycle) { requests[analysisScope(uri)] }
+                    ?: return CompletableFuture.completedFuture(emptyList())
             val text = compilation.overlays[uri] ?: return CompletableFuture.completedFuture(emptyList())
             if (isLibraryDocument(uri) || !XdkInlineCompletions.eligible(text, position, context)) {
                 return CompletableFuture.completedFuture(emptyList())
             }
             return analyzeAtAsync(CursorKey(uri, CursorKind.INLINE_COMPLETION), position)
                 .mapCancellable { partial ->
-                    if (partial == null || isStale(compilation)) emptyList()
-                    else XdkInlineCompletions.project(text, position, context, XdkCursorQueries.completions(partial))
+                    if (partial == null || isStale(compilation)) {
+                        emptyList()
+                    } else {
+                        XdkInlineCompletions.project(text, position, context, XdkCursorQueries.completions(partial))
+                    }
                 }
         }
 
