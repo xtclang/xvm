@@ -1,6 +1,5 @@
 package condMixinTests {
-    // TODO GG: the 'static' modifier should not be necessary
-    static TestConsole console = new TestConsole();
+    TestConsole console = new TestConsole();
 
     void run() {
 

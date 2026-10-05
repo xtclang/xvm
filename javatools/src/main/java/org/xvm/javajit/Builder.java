@@ -337,6 +337,13 @@ public abstract class Builder {
             if (singleton.getClassConstant() instanceof PropertyConstant propId) {
                 TypeConstant ownerType = propId.getClassIdentity().getType();
                 PropertyInfo propInfo  = propId.getPropertyInfo(ownerType);
+                if (!propInfo.isConstant()) {
+                    // an instance property on a runtime constant (e.g. singleton)
+                    RegisterInfo targetReg = loadConstant(bctx, code,
+                            pool().ensureSingletonConstConstant(propId.getClassIdentity()));
+                    return loadPropertyValue(code, targetReg, propId, bctx.ctxSlot(code));
+                }
+
                 TypeConstant propType  = singleton.getType();
                 JitTypeDesc  jtd       = propType.getJitDesc(this);
 
@@ -448,40 +455,8 @@ public abstract class Builder {
 
         case PropertyConstant propId: {
             // support for the "local property" mode
-            RegisterInfo targetReg = bctx.loadThis(code);
-            int          ctxSlot   = bctx.ctxSlot(code);
-            PropertyInfo info      = isPrimitivePseudoField(targetReg.type(), propId)
-                    ? loadPrimitivePseudoField(code, targetReg, propId, ctxSlot)
-                    : loadProperty(code, targetReg.type(), propId, true, ctxSlot);
-
-            TypeConstant type = info.getType();
-            JitTypeDesc  jtd  = type.getJitDesc(this);
-            switch (jtd.flavor) {
-                case NullablePrimitive:
-                    // load the null flag value from the context to the stack
-                    loadFromContext(code, CD_boolean, 0, ctxSlot);
-                    return new ExtendedSlot(Op.A_STACK, 0, 0, jtd.flavor, type, jtd.cd, "");
-
-                case XvmPrimitive:
-                case NullableXvmPrimitive:
-                    // for XVM primitives, the first value is on the stack, but we need to load any
-                    // remaining values from the context onto the stack
-                    ClassDesc[] cds  = JitTypeDesc.getXvmPrimitiveClasses(type);
-                    int         slot = 0;
-                    for (int i = 1; i < cds.length; i++) {
-                        loadFromContext(code, cds[i], slot++, ctxSlot);
-                    }
-                    if (jtd.flavor == NullableXvmPrimitive) {
-                        // load the boolean Null flag from the context
-                        loadFromContext(code, CD_boolean, slot, ctxSlot);
-                    }
-                    return new MultiSlot(jtd.flavor, type, jtd.cd, cds);
-                case Specific, Primitive, Widened:
-                    // single property value is on the stack
-                    return new SingleSlot(type, jtd.flavor, jtd.cd, "");
-                default:
-                    throw new IllegalStateException("TODO Unsupported flavor: " + jtd.flavor);
-            }
+            RegisterInfo regThis = bctx.loadThis(code);
+            return loadPropertyValue(code, regThis, propId, bctx.ctxSlot(code));
         }
 
         case MethodConstant methodId: {
@@ -645,6 +620,48 @@ public abstract class Builder {
         }
 
         throw new UnsupportedOperationException(constant.toString());
+    }
+
+    /**
+     * Load a property value. The target is already on the Java stack.
+     *
+     * @return the register description of the value on the stack
+     */
+    private RegisterInfo loadPropertyValue(CodeBuilder code, RegisterInfo targetReg,
+                                           PropertyConstant propId, int ctxSlot) {
+        PropertyInfo info = isPrimitivePseudoField(targetReg.type(), propId)
+                ? loadPrimitivePseudoField(code, targetReg, propId, ctxSlot)
+                : loadProperty(code, targetReg.type(), propId, true, ctxSlot);
+
+        TypeConstant type = info.getType();
+        JitTypeDesc  jtd  = type.getJitDesc(this);
+        switch (jtd.flavor) {
+        case NullablePrimitive:
+            // load the null flag value from the context to the stack
+            loadFromContext(code, CD_boolean, 0, ctxSlot);
+            return new ExtendedSlot(Op.A_STACK, 0, 0, jtd.flavor, type, jtd.cd, "");
+
+        case XvmPrimitive, NullableXvmPrimitive:
+            // for XVM primitives, the first value is on the stack, but we need to load any
+            // remaining values from the context onto the stack
+            ClassDesc[] cds  = JitTypeDesc.getXvmPrimitiveClasses(type);
+            int         slot = 0;
+            for (int i = 1; i < cds.length; i++) {
+                loadFromContext(code, cds[i], slot++, ctxSlot);
+            }
+            if (jtd.flavor == NullableXvmPrimitive) {
+                // load the boolean Null flag from the context
+                loadFromContext(code, CD_boolean, slot, ctxSlot);
+            }
+            return new MultiSlot(jtd.flavor, type, jtd.cd, cds);
+
+        case Specific, Primitive, Widened:
+            // single property value is on the stack
+            return new SingleSlot(type, jtd.flavor, jtd.cd, "");
+
+        default:
+            throw new IllegalStateException("TODO Unsupported flavor: " + jtd.flavor);
+        }
     }
 
     /**
