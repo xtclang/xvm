@@ -800,6 +800,13 @@ interface Adapter : Closeable {
         column: Int,
     ): Location?
 
+    /** Portable identity at a resolved occurrence; unavailable bindings return no identity. */
+    fun findMonikers(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): List<SymbolMoniker> = emptyList()
+
     /** All written contracts when a member overrides more than one declaration. */
     fun findDeclarations(
         uri: String,

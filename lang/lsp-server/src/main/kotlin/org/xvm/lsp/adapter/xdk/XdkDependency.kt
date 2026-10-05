@@ -24,6 +24,8 @@ class XdkDependency
         private val artifact: ByteArray,
         declarations: Map<Int, SemanticModel.SourceLocation>,
     ) {
+        internal val symbolIndex: XdkArtifactSymbols by lazy { XdkArtifactSymbols.capture(artifact) }
+
         val declarations: Map<Int, SemanticModel.SourceLocation> = immutableMap(declarations)
         val revision: String =
             ByteArrayOutputStream()
@@ -146,12 +148,13 @@ internal class XdkDependencies(
                     }
                 }
             }
-        return Open(repository, declarations, modules.mapValues { it.value.revision })
+        return Open(repository, declarations, modules.mapValues { it.value.revision }, modules)
     }
 
     class Open(
         val repository: ModuleRepository,
         val declarations: Map<IdentityConstant, DependencyDeclaration>,
         val revisions: Map<String, String>,
+        val artifacts: Map<String, XdkDependency> = emptyMap(),
     )
 }

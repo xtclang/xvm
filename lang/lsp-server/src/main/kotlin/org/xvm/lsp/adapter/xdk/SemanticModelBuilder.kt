@@ -135,27 +135,53 @@ internal fun EmbeddingSupport.Compilation.renameFacts(
         }
     }
 
-/** Copy navigation identities alongside the editor models, without retaining proof-only facts. */
-internal fun EmbeddingSupport.Compilation.navigationFacts(
+/** Successful emission and detached semantic facts from a single extraction. */
+internal class CompiledSemantics(
+    val models: List<SemanticModel>,
+    val navigation: XdkNavigationIndex.Facts?,
+    val artifact: XdkDependency?,
+)
+
+/** Emit once, then associate copied bindings with artifact identities; failed attempts have none. */
+internal fun EmbeddingSupport.Compilation.compiledSemantics(
     dependencies: XdkDependencies.Open,
     errors: ErrorListener,
-): XdkNavigationIndex.Facts =
-    ExecutionTrace.api("Compilation.navigationFacts") {
+    navigation: Boolean = false,
+): CompiledSemantics =
+    ExecutionTrace.api("Compilation.compiledSemantics") {
         ConstantPool.withPool(pool()).use {
             val builder =
                 SemanticModelBuilder(
                     dependencies.declarations.filterKeys { it.moduleConstant != file()?.moduleId },
                 )
+            val models = builder.build(this, errors)
+            val bindings = builder.constantBindings()
             val facts =
-                captureRenameFacts(
-                    builder.build(this, errors),
-                    builder.constantBindings(),
-                    dependencies,
-                    errors = errors,
-                    supers = builder.superBindings(),
-                    receivers = builder.receiverBindings(),
-                )
-            XdkNavigationIndex.Facts(facts.models, facts.constants)
+                if (navigation && succeeded() && !errors.hasSeriousErrors()) {
+                    captureRenameFacts(
+                        models,
+                        bindings,
+                        dependencies,
+                        errors = errors,
+                        supers = builder.superBindings(),
+                        receivers = builder.receiverBindings(),
+                    )
+                } else {
+                    null
+                }
+            val artifact =
+                if (succeeded() && !errors.hasSeriousErrors()) {
+                    XdkDependency.capture(this, builder.declarations())
+                } else {
+                    null
+                }
+            val monikers = artifact?.let { XdkMonikers.capture(it, bindings, dependencies) }.orEmpty()
+            val exported = models.map { it.withMonikers(monikers) }
+            CompiledSemantics(
+                exported,
+                facts?.let { XdkNavigationIndex.Facts(exported, it.constants) },
+                artifact,
+            )
         }
     }
 
