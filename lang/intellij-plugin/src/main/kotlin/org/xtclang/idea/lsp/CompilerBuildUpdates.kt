@@ -1,6 +1,7 @@
 package org.xtclang.idea.lsp
 
 import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.externalSystem.model.task.ExternalSystemTaskId
 import com.intellij.openapi.externalSystem.model.task.ExternalSystemTaskNotificationListener
@@ -10,12 +11,24 @@ import com.intellij.openapi.startup.ProjectActivity
 import com.intellij.openapi.vfs.VirtualFileManager
 import com.intellij.openapi.vfs.newvfs.BulkFileListener
 import com.intellij.openapi.vfs.newvfs.events.VFileEvent
+import org.jetbrains.plugins.gradle.settings.GradleSettingsListener
 import java.nio.file.Files
 import java.nio.file.Path
 
 /** Consume atomic exports without rewriting user settings or restarting a server. */
 class CompilerBuildUpdates : ProjectActivity {
     override suspend fun execute(project: Project) {
+        project.messageBus.connect(project).subscribe(
+            GradleSettingsListener.TOPIC,
+            object : GradleSettingsListener {
+                override fun onProjectsUnlinked(linkedProjectPaths: Set<String>) {
+                    project.service<CompilerImportService>().rootsRemoved()
+                    ApplicationManager.getApplication().executeOnPooledThread {
+                        if (!project.isDisposed) CompilerBuildModel.publish(project)
+                    }
+                }
+            },
+        )
         project.messageBus.connect(project).subscribe(
             VirtualFileManager.VFS_CHANGES,
             object : BulkFileListener {
