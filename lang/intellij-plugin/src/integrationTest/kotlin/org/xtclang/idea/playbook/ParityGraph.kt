@@ -48,15 +48,15 @@ internal fun ParityScenarios.graphCases() {
         applyRename(document, document.at(data.string("anchor")), data.string("replaceWith"))
         data.strings("modules").forEach { name ->
             val file = SharedScenarios.text(data.string("file"), name)
+            val expected = fixture(file).replace(data.pattern("replaceFrom"), data.string("replaceWith"))
+            // UP21 persists closed consumers for the compiler; the open editor stays unsaved.
+            val expectedDisk = if (file == document.file) fixture(file) else expected
+            check(Files.readString(directory.resolve(file)) == expectedDisk) {
+                "Rename must preserve the open buffer's disk text and persist closed consumers: $file"
+            }
             val changed = open(file)
             clean(changed)
-            check(
-                changed.text ==
-                    fixture(file).replace(data.pattern("replaceFrom"), data.string("replaceWith")),
-            )
-            check(Files.readString(directory.resolve(file)) == fixture(file)) {
-                "Rename unexpectedly saved $file"
-            }
+            check(changed.text == expected)
         }
     }
     case("X61") { data ->
