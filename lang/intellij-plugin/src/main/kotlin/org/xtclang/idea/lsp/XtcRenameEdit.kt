@@ -80,16 +80,23 @@ class XtcRenameEdit
                         graph?.beforeApply()
                         // TODO LSP4IJ: UP03 — 0.21 only renames the basename, ignoring a changed parent URI.
                         // Apply resource moves through VFS inside this same undo command.
-                        // Its VFS listener still waits for preflight on the EDT, including here.
-                        // Remove that duplicate wait only while preserving native Undo/Redo and guards.
+                        // Scope the already approved physical operation so the VFS listener does
+                        // not request another compiler edit while this write command holds the EDT.
+                        val preflighted = (snapshot.wrapper.clientFeatures as XtcClientFeatures).preflightedRenames
                         edit.documentChanges.orEmpty().forEach { change ->
                             if (change.isRight && change.right is RenameFile) {
                                 val move = change.right as RenameFile
                                 val (file, parent) = resolved.getValue(Path.of(URI(move.oldUri)))
                                 val target = Path.of(URI(move.newUri))
-                                if (file.parent != parent) file.move(this, parent)
+                                if (file.parent != parent) {
+                                    preflighted.apply(Path.of(file.path), Path.of(parent.path, file.name)) {
+                                        file.move(this, parent)
+                                    }
+                                }
                                 if (file.name != target.fileName.toString()) {
-                                    file.rename(this, target.fileName.toString())
+                                    preflighted.apply(Path.of(file.path), target) {
+                                        file.rename(this, target.fileName.toString())
+                                    }
                                 }
                             } else {
                                 LSPIJUtils.applyWorkspaceEdit(WorkspaceEdit(listOf(change)))
