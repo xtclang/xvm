@@ -7893,6 +7893,68 @@
         ]
       }
     },
+    "X248": {
+      "title": "retain outline folding and strictly expanding selection in damaged syntax",
+      "manual": [
+        "Open each damaged source variant. Inspect Alias/current/later in the outline, fold current and expand selection at its name. Repair the source and verify stale entries disappear."
+      ],
+      "values": {
+        "file": "Structure.x",
+        "variants": [
+          {
+            "source": "module Structure {\n    typedef Int Alias;\n    Object current(String value) {\n        /* \ud83d\ude00 */ return [value.si;\n    }\n    Int later() = 42;\n}",
+            "symbols": [
+              "Structure",
+              "Alias",
+              "current",
+              "later"
+            ],
+            "anchor": "current",
+            "foldLine": 2
+          },
+          {
+            "source": "module Structure {\n    typedef Int Alias;\n    Object current(String value) {\n        /* \ud83d\ude00 */ return (1, value.si;\n    }\n    Int later() = 42;\n}",
+            "symbols": [
+              "Structure",
+              "Alias",
+              "current",
+              "later"
+            ],
+            "anchor": "current",
+            "foldLine": 2
+          },
+          {
+            "source": "module Structure {\n    typedef Int Alias;\n    Object current(String value) {\n        /* \ud83d\ude00 */ return use(value.si;\n    }\n    Int later() = 42;\n}",
+            "symbols": [
+              "Structure",
+              "Alias",
+              "current",
+              "later"
+            ],
+            "anchor": "current",
+            "foldLine": 2
+          },
+          {
+            "source": "module Structure {\n    typedef Int Alias;\n    void current(Int value, Str) {\n        /* \ud83d\ude00 */ Int retained = 1;\n    }\n    Int later() = 42;\n}",
+            "symbols": [
+              "Structure",
+              "Alias",
+              "current",
+              "later"
+            ],
+            "anchor": "current",
+            "foldLine": 2
+          }
+        ],
+        "repaired": "module Structure { Int repaired() = 1; }"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": [
+          "Uses installed outline, folding and selection providers; interactive selection keybindings remain manual."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
