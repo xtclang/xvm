@@ -163,7 +163,8 @@ implementation retain their separate meanings. Indexed library sources remain re
 | Semantic diagnostics | None | None | Compiler errors and warnings |
 | Incomplete syntax | Limited | Error-tolerant parse | Recovers surrounding declarations/blocks; parse errors stop semantic compilation |
 | Definition / references | By spelling | Syntax and workspace index | Source identities across discovered/configured graphs; definitions also use host-supplied dependency source indices |
-| Symbol monikers | None | None | Artifact-versioned import/export/local identities; matching source and binary consumers |
+| Symbol monikers | None | None | Artifact-versioned import/export/local identities; source, binary consumers and matching library declarations |
+| Library document content | None | None | Negotiated LSP 3.18 content/refresh; revision-owned bundled source; read-only file fallback |
 | Hover | Declaration | Declaration | Declaration and validated type |
 | Highlights | By spelling | Syntax, read/write distinction | Resolved identities, read/write distinction |
 | Completion | Basic | Context-aware | Bounded scope/member/static completion and compatible argument values |
@@ -834,6 +835,18 @@ lambdas, unresolved bindings and unsuccessful compilations supply no IDs. Identi
 artifacts intentionally match across projects; module-name spelling alone never establishes a match.
 See [L74's contract and acceptance](../../docs/errs-integration-plan.md#l74-artifact-identities-2026-10-05).
 
-Parsed-only library source views do not yet answer moniker requests directly; current consumer
-snapshots do provide the imported binary identity. Library-view enrichment is tracked with L75.
+Matching bundled library declarations now answer moniker requests directly, including declarations
+not previously referenced by a consumer. Ambiguous source spans still return no identity.
+Supporting clients receive `ecstasy-library` URIs through LSP 3.18 `workspace/textDocumentContent`.
+URIs include the binary and source-archive revisions; registered content comes from the matching
+bundle, never from an arbitrary path or an editor overlay. Compiler input replacement refreshes
+fetched views; immutable revision URIs keep their original text. Closing the server retires its
+content registry. Line-ending normalization preserves declaration positions; other client text
+rewrites withhold monikers until matching presentation is restored. Clients without this capability retain protected file views (LSP4IJ UP25).
+External host source indexes remain host-owned file locations: they supply declaration ranges,
+not verified source text, and are not silently promoted to virtual library snapshots.
 Selected X31/X252/X253 pass in both editors; full-catalog/release acceptance remains separate.
+
+L75 passes 58 distinct backend/protocol cases and the packaged content round trip. X31/X101/X158/
+X252–X254 pass in VS Code; IntelliJ passes five plus START and X254's file-fallback checks, with
+X254 explicitly partial for UP25 and no IDE errors. See the [L75 receipt](../../docs/errs-integration-plan.md#l75-read-only-library-content-2026-10-05).

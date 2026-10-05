@@ -1,7 +1,9 @@
 # Integrating the embedding diagnostics work
 
-Latest feature checkpoint: [L74 artifact identities](#l74-artifact-identities-2026-10-05) passes
-backend, packaged transport and selected editor acceptance. L75 document content/refresh is next.
+Latest feature checkpoint: [L75 library content](#l75-read-only-library-content-2026-10-05) passes
+backend, packaged transport and selected editor acceptance. IntelliJ retains its tested read-only
+file fallback; virtual content/refresh remains UP25. L76–L79 retain their explicit product/runtime
+scope decisions; L81/L82 retain broader acceptance and release work.
 
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
@@ -1267,11 +1269,12 @@ and debugging. Neither feature counts nor a selected passing playbook establish 
   replacement, visibility and stale/canceled responses pass regression tests; X31/X252/X253 pass
   selected acceptance in both editors. Snapshot-local IDs remain internal. Parsed-only library
   document enrichment remains with L75; see the [L74 contract and receipt](#l74-artifact-identities-2026-10-05).
-- [ ] **L75 — Read-only document content.** Add LSP 3.18 `workspace/textDocumentContent` and
-  its refresh request for clients supporting server-provided library/virtual documents.
-  Existing matching XDK sources use read-only file views. Define URI/revision ownership and
-  invalidation; do not make binary-backed targets editable. Add current artifact-backed monikers
-  for matching library source views, which currently have parsed structure but no semantic snapshot.
+- [x] **L75 — Read-only document content.** Negotiated LSP 3.18 `workspace/textDocumentContent`
+  and refresh serve immutable revision-owned bundled source views. Matching library declarations
+  have artifact-backed monikers without another AST. VS Code virtual views and IntelliJ's read-only
+  file fallback pass selected acceptance; virtual IntelliJ content/refresh remains the explicit
+  UP25 client limit. Host source indexes remain file locations, not invented source snapshots.
+  See the [contract and receipt](#l75-read-only-library-content-2026-10-05).
 
 ### Additional LSP features with no implementation
 
@@ -10814,9 +10817,9 @@ recompilation, checkout relocation, distinct same-name artifacts, visibility, in
 closed graph views and replacement. Selected acceptance passes in both editors; receipts below.
 
 Companion views share an immutable identity table per compilation, including after graph joining.
-Queries need a current semantic snapshot: parsed-only library source views still return no moniker
-when queried directly. Resolved imports in consumers have binary identities; semantic enrichment of
-read-only library documents is tracked with L75. This is not a claim of complete library-document
+At the L74 checkpoint, parsed-only library source views returned no moniker when queried directly.
+L75 below adds exact artifact-backed library declaration identities; consumer imports already had
+binary identities. This is not a claim of complete library-document
 language support.
 
 L74 validation: **137 distinct backend/protocol unit cases** pass across the recorded selections,
@@ -10845,3 +10848,58 @@ Next compiler feature: L75 document content/refresh, starting with client suppor
 ownership. L73's broader Run/command service remains with R2–R5; it does not justify an unused
 command registry in this compiler-only slice. L76–L79 still need their recorded product/runtime
 decisions. L81/L82 retain the outstanding cross-platform and release acceptance work.
+
+
+### L75 read-only library content (2026-10-05)
+
+The compiler adapter exposes matching bundled documents with immutable revision-owned URIs.
+`workspace/textDocumentContent` is advertised only when the client declares support. Navigation,
+links and hierarchy targets use `ecstasy-library` views for those clients; other clients retain the
+protected file view. VS Code's language client supplies the standard read-only provider and refresh
+handler. LSP4IJ 0.21.0 has no equivalent provider, recorded with a searchable TODO and UP25.
+
+The per-connection registry serves only documents presented through that connection, never arbitrary
+file paths or decoded client URIs. Binary and source-archive revisions participate in URI ownership;
+a new revision requires a new URI. Compiler input replacement requests refresh for fetched views,
+coalescing each URI while its reply is outstanding. Since revisions are immutable, refresh rereads
+the same trusted content and cannot silently turn an old artifact view into a different artifact.
+Shutdown retires the registry. Client presentations cannot install compiler library overlays or replace the trusted content.
+CRLF/bare-CR normalization preserves positions; other whitespace/content rewrites suppress monikers
+until the presentation matches the artifact source again. External host source indexes still carry ranges rather than
+verified source text, so their existing host-owned file locations are preserved.
+
+Library declaration monikers use actual binary identities and unambiguous matching declaration
+ranges, with the same normalized artifact scheme as L74. They also resolve declarations not
+previously queried by the consumer. Only copied ranges and scalar identities survive; no new AST,
+constant pool, Java embedding API or mutable AST field is introduced. Library bodies remain
+parsed source views, not standalone recompilations of the XDK or complete semantic editing sessions.
+
+| Slice | Local commits | Contents |
+|-------|---------------|----------|
+| Library documents | `64673169e` | Revision-owned bundled content, exact declaration monikers, serialized/cancellable queries and backend tests. |
+| Protocol and client | `34dc51056` | Per-connection content/refresh, navigation mapping, VS Code synchronization, fallback and packaged/protocol tests. |
+| Shared acceptance | `b877d0e91` | X254 in both drivers; X101 expects VS Code virtual views. |
+| Validated corrections | `642763cf9` | Full module-name URI support, acknowledged refresh, whitespace presentation guards, formatting and native input assertions. |
+
+Validation: **58 distinct backend/protocol cases** pass across the 30-case initial and 32-case
+capability/presentation selections (four overlap), with zero failures/errors/skips. The packaged
+library-content/moniker round trip passes before and after the final client-presentation guard.
+Kotlin formatting, TypeScript and IntelliJ harness compilation pass. No full suite is claimed.
+
+- VS Code `run-e4dCrP`: X31/X101/X158/X252/X253/X254 all pass. Native typing cannot modify the
+  virtual document; the editor also declines formatting. Initial runs caught a missing manual-table
+  row and harness assumptions about `TextEditor.edit` and absent formatting results; these are fixed.
+- IntelliJ `run-16728311754487527222`: START and X31/X101/X158/X252/X253 pass, zero IDE failures.
+  X254 executes and passes its file-fallback/moniker assertions, reported **partial** because UP25
+  prevents virtual content/refresh. It is not an unimplemented driver case or failed file view.
+- The final whitespace-normalization guard has backend and packaged coverage after these GUI runs;
+  it does not change their normal source presentation and did not trigger another native rerun.
+- Initial backend validation caught the host-only URI constructor rejecting underscores in valid
+  module names (`runner_client.xtclang.org`). The registry-authority constructor fixes the complete
+  bundled-library test. Refresh acknowledgement is now observable without a timing assumption.
+
+The current catalog has **259 scenarios**, SHA-256
+`bdbf0228f32e5568edb7f70f8d7fc93e2781595bd56e8d2de20bc6babcb04c3c`.
+Remaining boundaries: LSP4IJ virtual providers (UP25), verified text attachments for external host
+binary indexes if that API is introduced, and broader semantic features inside library bodies.
+These do not require moving any compiler or AST implementation for this slice.
