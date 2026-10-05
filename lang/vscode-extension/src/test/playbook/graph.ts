@@ -214,7 +214,7 @@ export function libraryContentCases(): void {
             const [target] = await targets(document, 'Definition', at);
             assert.strictEqual(target.uri.scheme, data.scheme);
             const library = await vscode.workspace.openTextDocument(target.uri);
-            const editor = await vscode.window.showTextDocument(library);
+            await vscode.window.showTextDocument(library);
             const text = library.getText();
             assert.strictEqual(library.getText(target.range), name);
             const supplied = await client().sendRequest<{ text: string }>('workspace/textDocumentContent', { uri: target.uri.toString() });
@@ -224,12 +224,14 @@ export function libraryContentCases(): void {
             });
             assert.deepStrictEqual(exported, [{ ...imported[0], kind: 'export' }]);
             assert.strictEqual(exported[0].scheme, data.monikerScheme);
-            const edited = await editor.edit(builder => builder.insert(new vscode.Position(0, 0), '// forbidden\n')).catch(() => false);
-            assert.strictEqual(edited, false, 'Native virtual editor is read-only');
+            // TextEditor.edit is an extension API and can bypass editor read-only input handling.
+            // Exercise the user's typing command, as the manual playbook requires.
+            await vscode.commands.executeCommand('default:type', { text: '// forbidden\n' });
             assert.strictEqual(library.getText(), text);
             assert.strictEqual(library.isDirty, false);
-            assert.deepStrictEqual(await vscode.commands.executeCommand('vscode.executeFormatDocumentProvider', target.uri,
-                { tabSize: 4, insertSpaces: true }), []);
+            const edits = await vscode.commands.executeCommand<vscode.TextEdit[]>('vscode.executeFormatDocumentProvider', target.uri,
+                { tabSize: 4, insertSpaces: true });
+            assert.deepStrictEqual(edits ?? [], []);
         }
     });
 }

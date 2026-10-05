@@ -96,17 +96,29 @@ internal object XdkLibrarySources {
     fun document(uri: String): ReadOnlyDocument? = source(uri)?.document
 
     /** A parsed name is not proof: require one exact artifact declaration at this source range. */
-    fun monikers(uri: String, line: Int, column: Int): List<SymbolMoniker> {
+    fun monikers(
+        uri: String,
+        line: Int,
+        column: Int,
+    ): List<SymbolMoniker> {
         if (line < 0 || column < 0) return emptyList()
         val at = SemanticModel.Position(line, column)
-        return source(uri)?.monikers?.filterKeys { at in it }?.values?.singleOrNull()?.let(::listOf).orEmpty()
+        return source(uri)
+            ?.monikers
+            ?.filterKeys { at in it }
+            ?.values
+            ?.singleOrNull()
+            ?.let(::listOf)
+            .orEmpty()
     }
 
     private fun declarationMonikers(source: SourceFile): Map<SemanticModel.Range, SymbolMoniker> {
         val module = XdkLibraries.module(source.module) ?: return emptyMap()
         val symbols = XdkLibraries.symbolIndex(source.module) ?: return emptyMap()
         return ConstantPool.withPool(module.constantPool).use {
-            module.constantPool.constants.toList().filterIsInstance<IdentityConstant>()
+            module.constantPool.constants
+                .toList()
+                .filterIsInstance<IdentityConstant>()
                 .filter { it.moduleConstant.name == source.module }
                 .mapNotNull { identity ->
                     val component = identity.component ?: return@mapNotNull null
@@ -214,7 +226,7 @@ internal object XdkLibrarySources {
                     visit(root, path.substringBeforeLast('/', "").split('/').drop(1))
                 }
             }
-        val virtualUri = URI(SCHEME, module, "/${XdkLibraries.revision(module)}/${entry.revision}/$path", null).toASCIIString()
+        val virtualUri = URI(SCHEME, module, "/${XdkLibraries.revision(module)}/${entry.revision}/$path", null, null).toASCIIString()
         return SourceFile(
             module,
             path,

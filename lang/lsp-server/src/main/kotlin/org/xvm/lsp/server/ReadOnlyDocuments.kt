@@ -33,7 +33,7 @@ internal class ReadOnlyDocuments(
     )
 
     private val state = AtomicReference(State())
-    private val refreshing = ConcurrentHashMap.newKeySet<String>()
+    private val refreshing = ConcurrentHashMap<String, CompletableFuture<Void>>()
 
     fun configure(supported: Boolean) {
         state.updateAndGet { if (it.closed) it else it.copy(enabled = supported && adapter.readOnlyDocumentSchemes.isNotEmpty()) }
@@ -50,16 +50,18 @@ internal class ReadOnlyDocuments(
         val current = state.get()
         if (!current.enabled || current.closed) return uri
         val document = adapter.readOnlyDocument(uri) ?: return uri
-        val installed = state.updateAndGet {
-            if (it.closed) it else it.copy(documents = it.documents + (document.uri to document))
-        }
+        val installed =
+            state.updateAndGet {
+                if (it.closed) it else it.copy(documents = it.documents + (document.uri to document))
+            }
         return if (installed.closed) uri else document.uri
     }
 
     fun content(uri: String): CompletableFuture<TextDocumentContentResult> {
-        val current = state.updateAndGet {
-            if (it.closed || uri !in it.documents) it else it.copy(fetched = it.fetched + uri)
-        }
+        val current =
+            state.updateAndGet {
+                if (it.closed || uri !in it.documents) it else it.copy(fetched = it.fetched + uri)
+            }
         val document = current.documents[uri]
         return if (!current.closed && current.enabled && document != null) {
             CompletableFuture.completedFuture(TextDocumentContentResult(document.text))
@@ -71,25 +73,33 @@ internal class ReadOnlyDocuments(
     }
 
     /** Called after compiler input replacement. One outstanding refresh per immutable document. */
-    fun refresh() {
+    fun refresh(): CompletableFuture<Void> {
         val current = state.get()
-        if (!current.ready || current.closed) return
-        current.fetched.filter { refreshing.add(it) }.forEach { uri ->
-            // Never enter the client transport while holding compiler/document publication locks.
-            CompletableFuture.runAsync {
-                val reply = runCatching {
+        if (!current.ready || current.closed) return CompletableFuture.completedFuture(null)
+        return CompletableFuture.allOf(*current.fetched.map(::refreshDocument).toTypedArray())
+    }
+
+    private fun refreshDocument(uri: String): CompletableFuture<Void> {
+        val result = CompletableFuture<Void>()
+        refreshing.putIfAbsent(uri, result)?.let { return it }
+        // Never enter the client transport while holding compiler/document publication locks.
+        CompletableFuture.runAsync {
+            val reply =
+                runCatching {
                     if (state.get().closed) null else client()?.refreshTextDocumentContent(TextDocumentContentRefreshParams(uri))
                 }.getOrElse { CompletableFuture.failedFuture(it) } ?: CompletableFuture.completedFuture(null)
-                reply.orTimeout(10, SECONDS).whenComplete { _, failure ->
-                    refreshing.remove(uri)
-                    if (failure != null && !state.get().closed) logger.debug("Library content refresh failed for {}", uri, failure)
-                }
+            reply.orTimeout(10, SECONDS).whenComplete { _, failure ->
+                refreshing.remove(uri, result)
+                if (failure != null && !state.get().closed) logger.debug("Library content refresh failed for {}", uri, failure)
+                result.complete(null)
             }
         }
+        return result
     }
 
     override fun close() {
         state.set(State(closed = true))
+        refreshing.values.forEach { it.cancel(false) }
         refreshing.clear()
     }
 
