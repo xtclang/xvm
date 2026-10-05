@@ -12,7 +12,8 @@ class XdkInlineCompletionTest {
     @ParameterizedTest
     @ValueSource(strings = ["consume(ans§);", "consume(ans§", "consume(value = ans§);", "Int result = ans§;"])
     fun `compiler suggests compatible names in complete and incomplete source`(statement: String) {
-        val marked = """
+        val marked =
+            """
             module App {
                 void consume(Int value) {}
                 void run() {
@@ -21,7 +22,7 @@ class XdkInlineCompletionTest {
                     $statement
                 }
             }
-        """.trimIndent()
+            """.trimIndent()
         val source = marked.replace("§", "")
         val before = marked.substringBefore('§')
         val position = Position(before.count { it == '\n' }, before.substringAfterLast('\n').length)
@@ -37,8 +38,47 @@ class XdkInlineCompletionTest {
     }
 
     @Test
+    fun `member and literal suggestions use compiler facts and explicit requests can fill empty values`() {
+        listOf(
+            Triple("Int result = box.ans§;", true, listOf("answer")),
+            Triple("flag(Tr§);", true, listOf("True")),
+            Triple("flag(§);", false, listOf("False", "True")),
+        ).forEach { (statement, automatic, expected) ->
+            val marked =
+                """
+                module App {
+                    class Box { Int answer = 42; }
+                    void flag(Boolean value) {}
+                    void run(Box box) {
+                        $statement
+                    }
+                }
+                """.trimIndent()
+            val before = marked.substringBefore('§')
+            val at = Position(before.count { it == '\n' }, before.substringAfterLast('\n').length)
+            XdkAdapter().use { adapter ->
+                adapter.compile(URI, marked.replace("§", ""))
+                val edits = adapter.getInlineCompletionsAsync(URI, at, InlineCompletionContext(automatic)).get(30, SECONDS)
+                assertThat(edits.map { it.newText }).describedAs(statement).containsExactlyInAnyOrderElementsOf(expected)
+            }
+        }
+    }
+
+    @Test
+    fun `unopened and library documents never trigger inline analysis`() {
+        XdkAdapter().use { adapter ->
+            listOf(URI, "ecstasy-library://ecstasy.xtclang.org/revision/String.x").forEach { uri ->
+                assertThat(adapter.getInlineCompletionsAsync(uri, Position(0, 0), InlineCompletionContext(false)).get(5, SECONDS))
+                    .isEmpty()
+                assertThat(adapter.getCachedResult(uri)).isNull()
+            }
+        }
+    }
+
+    @Test
     fun `automatic ambiguity disappears as the user continues typing`() {
-        val marked = """
+        val marked =
+            """
             module App {
                 void run() {
                     Int answer = 1;
@@ -46,7 +86,7 @@ class XdkInlineCompletionTest {
                     Int result = an§;
                 }
             }
-        """.trimIndent()
+            """.trimIndent()
         val before = marked.substringBefore('§')
         val at = Position(before.count { it == '\n' }, before.substringAfterLast('\n').length)
         XdkAdapter().use { adapter ->
@@ -67,7 +107,11 @@ class XdkInlineCompletionTest {
         val range = Range(Position(0, 0), at)
         val item = CompletionItem("answer", CompletionItem.CompletionKind.VARIABLE, "Int", "answer", TextEdit(range, "answer"))
         val automatic = InlineCompletionContext(true)
-        fun project(text: String, items: List<CompletionItem> = listOf(item)) = XdkInlineCompletions.project(text, at, automatic, items)
+
+        fun project(
+            text: String,
+            items: List<CompletionItem> = listOf(item),
+        ) = XdkInlineCompletions.project(text, at, automatic, items)
         assertThat(project("an;")).containsExactly(TextEdit(range, "answer"))
         assertThat(project("another")).isEmpty()
         assertThat(project("an;", listOf(item.copy(snippet = "answer")))).isEmpty()
@@ -84,6 +128,7 @@ class XdkInlineCompletionTest {
         val range = Range(Position(0, 0), at)
         val edit = TextEdit(range, "answer")
         val item = CompletionItem("answer", CompletionItem.CompletionKind.VARIABLE, "Int", "answer", edit)
+
         fun selected(selection: TextEdit) = XdkInlineCompletions.project("an;", at, InlineCompletionContext(false, selection), listOf(item))
         assertThat(selected(TextEdit(range, "ans"))).containsExactly(edit)
         assertThat(selected(edit)).isEmpty()
