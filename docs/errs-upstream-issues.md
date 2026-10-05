@@ -35,7 +35,7 @@ not a claim that every referenced suite was rerun for this documentation change.
 | --- | --- | --- | --- |
 | **UP01 — LSP4IJ — bridged** | Process `stop()` can precede `start()`; later startup creates a child that subsequent stop does not reap. | [Provider](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcLspServerSupportProvider.kt) uses `ConnectionLifetime`. Real child reproduction and separate server EOF bug are documented in the [lifecycle diagnosis](errs-lsp-process-lifecycle.md). | Upstream atomically owns start/stop and rejects post-stop startup; `ConnectionLifetimeTest` and packaged process regressions still pass without the guard. |
 | **UP02 — LSP4IJ — constrained** | Native synchronization does not dispatch the advertised server save hooks, including `willSaveWaitUntil`. | [Client capabilities](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcClientFeatures.kt), [provider](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcLspServerSupportProvider.kt) and [settings](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/LanguageServiceConfigurable.kt) disable these hooks/server save formatting. Native Actions on Save remains available. | Observe real pre-save requests, apply version-checked edits before persistence, then enable the UI/capabilities and extend X139. |
-| **UP03 — LSP4IJ — bridged; generic UI wait open** | Native file rename/move preflight happens too late; resource rename handling ignores changed parents. The VFS listener also requests old-path → same-path preflight for moves and waits on the EDT. | Guarded native entry points preserve edits/Undo. `PreflightedRenames` now completes no-op requests and exact already-approved physical operations locally. Real unowned renames still use upstream preflight. Seven regressions pass; native validation is pending. Original 6–11-second wait stacks remain recorded. | Native upstream Rename/Move passes X103/X130, including consumers, resources, Undo/Redo and refusals, without our entry points or UI-thread waits. |
+| **UP03 — LSP4IJ — bridged; generic UI wait open** | Native file rename/move preflight happens too late; resource rename handling ignores changed parents. The VFS listener also requests old-path → same-path preflight for moves and waits on the EDT. | Guarded native entry points preserve edits/Undo. `PreflightedRenames` now completes no-op requests and exact already-approved physical operations locally. Real unowned renames still use upstream preflight. Eight endpoint/launcher regressions and the focused native run pass. Original 6–11-second wait stacks remain recorded. | Native upstream Rename/Move passes X103/X130, including consumers, resources, Undo/Redo and refusals, without our entry points or UI-thread waits. |
 | **UP04 — LSP4IJ — bridged** | Rename and generic `workspace/applyEdit` can apply stale edits without checking transmitted document versions/epochs. | [Rename handler](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcRenameHandler.kt), [snapshot guard](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcRenameEdit.kt) and [client edit handler](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcClientFeatures.kt) validate inside the write command. Unsupported generic resource/snippet/confirmation edits are refused. | Equivalent upstream ownership/version checks pass stale/closed/reopened document tests and X144; supported Rename/Move remains atomic and undoable. |
 | **UP05 — LSP4IJ — bridged** | Dynamic filesystem watcher registrations do not alone establish/refresh unknown or missing external VFS roots while the IDE stays focused. | [CompilerRootWatches](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/CompilerRootWatches.kt) owns roots and their disposal; `CompilerRootWatchesTest` and X124 cover resources. | Upstream observes creation/deletion/change under configured external roots while focused and releases watchers on disposal. |
 | **UP06 — LSP4J, bundled by LSP4IJ — bridged** | `relatedDocuments` diagnostic unions are not reliably decoded by their `kind` discriminator. | [DiagnosticReportJson](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/DiagnosticReportJson.kt) supplies the adapter; `DiagnosticReportJsonTest` checks full/unchanged reports. | Correct full/unchanged wire round trips without the adapter in the actual bundled client library. |
@@ -63,7 +63,7 @@ not a claim that every referenced suite was rerun for this documentation change.
 | --- | --- | --- | --- |
 | **UP25 — LSP4IJ — constrained** | No LSP 3.18 document-content provider or refresh handler. | Matching read-only file fallback and direct library monikers; X254 executes those assertions with explicit partial status. [Details below](#up25-lsp4ij-has-no-lsp-318-library-content-provider). | Upstream virtual URI resolution, read-only views, refresh and disposal pass native X254 before advertising the capability. |
 | **UP26 — LSP4IJ — constrained** | Inline requests always use Automatic and omit selected popup context. | Native unique suggestions work; X257 has protocol-only explicit alternatives/selection. [Details below](#up26-lsp4ij-inline-completion-loses-invocation-and-popup-selection-context). | Forward invocation kind and selection, then pass native X257. |
-| **UP27 — LSP4IJ — local repair; native validation pending** | Semantic-token and code-lens refresh fan out across connected files on the application executor, exceeding IntelliJ's concurrent non-blocking read-action limit in a long session. | `EditorRefresh` replaces that fan-out with one coalesced read/UI pass per connection and feature, retaining LSP4IJ's rendering bridges. X146 adds a many-document refresh burst; X259 retains toggling/restart acceptance. Original errors remain recorded. | Pass focused and long native acceptance without suppressing IDE errors. Remove the bridge when upstream provides bounded batch refresh and connection-lifetime cancellation. |
+| **UP27 — LSP4IJ — bridged; long continuation passes** | Semantic-token and code-lens refresh fan out across connected files on the application executor, exceeding IntelliJ's concurrent non-blocking read-action limit in a long session. | `EditorRefresh` replaces that fan-out with one coalesced read/UI pass per connection and feature, retaining LSP4IJ's rendering bridges. X146 adds a many-document refresh burst; X259 retains toggling/restart acceptance. Focused and long continuation runs pass with zero IDE errors/freeze dumps. Original errors remain recorded. | Remove the bridge when upstream provides bounded batch refresh and connection-lifetime cancellation, then repeat the many-file stress and long native acceptance. |
 
 
 ## UP19: directory moves retain old document connections
@@ -434,8 +434,12 @@ superseded internal tasks as failed JSON-RPC refreshes. Compiler inlay hints rem
 X146 now opens 16 additional real documents, temporarily raises the sandbox IDE's tab limit, then
 issues 64 refresh requests for each of the three features while a write action delays their work.
 The existing untouched-consumer hint assertions run afterward in both directions. X259 covers
-hint toggling and retiring a connection during restart. Focused and long native acceptance are
-pending; the passing earlier nine-case follow-up does not close this issue.
+hint toggling and retiring a connection during restart. Focused run `run-11532602109763278599`
+passes both cases and 14 refactoring cases plus startup, with zero IDE errors. The subsequent
+172-case continuation `run-13878115092192383073` also passes (two pre-existing partial cases),
+with zero IDE errors/freeze dumps. No suppression was installed. An independent X185 popup-harness
+failure in the first segment is fixed and recorded; acceptance is across continuations, not one
+uninterrupted full run. Upstream removal remains open.
 
 ## UP03 continuation: native VFS preflight blocks the UI
 
@@ -459,10 +463,15 @@ All notifications, including did-rename/watch notifications, are forwarded uncha
 unowned renames, mixed batches, non-file URIs and invalid URIs retain normal server handling.
 No capabilities or generic VFS listeners are disabled.
 
-Seven unit regressions cover a permanently pending remote reply, real service-proxy dispatch,
-scope nesting/failure cleanup, client/thread separation, malformed/mixed requests, notifications
-and cancellation. Focused native Move/Undo/Redo acceptance is pending. This is a narrow local
-repair, not a claim that upstream's generic UI wait has disappeared: a genuine basename rename
+Eight unit regressions cover a permanently pending remote reply, the actual production launcher,
+service-proxy dispatch, scope nesting/failure cleanup, client/thread separation, malformed/mixed
+requests, notifications
+and cancellation. Focused native run `run-11532602109763278599` passes START and all 16 selected
+cases, with zero IDE errors, including Move/Undo/Redo and the refresh stress. Its server trace still
+receives 14 will-rename requests and 84 did-rename notifications: file-operation support remains active.
+The later 172-case continuation also has zero IDE errors/freeze dumps, including the same-path
+Move/Undo/Redo paths under longer-session load. This is a narrow local repair, not a claim that
+upstream's generic UI wait has disappeared: a genuine basename rename
 replayed outside the approved scope still takes that path. Keep the original dump artifacts under
 `XtcCompilerPlaybook-run-5080670791887423538/log/threadDumps-freeze-*` and the long-session gate.
 This is separate from UP17's large-file interval-tree cost and UP27's refresh scheduling error.

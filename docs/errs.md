@@ -3,9 +3,12 @@ Real platform sources exposed a recursive-type adapter crash and repeatable empt
 retention on a long-lived compiler worker; both now have regression-tested fixes in separate commits.
 The [L82 receipt](errs-integration-plan.md#l82-combined-regression-and-retention-checkpoint-2026-10-05)
 records the before/after evidence, remaining native acceptance and extraction boundaries.
-Both 264-case editor catalogs have been exercised. VS Code retains UP23; IntelliJ feature
-assertions cover 262 passes plus two partial cases across continuations, but its long run exposes
-UP27 refresh overload and UP03 VFS waits. A clean combined native checkpoint remains open.
+Both 264-case editor catalogs have been exercised. VS Code retains UP23. The
+[local IntelliJ repairs](errs-integration-plan.md#l82-intellij-refresh-and-vfs-repair-2026-10-05)
+now cover 262 passes plus two known partial cases across two segments, with zero IDE errors or
+freeze dumps. UP27 is locally bridged; redundant UP03 waits are removed, while generic upstream
+VFS waits remain. A corrected native popup-harness failure means one uninterrupted clean full run
+is still pending. The new client/launcher regressions bring the focused plugin suite to 98 passes.
 No embedding or AST API change was needed. Compiler inlay hints remain enabled by default;
 the former disabled syntax-adapter placeholder is now an active negative capability test.
 

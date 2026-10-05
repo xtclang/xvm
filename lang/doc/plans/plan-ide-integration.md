@@ -266,11 +266,12 @@ Dynamic watcher registration now waits for `initialized` and negotiated support.
 full-catalog, scale and other-platform release evidence remain under L82.
 
 **Current combined checkpoint (2026-10-05):** 2,991 backend tests pass (44 existing skips).
-VS Code exercises all 264 scenarios: 263 pass, X218 retains UP23. IntelliJ's resumed coverage has
-262 passing feature assertions and two explicit partial cases (UP25/UP26). Its long continuation
-also records UP27 refresh overload and UP03 native VFS waits; the short clean follow-up does not
-clear those independent IDE failures. Recursive typedef diagnostics/rename and bounded worker
-retention are repaired without new AST/embedding APIs. See the
+VS Code exercises all 264 scenarios: 263 pass, X218 retains UP23. After the UP27 refresh and UP03
+redundant-preflight bridges, IntelliJ covers the same catalog across two segments: 262 pass and
+two remain partial (UP25/UP26), with zero IDE errors/freeze dumps, including the 14-minute
+continuation. A corrected X185 popup-harness failure prevents calling this one uninterrupted clean
+run. Generic upstream VFS waits remain. The client suite passes 98 tests. Recursive typedef
+handling, bounded worker retention and these client repairs require no new AST/embedding APIs. See the
 [L82 evidence and next tasks](../../../docs/errs-integration-plan.md#l82-combined-regression-and-retention-checkpoint-2026-10-05).
 
 **Historical acceptance (2026-09-29):** the shared playbook then had 128 cases with
