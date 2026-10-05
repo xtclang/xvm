@@ -14,6 +14,18 @@ import java.nio.file.Path
 class XdkMissingMethodsTest {
     @TempDir lateinit var directory: Path
 
+    @Test
+    fun `recursive aliases without a proven source spelling refuse method generation`() {
+        refused(
+            """
+            module Missing {
+                typedef (Int | Array<Doc>) as Doc;
+                Doc run(Doc value) = §missing(value);
+            }
+            """.trimIndent(),
+        )
+    }
+
     @ParameterizedTest
     @CsvSource(value = ["Int;Int64", "String;String", "List<Int>;List<Int64>", "(Int | String);(Int64 | String)"], delimiter = ';')
     fun `resolved parameter and return types produce a private method`(
