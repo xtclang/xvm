@@ -65,7 +65,6 @@ public class NativeTypeSystem
         URL  javatoolsURL  = ConstantPool.class.getProtectionDomain().getCodeSource().getLocation();
         Path javatoolsPath;
         try {
-            // a URL path such as "/D:/xdk/javatools.jar" is not a valid Windows file path
             javatoolsPath = Path.of(javatoolsURL.toURI());
         } catch (URISyntaxException e) {
             throw new IllegalStateException("Invalid location: " + javatoolsURL, e);
