@@ -1757,6 +1757,12 @@ class CompilerPlaybook(
                         }
                     },
             )
+        val discovery = !data.values.has("sourceModules")
+        if (discovery && service<LanguageClients>(singleProject()).getStartedServers().isEmpty()) {
+            // A selected discovery case can be the first to start the server. Bootstrap with
+            // the common graph's valid consumer, never this case's not-yet-configured source.
+            open(shared.dependencyNavigation.file)
+        }
         // Independent cases replace the source graph. Close their predecessors' fixture tabs,
         // as the workspace scenarios already did, before opening this case's caller.
         // TODO LSP4IJ: UP07 — keeping unrelated broken fixtures open during replacement can
@@ -1773,13 +1779,11 @@ class CompilerPlaybook(
         // Match VS Code's per-case discovery workspace so unrelated teaching fixtures cannot
         // silently alter this scenario's graph or the scope of its refactoring proof.
         val root = Path.of(singleProject().getBasePath())
-        val discovery = !data.values.has("sourceModules")
         // Explicit graphs already isolate the case. Keep their project-relative roots anchored
         // to the real project; moving the workspace folder would change their meaning.
         if (discovery) {
-            // Workspace-folder notifications need a started server; explicit settings can be
-            // installed before the first document starts it.
-            open(data.text("file"))
+            // The server is already started. Opening the target before selecting its graph
+            // lets LSP4IJ cache an empty lazy quick-fix result against the previous graph.
             changeWorkspaceFolders(root, root.resolve(id))
             configure("""{"xtc":{"compiler":{"sourceModules":null}}}""")
         }
