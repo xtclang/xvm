@@ -78,7 +78,10 @@ internal class XdkArtifactSymbols private constructor(
                                 val exported =
                                     generateSequence(current) { it.parentConstant }
                                         .filterNot { it is MultiMethodConstant }
-                                        .all { it.component?.access in setOf(Access.PUBLIC, Access.PROTECTED) }
+                                        .all {
+                                            it.component?.access in setOf(Access.PUBLIC, Access.PROTECTED) &&
+                                                (it == current || it !is MethodConstant)
+                                        }
                                 original to Entry(current.position, exported)
                             }.toMap()
                     XdkArtifactSymbols(revision, entries)
@@ -124,5 +127,6 @@ internal object XdkMonikers {
                     }
                 table?.moniker(index, imported)?.let { symbol to it }
             }.toMap()
+            .let(::immutableMap)
     }
 }
