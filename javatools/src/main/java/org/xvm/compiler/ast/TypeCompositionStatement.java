@@ -497,7 +497,7 @@ public class TypeCompositionStatement
                 };
 
                 component = container.createClass(getDefaultAccess(), format, sName, constCond);
-                if (m_fAnon) {
+                if (m_fAnon && component != null) {
                     component.setSynthetic(true);
                 }
             } else if (!errs.hasSeriousErrors()) {

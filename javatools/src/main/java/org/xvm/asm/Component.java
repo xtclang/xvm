@@ -1087,6 +1087,8 @@ public abstract class Component
      * @param format  the category format of the class
      * @param sName   the simple (unqualified) class name to create
      * @param cond    the conditional constant for the class, or null
+     *
+     * @return the newly created ClassStructure, or null if a name collision occurred
      */
     public ClassStructure createClass(Access access, Format format, String sName, ConditionalConstant cond) {
         assert sName != null;
@@ -1097,13 +1099,14 @@ public abstract class Component
             throw new IllegalStateException("this (" + this + ") cannot contain a class");
         }
 
-        // the check for duplicates is deferred, since it is possible (e.g. with conditionals) to
-        // have multiple components occupying the same location within the namespace at this point
-        // in the compilation
-
         int            nFlags  = format.ordinal() | access.FLAGS;
         ClassConstant  constId = getConstantPool().ensureClassConstant(getIdentityConstant(), sName);
         ClassStructure struct  = new ClassStructure(this, nFlags, constId, cond);
+
+        if (ensureChildByNameMap().get(sName) instanceof Component sibling &&
+                Objects.equals(cond, sibling.m_cond)) {
+            return null;
+        }
 
         return addChild(struct) ? struct : null;
     }
