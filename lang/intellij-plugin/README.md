@@ -137,7 +137,7 @@ uses JetBrains' `IdeaUltimate` artifact name, but the tested features require on
 Community feature set. No personal settings or license are copied into the test profile.
 See [JetBrains' unified distribution explanation](https://www.jetbrains.com/help/idea/intellij-idea-single-distribution.html).
 
-The suite reads all 263 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
+The suite reads all 264 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
 and source fixtures from the [manual playbook](../doc/manual-test-plan.md#xdkadapter-playbook).
 The earlier protocol selection, `run-15914309414363009017`, passes START and X136/X137/X140/X141
 with zero IDE errors: settings, restart, UTF-16 hover/rename ranges and runtime server tracing.
@@ -198,7 +198,7 @@ LSP4IJ would display `<no parameters>`. X81/X82 inspect Property-kind metadata f
 completion request. X20/X81/X82 pass natively. Problems-row clicking and visual
 layout remain manual.
 
-Every report lists all 263 scenario IDs and distinguishes failed/unselected cases from passing
+Every report lists all 264 scenario IDs and distinguishes failed/unselected cases from passing
 ones. The [L60 checklist](../../docs/errs-integration-plan.md#intellij-parity-backlog-l60) keeps each
 new case open until it has a pass receipt and records client limitations found during validation.
 The new protocol checks use the installed language-client connection. Synthetic nonexistent-file
@@ -804,3 +804,9 @@ response. X124/X131/X134/X142/X143 pass in both editors across selected runs and
 IntelliJ X142 correction; this does not establish a full 148-case checkpoint. See the
 [follow-up receipt](../../docs/errs-integration-plan.md#follow-up-validation-receipt-2026-09-30) for
 run IDs, failed attempts and the remaining L80/L81 acceptance limits.
+
+L81 selected acceptance passes X145/X146/X147/X259 plus startup with zero IDE errors. X259
+checks displayed consumer inlays while applying the real Language Service settings page,
+changing a dependency and restarting; the consumer text/version must remain unchanged.
+This complements the existing two-project lifetime check. See the
+[L81 receipt](../../docs/errs-integration-plan.md#l81-native-acceptance-closure-2026-10-05).

@@ -54,7 +54,7 @@ export async function run(): Promise<void> {
         cases: [...cases].map(([id, description]) => ({ ...description, id,
             ...(results.find(result => result.id === id) ?? { status: selected.some(value => value === id) ? 'not-run' : 'not-selected' }) })),
         errors: results.filter(result => !cases.has(result.id)),
-        scope: 'VS Code extension-host/provider checks. Visual appearance and physical key/menu interaction remain manual.',
+        scope: 'VS Code extension-host/provider checks; X145 --cancel-ui activates the actual renderer control and X259 inspects rendered inlay labels. Other visual appearance and physical key/menu interaction remain manual.',
         hostChecks: await hostResults(),
         hostChecksNote: 'Existing Gradle XML evidence; inspect timestamps. Focused editor runs do not rerun host checks.',
         supportingCoverage: {
