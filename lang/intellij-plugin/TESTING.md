@@ -28,9 +28,12 @@ E2E framework, log harvesting, and how each approach maps to the plugin's extens
 
 The `errs` branch has headless unit/manifest tests under `src/test/kotlin` and the native
 Starter+Driver compiler playbook under `src/integrationTest/kotlin`. The current headless run
-contains 90 tests across 21 JUnit suites. It covers compiler configuration/build models, root
+contains 106 tests. It covers compiler configuration/build models, root
 watch ownership, source graphs, lifecycle/process cleanup, edit/move guards, startup and diagnostic
 messages, capabilities, manifest wiring and bundled resources.
+The eight new compiler-import tests cover accepted-report ownership, cancellation/failure,
+delayed watcher completion, overlapping imports and project-owned progress disposal. The progress
+owner tests use application-free indicators; they do not claim native Cancel-button acceptance.
 
 The native suite uses the shared 264-scenario catalog (X1–X259, CFG1–CFG3, 7a.8/7a.9).
 It launches an isolated Community-capable IntelliJ environment with Ultimate disabled. Selected
