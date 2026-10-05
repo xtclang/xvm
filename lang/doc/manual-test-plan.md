@@ -1,6 +1,6 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **256 scenarios**: X1–X251, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **258 scenarios**: X1–X253, CFG1–CFG3 and 7a.8/7a.9.
 The preceding missing-method gate passes **X122/X209–X215** in VS Code `run-u5kDXk` and IntelliJ
 `run-4588144426201480586` (plus START), zero editor failures. It verifies required destination
 imports, exact signatures, atomic module-root/companion edits and diagnostic Undo/Redo. All 310
@@ -337,12 +337,12 @@ invoke normal formatting; enabling a second save-formatting path must not apply 
 > See [plan-ide-integration.md](plans/plan-ide-integration.md) for the canonical feature implementation matrix comparing Mock, Tree-sitter, and Compiler adapter capabilities.
 
 The [active compiler completion checklist (L55–L83)](../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist)
-tracks the remaining implementation and validation work. All 25 project-defined adapter
+tracks the remaining implementation and validation work. All 26 project-defined adapter
 capabilities have compiler implementations, many with explicit bounds; this is not full LSP
 coverage. Pull diagnostics and token range/delta have passing checkpoints. All six lazy-resolve
 operations, broader native moves and save/sync/formatting additions have passing backend and selected
 editor receipts. L80/L81 also have a validated bounded protocol checkpoint; optional negotiation,
-partial results and broader acceptance remain open. General refactorings, monikers, inline completion/values, colors and notebooks
+partial results and broader acceptance remain open. General refactorings, inline completion/values, colors and notebooks
 still have implementation gaps. Use the [absent-feature inventory](plans/plan-ide-integration.md#compiler-completeness-snapshot)
 to distinguish an unsupported feature from a failed playbook case.
 
@@ -1390,7 +1390,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X251 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X253 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -1770,7 +1770,7 @@ class Child extends Base<String> {
 |---|--------|-----------------|
 | X29 | In Editing.x, alternate rapidly between X15's String and Int arguments and request hints/completion. Finish with a valid call. Repeat while editing a module sibling. | The final answer and diagnostics match the latest text. Superseded queries do not resurrect old types, offsets or errors. |
 | X30 | Start a completion/hint request, dismiss it and close the document; reopen it. Repeat around a language-server restart. | No response repopulates a closed document, no hanging UI, and the reopened file gives current answers. Dismissing a popup does not guarantee the client sends cancellation; protocol cancellation is also covered by the automated stdio tests. |
-| X31 | Inspect compiler-mode capabilities, then format a module with an unindented body. | Declaration lookup, formatting, range formatting, code actions and code lenses are advertised; formatting produces edits. Document colors, monikers and inline values are not advertised. Native formatting is exercised further in X102/X107. |
+| X31 | Inspect compiler-mode capabilities, then format a module with an unindented body. | Declaration lookup, monikers, formatting, range formatting, code actions and code lenses are advertised; formatting produces edits. Document colors and inline values are not advertised. Native formatting is exercised further in X102/X107. |
 | X32 | Try completion in `box.pair(unknown = \|);`, `box.pair(first = "x", first = \|);`, `box.pair(True, \|);`, `box.pair("x", "y", \|);`, and `missing(\|);`. | Unknown or duplicate labels, incompatible or excess arguments, and unresolved calls offer no argument values. Valid argument-value insertion, including positions before a later written argument, is covered by the positive completion scenarios. |
 
 ### F. Type-definition and implementation lookup
@@ -3547,3 +3547,15 @@ index does not own compiler attempts, constant pools or ASTs, including during g
 Selected acceptance passes in VS Code `run-8dtGVL` and IntelliJ `run-3343499825664248739`:
 X45/X59/X63/X143/X251, with zero scenario failures; IntelliJ also passes startup. The catalog now has
 256 cases. This does not claim a full-catalog rerun.
+
+### Portable symbol identities — L74
+
+| Case | Action | Expected result |
+|------|--------|-----------------|
+| X252 | Configure the shared Library/Consumer sources. Query monikers for Consumer's integer call and closed Library's matching declaration; compare the string overload. Open Library, change the integer body without saving, then restore it. | Export/import share scheme and identifier; overloads differ. Opening/recompiling unchanged source preserves identity. The edit changes both ends together; restoration recovers the original identifier. |
+| X253 | Open the shared private-property example. Query its private declaration, bundled String and register local. Introduce the shared unresolved name, then repair it. | Private declaration is local; String is imported. Register locals and failed attempts supply no identity. Repair restores the same IDs. |
+
+These cases use `textDocument/moniker` through each installed language client. Inspect the protocol
+trace for `scheme`, `identifier`, `unique` and `kind`; neither IDE currently provides a moniker panel.
+X31 now requires the compiler moniker provider. Binary-only/source-indexed parity and checkout
+relocation are backend tests, not claims about native editor widgets. Selected acceptance pending.
