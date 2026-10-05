@@ -3028,3 +3028,18 @@ clone ownership; no new field, state or phase coupling is introduced. Kotlin cop
 identity and source range on the compiler worker. The current parser rejects conditional import
 source syntax before the latent AST COMPILER-29 path; X244 tests diagnostics and absence of guessed
 links. No conditional-compilation syntax has been added.
+
+
+### L67 detached navigation reuse (2026-10-05)
+
+The LSP-side module index reuses exact detached semantic models, source/binary identities and
+artifacts across graph queries and seeds them from editor/diagnostic compilation. It does not retain
+ASTs or compiler pools, add AST/embedding API, or authorize edits from cached proof facts. Source,
+resource and dependency source-index revisions select reuse; removed roots and retired generations
+cannot leak back into current results. See the [L67 record](errs-integration-plan.md#l67-module-navigation-index-2026-10-05)
+for validation and the persistence decision.
+
+L67 acceptance is closed for this bounded implementation: 33/129-module compile-count and
+retention controls pass under the existing heap, including collection during a still-running graph
+query. Packaged first references on 20,000-method fixtures improve from 8–11 s to 0.4–0.6 s.
+X45/X59/X63/X143/X251 pass in both editors; no full-catalog rerun or disk-persistent index is claimed.
