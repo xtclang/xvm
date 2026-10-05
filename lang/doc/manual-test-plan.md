@@ -1,6 +1,12 @@
 # Ecstasy Language Server - Manual Test Plan
 
 The current catalog has **258 scenarios**: X1–X253, CFG1–CFG3 and 7a.8/7a.9.
+
+Latest selection (L74): X31/X252/X253 pass in VS Code `run-EGMh6B` and IntelliJ
+`run-10438075944069511128` (plus START), with no IDE failures. See the
+[portable identity playbook and receipt](#portable-symbol-identities--l74). This is selected
+coverage; earlier full-catalog and feature-batch receipts below remain historical evidence.
+
 The preceding missing-method gate passes **X122/X209–X215** in VS Code `run-u5kDXk` and IntelliJ
 `run-4588144426201480586` (plus START), zero editor failures. It verifies required destination
 imports, exact signatures, atomic module-root/companion edits and diagnostic Undo/Redo. All 310
@@ -3558,4 +3564,11 @@ X45/X59/X63/X143/X251, with zero scenario failures; IntelliJ also passes startup
 These cases use `textDocument/moniker` through each installed language client. Inspect the protocol
 trace for `scheme`, `identifier`, `unique` and `kind`; neither IDE currently provides a moniker panel.
 X31 now requires the compiler moniker provider. Binary-only/source-indexed parity and checkout
-relocation are backend tests, not claims about native editor widgets. Selected acceptance pending.
+relocation are backend tests, not claims about native editor widgets.
+
+Selected acceptance: VS Code `run-EGMh6B` and IntelliJ `run-10438075944069511128` pass
+X31/X252/X253; IntelliJ also passes START, with no IDE errors. Its initial run failed X252/X253
+because the harness omitted monikers from its list-response decoder; the corrected run passes both.
+Final method-local visibility and shared-table checks pass backend/packaged tests after these GUI
+runs. This is not a full-catalog rerun. Both editor reports use catalog SHA-256
+`7f4170148797ce5828bcb36ec96dd35ca9c4a0670768b7b7dcc81826535f91d5`.
