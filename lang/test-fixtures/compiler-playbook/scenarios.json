@@ -8072,6 +8072,28 @@
         "limitations": []
       }
     },
+    "X254": {
+      "title": "open matching library content read only and resolve artifact monikers in the library view",
+      "manual": [
+        "Navigate to bundled String and xml.Document. VS Code opens revision-owned virtual content; IntelliJ opens the protected file fallback. Verify edits and formatting cannot change these library views."
+      ],
+      "values": {
+        "file": "X254/LibraryViews.x",
+        "source": "module LibraryViews {\n    package xml import xml.xtclang.org;\n    void accept(String text, xml.Document document) {}\n}\n",
+        "types": [
+          "String",
+          "Document"
+        ],
+        "scheme": "ecstasy-library",
+        "monikerScheme": "ecstasy-artifact-v1"
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "UP25: LSP4IJ 0.21.0 has no workspace/textDocumentContent provider; tests use the supported read-only file fallback and direct library monikers."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
