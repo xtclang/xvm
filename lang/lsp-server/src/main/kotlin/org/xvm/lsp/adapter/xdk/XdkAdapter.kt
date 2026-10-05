@@ -1076,14 +1076,15 @@ class XdkAdapter
             val analyses =
                 order.map { module ->
                     if (isStale(request)) throw CancellationException()
-                    val inputs = XdkDependencies(artifacts.values.toList())
+                    val closure = request.project.buildOrder(module.uri).mapTo(hashSetOf()) { it.name }
+                    val inputs = XdkDependencies(artifacts.filterKeys { it !in request.project.modules || it in closure }.values.toList())
                     val sources = captured.getValue(module).getOrNull()
                     val uri = sources?.uri(module.root) ?: module.uri
                     val missing =
                         module.dependencies.filter { it !in artifacts && it !in XdkLibraries.moduleNames }
                     val key =
                         sources?.let {
-                            BuildKey(it.inputs, artifacts.mapValues { (_, artifact) -> artifact.revision })
+                            BuildKey(it.inputs, inputs.modules.mapValues { (_, artifact) -> artifact.revision })
                         }
                     val cached =
                         builds[module.name]?.takeIf {
@@ -1216,7 +1217,13 @@ class XdkAdapter
                 buildMap {
                     compilation.sourceTrees().forEach { putAll(XdkAst.rootsBySource(it)) }
                 }
-            val views = compilation.semanticSnapshots(errs, dependencies)
+            val navigation =
+                if (moduleName != null && compilation.succeeded() && !heard.hasSeriousErrors()) {
+                    compilation.navigationFacts(dependencies, errs)
+                } else {
+                    null
+                }
+            val views = navigation?.models ?: compilation.semanticSnapshots(errs, dependencies)
             val sourceUris = sources?.sourceUris ?: roots.keys.associateWith { it }
             val fallback = if (sources == null) source else Source("", sources.uri(sources.sourceFile))
             val declarations = XdkAst.declarationLocations(compilation.sourceTrees(), sourceUris)
@@ -1254,6 +1261,23 @@ class XdkAdapter
                     "Expected module $moduleName, found ${artifact.module}",
                     documentUris,
                 )
+            }
+            if (navigation != null && artifact != null && sources != null) {
+                synchronized(lifecycle) {
+                    if (isStale(request)) throw CancellationException()
+                    navigationIndex.record(
+                        uri,
+                        XdkNavigationIndex.Build(
+                            XdkNavigationIndex.Key(
+                                requireNotNull(moduleName),
+                                sources.inputs,
+                                inputs.modules.mapValues { it.value.revision },
+                            ),
+                            navigation,
+                            artifact,
+                        ),
+                    )
+                }
             }
             return ModuleAnalysis(
                 documents = documents,
