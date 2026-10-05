@@ -1,18 +1,22 @@
 package org.xtclang.idea.lsp
 
 import java.time.Instant
+import java.util.UUID
 import java.util.concurrent.atomic.AtomicReference
 
 /** Owns one import and the last accepted report, independently of a settings dialog or connection. */
 internal class CompilerImport(
     private val read: () -> String?,
+    private val importId: (String) -> String? = { null },
     private val validate: (String) -> Unit,
 ) {
     enum class Outcome { SUCCEEDED, CANCELLED, FAILED }
 
     class Operation(
         val prepare: Boolean,
-    )
+    ) {
+        val id: String = UUID.randomUUID().toString()
+    }
 
     data class Result(
         val outcome: Outcome,
@@ -47,6 +51,12 @@ internal class CompilerImport(
             }
             // Malformed external reports leave the accepted snapshot intact and remain actionable.
             text?.let(validate)
+            // Task cancellation may precede the Gradle daemon's final write. A tagged report
+            // can only become accepted through its own successful finish callback.
+            if (before.observed != null && text != null && importId(text) != null && text != before.accepted) {
+                if (state.get() === before) return before.accepted
+                continue
+            }
             val after = before.copy(accepted = text, observed = Observed(text))
             if (state.compareAndSet(before, after)) return text
         }
@@ -83,6 +93,7 @@ internal class CompilerImport(
             runCatching {
                 val text = requireNotNull(observed.getOrThrow()) { "Gradle did not export an Ecstasy compiler model" }
                 validate(text)
+                require(importId(text)?.let { it == operation.id } != false) { "Gradle report belongs to a different import" }
                 text
             }
         val result =
