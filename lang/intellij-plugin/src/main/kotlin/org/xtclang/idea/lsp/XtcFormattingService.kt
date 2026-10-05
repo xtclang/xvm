@@ -1,7 +1,10 @@
 package org.xtclang.idea.lsp
 
 import com.intellij.formatting.service.AsyncFormattingRequest
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.application.ReadAction
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.editor.EditorFactory
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.progress.util.ProgressIndicatorUtils
@@ -15,7 +18,7 @@ import com.redhat.devtools.lsp4ij.features.formatting.LSPFormattingSupport
 import java.util.concurrent.CancellationException
 import java.util.concurrent.atomic.AtomicBoolean
 
-/** Keep the IDE's asynchronous edit/Undo handling, including Save All for closed tabs. */
+/** Format asynchronously with version-checked, undoable edits, including closed tabs. */
 class XtcFormattingService : LSPFormattingAndRangeBothService() {
     override fun canSupportFormatting(
         feature: LSPFormattingFeature,
@@ -33,10 +36,18 @@ class XtcFormattingService : LSPFormattingAndRangeBothService() {
         val file = LSPIJUtils.getPsiFile(source, request.context.project) ?: return null
         val document = LSPIJUtils.getDocument(source) ?: return null
         val original = request.documentText
+        val stamp = document.modificationStamp
+        val application = ApplicationManager.getApplication()
+        val synchronous = document.getUserData(FORMAT_DOCUMENT_SYNCHRONOUSLY) == true || application.isHeadlessEnvironment
+        val modality = ModalityState.defaultModalityState()
         val range =
             request.formattingRanges.firstOrNull()?.takeUnless { it.length == original.length }
         val support = LSPFormattingSupport(file)
         val cancelled = AtomicBoolean()
+
+        fun current() =
+            !cancelled.get() && !file.project.isDisposed && source.isValid &&
+                document.modificationStamp == stamp && document.text == original
         return object : FormattingTask {
             override fun run() {
                 try {
@@ -66,16 +77,41 @@ class XtcFormattingService : LSPFormattingAndRangeBothService() {
                         )
                     if (cancelled.get()) support.cancel()
                     val edits = result?.let { ProgressIndicatorUtils.awaitWithCheckCanceled(it) }
-                    val current =
-                        ReadAction.computeBlocking<Boolean, RuntimeException> {
-                            !file.project.isDisposed && source.isValid && document.text == original
-                        }
-                    if (cancelled.get() || !current) {
+                    if (!ReadAction.computeBlocking<Boolean, RuntimeException>(::current)) {
                         request.onTextReady(null)
                     } else {
                         // LSP ranges belong to the request, never to a concurrently edited buffer.
                         val snapshot = EditorFactory.getInstance().createDocument(original)
-                        request.onTextReady(LSPIJUtils.applyEdits(snapshot, edits ?: emptyList()))
+                        val formatted = LSPIJUtils.applyEdits(snapshot, edits ?: emptyList())
+                        when {
+                            formatted == original -> {
+                                request.onTextReady(null)
+                            }
+
+                            synchronous -> {
+                                request.onTextReady(formatted)
+                            }
+
+                            else -> {
+                                // TODO LSP4IJ: UP24 — IDEA's asynchronous formatting application is
+                                // undo-transparent: standalone Format undoes but cannot redo. Keep
+                                // synchronous Save's command; give asynchronous replies their own
+                                // short write command without waiting for the server on the EDT.
+                                application.invokeLater({
+                                    try {
+                                        WriteCommandAction
+                                            .writeCommandAction(file.project)
+                                            .withName("Format Ecstasy")
+                                            .run<RuntimeException> {
+                                                if (current()) document.setText(formatted)
+                                            }
+                                        request.onTextReady(null)
+                                    } catch (failure: RuntimeException) {
+                                        request.onError("Ecstasy formatting error", failure.message ?: "Formatting failed")
+                                    }
+                                }, modality)
+                            }
+                        }
                     }
                 } catch (cancelled: ProcessCanceledException) {
                     support.cancel()
