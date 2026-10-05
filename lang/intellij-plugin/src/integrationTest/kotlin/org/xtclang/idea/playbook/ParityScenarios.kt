@@ -26,6 +26,7 @@ class ParityScenarios(
         indexingCases()
         monikerCases()
         libraryContentCases()
+        inlineCompletionCases()
     }
 
     internal fun case(
