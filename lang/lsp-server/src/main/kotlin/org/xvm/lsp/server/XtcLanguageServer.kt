@@ -117,6 +117,7 @@ class XtcLanguageServer(
         get() = connectedClient.get()
 
     private val refresh = ClientRefresh { client }
+    internal val readOnlyDocuments = ReadOnlyDocuments(adapter) { client }
     internal val clientTrace = ClientTrace { client }
     internal val partialResults = PartialResults(client = { client })
 
@@ -517,6 +518,7 @@ class XtcLanguageServer(
             ),
         )
 
+        readOnlyDocuments.configure(params.capabilities?.workspace?.textDocumentContent != null)
         val capabilities = buildServerCapabilities()
 
         val workspace = params.capabilities?.workspace
@@ -612,6 +614,7 @@ class XtcLanguageServer(
         progress.initialized(supportsProgress.get())
         clientReady.complete(null)
         refresh.initialized()
+        readOnlyDocuments.initialized()
         logger.info("initialized: handshake complete, requesting editor configuration")
         if (
             editCapabilities
@@ -974,6 +977,7 @@ class XtcLanguageServer(
                                 if (client?.didCreate == true) didCreate = filters
                                 if (client?.didDelete == true) didDelete = filters
                             }
+                        textDocumentContent = readOnlyDocuments.options()
                         workspaceFolders =
                             WorkspaceFoldersOptions().apply {
                                 supported = true
@@ -1076,6 +1080,7 @@ class XtcLanguageServer(
         formattingState.close()
         resourceFileWatchers.close()
         refresh.close()
+        readOnlyDocuments.close()
         clientTrace.close()
         progress.close()
         partialResults.close()

@@ -66,6 +66,9 @@ class XtcClientFeatures : LSPClientFeatures() {
 
     override fun initializeParams(params: InitializeParams) {
         super.initializeParams(params)
+        // TODO LSP4IJ: UP25 — 0.21.0 has no workspace/textDocumentContent provider or refresh
+        // handler. Leave this capability absent so library navigation uses protected file views.
+        // Remove the fallback only after upstream supports read-only virtual document lifetimes.
         // TODO LSP4IJ: UP02 — advertise save hooks only when DocumentContentSynchronizer
         // actually dispatches them. Native Actions on Save owns formatting here.
         params.capabilities?.textDocument?.synchronization?.apply {
