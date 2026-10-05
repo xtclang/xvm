@@ -283,12 +283,25 @@ internal fun ParityScenarios.libraryContentCases() {
             val text = library.text
             val start = target["range"].asJsonObject["start"].asJsonObject
             check(text.lines()[start.int("line")].substring(start.int("character")).startsWith(name))
-            val exported = protocol.query("textDocument/moniker", mapOf(
-                "textDocument" to mapOf("uri" to uri), "position" to start,
-            )).rows().single()
+            val exported =
+                protocol
+                    .query(
+                        "textDocument/moniker",
+                        mapOf(
+                            "textDocument" to mapOf("uri" to uri),
+                            "position" to start,
+                        ),
+                    ).rows()
+                    .single()
             check(exported == imported.deepCopy().apply { addProperty("kind", "export") })
             check(exported.string("scheme") == data.string("monikerScheme"))
-            check(query("textDocument/formatting", library, extra = mapOf("options" to mapOf("tabSize" to 4, "insertSpaces" to true))).rows().isEmpty())
+            check(
+                query(
+                    "textDocument/formatting",
+                    library,
+                    extra = mapOf("options" to mapOf("tabSize" to 4, "insertSpaces" to true)),
+                ).rows().isEmpty(),
+            )
             check(library.text == text && Files.readString(path) == text)
         }
     }

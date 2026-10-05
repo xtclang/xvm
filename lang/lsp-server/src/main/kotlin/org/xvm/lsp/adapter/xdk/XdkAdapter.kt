@@ -279,26 +279,30 @@ class XdkAdapter
         override fun readOnlyDocument(uri: String): ReadOnlyDocument? =
             synchronized(lifecycle) { if (closed) null else XdkLibrarySources.document(uri) }
 
-        private fun isLibraryDocument(uri: String): Boolean =
-            uri.startsWith("${XdkLibrarySources.SCHEME}:") || XdkLibrarySources.owns(uri)
+        private fun isLibraryDocument(uri: String): Boolean = uri.startsWith("${XdkLibrarySources.SCHEME}:") || XdkLibrarySources.owns(uri)
 
         /** Library queries share compiler serialization, cancellation, tracing and shutdown. */
-        private fun libraryMonikers(uri: String, line: Int, column: Int): CompletableFuture<List<SymbolMoniker>> =
+        private fun libraryMonikers(
+            uri: String,
+            line: Int,
+            column: Int,
+        ): CompletableFuture<List<SymbolMoniker>> =
             synchronized(lifecycle) {
                 if (closed) return CompletableFuture.failedFuture(IllegalStateException("XDK adapter is closed"))
                 val result = CompletableFuture<List<SymbolMoniker>>()
-                val task = queueTrace.task("library-monikers", uri, result) {
-                    try {
-                        if (!result.isDone) result.complete(XdkLibrarySources.monikers(uri, line, column))
-                    } catch (failure: Exception) {
-                        result.completeExceptionally(failure)
-                    } catch (failure: Error) {
-                        result.completeExceptionally(failure)
-                        throw failure
-                    } finally {
-                        libraryQueries.remove(result)
+                val task =
+                    queueTrace.task("library-monikers", uri, result) {
+                        try {
+                            if (!result.isDone) result.complete(XdkLibrarySources.monikers(uri, line, column))
+                        } catch (failure: Exception) {
+                            result.completeExceptionally(failure)
+                        } catch (failure: Error) {
+                            result.completeExceptionally(failure)
+                            throw failure
+                        } finally {
+                            libraryQueries.remove(result)
+                        }
                     }
-                }
                 libraryQueries[result] = task
                 result.whenComplete { _, _ ->
                     if (result.isCancelled) {
