@@ -12,6 +12,11 @@ and both segments have zero IDE errors/freeze dumps. A corrected X185 popup-harn
 calling this one uninterrupted clean run. VS Code UP23, generic upstream VFS waits and the
 scale/release gates remain explicit.
 
+The [post-rebase acceptance receipt](#modern-vs-code-baseline-and-complete-rebase-acceptance-2026-10-05) supersedes the native snapshot
+above: 3,068 headless passes (54 existing skips), VS Code 266/267 with UP23, and IntelliJ
+265 passes plus UP25/UP26 partials across the full attempt and repaired continuation. Both
+editors' lifecycle checks pass. Original failures and fixture repairs remain recorded.
+
 The branch was rebased onto master `7a4e29e577` on 2026-10-05. Historical commit references
 below remain unchanged; [the rebase commit map](errs-rebase-2026-10-05.tsv) maps all 590 old
 commits to the 588 replayed commits and two changes absorbed upstream. See
@@ -11477,7 +11482,71 @@ The extension API types target 1.140.0, Node types and esbuild target Node 24, a
 `NodeNext` module resolution. Gradle already selects Node 24.21.0. TypeScript compilation,
 bundling and ESLint pass (six existing unused-variable warnings outside this change).
 
-- [ ] Complete fresh headless compiler, Gradle plugin, language-module, IntelliJ plugin and stdio checks.
-- [ ] Run the VS Code smoke suite and entire 267-scenario playbook on 1.140.0.
-- [ ] Run the entire IntelliJ playbook, preserving any explicit upstream partial/refusal results.
-- [ ] Record failures, repairs and final receipts before declaring complete rebase acceptance.
+- [x] Complete fresh headless compiler, Gradle plugin, language-module, IntelliJ plugin and stdio checks.
+- [x] Run the VS Code smoke suite and entire 267-scenario playbook on 1.140.0; retain UP23 as a failure.
+- [x] Run the entire IntelliJ playbook, preserving explicit upstream partial results and failed first receipts.
+- [x] Record failures, repairs and final native receipts; UP23 remains a failed host acceptance check.
+
+Fresh headless XML records **3,122 tests: 3,068 passed, 54 existing skips, zero failures/errors**:
+compiler 578/40 skipped, utilities 124/2, Gradle plugin 59/10, DSL 50/0, LSP 2,124/2,
+packaged stdio 81/0 and IntelliJ plugin 106/0. The separate tree-sitter corpus passes all 937
+included files (10 documented exclusions). The single-baseline VS Code smoke suite passes 34/34.
+
+VS Code `run-J054rk` completes all **267 scenarios: 266 pass and X218 fails** with the same
+UP23 native overlapping-move Undo error (`target already exists`). X130 passes independently.
+This is no new VS Code regression after the rebase, but is not a wholly green native suite.
+The user previously accepted carrying UP23; its failed assertion remains in the receipt.
+
+The first full IntelliJ feature run, `run-15431938389766717360`, passes START and 92 scenarios
+before X185 cannot display its intention popup. It has zero IDE errors. Its client trace shows an
+early diagnostic quick-fix request returning an empty list, followed by the correct missing-method
+action after the graph switch. The isolated X100/X181/X185 sequence passes in
+`run-14025377759354811471`. Fixture setup still opened discovery targets before selecting their
+source graph, priming LSP4IJ's lazy quick-fix cache against the previous graph. The harness now
+bootstraps a cold server with the common graph's consumer, closes it, selects the scenario graph,
+and only then opens the target. This fixes fixture ordering; the broader UP07 delivery/cache issue
+remains open. A complete native rerun validates this change below.
+
+The independent IntelliJ startup (`run-3986116929706651257`), focus recovery
+(`run-9696449939874396237`) and two-project lifecycle (`run-8589502777162952560`) checks all
+pass, each with zero IDE errors. The separate opt-in UP17 large-file diagnostic was not enabled.
+
+The rerun `run-1475359363733913185` passes X185 in 2,398 ms, then X139 exposes a second
+fixture-isolation problem: native Save All formats closed dirty buffers from earlier common
+workspace cases before reaching the intended source. Its trace includes dozens of unrelated
+formatting requests; the intended closed file formats, but the open-file wait expires. Later cases
+continue slowly with this backlog. At 24 minutes the disposable IDE was deliberately stopped:
+239 entries pass (including START), X139 is a real failure, and X163 records that interruption.
+No IDE errors are reported. Keep the interruption distinct from a production failure.
+
+`ParityWorkspace` now retires preceding closed dirty buffers under the disposable project root
+when entering an independent case, matching its existing cleanup on case exit. It does not clear
+buffers created inside that case: X139 still tests an intentionally dirty closed tab. Continuation
+`run-7075359973250470210` executes 32 selected cases plus START: **31 pass and two are partial**,
+with zero failures/IDE errors. This includes cold-start X185, X132/X138/X139, every unfinished
+case, cancellation, type moves, indexing, library content and the native Gradle import controls.
+X139 passes in 3,245 ms; formatting traces contain only the intended X138/X139 files.
+
+Combined coverage is **265 passing shared scenarios and two explicit partials**, with none omitted:
+X254 retains UP25's read-only file fallback; X257 retains UP26's missing native selection context.
+This is full-catalog coverage with targeted repairs/continuation, not an uninterrupted all-green
+run. The separate startup/focus/project checks above also pass. All original failure receipts,
+continuation selection and a compiler thread dump from the save backlog are kept with the backup.
+No compiler, embedding API or shipped IntelliJ behavior changed in these two harness repairs.
+
+VS Code lifecycle acceptance also passes on the same cached 1.140.0 build: separate application
+instances in `run-EJK5Rd`, and two windows in one application in `run-apiXSf`. Both verify pending
+close, compiler PID retirement, unsaved-content restoration and continued queries in the other
+window. These are fresh receipts for the centralized version/cache helper, not prior-version runs.
+
+The additional manual consumer gate passes `:manualTests:runCiTestTasks` and
+`:manualTests:testXtc`: all 22 configured sequential modules exit successfully, as do the
+project-level runner, two-module sequence, JIT suite, small-float JIT suite and 19 xUnit tests.
+The existing sequential `TestAnnotations` exclusion remains. The duplicate-source manual runner
+passes both expected `COMPILER-148` failures and all three valid controls. Root/lang read-only
+`spotlessCheck` and `git diff --check` pass. Configuration-cache entries are stored successfully.
+
+Extraction boundaries: `4703a0f20` owns the VS Code 1.140 / Node 24 test baseline and shared
+cache helper; `aa3d59f78` owns only the IntelliJ fixture-isolation repairs. Keep the latter with
+the editor acceptance harness when splitting PRs. The following documentation checkpoint
+records the complete validation and preserves the original failures.

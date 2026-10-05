@@ -364,6 +364,13 @@ failures, Ultimate disabled. X214 includes native atomic Undo/Redo of its module
 companion method. The accepted IDE log contains no ERROR/SEVERE or ProcessCanceledException
 markers. The broader production graph-replacement acceptance obligation above remains open.
 
+The post-rebase full run `run-15431938389766717360` exposes the equivalent discovery setup
+problem at X185. The first diagnostic quick-fix request returns an empty result before the correct
+scenario graph is installed; a later caret request returns the missing-method action, but the native
+popup never appears. No IDE error is recorded. Discovery setup now also installs its graph before
+opening its target. A cold selected run starts the server using the common graph's valid consumer
+first. This is fixture isolation, not a fix for UP07's production graph-change/cache lifecycle.
+
 ### UP23: overlapping VS Code file moves retain the host's order
 
 VS Code 1.140.0 applies requested file moves in their supplied order after the Ecstasy participant's
@@ -377,6 +384,9 @@ The full 264-case VS Code run `run-5flalU` on 2026-10-05 reproduces the same nat
 263 cases pass and X218 fails after forward movement. No failure is suppressed or reclassified;
 X130 independently passes this run. The observed `target already exists` error is the same UP23
 ordering problem, not renewed compiler proof failure.
+
+After the master rebase, `run-J054rk` on the same VS Code 1.140.0 baseline completes all 267
+cases with 266 passes and the identical X218 failure. It remains an explicit failed assertion.
 
 The compiler proposal normalizes both input orders to child-first and coalesces inherited child
 paths. IntelliJ applies that complete ordered transaction. VS Code's participant cannot replace,

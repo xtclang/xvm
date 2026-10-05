@@ -1,9 +1,13 @@
 # Failures with nowhere to go
 
-**Master rebase (2026-10-05):** integrated `origin/master` at `7a4e29e577`, repaired
-nesting-limit recovery and updated master-dependent fixture assertions. Backend checks and
-selected editor smoke checks pass. The [integration checkpoint](errs-integration-plan.md#master-rebase-checkpoint-2026-10-05)
-and [commit map](errs-rebase-2026-10-05.tsv) preserve validation and future PR boundaries.
+**Post-rebase acceptance (2026-10-05):** master `7a4e29e577` is integrated and lease-pushed.
+The fresh headless batch passes 3,068 tests with 54 existing skips. VS Code 1.140.0 is the sole
+minimum/test baseline: 34 smoke tests pass; the 267-case catalog passes 266 and retains X218/UP23.
+IntelliJ covers all 267 cases across the full attempt and corrected continuation: 265 pass, two
+retain UP25/UP26 partial status, and there are zero IDE errors. Two fixture-isolation failures
+were repaired and rerun; this is not an uninterrupted green full run. Both editors' lifecycle
+checks pass. See the [complete receipt](errs-integration-plan.md#modern-vs-code-baseline-and-complete-rebase-acceptance-2026-10-05)
+and [rebase commit map](errs-rebase-2026-10-05.tsv).
 
 **Compiler import ownership (2026-10-05):** model-file watchers could publish Gradle output before
 the exporting task succeeded, including output from a failed/cancelled task. Both editor clients
