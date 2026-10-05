@@ -24,6 +24,30 @@ explicitly authorized action. [XVM PR #653](https://github.com/xtclang/xvm/pull/
 process-lifecycle fix, not an LSP4IJ upstream report. LSP4IJ #888 is a different IDE-freeze
 issue and must not be used as the tracking issue for UP01.
 
+Local upstream repair work is now authorized in `~/src/lsp4ij`, on the unpushed branch
+`lagergren/local-lsp-repairs`, based on upstream `main` at `4796cf99` (0.21.1-SNAPSHOT).
+The first five local commits are listed below, with regression tests. These are local repairs,
+not released fixes or permission to remove the bridges here. XVM still uses LSP4IJ 0.21.0;
+testing a local build must be explicit. UP17 belongs to IntelliJ Platform, not this repair branch.
+
+| Local LSP4IJ commit | Issue and scope |
+| --- | --- |
+| `d823fde7` | UP12: apply formatting to the captured document when the editor is absent. |
+| `35a3bf97` | UP22: owner-bound diagnostic Alarm; serialize scheduling/disposal and reject retired callbacks/replies. |
+| `2701b577` | UP27: batch refresh by connection and feature, with disposal cancellation. |
+| `5e19e5f3` | UP01: single-use atomic process lifetime; reject start-after-stop/double-start and reap the owned child. |
+| `c68a0819` | UP03, partial: preflight uses the actual destination parent and URI-escaped basename. Generic EDT waiting remains. |
+
+All 14 new regressions fail against the unfixed upstream production files and pass after these
+repairs. The combined targeted run passes 17 tests, with no failures/errors/skips, and `buildPlugin`
+produces `build/distributions/lsp4ij-0.21.1-SNAPSHOT.zip` in that checkout. It uses upstream's
+Community IC 2024.2 baseline and JDK 21 for Gradle 8.6; configuration-cache reuse passes. The archive's
+SHA-256 is `31ff2edff4fc35ca08e4088ccc071eaa76d190aa91acdb06e6940f4d6eac0cc0`. Local XML/evidence is
+under `/private/tmp/lsp4ij-repair-evidence/`. This is not full-suite or XVM native acceptance.
+In particular, correcting UP03's target makes genuine preflight requests visible where the old
+same-path request was short-circuited. Keep our bridges until testing real Move/Undo/Redo with the
+local plugin. UP19 and UP07 remain candidates for a later upstream batch.
+
 ## Register
 
 “Bridged” means this branch has a local workaround, whose regression must pass before its
@@ -64,6 +88,27 @@ not a claim that every referenced suite was rerun for this documentation change.
 | **UP25 — LSP4IJ — constrained** | No LSP 3.18 document-content provider or refresh handler. | Matching read-only file fallback and direct library monikers; X254 executes those assertions with explicit partial status. [Details below](#up25-lsp4ij-has-no-lsp-318-library-content-provider). | Upstream virtual URI resolution, read-only views, refresh and disposal pass native X254 before advertising the capability. |
 | **UP26 — LSP4IJ — constrained** | Inline requests always use Automatic and omit selected popup context. | Native unique suggestions work; X257 has protocol-only explicit alternatives/selection. [Details below](#up26-lsp4ij-inline-completion-loses-invocation-and-popup-selection-context). | Forward invocation kind and selection, then pass native X257. |
 | **UP27 — LSP4IJ — bridged; long continuation passes** | Semantic-token and code-lens refresh fan out across connected files on the application executor, exceeding IntelliJ's concurrent non-blocking read-action limit in a long session. | `EditorRefresh` replaces that fan-out with one coalesced read/UI pass per connection and feature, retaining LSP4IJ's rendering bridges. X146 adds a many-document refresh burst; X259 retains toggling/restart acceptance. Focused and long continuation runs pass with zero IDE errors/freeze dumps. Original errors remain recorded. | Remove the bridge when upstream provides bounded batch refresh and connection-lifetime cancellation, then repeat the many-file stress and long native acceptance. |
+
+## UP17: local workaround assessment (2026-10-05)
+
+No safe plugin-level repair was identified in the pinned IntelliJ 262.10968.63 APIs. The affected
+range-tree update and ancestor recalculation are internal to platform-owned documents/markup
+models. `DocumentImpl` is final and owns its marker trees in private final fields; there is no
+public replacement strategy for that update. LSP4IJ submits semantic `HighlightInfo` objects to
+the platform highlighting pass, which owns the resulting highlighters. A local LSP4IJ build alone
+does not replace the affected platform algorithm.
+
+The earlier plain-document control already rules out compiler queueing and LSP refresh fan-out.
+Bulk-update mode still took about five seconds with 80,000 markers, and `replaceString` already
+trims unchanged prefixes/suffixes. Clearing highlighting would reduce functionality; splitting one
+replacement into arbitrary edits would change document-event and marker behavior and would not
+repair ordinary user edits. Neither is adopted as a workaround. Reflective tree replacement or
+runtime bytecode patches are also outside this local plugin repair.
+
+Retain UP17 as open, with the existing standalone probe and decorated-editor acceptance gate.
+A real platform repair or verified fixed IDE version remains the next step; no new runtime code
+or GUI rerun was needed for this API assessment. This is not a claim that every possible local
+mitigation has been exhausted, nor a release exception approved by the user.
 
 
 ## UP19: directory moves retain old document connections

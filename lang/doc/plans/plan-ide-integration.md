@@ -849,6 +849,11 @@ PLAT2c/L67 now imports the evaluated Gradle model in both hosts and exposes effe
 paths and origin. Explicit overrides survive refresh; invalid model files retain the last valid host
 import. Gradle export/prepare actions run in the host, never in LSP. Both `.gradle` and `.gradle.kts`
 are handled by Gradle itself. TestKit, importer/server tests and shared X129 pass.
+Compiler import progress is cancellable in both hosts, with one active import per project/folder.
+Pending, cancelled or failed builds cannot replace the last accepted model via a file watcher;
+successful retries can. The paths view includes the last outcome/time. Project/folder closure
+cancels its owned import. Generated files are not rolled back, and failed-output retention lasts
+for the current editor session. See the UI5/UI6 import continuation and manual cancellation steps.
 Automatic IntelliJ Gradle-sync refresh and aggregation of nested/composite build roots remain
 follow-ups; each exported root has an explicit refresh action.
 Earlier X124 receipts used explicit native VFS refresh. The strengthened case creates previously
