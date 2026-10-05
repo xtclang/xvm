@@ -10,8 +10,8 @@ import org.eclipse.lsp4j.DocumentSymbolCapabilities
 import org.eclipse.lsp4j.DocumentSymbolParams
 import org.eclipse.lsp4j.HoverCapabilities
 import org.eclipse.lsp4j.InitializeParams
-import org.eclipse.lsp4j.InlineCompletionCapabilities
 import org.eclipse.lsp4j.InitializedParams
+import org.eclipse.lsp4j.InlineCompletionCapabilities
 import org.eclipse.lsp4j.MarkupKind
 import org.eclipse.lsp4j.PublishDiagnosticsCapabilities
 import org.eclipse.lsp4j.SignatureHelpCapabilities
