@@ -7741,6 +7741,58 @@
         "limitations": []
       }
     },
+    "X243": {
+      "title": "open the resolved wildcard import container",
+      "manual": [
+        "Open the linked import target and verify the matching Library source. Conditional imports still show COMPILER-29; the condition is not applied."
+      ],
+      "values": {
+        "file": "ImportLinks.x",
+        "module": "ImportLinks",
+        "source": "module ImportLinks {\n    package lib import LinkLibrary;\n    import lib.tools.*;\n}",
+        "libraryFile": "LinkLibrary.x",
+        "libraryModule": "LinkLibrary",
+        "library": "module LinkLibrary { package tools { class Box {} } }",
+        "alias": "",
+        "linkNames": [
+          "LinkLibrary",
+          "lib.tools"
+        ],
+        "aliasUses": []
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": [
+          "Link target and protocol ranges are asserted; modifier-click presentation remains manual."
+        ]
+      }
+    },
+    "X244": {
+      "title": "link a conditional import while retaining the compiler warning",
+      "manual": [
+        "Open the linked import target and verify the matching Library source. Conditional imports still show COMPILER-29; the condition is not applied."
+      ],
+      "values": {
+        "file": "ImportLinks.x",
+        "module": "ImportLinks",
+        "source": "module ImportLinks {\n    package lib import LinkLibrary;\n    if (true) { import lib.tools.Box as Crate; }\n}",
+        "libraryFile": "LinkLibrary.x",
+        "libraryModule": "LinkLibrary",
+        "library": "module LinkLibrary { package tools { class Box {} } }",
+        "alias": "",
+        "linkNames": [
+          "LinkLibrary",
+          "Crate"
+        ],
+        "aliasUses": []
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": [
+          "Link target and protocol ranges are asserted; modifier-click presentation remains manual."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
