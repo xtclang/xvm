@@ -12,7 +12,7 @@ and refactoring proofs still fail closed. This adds no AST state or compiler lis
 See [scope, ownership and validation](../../../docs/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
 
 
-> **Last Updated**: 2026-10-02 (bounded L64/L65 closure and combined full-catalog receipts)
+> **Last Updated**: 2026-10-05 (L74 artifact identities and selected editor acceptance)
 
 The P1–P4 compiler organization checkpoint moves the four incomplete-syntax nodes into
 `org.xvm.compiler.ast.partial` and updates the adapter's imports. It changes no advertised LSP
@@ -236,7 +236,7 @@ local or import-alias declarations and inherited written member contracts, prese
 | File-operation pre-edit requests; explicit create/delete notifications | All six hooks pass backend/protocol checks; native file/package Rename passes. Batch native Move/Undo/Redo and resource assertions pass X130, but the current full VS Code run fails that case on the host's post-Paste Explorer repaint. IntelliJ passes. Bounded cross-package qualification passes X161; explicit graph replacement now uses `xtc/renameFiles` and shared X162/X163. | L71 / X128, X130 |
 | Save-time edits, incremental sync, multiple-range formatting | Negotiated save hooks, opt-in incremental UTF-16 updates and multiple-range formatting implemented; default Full/no save edits preserved. Backend/packaged transport and selected X132 pass in both editors. | L72 / X132 |
 | Server-side `workspace/executeCommand` | Module Run lenses invoke an existing client command | L73 |
-| Cross-project monikers | Artifact-based import/export/local identities implemented; L74 acceptance pending | L74 |
+| Cross-project monikers | Artifact-based import/export/local identities; backend and selected acceptance pass in both editors | L74 |
 | Server-provided document content/refresh | Matching bundled/host-indexed source files, opened read-only | L75 |
 | Inline completion | Ordinary completion popup | L76 |
 | Document colors and color presentations | Ordinary token coloring; no color-value provider | L77 |
@@ -1432,20 +1432,20 @@ editors. The 129-module control succeeds under the unchanged heap; 20,000-method
 queries now use one compile and take 0.4–0.6 s in the recorded workload. Persistent indexing is not
 justified by these measurements; prolonged release budgets remain L82.
 
-### L74 artifact identities (2026-10-05; validation pending)
+### L74 artifact identities (2026-10-05)
 
 `textDocument/moniker` now has a compiler-only provider. The `ecstasy-artifact-v1` scheme
 uses a SHA-256 digest of the normalized emitted module plus its normalized constant-table index.
 Normalization removes build timestamps and checkout directories in a private deserialized copy;
-actual module bytes, version, code, signatures, embedded resources and relative source/debug data
-otherwise participate in identity. Unchanged recompilation and relocating a checkout should keep
+module versions, code, signatures, embedded resources and relative source/debug data otherwise
+participate in identity. Unchanged recompilation and relocating a checkout keep
 IDs; changing an artifact changes its symbol IDs. Identical normalized artifacts intentionally
 share IDs across projects. Equal names in different artifacts do not establish identity.
 Source-index metadata is not part of this portable key, so attaching/removing matching sources
 cannot change binary identity. Existing source-index revisions and fresh rename proofs are unchanged.
 
 Public/protected declarations with externally visible owners export their identity; consumers
-import the same identity. Private components are local. The uniqueness is `scheme`, not a claim
+import the same identity. Private components, method-local types and their members are local. The uniqueness is `scheme`, not a claim
 of an independently registered global identifier. Missing emitted entries, register locals,
 parameters, lambdas, unresolved names and unsuccessful compilations return no moniker. The feature
 is an exact artifact identity API, not a fuzzy symbol search or an LSIF exporter. Compiler-generated
@@ -1457,4 +1457,22 @@ partial-result path. Shared X252/X253 and updated X31 exercise the connected cli
 there is no native moniker browser in either editor, and protocol checks must not be described as
 native moniker UI coverage. Backend tests cover source/binary matching, overloads, unchanged
 recompilation, checkout relocation, distinct same-name artifacts, visibility, incomplete source,
-closed graph views and replacement. Acceptance is pending the batched run.
+closed graph views and replacement. Selected acceptance passes in both editors; receipts below.
+
+Companion views share an immutable identity table per compilation, including after graph joining.
+Queries need a current semantic snapshot: parsed-only library source views still return no moniker
+when queried directly. Resolved imports in consumers have binary identities; semantic enrichment of
+read-only library documents is tracked with L75. This is not a claim of complete library-document
+language support.
+
+L74 validation: **137 distinct backend/protocol unit cases** pass across the recorded selections,
+plus all **64 packaged `XdkStdioTest` cases**. The final visibility/table-sharing check reruns 39
+backend cases and the packaged moniker case successfully. All have zero failures/errors/skips.
+LSP and IntelliJ Spotless checks, TypeScript compilation and IntelliJ harness compilation pass.
+VS Code `run-EGMh6B` passes X31/X252/X253. IntelliJ `run-10438075944069511128` passes the same three
+plus START, with no IDE failures. Its first run (`run-11826261276184041200`) passed X31 but failed
+the two new cases because the test driver decoded `Moniker[]` as an object; adding the method to
+its existing collection-response set fixes both. This was a harness omission, not an LSP4IJ defect.
+The final method-local visibility refinement has backend/packaged coverage; it did not trigger
+another GUI run. No full-catalog run is claimed. The catalog has **258 cases**, SHA-256
+`7f4170148797ce5828bcb36ec96dd35ca9c4a0670768b7b7dcc81826535f91d5`.

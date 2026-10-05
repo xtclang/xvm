@@ -829,7 +829,11 @@ use one-use, revision-checked commands only if they support `workspace.applyEdit
 `textDocument/moniker` uses the `ecstasy-artifact-v1` scheme and scheme-level uniqueness.
 Exported declarations and their binary consumers match by normalized artifact content and constant
 index. Build timestamps, absolute checkout paths and optional source attachments do not define the
-identity; code/signature/resource changes do. Private components are local. Register locals,
+identity; code/signature/resource changes do. Private and method-local components are local. Register locals,
 lambdas, unresolved bindings and unsuccessful compilations supply no IDs. Identical normalized
 artifacts intentionally match across projects; module-name spelling alone never establishes a match.
-See [L74's contract and acceptance](../../docs/errs-integration-plan.md#l74-artifact-identities-2026-10-05-validation-pending).
+See [L74's contract and acceptance](../../docs/errs-integration-plan.md#l74-artifact-identities-2026-10-05).
+
+Parsed-only library source views do not yet answer moniker requests directly; current consumer
+snapshots do provide the imported binary identity. Library-view enrichment is tracked with L75.
+Selected X31/X252/X253 pass in both editors; full-catalog/release acceptance remains separate.
