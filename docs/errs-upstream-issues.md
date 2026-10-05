@@ -115,6 +115,11 @@ references and highlights through the same real server connection. It also check
 not correct error classification. The underlying defect is shared LSP4J transport behavior,
 not an Ecstasy parser/compiler error and not specific to IntelliJ.
 
+Rechecked on 2026-10-05: [1.0.0 remains the latest release](https://github.com/eclipse-lsp4j/lsp4j/releases),
+which this branch already uses. The same catch/classification is present in
+[`MessageTypeAdapter` at upstream commit `57eeaa40e6b193630679ecf039895863ee715242`](https://github.com/eclipse-lsp4j/lsp4j/blob/57eeaa40e6b193630679ecf039895863ee715242/org.eclipse.lsp4j.jsonrpc/src/main/java/org/eclipse/lsp4j/jsonrpc/json/adapters/MessageTypeAdapter.java).
+There is no released dependency upgrade that removes this limitation.
+
 ## Follow-up discipline
 
 - [ ] Prepare minimal upstream reports from the recorded evidence; obtain authorization before
