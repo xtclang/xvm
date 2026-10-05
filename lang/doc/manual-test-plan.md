@@ -3770,4 +3770,14 @@ The shared Gradle init script produces `.gradle/xtc/lsp-workspace.json` for the 
 legacy single-build reports remain readable. Import does not parse Gradle script text or run the
 Ecstasy compiler. Preparing resources remains a separate explicit action. Automatic export is
 enabled by an existing imported report; VS Code additionally requires a trusted local workspace.
-Validation for this new batch is pending; the preceding full-suite receipt describes the old catalog.
+Tagged IDE exports are accepted only by the successful import that owns them; late daemon writes
+after cancellation cannot replace the accepted model. Untagged external exports remain observable.
+This guard is session-local. X265 uses a saved VS Code workspace so adding/removing a folder does
+not replace the extension-test host; the launcher chooses this automatically when X265 is selected.
+
+Selected acceptance (2026-10-05): VS Code `run-40itia` passes X129/X260–X265, zero failures.
+IntelliJ `run-12471400462423684800` passes START/X129/X260/X261/X263/X265; corrected
+`run-11279722985432501847` passes START/X262/X264 with zero IDE errors. The first run's
+malformed-report summary and VFS-probe lock failures are retained and explained in the
+[batch receipt](../../docs/errs-integration-plan.md#compiler-workspace-synchronization-batch-ui5ui6-2026-10-05).
+All seven cases have passing receipts; the complete 270-case catalog was not rerun for this batch.

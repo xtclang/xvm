@@ -859,8 +859,12 @@ Pending, cancelled or failed builds cannot replace the last accepted model via a
 successful retries can. The paths view includes the last outcome/time. Project/folder closure
 cancels its owned import. Generated files are not rolled back, and failed-output retention lasts
 for the current editor session. See the UI5/UI6 import continuation and manual cancellation steps.
-Automatic IntelliJ Gradle-sync refresh and aggregation of nested/composite build roots remain
-follow-ups; each exported root has an explicit refresh action.
+Automatic IntelliJ Gradle-sync refresh and successful VS Code Gradle-task refresh now follow an
+initial import. A shared evaluated init script aggregates nested/composite build roots, including
+roots without the Ecstasy plugin. Exported-report watchers retain accepted inputs after malformed
+output, and import identities reject late daemon output after cancellation. Project/folder removal
+retires the owner; explicit overrides survive. X263–X265 cover these paths in both clients; see the
+[batch receipt](../../../docs/errs-integration-plan.md#compiler-workspace-synchronization-batch-ui5ui6-2026-10-05).
 Earlier X124 receipts used explicit native VFS refresh. The strengthened case creates previously
 missing external roots without opening them or manually refreshing; those earlier receipts remain
 historical and do not prove automatic watch ownership.
@@ -1527,7 +1531,7 @@ unsaved source after close while work is pending. The 19 focused backend/transpo
 UP15 remains upstream; full-catalog/scale/cross-platform evidence remains L82. This closes acceptance
 for existing providers and adds no AST, embedding or production language capability. See the
 [receipt and commit map](../../../docs/errs-integration-plan.md#l81-native-acceptance-closure-2026-10-05).
-The current shared catalog has 267 scenarios (X1–X262 plus the five configuration/stress IDs).
+The current shared catalog has 270 scenarios (X1–X265 plus the five configuration/stress IDs).
 
 
 The October 5 UI5–UI7 continuation adds shared X260–X262 for real Gradle import cancellation,
