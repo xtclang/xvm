@@ -26,43 +26,43 @@ E2E framework, log harvesting, and how each approach maps to the plugin's extens
 
 ## Current State
 
-The plugin has **two test files**, both pure unit tests with no IntelliJ platform dependencies:
+The `errs` branch has headless unit/manifest tests under `src/test/kotlin` and the native
+Starter+Driver compiler playbook under `src/integrationTest/kotlin`. The current headless run
+contains 90 tests across 21 JUnit suites. It covers compiler configuration/build models, root
+watch ownership, source graphs, lifecycle/process cleanup, edit/move guards, startup and diagnostic
+messages, capabilities, manifest wiring and bundled resources.
 
-### `LspServerJarResolutionTest.kt`
+The native suite uses the shared 264-scenario catalog (X1–X259, CFG1–CFG3, 7a.8/7a.9).
+It launches an isolated Community-capable IntelliJ environment with Ultimate disabled. Selected
+runs preserve explicit `partial` statuses where LSP4IJ cannot exercise a native feature; neither
+passing protocol assertions nor an unselected scenario count as full UI acceptance. The
+[manual playbook](../doc/manual-test-plan.md) and
+[integration receipt](../../docs/errs-integration-plan.md) are authoritative for current results
+and upstream limitations.
 
-Tests `XtcLspConnectionProvider.resolveServerJar()` — a static method that locates
-`bin/xtc-lsp-server.jar` relative to a plugin directory path.
+From the composite root:
 
-- 5 tests: correct layout, missing bin dir, JAR in wrong directory, empty bin, wrong name
-- Uses: JUnit 5 + AssertJ + `@TempDir`
-- No IntelliJ API usage — tests a pure `Path` → `Path?` function
-
-### Build Configuration
-
-```kotlin
-// build.gradle.kts (dependencies)
-testImplementation(platform(libs.junit.bom))    // JUnit 6.0.2 BOM
-testImplementation(libs.junit.jupiter)
-testRuntimeOnly(libs.junit.platform.launcher)
-testRuntimeOnly(libs.lang.intellij.junit4.compat)  // JUnit 4.13.2 (required by IntelliJ test harness)
-testImplementation(libs.assertj)                     // AssertJ 3.27.7
-
-// build.gradle.kts (test task)
-val test by tasks.existing(Test::class) {
-    useJUnitPlatform()
-    jvmArgs("-Xlog:cds=off")  // Suppress CDS warning from IntelliJ's PathClassLoader
-    testLogging { events("passed", "skipped", "failed") }
-}
+```bash
+./gradlew :lang:intellij-plugin:test \
+  -PincludeBuildLang=true -PincludeBuildAttachLang=true --no-build-cache
+./gradlew :lang:intellij-plugin:testCompilerPlaybook \
+  --tests '*CompilerPlaybookTest.compilerPlaybook' \
+  -Plsp.adapter=compiler -PincludeBuildLang=true -PincludeBuildAttachLang=true --no-build-cache
 ```
 
-The IntelliJ Platform Gradle Plugin (2.10.5) automatically configures the test JVM with:
-- `-Djava.system.class.loader=com.intellij.util.lang.PathClassLoader`
-- `idea.classpath.index.enabled=false`
-- `idea.force.use.core.classloader=true`
-- Sandbox directories (`config/`, `plugins/`, `system/`, `log/`) via `SandboxArgumentProvider`
+Use `-PintellijPlaybookCases=X145,X146,X147,X259` for exact scenario selection. Omit it for the
+full implemented catalog. The status bar shows completed/remaining counts and the current case's
+short description. The driver can restore focus without moving the mouse; avoid typing into the
+fixture while it runs. All waits are bounded and completed edits are not replayed after focus loss.
 
-This means the IntelliJ classloading infrastructure is already available to tests — the
-missing piece is the test framework dependency and test base classes.
+Unit results are in `build/test-results/test/*.xml`. Native per-case results, IDE failures,
+server traces and screenshots are under `build/reports/compiler-playbook/run-*`. A green Gradle
+summary alone is insufficient: inspect skipped counts, per-case statuses and `ideFailures`.
+`--rerun-tasks --no-build-cache` forces a complete re-execution when required.
+
+The sections below provide testing approaches and examples; consult `build.gradle.kts` and the
+version catalog for the active dependencies and task wiring, rather than copying older examples
+as current build configuration.
 
 ---
 

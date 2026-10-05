@@ -40,6 +40,9 @@ import java.util.concurrent.atomic.AtomicReference
 class XtcLanguageClient(
     project: Project,
 ) : LanguageClientImpl(project) {
+    // TODO LSP4IJ: UP27 — inherited semantic/lens refresh fans out across connected documents
+    // on an unbounded executor. Per-file coalescing does not bound distinct-file submissions.
+    // Retain the native IDE-error gate until bounded refresh scheduling passes a long session.
     private val compilerWatches = CompilerVfsWatches()
     private val preferences = AtomicReference(LanguageServiceSettings.validated(project))
     private val updateQueued = AtomicBoolean()
