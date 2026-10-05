@@ -1,8 +1,13 @@
 UI5/UI6 now guards compiler build imports in both editors: cancellable project-owned progress,
 one import at a time, and acceptance only after successful task completion and model validation.
 Failed/cancelled output cannot replace the previous model through a watcher read. All 106 IntelliJ
-unit tests, 34 VS Code extension tests and X129 in both editors pass. Native import Cancel-button
-acceptance remains manual. See the [implementation and receipt](errs-integration-plan.md#compiler-import-progress-and-accepted-model-ownership-ui5ui6-2026-10-05).
+unit tests, 34 VS Code extension tests and X129 in both editors pass. Shared X260–X262 now also
+pass both editors, including the visible import Cancel button, overlap refusal, rejected output
+and retry. The first IntelliJ X260 attempt exposed a fixture retirement assumption, corrected in
+its focused rerun with zero IDE errors. See the [implementation and receipt](errs-integration-plan.md#compiler-import-progress-and-accepted-model-ownership-ui5ui6-2026-10-05).
+The [shared acceptance receipt and remaining UI list](errs-integration-plan.md#shared-compiler-import-acceptance-and-remaining-ui-work-2026-10-05)
+keeps automatic build sync, advanced runtime/source-attachment controls and broader settings
+acceptance open. Color support awaits a recognized Ecstasy API; notebooks are explicitly deferred.
 Five separately committed local LSP4IJ repairs are recorded in the [upstream register](errs-upstream-issues.md);
 they are unpushed and not installed in this branch. UP17 remains an open IntelliJ Platform defect.
 
