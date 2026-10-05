@@ -35,7 +35,7 @@ not a claim that every referenced suite was rerun for this documentation change.
 | --- | --- | --- | --- |
 | **UP01 — LSP4IJ — bridged** | Process `stop()` can precede `start()`; later startup creates a child that subsequent stop does not reap. | [Provider](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcLspServerSupportProvider.kt) uses `ConnectionLifetime`. Real child reproduction and separate server EOF bug are documented in the [lifecycle diagnosis](errs-lsp-process-lifecycle.md). | Upstream atomically owns start/stop and rejects post-stop startup; `ConnectionLifetimeTest` and packaged process regressions still pass without the guard. |
 | **UP02 — LSP4IJ — constrained** | Native synchronization does not dispatch the advertised server save hooks, including `willSaveWaitUntil`. | [Client capabilities](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcClientFeatures.kt), [provider](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcLspServerSupportProvider.kt) and [settings](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/LanguageServiceConfigurable.kt) disable these hooks/server save formatting. Native Actions on Save remains available. | Observe real pre-save requests, apply version-checked edits before persistence, then enable the UI/capabilities and extend X139. |
-| **UP03 — LSP4IJ — bridged; UI wait open** | Native file rename/move preflight happens too late; resource rename handling changes the basename but ignores a changed parent URI. The upstream VFS listener still waits on the EDT during physical moves. | [File rename](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcFileRenameHandler.kt), [Move](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcFileMoveHandler.kt) and [resource edits](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcRenameEdit.kt) preflight old paths and apply names/parents in one guarded undo command. The October 5 long run retains 6–11-second native wait stacks. | Native upstream Rename/Move passes X103/X130, including consumers, resources, Undo/Redo and refusals, without our entry points or UI-thread waits. |
+| **UP03 — LSP4IJ — bridged; generic UI wait open** | Native file rename/move preflight happens too late; resource rename handling ignores changed parents. The VFS listener also requests old-path → same-path preflight for moves and waits on the EDT. | Guarded native entry points preserve edits/Undo. `PreflightedRenames` now completes no-op requests and exact already-approved physical operations locally. Real unowned renames still use upstream preflight. Seven regressions pass; native validation is pending. Original 6–11-second wait stacks remain recorded. | Native upstream Rename/Move passes X103/X130, including consumers, resources, Undo/Redo and refusals, without our entry points or UI-thread waits. |
 | **UP04 — LSP4IJ — bridged** | Rename and generic `workspace/applyEdit` can apply stale edits without checking transmitted document versions/epochs. | [Rename handler](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcRenameHandler.kt), [snapshot guard](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcRenameEdit.kt) and [client edit handler](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcClientFeatures.kt) validate inside the write command. Unsupported generic resource/snippet/confirmation edits are refused. | Equivalent upstream ownership/version checks pass stale/closed/reopened document tests and X144; supported Rename/Move remains atomic and undoable. |
 | **UP05 — LSP4IJ — bridged** | Dynamic filesystem watcher registrations do not alone establish/refresh unknown or missing external VFS roots while the IDE stays focused. | [CompilerRootWatches](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/CompilerRootWatches.kt) owns roots and their disposal; `CompilerRootWatchesTest` and X124 cover resources. | Upstream observes creation/deletion/change under configured external roots while focused and releases watchers on disposal. |
 | **UP06 — LSP4J, bundled by LSP4IJ — bridged** | `relatedDocuments` diagnostic unions are not reliably decoded by their `kind` discriminator. | [DiagnosticReportJson](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/DiagnosticReportJson.kt) supplies the adapter; `DiagnosticReportJsonTest` checks full/unchanged reports. | Correct full/unchanged wire round trips without the adapter in the actual bundled client library. |
@@ -445,10 +445,24 @@ The same long run records two independent freeze alerts and seven freeze-dump gr
 our guarded operation has already obtained a proposal, but its physical VFS move invokes the
 upstream preflight listener again while the write command owns the UI thread.
 
-The existing entry-point bridge preserves correct edits; it does not eliminate this upstream
-wait. Characterize the duplicate preflight and Undo/Redo paths, then prevent the redundant request
-only for a verified owned transaction. Generic file events must retain required preflight and
-notifications. Validate delayed compiler replies, cancellation, current-version guards, resources,
-closed consumers and native Undo/Redo before claiming the freeze fixed. Keep the original dump
-artifacts under `XtcCompilerPlaybook-run-5080670791887423538/log/threadDumps-freeze-*`.
+The saved wire trace shows the Move listener requesting the same old/new local path, including
+directory URIs that differ only by a trailing slash. Upstream passes `VFileMoveEvent.oldPath` to
+the rename-name resolver, so there is no real target in this request. This also occurs on native
+Undo/Redo. The resulting no-op still waits behind compiler work while holding the UI thread.
+
+`PreflightedRenames` decorates the public JSON-RPC endpoint factory. A request consisting entirely
+of local no-op moves completes immediately with no additional edit. While `XtcRenameEdit` applies
+an approved physical operation, a connection-local `ScopedValue` also recognizes that exact
+old/new pair. Its lifetime ends automatically on return or exception; it does not leak to another
+client or an unrelated worker. The existing version/graph/path guards run before entering it.
+All notifications, including did-rename/watch notifications, are forwarded unchanged. Real
+unowned renames, mixed batches, non-file URIs and invalid URIs retain normal server handling.
+No capabilities or generic VFS listeners are disabled.
+
+Seven unit regressions cover a permanently pending remote reply, real service-proxy dispatch,
+scope nesting/failure cleanup, client/thread separation, malformed/mixed requests, notifications
+and cancellation. Focused native Move/Undo/Redo acceptance is pending. This is a narrow local
+repair, not a claim that upstream's generic UI wait has disappeared: a genuine basename rename
+replayed outside the approved scope still takes that path. Keep the original dump artifacts under
+`XtcCompilerPlaybook-run-5080670791887423538/log/threadDumps-freeze-*` and the long-session gate.
 This is separate from UP17's large-file interval-tree cost and UP27's refresh scheduling error.
