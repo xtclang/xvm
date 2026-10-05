@@ -25,6 +25,7 @@ import org.xvm.lsp.adapter.LinkedEditingRanges
 import org.xvm.lsp.adapter.Position
 import org.xvm.lsp.adapter.PrepareRenameResult
 import org.xvm.lsp.adapter.Range
+import org.xvm.lsp.adapter.ReadOnlyDocument
 import org.xvm.lsp.adapter.SelectionRange
 import org.xvm.lsp.adapter.SemanticTokens
 import org.xvm.lsp.adapter.SignatureHelp
@@ -204,7 +205,7 @@ class XdkAdapter
         ): Set<String> {
             val snapshot =
                 synchronized(lifecycle) {
-                    if (closed || XdkLibrarySources.owns(uri) || overlays[uri] == content) {
+                    if (closed || isLibraryDocument(uri) || overlays[uri] == content) {
                         return emptySet()
                     }
                     overlays[uri] = content
@@ -272,6 +273,42 @@ class XdkAdapter
             }
             return refreshDiscoveredSources()
         }
+
+        override val readOnlyDocumentSchemes = setOf(XdkLibrarySources.SCHEME)
+
+        override fun readOnlyDocument(uri: String): ReadOnlyDocument? =
+            synchronized(lifecycle) { if (closed) null else XdkLibrarySources.document(uri) }
+
+        private fun isLibraryDocument(uri: String): Boolean =
+            uri.startsWith("${XdkLibrarySources.SCHEME}:") || XdkLibrarySources.owns(uri)
+
+        /** Library queries share compiler serialization, cancellation, tracing and shutdown. */
+        private fun libraryMonikers(uri: String, line: Int, column: Int): CompletableFuture<List<SymbolMoniker>> =
+            synchronized(lifecycle) {
+                if (closed) return CompletableFuture.failedFuture(IllegalStateException("XDK adapter is closed"))
+                val result = CompletableFuture<List<SymbolMoniker>>()
+                val task = queueTrace.task("library-monikers", uri, result) {
+                    try {
+                        if (!result.isDone) result.complete(XdkLibrarySources.monikers(uri, line, column))
+                    } catch (failure: Exception) {
+                        result.completeExceptionally(failure)
+                    } catch (failure: Error) {
+                        result.completeExceptionally(failure)
+                        throw failure
+                    } finally {
+                        libraryQueries.remove(result)
+                    }
+                }
+                libraryQueries[result] = task
+                result.whenComplete { _, _ ->
+                    if (result.isCancelled) {
+                        libraryQueries.remove(result)
+                        compiles.remove(task)
+                    }
+                }
+                compiles.execute(task.ready())
+                result
+            }
 
         override fun healthCheck(): Boolean = runCatching { XdkLibraries.configure() }.isSuccess
 
@@ -376,7 +413,7 @@ class XdkAdapter
             uri: String,
             content: String,
         ): CompletableFuture<CompilationResult> {
-            if (XdkLibrarySources.owns(uri)) {
+            if (isLibraryDocument(uri)) {
                 return CompletableFuture.completedFuture(CompilationResult.success(uri, emptyList()))
             }
             updateDocument(uri, content)
@@ -943,7 +980,7 @@ class XdkAdapter
 
         /** Closing restores disk headers and returns exactly the scopes retired by that change. */
         fun closeDocumentAndRefresh(uri: String): Set<String> {
-            if (XdkLibrarySources.owns(uri)) return emptySet()
+            if (isLibraryDocument(uri)) return emptySet()
             val (retired, obsoleteQueries) =
                 synchronized(lifecycle) {
                     val scope = scopes.remove(uri) ?: analysisScope(uri)
@@ -983,11 +1020,12 @@ class XdkAdapter
                         requests.values.map { it.result } +
                             cursors.values.map { it.result } +
                             renames.values.map { it.result } +
-                            projectQueries.values.map { it.result }
+                            projectQueries.values.map { it.result } + libraryQueries.keys
                     requests.clear()
                     cursors.clear()
                     renames.clear()
                     projectQueries.clear()
+                    libraryQueries.clear()
                     diagnosticCache.clear()
                     navigationIndex.clear()
                     overlays.clear()
@@ -1376,7 +1414,7 @@ class XdkAdapter
             content: String,
             options: FormattingOptions,
         ): List<TextEdit> =
-            if (XdkLibrarySources.owns(uri)) {
+            if (isLibraryDocument(uri)) {
                 emptyList()
             } else {
                 XdkLexical.format(
@@ -1392,7 +1430,7 @@ class XdkAdapter
             range: Range,
             options: FormattingOptions,
         ): List<TextEdit> =
-            if (XdkLibrarySources.owns(uri)) {
+            if (isLibraryDocument(uri)) {
                 emptyList()
             } else {
                 XdkLexical.format(
@@ -1469,7 +1507,7 @@ class XdkAdapter
             line: Int,
             column: Int,
         ): LinkedEditingRanges? {
-            if (XdkLibrarySources.owns(uri)) return null
+            if (isLibraryDocument(uri)) return null
             val model =
                 analysis(uri)?.semantics?.takeIf { it.status == SemanticModel.Status.COMPLETE }
                     ?: return null
@@ -1619,6 +1657,7 @@ class XdkAdapter
             line: Int,
             column: Int,
         ): CompletableFuture<List<SymbolMoniker>> {
+            if (isLibraryDocument(uri)) return libraryMonikers(uri, line, column)
             val current = module(uri)
             if (current == null && hasProject(uri)) {
                 return projectQuery(ProjectQueryKey(uri, ProjectQueryKind.MONIKERS), emptyList()) {
@@ -2206,6 +2245,7 @@ class XdkAdapter
         private val cursors = ConcurrentHashMap<CursorKey, CursorRequest>()
         private val renames = ConcurrentHashMap<String, RenameRequest>()
         private val projectQueries = ConcurrentHashMap<ProjectQueryKey, ProjectRequest<*>>()
+        private val libraryQueries = ConcurrentHashMap<CompletableFuture<*>, CompilerQueueTrace.Work>()
         private val diagnosticCache = XdkDiagnosticIndex()
         private val navigationIndex = XdkNavigationIndex()
 
