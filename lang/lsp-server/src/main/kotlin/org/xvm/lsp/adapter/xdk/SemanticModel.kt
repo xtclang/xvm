@@ -511,6 +511,12 @@ class SemanticModel
                                 canonical(id) to slot.copy(method = canonical(slot.method))
                             },
                     )
+                // Each source view shares its compilation's identity table, just like other facts.
+                // Copying the whole module table per companion would retain files × symbols entries.
+                val monikersBySnapshot =
+                    models.distinctBy { it.id }.associate { model ->
+                        model.id to immutableMap(model.monikers.mapKeys { canonical(it.key) })
+                    }
                 return models.map { model ->
                     SemanticModel(
                         model.id,
@@ -526,7 +532,7 @@ class SemanticModel
                         model.imports,
                         lambdas = model.lambdas,
                         sourceLinks = model.sourceLinks,
-                        monikers = model.monikers.mapKeys { canonical(it.key) },
+                        monikers = monikersBySnapshot.getValue(model.id),
                     )
                 }
             }
