@@ -1,5 +1,13 @@
 # Failures with nowhere to go
 
+**Compiler import ownership (2026-10-05):** model-file watchers could publish Gradle output before
+the exporting task succeeded, including output from a failed/cancelled task. Both editor clients
+now hold immutable accepted reports behind an import owner, reject overlapping imports and cancel
+owned progress on project/folder retirement. Failure/cancellation retains the previous accepted
+report for the editor session. All 106 IntelliJ unit tests, 34 VS Code extension tests and shared
+X129 in both editors pass; native Gradle Cancel-button acceptance remains manual. See the
+[ownership contract and receipt](errs-integration-plan.md#compiler-import-progress-and-accepted-model-ownership-ui5ui6-2026-10-05).
+
 **L82 real-project audit (2026-10-05):** recursive typedefs reached a base-type accessor that
 intentionally throws; diagnostics/rename identity and two code-generation paths now have regressions
 that fail before the fix and pass afterwards. Live heap histograms also exposed empty `TransientThreadLocal`
