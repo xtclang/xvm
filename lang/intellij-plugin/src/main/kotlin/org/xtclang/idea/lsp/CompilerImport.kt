@@ -29,6 +29,7 @@ internal class CompilerImport(
         val observed: Observed? = null,
         val operation: Operation? = null,
         val result: Result? = null,
+        val retired: Boolean = false,
     )
 
     private val state = AtomicReference(State())
@@ -37,6 +38,7 @@ internal class CompilerImport(
     fun current(): String? {
         while (true) {
             val before = state.get()
+            if (before.retired) return null
             if (before.operation != null) return before.accepted
             val text = read()
             if (before.observed == Observed(text)) {
@@ -52,9 +54,14 @@ internal class CompilerImport(
 
     fun retained(): String? = state.get().accepted
 
+    fun retire() {
+        state.set(State(retired = true))
+    }
+
     fun begin(prepare: Boolean): Operation {
         while (true) {
             val before = state.get()
+            check(!before.retired) { "Compiler import owner has been retired" }
             check(before.operation == null) { "An Ecstasy compiler import is already running" }
             val operation = Operation(prepare)
             if (state.compareAndSet(before, before.copy(operation = operation))) return operation
@@ -69,6 +76,7 @@ internal class CompilerImport(
         cancelled: () -> Boolean = { false },
     ): Result {
         val before = state.get()
+        if (before.retired) return Result(Outcome.CANCELLED, "Compiler import owner has been retired.")
         check(before.operation === operation) { "Compiler import no longer owns this result" }
         val observed = runCatching(read)
         val validation =
@@ -108,7 +116,10 @@ internal class CompilerImport(
                 operation = null,
                 result = result,
             )
-        check(state.compareAndSet(before, after)) { "Compiler import ownership changed" }
+        if (!state.compareAndSet(before, after)) {
+            if (state.get().retired) return Result(Outcome.CANCELLED, "Compiler import owner has been retired.")
+            error("Compiler import ownership changed")
+        }
         return result
     }
 
