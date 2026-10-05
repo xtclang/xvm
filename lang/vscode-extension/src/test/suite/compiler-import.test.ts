@@ -62,4 +62,16 @@ suite('Compiler import ownership', () => {
         owner.finish(second, 'succeeded');
         assert.strictEqual(owner.current(), 'new');
     });
+
+    test('removed workspace owners cannot publish late output or start another import', () => {
+        const { owner, write } = fixture();
+        owner.current();
+        const operation = owner.begin(false);
+        owner.retire();
+        write('late report');
+        assert.strictEqual(owner.finish(operation, 'succeeded').outcome, 'cancelled');
+        assert.strictEqual(owner.current(), undefined);
+        assert.strictEqual(owner.retained(), undefined);
+        assert.throws(() => owner.begin(false), /retired/);
+    });
 });
