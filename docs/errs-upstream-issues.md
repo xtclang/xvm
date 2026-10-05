@@ -375,3 +375,19 @@ Selected receipt: IntelliJ `run-16728311754487527222` executes X254 and passes p
 matching-source, direct-moniker and no-formatting assertions. It reports partial for virtual
 content/refresh, with zero IDE failures. VS Code `run-e4dCrP` passes its virtual provider path,
 including native typing refusal. Both also pass X31/X101/X158/X252/X253.
+
+### UP26: LSP4IJ inline completion loses invocation and popup-selection context
+
+LSP4IJ 0.21.0's `LSPInlineCompletionSupport.createInlineCompletionContext` always sends
+`Automatic`. Its provider recognizes `DirectCall` only to skip debounce; it does not forward
+`Invoked` or `selectedCompletionInfo`. Unique compiler ghost suggestions work, but native
+explicit cycling through ambiguous alternatives and extending a selected popup item cannot
+exercise the server's complete contract. X257 marks these assertions as protocol-only/partial
+in IntelliJ; VS Code uses its native alternative selection as well.
+
+Upstream repair: carry the triggering event and selected lookup range/text in the request,
+then map them to the standard context. Keep selection ranges identical and require insertions
+to extend the selected item. Native X257 must pass before removing the partial marker.
+No production workaround broadens Automatic requests into speculative alternatives.
+
+Source: [LSP4IJ support at 0.21.0](https://github.com/redhat-developer/lsp4ij/blob/0.21.0/src/main/java/com/redhat/devtools/lsp4ij/features/inlineCompletion/LSPInlineCompletionSupport.java).

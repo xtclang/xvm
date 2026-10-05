@@ -8094,6 +8094,72 @@
         ]
       }
     },
+    "X255": {
+      "title": "accept and undo a compiler-backed inline name",
+      "manual": [
+        "Place the caret at \u00a7 (remove the marker). Invoke inline completion, accept the ghost suffix, then undo once."
+      ],
+      "values": {
+        "file": "X255/InlineValues.x",
+        "source": "module InlineValues {\n    void run() {\n        Int answer = 42;\n        Int result = ans\u00a7;\n    }\n}\n",
+        "mode": "accept",
+        "expected": "answer"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X256": {
+      "title": "dismiss ghost text and keep suggestions current while typing",
+      "manual": [
+        "Place the caret at \u00a7 (remove the marker). Dismiss the ghost suggestion, type w after ans, then accept the updated suffix."
+      ],
+      "values": {
+        "file": "X256/InlineValues.x",
+        "source": "module InlineValues {\n    void run() {\n        Int answer = 42;\n        Int result = ans\u00a7;\n    }\n}\n",
+        "mode": "typing",
+        "expected": "answer"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X257": {
+      "title": "respect ambiguity and the selected completion item",
+      "manual": [
+        "Place the caret at \u00a7 (remove the marker). Check automatic ambiguity suppression, invoke alternatives explicitly, and test popup-selection range/extension constraints."
+      ],
+      "values": {
+        "file": "X257/InlineValues.x",
+        "source": "module InlineValues {\n    void run() {\n        Int answer = 42;\n        Int another = 7;\n        Int result = an\u00a7;\n    }\n}\n",
+        "mode": "selection",
+        "expected": "answer"
+      },
+      "intellij": {
+        "coverage": "partial",
+        "limitations": [
+          "UP26: LSP4IJ 0.21.0 labels direct invocations Automatic and omits selectedCompletionInfo; explicit alternatives and selection constraints are asserted over its connection, not the native UI."
+        ]
+      }
+    },
+    "X258": {
+      "title": "complete a type-compatible value in an unfinished call",
+      "manual": [
+        "Place the caret at \u00a7 (remove the marker). Invoke and accept answer in the incomplete Int argument; answerText must not be offered. Repair the missing delimiters and verify diagnostics clear."
+      ],
+      "values": {
+        "file": "X258/InlineValues.x",
+        "source": "module InlineValues {\n    void consume(Int value) {}\n    void run() {\n        Int answer = 42;\n        String answerText = \"incompatible\";\n        consume(ans\u00a7\n    }\n}\n",
+        "mode": "incomplete",
+        "expected": "answer"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
