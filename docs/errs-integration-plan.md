@@ -1284,6 +1284,16 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
 - [ ] **L76 — Inline completion.** Implement `textDocument/inlineCompletion` for justified
   compiler/snippet suggestions and trigger/selection behavior. Ordinary completion is separate;
   this does not imply adding a generative service.
+  Accepted implementation scope: plain-text ghost completions of compiler-resolved names and
+  expected-type argument values. Both vscode-languageclient and LSP4IJ 0.21.0 have native providers;
+  advertise this optional capability only to clients that negotiate it. Reuse copied cursor facts
+  with a separate request owner from popup completion. Automatic requests require a nonempty prefix
+  and one distinct insertion; explicit requests may return ordered alternatives. Replace only the
+  prefix before the caret on one line, preserve existing suffixes, and respect selected-completion
+  range/extension constraints. Suppress imports requiring other edits, placeholder snippets,
+  read-only libraries, canceled and obsolete results. Whole-method generation and an AI service
+  are outside this compiler feature. Commit the contract, semantic projection/tests, protocol/tests,
+  then shared native acceptance cases; batch validation after implementation.
 - [ ] **L77 — Color support.** Define supported XTC color values, then implement
   `textDocument/documentColor` and `textDocument/colorPresentation`, including exact round-trip
   edits. No color provider is currently advertised.
