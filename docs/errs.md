@@ -1,4 +1,9 @@
 UI5/UI6 now guards compiler build imports in both editors: cancellable project-owned progress,
+
+**Master rebase (2026-10-05):** integrated `origin/master` at `7a4e29e577`, repaired
+nesting-limit recovery and updated master-dependent fixture assertions. Backend checks and
+selected editor smoke checks pass. The [integration checkpoint](errs-integration-plan.md#master-rebase-checkpoint-2026-10-05)
+and [commit map](errs-rebase-2026-10-05.tsv) preserve validation and future PR boundaries.
 one import at a time, and acceptance only after successful task completion and model validation.
 Failed/cancelled output cannot replace the previous model through a watcher read. All 106 IntelliJ
 unit tests, 34 VS Code extension tests and X129 in both editors pass. Shared X260–X262 now also
@@ -2090,7 +2095,7 @@ integration remain subsequent work in the existing LSP module.
 
 The cursor/module follow-up extends this same node to an explicit source position before existing
 closing braces or a semicolon. Its additional final `diagnosticCode` is syntax provenance: EOF keeps
-`PARSER-02`, while an explicit cursor uses `PARSER-30`. Validation replays that exact boundary error
+`PARSER-02`, while an explicit cursor uses `PARSER-31`. Validation replays that exact boundary error
 to prevent emission. The field is immutable and needs no clone handling; no Context or semantic
 lookup state is added. The parser owns cursor recognition and resumes after the intact prefix, so
 an unclosed call cannot consume the method's closing brace during recovery. Source is never cut
