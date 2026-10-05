@@ -6,6 +6,7 @@ import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.compiler.ast.PropertyDeclarationStatement
 import org.xvm.compiler.ast.TypeCompositionStatement
+import org.xvm.compiler.ast.TypedefStatement
 import org.xvm.compiler.ast.partial.IncompleteDeclarationStatement
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
@@ -104,6 +105,11 @@ internal object XdkSymbols {
 
             is PropertyDeclarationStatement -> {
                 SymbolInfo.of(node.name, SymbolKind.PROPERTY, rangeOf(uri, node))
+            }
+
+            is TypedefStatement -> {
+                // LSP has no alias kind; represent the written type declaration as a type.
+                SymbolInfo.of(node.nameToken.valueText, SymbolKind.CLASS, rangeOf(uri, node))
             }
 
             is IncompleteDeclarationStatement -> {

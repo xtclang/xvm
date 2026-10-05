@@ -81,22 +81,16 @@ internal object XdkAst {
         root: AstNode?,
         line: Int,
         column: Int,
-    ): List<AstNode> {
-        val chain = mutableListOf<AstNode>()
-        var node = root ?: return chain
-        if (!node.contains(line, column)) {
-            return chain
-        }
-        while (true) {
-            chain += node
-            // the AST nests, so at most one child can contain a position - except where two
-            // siblings share a boundary, and then the first one that does is as good an answer
-            val next =
-                node.childList().firstOrNull { it.belongsTo(root) && it.contains(line, column) }
-                    ?: return chain
-            node = next
-        }
-    }
+    ): List<AstNode> =
+        generateSequence(root?.takeIf { it.contains(line, column) }) { node ->
+            // Recovery and generated wrappers can overlap. At a sibling boundary prefer the
+            // node starting there; never expand into a child outside its written parent's span.
+            node.childNodes()
+                .filter {
+                    it.belongsTo(requireNotNull(root)) && it.contains(line, column) &&
+                        it.startPosition >= node.startPosition && it.endPosition <= node.endPosition
+                }.minWithOrNull(compareByDescending<AstNode> { it.startPosition }.thenBy { it.endPosition })
+        }.toList()
 
     /**
      * The regions worth collapsing: anything that spans more than one line and is a block or a
