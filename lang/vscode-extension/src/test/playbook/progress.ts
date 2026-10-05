@@ -2,6 +2,7 @@ import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 import { LSPErrorCodes, ProgressType, WorkDoneProgressBegin, WorkDoneProgressEnd, WorkDoneProgressReport } from 'vscode-languageclient/node';
 import { client, eventually, hover, noErrors, playbook } from './support';
+import { WorkbenchUi } from '../workbenchUi';
 
 export function progressCases(): void {
     playbook('X145', async (workspace, data) => {
@@ -9,6 +10,7 @@ export function progressCases(): void {
         await workspace.configure([{ name: data.module, uri: workspace.uri(data.file).toString() }]);
         const document = await workspace.open(data.file);
         const cancelUi = process.env.XTC_PLAYBOOK_CANCEL_UI === 'true';
+        const ui = cancelUi ? await WorkbenchUi.connect() : undefined;
         const workload = (methods: number) => `module ${data.module} {\n    static Int value = 1;\n${Array.from({ length: methods }, (_, i) =>
             `    Int read${i}() { return value; }`).join('\n')}\n}\n`;
         const large = workload(data.methods);
@@ -72,10 +74,10 @@ export function progressCases(): void {
             assert.ok(messages.some(message => message.includes(data.file.split('/').pop()!)),
                 'Reference progress identifies the source being analyzed');
             if (cancelUi) {
-                // Explicit manual/accessibility acceptance mode: only the visible Cancel button
-                // may cancel this query. A fast completed workload is a failure, never a pass.
+                // Only the visible Cancel button may cancel this query. A completed workload
+                // remains a failure; the UI driver has no direct cancellation fallback.
                 await vscode.commands.executeCommand('notifications.showList');
-                console.log('[X145] Click Cancel on "Finding references" now.');
+                await ui!.cancelReferences();
             } else {
                 // Ordinary unattended runs exercise the real workbench token callback.
                 const cancel = Reflect.get(canceled.token, 'cancel') as () => void;
@@ -107,6 +109,7 @@ export function progressCases(): void {
         } finally {
             connection.onProgress = original;
             if (cancelUi) { await vscode.commands.executeCommand('notifications.hideList'); }
+            await ui?.close();
         }
     });
 }
