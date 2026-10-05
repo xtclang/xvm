@@ -192,3 +192,60 @@ private fun ParityWorkspace.graphReferences(document: ParityWorkspace.Document):
         document.at(common["graph"].asJsonObject.string("referenceAnchor")),
         mapOf("context" to mapOf("includeDeclaration" to true)),
     ).rows()
+
+internal fun ParityScenarios.monikerCases() {
+    case("X252") { data ->
+        write(data.string("libraryFile"), data.string("librarySource"))
+        write(data.string("consumerFile"), data.string("consumerSource"))
+        configure(data["sourceModules"])
+        val consumer = open(data.string("consumerFile"))
+        clean(consumer)
+        fun imports() = query("textDocument/moniker", consumer, consumer.at(data.string("reference"))).rows()
+        val imported = imports().single()
+        val text = data.string("librarySource")
+        val offset = text.indexOf(data.string("declaration"))
+        check(offset >= 0)
+        val exported = protocol.query("textDocument/moniker", mapOf(
+            "textDocument" to mapOf("uri" to uri(data.string("libraryFile"))),
+            "position" to mapOf("line" to text.take(offset).count { it == '\n' }, "character" to offset - text.lastIndexOf('\n', offset) - 1),
+        )).rows().single()
+        check(imported.string("scheme") == data.string("scheme"))
+        check(imported.string("unique") == data.string("unique"))
+        check(exported.string("kind") == "export")
+        check(imported == exported.deepCopy().apply { addProperty("kind", "import") })
+        val overload = query("textDocument/moniker", consumer, consumer.at(data.string("overload"))).rows().single()
+        check(overload.string("identifier") != imported.string("identifier"))
+        val library = open(data.string("libraryFile"))
+        clean(library)
+        fun exports() = query("textDocument/moniker", library, library.at(data.string("declaration"))).rows().single()
+        check(exports() == exported)
+        replace(library, text.replace(data.string("replaceFrom"), data.string("replaceWith")))
+        clean(consumer)
+        val changed = exports()
+        check(changed.string("identifier") != exported.string("identifier"))
+        check(imports().single() == changed.deepCopy().apply { addProperty("kind", "import") })
+        replace(library, text)
+        clean(consumer)
+        check(imports().single() == imported)
+    }
+    case("X253") { data ->
+        write(data.string("file"), data.string("source"))
+        val document = open(data.string("file"))
+        clean(document)
+        fun monikers(key: String) = query("textDocument/moniker", document, document.at(data.string(key))).rows()
+        val own = monikers("private").single()
+        val bundled = monikers("library").single()
+        check(own.string("kind") == "local")
+        check(bundled.string("kind") == "import")
+        check(bundled.string("scheme") == data.string("scheme"))
+        check(bundled.string("unique") == data.string("unique"))
+        check(monikers("local").isEmpty())
+        replace(document, data.string("source").replace(data.string("replaceFrom"), data.string("replaceWith")))
+        errors(document)
+        check(monikers("private").isEmpty())
+        replace(document, data.string("source"))
+        clean(document)
+        check(monikers("private").single() == own)
+        check(monikers("library").single() == bundled)
+    }
+}
