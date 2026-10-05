@@ -822,3 +822,20 @@ All testing and development tasks for the IntelliJ plugin, runnable from the pro
 - [Integration Tests for Plugin Developers (Feb 2025)](https://blog.jetbrains.com/platform/2025/02/integration-tests-for-plugin-developers-intro-dependencies-and-first-integration-test/)
 - [Integration Tests: API Interaction (Mar 2025)](https://blog.jetbrains.com/platform/2025/03/integration-tests-for-plugin-developers-api-interaction/)
 - [IntelliJ Platform SDK — IDE Development Instance](https://plugins.jetbrains.com/docs/intellij/ide-development-instance.html)
+
+
+### L82 refresh and VFS regression selection
+
+X146 additionally keeps 16 extra documents connected and schedules 64 lens, hint and semantic-token
+refreshes each while a write action delays their read passes. The test temporarily raises the sandbox
+IDE tab limit and restores it afterward. The untouched consumer must still show Int, then String,
+then Int hints. X259 covers hint settings and connection retirement during restart. Hints stay enabled.
+
+For the UP03/UP27 repair, the focused selection is X103/X118/X130/X146/X161/X162/X163/X169/
+X173/X174/X175/X176/X216/X217/X218/X259. `run-11532602109763278599` passes all 16 plus START,
+with zero IDE errors. The 172-case continuation `run-13878115092192383073` subsequently passes
+with zero IDE errors/freeze dumps (two known partial cases). Together with the first segment it
+covers all 264 scenarios, but a corrected X185 popup-harness failure means this is not one
+uninterrupted clean run. Keep the full-suite IDE-error gate; do not suppress upstream alerts. `PreflightedRenamesTest` also tests the production launcher with an unset
+optional class loader, preventing the startup regression seen in `run-2406379153883211212`.
+See the [repair receipt and extraction map](../../docs/errs-integration-plan.md#l82-intellij-refresh-and-vfs-repair-2026-10-05).

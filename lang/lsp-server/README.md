@@ -6,6 +6,9 @@ and binary dependencies. Tree-sitter remains the default shipped adapter. The
 records bounded implementations, deliberate refusals and the remaining runtime/release work.
 The [L82 checkpoint](../../docs/errs-integration-plan.md#l82-combined-regression-and-retention-checkpoint-2026-10-05)
 tracks the combined tests, real-project retention fixes and current editor acceptance separately.
+The subsequent [IntelliJ client repairs](../../docs/errs-integration-plan.md#l82-intellij-refresh-and-vfs-repair-2026-10-05)
+cover the complete native catalog across continuations without IDE errors/freeze dumps; known
+partial features and generic upstream VFS waits remain explicit. They add no server/embedding API.
 
 Language Server Protocol (LSP) implementation for the Ecstasy programming language.
 
