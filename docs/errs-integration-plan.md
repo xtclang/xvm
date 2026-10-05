@@ -1,5 +1,8 @@
 # Integrating the embedding diagnostics work
 
+Latest feature checkpoint: [L74 artifact identities](#l74-artifact-identities-2026-10-05) passes
+backend, packaged transport and selected editor acceptance. L75 document content/refresh is next.
+
 Upstream defects and compatibility bridges are tracked in [errs-upstream-issues.md](errs-upstream-issues.md).
 
 Plan prepared on 2026-09-22 from `lagergren/errs` at `a8213cf04`, against the local
@@ -1203,7 +1206,7 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 | L71 file operations | Six negotiated pre/post hooks and compiler-proven file/package/container operations; backend and selected X128/X130 checks pass in both editors. | Bounded same-module type moves now rewrite package qualifications; X161 Move/Undo/Redo passes in both editors. Explicit graph relocation now uses the host proposal/persistence path (X162/X163). Retain the VS Code file-operation refusal limitation. |
 | L72 save/sync/formatting | Negotiated save hooks, opt-in incremental patches and multiple-range formatting pass backend and selected X132/X137–X139 checks; Full remains default. | Broaden workspace/save ownership coverage; IntelliJ uses native save formatting because LSP4IJ lacks `willSaveWaitUntil`. Save edits remain version guarded and independent of compilation. |
 | L73 server commands | Run lenses invoke client commands; negotiated legacy code actions have a bounded one-use resolve/apply command. | Broader server commands and embedded Run remain separate scopes; define typed commands, edit failure handling and cancellation. Embedded execution depends on the accepted R2–R5 service design, not another command-line assembly path. |
-| L74 monikers | Artifact-based identities and standard request implemented; acceptance pending. | Verify normalized artifact stability, source/binary equality, dependency replacement and shared X252/X253. No name-based joins or snapshot IDs. |
+| L74 monikers | Implemented and validated: normalized artifact identities, source/binary equality, overload/generic calls, replacement, private/local visibility and shared X252/X253. | Bounded to current successful semantic snapshots. Parsed-only library document enrichment remains with L75; no LSIF exporter or native moniker browser is claimed. |
 | L75 document content | Matching indexed sources open as read-only files. | Establish client support and URI/revision ownership for virtual or archived sources; define refresh and stale-content behavior. |
 | L76 inline completion | No inline provider exists. | Decide useful compiler/snippet use cases and client support first; no generative service is implied. Implement and test the agreed scope or record an explicit exclusion. |
 | L77 colors | No color-value provider exists. | Decide which XTC values have unambiguous color meaning and reversible source edits. Implement that scope or record why it is inapplicable. |
@@ -1258,13 +1261,17 @@ and debugging. Neither feature counts nor a selected passing playbook establish 
   the only negotiated server command resolves/applies a one-use legacy code action. Broader commands remain open. Do not conflate running XTC with debugging.
   Embedded Run commands must route to the shared build/execution service defined by R2–R5,
   rather than assembling another CLI command or duplicating compilation in a protocol handler.
-- [ ] **L74 — Cross-project symbol identities.** Implement `textDocument/moniker` and stable
-  import/export identities tied to module/artifact versions; snapshot-local symbol IDs cannot
-  substitute for cross-project identities. Verify unrelated projects and binary/source matches.
+- [x] **L74 — Cross-project symbol identities.** `textDocument/moniker` supplies normalized
+  artifact-based import/export/local identities with scheme-level uniqueness. Recompilation,
+  checkout relocation, overload/generic calls, distinct same-name artifacts, source/binary parity,
+  replacement, visibility and stale/canceled responses pass regression tests; X31/X252/X253 pass
+  selected acceptance in both editors. Snapshot-local IDs remain internal. Parsed-only library
+  document enrichment remains with L75; see the [L74 contract and receipt](#l74-artifact-identities-2026-10-05).
 - [ ] **L75 — Read-only document content.** Add LSP 3.18 `workspace/textDocumentContent` and
   its refresh request for clients supporting server-provided library/virtual documents.
   Existing matching XDK sources use read-only file views. Define URI/revision ownership and
-  invalidation; do not make binary-backed targets editable.
+  invalidation; do not make binary-backed targets editable. Add current artifact-backed monikers
+  for matching library source views, which currently have parsed structure but no semantic snapshot.
 
 ### Additional LSP features with no implementation
 
@@ -10779,20 +10786,20 @@ Selected editor acceptance:
 - Kotlin formatting, TypeScript compilation and `git diff --check` pass. No Gradle configuration,
   Java embedding API, compiler AST fields or production explicit-GC calls were added.
 
-### L74 artifact identities (2026-10-05; validation pending)
+### L74 artifact identities (2026-10-05)
 
 `textDocument/moniker` now has a compiler-only provider. The `ecstasy-artifact-v1` scheme
 uses a SHA-256 digest of the normalized emitted module plus its normalized constant-table index.
 Normalization removes build timestamps and checkout directories in a private deserialized copy;
-actual module bytes, version, code, signatures, embedded resources and relative source/debug data
-otherwise participate in identity. Unchanged recompilation and relocating a checkout should keep
+module versions, code, signatures, embedded resources and relative source/debug data otherwise
+participate in identity. Unchanged recompilation and relocating a checkout keep
 IDs; changing an artifact changes its symbol IDs. Identical normalized artifacts intentionally
 share IDs across projects. Equal names in different artifacts do not establish identity.
 Source-index metadata is not part of this portable key, so attaching/removing matching sources
 cannot change binary identity. Existing source-index revisions and fresh rename proofs are unchanged.
 
 Public/protected declarations with externally visible owners export their identity; consumers
-import the same identity. Private components are local. The uniqueness is `scheme`, not a claim
+import the same identity. Private components, method-local types and their members are local. The uniqueness is `scheme`, not a claim
 of an independently registered global identifier. Missing emitted entries, register locals,
 parameters, lambdas, unresolved names and unsuccessful compilations return no moniker. The feature
 is an exact artifact identity API, not a fuzzy symbol search or an LSIF exporter. Compiler-generated
@@ -10804,4 +10811,37 @@ partial-result path. Shared X252/X253 and updated X31 exercise the connected cli
 there is no native moniker browser in either editor, and protocol checks must not be described as
 native moniker UI coverage. Backend tests cover source/binary matching, overloads, unchanged
 recompilation, checkout relocation, distinct same-name artifacts, visibility, incomplete source,
-closed graph views and replacement. Acceptance is pending the batched run.
+closed graph views and replacement. Selected acceptance passes in both editors; receipts below.
+
+Companion views share an immutable identity table per compilation, including after graph joining.
+Queries need a current semantic snapshot: parsed-only library source views still return no moniker
+when queried directly. Resolved imports in consumers have binary identities; semantic enrichment of
+read-only library documents is tracked with L75. This is not a claim of complete library-document
+language support.
+
+L74 validation: **137 distinct backend/protocol unit cases** pass across the recorded selections,
+plus all **64 packaged `XdkStdioTest` cases**. The final visibility/table-sharing check reruns 39
+backend cases and the packaged moniker case successfully. All have zero failures/errors/skips.
+LSP and IntelliJ Spotless checks, TypeScript compilation and IntelliJ harness compilation pass.
+VS Code `run-EGMh6B` passes X31/X252/X253. IntelliJ `run-10438075944069511128` passes the same three
+plus START, with no IDE failures. Its first run (`run-11826261276184041200`) passed X31 but failed
+the two new cases because the test driver decoded `Moniker[]` as an object; adding the method to
+its existing collection-response set fixes both. This was a harness omission, not an LSP4IJ defect.
+The final method-local visibility refinement has backend/packaged coverage; it did not trigger
+another GUI run. No full-catalog run is claimed. The catalog has **258 cases**, SHA-256
+`7f4170148797ce5828bcb36ec96dd35ca9c4a0670768b7b7dcc81826535f91d5`.
+
+L74 extraction map (keep together after the L67 navigation/artifact foundation):
+
+| Slice | Local commits | Contents |
+|-------|---------------|----------|
+| Portable identity model | `71fc8da4f` | Normalize a private artifact copy, associate actual compiler bindings, share source/binary identities, add backend tests. |
+| Protocol endpoint | `d58d4aa63` | Compiler-only capability, cancellable/version-guarded moniker requests, partial results, negotiation and packaged tests. |
+| Shared scenarios and contract | `4b9bc5b28` | X252/X253 in both drivers, update X31 and adapter/playbook/tracking docs. |
+| Identity boundaries and memory | `6a8c9acc1`, `febb6431a` | Generic imports, exclude formal properties, classify method-local declarations, share module tables. |
+| IntelliJ driver completion | `784c7d534` | Decode moniker list responses through the existing remote collection bridge. |
+
+Next compiler feature: L75 document content/refresh, starting with client support and URI/revision
+ownership. L73's broader Run/command service remains with R2–R5; it does not justify an unused
+command registry in this compiler-only slice. L76–L79 still need their recorded product/runtime
+decisions. L81/L82 retain the outstanding cross-platform and release acceptance work.
