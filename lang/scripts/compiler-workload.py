@@ -137,11 +137,18 @@ class Session:
                     return
                 self.stop_sampling.wait(0.2)
 
-    def collect_heap(self):
-        """A controlled GC checkpoint between edits, never part of a request latency sample."""
-        collected = subprocess.run([self.args.jcmd, str(self.process.pid), "GC.run"],
+    def collect_heap(self, cycle):
+        """Collect live heap between edits; never include diagnostic pauses in request latency."""
+        # GC.class_histogram performs a full GC unless -all is specified. Its live-object counts
+        # distinguish retained classes from allocation churn without retaining a full heap dump.
+        command = "GC.class_histogram" if self.args.heap_histograms else "GC.run"
+        collected = subprocess.run([self.args.jcmd, str(self.process.pid), command],
                                    check=True, capture_output=True, text=True, timeout=30)
-        assert "Command executed successfully" in collected.stdout, collected.stdout
+        if self.args.heap_histograms:
+            assert "Total" in collected.stdout, collected.stdout
+            (self.directory / f"heap-{cycle}.txt").write_text(collected.stdout)
+        else:
+            assert "Command executed successfully" in collected.stdout, collected.stdout
         return self.call("xtc/languageServiceStatus", record=False)["heap"]
 
     def initialize(self):
@@ -240,6 +247,7 @@ def run(args):
     document = {"uri": source_file.as_uri()}
     report = {"workspace": str(args.workspace), "sourceFiles": len(before), "modules": modules,
               "cyclesPerSession": args.cycles, "sessions": [], "heapLimit": args.heap,
+              "gcEvery": args.gc_every, "heapHistograms": args.heap_histograms,
               "jarSha256": hashlib.sha256(args.jar.read_bytes()).hexdigest(),
               "limits": "Sampled peaks are lower bounds; post-GC heap includes intentional caches. This is a controlled workload, not multi-hour interactive acceptance."}
     try:
@@ -274,7 +282,7 @@ def run(args):
                     diagnostics = session.call("textDocument/diagnostic", {"textDocument": document})
                     assert not diagnostics.get("items"), diagnostics
                     if args.gc_every and (cycle + 1) % args.gc_every == 0:
-                        result["heapCheckpoints"].append({"cycle": cycle + 1, "heap": session.collect_heap()})
+                        result["heapCheckpoints"].append({"cycle": cycle + 1, "heap": session.collect_heap(cycle + 1)})
                     if (cycle + 1) % 100 == 0:
                         print(f"session {restart + 1}: {cycle + 1}/{args.cycles} edit/cancel cycles", flush=True)
                 session.notify("textDocument/didClose", {"textDocument": document})
@@ -385,11 +393,14 @@ if __name__ == "__main__":
     parser.add_argument("--sample-rss", action="store_true", help="Sample owned server RSS through ps on macOS/Linux")
     parser.add_argument("--gc-every", type=int, default=0, help="Record post-GC heap every N project edit cycles (0 disables)")
     parser.add_argument("--jcmd", default="jcmd")
+    parser.add_argument("--heap-histograms", action="store_true",
+                        help="Retain live-object histograms at the --gc-every project checkpoints")
     parser.add_argument("--semantic-methods", nargs="+", type=int,
                         help="Generate isolated large files and measure queries after compilation")
     args = parser.parse_args()
     assert args.cycles > 0 and args.restarts >= 0 and args.timeout > 0
     assert args.gc_every >= 0
+    assert not args.heap_histograms or (args.gc_every > 0 and not args.semantic_methods), "Histograms require project --gc-every checkpoints"
     assert not args.sample_rss or sys.platform in ("darwin", "linux"), "RSS sampler supports macOS/Linux"
     args.jar, args.output = args.jar.resolve(), args.output.resolve()
     args.output.mkdir(parents=True, exist_ok=False)

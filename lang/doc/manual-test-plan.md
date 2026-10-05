@@ -3060,6 +3060,32 @@ Source `TODO LSP4IJ:` / `TODO VSCODE:` markers carry matching UP IDs and removal
 UP15's malformed-parameter classification and UP16's X130 host repaint remain defects; a passing
 reader-recovery or Move/Undo/Redo check is not evidence that those defects are repaired.
 
+### Bounded L82 regression and memory checkpoint
+
+Run the combined compiler/LSP/packaged-server/plugin checks before the full editor catalogs.
+Confirm XML counts and record existing disabled/opt-in cases separately; a cached task or missing
+native-library skip is not execution evidence. Full editor runs omit the scenario-selection
+property. Keep known upstream native failures and explicit partial cases visible in their reports.
+
+For a repeatable real-project memory run, with the compiler server already built:
+
+```bash
+python3 lang/scripts/compiler-workload.py \
+  --workspace ../platform \
+  --jar lang/lsp-server/build/libs/lsp-server-0.4.4-SNAPSHOT-all.jar \
+  --output lang/lsp-server/build/reports/platform-workload/l82-checkpoint \
+  --cycles 400 --restarts 2 --sample-rss --gc-every 100 --heap-histograms
+```
+
+Choose a fresh output directory; the script refuses to overwrite an earlier receipt. It changes
+only LSP overlays and verifies disk-source hashes afterward. The three bounded sessions alternate
+normal shutdown and unexpected transport EOF, and require actual process exit. Each live-object
+histogram is captured between edit cycles through the owned server's `jcmd GC.class_histogram`;
+its diagnostic full-GC pause is excluded from request latency. Compare `heap-100.txt` through
+`heap-400.txt` with the post-GC checkpoints and sampled RSS. Class counts locate retained growth;
+they do not identify reference owners or replace a heap-dominator investigation when growth remains.
+This is a bounded local regression workload, not multi-hour or cross-platform acceptance.
+
 ### Large-file IntelliJ diagnostic (L82 / UP17)
 
 The optional `CompilerPlaybookTest.largeFileEditing` probe reproduces the recorded UI freeze.
