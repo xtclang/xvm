@@ -15,6 +15,7 @@ import org.eclipse.lsp4j.InsertTextMode
 import org.eclipse.lsp4j.jsonrpc.Launcher
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.RemoteEndpoint
+import org.eclipse.lsp4j.jsonrpc.services.ServiceEndpoints
 import org.eclipse.lsp4j.services.LanguageServer
 import java.net.URI
 import java.util.concurrent.CompletableFuture
@@ -23,6 +24,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 /** Client features and the document ownership of the current transport. */
 class XtcClientFeatures : LSPClientFeatures() {
+    internal val preflightedRenames = PreflightedRenames()
     internal val documents = AtomicReference<DocumentStartupMessages?>()
     private val edits = ConcurrentHashMap.newKeySet<CompletableFuture<ApplyWorkspaceEditResponse>>()
 
@@ -104,6 +106,14 @@ class XtcClientFeatures : LSPClientFeatures() {
 
     override fun <S : LanguageServer> createLauncherBuilder(): Launcher.Builder<S> =
         object : DefaultLauncherBuilder<S>(this) {
+            @Suppress("UNCHECKED_CAST") // LSP4J's multiple-interface proxy factory returns Object.
+            override fun createProxy(remoteEndpoint: RemoteEndpoint): S =
+                ServiceEndpoints.toServiceObject(
+                    preflightedRenames.endpoint(remoteEndpoint),
+                    remoteInterfaces.toList<Class<*>>(),
+                    classLoader,
+                ) as S
+
             private fun snapshot(uri: String): DocumentStartupMessages.Snapshot? {
                 if (project.isDisposed || serverWrapper.isDisposed) return null
                 val opened = serverWrapper.getOpenedDocument(URI(uri)) ?: return null
