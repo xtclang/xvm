@@ -1491,11 +1491,11 @@ class XdkAdapter
         ): List<SelectionRange> {
             val ast = analysis(uri)?.ast
             return positions.map { position ->
-                XdkAst.chainAt(ast, position.line, position.column).fold(null as SelectionRange?) {
+                XdkAst.chainAt(ast, position.line, position.column).map(XdkAst::rangeOf).distinct().fold(null as SelectionRange?) {
                     parent,
-                    node,
+                    range,
                     ->
-                    SelectionRange(XdkAst.rangeOf(node), parent)
+                    SelectionRange(range, parent)
                 } ?: SelectionRange(Range(position, position))
             }
         }
