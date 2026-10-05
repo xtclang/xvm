@@ -3543,4 +3543,7 @@ Both drivers implement X251 from the same catalog. IntelliJ assertions use its c
 references/workspace symbols and native documents/diagnostics; this does not assert References-panel
 layout. Backend compile counters establish reuse, exact dependency-closure invalidation and resource
 changes despite unchanged timestamps. Weak-reference checks establish that the retained navigation
-index does not own compiler attempts, constant pools or ASTs. Selected acceptance is pending.
+index does not own compiler attempts, constant pools or ASTs, including during graph compilation.
+Selected acceptance passes in VS Code `run-8dtGVL` and IntelliJ `run-3343499825664248739`:
+X45/X59/X63/X143/X251, with zero scenario failures; IntelliJ also passes startup. The catalog now has
+256 cases. This does not claim a full-catalog rerun.

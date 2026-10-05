@@ -471,13 +471,15 @@ VS Code receipts above.
   X243–X250 pass in both editors; the [closure receipt](#l66-bounded-closure-and-acceptance-2026-10-05)
   records the supported forms, parser/refactoring refusals and literal/layout limits. IntelliJ
   formatting Redo is repaired locally under UP24. This is not a complete Ecstasy pretty-printer.
-- [ ] **L67 — Workspace indexing and dependencies at scale.** Extend the on-demand detached
-  graph cache with measured incremental/persistent indexing where needed; cover large graphs,
-  ambiguous source indices and library source availability. The October 2 backend regressions cover
-  binary source-index replacement, binary-only fallback, source authority and graph removal, including
-  stale hierarchy handles and detached lambda facts. Live unsaved import edges and workspace-folder
-  refresh are already implemented. Complete-graph
-  references/refactorings must retain their proof requirements beside broken neighbors.
+- [x] **L67 — Workspace indexing and dependencies at scale, bounded closure.** Exact detached
+  per-module reuse now includes editor/diagnostic builds; source edits rebuild only their affected
+  closure. Captured inputs no longer retain compiler trees during graph compilation. 33/129-module
+  controls, binary/source-index replacement and ambiguity controls pass; X251 passes in both editors.
+  First references on the 20,000-method fixtures fall from 8–11 s to 0.4–0.6 s with one compile.
+  The [closure receipt](#l67-module-navigation-index-2026-10-05) records the unchanged-heap evidence,
+  canonical URI fix, source-availability boundaries and measured decision against disk persistence.
+  Complete references and fresh edit proofs retain their requirements beside broken neighbors;
+  prolonged-session budgets remain L82 work.
 
 ### L12, project settings and L62–L68 hardening batch (2026-09-29)
 
@@ -7780,7 +7782,7 @@ reproducible, and reconcile completed versus remaining scope. Validation is batc
    | L64 completion/signatures | Import edits, syntax names/templates, guarded bounds and compiler-fitted literals/values; latest continuation adds wrapped names, enclosing-instance arguments and real platform anonymous-body recovery | Latest continuation below gives the exact supported forms, evidence and conservative exclusions. Remaining expansion includes inferred/ambiguous local names, arbitrary value synthesis and general special-this enumeration outside calls; these are not counted as implemented. |
    | L65 navigation/classification | Source/bundled navigation, recorded hierarchy/composition relations and resolved tokens | Conditional/synthetic/native/redirect routes and ambiguous binary source metadata need individual fixtures. Runtime function targets cannot be invented by a static hierarchy. |
    | L66 editing/structure | October 5 bounded closure: configured continuations/expression-list wrapping, standalone comment margins, resolved wildcard/source links, local/lambda/alias linked ranges and strict damaged-source structure | Conditional import source syntax is unsupported by the parser. Callable parameters/members require Rename. Literal splitting, comment reflow, declaration alignment and general pretty-printing remain outside the safe formatter; see the closure receipt below. |
-   | L67 scale | Live graph discovery/overlays, dependencies and detached per-root caches | Use the platform workload to establish budgets and locate bottlenecks before choosing incremental or persistent indexing; neither exists merely because incremental text transport does. |
+   | L67 scale | October 5 bounded closure: exact per-root navigation reuse, editor/diagnostic seeding, fresh compiler-attempt ownership, 33/129-module controls and X251 in both editors | In-memory reuse removes duplicate compilation; disk persistence is not justified by the measured workload. Warm requests still capture current inputs. Agreed budgets and prolonged sessions remain L82 release work. |
    | L80 capability contract | Current method/producer inventory completed on 2026-10-01; optional presentation gates corrected, with exhaustive adapter-provider and rich/reduced-client checks | Revisit negotiation when a producer adds snippets, location links, tags or other optional fields. Generic native resource/snippet/confirmation edits remain deliberately refused. L81/L82 manual/release evidence is separate. |
    | L81 lifecycle | Trace, owned progress/cancel, partial results, refresh, shutdown, X145 pending restart and X146/X147 refresh/report ownership | Physical Cancel-button selection and broader per-provider visual/multiple-window interactions remain manual acceptance rather than absent server implementations. See the following validation receipt. |
    | L82 release evidence | Previous backend/compiler suite, full native 150-case checkpoint, 360-cycle retention receipt, current stdio/plugin/selected editor tests and 30-cycle platform baseline | Intermittent X130 host failure; agreed response-time/heap targets, prolonged editing/restart/process-leak runs and supported-platform/packaging acceptance. Later extracted PRs still need independent validation. |
@@ -8823,8 +8825,8 @@ remain separate from functionality implementation.
   aliases and bounded formatter rules; October 5 closure and acceptance below.
 - [x] L67 bounded source/binary replacement and graph/index lifecycle regression; fix lost host
   binary source URIs and lambda facts. Twenty backend tests pass.
-- [ ] L67 scale closure: use recorded measurements to justify caching changes instead of
-  introducing a persistent index speculatively.
+- [x] L67 scale closure: measured module-level navigation reuse and bounded compiler ownership;
+  October 5 receipt below records the decision against speculative disk persistence.
 
 The shared catalog now contains 163 cases (X1–X158 and five existing CFG/warning cases).
 Earlier 159-case receipts remain historical evidence; X155–X158 now pass in both editors (receipt below).
@@ -8912,7 +8914,8 @@ although navigation from a compiled editor snapshot retained them. The graph vie
 the same indexed source mapping; binary-only artifacts still expose no guessed location.
 Existing dependency, live graph and closed-file navigation tests accompany it: 20 tests passed,
 zero failures/errors/skips. Large-graph budgets, avoiding redundant cold graph
-compilation and the evidence-based choice of incremental/persistent indexing remain open.
+compilation and the evidence-based choice of incremental/persistent indexing remained open at this
+checkpoint; the October 5 L67 closure below records the measured resolution.
 
 Extraction map for this continuation:
 
@@ -10700,7 +10703,7 @@ or editor libraries. No new mutable AST state, semantic cache or clone responsib
 
 ### L67 module navigation index (2026-10-05)
 
-Implementation sequence; validate as one batch after the checkpoints:
+Implementation sequence; combined validation follows the checkpoints:
 
 - [x] Keep one detached navigation build per configured root, keyed by exact source/resource inputs
   and dependency artifact/source-index revisions. Reuse unaffected roots across graph changes,
@@ -10709,7 +10712,69 @@ Implementation sequence; validate as one batch after the checkpoints:
 - [x] Seed the index from editor and diagnostic compilation so the first graph lookup does not
   compile the same successful module again.
 - [x] Exercise scale, compiler-object release, binary/source-index replacement, ambiguous library
-  source matches and editor-visible replacement scenarios (X251). Packaged-server measurements and
-  execution of these added regressions remain part of the combined validation below.
-- [ ] Run the combined backend and selected editor acceptance batch, update capability/playbook
+  source matches and editor-visible replacement scenarios (X251); execution and measurements below.
+- [x] Run the combined backend and selected editor acceptance batch, update capability/playbook
   receipts and commit extraction mapping, and decide whether disk persistence is justified.
+
+
+The 129-module control exposed an in-query heap failure under the unchanged test heap. `ModuleInfo`
+caches its parsed source tree, so compiling the graph's captured `XdkSources` directly retained
+all earlier ASTs/pools until the query returned. A post-query collection test alone missed this.
+Compilation now receives a fresh replay of the immutable captured inputs in navigation, diagnostics
+and editor paths. Dependency compilation also consumes intermediate analyses lazily, retaining only
+the target editor AST. The regression checks compiler-object release halfway through navigation and
+diagnostic graph compilation as well as after completion. No compiler AST or embedding API changed.
+
+
+Extraction map (keep the validation corrections with their owning slices):
+
+| Slice | Commits | Notes |
+| --- | --- | --- |
+| L67 detached navigation reuse | `788e84ea1`, `0af29295b`, `b2490aa2e`, `765fd1eb7` | Module keys, editor/diagnostic seeding, one atomic publication generation and fresh attempt-owned ModuleInfo inputs. Include the hardening correction; the initial checkpoint alone retains compiler trees during graph compilation. |
+| L67 acceptance | `570e45bba`, `b2490aa2e`, `765fd1eb7`, `9893f57c1` | X251 in both drivers, exact compile counts, resources, 33/129-module scale and compiler-object release during/after queries. |
+| L63 assertion correction | `55070033e` | Reject an inaccessible import while accepting and compiling a valid local type-creation fix. The earlier assertion predated that L63 feature. |
+
+
+Measured decision: retain the in-memory per-module index; disk persistence is not justified by this
+workload. Source edits rebuild their changed closure; host binary/source-index changes conservatively
+invalidate every key containing that available repository input. Warm requests still capture current
+source/resource inputs, so closed-file detection does not depend on watcher delivery. This is module
+reuse, not an incremental compiler or a guarantee for arbitrarily large repositories. Agreed latency/
+heap budgets and prolonged sessions remain L82 release work.
+
+Packaged-server measurement (`lang/scripts/compiler-workload.py --semantic-methods 5000 20000
+--cycles 2`, same machine and heap, before `l67-before/results.json`, after
+`l67-canonical/results.json` under `lang/lsp-server/build/reports/semantic-workload/`):
+
+| Fixture | First references before | First references after | Total compiler invocations before → after |
+| --- | --- | --- | --- |
+| 5,000 methods, plain | 1,022 ms | 114 ms | 2 → 1 |
+| 5,000 methods, inferred locals | 1,314 ms | 155 ms | 2 → 1 |
+| 20,000 methods, plain | 8,089 ms | 407 ms | 2 → 1 |
+| 20,000 methods, inferred locals | 10,784 ms | 638 ms | 2 → 1 |
+
+All response-content assertions pass; traces show one active compiler API thread. These are observed
+runs, not timing thresholds. The first candidate measurement (`l67-after`) still compiled twice and
+exposed editor `file:///` versus canonical module `file:/` cache keys. `765fd1eb7` corrects the key and
+adds the real-client URI regression; only the `l67-canonical` receipt establishes duplicate removal.
+
+Backend acceptance: 120 tests plus 78 packaged-protocol tests pass with zero failures/errors/skips;
+final canonical-key/lifecycle selection adds a clean 19-test rerun. The 33/129-module controls compile
+once per initial root, zero times when unchanged, and exactly twice after editing the library with one
+consumer. Isolated observations were 1.9 s / 38 ms and 7.4 s / 331 ms cold/warm respectively; the
+combined gate observed 3.0 s / 90 ms and 10.6 s / 548 ms under concurrent build/test load. The heap
+limit was not raised. Both during-query and post-query compiler-object release controls pass.
+
+
+Selected editor acceptance:
+
+- VS Code `run-8dtGVL/results.json`: X45/X59/X63/X143/X251 all pass, zero failures.
+  `run-IfkEa7` failed the pre-run catalog-order assertion; the registration correction retains that
+  assertion and places X251 after X250. No semantic case ran in that initial attempt.
+- IntelliJ `run-3343499825664248739/results.json`: the same five scenarios plus startup pass,
+  no IDE failures. X251 exercises native document edits and diagnostic delivery, with references and
+  workspace-symbol assertions through the installed LSP4IJ client; panel presentation remains manual.
+- Catalog: **256 scenarios** (X1–X251 plus CFG1–CFG3 and 7a.8/7a.9). This is selected acceptance,
+  not a new full-catalog GUI receipt. Existing UP23 host Undo and other recorded host limits remain.
+- Kotlin formatting, TypeScript compilation and `git diff --check` pass. No Gradle configuration,
+  Java embedding API, compiler AST fields or production explicit-GC calls were added.
