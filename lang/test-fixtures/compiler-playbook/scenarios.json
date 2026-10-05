@@ -750,7 +750,6 @@
         "file": "Navigation.x",
         "unsupportedCapabilities": [
           "colorProvider",
-          "monikerProvider",
           "inlineValueProvider"
         ],
         "tabSize": 4,
@@ -759,7 +758,8 @@
           "documentFormattingProvider",
           "documentRangeFormattingProvider",
           "codeActionProvider",
-          "codeLensProvider"
+          "codeLensProvider",
+          "monikerProvider"
         ],
         "unformatted": "module Navigation {\nInt value=1;\n}\n"
       },
@@ -8008,6 +8008,64 @@
         },
         "brokenSource": "module Node${0} {\n    Missing value;\n}\n",
         "replaceFrom": "class Box {}"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X252": {
+      "title": "match portable export and import identities across closed source roots and artifact replacement",
+      "manual": [
+        "Inspect textDocument/moniker in the language-server trace. Both editors exercise the connected protocol; neither has a native moniker panel. Library stays closed for the initial query."
+      ],
+      "values": {
+        "libraryFile": "X252/Library.x",
+        "librarySource": "module Library {\n    static Int pick(Int n) = n;\n    static String pick(String s) = s;\n}\n",
+        "consumerFile": "X252/Consumer.x",
+        "consumerSource": "module Consumer {\n    package lib import Library;\n    Int number() = lib.pick(1);\n    String text() = lib.pick(\"x\");\n}\n",
+        "sourceModules": [
+          {
+            "name": "Library",
+            "uri": "X252/Library.x",
+            "dependencies": []
+          },
+          {
+            "name": "Consumer",
+            "uri": "X252/Consumer.x",
+            "dependencies": [
+              "Library"
+            ]
+          }
+        ],
+        "declaration": "pick(Int",
+        "reference": "pick(1)",
+        "overload": "pick(\"x\")",
+        "replaceFrom": "= n;",
+        "replaceWith": "= n + 1;",
+        "scheme": "ecstasy-artifact-v1",
+        "unique": "scheme"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X253": {
+      "title": "distinguish local and bundled identities and withhold IDs for incomplete source",
+      "manual": [
+        "Inspect protocol monikers for the private property and bundled String type. Register locals and failed attempts have no artifact identity."
+      ],
+      "values": {
+        "file": "X253/Identities.x",
+        "source": "module Identities {\n    private String hidden = \"text\";\n    String read() {\n        String local = hidden;\n        return local;\n    }\n}\n",
+        "private": "hidden =",
+        "library": "String hidden",
+        "local": "local =",
+        "replaceFrom": "return local;",
+        "replaceWith": "return missing;",
+        "scheme": "ecstasy-artifact-v1",
+        "unique": "scheme"
       },
       "intellij": {
         "coverage": "full",
