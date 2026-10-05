@@ -26,6 +26,11 @@ internal fun receiverIdentity(
 
     fun nested(type: TypeConstant) = receiverIdentity(type, identity, depth + 1)
     return when (type) {
+        // Recursive types extend TerminalTypeConstant but have no single defining constant.
+        is RecursiveTypeConstant -> {
+            identity(type.typedef)
+        }
+
         is TerminalTypeConstant -> {
             when (val declaration = type.definingConstant) {
                 is ClassConstant, is TypeParameterConstant -> identity(declaration)
@@ -60,10 +65,6 @@ internal fun receiverIdentity(
 
         is InnerChildTypeConstant -> {
             ProofIdentity.TypeShape(type.format, listOf(nested(type.parentType) ?: return null, identity(type.definingConstant)))
-        }
-
-        is RecursiveTypeConstant -> {
-            identity(type.typedef)
         }
 
         is RelationalTypeConstant -> {
