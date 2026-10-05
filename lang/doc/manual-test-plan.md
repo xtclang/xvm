@@ -2,6 +2,15 @@
 
 The current catalog has **264 scenarios**: X1–X259, CFG1–CFG3 and 7a.8/7a.9.
 
+L82 combined checkpoint (2026-10-05): 2,991 backend tests pass with 44 existing skips. VS Code
+`run-5flalU` completes all 264 cases: 263 pass and X218 retains its UP23 Undo failure. IntelliJ
+`run-9819779843503311532`, `run-5080670791887423538` and the nine-case follow-up
+`run-14793635842897832756` cover the same catalog: 262 cases pass their assertions and X254/X257
+remain partial. The long continuation also records four independent IDE alerts (UP27 refresh
+overload and UP03 VFS waits), so this is **not clean combined native acceptance**. The original
+failures, harness corrections and remaining gates are in the
+[L82 receipt](../../docs/errs-integration-plan.md#l82-combined-regression-and-retention-checkpoint-2026-10-05).
+
 L81 selected acceptance: VS Code `run-VeotM0` and IntelliJ `run-15703196975306829056`
 pass X145/X146/X147/X259 (IntelliJ also passes START, with zero IDE errors). VS Code now clicks the
 actual displayed Cancel control automatically. Shared-process lifecycle passes in `run-Sh7ro5`;
@@ -1479,6 +1488,9 @@ registered formals, empty generic arguments and whole-token replacement.
 X106–X108 cover function/sequence leaves, trailing dots, empty type operands and declaration
 headers. Discovery/refactoring cases use the same per-scenario workspace scope as VS Code.
 X103 additionally reverses its file rename with the member open and verifies diagnostics clear.
+The IntelliJ driver checks the restored member text in its editor, saves that document through
+the IDE, then checks the disk. Refactoring an open document does not imply it has already been
+autosaved; changing desktop focus must not decide whether this assertion passes.
 
 X20 now checks that the native popup retains the full candidate label without an invented active
 argument. X81/X82 inspect Property-kind metadata from the native completion request as well as
@@ -2155,7 +2167,7 @@ module Dormant {
 | # | Action | Expected result |
 |---|--------|-----------------|
 | X59 | Find References on the interface's `map` in Contracts.x, with Uses.x and Dormant.x unopened. | The declaration and the two calls through `api.Mapper<String>` appear. The concrete override and `impl.map` have their own identity and are excluded from this exact reference query. |
-| X60 | Rename that `map` to `convert`; inspect the preview, apply, then undo. | Five edits across all three files: the contract, concrete override, and all three calls. No diagnostics after recompilation. Closed files have null edit versions; open buffers carry their current versions. |
+| X60 | Rename that `map` to `convert`; inspect the preview, apply, then undo. | Five edits across all three files: the contract, concrete override, and all three calls. No diagnostics after recompilation. Closed files have null edit versions; open buffers carry their current versions. IntelliJ persists edited closed consumers through the UP21 bridge before opening them; the original open buffer stays unsaved. |
 | X61 | Rename Contracts.Base's `pick` to `choose`. | No edit. The unchanged `box.choose(1)` would select a different overload even though the edited graph compiles. |
 | X62 | Open Uses.x, invoke signature help inside `indexOf('a')`, then try renaming `indexOf`. Separately try renaming Named's `toString` override. | The bundled XDK supplies the Char overload's signature; binary `String.indexOf` cannot be renamed. The source override also cannot be renamed because its contract belongs to the bundled XDK. These are resolved binary targets, not missing dependencies. |
 | X63 | Add a second `mapper.map("d")` call to Dormant's return expression without saving, query references/rename, then temporarily replace its body with `MissingType broken;`. Restore the fixture. | Queries include the unsaved call and rename uses its current buffer version. An incomplete configured graph gives no reference list or rename edit; proof compilations add no diagnostics of their own. Restoring it restores results. |
@@ -3671,7 +3683,7 @@ It does not change the earlier native normal-text acceptance; no full-catalog re
 | X256 | Dismiss ghost text and keep suggestions current while typing. Use the shared `X256/InlineValues.x` source. | Dismissal leaves source unchanged; further typing produces a current suggestion. |
 | X257 | Respect ambiguity and the selected completion item. Use the shared `X257/InlineValues.x` source. | Automatic ambiguity yields nothing; explicit alternatives and selection constraints match the source. IntelliJ native trigger/selection limits are UP26. |
 | X258 | Complete a type-compatible value in an unfinished call. Use the shared `X258/InlineValues.x` source. | Only the Int-compatible answer is suggested; missing delimiters remain untouched. |
-| X259 | Keep RefreshConsumer open. Disable inlay hints, change RefreshLibrary.make from Int to String, re-enable hints and restart. Restore the dependency while toggling hints again. | Visible consumer hints disappear when disabled, then show String and Int in order. The consumer text/version stays unchanged and the old server exits. X146 separately verifies all five refresh families; X147 covers late report publication. |
+| X259 | Keep RefreshConsumer open, including its bundled recursive json.Doc method signature. Disable inlay hints, change RefreshLibrary.make from Int to String, re-enable hints and restart. Restore the dependency while toggling hints again. | Visible consumer hints disappear when disabled, then show String and Int in order. Recursive signatures do not crash workspace analysis. The consumer text/version stays unchanged and the old server exits. X146 separately verifies all five refresh families; X147 covers late report publication. |
 
 Ghost suggestions are plain compiler names/values. No imports or placeholder bodies are inserted.
 VS Code uses its Inline Suggest commands (Tab to accept, Escape to dismiss); IntelliJ uses

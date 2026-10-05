@@ -1,3 +1,14 @@
+L82 has a new combined post-fix backend checkpoint: **2,991 passed, 44 existing skips, zero failures**.
+Real platform sources exposed a recursive-type adapter crash and repeatable empty-thread-local
+retention on a long-lived compiler worker; both now have regression-tested fixes in separate commits.
+The [L82 receipt](errs-integration-plan.md#l82-combined-regression-and-retention-checkpoint-2026-10-05)
+records the before/after evidence, remaining native acceptance and extraction boundaries.
+Both 264-case editor catalogs have been exercised. VS Code retains UP23; IntelliJ feature
+assertions cover 262 passes plus two partial cases across continuations, but its long run exposes
+UP27 refresh overload and UP03 VFS waits. A clean combined native checkpoint remains open.
+No embedding or AST API change was needed. Compiler inlay hints remain enabled by default;
+the former disabled syntax-adapter placeholder is now an active negative capability test.
+
 L76 validation: 46 backend/protocol tests and the packaged UTF-16 round trip pass, without failures
 or skips. VS Code `run-B6sogF` passes X7/X31/X255–X258. IntelliJ
 `run-13088584184602426732` passes START/X7/X31/X255/X256/X258, with X257 explicitly partial for
