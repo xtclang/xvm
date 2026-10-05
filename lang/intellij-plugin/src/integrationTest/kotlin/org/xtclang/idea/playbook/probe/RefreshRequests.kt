@@ -1,15 +1,20 @@
 package org.xtclang.idea.playbook.probe
 
 import com.google.gson.Gson
+import com.intellij.ide.ui.UISettings
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.command.WriteCommandAction
 import com.intellij.openapi.project.Project
 import com.redhat.devtools.lsp4ij.LanguageServerWrapper
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
+import com.redhat.devtools.lsp4ij.client.LanguageClientImpl
 import com.redhat.devtools.lsp4ij.lifecycle.LanguageServerLifecycleListener
 import com.redhat.devtools.lsp4ij.lifecycle.LanguageServerLifecycleManager
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.jsonrpc.MessageConsumer
 import org.eclipse.lsp4j.jsonrpc.messages.Message
 import org.eclipse.lsp4j.jsonrpc.messages.RequestMessage
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ConcurrentLinkedQueue
 
 /** Bounded to one scenario's lifetime; observe real refresh requests without replacing handlers. */
@@ -61,6 +66,36 @@ class RefreshRequests private constructor(
     }
 
     fun clear() = requests.clear()
+
+    fun tabLimit(value: Int): Int {
+        ApplicationManager.getApplication().assertIsDispatchThread()
+        val settings = UISettings.getInstance()
+        val previous = settings.editorTabLimit
+        settings.editorTabLimit = value
+        return previous
+    }
+
+    /** Exercise the real handlers while the write lock keeps their NBRA work queued. */
+    fun burst(): CompletableFuture<Void> {
+        ApplicationManager.getApplication().assertIsDispatchThread()
+        check(owner.openedDocuments.size >= 16) { "Refresh regression needs many connected documents" }
+        val client =
+            LanguageServerWrapper::class.java.getDeclaredField("languageClient").run {
+                isAccessible = true
+                get(owner) as LanguageClientImpl
+            }
+        return WriteCommandAction.writeCommandAction(project).compute<CompletableFuture<Void>, RuntimeException> {
+            CompletableFuture.allOf(
+                *buildList {
+                    repeat(64) {
+                        add(client.refreshCodeLenses())
+                        add(client.refreshInlayHints())
+                        add(client.refreshSemanticTokens())
+                    }
+                }.toTypedArray(),
+            )
+        }
+    }
 
     override fun handleStatusChanged(wrapper: LanguageServerWrapper) = Unit
 
