@@ -1,8 +1,14 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **258 scenarios**: X1–X253, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **259 scenarios**: X1–X254, CFG1–CFG3 and 7a.8/7a.9.
 
-Latest selection (L74): X31/X252/X253 pass in VS Code `run-EGMh6B` and IntelliJ
+Latest selection (L75): VS Code `run-e4dCrP` passes X31/X101/X158/X252–X254. IntelliJ
+`run-16728311754487527222` passes START and X31/X101/X158/X252/X253; X254 passes its read-only
+file-fallback/moniker checks with explicit partial status for UP25. No IDE failures. See the
+[L75 playbook](#read-only-library-documents--l75). The final whitespace guard has subsequent
+backend/packaged coverage. This is selected acceptance, not a full-catalog run.
+
+Preceding selection (L74): X31/X252/X253 pass in VS Code `run-EGMh6B` and IntelliJ
 `run-10438075944069511128` (plus START), with no IDE failures. See the
 [portable identity playbook and receipt](#portable-symbol-identities--l74). This is selected
 coverage; earlier full-catalog and feature-batch receipts below remain historical evidence.
@@ -1396,7 +1402,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X253 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X254 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -3572,3 +3578,37 @@ because the harness omitted monikers from its list-response decoder; the correct
 Final method-local visibility and shared-table checks pass backend/packaged tests after these GUI
 runs. This is not a full-catalog rerun. Both editor reports use catalog SHA-256
 `7f4170148797ce5828bcb36ec96dd35ca9c4a0670768b7b7dcc81826535f91d5`.
+
+
+### Read-only library documents — L75
+
+| Case | Action | Expected result |
+|------|--------|-----------------|
+| X254 | Open the shared LibraryViews fixture and navigate to String and xml.Document. Open each matching source, compare its declaration moniker with the consumer, and request formatting. Attempt an edit in the VS Code virtual editor. | VS Code negotiates revision-owned virtual content and refuses edits; IntelliJ uses protected file views (UP25). Declaration/export and consumer/import share artifact identity. Formatting leaves the source unchanged. |
+
+Select **X31,X101,X158,X252,X253,X254** to cover existing bundled navigation, portable identities and the
+new library-view path. X254 runs the same String/xml.Document source fixture in both editors.
+
+1. Open `X254/LibraryViews.x` and navigate from `String` and `xml.Document` to their definitions.
+2. In VS Code, confirm the target uses `ecstasy-library:` and displays the matching declaration.
+   Typing must leave the document unchanged and clean. Formatting must return no edits.
+3. In IntelliJ, confirm the matching source file opens read-only and formatting leaves it unchanged.
+   LSP4IJ 0.21.0 lacks virtual content/refresh (UP25); this explicitly tests the supported file fallback.
+4. The driver requests `textDocument/moniker` at the library declaration. Its scheme/identifier must
+   match the consumer import; the declaration kind is `export`. Neither IDE has a moniker browser.
+5. For supporting clients, `workspace/textDocumentContent` returns exact matching bundled text.
+   The protocol tests replace compiler inputs and verify refresh of fetched views, coalescing while
+   a reply is pending, rejection of unknown/other-connection URIs, and retirement on shutdown.
+
+URI revisions belong to the matching binary and source archive. Workspace edits never rewrite them;
+opening a library view does not add it to the writable source graph. Externally supplied host source
+indexes remain file views because they do not carry a verified source-text snapshot. This does not
+claim complete semantic editing/navigation inside library bodies.
+
+L75 selected acceptance: VS Code `run-e4dCrP` passes all six selected cases. IntelliJ
+`run-16728311754487527222` passes five plus START; X254 passes its file-fallback assertions with
+explicit partial status for UP25, zero IDE failures. The catalog SHA-256 is
+`bdbf0228f32e5568edb7f70f8d7fc93e2781595bd56e8d2de20bc6babcb04c3c`.
+The final whitespace guard additionally verifies CRLF acceptance, refusal of shifted/mismatched
+presentation coordinates, and restoration of IDs after presentation repair in backend/protocol tests.
+It does not change the earlier native normal-text acceptance; no full-catalog rerun is claimed.
