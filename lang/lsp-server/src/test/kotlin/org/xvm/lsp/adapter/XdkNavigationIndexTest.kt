@@ -1,13 +1,17 @@
 package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
+import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkNavigationIndex
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import java.lang.ref.WeakReference
+import java.nio.file.Files
 import java.nio.file.Path
+import java.time.Duration
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.TimeSource
@@ -113,6 +117,58 @@ class XdkNavigationIndexTest {
             assertThat(adapter.workspaceDiagnosticsAsync().join()).allMatch { it.success }
             assertThat(adapter.findReferences(library.uri, 0, 23, true)).hasSize(2)
             assertThat(compiled.values.sumOf { it.get() }).isEqualTo(4)
+        }
+    }
+
+    @Test
+    fun `resource replacement with unchanged timestamp invalidates only dependent navigation`() {
+        val resources = directory.resolve("assets").toFile().apply { mkdirs() }
+        val resource = resources.resolve("data.txt").apply { writeText("first") }
+        val library =
+            source("Library", "module Library { static String text() = $./data.txt; }").let {
+                XdkSourceModule(it.name, it.uri, resourceRoots = listOf(resources.toURI().toString()))
+            }
+        val consumer = source("Consumer", "module Consumer { package lib import Library; String run() = lib.text(); }", setOf("Library"))
+        val independent = source("Independent", "module Independent { class Unrelated {} }")
+        adapter().use { adapter ->
+            adapter.replaceSourceModules(listOf(library, consumer, independent))
+            assertThat(adapter.findWorkspaceSymbols("run")).hasSize(1)
+            val stamp = Files.getLastModifiedTime(resource.toPath())
+            resource.writeText("other")
+            Files.setLastModifiedTime(resource.toPath(), stamp)
+            assertThat(adapter.findWorkspaceSymbols("run")).hasSize(1)
+            assertThat(compiled.getValue("Library").get()).isEqualTo(2)
+            assertThat(compiled.getValue("Consumer").get()).isEqualTo(2)
+            assertThat(compiled.getValue("Independent").get()).isEqualTo(1)
+        }
+    }
+
+    @Test
+    fun `retained graph navigation releases all compilation pools and ASTs`() {
+        CompilerTestSupport.configure()
+        val observed = mutableListOf<WeakReference<Any>>()
+        val roots = (0 until 32).map { source("Node$it", "module Node$it { class Box {} }") }
+        XdkAdapter(
+            { source, repository, errors -> EmbeddingSupport.instance().compileModule(source, repository, errors) },
+            { sources, repository, errors ->
+                assertThat(repository?.moduleNames).isEmpty()
+                EmbeddingSupport.instance().compileModule(sources, repository, errors).also { result ->
+                    observed += WeakReference(result)
+                    result.pool()?.let { observed += WeakReference(it) }
+                    result.sourceTrees().forEach { observed += WeakReference(it) }
+                }
+            },
+            { _, _, _, _, _ -> error("No cursor analysis") },
+        ).use { adapter ->
+            adapter.replaceSourceModules(roots)
+            assertThat(adapter.findWorkspaceSymbols("Box")).hasSize(32)
+            assertThat(observed).hasSizeGreaterThanOrEqualTo(96)
+            await().atMost(Duration.ofSeconds(20)).untilAsserted {
+                System.gc()
+                assertThat(observed.count { it.get() != null }).describedAs("compiler objects retained by detached index").isZero()
+            }
+            assertThat(adapter.findWorkspaceSymbols("Box")).hasSize(32)
+            assertThat(observed).hasSize(96)
         }
     }
 

@@ -7982,6 +7982,38 @@
         "limitations": []
       }
     },
+    "X251": {
+      "title": "refresh a detached graph index after unsaved edits, broken neighbors and root replacement",
+      "manual": [
+        "Find references to Node0.Box with Consumer closed; expect its declaration and Consumer use. Repeat, add a field to Node0 without saving, and search for the new field. Break an independent root: complete references must be empty while healthy workspace symbols remain. Repair it, remove and restore one configured root, and repeat workspace-symbol search."
+      ],
+      "values": {
+        "roots": 16,
+        "rootName": "Node${0}",
+        "rootFile": "Node${0}.x",
+        "rootSource": "module Node${0} {\n    class Box {}\n}\n",
+        "file": "Node0.x",
+        "anchor": "Box",
+        "replacement": "class Box { Int added = 1; }",
+        "addedSymbol": "added",
+        "symbol": "Box",
+        "referenceCount": 2,
+        "consumer": {
+          "name": "Consumer",
+          "uri": "Consumer.x",
+          "dependencies": [
+            "Node0"
+          ],
+          "source": "module Consumer {\n    package lib import Node0;\n    class Child extends lib.Box {}\n}\n"
+        },
+        "brokenSource": "module Node${0} {\n    Missing value;\n}\n",
+        "replaceFrom": "class Box {}"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
