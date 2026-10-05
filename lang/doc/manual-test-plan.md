@@ -1,6 +1,6 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **264 scenarios**: X1–X259, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **267 scenarios**: X1–X262, CFG1–CFG3 and 7a.8/7a.9.
 
 L82 combined checkpoint (2026-10-05): 2,991 backend tests pass with 44 existing skips. VS Code
 `run-5flalU` completes all 264 cases: 263 pass and X218 retains its UP23 Undo failure. IntelliJ
@@ -1431,7 +1431,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X259 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X262 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -2439,8 +2439,8 @@ Ecstasy Compiler**; in VS Code, invoke **Ecstasy: Configure Compiler Paths**. In
 main/test owner, source roots, processed resource roots and missing outputs. Use **Refresh Gradle
 model**, **Prepare generated resources**, **Open build file** and reset controls. An explicit
 source/resource override must survive refresh. Missing or malformed reports must not crash the
-server. Invoking the real Gradle wrapper from these controls is a manual check; X129 covers the
-import/settings lifecycle and TestKit covers the actual producer tasks. Automatic IntelliJ Gradle
+server. X129 covers the model/settings lifecycle; X260–X262 invoke the real Gradle wrapper from
+these controls against a shared gated producer. TestKit covers the actual XTC producer tasks. Automatic IntelliJ Gradle
 sync and nested/composite build aggregation are still follow-ups.
 
 **Build import cancellation and ownership (UI5/UI6):** both controls now keep the previous
@@ -2463,10 +2463,10 @@ cancel; generated files themselves are not rolled back by cancelling an import.
    progress is cancelled; an old callback must not replace another operation's model. Also try
    a missing wrapper and malformed/missing output, then repair and retry.
 
-Automated ownership regressions cover failed/cancelled output and stale callbacks; VS Code task
-tests additionally exercise real process success/cancellation. X129 retains model/settings
-acceptance. Clicking native import progress controls and a real project's long generated-input
-task are manual acceptance steps, not additional passing shared scenarios.
+Automated ownership regressions cover failed/cancelled output and stale callbacks. X129 retains
+model/settings acceptance; X260–X262 add real Gradle tasks, visible Cancel and rejected-output/retry
+checks through both installed clients. Project/folder closure during import and a representative
+user project's generated-input task remain manual acceptance steps.
 
 **Current hardening batch:** updated X76/X118 and new X123 pass in both editors with shared
 scenario SHA-256 `959c3e71f68b00f58e6cc5cc22e275b20623442600175975ed1ab36a718567d3`.
@@ -3722,3 +3722,29 @@ Ghost suggestions are plain compiler names/values. No imports or placeholder bod
 VS Code uses its Inline Suggest commands (Tab to accept, Escape to dismiss); IntelliJ uses
 Insert Inline Completion and Escape. Explicit ambiguous suggestions are a VS Code native check;
 LSP4IJ currently sends Automatic even for a direct invocation (UP26).
+
+
+### Compiler build import lifecycle (UI5–UI7)
+
+These cases share the real gated Gradle producer under `test-fixtures/compiler-playbook/compiler-import`.
+Each uses an isolated project and the repository's Gradle wrapper. The fixture writes a model, signals
+that publication has happened, then waits for an explicit release or native cancellation. It tests
+client ownership rather than repeating the XTC Gradle plugin's model-export TestKit coverage.
+
+| ID | Action | Expected result |
+| --- | --- | --- |
+| X260 | Prepare generated inputs; while Gradle waits after writing its report, request Refresh again and click the visible progress Cancel button; retry Refresh successfully. | Only one task starts, pending/cancelled output never replaces accepted inputs, cancellation retires progress, and retry accepts the new resource roots. Both drivers activate the actual Cancel control without moving the desktop pointer. |
+| X261 | Export a valid changed model, hold the task pending, then deliberately fail Gradle; retry with identical output and a successful exit. | Pending/failed output retains old paths and clean diagnostics through later configuration reads. The successful retry accepts the changed paths and produces the expected missing-resource diagnostic. |
+| X262 | Let Gradle exit successfully with malformed output, then no output; repair with a valid report. | Both invalid imports retain accepted paths, show an actionable last outcome, and allow a successful retry. Source text remains unchanged. |
+
+IntelliJ displays the shipping Compiler settings component in a test-owned modeless dialog and
+activates its real Refresh/Prepare buttons; native background progress supplies Cancel. VS Code
+invokes the installed commands and clicks the renderer's notification Cancel button. No task,
+progress token, producer exit or acceptance result is mocked. These cases do not cover closing a
+project/folder during import, automatic Gradle sync, remote filesystems or arbitrary user builds.
+
+Selected acceptance (2026-10-05): VS Code `run-t4aYi4` passes X129/X260–X262; corrected X260
+also passes `run-SLwDJk`. IntelliJ passes START/X129/X261/X262 in `run-15251954735937319371`,
+then START/X260 in `run-11734301827775631328`, both with zero IDE errors. Its initial X260 failed
+only because the fixture waited for a `finally` marker from a terminated Gradle JVM; retirement
+now checks the recorded process as well. These are selected receipts, not a full 267-case rerun.
