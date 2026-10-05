@@ -63,7 +63,7 @@ not a claim that every referenced suite was rerun for this documentation change.
 | --- | --- | --- | --- |
 | **UP25 — LSP4IJ — constrained** | No LSP 3.18 document-content provider or refresh handler. | Matching read-only file fallback and direct library monikers; X254 executes those assertions with explicit partial status. [Details below](#up25-lsp4ij-has-no-lsp-318-library-content-provider). | Upstream virtual URI resolution, read-only views, refresh and disposal pass native X254 before advertising the capability. |
 | **UP26 — LSP4IJ — constrained** | Inline requests always use Automatic and omit selected popup context. | Native unique suggestions work; X257 has protocol-only explicit alternatives/selection. [Details below](#up26-lsp4ij-inline-completion-loses-invocation-and-popup-selection-context). | Forward invocation kind and selection, then pass native X257. |
-| **UP27 — LSP4IJ — open** | Semantic-token and code-lens refresh fan out across connected files on the application executor, exceeding IntelliJ's concurrent non-blocking read-action limit in a long session. | October 5 continuation `run-5080670791887423538` records two IDE errors, at 11 and 42 active similar submissions. Per-file coalescing already exists; no repair or suppression is installed. | Bound pending/running refresh work across distinct files, preserve the latest refresh and disposal, then pass a long native session and its independent IDE-error gate. |
+| **UP27 — LSP4IJ — local repair; native validation pending** | Semantic-token and code-lens refresh fan out across connected files on the application executor, exceeding IntelliJ's concurrent non-blocking read-action limit in a long session. | `EditorRefresh` replaces that fan-out with one coalesced read/UI pass per connection and feature, retaining LSP4IJ's rendering bridges. X146 adds a many-document refresh burst; X259 retains toggling/restart acceptance. Original errors remain recorded. | Pass focused and long native acceptance without suppressing IDE errors. Remove the bridge when upstream provides bounded batch refresh and connection-lifetime cancellation. |
 
 
 ## UP19: directory moves retain old document connections
@@ -423,11 +423,19 @@ feature and cache-clearing flag. It submits each distinct file to the applicatio
 returns without exposing that completion to the client. Adding the same coalescing key again,
 serializing only calls that schedule work, or suppressing the IDE error would not establish a bound.
 
-Next repair: characterize pending refresh work across many connected documents versus actual
-open editors; bound outstanding work across files and merge repeated refreshes without losing the
-latest state. Preserve cancellation/disposal and untouched-consumer updates. Add a stress scenario
-with many files, dependency/settings changes and close/reopen, then rerun the long catalog and its
-independent IDE-error gate. The passing nine-case follow-up does not close this issue.
+Local repair: `EditorRefresh` submits a single non-blocking read action for each connection/feature,
+coalescing repeated requests at that boundary rather than per file. Each pass visits connected
+documents but prepares rendering only for live editors. It reuses upstream `EditorFeature`
+implementations for cache invalidation, code vision, declarative hints and semantic tokens; no
+reflection implementation or global IDE service is copied. Disposed clients/projects expire work,
+and editors closed before UI publication are skipped. Scheduling acknowledgement does not expose
+superseded internal tasks as failed JSON-RPC refreshes. Compiler inlay hints remain enabled.
+
+X146 now opens 16 additional real documents, temporarily raises the sandbox IDE's tab limit, then
+issues 64 refresh requests for each of the three features while a write action delays their work.
+The existing untouched-consumer hint assertions run afterward in both directions. X259 covers
+hint toggling and retiring a connection during restart. Focused and long native acceptance are
+pending; the passing earlier nine-case follow-up does not close this issue.
 
 ## UP03 continuation: native VFS preflight blocks the UI
 
