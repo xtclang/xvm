@@ -1382,7 +1382,11 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
     a passing bounded progress test does not establish large-file responsiveness. The focused
     [L82 investigation](#l82-large-file-intellij-freeze-investigation-2026-10-01) reproduces the
     platform cost without an LSP client (UP17). Diagnosis is complete for the interval-tree
-    bottleneck; its repair and decorated-editor acceptance remain open.
+    bottleneck; its repair and decorated-editor acceptance remain open. The October 5
+    [local workaround assessment](errs-upstream-issues.md#up17-local-workaround-assessment-2026-10-05)
+    found no safe public plugin hook for the affected tree update. Postpone a local repair rather
+    than discard highlighting or patch platform internals. The separate, unpushed LSP4IJ repair
+    branch targets LSP4IJ-owned issues and does not close this platform gate.
 
 - [x] **L83 — Semantic facts for constant-folded property initializers.** Successful temporary
   initializer probes now export detached constant targets, source spans, types and invocation
@@ -11306,3 +11310,55 @@ Extraction map (all local on `lagergren/errs`; not pushed):
 
 Retain the original overload/freeze receipts and `TODO LSP4IJ` markers. A future upstream repair
 must cover real generic operations without UI waits before these bridges can be removed.
+
+## Compiler import progress and accepted-model ownership (UI5/UI6, 2026-10-05)
+
+This is the main compiler/LSP continuation while the separate local LSP4IJ branch repairs upstream
+issues. No runtime worker, new compiler/AST API or dependency replacement is introduced.
+
+- Each project/folder owns at most one import. A report written while its Gradle task runs cannot
+  enter configuration until the task succeeds and the report validates. Cancellation/failure
+  preserves the previously accepted report, including against later watcher reads of that same
+  rejected output. An explicit successful retry or a subsequently changed external report can
+  update it. Model snapshots are immutable strings; callers receive independently parsed models.
+- IntelliJ uses a project service to cancel owned progress on disposal, distinguishes cancellation
+  from build failure, and records the last outcome/time. Atomic immutable import state prevents a
+  delayed watcher from replacing a newer result. Closing a settings dialog only retires its UI
+  callback; it does not discard project-owned work.
+- VS Code exposes native cancellable progress alongside its existing task terminal. Cancellation
+  before task dispatch avoids startup; cancellation while its execution handle is pending is
+  applied when that handle arrives. Task listeners retire together, unrelated task exits are
+  ignored, and a task ending without a successful process result fails explicitly. Folder removal
+  and extension disposal cancel their owned tasks. Imports require a trusted local workspace.
+- Generated files are build-task side effects and are not rolled back. The import acceptance guard
+  is session-local, not a persistent transaction journal for an externally running Gradle daemon.
+  Existing source-graph overrides remain independent of imported default inputs.
+
+Validation:
+
+- All **106 IntelliJ plugin unit tests pass**, with zero failures/errors/skips. Eight new tests
+  cover import ownership, rejected output, cancellation, delayed watchers and project disposal.
+  The first test attempt exposed application-global dependencies in a test progress indicator;
+  the corrected fixture uses an application-independent indicator, without changing production
+  cancellation behavior. The native driver also compiles.
+- All **34 VS Code extension tests pass** in `run-6C3Ja1`, including model ownership, task event
+  ordering, cancellation before dispatch/handle delivery, and actual native process success and
+  cancellation. TypeScript compilation and linting of the changed files pass.
+- Shared **X129 passes in both editors**: VS Code `run-8B7fch` and IntelliJ
+  `run-17111547275177667612` (START + X129, zero IDE errors). This verifies the existing installed
+  plugin/model/settings flow. Root and lang formatting checks pass.
+- The manual playbook now specifies progress, Cancel, duplicate requests, failed output, retry
+  and close/removal steps. Neither X129 nor the task regressions claim native **Cancel-button**
+  acceptance for a long-running Gradle import. No full editor catalog or backend/compiler suite
+  rerun was needed for this client-only batch. The new acceptance guard remains session-local.
+
+Extraction map (local commits on `lagergren/errs`; not pushed):
+
+| Commit | Future PR grouping |
+| --- | --- |
+| `51635fcef` | IntelliJ compiler import ownership, cancellation and eight regressions. |
+| `edbd7f19c` | VS Code compiler import ownership, native task cancellation and eleven regressions. |
+
+These client changes share the existing evaluated Gradle model contract and can be extracted
+independently once that contract and each client's import controls exist. Neither requires the
+local LSP4IJ repair archive or changes the embedding API.
