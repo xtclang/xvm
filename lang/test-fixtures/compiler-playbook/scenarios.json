@@ -7793,6 +7793,106 @@
         ]
       }
     },
+    "X245": {
+      "title": "link lambda parameters and nested captures without sibling names",
+      "manual": [
+        "Request linked editing at each marked name and verify exact lexical ranges. Callable parameters must use Rename instead."
+      ],
+      "values": {
+        "file": "Linked.x",
+        "source": "module Linked {\n    Int run() {\n        function Int(Int) first = (Int input) -> {\n            function Int() nested = () -> input;\n            return nested();\n        };\n        function Int(Int) second = (Int input) -> input + 1;\n        return first(1) + second(2);\n    }\n}",
+        "queries": [
+          {
+            "anchor": "input) -> {",
+            "occurrences": [
+              "input) -> {",
+              "input;"
+            ]
+          },
+          {
+            "anchor": "input) -> input",
+            "occurrences": [
+              "input) -> input",
+              "input + 1"
+            ]
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": [
+          "Uses the installed linked-editing request; automatic typing presentation remains a manual host check."
+        ]
+      }
+    },
+    "X246": {
+      "title": "refuse document linked editing for callable parameters and members",
+      "manual": [
+        "Request linked editing at each marked name and verify exact lexical ranges. Callable parameters must use Rename instead."
+      ],
+      "values": {
+        "file": "Linked.x",
+        "source": "module Linked {\n    private Int pick(Int privateInput) = privateInput;\n    Int exposed(Int publicInput) = publicInput;\n    Int run() = pick(privateInput = 1) + exposed(publicInput = 2);\n    class Box(Int value) { Int read() = value; }\n}",
+        "queries": [
+          {
+            "anchor": "privateInput",
+            "occurrences": []
+          },
+          {
+            "anchor": "publicInput",
+            "occurrences": []
+          },
+          {
+            "anchor": "value",
+            "occurrences": []
+          },
+          {
+            "anchor": "pick",
+            "occurrences": []
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": [
+          "Uses the installed linked-editing request; automatic typing presentation remains a manual host check."
+        ]
+      }
+    },
+    "X247": {
+      "title": "link an explicit same-spelling alias without changing its imported target",
+      "manual": [
+        "Request linked editing at each marked name and verify exact lexical ranges. Callable parameters must use Rename instead."
+      ],
+      "values": {
+        "file": "Linked.x",
+        "source": "module Linked {\n    package types { class Box {} }\n    Int first() { import types.Box as Box; Box value = new Box(); return 1; }\n    Int second() { import types.Box as Box; Box other = new Box(); return 2; }\n}",
+        "queries": [
+          {
+            "anchor": "Box; Box value",
+            "occurrences": [
+              "Box; Box value",
+              "Box value",
+              "Box(); return 1"
+            ]
+          },
+          {
+            "anchor": "Box; Box other",
+            "occurrences": [
+              "Box; Box other",
+              "Box other",
+              "Box(); return 2"
+            ]
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": [
+          "Uses the installed linked-editing request; automatic typing presentation remains a manual host check."
+        ]
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
