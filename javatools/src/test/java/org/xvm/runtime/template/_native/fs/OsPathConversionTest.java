@@ -15,7 +15,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * Conversions between OS paths and the '/'-separated form of an Ecstasy {@code Path}. The Windows
  * mapping is tested on every OS; the OS-specific wrappers only on the OS they apply to.
  */
-public class OSPathConversionTest {
+public class OsPathConversionTest {
 
     // ----- the Windows mapping, on any OS --------------------------------------------------------
 
