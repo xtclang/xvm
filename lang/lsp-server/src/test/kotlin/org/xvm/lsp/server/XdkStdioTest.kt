@@ -28,12 +28,12 @@ import org.eclipse.lsp4j.FormattingOptions
 import org.eclipse.lsp4j.HoverParams
 import org.eclipse.lsp4j.ImplementationParams
 import org.eclipse.lsp4j.InitializeParams
+import org.eclipse.lsp4j.InitializedParams
+import org.eclipse.lsp4j.InlayHintParams
 import org.eclipse.lsp4j.InlineCompletionCapabilities
 import org.eclipse.lsp4j.InlineCompletionContext
 import org.eclipse.lsp4j.InlineCompletionParams
 import org.eclipse.lsp4j.InlineCompletionTriggerKind
-import org.eclipse.lsp4j.InitializedParams
-import org.eclipse.lsp4j.InlayHintParams
 import org.eclipse.lsp4j.MessageActionItem
 import org.eclipse.lsp4j.MessageParams
 import org.eclipse.lsp4j.MonikerKind
@@ -120,20 +120,30 @@ class XdkStdioTest {
     fun `packaged inline completion preserves UTF16 positions and source suffixes`() {
         Session(packagedJar(), directory).use { session ->
             session.initialize()
-            val text = """
+            val text =
+                """
                 module Stdio {
                     void run() {
                         Int answer = 42;
                         /* 😀 */ Int result = ans;
                     }
                 }
-            """.trimIndent()
+                """.trimIndent()
             session.open(text)
             val line = text.lines()[3]
             val at = Position(3, line.indexOf("ans;") + 3)
-            val result = session.await(session.server.textDocumentService.inlineCompletion(
-                InlineCompletionParams(TextDocumentIdentifier(URI), at, InlineCompletionContext(InlineCompletionTriggerKind.Automatic)),
-            )).right.items.single()
+            val result =
+                session
+                    .await(
+                        session.server.textDocumentService.inlineCompletion(
+                            InlineCompletionParams(
+                                TextDocumentIdentifier(URI),
+                                at,
+                                InlineCompletionContext(InlineCompletionTriggerKind.Automatic),
+                            ),
+                        ),
+                    ).right.items
+                    .single()
             assertThat(result.insertText.left).isEqualTo("answer")
             assertThat(result.range.start).isEqualTo(Position(3, at.character - 3))
             assertThat(result.range.end).isEqualTo(at)
