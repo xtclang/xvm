@@ -10,7 +10,7 @@
         "url": "https://github.com/xtclang/xvm"
     },
     "engines": {
-        "vscode": "^1.101.0"
+        "vscode": "^1.140.0"
     },
     "categories": [
         "Programming Languages",
@@ -398,8 +398,8 @@
         "@eslint/js": "^10.0.1",
         "@types/glob": "^8.1.0",
         "@types/mocha": "^10.0.10",
-        "@types/node": "~22.15.35",
-        "@types/vscode": "1.101.0",
+        "@types/node": "^24.0.0",
+        "@types/vscode": "1.140.0",
         "@vscode/test-electron": "^3.1.0",
         "@vscode/vsce": "^4.0.0",
         "esbuild": "^0.28.2",

@@ -4,8 +4,8 @@
 //
 // The extension runs on the Node that ships inside VS Code's Electron, not on the Node that
 // builds it. package.json states that runtime once: engines.vscode is the oldest supported
-// VS Code, and @types/node pins the Node bundled with that release (VS Code 1.101 ships
-// Node 22.15). The esbuild target is derived from the @types/node major so they cannot drift.
+// VS Code, and @types/node pins the Node major bundled with that release (VS Code 1.140 ships
+// Node 24). The esbuild target is derived from the @types/node major so they cannot drift.
 //
 // Usage: node scripts/bundle.cjs <outfile> [--watch]
 
