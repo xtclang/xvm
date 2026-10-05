@@ -11421,10 +11421,10 @@ not a claim that the existing settings pages have never been implemented:
 | --- | --- | --- |
 | UI1/UI2 contract and ownership | Validated settings, inherited project service values, graph precedence, last-valid state and guarded updates. | Complete option/consumer inventory as controls expand; remote/restricted-workspace and broader multi-root precedence acceptance. |
 | UI3/UI4 settings | Community IntelliJ Compiler/Code Style/Language Service pages; VS Code native Settings, commands and path selection. | Ordered library/source-attachment editing, improved ordered resource/path editing and consistent origin/inheritance presentation. |
-| UI5 build/apply lifecycle | Live formatting/hints, restart-owned transport options, explicit build-model import/preparation, cancellation and accepted-report ownership. | Automatic Gradle-sync refresh, nested/composite root aggregation, generated-input status, and project/folder retirement during imports in native shared acceptance. |
+| UI5 build/apply lifecycle | Live formatting/hints, restart-owned transport options, explicit import/preparation, cancellation and accepted-report ownership; automatic refresh after initial import, nested/composite aggregation, processed-resource status and native project/folder retirement (X263–X265). | Broader independent multi-root/overlapping-root precedence and remote/restricted-workspace acceptance. Conflicting source owners are rejected, not silently reconciled. |
 | UI5 runtime | Effective bundled server/runtime, VS Code Java home and restart actions. | Validated advanced JVM options with machine-local scope and an explicit restart boundary. |
 | UI6 support | Effective settings/queue reports, log toggle, import outcome/time. | Source-attachment/library presentation, log export/retention and links from failures to settings/logs. |
-| UI7 acceptance | Shared local settings/restart/save/refresh scenarios and new X260–X262 import cases. | Broader persistence/multi-root/remote/restricted-workspace and adapter parity; adding a scenario does not itself establish a passing receipt. |
+| UI7 acceptance | Shared local settings/restart/save/refresh scenarios and X260–X265 import cases pass both editors; selected receipts and corrections are recorded below. | Broader persistence/multi-root/remote/restricted-workspace and adapter parity; the complete 270-case catalog has not been rerun for this batch. |
 
 L77 awaits a real recognized color API; no color library is added solely for LSP. L78 notebooks are
 explicitly deferred by the user. L79 runtime inline values follows Run/DAP. L73's existing legacy
@@ -11567,11 +11567,64 @@ records the complete validation and preserves the original failures.
 - `0f99df075`: project/folder retirement invalidates the import owner as well as cancelling the
   producer. Late completion and validation cannot publish; unlinking IntelliJ roots creates a
   distinct owner. Deferred server initialization reads current settings before publication.
-- Shared X263–X265 cover composite import, native Gradle synchronization plus exported-report
-  watching, and closure/removal during an import. Existing X260–X262 remain cancellation,
+- `2ba5d35b7`: shared X263–X265 cover composite import, native Gradle synchronization plus
+  exported-report watching, and closure/removal during an import. Existing X260–X262 remain cancellation,
   failure, malformed/missing output and retry regressions. Catalog: 270 scenarios.
 
-Tests were added with each implementation slice; combined validation is pending. These changes
-use Community APIs and public VS Code task/workspace events. No local LSP4IJ snapshot is required.
-Explicit source overrides are never rewritten by model refresh. Remote/restricted-workspace
-execution, library/source-attachment editing, advanced JVM settings and log export remain open.
+Validation exposed two production gaps, repaired in `bd39a5aee`:
+
+- A cancelled Gradle client can finish before its daemon writes the aggregate report. Each IDE
+  import now tags exports with its identity. Changed tagged output enters the accepted model only
+  through successful completion of that same import; a delayed write cannot replace the accepted
+  model or complete a different import. Both clients have explicit late-write/retry regressions.
+  The identity is a task input supplied through an environment Provider; changing it reuses the
+  configuration cache. This is still session-local ownership, not a durable cancellation journal.
+- IntelliJ's paths/settings summary read the raw aggregate outside the existing last-valid
+  fallback. Malformed JSON left compiler settings intact but broke the summary. Both consumers
+  now read through the same accepted-model fallback.
+
+The same correction commit fixes test infrastructure exposed by the new cases: complete catalog
+registration/order, backup/restore of both report files, write-intent ownership for IntelliJ's VFS
+probe, and a saved VS Code workspace when X265 adds/removes a folder. Converting a single-folder
+extension-test window would replace the running test host. Existing cases retain their stable IDs.
+
+Combined validation (local October 5 receipts):
+
+- Final Gradle model selection: **3 passed**, zero failures/errors/skips. Real TestKit composite
+  builds cover nested roots, source dependency substitution without compiling XTC, failed export
+  preservation, removed builds, and configuration-cache reuse with a changed import identity.
+  The earlier complete plugin run passed 50 tests with 10 existing skips; the final three-test
+  selection includes the strengthened identity assertion.
+- **112 IntelliJ plugin unit tests** and **37 VS Code extension tests** pass without failures or
+  skips. VS Code smoke receipt: `extension-tests/run-JPVmku`. The focused backend build-model
+  suite passes all **5 tests**. Both editor drivers compile; changed TypeScript passes ESLint
+  without warnings; root/lang Spotless checks and `git diff --check` pass.
+- VS Code 1.140.0 `run-40itia`: **X129/X260–X265 all pass**, zero failures. The final run uses
+  the import-identity repair, real native Gradle tasks, cancellation and folder removal.
+- IntelliJ 2026.2.3/LSP4IJ 0.21.0, with Ultimate disabled:
+  `run-12471400462423684800` passes START/X129/X260/X261/X263/X265. Its X262 failure exposed
+  the summary fallback above; X264 completed automatic import but its VFS probe lacked write-intent
+  ownership. Corrected `run-11279722985432501847` passes START/X262/X264 with zero IDE errors.
+  All seven selected cases therefore have passing receipts across the initial run and focused
+  correction; this is not an uninterrupted green seven-case run.
+- Preserve the failed VS Code `run-GdXIws` receipt (late daemon output and folder-removal timing),
+  `run-0n78cI` (X260 passes; single-folder conversion prevents X265's folder event), and IntelliJ's
+  first receipt. Corrected X265 also passes independently in `run-Zhh8IM`. These failures are
+  explained, not converted to accepted host limitations.
+- Catalog: **270 scenarios**, SHA-256
+  `b79a017f89c9faf0330603fd9ba6f471bb178762b210255cc8ef060522bccd1b`.
+  This is focused acceptance for the batch, not a new full-catalog or full-backend receipt.
+
+Extraction boundaries: keep `e8bdb540a`'s shared init script and model integration together; client
+refresh (`9ff95c9d0`) and lifetime ownership (`0f99df075`) depend on that evaluated-report contract.
+Native coverage (`2ba5d35b7`) belongs with the corresponding client controls. Carry `bd39a5aee`'s
+identity/report fixes with those implementations, and its harness fixes with native coverage.
+Do not extract the initial commits without their validation corrections. No embedding/AST change
+or local LSP4IJ snapshot is required; both clients use public Community/task/workspace APIs.
+
+Explicit source overrides are never rewritten by model refresh. Automatic exports require an
+initial imported report; VS Code additionally requires a trusted local workspace and observes
+public Gradle task events, not a private Java-extension sync API. Untagged external exports remain
+observable. Conflicting overlapping-root models are rejected; broad independent multi-root
+precedence, remote/restricted-workspace acceptance, library/source-attachment editing, advanced
+JVM settings and log export remain open.
