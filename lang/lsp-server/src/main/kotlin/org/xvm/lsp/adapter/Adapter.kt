@@ -30,6 +30,12 @@ import java.util.concurrent.CompletableFuture
 interface Adapter : Closeable {
     override fun close() {}
 
+    /** Schemes owned by this backend, never writable editor overlays. */
+    val readOnlyDocumentSchemes: Set<String> get() = emptySet()
+
+    /** Resolve only a registered matching source, never an arbitrary client-provided file path. */
+    fun readOnlyDocument(uri: String): ReadOnlyDocument? = null
+
     /** Features the server may advertise for this backend. */
     val capabilities: Set<AdapterCapability>
         get() =
