@@ -1,6 +1,6 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
-import { client, diagnosticCode, diagnostics, noErrors, playbook, position } from './support';
+import { client, diagnosticCode, diagnostics, noErrors, playbook, position, symbolNames, symbols } from './support';
 
 export function editingClosureCases(ids: readonly ('X158' | 'X243' | 'X244')[] = ['X158']): void {
     ids.forEach(id => playbook(id, async (workspace, data) => {
@@ -44,4 +44,33 @@ export function linkedScopeCases(): void {
             assert.strictEqual(document.getText(), data.source);
         }
     }));
+}
+
+export function structuralRecoveryCases(): void {
+    playbook('X248', async (workspace, data) => {
+        const document = await workspace.open(data.file, data.variants[0].source);
+        for (const variant of data.variants) {
+            await workspace.replace(document, variant.source);
+            await diagnostics(document.uri, values => values.some(item => item.severity === vscode.DiagnosticSeverity.Error), 'Current damaged source diagnostics');
+            const names = symbolNames(await symbols(document));
+            assert.ok(variant.symbols.every(name => names.includes(name)));
+            const folds = await vscode.commands.executeCommand<vscode.FoldingRange[]>('vscode.executeFoldingRangeProvider', document.uri);
+            assert.ok(folds?.some(fold => fold.start === variant.foldLine && fold.end >= variant.foldLine + 1));
+            const at = position(document, variant.anchor);
+            const ranges = await vscode.commands.executeCommand<vscode.SelectionRange[]>('vscode.executeSelectionRangeProvider', document.uri, [at]);
+            let selection = ranges?.[0];
+            assert.ok(selection?.parent);
+            while (selection) {
+                assert.ok(selection.range.contains(at));
+                if (selection.parent) {
+                    assert.ok(selection.parent.range.contains(selection.range));
+                    assert.ok(!selection.parent.range.isEqual(selection.range));
+                }
+                selection = selection.parent;
+            }
+        }
+        await workspace.replace(document, data.repaired);
+        await noErrors(document.uri);
+        assert.deepStrictEqual(symbolNames(await symbols(document)), ['Structure', 'repaired']);
+    });
 }
