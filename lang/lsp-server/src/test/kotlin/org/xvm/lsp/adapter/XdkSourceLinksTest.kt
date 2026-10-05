@@ -72,28 +72,32 @@ class XdkSourceLinksTest {
     }
 
     @Test
-    fun `wildcard and conditional imports link resolved containers and preserve compiler warnings`() {
+    fun `wildcard imports link resolved containers and unsupported conditional syntax cannot invent links`() {
         val library = source("Library", "module Library { package tools { class Box {} } }")
         listOf("import lib.tools.*;", "if (true) { import lib.tools.Box as Crate; }").forEach { statement ->
-            val text = """
+            val text =
+                """
                 module Consumer {
                     package lib import Library;
                     $statement
                 }
-            """.trimIndent().replace("\n", "\r\n")
+                """.trimIndent().replace("\n", "\r\n")
             val uri = source("Consumer", text)
             XdkAdapter().use { adapter ->
                 adapter.initializeWorkspace(listOf(directory.toString()))
                 val result = adapter.compile(uri, text)
-                assertThat(result.success).isTrue()
-                assertThat(result.diagnostics.map { it.code }).containsExactlyElementsOf(
-                    if (statement.startsWith("if")) listOf("COMPILER-29") else emptyList(),
-                )
-                val links = adapter.getDocumentLinks(uri, text)
-                assertThat(links.map { it.target }).containsExactly(library, library)
-                assertThat(links.map { spelling(text, it.range) }).containsExactly(
-                    "Library", if (statement.startsWith("if")) "Crate" else "lib.tools",
-                )
+                if (statement.startsWith("if")) {
+                    // The parser does not currently construct conditional ImportStatements from source.
+                    assertThat(result.success).isFalse()
+                    assertThat(result.diagnostics).isNotEmpty()
+                    assertThat(result.diagnostics.map { it.code }).doesNotContain("EMB-5")
+                    assertThat(adapter.getDocumentLinks(uri, text)).isEmpty()
+                } else {
+                    assertThat(result.diagnostics).isEmpty()
+                    val links = adapter.getDocumentLinks(uri, text)
+                    assertThat(links.map { it.target }).containsExactly(library, library)
+                    assertThat(links.map { spelling(text, it.range) }).containsExactly("Library", "lib.tools")
+                }
                 assertThat(adapter.getDocumentLinks(uri, text.replace("lib.tools", "lib.missing"))).isEmpty()
             }
         }

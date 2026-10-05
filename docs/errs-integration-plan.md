@@ -464,12 +464,13 @@ VS Code receipts above.
   call boundaries and binary source ambiguity. X153/X154 pass in both editors. Runtime target
   enumeration and inferred conditional type-hierarchy edges remain explicit static-model limits;
   no executable target or source location is invented.
-- [ ] **L66 — Structural and editing breadth.** Resolved module/type import source links and
-  explicit lexical alias linked editing are implemented; X158 passes in both editors. Extend
-  token-preserving indentation to the agreed formatter style, expression wrapping and
-  comment/string layout; cover wildcard/conditional import links and broader proven
-  linked-editing scopes. Audit outline/selection/folding recovery
-  across remaining damaged constructs. Preserve literal contents, CRLF and Unicode positions.
+- [x] **L66 — Structural and editing breadth, bounded closure.** Resolved module/type/wildcard
+  container links, lexical local/lambda/explicit-alias linked ranges, typedef outlines and strict
+  damaged-source selections are implemented. The lexer formatter supports configured indentation,
+  operator continuations, safe expression/list wrapping and standalone comment margins. X158 and
+  X243–X250 pass in both editors; the [closure receipt](#l66-bounded-closure-and-acceptance-2026-10-05)
+  records the supported forms, parser/refactoring refusals and literal/layout limits. IntelliJ
+  formatting Redo is repaired locally under UP24. This is not a complete Ecstasy pretty-printer.
 - [ ] **L67 — Workspace indexing and dependencies at scale.** Extend the on-demand detached
   graph cache with measured incremental/persistent indexing where needed; cover large graphs,
   ambiguous source indices and library source availability. The October 2 backend regressions cover
@@ -575,7 +576,8 @@ The broader family boundaries remain explicit: L62 still excludes unproven dispa
 external-consumer routes; at this checkpoint L63 had no extract/inline/safe-delete/missing-declaration
 implementation (the October 2/4 continuations below add bounded local transformations);
 L64's last batch covers its recorded literal/formal/presentation forms; L65 still cannot enumerate
-runtime-selected targets; L66 still lacks import links and comprehensive wrapping; L67 adds
+runtime-selected targets; the October 2/5 L66 continuations below add import links and bounded
+expression/list wrapping; L67 adds
 in-memory diagnostic reuse, not a persistent or universal incremental semantic index. These are
 implementation gaps, not scenarios that an editor driver can truthfully mark implemented.
 
@@ -7777,7 +7779,7 @@ reproducible, and reconcile completed versus remaining scope. Validation is batc
    | L63 semantic actions | Import fixes, compiler-proven implement/override including bundled contracts, whole-return/typed-initializer extraction, adjacent same-type returned/initializer local inline and unused constant local removal | Private same-owner expression helpers are implemented in the latest batch below. General statement/context extraction, missing-declaration fixes, broader inline and global safe delete remain separate transformations. Each needs its own side-effect/capture/caller-closure design and positive/refusal tests. |
    | L64 completion/signatures | Import edits, syntax names/templates, guarded bounds and compiler-fitted literals/values; latest continuation adds wrapped names, enclosing-instance arguments and real platform anonymous-body recovery | Latest continuation below gives the exact supported forms, evidence and conservative exclusions. Remaining expansion includes inferred/ambiguous local names, arbitrary value synthesis and general special-this enumeration outside calls; these are not counted as implemented. |
    | L65 navigation/classification | Source/bundled navigation, recorded hierarchy/composition relations and resolved tokens | Conditional/synthetic/native/redirect routes and ambiguous binary source metadata need individual fixtures. Runtime function targets cannot be invented by a static hierarchy. |
-   | L66 editing/structure | Token-preserving indentation, URL links, local linked editing, recorded damaged-source structure | Expression wrapping and comment/string layout, wildcard/conditional import links, broader proven linked scopes and remaining damaged constructs. Resolved module/type/alias source links and lexical alias linked editing are implemented below. A full pretty-printer is not implemented. |
+   | L66 editing/structure | October 5 bounded closure: configured continuations/expression-list wrapping, standalone comment margins, resolved wildcard/source links, local/lambda/alias linked ranges and strict damaged-source structure | Conditional import source syntax is unsupported by the parser. Callable parameters/members require Rename. Literal splitting, comment reflow, declaration alignment and general pretty-printing remain outside the safe formatter; see the closure receipt below. |
    | L67 scale | Live graph discovery/overlays, dependencies and detached per-root caches | Use the platform workload to establish budgets and locate bottlenecks before choosing incremental or persistent indexing; neither exists merely because incremental text transport does. |
    | L80 capability contract | Current method/producer inventory completed on 2026-10-01; optional presentation gates corrected, with exhaustive adapter-provider and rich/reduced-client checks | Revisit negotiation when a producer adds snippets, location links, tags or other optional fields. Generic native resource/snippet/confirmation edits remain deliberately refused. L81/L82 manual/release evidence is separate. |
    | L81 lifecycle | Trace, owned progress/cancel, partial results, refresh, shutdown, X145 pending restart and X146/X147 refresh/report ownership | Physical Cancel-button selection and broader per-provider visual/multiple-window interactions remain manual acceptance rather than absent server implementations. See the following validation receipt. |
@@ -8817,8 +8819,8 @@ remain separate from functionality implementation.
 - [ ] L63 remaining transformations: wider expression/statement extraction, mutable captures, broader
   inline, global safe delete and missing declarations; each needs its own semantic proof.
 - [x] L66 resolved module/type import source links and explicit lexical alias linked editing.
-- [ ] L66 remaining damaged structure, wildcard/conditional links and broader linked scopes; agree
-  formatter behavior before introducing wrapping or changing comment/string layout.
+- [x] L66 damaged structure, wildcard links, conditional-source refusal, lexical lambda/same-name
+  aliases and bounded formatter rules; October 5 closure and acceptance below.
 - [x] L67 bounded source/binary replacement and graph/index lifecycle regression; fix lost host
   binary source URIs and lambda facts. Twenty backend tests pass.
 - [ ] L67 scale closure: use recorded measurements to justify caching changes instead of
@@ -10589,11 +10591,12 @@ neither changes nor claims to repair VS Code's overlapping file-move Undo failur
 
 ### L66 import source continuation (2026-10-05)
 
-Wildcard imports now link their resolved container. Conditional imports link the compiler-selected
-identity and preserve COMPILER-29: the ordinary compiler currently ignores the condition, so this
-does not claim conditional-import semantics. Missing/ambiguous/binary-only source targets still
-have no guessed link. Shared X243/X244 and backend regressions cover these forms; validation is
-batched after all four L66 implementation slices.
+Wildcard imports now link their resolved container. The initial conditional-import fixture exposed
+that the current parser does not construct conditional imports from source at all: its latent AST
+COMPILER-29 warning is not a supported source path. X244 explicitly verifies ordinary parser
+diagnostics and no guessed links. This slice does not add conditional compilation syntax.
+Missing/ambiguous/binary-only source targets still have no guessed link. Shared X243/X244 and backend
+regressions cover these forms; validation is batched after all four L66 implementation slices.
 
 `ImportStatement.getQualifiedNameTokens()` exposes an immutable copy of the existing written name
 tokens, excluding alias/star. This is syntax ownership in the AST, not LSP state or a new cache; it
@@ -10605,8 +10608,8 @@ responsibility is added.
 Lambda parameters and normalized nested captures now join lexical local variables in document-only
 linked editing. Callable parameter slots, constructor/property contracts and members remain on the
 complete graph Rename path because named callers can be outside this document. Explicit aliases
-whose name equals the imported terminal are recognized from token ownership; conditional aliases
-use the compiler's resolved scope and retain COMPILER-29. Read-only indexed sources refuse editing.
+whose name equals the imported terminal are recognized from token ownership. Unsupported conditional
+source syntax has no complete semantic snapshot or linked ranges. Read-only indexed sources refuse editing.
 Shared X245–X247 and backend regressions cover exact ranges, sibling separation, UTF-16/CRLF, broken
 replacement and close. Combined testing remains after all four L66 slices. Import checkpoint:
 `b5bf3ebe9`. No AST field or new semantic cache is introduced.
@@ -10635,3 +10638,62 @@ backend regressions cover LF/CRLF/bare CR, range boundaries, margin changes, lit
 and lexical refusal. Typedef/selection checkpoint: `db8fefb53`. The four implementation checkpoints
 now precede one combined backend gate and selected editor acceptance. Arbitrary comment reflow,
 literal splitting, brace relocation and type-argument wrapping remain outside these safe rules.
+
+
+### L66 bounded closure and acceptance (2026-10-05)
+
+All four implementation slices were committed before batched testing. The supported/refused boundary
+is now explicit:
+
+| Area | Supported and checked | Deliberate boundary |
+| --- | --- | --- |
+| Import links | Compiler-resolved source modules/types and wildcard containers, with exact written ranges. | Missing/ambiguous/binary-only targets have no guessed source. Conditional import source syntax fails in the existing parser; X244 checks the refusal. |
+| Linked editing | Source-local variables, lexical lambda parameters/nested captures and explicit import aliases, including aliases with the same terminal spelling. | Callable parameter slots, primary-constructor/property contracts and members require graph Rename. Broken/replaced/closed or read-only snapshots provide no editable linked ranges; linked editing does not prove a proposed new name. |
+| Structure | Typedef outlines and source-owned, distinct, strictly nested selections; damaged header/call/list/tuple structure with repair. | Existing Java parser recovery remains authoritative; no synthetic semantic targets or new recovery grammar is added. |
+| Formatting | Configured block/continuation indentation, bounded expression/list wrapping, standalone comment margins, range isolation, line-ending preservation and native history. | No literal/template rewriting, comment reflow, declaration alignment, operator-spacing normalization, type-argument wrapping or arbitrary brace relocation. Unbreakable tokens can exceed the target width. Lexically invalid source refuses edits; on-type requests do not wrap. |
+
+Four-space block and eight-space continuation indentation are defaults, not embedded formatter
+constants. IntelliJ supplies Ecstasy Code Style (including its right margin); VS Code supplies
+`xtc.formatting.*`, with `editor.tabSize` defining tab width. Standard LSP options provide the fallback
+when no editor configuration exists. Custom two-space/six-space-continuation and tab wrapping now have
+explicit compile/idempotence regressions. `maxLineWidth` is active for the compiler adapter and is no
+longer presented as an unimplemented/deprecated setting. No `xtc-format.toml` support is claimed.
+
+Validation:
+
+- Combined backend gate: **129 passed**, zero failures/errors/skips; both editor drivers compiled.
+  The initial failures found an invalid typedef fixture and unsupported conditional-import grammar;
+  those fixtures were corrected instead of adding or claiming unsupported language syntax.
+- Final focused formatter gate: **7 passed**, including custom indentation/tabs and compact-wrap
+  idempotence. Packaged stdio formatting/range/save and recovered folding: **2 passed**, zero skips.
+  The first stdio invocation omitted `-Plsp.adapter=compiler` and failed its adapter precondition;
+  the corrected invocation passed both tests.
+- VS Code `run-BFaPcC`: ten of twelve selected cases passed; X249/X250 exposed a fixture newline
+  assumption. `run-zy8tI6` then exposed the native no-edit command's `undefined` result. Fixtures now
+  preserve their existing newline, and the driver checks an empty protocol edit list plus repeat
+  native Format and Undo/Redo/Undo. `run-3DR6vE` passes both corrected cases. The extension suite
+  `run-DzVUde` passes **23 tests**, including settings metadata and 40 compiler error/recovery cycles.
+- IntelliJ `run-12440566880428489550`: ten of twelve selected cases plus START passed. X249/X250
+  exposed a real standalone-formatting Redo defect in the platform's undo-transparent async path.
+  The local repair is `60b5acf9e` and [UP24](errs-upstream-issues.md#up24-asynchronous-intellij-formatting-loses-redo).
+  `run-14744074393597958558` passes START plus X249/X250/X139/X132, including exact native history and
+  closed-document save formatting. Both runs recorded zero IDE failures.
+- Final root/LSP/IntelliJ read-only Spotless checks and `git diff --check` pass.
+- Collectively **X132/X138/X139/X158/X243–X250 pass in both editors**. This is selected acceptance in
+  the **255-case catalog**, not a full-catalog rerun, cross-platform release or soak claim. Earlier
+  failed receipts remain intact. UP07/UP22/UP23 and unrelated release gates remain separate.
+
+Commit extraction map:
+
+| Implementation checkpoint | Extraction group | Required acceptance corrections |
+| --- | --- | --- |
+| `b5bf3ebe9` | L66 import links and the additive `ImportStatement` token accessor | Include the later conditional-source refusal correction. The original commit title's conditional-link wording must not be used as a source-language support claim. |
+| `2383ed9ec` | L66 lexical lambda and same-name alias linked editing | Include formatted predicates/tests and shared X245–X247. |
+| `db8fefb53` | L66 typedef outline and strict recovered structure | Include valid `typedef Int as Alias` fixtures, selection driver typing and X248. |
+| `9f27e5293` | L66 configured continuation/wrapping/comment-margin formatter | Include nesting at each wrap boundary, custom-indent/tab tests, active margin setting/UI, shared newline policy and native idempotence/history corrections. |
+| `60b5acf9e` | IntelliJ asynchronous formatting history / UP24 | Keep with native formatting acceptance; compiler-only extraction does not need this editor repair. |
+
+The following local acceptance checkpoint contains the corrections above and this receipt. Extracted
+PRs must include their applicable corrections and pass independently. The only new Java AST API in
+L66 is an immutable copy of existing import-name tokens; all other implementation stays in the LSP
+or editor libraries. No new mutable AST state, semantic cache or clone responsibility is introduced.
