@@ -57,6 +57,7 @@ class ServerRuntimeConfigurable : Configurable {
             )
             add(
                 JButton("Restart running Ecstasy servers with saved settings").apply {
+                    name = "xtc.runtime.restart"
                     addActionListener {
                         ServerRuntimeSettings.getInstance().launchArguments()
                         ProjectManager.getInstance().openProjects.filterNot { it.isDisposed }.forEach { project ->
