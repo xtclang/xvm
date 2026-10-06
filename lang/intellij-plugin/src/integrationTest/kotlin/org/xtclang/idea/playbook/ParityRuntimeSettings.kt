@@ -88,6 +88,67 @@ internal fun ParityScenarios.runtimeSettingsCases() {
             }
         }
     }
+    listOf("X271", "X272").forEach { id ->
+        case(id) {
+            val data = common["runtimeSettings"].asJsonObject
+            val document = open(data.string("file"), data.string("source"))
+            clean(document)
+            val before = protocol.query("xtc/languageServiceStatus", emptyMap<String, String>()).asJsonObject
+            val server = protocol.server()
+            with(driver) {
+                val page = utility(ServerRuntimePage::class)
+                val project = singleProject()
+                val original = withContext(OnDispatcher.EDT) { page.content() }
+                val destination = Files.createTempFile("ecstasy-offline-", ".zip")
+                try {
+                    if (id == "X271") {
+                        val stopped = server.stop()
+                        awaitUi("server stops before offline export", 30.seconds) { stopped.isDone() }
+                    } else {
+                        val failing =
+                            JsonObject().apply {
+                                addProperty("vmOptions", data["startupFailureOptions"].asJsonArray.joinToString("\n") { it.asString })
+                            }
+                        withContext(OnDispatcher.EDT) { page.edit(failing.toString(), "apply") }
+                        server.restart()
+                        awaitUi("intentional JVM startup failure recorded", 30.seconds) {
+                            server.getServerStatus().name() == "stopped" &&
+                                run {
+                                    page.export(project, destination.toString())
+                                    ZipFile(destination.toFile()).use { zip ->
+                                        zip.getInputStream(zip.getEntry("launcher.log")).reader().use {
+                                            it.readText().contains(data["startupFailureOptions"].asJsonArray.single().asString)
+                                        }
+                                    }
+                                }
+                        }
+                    }
+                    page.export(project, destination.toString())
+                    ZipFile(destination.toFile()).use { zip ->
+                        val manifest =
+                            zip.getInputStream(zip.getEntry("manifest.json")).reader().use {
+                                JsonParser.parseReader(it).asJsonObject
+                            }
+                        check(manifest["offline"].asBoolean)
+                        if (id == "X271") {
+                            check(manifest.string("directory") == before["logs"].asJsonObject.string("directory"))
+                            check(zip.entries().asSequence().any { it.name.endsWith("server.log") })
+                        } else {
+                            val launcher = zip.getInputStream(zip.getEntry("launcher.log")).reader().use { it.readText() }
+                            check(launcher.contains(data["startupFailureOptions"].asJsonArray.single().asString))
+                            check(manifest.string("directory") != before["logs"].asJsonObject.string("directory"))
+                        }
+                    }
+                } finally {
+                    withContext(OnDispatcher.EDT) { page.edit(original, "apply") }
+                    server.restart()
+                    clean(document)
+                    check(document.text == data.string("source"))
+                    Files.deleteIfExists(destination)
+                }
+            }
+        }
+    }
 }
 
 @Remote("org.xtclang.idea.playbook.probe.ServerRuntimePage", plugin = "org.xtclang.playbook.probe")
