@@ -1,3 +1,11 @@
+**UP29 harness readiness race (2026-10-06):** the pinned IntelliJ Driver rechecks a successful
+predicate after leaving its polling loop. During restart that can turn a successful observation
+into an immediate false timeout. The test-only wrapper now accepts success once and measures
+elapsed time monotonically; actual expiry and cancellation remain fatal. Five new regressions
+and four existing failure controls pass, and native X137/X146/X259 pass with the local UP27
+repair replacing our refresh bridge. Preserve the original failure; see the
+[diagnosis and removal gate](errs-upstream-issues.md#up29-a-successful-readiness-observation-was-checked-again-2026-10-06).
+
 **Platform implicit-package navigation repair (2026-10-06):** the full eleven-module platform
 graph compiled cleanly, but references failed in `XdkProjectQueries.navigation`: it required a
 filename on every semantic view. Implicit directories such as `common/tools` contribute synthetic
