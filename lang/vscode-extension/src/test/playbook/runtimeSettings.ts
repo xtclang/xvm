@@ -4,6 +4,8 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { catalog } from './shared';
 import { client, noErrors, playbook } from './support';
+import { stopLanguageClient } from '../../lsp-client';
+import { readArchive } from '../archive';
 
 interface Status { pid: number; jvmOptions: string[]; logs: { directory: string; retention: Record<string, number> } }
 export function runtimeSettingsCases(): void {
@@ -50,4 +52,38 @@ export function runtimeSettingsCases(): void {
             await vscode.commands.executeCommand('xtc.restartServer');
         }
     });
+    for (const id of ['X271', 'X272'] as const) playbook(id, async workspace => {
+        const data = catalog.common.runtimeSettings;
+        const settings = vscode.workspace.getConfiguration('xtc');
+        const original = settings.inspect('java.vmOptions')?.globalValue;
+        const document = await workspace.open(data.file, data.source);
+        await noErrors(document.uri);
+        const previous = await client().sendRequest<Status>('xtc/languageServiceStatus');
+        try {
+            if (id === 'X271') await stopLanguageClient();
+            else {
+                await settings.update('java.vmOptions', data.startupFailureOptions, vscode.ConfigurationTarget.Global);
+                await assert.rejects(async () => vscode.commands.executeCommand('xtc.restartServer'));
+            }
+            const destination = vscode.Uri.file(path.join(workspace.directory, 'offline.zip'));
+            await vscode.commands.executeCommand('xtc.exportServerLogs', destination);
+            const entries = await readArchive(await fs.readFile(destination.fsPath));
+            const manifest = JSON.parse(entries.get('manifest.json')!.toString());
+            assert.strictEqual(manifest.offline, true);
+            assert.ok(entries.has('launcher.log'));
+            if (id === 'X271') {
+                assert.strictEqual(manifest.logs.directory, previous.logs.directory);
+                assert.ok([...entries.keys()].some(name => name.endsWith('server.log')));
+            } else {
+                assert.ok(entries.get('launcher.log')!.includes(data.startupFailureOptions[0]));
+                assert.strictEqual(manifest.logs, undefined, 'Failed launch must not reuse an earlier successful session');
+            }
+        } finally {
+            await settings.update('java.vmOptions', original, vscode.ConfigurationTarget.Global);
+            await vscode.commands.executeCommand('xtc.restartServer');
+            await noErrors(document.uri);
+            assert.strictEqual(document.getText(), data.source);
+        }
+    });
+
 }

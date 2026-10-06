@@ -35,6 +35,7 @@ enum class PlaybookMode {
     FOCUS_RECOVERY,
     LARGE_FILE,
     PROJECT_LIFECYCLE,
+    SETTINGS_PERSISTENCE,
 }
 
 /** Drive editor actions and inspect the diagnostics/lookup actually delivered to IntelliJ. */
@@ -101,7 +102,10 @@ class CompilerPlaybook(
         }
     }
 
-    fun run(driver: Driver) =
+    fun run(
+        driver: Driver,
+        persistencePhase: Int = 0,
+    ) {
         with(driver) {
             case("START", "Packaged XTC and pinned LSP4IJ load") {
                 waitForIndicators(2.minutes)
@@ -142,6 +146,12 @@ class CompilerPlaybook(
             if (mode == PlaybookMode.PROJECT_LIFECYCLE) {
                 case("START_PROJECTS", "Two project windows, pending close and reopen") {
                     projectLifecycle(shared)
+                }
+                return@with
+            }
+            if (mode == PlaybookMode.SETTINGS_PERSISTENCE) {
+                case("START_SETTINGS_$persistencePhase", "Settings survive a complete IDE exit and reopen") {
+                    settingsPersistence(shared, persistencePhase)
                 }
                 return@with
             }
@@ -517,6 +527,7 @@ class CompilerPlaybook(
                 "Failed IntelliJ cases: ${completed.filter { it.status == "failed" }.map { it.id }}; see results.json"
             }
         }
+    }
 
     private fun Driver.signatureScenarios() {
         scenario("X15") { data ->

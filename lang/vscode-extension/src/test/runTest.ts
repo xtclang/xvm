@@ -22,8 +22,8 @@ async function main(): Promise<void> {
         await (await import('./runLifecycle.js')).runLifecycle(extensionRoot, args.includes('--shared-process'));
         return;
     }
-    if (args.some(argument => !['--playbook', '--multi-root', '--cancel-ui', '--explorer-move-probe', '--refresh-during-move'].includes(argument) && !argument.startsWith('--cases='))) {
-        throw new Error('Expected --playbook with optional --cases=ID[,ID], --multi-root and --cancel-ui, or --project-lifecycle with optional --shared-process, or --explorer-move-probe with optional --refresh-during-move');
+    if (args.some(argument => !['--settings-persistence', '--playbook', '--multi-root', '--cancel-ui', '--explorer-move-probe', '--refresh-during-move'].includes(argument) && !argument.startsWith('--cases='))) {
+        throw new Error('Expected --playbook with optional --cases=ID[,ID], --multi-root and --cancel-ui, or --project-lifecycle with optional --shared-process, or --explorer-move-probe with optional --refresh-during-move, or --settings-persistence');
     }
     const explorerProbe = args.includes('--explorer-move-probe');
     const refreshDuringMove = args.includes('--refresh-during-move');
@@ -31,6 +31,8 @@ async function main(): Promise<void> {
     if (explorerProbe && args.some(argument => !['--explorer-move-probe', '--refresh-during-move'].includes(argument))) {
         throw new Error('Run --explorer-move-probe with only the optional --refresh-during-move flag');
     }
+    const persistence = args.includes('--settings-persistence');
+    if (persistence && args.length !== 1) throw new Error('--settings-persistence runs independently');
     const playbook = args.includes('--playbook');
     const multiRoot = args.includes('--multi-root');
     const cancelUi = args.includes('--cancel-ui');
@@ -45,7 +47,7 @@ async function main(): Promise<void> {
         ? (await import('./playbook/shared.js')).selectedScenarioIds(selections[0]?.slice('--cases='.length))
         : [];
     if (cancelUi && !selected.includes('X145')) throw new Error('--cancel-ui requires X145 in the selected cases');
-    const extensionTestsPath = path.resolve(__dirname, explorerProbe ? 'explorer-probe' : playbook ? 'playbook' : 'suite', 'index');
+    const extensionTestsPath = path.resolve(__dirname, persistence ? 'settings-persistence' : explorerProbe ? 'explorer-probe' : playbook ? 'playbook' : 'suite', 'index');
     const { version, executable } = await testVSCodeBuild(extensionRoot);
     console.log(`[vscode-test] Running on VS Code ${version} (${executable})`);
     const reports = path.join(extensionRoot, 'build', 'reports', explorerProbe ? 'explorer-probe' : playbook ? 'compiler-playbook' : 'extension-tests');
@@ -85,7 +87,7 @@ async function main(): Promise<void> {
     }
 
     try {
-        await runTests({
+        for (const phase of persistence ? ['write', 'read'] : ['single']) await runTests({
             vscodeExecutablePath: executable,
             extensionDevelopmentPath,
             extensionTestsPath,
@@ -107,7 +109,7 @@ async function main(): Promise<void> {
                 XTC_PLAYBOOK_COMMIT: execFileSync('git', ['rev-parse', 'HEAD'], { cwd: extensionDevelopmentPath, encoding: 'utf8' }).trim(),
                 XTC_PLAYBOOK_DIRTY: execFileSync('git', ['status', '--porcelain'], { cwd: extensionDevelopmentPath, encoding: 'utf8' }).trim()
             } : explorerProbe ? { XTC_EXPLORER_PROBE_REPORT: runDirectory,
-                XTC_EXPLORER_PROBE_REFRESH: String(refreshDuringMove) } : { XTC_LSP_LOG_DIR: path.join(runDirectory, 'server-logs') },
+                XTC_EXPLORER_PROBE_REFRESH: String(refreshDuringMove) } : { XTC_LSP_LOG_DIR: path.join(runDirectory, 'server-logs'), XTC_SETTINGS_PHASE: phase },
         });
     } catch (error) {
         await fs.writeFile(path.join(runDirectory, 'launcher-error.txt'), String(error) + '\n');
