@@ -248,6 +248,13 @@ val classes = tasks.named("classes")
 
 tasks.withType<Test>().configureEach {
     systemProperty(
+        "xtc.logs.directory",
+        layout.buildDirectory
+            .dir("reports/server-logs")
+            .get()
+            .asFile.absolutePath,
+    )
+    systemProperty(
         "xtc.trace.directory",
         layout.buildDirectory
             .dir("reports/execution-trace")
@@ -421,6 +428,16 @@ tasks.register<JavaExec>("prepareLibraryPlaybook") {
     group = "verification"
     description = "Build binary libraries and matching sources for both editor playbooks"
     classpath = sourceSets.test.get().runtimeClasspath
+    // javatools shades a no-op provider. This standalone JVM can select Logback directly;
+    // do not put this property on Gradle's test-worker/bootstrap classloader.
+    systemProperty("slf4j.provider", "ch.qos.logback.classic.spi.LogbackServiceProvider")
+    systemProperty(
+        "xtc.logs.directory",
+        layout.buildDirectory
+            .dir("reports/library-playbook/server-logs")
+            .get()
+            .asFile.absolutePath,
+    )
     mainClass.set("org.xvm.lsp.adapter.PrepareLibraryPlaybook")
     val scenarios = rootProject.layout.projectDirectory.file("test-fixtures/compiler-playbook/scenarios.json")
     val output = layout.buildDirectory.dir("generated/compiler-playbook/libraries")
