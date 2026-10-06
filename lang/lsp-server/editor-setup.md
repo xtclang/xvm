@@ -52,7 +52,7 @@ echo -ne 'Content-Length: 73\r\n\r\n{"jsonrpc":"2.0","id":1,"method":"initialize
 ```
 
 You should see a JSON-RPC response containing the server's capabilities. The
-server also writes logs to `~/.xtc/logs/lsp-server.log`.
+server also writes logs to `~/.xtc/logs/lsp/server-*/server.log`.
 
 ## Step 3: Connect to Your Editor
 
@@ -449,7 +449,7 @@ nvim --headless \
 After running any of the above, verify the server logged the requests:
 
 ```bash
-tail -20 ~/.xtc/logs/lsp-server.log
+tail -20 ~/.xtc/logs/lsp/server-*/server.log
 ```
 
 You should see entries like:
@@ -470,13 +470,13 @@ TreeSitterAdapter - parsed in 2.3ms, 0 errors, 31 symbols (query: 1.2ms)
 The LSP server writes detailed logs to:
 
 ```
-~/.xtc/logs/lsp-server.log
+~/.xtc/logs/lsp/server-*/server.log
 ```
 
 Tail the log while testing to see server activity in real time:
 
 ```bash
-tail -f ~/.xtc/logs/lsp-server.log
+tail -f ~/.xtc/logs/lsp/server-*/server.log
 ```
 
 ### "UnsatisfiedLinkError" or tree-sitter failures
