@@ -107,7 +107,7 @@ class CompilerPlaybook(
         persistencePhase: Int = 0,
     ) {
         with(driver) {
-            case("START", "Packaged XTC and pinned LSP4IJ load") {
+            case(if (persistencePhase == 0) "START" else "START_REOPEN", "Packaged XTC and pinned LSP4IJ load") {
                 waitForIndicators(2.minutes)
                 withContext(OnDispatcher.EDT) {
                     utility(PlaybookProgress::class).install(singleProject())
