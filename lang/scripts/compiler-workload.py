@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Measure the packaged compiler on an explicit real graph without writing source files.
+"""Measure the packaged compiler on real graphs and generated fixtures without editing user sources.
 
 The sampler observes heap and queue metadata over the same stdio connection. Optional RSS sampling
 and post-GC checkpoints supplement it. Timings include transport/debounce; sampled peaks are lower
@@ -18,6 +18,7 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.parse
 from types import SimpleNamespace
 
 
@@ -379,6 +380,90 @@ def semantic_workload(args):
         (args.output / "results.json").write_text(json.dumps(report, indent=2) + "\n")
 
 
+def configuration_workload(args):
+    """Replace generated graphs, or add/remove an unrelated root beside a real project graph."""
+    workspace = args.workspace.resolve() if args.workspace else args.output / "workspace"
+    if args.workspace:
+        modules = [{**module, "uri": (workspace / module["uri"]).resolve().as_uri(),
+                    **({"resourceRoots": [(workspace / root).resolve().as_uri() for root in module["resourceRoots"]]}
+                       if "resourceRoots" in module else {})} for module in json.loads(args.graph.read_text())["modules"]]
+        added = args.output / "ConfigurationProbe.x"
+        added.write_text("module ConfigurationProbe { Int value = 1; }\n")
+        replacement = modules + [{"name": "ConfigurationProbe", "uri": added.as_uri()}]
+        changes = [("add-unrelated", replacement), ("unchanged", replacement), ("remove-unrelated", modules)]
+    else:
+        workspace.mkdir()
+        modules = []
+        for index in range(args.configuration_documents):
+            source = workspace / f"Module{index}.x"
+            source.write_text(f"module Module{index} {{\n    Int value = {index};\n}}\n")
+            modules.append({"name": source.stem, "uri": source.as_uri()})
+        replacement = [{**module, **({"resourceRoots": []} if index == 0 else {})}
+                       for index, module in enumerate(modules)]
+        changes = [("one-module", replacement), ("unchanged", replacement),
+                   ("remove-graph", []), ("restore-graph", modules)]
+    session_args = SimpleNamespace(**{**vars(args), "workspace": workspace})
+    session = Session(session_args, args.output, modules)
+    before_sources = inventory(workspace)
+    report = {"jarSha256": hashlib.sha256(args.jar.read_bytes()).hexdigest(),
+              "workspace": str(workspace), "pid": session.process.pid, "changes": [],
+              "limits": "Dispatch timing is the first status reply after the notification; settled timing includes current document symbols. No GUI or timeout extension."}
+
+    def check_documents():
+        results = {}
+        for document in documents:
+            symbols = session.call("textDocument/documentSymbol", {"textDocument": document})
+            assert symbols, document
+            diagnostic = session.call("textDocument/diagnostic", {"textDocument": document})
+            assert not any(item.get("severity", 1) == 1 for item in diagnostic.get("items", [])), diagnostic
+            results[document["uri"]] = {"symbols": symbols, "diagnostics": diagnostic.get("items", [])}
+        return results
+
+    try:
+        session.initialize()
+        if args.workspace:
+            reports = session.call("workspace/diagnostic", {})["items"]
+            assert not any(d.get("severity", 1) == 1 for item in reports for d in item.get("items", [])), reports
+            documents = [{"uri": uri} for uri in sorted({item["uri"] for item in reports})[:args.configuration_documents]]
+        else:
+            documents = [{"uri": module["uri"]} for module in modules]
+        assert documents, "No source documents in the selected graph"
+        report["documents"] = len(documents)
+        for document in documents:
+            session.notify("textDocument/didOpen", {"textDocument": {
+                **document, "languageId": "xtc", "version": 1,
+                "text": pathlib.Path(urllib.parse.unquote(urllib.parse.urlsplit(document["uri"]).path)).read_text(),
+            }})
+        baseline = check_documents()
+        for cycle in range(args.cycles):
+            for label, graph in changes:
+                before = session.call("xtc/languageServiceStatus")["compilerQueue"]
+                started = time.perf_counter()
+                session.notify("workspace/didChangeConfiguration", {
+                    "settings": {"xtc": {"compiler": {"sourceModules": graph}}}})
+                session.call("xtc/languageServiceStatus")
+                dispatch_ms = (time.perf_counter() - started) * 1000
+                assert check_documents() == baseline, f"Document symbols or diagnostics changed after {label}"
+                after = session.call("xtc/languageServiceStatus")["compilerQueue"]
+                change = {"cycle": cycle, "change": label, "dispatchMs": dispatch_ms,
+                          "settledMs": (time.perf_counter() - started) * 1000,
+                          "submitted": after["submittedTotal"] - before["submittedTotal"],
+                          "started": after["startedTotal"] - before["startedTotal"]}
+                report["changes"].append(change)
+                print(json.dumps(change), flush=True)
+        report["exit"] = session.finish()
+        report["status"] = "passed"
+    except (Exception, KeyboardInterrupt) as error:
+        report["status"], report["error"] = "failed", str(error)
+        raise
+    finally:
+        session.cleanup()
+        report["sourcesUnchanged"] = before_sources == inventory(workspace)
+        report.update(trace_statistics(args.output))
+        (args.output / "results.json").write_text(json.dumps(report, indent=2) + "\n")
+        assert report["sourcesUnchanged"], "Configuration workload modified source content"
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", type=pathlib.Path)
@@ -397,14 +482,20 @@ if __name__ == "__main__":
                         help="Retain live-object histograms at the --gc-every project checkpoints")
     parser.add_argument("--semantic-methods", nargs="+", type=int,
                         help="Generate isolated large files and measure queries after compilation")
+    parser.add_argument("--configuration-documents", type=int,
+                        help="Measure graph replacement with this many generated buffers, or up to this many real --workspace documents")
     args = parser.parse_args()
     assert args.cycles > 0 and args.restarts >= 0 and args.timeout > 0
     assert args.gc_every >= 0
-    assert not args.heap_histograms or (args.gc_every > 0 and not args.semantic_methods), "Histograms require project --gc-every checkpoints"
+    assert not (args.semantic_methods and args.configuration_documents), "Select one generated workload"
+    assert not args.heap_histograms or (args.gc_every > 0 and not args.semantic_methods and not args.configuration_documents), "Histograms require project editing --gc-every checkpoints"
     assert not args.sample_rss or sys.platform in ("darwin", "linux"), "RSS sampler supports macOS/Linux"
     args.jar, args.output = args.jar.resolve(), args.output.resolve()
     args.output.mkdir(parents=True, exist_ok=False)
-    if args.semantic_methods:
+    if args.configuration_documents is not None:
+        assert args.configuration_documents > 0
+        configuration_workload(args)
+    elif args.semantic_methods:
         assert all(count > 0 for count in args.semantic_methods)
         semantic_workload(args)
     else:
