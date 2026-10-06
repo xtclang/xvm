@@ -26,7 +26,7 @@ issue and must not be used as the tracking issue for UP01.
 
 Local upstream repair work is now authorized in `~/src/lsp4ij`, on the unpushed branch
 `lagergren/local-lsp-repairs`, based on upstream `main` at `4796cf99` (0.21.1-SNAPSHOT).
-The first five local commits are listed below, with regression tests. These are local repairs,
+All nine local commits are listed below, with regression tests. These are local repairs,
 not released fixes or permission to remove the bridges here. XVM still uses LSP4IJ 0.21.0;
 testing a local build must be explicit. UP17 belongs to IntelliJ Platform, not this repair branch.
 
@@ -37,16 +37,29 @@ testing a local build must be explicit. UP17 belongs to IntelliJ Platform, not t
 | `2701b577` | UP27: batch refresh by connection and feature, with disposal cancellation. |
 | `5e19e5f3` | UP01: single-use atomic process lifetime; reject start-after-stop/double-start and reap the owned child. |
 | `c68a0819` | UP03, partial: preflight uses the actual destination parent and URI-escaped basename. Generic EDT waiting remains. |
+| `1a5005d1` | UP19: reconnect open descendants after directory moves/renames, including Undo. |
+| `42d073e5` | UP07: synchronizer-owned diagnostic result IDs, unchanged reports and retained/refreshed lazy fixes. |
+| `47b51259` | UP13: overlay project configuration on global defaults without mutating either store. |
+| `2ccc5a30` | UP08: preserve explicit nulls in configuration notifications while omitting unrelated optional protocol fields. |
 
-All 14 new regressions fail against the unfixed upstream production files and pass after these
-repairs. The combined targeted run passes 17 tests, with no failures/errors/skips, and `buildPlugin`
-produces `build/distributions/lsp4ij-0.21.1-SNAPSHOT.zip` in that checkout. It uses upstream's
-Community IC 2024.2 baseline and JDK 21 for Gradle 8.6; configuration-cache reuse passes. The archive's
-SHA-256 is `31ff2edff4fc35ca08e4088ccc071eaa76d190aa91acdb06e6940f4d6eac0cc0`. Local XML/evidence is
-under `/private/tmp/lsp4ij-repair-evidence/`. This is not full-suite or XVM native acceptance.
+The first batch's 14 new regressions fail against unfixed production files. The second batch
+adds 11 failing controls for directory connections and diagnostic ownership, then four for
+project settings and three for null serialization. The historical `batch2-combined` evidence
+contains only the three serialization tests; it is not evidence for the combined repair branch.
+
+A fresh combined run at `2ccc5a30` on October 6 passes **53 tests**, with no failures/errors/skips,
+across all nine repairs and existing formatting/settings/restart controls. `buildPlugin` produces
+`build/distributions/lsp4ij-0.21.1-SNAPSHOT.zip` in that checkout. It uses upstream's Community
+IC 2024.2 baseline and JDK 21 for Gradle 8.6. The rebuilt archive's SHA-256 is
+`88fe3a852644d50e70ff8a30662b338a5f761f3af0af247bb7ad543cb5e15d06`.
+Local XML/evidence is under `/private/tmp/lsp4ij-repair-evidence/all-nine/`; earlier directories
+retain the failing controls and individual repair runs. This is targeted upstream testing,
+not full-suite or XVM native acceptance.
 In particular, correcting UP03's target makes genuine preflight requests visible where the old
 same-path request was short-circuited. Keep our bridges until testing real Move/Undo/Redo with the
-local plugin. UP19 and UP07 remain candidates for a later upstream batch.
+local plugin. The Marketplace default remains 0.21.0, so its workarounds remain necessary even
+if the local snapshot passes. UP02/UP04–UP06/UP09–UP11/UP14/UP18/UP21/UP25/UP26 are not repaired
+by these nine commits; UP20 concerns the test Driver, UP15 the server's LSP4J and UP17 the platform.
 
 ## Register
 
