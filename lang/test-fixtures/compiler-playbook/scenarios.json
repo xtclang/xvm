@@ -153,6 +153,17 @@
           }
         ]
       }
+    },
+    "librarySettings": {
+      "module": "PlaybookLibrary",
+      "binaryFile": "PlaybookLibrary.xtc",
+      "sourceFile": "PlaybookLibrary.x",
+      "source": "module PlaybookLibrary {\n    static Int answer() = 1;\n}\n",
+      "replacementSource": "module PlaybookLibrary {\n    static Int answer() = 2;\n}\n",
+      "consumer": "module LibraryConsumer {\n    package lib import PlaybookLibrary;\n    Int run() = lib.answer();\n}\n",
+      "consumerFile": "LibraryConsumer.x",
+      "anchor": "answer",
+      "definitionLine": 1
     }
   },
   "cases": {
@@ -8392,6 +8403,35 @@
       "values": {
         "operation": "retirement"
       },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X266": {
+      "title": "ordered library settings apply reset cancel and retain the bundled XDK",
+      "values": {},
+      "manual": [
+        "Library/source path picker appearance and layout"
+      ],
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X267": {
+      "title": "attached binary sources navigate read only and settings survive server restart",
+      "values": {},
+      "manual": [],
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X268": {
+      "title": "invalid library replacements retain accepted inputs and ordered resources remain distinct",
+      "values": {},
+      "manual": [],
       "intellij": {
         "coverage": "full",
         "limitations": []
