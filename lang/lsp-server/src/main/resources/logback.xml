@@ -6,8 +6,7 @@
   is reserved for JSON-RPC protocol messages. Any output to stdout
   will corrupt the protocol stream.
 
-  Log file location: ~/.xtc/logs/lsp-server.log
-  Tail with: tail -f ~/.xtc/logs/lsp-server.log
+  Logs are isolated under ~/.xtc/logs/lsp/server-PID-START/. Retention is configured by the IDE.
 -->
 <configuration>
     <!-- Suppress logback's own status messages -->
@@ -21,14 +20,16 @@
         </encoder>
     </appender>
 
-    <!-- Log to file for terminal tailing: tail -f ~/.xtc/logs/lsp-server.log -->
+    <define name="LOG_DIRECTORY" class="org.xvm.lsp.util.ServerLogDirectory"/>
+    <!-- Each process owns both appenders; old inactive sessions are pruned at startup. -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${user.home}/.xtc/logs/lsp-server.log</file>
+        <file>${LOG_DIRECTORY}/server.log</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${user.home}/.xtc/logs/lsp-server.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
-            <maxFileSize>10MB</maxFileSize>
-            <maxHistory>7</maxHistory>
-            <totalSizeCap>50MB</totalSizeCap>
+            <fileNamePattern>${LOG_DIRECTORY}/server.%d{yyyy-MM-dd}.%i.log</fileNamePattern>
+            <maxFileSize>${xtc.logs.maxFileMb:-10}MB</maxFileSize>
+            <maxHistory>${xtc.logs.historyDays:-7}</maxHistory>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+            <totalSizeCap>${xtc.logs.totalSizeMb:-50}MB</totalSizeCap>
         </rollingPolicy>
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} %-5level %logger{0} - %msg%n</pattern>
@@ -44,14 +45,15 @@
 
     <!-- Per-process JSON lines retain ordering, queue contents and timing without source text. -->
     <define name="TRACE_PROCESS" class="org.xvm.lsp.util.TraceProcessId"/>
-    <variable name="TRACE_DIRECTORY" value="${xtc.trace.directory:-${XTC_LSP_TRACE_DIR:-${user.home}/.xtc/logs}}"/>
+    <variable name="TRACE_DIRECTORY" value="${xtc.trace.directory:-${XTC_LSP_TRACE_DIR:-${LOG_DIRECTORY}}}"/>
     <appender name="EXECUTION_TRACE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>${TRACE_DIRECTORY}/lsp-trace-${TRACE_PROCESS}.jsonl</file>
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <fileNamePattern>${TRACE_DIRECTORY}/lsp-trace-${TRACE_PROCESS}.%d{yyyy-MM-dd}.%i.jsonl</fileNamePattern>
-            <maxFileSize>20MB</maxFileSize>
-            <maxHistory>7</maxHistory>
-            <totalSizeCap>100MB</totalSizeCap>
+            <maxFileSize>${xtc.logs.maxFileMb:-10}MB</maxFileSize>
+            <maxHistory>${xtc.logs.historyDays:-7}</maxHistory>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+            <totalSizeCap>${xtc.logs.totalSizeMb:-50}MB</totalSizeCap>
         </rollingPolicy>
         <encoder><pattern>%msg%n</pattern></encoder>
     </appender>
