@@ -20,7 +20,7 @@ import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import com.redhat.devtools.lsp4ij.settings.LanguageServerSettings.LanguageServerDefinitionSettings
 import com.redhat.devtools.lsp4ij.settings.ProjectLanguageServerSettings
 import java.awt.BorderLayout
-import java.awt.FlowLayout
+import java.awt.GridLayout
 import java.net.URI
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
@@ -41,7 +41,12 @@ class CompilerProjectConfigurable
             ::effectiveModules,
     ) : Configurable {
         private val discovery = JBCheckBox("Use Gradle model or automatic source discovery")
-        private val effective = JTextArea(8, 60).apply { isEditable = false }
+        private val effective =
+            JTextArea(12, 60).apply {
+                isEditable = false
+                name = "xtc.compiler.details"
+            }
+        private val status = JBLabel("No build model imported")
         private val rows =
             DefaultTableModel(
                 arrayOf(
@@ -81,189 +86,242 @@ class CompilerProjectConfigurable
             discovery.addItemListener { updateEnabled() }
             reset()
             updateEnabled()
-            return JPanel(BorderLayout(0, 8)).apply {
-                add(
-                    JPanel(BorderLayout()).apply {
-                        add(discovery, BorderLayout.NORTH)
-                        add(
-                            JBLabel(
-                                "Roots are relative to this project. Apply updates the running server.",
-                            ),
-                            BorderLayout.SOUTH,
-                        )
-                    },
-                    BorderLayout.NORTH,
-                )
-                add(
-                    JTabbedPane().apply {
-                        addTab(
-                            "Source modules",
-                            JPanel(BorderLayout(0, 8)).apply {
-                                add(JBScrollPane(table), BorderLayout.CENTER)
-                                add(JBScrollPane(effective), BorderLayout.SOUTH)
-                            },
-                        )
-                        addTab("Libraries and sources", libraries)
-                    },
-                    BorderLayout.CENTER,
-                )
-                add(
-                    JPanel(FlowLayout(FlowLayout.LEADING)).apply {
-                        add(add)
-                        add(remove)
-                        add(
-                            JButton("Choose module root").apply {
-                                addActionListener {
-                                    val row = table.selectedRow
-                                    if (row >= 0 && !discovery.isSelected) {
-                                        FileChooser
-                                            .chooseFile(
-                                                FileChooserDescriptorFactory.createSingleFileDescriptor(
-                                                    "x",
-                                                ),
-                                                project,
-                                                null,
-                                            )?.let {
-                                                rows.setValueAt(
-                                                    Path.of(it.path).toUri().toString(),
-                                                    row,
-                                                    1,
-                                                )
-                                            }
-                                    }
-                                }
-                            },
-                        )
-                        add(
-                            JButton("Add resource directory").apply {
-                                addActionListener {
-                                    val row = table.selectedRow
-                                    if (row >= 0 && !discovery.isSelected) {
-                                        FileChooser
-                                            .chooseFile(
-                                                FileChooserDescriptorFactory
-                                                    .createSingleFolderDescriptor(),
-                                                project,
-                                                null,
-                                            )?.let { directory ->
-                                                val current =
-                                                    runCatching {
-                                                        modules()?.get(row)?.resourceRoots.orEmpty()
-                                                    }.getOrNull()
-                                                if (current != null) {
-                                                    rows.setValueAt(
-                                                        Gson()
-                                                            .toJson(
-                                                                (
-                                                                    current +
-                                                                        Path
-                                                                            .of(directory.path)
-                                                                            .toUri()
-                                                                            .toString()
-                                                                ).distinct(),
-                                                            ),
-                                                        row,
-                                                        3,
-                                                    )
-                                                }
-                                            }
-                                    }
-                                }
-                            },
-                        )
-                        add(
-                            JButton("Order resource directories…").apply {
-                                addActionListener {
-                                    val row = table.selectedRow
-                                    if (row >= 0 && !discovery.isSelected) {
-                                        table.cellEditor?.stopCellEditing()
-                                        val current = modules()?.get(row)?.resourceRoots
-                                        val paths = OrderedPaths(project, "Resource directories", true).apply { reset(current.orEmpty()) }
-                                        val automatic = JBCheckBox("Use automatic resource directories", current == null)
-                                        val dialog =
-                                            object : DialogWrapper(project) {
-                                                init {
-                                                    title = "Ecstasy Resource Directories"
-                                                    init()
-                                                }
-
-                                                override fun createCenterPanel(): JComponent =
-                                                    JPanel(BorderLayout(0, 8)).apply {
-                                                        add(automatic, BorderLayout.NORTH)
-                                                        add(paths, BorderLayout.CENTER)
-                                                    }
-                                            }
-                                        if (dialog.showAndGet()) {
+            val sourceActions =
+                JPanel(GridLayout(0, 3, 8, 8)).apply {
+                    add(add)
+                    add(remove)
+                    add(
+                        JButton("Choose module root").apply {
+                            addActionListener {
+                                val row = table.selectedRow
+                                if (row >= 0 && !discovery.isSelected) {
+                                    FileChooser
+                                        .chooseFile(
+                                            FileChooserDescriptorFactory.createSingleFileDescriptor(
+                                                "x",
+                                            ),
+                                            project,
+                                            null,
+                                        )?.let {
                                             rows.setValueAt(
-                                                if (automatic.isSelected) "" else Gson().toJson(paths.paths),
+                                                Path.of(it.path).toUri().toString(),
                                                 row,
-                                                3,
+                                                1,
                                             )
                                         }
-                                    }
                                 }
-                            },
-                        )
-                        add(
-                            JButton("Refresh Gradle model").apply {
-                                addActionListener { refreshBuild(false) }
-                            },
-                        )
-                        add(
-                            JButton("Prepare generated resources").apply {
-                                addActionListener { refreshBuild(true) }
-                            },
-                        )
-                        add(
-                            JButton("Reset to build model").apply {
-                                addActionListener { discovery.isSelected = true }
-                            },
-                        )
-                        add(
-                            JButton("Open build file").apply {
-                                addActionListener {
-                                    val selected = table.selectedRow
-                                    val modules = runCatching { modules() }.getOrNull().orEmpty()
-                                    val model =
-                                        runCatching {
-                                            CompilerBuildModel.read(project)
-                                        }.getOrNull()
-                                    val entries =
-                                        model
-                                            ?.get("sourceSets")
-                                            ?.asJsonArray
-                                            ?.map { it.asJsonObject }
-                                            .orEmpty()
-                                    val root = modules.getOrNull(selected)?.uri
-                                    val entry =
-                                        entries.firstOrNull { item ->
-                                            item["sourceFiles"].asJsonArray.any { it.asString == root }
-                                        } ?: entries.firstOrNull()
-                                    entry?.get("buildFile")?.asString?.let { uri ->
-                                        LocalFileSystem
-                                            .getInstance()
-                                            .refreshAndFindFileByNioFile(Path.of(URI(uri)))
-                                            ?.let {
-                                                FileEditorManager
-                                                    .getInstance(project)
-                                                    .openFile(it, true)
+                            }
+                        },
+                    )
+                    add(
+                        JButton("Add resource directory").apply {
+                            addActionListener {
+                                val row = table.selectedRow
+                                if (row >= 0 && !discovery.isSelected) {
+                                    FileChooser
+                                        .chooseFile(
+                                            FileChooserDescriptorFactory
+                                                .createSingleFolderDescriptor(),
+                                            project,
+                                            null,
+                                        )?.let { directory ->
+                                            val current =
+                                                runCatching {
+                                                    modules()?.get(row)?.resourceRoots.orEmpty()
+                                                }.getOrNull()
+                                            if (current != null) {
+                                                rows.setValueAt(
+                                                    Gson()
+                                                        .toJson(
+                                                            (
+                                                                current +
+                                                                    Path
+                                                                        .of(directory.path)
+                                                                        .toUri()
+                                                                        .toString()
+                                                            ).distinct(),
+                                                        ),
+                                                    row,
+                                                    3,
+                                                )
                                             }
+                                        }
+                                }
+                            }
+                        },
+                    )
+                    add(
+                        JButton("Order resource directories…").apply {
+                            addActionListener {
+                                val row = table.selectedRow
+                                if (row >= 0 && !discovery.isSelected) {
+                                    table.cellEditor?.stopCellEditing()
+                                    val current = modules()?.get(row)?.resourceRoots
+                                    val paths = OrderedPaths(project, "Resource directories", true).apply { reset(current.orEmpty()) }
+                                    val automatic = JBCheckBox("Use automatic resource directories", current == null)
+                                    val dialog =
+                                        object : DialogWrapper(project) {
+                                            init {
+                                                title = "Ecstasy Resource Directories"
+                                                init()
+                                            }
+
+                                            override fun createCenterPanel(): JComponent =
+                                                JPanel(BorderLayout(0, 8)).apply {
+                                                    add(automatic, BorderLayout.NORTH)
+                                                    add(paths, BorderLayout.CENTER)
+                                                }
+                                        }
+                                    if (dialog.showAndGet()) {
+                                        rows.setValueAt(
+                                            if (automatic.isSelected) "" else Gson().toJson(paths.paths),
+                                            row,
+                                            3,
+                                        )
                                     }
                                 }
+                            }
+                        },
+                    )
+                    add(
+                        JButton("Reset to build model").apply {
+                            addActionListener { discovery.isSelected = true }
+                        },
+                    )
+                }
+
+            fun updateSourceActions() {
+                sourceActions.components.filterIsInstance<JButton>().forEach {
+                    it.isEnabled = it.text == "Reset to build model" || !discovery.isSelected
+                }
+            }
+            discovery.addItemListener { updateSourceActions() }
+            updateSourceActions()
+            val buildActions =
+                JPanel(GridLayout(0, 2, 8, 8)).apply {
+                    add(
+                        JButton("Refresh Gradle model").apply {
+                            toolTipText = "Read evaluated inputs without generating resources."
+                            addActionListener { refreshBuild(false) }
+                        },
+                    )
+                    add(
+                        JButton("Prepare generated resources").apply {
+                            toolTipText = "Run the resource tasks declared by the evaluated Gradle model."
+                            addActionListener { refreshBuild(true) }
+                        },
+                    )
+                    add(
+                        JButton("Open build file").apply {
+                            addActionListener {
+                                val selected = table.selectedRow
+                                val modules = runCatching { modules() }.getOrNull().orEmpty()
+                                val model =
+                                    runCatching {
+                                        CompilerBuildModel.read(project)
+                                    }.getOrNull()
+                                val entries =
+                                    model
+                                        ?.get("sourceSets")
+                                        ?.asJsonArray
+                                        ?.map { it.asJsonObject }
+                                        .orEmpty()
+                                val root = modules.getOrNull(selected)?.uri
+                                val entry =
+                                    entries.firstOrNull { item ->
+                                        item["sourceFiles"].asJsonArray.any { it.asString == root }
+                                    } ?: entries.firstOrNull()
+                                entry?.get("buildFile")?.asString?.let { uri ->
+                                    LocalFileSystem
+                                        .getInstance()
+                                        .refreshAndFindFileByNioFile(Path.of(URI(uri)))
+                                        ?.let {
+                                            FileEditorManager
+                                                .getInstance(project)
+                                                .openFile(it, true)
+                                        }
+                                }
+                            }
+                        },
+                    )
+                }
+            return JTabbedPane().apply {
+                name = "xtc.compiler.tabs"
+                addTab(
+                    "Source modules",
+                    JPanel(BorderLayout(0, 12)).apply {
+                        add(
+                            JPanel(BorderLayout(0, 8)).apply {
+                                add(discovery, BorderLayout.NORTH)
+                                add(
+                                    JBLabel(
+                                        "<html>Project settings · Apply updates the running compiler.<br>" +
+                                            "Automatic: use evaluated Gradle inputs or discover sources.<br>" +
+                                            "Manual: the table replaces automatic roots; an empty table disables discovery.</html>",
+                                    ),
+                                    BorderLayout.CENTER,
+                                )
                             },
+                            BorderLayout.NORTH,
+                        )
+                        add(JBScrollPane(table), BorderLayout.CENTER)
+                        add(sourceActions, BorderLayout.SOUTH)
+                    },
+                )
+                addTab("Libraries and sources", libraries)
+                addTab(
+                    "Build import",
+                    JPanel(BorderLayout(0, 12)).apply {
+                        add(
+                            JPanel(BorderLayout(0, 8)).apply {
+                                add(
+                                    JBLabel(
+                                        "<html>Refresh reads the Gradle model. Prepare also generates resource inputs.<br>" +
+                                            "Manual source and library overrides remain in effect after import.</html>",
+                                    ),
+                                    BorderLayout.NORTH,
+                                )
+                                add(buildActions, BorderLayout.CENTER)
+                                add(status, BorderLayout.SOUTH)
+                            },
+                            BorderLayout.NORTH,
+                        )
+                        val details = JBScrollPane(effective).apply { isVisible = false }
+                        add(
+                            JPanel(BorderLayout(0, 8)).apply {
+                                add(
+                                    JBCheckBox("Show effective paths and import details").apply {
+                                        name = "xtc.compiler.showDetails"
+                                        addItemListener {
+                                            details.isVisible = isSelected
+                                            revalidate()
+                                        }
+                                    },
+                                    BorderLayout.NORTH,
+                                )
+                                add(details, BorderLayout.CENTER)
+                            },
+                            BorderLayout.CENTER,
                         )
                     },
-                    BorderLayout.SOUTH,
                 )
             }
         }
 
+        private fun showReport(text: String) {
+            effective.text = text
+            effective.caretPosition = 0
+            val summary = text.lineSequence().firstOrNull(String::isNotBlank).orEmpty()
+            status.text = if (summary.length > 100) summary.take(100) + "…" else summary
+            status.toolTipText = summary
+        }
+
         private fun refreshBuild(prepare: Boolean) {
             val revision = reportRevision.incrementAndGet()
-            effective.text = "Reading evaluated Gradle inputs…"
+            showReport("Reading evaluated Gradle inputs…")
             CompilerBuildModel.refresh(project, prepare) { failure ->
                 if (!project.isDisposed && reportRevision.get() == revision) {
-                    if (failure != null) effective.text = failure else refreshEffectivePaths()
+                    if (failure != null) showReport(failure) else refreshEffectivePaths()
                 }
             }
         }
@@ -285,7 +343,7 @@ class CompilerProjectConfigurable
                 runCatching {
                     CompilerBuildModel.describe(project)
                 }.getOrElse { it.message.orEmpty() }
-            effective.text = description
+            showReport(description)
             readModules(project).thenAccept { modules ->
                 ApplicationManager.getApplication().invokeLater {
                     // Check the request's original owner at publication, including a restart
@@ -299,12 +357,13 @@ class CompilerProjectConfigurable
                             wrapper in accessor.startedServers && wrapper.languageServer === server
                         }
                     ) {
-                        effective.text =
+                        showReport(
                             description +
-                            "\n\nEffective compiler modules:\n" +
-                            modules.joinToString("\n") {
-                                "${it.name}: ${it.uri}\n  Resources: ${it.resourceRoots.orEmpty().joinToString()}\n  Dependencies: ${it.dependencies.joinToString()}"
-                            }
+                                "\n\nEffective compiler modules:\n" +
+                                modules.joinToString("\n") {
+                                    "${it.name}: ${it.uri}\n  Resources: ${it.resourceRoots.orEmpty().joinToString()}\n  Dependencies: ${it.dependencies.joinToString()}"
+                                },
+                        )
                     }
                 }
             }

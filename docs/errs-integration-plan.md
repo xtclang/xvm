@@ -11863,3 +11863,24 @@ that independent aggregate-task relationship.
 
 Extraction: compiler-default policy is isolated in `62b9ceda6`; retain the native cache reuse,
 completion markers, pruning task/tests and report-path documentation together as test infrastructure.
+
+
+## UI1–UI7 completion batch (2026-10-06)
+
+Implementation is in progress; the final acceptance gate is pending. Keep the preceding receipts
+separate from the new batch. Local commits will separate settings contracts, ownership, editor UI,
+apply/reporting, support export and shared/native acceptance.
+
+- UI3: Compiler settings now separate Source modules, Libraries and sources, and Build import.
+  Source actions stay beside the source table; import actions have explicit Refresh/Prepare help.
+  The report is collapsed behind **Show effective paths and import details**. The shared import
+  probe selects Build import before operating the same shipping buttons. No compiler or settings
+  persistence owner changes in this layout commit.
+- UI1 audit found that VS Code's maxLineWidth field was advertised but omitted from its formatting
+  configuration response. The settings-contract commit must send and validate it, with regression
+  coverage. Connection settings descriptions also need to describe their automatic restart.
+- UI6 offline support must be scoped to the last server connection owned by the selected project,
+  preserve bounded launcher failure information, and never select another project's newest log.
+- UI2/7: full editor exit/reopen, independent owners, multi-root rejection/precedence, unsupported
+  virtual/restricted workspaces, adapter parity, and the current complete catalogs are acceptance
+  requirements. Do not label the batch complete based only on unit tests or selected GUI cases.
