@@ -93,11 +93,8 @@ internal fun Driver.nativeLocations(
                     inspection.recover()
                     table.present() && table.content().size == expected.size
                 }
-                withContext(OnDispatcher.EDT) {
-                    cast(table.component, NativeTableSelection::class)
-                        .setRowSelectionInterval(index, index)
-                }
-                popup.keyboard { enter() }
+                chooseNavigationRow(table, index)
+                awaitUi("native $kind chooser closes", 15.seconds) { popup.notPresent() }
             }
             awaitUi(
                 message = "$kind opens an exact source target",
