@@ -1,3 +1,24 @@
+**Library configuration invalidation repair (2026-10-06):** VS Code X148 timed out after X147's
+restart resynchronized 56 documents. Six configuration updates each blocked dispatch for roughly
+six seconds. Library refresh fed resolved display paths back into source configuration, changing
+automatic resource roots into explicit roots; discovery changed them back and retired unchanged
+compilations repeatedly. Preserve the original immutable source inputs instead. The new regression
+fails before the fix and passes afterward, including discovery of a newly added file under unchanged
+settings. All 17 configuration/library/build-model tests pass. X148 passes in the full accumulated
+document workload, but genuine graph replacements still take roughly seven seconds there; that
+remaining responsiveness work stays open in L82.
+
+Final IntelliJ acceptance completes all 277 shared scenarios in one uninterrupted process:
+275 pass, X254/X257 retain UP25/UP26 partial status, zero failures and zero IDE errors. START
+also passes. `run-11949889098742489342` uses shipping LSP4IJ 0.21.0 with all production bridges
+restored. The earlier chooser and report-page harness failures remain recorded separately.
+
+VS Code has all 277 scenarios covered across the corrected full attempt and continuations:
+276 pass, X218 retains the UP23 host Undo failure. Multi-root X260 also required the harness to
+select the native workspace-folder picker before waiting for Gradle; production import behavior
+is unchanged. Failed receipts, corrections and local commit ownership are in the
+[acceptance record](errs-integration-plan.md#l82-upstream-isolation-and-full-catalog-acceptance-2026-10-06).
+
 **UP29 harness readiness race (2026-10-06):** the pinned IntelliJ Driver rechecks a successful
 predicate after leaving its polling loop. During restart that can turn a successful observation
 into an immediate false timeout. The test-only wrapper now accepts success once and measures
