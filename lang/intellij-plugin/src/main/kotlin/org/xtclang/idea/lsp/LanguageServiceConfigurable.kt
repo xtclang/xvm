@@ -51,7 +51,6 @@ open class LanguageServiceConfigurable(
     override fun createComponent(): JComponent {
         inherit.addItemListener { updateEnabled() }
         reset()
-        refreshReport()
         return JPanel(BorderLayout(0, 12)).apply {
             add(
                 JPanel(GridLayout(0, 2, 8, 8)).apply {
@@ -59,7 +58,7 @@ open class LanguageServiceConfigurable(
                         add(inherit)
                         add(JBLabel("Project overrides are stored with LSP4IJ."))
                     }
-                    add(JBLabel("Text synchronization (restart required)"))
+                    add(JBLabel("Text synchronization (restarts automatically)"))
                     add(synchronization)
                     add(JBLabel("Save formatting owner (restart required)"))
                     add(saving)
@@ -73,7 +72,7 @@ open class LanguageServiceConfigurable(
                     "<html>Full is the default. Incremental sends changed text; it does not enable incremental compilation.<br>" +
                         "Server save edits are unavailable in LSP4IJ. Use Tools → Actions on Save → Reformat code.<br>" +
                         "Indentation and the compiler wrapping margin are configured under Editor → Code Style → Ecstasy.<br>" +
-                        "Compiler paths remain under Ecstasy Compiler. Trace and runtime controls remain in Language Servers.</html>",
+                        "Compiler paths remain under Ecstasy Compiler. Trace controls remain in Language Servers; JVM and log limits are under Ecstasy Server Runtime and Logs.</html>",
                 ),
                 BorderLayout.CENTER,
             )
@@ -95,6 +94,8 @@ open class LanguageServiceConfigurable(
     private fun refreshReport() {
         val revision = reportRevision.incrementAndGet()
         val gson = GsonBuilder().setPrettyPrinting().serializeNulls().create()
+        val savedPreferences = LanguageServiceSettings.effective(project)
+        val savedRuntime = ServerRuntimeSettings.getInstance().state
         val prefix =
             "Configured preferences (" +
                 (
@@ -107,19 +108,26 @@ open class LanguageServiceConfigurable(
                     }
                 ) +
                 "):\n" +
-                gson.toJson(LanguageServiceSettings.effective(project)) +
-                "\n\n"
+                gson.toJson(savedPreferences) +
+                "\n\nSaved machine runtime (applies after explicit restart):\n" +
+                gson.toJson(savedRuntime) + "\n\n"
         report.text = prefix + "Open an Ecstasy source file to start its language service."
         val owner = project ?: return
         val wrapper =
             LanguageServiceAccessor.getInstance(owner).startedServers.firstOrNull {
                 it.serverDefinition.id == CompilerSettings.SERVER_ID
             } ?: return
+        val connection = wrapper.languageServer
         wrapper.initializedServer
             .thenCompose { (it as XtcLanguageServer).languageServiceStatus() }
             .whenComplete { status, failure ->
                 ApplicationManager.getApplication().invokeLater {
-                    if (!owner.isDisposed && reportRevision.get() == revision) {
+                    if (!owner.isDisposed && reportRevision.get() == revision &&
+                        LanguageServiceSettings.effective(owner) == savedPreferences &&
+                        ServerRuntimeSettings.getInstance().state == savedRuntime &&
+                        wrapper in LanguageServiceAccessor.getInstance(owner).startedServers &&
+                        wrapper.languageServer === connection
+                    ) {
                         report.text =
                             prefix +
                             if (failure == null) {
@@ -165,6 +173,7 @@ open class LanguageServiceConfigurable(
         saving.selectedItem = initial.saveFormatting
         hints.isSelected = initial.inlayHints
         updateEnabled()
+        refreshReport()
     }
 
     override fun apply() {
@@ -178,7 +187,6 @@ open class LanguageServiceConfigurable(
                 )
             LanguageServiceSettings.install(project, content)
             reset()
-            refreshReport()
         } catch (failure: IllegalArgumentException) {
             throw ConfigurationException(
                 failure.message ?: "Invalid Ecstasy language-service settings",
