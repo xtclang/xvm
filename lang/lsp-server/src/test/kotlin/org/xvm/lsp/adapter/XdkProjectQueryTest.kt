@@ -71,6 +71,21 @@ class XdkProjectQueryTest {
     }
 
     @Test
+    fun `implicit packages retain companion references without becoming workspace documents`() {
+        val library = source("Library", "module Library { Int run() = tools.Helper.pick(); }")
+        val helper =
+            directory.toRealPath().resolve("Library/tools/Helper.x").toFile().apply {
+                parentFile.mkdirs()
+                writeText("class Helper { static Int pick() = 42; }")
+            }
+        val query = query(library)
+        assertThat(query.diagnostics()).isNotEmpty().allMatch { it.success }
+        val references = query.references(library.toURI().toString(), 0, library.readText().indexOf("pick"), true)
+        assertThat(references.map { it.uri }).containsExactlyInAnyOrder(library.toURI().toString(), helper.toURI().toString())
+        assertThat(query.symbols("Helper").map { it.location.uri }).containsExactly(helper.toURI().toString())
+    }
+
+    @Test
     fun `references join serialized identities across unopened consumers and separate overloads`() {
         val library =
             source(
