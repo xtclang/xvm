@@ -28,7 +28,7 @@ E2E framework, log harvesting, and how each approach maps to the plugin's extens
 
 The `errs` branch has headless unit/manifest tests under `src/test/kotlin` and the native
 Starter+Driver compiler playbook under `src/integrationTest/kotlin`. The current headless run
-contains 106 tests. It covers compiler configuration/build models, root
+contains 114 tests. It covers compiler configuration/build models, root
 watch ownership, source graphs, lifecycle/process cleanup, edit/move guards, startup and diagnostic
 messages, capabilities, manifest wiring and bundled resources.
 The eight new compiler-import tests cover accepted-report ownership, cancellation/failure,
@@ -37,7 +37,7 @@ owner tests use application-free indicators; shared X260 separately exercises th
 Cancel button. X261/X262 cover failed/invalid Gradle output and retry. See the
 [shared import receipt](../../docs/errs-integration-plan.md#shared-compiler-import-acceptance-and-remaining-ui-work-2026-10-05).
 
-The native suite uses the shared 267-scenario catalog (X1–X262, CFG1–CFG3, 7a.8/7a.9).
+The native suite uses the shared 273-scenario catalog (X1–X268, CFG1–CFG3, 7a.8/7a.9).
 It launches an isolated Community-capable IntelliJ environment with Ultimate disabled. Selected
 runs preserve explicit `partial` statuses where LSP4IJ cannot exercise a native feature; neither
 passing protocol assertions nor an unselected scenario count as full UI acceptance. The
@@ -864,3 +864,14 @@ cancellation is guarded by import identity; the configuration cache is reused ac
 Automatic exports require an initial imported report; VS Code uses public Gradle task events in
 trusted local workspaces. The catalog has 270 cases; this was a selected run, not a full rerun.
 See the [contract, failures and commit map](../../docs/errs-integration-plan.md#compiler-workspace-synchronization-batch-ui5ui6-2026-10-05).
+
+
+Ordered library settings add X266–X268. The driver operates the installed Compiler settings
+components, checks cancel/reset/apply and ordering, opens the compiler-selected read-only source
+snapshot, restarts the server, and checks invalid-input retention and library removal/restoration.
+The shared `prepareLibraryPlaybook` task produces two versions of a binary and matching sources;
+neither editor bundles test binaries in source control. Use
+`-PintellijPlaybookCases=X266,X267,X268` for this selection. The new URI round-trip regression
+keeps case-sensitive module names in the virtual URI path because hosts normalize URI authorities.
+See the [batch receipt](../../docs/errs-integration-plan.md#ordered-libraries-and-attached-sources-batch-ui3ui4ui6-2026-10-06)
+for native results; a successful fallback-file check does not close UP25's virtual-editor gap.
