@@ -575,5 +575,8 @@ monikers or support arbitrary semantic queries inside library source text. Intel
 fallback files (UP25); VS Code uses the virtual content provider. Shared X266–X268 cover the controls,
 persistence, navigation and invalid-input retention. See the
 [contract and validation](../../../docs/errs-integration-plan.md#ordered-libraries-and-attached-sources-batch-ui3ui4ui6-2026-10-06).
-Advanced JVM settings, log export/retention, broader multi-root/remote-workspace acceptance and
-L82 release evidence remain separate work; Run/DAP, color and notebooks retain their recorded scope.
+Machine-local JVM settings, explicit restart, process-owned log retention and bounded live-server
+export are implemented with shared X269/X270 (validation pending). They add host support controls,
+not compiler semantics or a new advertised LSP capability. Broader multi-root/remote-workspace
+acceptance, offline export and L82 release evidence remain; Run/DAP, color and notebooks retain
+their recorded scope. See the [runtime/log contract](../../../docs/errs-integration-plan.md#machine-local-jvm-settings-and-log-support-ui5ui6-2026-10-06).

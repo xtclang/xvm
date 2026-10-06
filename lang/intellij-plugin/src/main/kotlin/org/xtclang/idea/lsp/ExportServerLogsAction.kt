@@ -8,9 +8,12 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.fileChooser.FileChooserFactory
 import com.intellij.openapi.fileChooser.FileSaverDescriptor
 import com.intellij.openapi.project.DumbAwareAction
+import com.intellij.openapi.project.Project
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import java.nio.file.Files
+import java.nio.file.Path
 import java.util.Base64
+import java.util.concurrent.CompletableFuture
 
 /** Export through the connected server, without guessing another project's process log paths. */
 class ExportServerLogsAction : DumbAwareAction() {
@@ -47,28 +50,40 @@ class ExportServerLogsAction : DumbAwareAction() {
                     ),
                     project,
                 ).save("ecstasy-server-logs.zip") ?: return
-        wrapper.initializedServer
-            .thenCompose { (it as XtcLanguageServer).exportLogs() }
-            .thenAcceptAsync { bundle ->
-                val bytes = Base64.getDecoder().decode(requireNotNull(bundle["base64"]))
-                Files.write(destination.file.toPath(), bytes)
-            }.whenComplete { _, failure ->
-                ApplicationManager.getApplication().invokeLater {
-                    if (!project.isDisposed) {
-                        Notification(
-                            "XTC Language Server",
-                            "Ecstasy server logs",
-                            if (failure ==
-                                null
-                            ) {
-                                "Saved ${destination.file.name}"
-                            } else {
-                                "Log export failed: ${failure.message}. See the Language Servers log."
-                            },
-                            if (failure == null) NotificationType.INFORMATION else NotificationType.ERROR,
-                        ).notify(project)
-                    }
+        export(project, destination.file.toPath()).whenComplete { _, failure ->
+            ApplicationManager.getApplication().invokeLater {
+                if (!project.isDisposed) {
+                    Notification(
+                        "XTC Language Server",
+                        "Ecstasy server logs",
+                        if (failure ==
+                            null
+                        ) {
+                            "Saved ${destination.file.name}"
+                        } else {
+                            "Log export failed: ${failure.message}. See the Language Servers log."
+                        },
+                        if (failure == null) NotificationType.INFORMATION else NotificationType.ERROR,
+                    ).notify(project)
                 }
             }
+        }
+    }
+
+    companion object {
+        fun export(
+            project: Project,
+            destination: Path,
+        ): CompletableFuture<Void> {
+            val wrapper =
+                LanguageServiceAccessor.getInstance(project).startedServers.firstOrNull {
+                    it.serverDefinition.id ==
+                        CompilerSettings.SERVER_ID
+                }
+                    ?: return CompletableFuture.failedFuture(IllegalStateException("No running Ecstasy server"))
+            return wrapper.initializedServer.thenCompose { (it as XtcLanguageServer).exportLogs() }.thenAcceptAsync { bundle ->
+                Files.write(destination, Base64.getDecoder().decode(requireNotNull(bundle["base64"])))
+            }
+        }
     }
 }

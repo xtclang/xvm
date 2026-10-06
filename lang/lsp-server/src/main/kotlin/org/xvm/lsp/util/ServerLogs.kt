@@ -43,7 +43,12 @@ internal data class LogRetention(
 /** Owned session files only. Never traverses source roots, other applications' logs, or symlinks. */
 internal object ServerLogs {
     val process = TraceProcessId().propertyValue
-    val root: Path = Path.of(System.getProperty("xtc.logs.directory", "${System.getProperty("user.home")}/.xtc/logs/lsp"))
+    val root: Path =
+        Path.of(
+            System.getProperty(
+                "xtc.logs.directory",
+            ) ?: System.getenv("XTC_LSP_LOG_DIR") ?: "${System.getProperty("user.home")}/.xtc/logs/lsp",
+        )
     val directory: Path = root.resolve("server-$process")
     val traceDirectory: Path =
         Path.of(System.getProperty("xtc.trace.directory") ?: System.getenv("XTC_LSP_TRACE_DIR") ?: directory.toString())
@@ -70,7 +75,7 @@ internal object ServerLogs {
         active: (Long, Long) -> Boolean = ::isActive,
     ): Int {
         if (!Files.isDirectory(root, NOFOLLOW_LINKS)) return 0
-        return FileChannel.open(root.resolve(".retention.lock"), CREATE, WRITE).use { channel ->
+        return FileChannel.open(root.resolve(".retention.lock"), CREATE, WRITE, NOFOLLOW_LINKS).use { channel ->
             val lock =
                 try {
                     channel.tryLock()
@@ -92,8 +97,11 @@ internal object ServerLogs {
                 .list(root)
                 .use { paths -> paths.filter { Files.isDirectory(it, NOFOLLOW_LINKS) }.toList() }
                 .mapNotNull { path -> sessionName.matchEntire(path.fileName.toString())?.let { path to it } }
-                .filterNot { (_, name) -> active(name.groupValues[1].toLong(), name.groupValues[2].toLong()) }
-                .map { (path, _) -> path to Files.list(path).use { files -> files.toList() } }
+                .filter { (_, name) ->
+                    val pid = name.groupValues[1].toLongOrNull()
+                    val started = name.groupValues[2].toLongOrNull()
+                    pid != null && pid > 0 && started != null && !active(pid, started)
+                }.map { (path, _) -> path to Files.list(path).use { files -> files.toList() } }
                 .filter { (_, files) -> files.all { Files.isRegularFile(it, NOFOLLOW_LINKS) && logName.matches(it.fileName.toString()) } }
                 .map { (path, files) ->
                     Triple(
