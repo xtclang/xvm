@@ -58,11 +58,13 @@ internal object XdkAttachedSources {
                                 check(snapshot.toFile().setReadOnly()) { "Cannot protect attached source $sourcePath" }
                             }
                         }
+                        // URI authorities are case-insensitive (and lowercased by VS Code).
+                        // Module identities are case-sensitive, so retain them in the path.
                         val uri =
                             URI(
                                 XdkLibrarySources.SCHEME,
-                                dependency.module,
-                                "/${dependency.revision}/$revision/$sourcePath",
+                                "attached",
+                                "/${dependency.module}/${dependency.revision}/$revision/$sourcePath",
                                 null,
                                 null,
                             ).toASCIIString()
