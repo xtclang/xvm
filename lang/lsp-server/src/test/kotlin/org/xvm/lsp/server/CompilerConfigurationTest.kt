@@ -34,6 +34,36 @@ import java.util.concurrent.TimeUnit.SECONDS
 
 class CompilerConfigurationTest {
     @Test
+    fun `unchanged library settings preserve discovered resource inputs and cached compilation`() {
+        Session().use { session ->
+            val config =
+                mapOf(
+                    "sourceModules" to null,
+                    "libraries" to mapOf("modulePath" to null, "sourceAttachments" to emptyList<Any>()),
+                )
+            session.configure(config)
+            session.open()
+            session.expect(false)
+            val before = session.adapter.getCachedResult(session.uri)
+            val submitted = session.adapter.compilerQueueSnapshot()["submittedTotal"]
+
+            repeat(3) {
+                session.configure(config)
+                assertThat(session.adapter.getCachedResult(session.uri)).isEqualTo(before)
+                assertThat(session.adapter.compilerQueueSnapshot()["submittedTotal"])
+                    .isEqualTo(submitted)
+            }
+
+            // Repeated settings may still discover a new file; equality of raw JSON is insufficient.
+            directory.resolve("Added.x").toFile().writeText("module Added {}")
+            session.configure(config)
+            assertThat(session.adapter.effectiveSourceModules().map { it.name })
+                .containsExactlyInAnyOrder("Library", "Consumer", "Added")
+            session.expect(false)
+        }
+    }
+
+    @Test
     fun `presentation updates preserve pending graph configuration and cached compilation`() {
         Session(pull = true).use { session ->
             session.open()
