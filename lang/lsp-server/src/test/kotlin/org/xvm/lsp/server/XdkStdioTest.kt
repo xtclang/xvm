@@ -575,12 +575,12 @@ class XdkStdioTest {
             assertThat(it["queuedJobs"].toString()).contains("compile", "Stdio.x")
         }
         assertThat(entries).anySatisfy {
-            assertThat(it["operation"].asString).startsWith("EmbeddingSupport.compileModule")
+            assertThat(it["operation"]?.asString).startsWith("EmbeddingSupport.compileModule")
             assertThat(it["event"].asString).isEqualTo("end")
             assertThat(it["elapsedMs"].asDouble).isPositive()
         }
         assertThat(entries).anySatisfy {
-            assertThat(it["operation"].asString).isEqualTo("textDocument/documentSymbol")
+            assertThat(it["operation"]?.asString).isEqualTo("textDocument/documentSymbol")
             assertThat(it["event"].asString).isEqualTo("end")
             assertThat(it["boundary"].asString).isEqualTo("server-reply-written")
         }
