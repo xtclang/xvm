@@ -56,6 +56,8 @@ interface StartedLanguageServer {
 
     fun stop(): ClientFuture
 
+    fun stopAndDisable()
+
     fun restart()
 
     fun getCurrentProcessId(): Long?
