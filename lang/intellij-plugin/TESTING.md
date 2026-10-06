@@ -792,6 +792,13 @@ selection, startup editing and two-project disposal, with zero IDE errors. These
 release bridges enabled; the [upstream register](../../docs/errs-upstream-issues.md#local-plugin-acceptance-2026-10-06)
 distinguishes integration compatibility from the per-bridge removal gates.
 
+Readiness polling accepts a successful observation once, using a monotonic deadline. Pinned
+Driver `waitFor` rechecks success and can falsely report a timeout during connection replacement
+(UP29). `UiWaitsTest` covers this race, actual expiry, pending reads, cancellation and null values;
+`PlaybookFailureTest` retains fatal timeout/cancellation behavior. These tests run without opening
+an IDE through `testCompilerPlaybook --tests '*UiWaitsTest' --tests '*PlaybookFailureTest'`.
+The wrapper only retries observations; edit/refactoring actions remain outside polling loops.
+
 LSP4IJ is the most complex dependency. For platform tests, you need it on the test
 classpath so that the `lsp4ij:server` and `lsp4ij:fileNamePatternMapping` extensions
 in `plugin.xml` resolve correctly.
