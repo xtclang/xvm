@@ -1,6 +1,6 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **270 scenarios**: X1–X265, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **273 scenarios**: X1–X268, CFG1–CFG3 and 7a.8/7a.9.
 
 Post-rebase acceptance (2026-10-05): VS Code `run-J054rk` passes 266 of all 267 cases;
 X218 remains the accepted UP23 host Undo failure. IntelliJ `run-1475359363733913185` plus
@@ -3781,3 +3781,29 @@ IntelliJ `run-12471400462423684800` passes START/X129/X260/X261/X263/X265; corre
 malformed-report summary and VFS-probe lock failures are retained and explained in the
 [batch receipt](../../docs/errs-integration-plan.md#compiler-workspace-synchronization-batch-ui5ui6-2026-10-05).
 All seven cases have passing receipts; the complete 270-case catalog was not rerun for this batch.
+
+
+### Ordered libraries and attached sources (X266–X268)
+
+Use **Settings → Ecstasy Compiler → Libraries and sources** in IntelliJ Community, or
+**Ecstasy: Configure Libraries and Sources** in VS Code. VS Code also exposes
+`xtc.compiler.libraries` in native Settings. Compiler settings are project/workspace-owned;
+use absolute file URIs when multiple workspace folders are open. The bundled XDK remains
+read-only and always available. `xtc.sourceRoots` is a separate indexing option, not a binary
+source attachment.
+
+| Case | Actions | Expected result |
+| --- | --- | --- |
+| X266 | Add two library directories, reorder them, cancel a draft and reset/reopen settings, then apply. | Draft changes do not persist until Apply. The first binary for a module wins. The bundled XDK remains available. IntelliJ exercises the installed page controls; VS Code drives the native picker. |
+| X267 | Add a binary and matching source directories for its exact module name. Navigate from a consumer, restart the server, navigate again, then remove and restore the binary. | Attached source opens read-only at the declaration; settings survive reconnect. Removing the binary produces diagnostics; restoration clears them. Sources do not become editable source modules. |
+| X268 | Try duplicate and missing library paths after a valid import. Set resource roots in a deliberate order. | Invalid replacements preserve accepted compilation/navigation; path validation explains the refusal. Resource order survives settings application. |
+
+Null module paths inherit Gradle libraries; an empty list clears external binaries. Source roots
+are searched in listed order using artifact source paths and declaration metadata. Available
+method debug text must match; declarations without debug text are not a reproducibility check.
+Use matching library sources. **Reload applied libraries** rereads the saved paths without restarting. Applying or reloading captures an immutable source snapshot; modifying an
+attachment on disk does not edit a running compiler artifact.
+
+Both drivers share the Ecstasy fixture in the scenario catalog. `prepareLibraryPlaybook` builds
+its binaries through the embedding API before either editor run. No binary fixture is checked in.
+Native receipts for this batch are pending combined validation.
