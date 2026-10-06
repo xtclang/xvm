@@ -798,7 +798,7 @@ libraries and compiler queue names/count. Server save edits are unavailable in L
 native **Actions on Save → Reformat code**. Compiler mode wraps expressions/lists at safe token
 boundaries using the Code Style right margin; literal splitting and comment reflow are not supported.
 
-The follow-up catalog now contains 148 scenarios. New X142 verifies constant-initializer semantic
+The September 30 follow-up expanded the catalog to 148 scenarios. X142 verifies constant-initializer semantic
 navigation and rename/undo; X143 compares partial workspace-symbol batches with the ordinary
 response. X124/X131/X134/X142/X143 pass in both editors across selected runs and a focused
 IntelliJ X142 correction; this does not establish a full 148-case checkpoint. See the
@@ -854,5 +854,13 @@ See the [contract and receipt](../../docs/errs-integration-plan.md#machine-local
 
 The **Ecstasy Compiler** page separates **Source modules**, **Libraries and sources** and
 **Build import**. Import buttons stay with their help; the detailed paths/report are expandable.
-No compiler inputs are changed by switching tabs. The Language Service page distinguishes saved
-machine runtime settings from the running server; stale replies cannot replace a newer report.
+Build import uses native Kotlin UI DSL groups, ordinary-width buttons, smaller help text and
+collapsed details, and a bordered vertical page list. Build actions are stacked at their normal
+width; the standalone window fits the selected page. Switching pages preserves unapplied edits.
+The Language Service page distinguishes saved machine runtime settings from the running server;
+stale replies cannot replace a newer report.
+
+The current UI acceptance includes all ten selected import/library/runtime/support cases with no
+IDE errors and complete-process persistence for compiler and Tree-sitter. See the
+[UI completion receipt](../../docs/errs-integration-plan.md#ui1ui7-completion-batch-2026-10-06)
+for the full catalog's combined coverage and remaining native host limitations.
