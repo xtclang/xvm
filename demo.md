@@ -2,7 +2,7 @@
 
 Use `lagergren/errs` in this repository. This is a manual tour of implemented feature families,
 not a claim that every XTC construct or LSP operation is complete. Checked against platform
-`b8be627b7` on 2026-09-29; use the named code anchors below rather than fixed line numbers.
+`8df5449` on 2026-10-06; use the named code anchors below rather than fixed line numbers.
 
 **Start with `auth` and `githubCLI` for a short tour.** The full eleven-module graph also compiles
 cleanly through the packaged server after configuring platformUI's generated resources below:
@@ -26,7 +26,8 @@ No separate `installDist`, plugin installation, XDK download or Ultimate subscri
 Keep the terminal open; close the sandbox IDE when finished. This does not start the UI test driver.
 
 Before opening `.x` files, open **Settings → Languages & Frameworks → Ecstasy Compiler**.
-Uncheck **Discover source modules automatically**, remove any old rows, and **Add module** twice:
+Select **Source modules** in the left-hand list. Uncheck **Use Gradle model or automatic source
+discovery**, remove any old rows, and **Add module** twice:
 
 | Module | Root URI or relative path | Dependencies |
 |---|---|---|
@@ -35,9 +36,11 @@ Uncheck **Discover source modules automatically**, remove any old rows, and **Ad
 
 Click **Apply**, then **OK**. Roots are relative to the opened platform project. Bundled XDK
 modules resolve automatically; do not enter them as source dependencies. Open the files below;
-confirm the Language Servers tool window shows XTC running with the compiler adapter.
+confirm the Language Servers tool window shows Ecstasy running with the compiler adapter.
 Open **View → Tool Windows → Problems**, and **Structure** beside the editor.
-If files opened before configuration, wait for the settings-triggered restart to finish.
+Source-graph changes apply live; wait for analysis to finish. Transport/JVM changes separately
+require a restart. **Libraries and sources** manages ordered binary paths and matching read-only
+source attachments; **Build import** imports evaluated Gradle inputs or prepares generated resources.
 
 Use **Find Action** (`⇧⌘A` on the macOS keymap) and the action names below; this avoids keymap
 variations. Put the caret *inside the named identifier*. Restore each edit with **Undo** before
@@ -63,7 +66,7 @@ Paths below are relative to platform. Open these three files:
 | Bundled XDK type sources | In **G**, find `HttpStatus status = response.status;`. On `response`, invoke **Go to Type Declaration**. | Opens the bundled `web/ResponseIn.x` declaration read-only. On `String` in a declaration, normal definition lookup also reaches bundled source. |
 | Read/write highlights | In **R**, place the caret on `repositoryName` in `repositoryName = repository;`. | The declaration, write and reads in URL interpolations are related by identity. |
 | Inlay hints | In **G**, inspect `readLine(..., "xtclang")`, `new Uri(...)` and calls in `send`. Enable LSP inlay hints in editor settings if hidden. | Parameter labels; inferred-type hints appear where inference supplies a type. The packaged request returns 26 hints in this file. |
-| URLs | In **O**, find the RFC 6749 comment and follow its HTTPS link with the editor's link gesture. | Opens the RFC. Comment/string links are supported; import links are a separate unfinished feature. |
+| URLs and source links | In **O**, follow the RFC 6749 comment's HTTPS link. Follow `import json.JsonObject;` at the top of **R**. | Opens the RFC or the resolved read-only library source. Compiler-backed module/type/alias and wildcard-container links require current, resolved source facts. |
 | Expand selection | In **G**, put the caret inside `createRequest(method, group, path, content)`; invoke **Extend Selection** repeatedly, then **Shrink Selection**. | Expression, enclosing call and larger AST ranges. |
 | Run entry point | Open the module declaration at the top of **G** and inspect its **Run** lens. | Existing client run integration. Do not execute this example during the tour: it asks for credentials and contacts GitHub. Reusable embedded execution and DAP are still planned. |
 
@@ -72,6 +75,20 @@ inlay hints, links, outline and folds above were checked through the packaged se
 session has **not** been driven through native IntelliJ; the shared playbook has separate native
 receipts. The PLAT3 packaged recheck now shows the correct use-site hover, four signature parameters
 with `group` active, and `trim` completion before existing parentheses on the chained receiver.
+
+The October 6 recheck uses platform `8df5449`: all eleven modules produce 49 clean diagnostic
+reports. It confirms six `sendRequest` references/incoming callers, five OAuth subtypes, four
+`authorizationUrl` implementations, 26 hints in **G**, `status` completion and a four-parameter
+incomplete signature with `group` active. The deliberate `Int value` mismatch reports compiler
+errors; restoring the original overlay clears them. Rename returns exactly three versioned edits.
+All platform source hashes are unchanged, and the server shuts down normally.
+
+That check exposed and fixed a graph-navigation bug: implicit directories such as `common/tools`
+contribute synthetic `package tools {}` syntax with no filename. Its semantic facts remain in the
+joined graph, but it cannot itself be a file target. The minimal compiler-adapter regression and
+shared X117 now cover references through such directories. Local request/results evidence is in
+`lang/lsp-server/build/reports/platform-demo/2026-10-06-final/`; this remains packaged-server
+evidence, not a claim that this entire manual tour ran through IntelliJ's menus.
 
 ## Completion, signature help and live repair
 
@@ -126,8 +143,9 @@ Make one edit at a time and Undo it afterward.
   the precise supported/refused variants are [X105/X122 in the playbook](lang/doc/manual-test-plan.md).
 - **Formatting:** remove the leading indentation from a few lines inside **G**'s `readLine` body;
   select those lines and invoke **Reformat Code**. Repeat for the whole file, then Undo. Press Enter
-  inside a block to show on-type indentation. The formatter preserves token spellings; it does not
-  promise expression wrapping or binary-operator spacing changes.
+  inside a block to show on-type indentation. The formatter preserves token spellings.
+  Code Style controls indentation, tabs, spacing, blank lines and bounded
+  expression/list wrapping at the right margin; this is not a grammar-complete pretty-printer.
 - **Hover:** use **Quick Documentation** on `sendRequest` in **R**; it should show that method's
   substituted signature, not the enclosing `listRepositories`. On narrowed `repo` after the
   `JsonObject` assertion, **Go to Type Declaration** should reach bundled `Map.x`.
@@ -159,9 +177,12 @@ Its Gradle build adds that generated directory with `sourceSets.main.resources.s
 the embedded `Directory:/spa` is `platformUI/gui/dist/spa`. It already existed in the checked demo
 workspace. If missing, build it from platform's root with `./gradlew :platformUI:buildGui` first.
 Other modules can leave this column blank: the compiler finds their conventional
-`src/main/resources` directories. The plugin does not yet import evaluated Gradle paths or run
-resource-generation tasks automatically. Paths use project-root-relative URI syntax here; no
-assets need copying into `src/main/x`.
+`src/main/resources` directories. This explicit graph keeps the tour independent of build import.
+For build-owned inputs, use **Build import → Refresh Gradle model**, then inspect **Show effective
+paths and import details**. **Prepare generated resources** runs the model's preparation tasks;
+it supports cancellation and refuses overlapping imports. Manual source/library overrides stay in
+effect after import; **Reset to build model** restores model/discovery ownership. Paths use
+project-root-relative URI syntax here; no assets need copying into `src/main/x`.
 
 Then demonstrate these real relationships, with all roots clean before trying rename/actions:
 
@@ -178,6 +199,13 @@ Then demonstrate these real relationships, with all roots clean before trying re
 
 The [adapter feature matrix](lang/doc/plans/plan-ide-integration.md#adapter-capability-matrix) and
 [remaining task list](docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist)
-record the boundaries: no extract/inline/safe-delete, full pretty-printer, runtime call graph,
-reusable Run worker or debugger yet. Queue order, queued job names, compile/API timings and reply
-latency are logged in `~/.xtc/logs/lsp-server.log` and tailed by `runIde` in the launch terminal.
+record the boundaries. Extract/inline/safe-delete have bounded compiler-proven implementations;
+use the shared playbook's exact examples to demonstrate those proof/refusal boundaries. A full
+pretty-printer, runtime call graph, reusable Run worker and debugger remain outside this tour.
+
+Use **Toggle Ecstasy Language Server Log** to show/hide the docked log, or **Export Ecstasy Server
+Logs** for a support ZIP. **Ecstasy Server Runtime and Logs** configures Java, heap, VM options and
+retention; **Ecstasy Language Service** controls live presentation/transport preferences. The export
+and effective-state view identify the actual log directory and server process. Queue size, ordered
+job names, compile/API times and reply latency are traced; no platform application is executed by
+the demo. Use the **Run** lens only when intentionally ready for that application's side effects.
