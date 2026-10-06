@@ -127,6 +127,9 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
             xtcSourceRoots: vscode.workspace.getConfiguration('xtc').get<string[]>('sourceRoots', []),
             xtcCompiler: compilerConfiguration()
         },
+        // Our startup handler reports one actionable failure; the default handler also opens
+        // raw JSON-RPC and initialization popups for the same failed process.
+        initializationFailedHandler: () => false,
         middleware: {
             provideInlayHints: (document, range, token, next) => {
                 const value = vscode.workspace.getConfiguration('xtc', document.uri).get<unknown>('inlayHints.enabled', true);
@@ -171,12 +174,12 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
                 return { action: ErrorAction.Shutdown };
             },
             closed: () => {
-                if (client !== connection) return { action: CloseAction.DoNotRestart };
+                if (client !== connection) return { action: CloseAction.DoNotRestart, handled: true };
                 if (!hasEverReachedRunning) {
                     // Server died before reaching Running state (startup crash).
                     // Do not restart to avoid unhandled rejection issues in vscode-languageclient.
                     updateStatusBar('error');
-                    return { action: CloseAction.DoNotRestart };
+                    return { action: CloseAction.DoNotRestart, handled: true };
                 }
                 crashCount++;
                 if (crashCount <= MAX_CRASH_RESTARTS) {
@@ -185,12 +188,42 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
                 }
                 updateStatusBar('stopped');
                 serviceFailure(`Ecstasy Language Server crashed ${crashCount} times and will not restart automatically.`);
-                return { action: CloseAction.DoNotRestart };
+                return { action: CloseAction.DoNotRestart, handled: true };
             }
         }
     };
 
     const connection = new class extends LanguageClient {
+        override async start(): Promise<void> {
+            try {
+                // TODO VSCODE: UP28 — start() can lose its internal startup promise when the
+                // transport closes during initialize. Observe the idempotent in-flight start
+                // immediately too, before upstream clears it, so its rejection is handled.
+                // Remove when upstream always returns/observes that captured promise (X272).
+                const starting = super.start();
+                await Promise.all([starting, super.start()]);
+                if (!this.isRunning()) throw new Error('Server stopped before initialization completed');
+            } catch (error) {
+                if (client === this) {
+                    const message = error instanceof Error ? error.message : String(error);
+                    logs.finish(launch, `Startup failed: ${message}\n`);
+                    serviceFailure('Ecstasy Language Server could not start. Check the Java runtime and JVM options; details are in the server log.');
+                    updateStatusBar('error');
+                }
+                throw error;
+            }
+        }
+
+        override error(message: string, data?: unknown, showNotification?: boolean | 'force'): void {
+            // Keep full transport detail in Output. Startup/disconnect notifications have an owner.
+            super.error(message, data, this.isRunning() ? showNotification : false);
+        }
+
+        override stop(timeout?: number): Promise<void> {
+            // Upstream invokes void stop() during initialization failure, when stopping is invalid.
+            return super.stop(timeout).catch(() => {});
+        }
+
         protected override async createMessageTransports(encoding: string): Promise<MessageTransports> {
             const id = logs.begin(`Java: ${javaExecutable}\nArguments: ${jvmArgs.join(' ')}\n`);
             launch = id;
@@ -207,13 +240,6 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
     );
 
     client = connection;
-
-    // Patch stop() to suppress internal rejections from vscode-languageclient.
-    // The library calls `void this.stop()` during initialization failures, creating
-    // unhandled rejections. This patch ensures stop() always resolves.
-    const originalStop = client.stop.bind(client);
-    (client as unknown as { stop: (timeout?: number) => Promise<void> }).stop =
-        (timeout?: number) => originalStop(timeout).catch(() => {});
 
     activeConnectionKey = requestedKey;
     const startingClient = client;
@@ -246,9 +272,6 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
         if (client !== connection) throw err;
         const message = err?.message ?? String(err);
         console.warn('Ecstasy Language Server failed to start:', message);
-
-        logs.finish(launch, `Startup failed: ${message}\n`);
-        serviceFailure(`Ecstasy Language Server could not start: ${message}`);
 
         updateStatusBar('error');
         if (client === startingClient) client = undefined;
