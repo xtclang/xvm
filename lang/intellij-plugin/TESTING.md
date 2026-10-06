@@ -28,7 +28,7 @@ E2E framework, log harvesting, and how each approach maps to the plugin's extens
 
 The `errs` branch has headless unit/manifest tests under `src/test/kotlin` and the native
 Starter+Driver compiler playbook under `src/integrationTest/kotlin`. The current headless run
-contains 114 tests. It covers compiler configuration/build models, root
+contains 122 tests. It covers compiler configuration/build models, root
 watch ownership, source graphs, lifecycle/process cleanup, edit/move guards, startup and diagnostic
 messages, capabilities, manifest wiring and bundled resources.
 The eight new compiler-import tests cover accepted-report ownership, cancellation/failure,
@@ -52,6 +52,12 @@ native actions with direct edits. Startup, focus recovery and project lifecycle 
 The opt-in UP17 large-file diagnostic is excluded. Original failures and exact counts remain in
 the [receipt](../../docs/errs-integration-plan.md#modern-vs-code-baseline-and-complete-rebase-acceptance-2026-10-05).
 
+October 6 settings acceptance covers all 277 shared cases across the full attempt, continuation
+and targeted corrections: 275 pass; X254/X257 remain partial for UP25/UP26. The final ten-case
+layout/support rerun has no IDE errors. Full-exit settings persistence also passes with compiler
+and Tree-sitter. These are combined receipts, not a single uninterrupted green run; see the
+[UI completion record](../../docs/errs-integration-plan.md#ui1ui7-completion-batch-2026-10-06).
+
 From the composite root:
 
 ```bash
@@ -66,6 +72,10 @@ Use `-PintellijPlaybookCases=X145,X146,X147,X259` for exact scenario selection. 
 full implemented catalog. The status bar shows completed/remaining counts and the current case's
 short description. The driver can restore focus without moving the mouse; avoid typing into the
 fixture while it runs. All waits are bounded and completed edits are not replayed after focus loss.
+Timeouts, cancellations and failed fixture cleanup stop that IDE run; remaining cases are recorded
+as not run. A completed assertion may be collected only after successful cleanup. Expected protocol
+refusals must identify the actual refusal and cannot treat a timeout as success. Resume the remaining
+IDs in a fresh disposable IDE after diagnosing the failure; do not replay a timed-out mutation.
 
 Unit results are in `build/test-results/test/*.xml`. Native per-case results, IDE failures,
 server traces and screenshots are under `build/reports/compiler-playbook/run-*`. A green Gradle

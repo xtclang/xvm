@@ -3852,8 +3852,8 @@ The failed receipt is retained. This is selected acceptance, not a complete 275-
 ### Settings persistence and layout acceptance (UI1–UI7)
 
 IntelliJ’s **Settings → Ecstasy Compiler** page has **Source modules**, **Libraries and sources**
-and **Build import** tabs. Import commands and their explanation live on Build import; expand
-**Show effective paths and import details** for the full report. Confirm that switching tabs
+and **Build import** pages in a bordered vertical navigation list. Build actions are stacked
+vertically at their normal width; expand **Effective paths and import details** for the full report. Confirm that switching pages
 retains an unapplied draft and that Cancel leaves saved inputs unchanged. Gradle actions require
 project trust and retain the accepted model if refused or cancelled.
 
@@ -3875,4 +3875,25 @@ refusal before any Gradle task starts. They supplement the X-case selectors rath
 node scripts/run-vscode-tests.cjs --settings-persistence
 ```
 
-Implementation is ready for acceptance; the UI completion receipt records execution separately.
+Both full-exit persistence checks pass: IntelliJ `run-7326867442734256276` and VS Code
+`extension-tests/run-fWbld3`. Tree-sitter also passes: IntelliJ `run-6749401871977790942` and
+VS Code `extension-tests/run-LXUiIb`. Build with `-Plsp.adapter=treesitter` to repeat that settings-only
+check, then restore `-Plsp.adapter=compiler` for compiler feature scenarios. Broader acceptance is
+recorded separately in the UI completion receipt.
+
+X269/X270 intentionally submit invalid heap/log settings and verify that the running server is
+retained. X272 intentionally starts a JVM that cannot initialize, verifies one actionable startup
+error plus offline export, then restores valid settings and verifies recovery. These expected
+notifications are checked and dismissed between cases; they are not successful-start evidence.
+
+Both harnesses stop the current IDE run on a timeout or failed workspace cleanup. Remaining cases
+stay **not run**, rather than inheriting unfinished work and producing misleading results. VS Code's
+status bar shows the current read-only wait and elapsed time against its deadline; the tooltip
+contains the full condition. Commands that edit/rename/Undo remain single-shot. Expected refusal
+tests must assert the refusal itself, not accept a timeout. Resume only remaining IDs in a fresh
+test window after diagnosing a failure.
+
+Final selected layout/support check: IntelliJ `run-8778326141068942537` passes X260–X262 and
+X266–X272, plus START, with no IDE errors. X271 uses the native Stop-and-disable operation and
+checks that export neither restarts the process nor selects another session. Internal `stop()`
+leaves the wrapper enabled and does not represent the user's Stop action.
