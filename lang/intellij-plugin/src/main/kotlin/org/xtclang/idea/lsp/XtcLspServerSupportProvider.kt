@@ -131,7 +131,7 @@ class XtcLspConnectionProvider(
         val jarIndex = commands.indexOf("-jar")
         commands.addAll(
             jarIndex,
-            ServerRuntimeSettings.getInstance().state.arguments() +
+            ServerRuntimeSettings.getInstance().launchArguments() +
                 listOf(
                     "-Dapple.awt.UIElement=true", // macOS: no dock icon
                     "-Djava.awt.headless=true", // No GUI components
