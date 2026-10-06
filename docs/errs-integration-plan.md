@@ -11751,8 +11751,54 @@ The drivers bypass the OS save chooser by supplying a destination; native picker
 fresh-IDE persistence, rollover stress, remote/restricted workspaces and cross-platform checks
 remain explicit acceptance work. The catalog now has 275 cases, not a claim of 275 new passes.
 
-Validation: pending headless and selected native runs after the implementation batch.
+Validation after the implementation batch:
+
+- Server retention/archive tests: **3 passed**, zero failures/errors/skips. Development log-tail
+  regressions: **3 passed**, including new process discovery, rollover, partial/oversized UTF-8
+  lines and missing/foreign/symlink paths. IntelliJ unit suite: **117 passed**, zero failures or
+  skips. VS Code extension suite: **44 passed** (`run-rD6EbF`). Both native drivers compile;
+  changed TypeScript passes ESLint with zero warnings.
+- VS Code 1.140.0 `run-GSU1jO` passes X135/X269/X270 in 0.8/2.1/2.5 seconds. The exported archive
+  was inspected: ordinary log, timing trace and manifest identify the same process/policy.
+- IntelliJ `run-11382447476811663163` passes START/X135 but fails both new cases because the
+  probe's generic JButton selector also matches spinner arrows. A stable Restart control name
+  fixes the selector. `run-7594844964901809886` passes START/X269/X270 (new cases 5.4/3.7 seconds),
+  with zero IDE errors. Keep the failed receipt: selected coverage passes across two runs, not
+  one uninterrupted green run. These checks do not require a local LSP4IJ snapshot.
+- Shared catalog hash: `0556c4cfbb390d7ac38b09ba4c1e9ce7bd16897cfecf66ccb1572b8c384dac60`.
+  Initial compilation caught the TypeScript distinction between VS Code Thenable and Promise;
+  the rejection assertions now use async callbacks. No compiler API or source semantics changed.
+- Root/lang Spotless checks and `git diff --check` pass. Real start/stop tail tasks pass and
+  the corrected task graph stores and reuses the configuration cache. Standalone start/stop
+  required explicit ordering; a final thread dump confirms no tail thread survives shutdown.
+
+The development launcher now follows process-owned logs, new sessions and rotation without
+holding old file handles open. Logging instructions in the server/editor READMEs and playbook
+point to the new paths. Test and fixture JVMs keep logs under build reports.
+
+The SLF4J multiple-provider warning came from `prepareLibraryPlaybook`, whose unshaded test
+classpath contains Logback and javatools' bundled NOP provider. NOP discarded fixture logging;
+the packaged server already excludes it. The standalone JavaExec now explicitly chooses Logback
+using `slf4j.provider` and verifies the active logger before compiling. A forced fixture execution
+passes without the multiple-provider warning and writes 64 compiler trace records. This property
+is deliberately not set on Gradle test-worker bootstrap classloaders. This is a local fixture
+configuration fix, not an LSP4IJ defect.
 
 The compiler-project page visual follow-up should reduce competing actions: Sources/Libraries/
 Build import tabs, clear automatic/manual source ownership, one primary Refresh action, a separate
 Prepare action and collapsible detailed output. This is a design proposal, not implemented here.
+
+
+Extraction/checkpoint map for this batch:
+
+| Commit | Slice |
+| --- | --- |
+| `ab414c533` | Machine-local JVM validation, settings and restart controls |
+| `47f35d3df` | Process-owned logs, retention and bounded export |
+| `9b9421a74` | Shared X269/X270, native drivers, test log isolation and initial documentation |
+| `24ba7ee78` | Development log tail follows sessions/rollover, with regression tests and ordered shutdown |
+| `71df2ab9f` | Fixture JVM explicitly selects Logback; test log roots stay in reports |
+| `8ee99a697` | Passing native Restart selector and TypeScript rejection-assertion corrections |
+
+Carry the launcher compatibility work with the log layout; carry the native corrections with
+shared scenarios. The fixture provider fix is independently extractable with its generator.

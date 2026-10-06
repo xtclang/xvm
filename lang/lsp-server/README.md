@@ -607,7 +607,7 @@ The LSP server logs to both stderr (for IntelliJ's Language Servers panel) and a
 ### Log File Location
 
 ```bash
-~/.xtc/logs/lsp-server.log
+~/.xtc/logs/lsp/server-*/server.log
 ```
 
 Log messages use SLF4J with a short class name (`%logger{0}`) to identify their source:
@@ -626,10 +626,15 @@ Log messages use SLF4J with a short class name (`%logger{0}`) to identify their 
 ### Compiler queue and API timing
 
 Execution tracing is enabled at INFO in ordinary runs and tests. Each process writes JSON lines to
-`~/.xtc/logs/lsp-trace-<pid>-<process-start>.jsonl`, as well as the existing stderr/server log.
+`~/.xtc/logs/lsp/server-<pid>-<process-start>/lsp-trace-<pid>-<process-start>.jsonl`, as well as the existing stderr/server log.
 Use `XTC_LSP_TRACE_DIR` or `-Dxtc.trace.directory` to select a directory; use
 `XTC_LSP_TRACE_LEVEL=OFF` or `-Dxtc.trace.level=OFF` to disable it. System properties take precedence.
-Files roll at 20 MB with seven days/100 MB retained per process; this is not a global directory cap.
+Files roll at 10 MB by default with seven days/50 MB of archives retained per stream.
+Active files are additional. Machine-local plugin settings control these limits and keep up to
+five stopped-server sessions; pruning runs on startup and protects active processes. Use
+`XTC_LSP_LOG_DIR` or `-Dxtc.logs.directory` to change the parent directory for both logs; an
+explicit trace-directory override remains independent. Export from either plugin saves bounded
+recent tails and status, with truncation described in the ZIP manifest.
 
 Each event records sequence, wall time, process/thread, operation, URI and span/parent IDs.
 Compiler queue events include `queueSize` and the ordered `queuedJobs` list, plus separate
@@ -657,7 +662,7 @@ The IntelliJ provider forwards the trace directory/level JVM properties to its c
 ### Tailing Logs
 
 ```bash
-tail -f ~/.xtc/logs/lsp-server.log
+tail -f ~/.xtc/logs/lsp/server-*/server.log
 ```
 
 ## Code Formatting
@@ -755,7 +760,7 @@ but behaviors we must work around.
 | Issue | Impact | Workaround | Reference |
 |-------|--------|------------|-----------|
 | **Duplicate server spawning** | LSP4IJ may call `start()` concurrently for multiple `.x` files, briefly spawning extra LSP server processes | Harmless -- extras are killed within milliseconds. We guard notifications with `AtomicBoolean` to avoid duplicates | [lsp4ij#888](https://github.com/redhat-developer/lsp4ij/issues/888) |
-| **"Show Logs" link in error popups** | When the LSP server returns an error (e.g., internal exception), the error notification shows "Show Logs" / "Disable error reporting". The "Show Logs" link opens `idea.log`, **not** the LSP server log file, and may be unclickable | Tail the actual LSP log directly: `tail -f ~/.xtc/logs/lsp-server.log`. Also check the LSP Console: **View -> Tool Windows -> Language Servers -> Logs tab** | LSP4IJ limitation |
+| **"Show Logs" link in error popups** | When the LSP server returns an error (e.g., internal exception), the error notification shows "Show Logs" / "Disable error reporting". The "Show Logs" link opens `idea.log`, **not** the LSP server log file, and may be unclickable | Tail the actual LSP log directly: `tail -f ~/.xtc/logs/lsp/server-*/server.log`. Also check the LSP Console: **View -> Tool Windows -> Language Servers -> Logs tab** | LSP4IJ limitation |
 | **Error notification popup not actionable** | The `textDocument/semanticTokens Internal error` popup's links ("Show Logs", "Disable error reporting", "More") may not respond to clicks in some IntelliJ versions | The popup auto-dismisses. Check the LSP Console Logs tab for the actual server-side stack trace | LSP4IJ UI limitation |
 
 ### IntelliJ Platform Issues
@@ -772,7 +777,7 @@ but behaviors we must work around.
 
 | Log | Location | Contents |
 |-----|----------|----------|
-| LSP server log | `~/.xtc/logs/lsp-server.log` | All `XtcLanguageServer`, `TreeSitterAdapter`, `XtcParser`, `XtcQueryEngine` messages |
+| LSP server log | `~/.xtc/logs/lsp/server-*/server.log` | All `XtcLanguageServer`, `TreeSitterAdapter`, `XtcParser`, `XtcQueryEngine` messages |
 | IntelliJ `idea.log` | Sandbox `log/idea.log` (path shown at `runIde` startup) | Platform errors, plugin loading, EDT violations |
 | LSP Console (IDE) | **View -> Tool Windows -> Language Servers -> Logs** | JSON-RPC traces, server stderr |
 | Gradle console | Terminal running `runIde` | Build output + tailed LSP log (real-time) |
@@ -785,7 +790,7 @@ contain the actual LSP server error. Instead:
 1. Open the **Language Servers** tool window (bottom panel, next to Terminal)
 2. Select **Ecstasy Language Server** -> **Logs** tab
 3. Look for `SEVERE:` or stack traces in the log output
-4. Or tail the server log directly: `tail -f ~/.xtc/logs/lsp-server.log`
+4. Or tail the server log directly: `tail -f ~/.xtc/logs/lsp/server-*/server.log`
 
 **When IntelliJ complains about "slow operations":**
 
