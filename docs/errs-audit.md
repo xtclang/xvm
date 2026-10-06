@@ -1,3 +1,9 @@
+**Compiler default (2026-10-06):** compiler mode now ships by default in `gradle.properties`,
+packaged server metadata and missing-metadata fallbacks. Explicit Tree-sitter/mock builds remain
+available. The three adapter-selection regressions and a no-override IntelliJ START/X135 run pass.
+Earlier entries describing Tree-sitter as the shipped default are historical. See the
+[default checkpoint](errs-integration-plan.md#compiler-default-2026-10-06).
+
 **Machine-local JVM settings and log support (2026-10-06):** both clients now validate JVM tuning
 and log retention before replacing launch settings. Saving requires an explicit restart. Server
 logs are isolated by PID/start time; export creates a bounded ZIP of recent logs, timing traces and

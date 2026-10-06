@@ -286,7 +286,7 @@ Generated files:
 │  │                  Adapter (interface)                    │    │
 │  │  ┌──────────────┬──────────────┬──────────────┐         │    │
 │  │  │ Mock         │ TreeSitter   │ Xdk          │         │    │
-│  │  │ (regex)      │ (syntax)     │ (future)     │         │    │
+│  │  │ (regex)      │ (syntax)     │ (compiler)   │         │    │
 │  │  └──────────────┴──────────────┴──────────────┘         │    │
 │  └─────────────────────────────────────────────────────────┘    │
 └─────────────────────────────────────────────────────────────────┘
@@ -295,17 +295,17 @@ Generated files:
 ### LSP Adapter Selection
 
 ```bash
-# Tree-sitter (default) - syntax-aware features and workspace index
+# Tree-sitter (explicit syntax-only alternative) - syntax-aware features and workspace index
 ./gradlew :lang:lsp-server:fatJar -Plsp.adapter=treesitter
 
 # Mock - regex-based, for testing without native libraries
 ./gradlew :lang:lsp-server:fatJar -Plsp.adapter=mock
 
-# XTC compiler diagnostics and module semantic features, with bundled XDK modules
+# Compiler (default) - diagnostics and semantic features, with bundled XDK modules
 ./gradlew :lang:lsp-server:fatJar -Plsp.adapter=compiler
 ```
 
-Compiler mode is opt-in. Its bounded semantic features and dependency host API are described in the
+Compiler mode is the default. Its bounded semantic features and dependency host API are described in the
 [LSP server README](./lsp-server/README.md); the capability matrix below records supported requests
 and remaining project/workspace limits. No external XDK installation is required.
 
