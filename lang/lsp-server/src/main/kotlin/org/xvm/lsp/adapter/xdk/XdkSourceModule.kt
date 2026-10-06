@@ -93,9 +93,10 @@ internal class XdkProject(
         ordered = result.toList()
     }
 
-    fun scope(uri: String): String? {
-        val file = XdkSources.file(uri) ?: return null
-        return modules.values
+    fun scope(uri: String): String? = XdkSources.file(uri)?.let(::scope)
+
+    fun scope(file: File): String? =
+        modules.values
             .filter {
                 file == it.root ||
                     file
@@ -103,7 +104,6 @@ internal class XdkProject(
                         .startsWith(File(it.root.parentFile, it.root.nameWithoutExtension).toPath())
             }.maxByOrNull { it.root.path.length }
             ?.uri
-    }
 
     fun resourceScopes(uri: String): Set<String> {
         val file = XdkSources.file(uri)?.toPath() ?: return emptySet()
@@ -122,6 +122,11 @@ internal class XdkProject(
             }.toSet()
 
     fun sameConfiguration(other: XdkProject): Boolean = configuration == other.configuration
+
+    /** Added, removed and changed source inputs, independent of presentation order. */
+    fun changedModules(other: XdkProject): Set<String> =
+        ((configuration - other.configuration) + (other.configuration - configuration))
+            .mapTo(linkedSetOf()) { it.name }
 
     /** Complete configured source graph, including modules that have never been opened. */
     fun buildOrder(): List<XdkSourceModule> = ordered
