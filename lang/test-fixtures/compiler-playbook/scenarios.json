@@ -180,7 +180,10 @@
         "maxFileMb": 1,
         "totalSizeMb": 3,
         "retainedSessions": 2
-      }
+      },
+      "startupFailureOptions": [
+        "-Xmx1K"
+      ]
     }
   },
   "cases": {
@@ -8470,6 +8473,24 @@
       "manual": [
         "Choose a destination and cancel through the native export save dialog; inspect the ZIP in the operating system archive viewer."
       ],
+      "values": {},
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X271": {
+      "title": "offline log export after stopping the server preserves the owning session",
+      "manual": [],
+      "values": {},
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X272": {
+      "title": "failed JVM launch exports support details and corrected settings recover",
+      "manual": [],
       "values": {},
       "intellij": {
         "coverage": "full",

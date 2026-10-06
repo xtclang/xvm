@@ -37,7 +37,7 @@ owner tests use application-free indicators; shared X260 separately exercises th
 Cancel button. X261/X262 cover failed/invalid Gradle output and retry. See the
 [shared import receipt](../../docs/errs-integration-plan.md#shared-compiler-import-acceptance-and-remaining-ui-work-2026-10-05).
 
-The native suite uses the shared 275-scenario catalog (X1–X270, CFG1–CFG3, 7a.8/7a.9).
+The native suite uses the shared 277-scenario catalog (X1–X272, CFG1–CFG3, 7a.8/7a.9).
 It launches an isolated Community-capable IntelliJ environment with Ultimate disabled. Selected
 runs preserve explicit `partial` statuses where LSP4IJ cannot exercise a native feature; neither
 passing protocol assertions nor an unselected scenario count as full UI acceptance. The
@@ -905,12 +905,23 @@ Legacy shared logs and the IDE's own protocol console are outside this policy.
 
 **Tools → Export Ecstasy Server Logs** saves a ZIP of recent log tails and current status from
 the connected server (at most eight 512 KiB tails, 4 MiB log input). It may contain local paths and
-logged diagnostics; it does not collect source files. Export requires a running server. Shared
-X269/X270 check restart boundaries, invalid settings, retention/status and installed export.
-Native OS save-dialog layout, fresh-IDE persistence and rollover stress remain manual checks.
+logged diagnostics; it does not collect source files. When stopped, export uses only this project’s
+last recorded launch, including up to 64 KiB of launcher output. Its manifest identifies offline
+mode and truncation and lists included files; another project’s logs are never substituted. Shared
+X269–X272 cover settings, restart, live/offline export and recovery from an intentional failed JVM
+launch. Full editor exit/reopen has a separate two-process persistence test. Native OS save-dialog
+layout and rollover stress remain manual checks. New acceptance results are tracked in the
+[UI completion batch](../../docs/errs-integration-plan.md#ui1ui7-completion-batch-2026-10-06).
 See the [contract and receipt](../../docs/errs-integration-plan.md#machine-local-jvm-settings-and-log-support-ui5ui6-2026-10-06).
 
 Runtime/log selected acceptance: VS Code `run-GSU1jO` passes X135/X269/X270. IntelliJ
 `run-11382447476811663163` passes START/X135 and exposes a test selector that also matched
 spinner arrows; corrected `run-7594844964901809886` passes START/X269/X270, with zero IDE errors.
 The failed receipt is retained. This is selected acceptance, not a complete 275-case rerun.
+
+
+The UI completion gate includes `--tests '*CompilerPlaybookTest.settingsPersistence'` on
+`testCompilerPlaybook`, with the usual compiler adapter and both lang inclusion flags. It starts
+and completely exits two IDE processes using one disposable project/profile. See the
+[settings acceptance steps](../doc/manual-test-plan.md#settings-persistence-and-layout-acceptance-ui1ui7)
+for exact commands and layout checks.
