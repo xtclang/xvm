@@ -223,7 +223,7 @@ The abstract base class provides default implementations for all methods that lo
 > **Note:** All `./gradlew :lang:*` commands require `-PincludeBuildLang=true -PincludeBuildAttachLang=true` when run from the project root.
 
 ```bash
-# Build with Tree-sitter adapter (default)
+# Build with the explicit Tree-sitter adapter (compiler is now the default)
 ./gradlew :lang:lsp-server:fatJar
 
 # Build with Mock adapter (for testing without native libraries)

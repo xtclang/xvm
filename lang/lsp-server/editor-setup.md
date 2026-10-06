@@ -5,7 +5,7 @@ text editors like Neovim, Emacs, or VS Code -- without using the IntelliJ plugin
 
 ## Prerequisites
 
-- **Java 25+** is required for the default tree-sitter adapter (it uses the
+- **Java 25+** is required for the server, including the optional tree-sitter adapter (which uses the
   Foreign Function & Memory API). Verify with `java -version`.
 - If you don't have Java 25, you can build with the regex-based mock adapter
   instead (see the build step below).

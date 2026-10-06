@@ -413,10 +413,10 @@ diagnostics/folds. The normal feature readiness wait is not used as that evidenc
 > **Note:** All `./gradlew :lang:*` commands require `-PincludeBuildLang=true -PincludeBuildAttachLang=true` when run from the project root.
 
 ```bash
-# Build with tree-sitter adapter (the shipped default)
+# Build with the explicit tree-sitter syntax-only adapter
 ./gradlew :lang:lsp-server:build -Plsp.adapter=treesitter
 
-# Or opt into XdkAdapter - compiler diagnostics and semantic IDE features
+# Build the default XdkAdapter - compiler diagnostics and semantic IDE features
 ./gradlew :lang:lsp-server:build -Plsp.adapter=compiler
 
 # Or with mock adapter (no native dependencies)
@@ -2712,7 +2712,7 @@ sections instead of silently counting provider responses as complete UI acceptan
 | Semantic tokens | X41/X126, existing token tests; section 19 | Inspect theme fallback, enable/disable behavior, UTF-16/range clipping, edits/close/restart with old result IDs and refresh. Audit per-token claims (e.g. deprecated tags) against actual modifiers rather than claiming every row for every adapter. |
 | Rename, actions and resource edits | X53–X63/X102–X105/X109–X122/X127–X130 | Collision/capture refusals, cancellation, stale documents, graph persistence, closed consumers, one Undo/Redo and source text plus filesystem bytes; see the batch matrix. Explorer drag/drop and arbitrary third-party edit application are separate host paths. |
 | Discovery, paths and build settings | CFG1–CFG3/X99/X100/X124/X129/X134 | Multiple roots, Unicode/space-containing paths, symlinks, project close/reopen and external shared watch leases. Gradle-import failure, missing generated resources and no-Gradle projects must retain usable last-valid inputs and show actionable status. |
-| Generic editor integration | Separate sections 1, 16, 17 and VS Code V-cases | File association, TextMate fallback, comment/uncomment, templates/snippets, keybindings, plugin reload and Community-only startup. Compiler shared scenarios do not replace these checks or a default Tree-sitter smoke run. |
+| Generic editor integration | Separate sections 1, 16, 17 and VS Code V-cases | File association, TextMate fallback, comment/uncomment, templates/snippets, keybindings, plugin reload and Community-only startup. Compiler shared scenarios do not replace these checks or an explicit Tree-sitter smoke run. |
 | Reliability and configuration | X29/X30/X51/X57 plus process/retention suites | Cross-platform/remote filesystems, large-workspace latency/heap bounds, prolonged run/stop/crash cycles, cancellation under queue pressure, and UI1–UI7 settings acceptance remain explicit L82 gates. |
 
 A catalog entry's `coverage: full` means the driver implements that **case's stated assertions**;
@@ -2722,7 +2722,7 @@ drivers as they are implemented; keep genuine visual/OS/runtime checks explicitl
 
 ### Semantic Tokens: Current Scope and Follow-ups
 
-Tree-sitter supplies the default syntax-based tokens; broader heuristic usage-site classification
+Tree-sitter supplies syntax-based tokens when explicitly selected; broader heuristic usage-site classification
 remains a possible enhancement. The opt-in compiler adapter now supplies resolved-name tokens and
 modifiers independently, with no Tree-sitter fallback or combined adapter. Broader syntax coverage
 must preserve the distinction between compiler facts and lexical coloring.
