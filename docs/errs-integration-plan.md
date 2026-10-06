@@ -11943,3 +11943,20 @@ late status callbacks after a connection or settings-owner change.
 New regression tests cover retired callbacks, saved launch restoration, isolation from other project
 logs, trace ownership, symlinks, source exclusion, file truncation and export after pruning/failure.
 Execution is still deferred to the combined batch gate.
+
+
+### UI2/UI5 owner and trust follow-up
+
+IntelliJ's direct Gradle import now checks native project trust before scheduling any build process.
+Untrusted import leaves the accepted model untouched. This matches the VS Code import guard;
+VS Code also explicitly declares untrusted/virtual workspaces unsupported in its manifest.
+Settings status callbacks compare their original connection and saved preferences before publishing.
+This prevents a reply from a replaced server from appearing as the current effective configuration.
+The report includes saved machine runtime settings separately from actual running JVM/log values.
+
+The new two-process settings-persistence harnesses reuse their isolated project/profile after a full
+IDE exit. They check machine JVM/log settings, project source graph, service preferences and new
+server PID; VS Code also checks user versus workspace inlay precedence. IntelliJ uses the shipping
+settings pages and verifies that untrusted Gradle import is refused without replacing the model.
+Shared X271/X272 exercise stopped/failed-launch export and recovery in both installed clients.
+All new acceptance remains pending execution; no previous green receipt establishes these cases.
