@@ -30,7 +30,13 @@ object CompilerSettingsPage {
                 yield(component)
                 if (component is Container) component.components.forEach { yieldAll(descendants(it)) }
             }
-        descendants(page.createComponent()).filterIsInstance<JCheckBox>().single().isSelected = true
+        descendants(page.createComponent())
+            .filterIsInstance<JCheckBox>()
+            .single {
+                it.text ==
+                    "Use Gradle model or automatic source discovery"
+            }.isSelected =
+            true
         if (page.isModified()) page.apply()
         CompilerBuildModel.publish(project)
         return CompilerBuildModel.describe(project)
@@ -64,13 +70,17 @@ object CompilerSettingsPage {
                 yield(component)
                 if (component is Container) component.components.forEach { yieldAll(descendants(it)) }
             }
-        val discovery = descendants(component).filterIsInstance<JCheckBox>().single()
+        val discovery =
+            descendants(component).filterIsInstance<JCheckBox>().single {
+                it.text ==
+                    "Use Gradle model or automatic source discovery"
+            }
         check(!discovery.isSelected)
         discovery.doClick()
         check(page.isModified())
         page.reset()
         check(!page.isModified() && !discovery.isSelected)
-        val table = descendants(component).filterIsInstance<JTable>().single()
+        val table = descendants(component).filterIsInstance<JTable>().single { it.name == "Ecstasy source modules" }
         val before =
             GlobalLanguageServerSettings
                 .getInstance()
@@ -130,7 +140,7 @@ object CompilerSettingsPage {
                 yield(component)
                 if (component is Container) component.components.forEach { yieldAll(descendants(it)) }
             }
-        val table = descendants(page.createComponent()).filterIsInstance<JTable>().single()
+        val table = descendants(page.createComponent()).filterIsInstance<JTable>().single { it.name == "Ecstasy source modules" }
         val original = table.model.getValueAt(0, 3)
         table.model.setValueAt("[]", 0, 3)
         page.reset()
