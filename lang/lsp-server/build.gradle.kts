@@ -45,19 +45,18 @@ plugins {
 // =============================================================================
 // The LSP server can use different parsing backends:
 //
-//   treesitter  - Tree-sitter parsing (DEFAULT, syntax-level intelligence, needs native lib)
-//   compiler    - The XTC compiler with bundled XDK libraries (diagnostics and semantic navigation)
+//   treesitter  - Tree-sitter parsing (syntax-level intelligence, needs native lib)
+//   compiler    - The XTC compiler with bundled XDK libraries (DEFAULT, diagnostics and semantics)
 //   mock        - Regex-based parsing (no native dependencies, for testing/fallback)
 //
 // Set via Gradle property: -Plsp.adapter=mock (to override default)
 // Or in gradle.properties:  lsp.adapter=mock
 //
-// Default is 'treesitter' which provides syntax-aware features (native library bundled).
-// Use 'mock' for basic regex-based functionality if tree-sitter has issues.
+// Default is 'compiler'. Tree-sitter and mock remain explicit build-time alternatives.
 // =============================================================================
 // Resolve via xdkProperties which reads from the composite root's gradle.properties
 // (project.findProperty() only sees the included build's own gradle.properties, which doesn't exist)
-val lspAdapter: String = xdkProperties.stringValue("lsp.adapter", "treesitter")
+val lspAdapter: String = xdkProperties.stringValue("lsp.adapter", "compiler")
 val lspSemanticTokens: String = xdkProperties.stringValue("lsp.semanticTokens", "false")
 
 // Log level: -Plog=DEBUG or XTC_LOG_LEVEL=DEBUG (default: INFO)

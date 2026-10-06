@@ -1,7 +1,7 @@
 # Ecstasy LSP Server
 
 Compiler mode provides compiler diagnostics and semantic editor features across configured source
-and binary dependencies. Tree-sitter remains the default shipped adapter. The
+and binary dependencies. The compiler is the default shipped adapter. Tree-sitter remains an explicit syntax-only alternative. The
 [completion checklist](../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist)
 records bounded implementations, deliberate refusals and the remaining runtime/release work.
 The [L82 checkpoint](../../docs/errs-integration-plan.md#l82-combined-regression-and-retention-checkpoint-2026-10-05)
@@ -58,7 +58,7 @@ The LSP server uses a pluggable adapter pattern to support different parsing bac
 │               │   │               │   │               │
 │ - Regex-based │   │ - Tree-sitter │   │ - Compiler    │
 │ - For testing │   │ - Syntax AST  │   │ - Diagnostics │
-│               │   │ - Default     │   │ - Semantics   │
+│               │   │               │   │ - Default     │
 └───────────────┘   └───────────────┘   └───────────────┘
 ```
 
@@ -72,13 +72,13 @@ The selection is embedded in `lsp-version.properties` inside the JAR.
 | Adapter | Value | Description |
 |---------|-------|-------------|
 | **Mock** | `mock` | Regex-based parsing. No native dependencies. Good for testing. |
-| **Tree-sitter** (default) | `treesitter` | AST-based parsing using tree-sitter. Requires native library. |
-| **XDK** | `compiler` | Compiler diagnostics, semantic navigation and hierarchy across source graphs and binary dependencies. The full matching XDK library set is bundled. |
+| **Tree-sitter** | `treesitter` | AST-based parsing using tree-sitter. Requires native library. |
+| **XDK** (default) | `compiler` | Compiler diagnostics, semantic navigation and hierarchy across source graphs and binary dependencies. The full matching XDK library set is bundled. |
 
 ### Build Commands
 
 ```bash
-# Build with Tree-sitter adapter (default)
+# Build with the compiler adapter and bundled XDK (default)
 ./gradlew :lang:lsp-server:fatJar
 
 # Build with Mock adapter (no native dependencies)
@@ -88,7 +88,7 @@ The selection is embedded in `lsp-version.properties` inside the JAR.
 ./gradlew :lang:lsp-server:fatJar -Plsp.adapter=compiler
 
 # Run IntelliJ with specific adapter
-./gradlew :lang:intellij-plugin:runIde -Plsp.adapter=treesitter
+./gradlew :lang:intellij-plugin:runIde -Plsp.adapter=compiler
 ```
 
 ### Setting a Default Adapter
@@ -96,7 +96,7 @@ The selection is embedded in `lsp-version.properties` inside the JAR.
 Create or edit `gradle.properties`:
 
 ```properties
-lsp.adapter=treesitter
+lsp.adapter=compiler
 ```
 
 ### Verifying the Active Backend
@@ -238,7 +238,7 @@ single-source inputs. Source roots use the normal file/same-name-directory modul
 
 The canonical feature matrix lives in
 [`../doc/plans/plan-ide-integration.md`](../doc/plans/plan-ide-integration.md#adapter-capability-matrix).
-At a high level, the current tree-sitter-backed default provides:
+At a high level, the explicit Tree-sitter backend provides:
 
 - document symbols, same-file navigation, workspace-symbol search, and best-effort cross-file navigation
 - context-aware completion
@@ -424,7 +424,7 @@ Other LSP clients can send the same `{ "sourceModules": [...] }` object in
 `workspace/didChangeConfiguration` with `{ "xtc": { "compiler": { "sourceModules": [...] } } }`.
 Absent settings preserve the current host graph; late replies and replies after shutdown are ignored.
 This configures source graphs only; binary artifacts/source indices still use the host API below.
-Tree-sitter remains the default and ignores compiler settings.
+The explicit Tree-sitter backend ignores compiler settings.
 
 ### Dependency artifacts supplied by a host
 
@@ -560,8 +560,8 @@ included build, which has no `gradle.properties` of its own.
 | Property | Default | Description |
 |----------|---------|-------------|
 | `log` | `INFO` | Log level for XTC LSP/DAP servers. Valid: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR` |
-| `lsp.adapter` | `treesitter` | Parsing backend. Valid: `treesitter`, `mock`, `compiler` |
-| `lsp.semanticTokens` | `true` | Enable semantic token highlighting (tree-sitter lexer-based) |
+| `lsp.adapter` | `compiler` | Parsing backend. Valid: `treesitter`, `mock`, `compiler` |
+| `lsp.semanticTokens` | `true` | Enable semantic token highlighting for the selected adapter |
 | `includeBuildLang` | `false` | Include `lang` as a composite build (IDE visibility, task addressability) |
 | `includeBuildAttachLang` | `false` | Wire lang lifecycle tasks to root build (requires `includeBuildLang=true`) |
 | `lsp.buildSearchableOptions` | `false` | Build IntelliJ searchable options index |
