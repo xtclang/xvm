@@ -288,7 +288,6 @@ public class AssertStatement
         boolean      fDebug = isDebugOnly();
 
         if (isLinktimeConditional()) {
-            // TODO GG: create an IfStmtAST based on a "named" condition
             // for "assert:debug", the assertion only is evaluated if the "debug" named condition
             // exists; similarly, for "assert:test", it is evaluated only if "test" is defined
             String sCond = fDebug ? "debug" : "test";

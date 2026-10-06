@@ -293,12 +293,13 @@ public class TerminalTypeConstant
                  TypeParameter,
                  FormalTypeChild -> 0;
 
-            // examine the structure to determine if it represents a class or interface (TODO GG - is this comment just wrong?)
-            case Class -> ((ClassStructure) ((ClassConstant) constant).getComponent()).getTypeParamCount();
+            case Class -> ((ClassStructure) ((ClassConstant) constant).getComponent())
+                        .getTypeParamCount();
 
             case ThisClass,
                  ParentClass,
-                 ChildClass -> ((ClassStructure) ((PseudoConstant) constant).getDeclarationLevelClass().getComponent()).getTypeParamCount();
+                 ChildClass -> ((ClassStructure) ((PseudoConstant) constant).getDeclarationLevelClass()
+                        .getComponent()).getTypeParamCount();
 
             default -> throw new IllegalStateException("unexpected defining constant: " + constant);
         };
@@ -458,7 +459,6 @@ public class TerminalTypeConstant
         case ThisClass:
         case ParentClass:
         case ChildClass:
-            // TODO GG are these even possible here?
         case UnresolvedName:
         default:
             throw new IllegalStateException("unexpected defining constant: " + constant);
@@ -493,7 +493,6 @@ public class TerminalTypeConstant
         case ThisClass:
         case ParentClass:
         case ChildClass:
-            // TODO
         case UnresolvedName:
         default:
             throw new IllegalStateException("unexpected defining constant: " + constant);

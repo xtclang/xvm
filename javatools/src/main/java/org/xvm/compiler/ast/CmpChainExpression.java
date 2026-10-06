@@ -522,22 +522,6 @@ public class CmpChainExpression
             }
         }
 
-// TODO GG
-//        switch (operator.getId()) {
-//        case COMP_EQ:
-//            typeTrue  = typeNull;
-//            typeFalse = typeTarget.removeNullable();
-//            break;
-//
-//        case COMP_NEQ:
-//            typeTrue  = typeTarget.removeNullable();
-//            typeFalse = typeNull;
-//            break;
-//        }
-//
-//        exprTarget.narrowType(ctx, Branch.WhenTrue,  typeTrue);
-//        exprTarget.narrowType(ctx, Branch.WhenFalse, typeFalse);
-
         return true;
     }
 
