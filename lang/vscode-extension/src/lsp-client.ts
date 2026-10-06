@@ -16,6 +16,8 @@ import { formattingSettings, nativeFormatOnSave, readServiceSettings } from './e
 import { synchronizationOptions } from './service-settings';
 import { compilerBuildModels } from './compiler-paths';
 import { BuildModel } from './build-model';
+import { LibraryOptions } from './library-configuration';
+import { libraryOptions } from './library-settings';
 import { buildJvmArgs, findJavaExecutable } from './java';
 import { compilerSourceModules, moveWithConfiguration, renameWithConfiguration } from './rename-proposal';
 import { updateStatusBar } from './status-bar';
@@ -37,8 +39,8 @@ export function getClient(): LanguageClient | undefined {
     return client;
 }
 
-function compilerConfiguration(): { sourceModules: unknown[] | null; buildModels: BuildModel[] } {
-    return { sourceModules: compilerSourceModules(), buildModels: compilerBuildModels() };
+function compilerConfiguration(): { sourceModules: unknown[] | null; buildModels: BuildModel[]; libraries: LibraryOptions } {
+    return { sourceModules: compilerSourceModules(), buildModels: compilerBuildModels(), libraries: libraryOptions() };
 }
 
 export async function updateEditorConfiguration(): Promise<void> {
