@@ -6,17 +6,19 @@ import com.intellij.openapi.components.SerializablePersistentStateComponent
 import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
+import com.intellij.util.xmlb.annotations.OptionTag
 
 /** Application-owned and excluded from Settings Sync and project files. */
 @Service(Service.Level.APP)
 @State(name = "EcstasyServerRuntime", storages = [Storage(value = "ecstasy-server-runtime.xml", roamingType = RoamingType.DISABLED)])
 internal class ServerRuntimeSettings : SerializablePersistentStateComponent<ServerRuntimeSettings.Options>(Options()) {
     data class Options(
-        @JvmField val vmOptions: String = "",
-        @JvmField val logHistoryDays: Int = 7,
-        @JvmField val logMaxFileMb: Int = 10,
-        @JvmField val logTotalSizeMb: Int = 50,
-        @JvmField val logRetainedSessions: Int = 5,
+        // Explicit bindings preserve immutable fields in IntelliJ's XML serializer.
+        @field:OptionTag @JvmField val vmOptions: String = "",
+        @field:OptionTag @JvmField val logHistoryDays: Int = 7,
+        @field:OptionTag @JvmField val logMaxFileMb: Int = 10,
+        @field:OptionTag @JvmField val logTotalSizeMb: Int = 50,
+        @field:OptionTag @JvmField val logRetainedSessions: Int = 5,
     ) {
         fun arguments(): List<String> =
             ServerJvmOptions.validate(
