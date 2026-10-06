@@ -1,3 +1,24 @@
+**Platform implicit-package navigation repair (2026-10-06):** the full eleven-module platform
+graph compiled cleanly, but references failed in `XdkProjectQueries.navigation`: it required a
+filename on every semantic view. Implicit directories such as `common/tools` contribute synthetic
+`package tools {}` syntax without a filename. This is an adapter graph-construction bug, not an
+Ecstasy compiler or LSP4IJ failure. Keep those views' shared semantic facts when joining models,
+then omit only unnamed views from the file-to-model index. Named views still require an actual
+source URI; no fake filename or broad exception suppression was added.
+
+The new `XdkProjectQueryTest` case fails before this fix and passes afterward, asserting both
+root/companion references and the companion's workspace symbol. The selected adapter/boundary
+classes pass 30 tests; 14 API/ownership tests also pass, with zero failures/errors/skips. Shared
+X117 checks the same real-file references before its existing native Rename/Undo sequence:
+IntelliJ `run-5458566801610906172` passes START/X117 on released LSP4IJ 0.21.0 with zero IDE
+errors; VS Code 1.140.0 `run-Cao6we` passes X117 with zero failures. The full catalog was not
+rerun for this fix. The real platform recheck passes 11 modules and 49 clean diagnostic reports,
+six references/callers, five subtypes, four implementations, binary-source navigation, completion,
+signature help, error recovery and three versioned rename edits. Source hashes remain unchanged.
+Local evidence is under `lang/lsp-server/build/reports/platform-demo/2026-10-06-final/`; the
+original failed probe and fail-before regression remain under `2026-10-06/`. See [demo.md](../demo.md)
+for the updated manual tour and its distinction from packaged-server acceptance.
+
 **Build/test artifact retention (2026-10-06):** cleanup reduced this checkout from approximately
 23 GiB to 13 GiB while preserving all Git worktrees and compact test receipts. Gradle editor tests
 now retain five completed payloads, protect pinned/unfinished runs and remove disposable IntelliJ
