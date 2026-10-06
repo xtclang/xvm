@@ -51,7 +51,7 @@ internal object ExecutionTrace {
                     "sequence" to events.incrementAndGet(),
                     "time" to Instant.now().toString(),
                     "pid" to pid,
-                    "thread" to thread.name,
+                    "thread" to thread.name.ifEmpty { "${if (thread.isVirtual) "virtual" else "platform"}-${thread.threadId()}" },
                     "threadId" to thread.threadId(),
                     "id" to span.id,
                     "parent" to span.parent,
