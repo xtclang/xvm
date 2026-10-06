@@ -698,7 +698,9 @@ module.exports = grammar({
         ),
         // Angle bracket type list: <> or <Type> or <Type1, Type2> - used in method type signatures
         angle_bracket_type_list: $ => seq('<', commaSep($.type_expression), $._type_gt),
-        array_type: $ => prec.left(seq($._non_bi_type, '[', ']')),
+        // One `?` per dimension, as in the reference parser: `Int[]`, `Int[?]`, `Int[?,?]`
+        array_type: $ => prec.left(seq($._non_bi_type, '[', optional($._array_dims), ']')),
+        _array_dims: $ => seq('?', repeat(seq(',', '?'))),
         nullable_type: $ => prec.left(seq($._non_bi_type, '?')),
         // Non-null type modifier (no auto-narrowing): Type!
         non_null_type: $ => prec.left(seq($._non_bi_type, token.immediate('!'))),
@@ -1338,7 +1340,7 @@ module.exports = grammar({
         // Array type literal as expression - for type comparisons like: type == Byte[]
         // Also supports generic array types: type == Map<String, Int>[]
         // Also supports nullable array types: Element?[]
-        array_type_literal: $ => seq(choice($.generic_type, $.type_name), optional('?'), '[', ']'),
+        array_type_literal: $ => seq(choice($.generic_type, $.type_name), optional('?'), '[', optional($._array_dims), ']'),
 
         // new Type(args), new Type[size], new Type[], new Type[size](initializer), or expr.new(args)
         // Also supports anonymous inner classes: new Type(args) { body }

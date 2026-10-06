@@ -96,6 +96,9 @@
 #    - Array construction with one size per dimension: `new Int[7, (i) -> -1]`
 #      in errors.x. The reference parser reads the brackets as an argument
 #      list; multi-dimensional arrays not being implemented is a compiler error.
+#      Array types likewise take one `?` per dimension (`Int[?]`, `Int[?,?]`),
+#      where only `Int[]` parsed before. Multi-index access (`m[i, j]`) already
+#      parsed. No swept file uses these types, so the adapter test covers them.
 #    - errors.x also declares `Int _ = node.valDerivedPro;`: the typed variable
 #      declaration now accepts the `_` wildcard name, as the val/var form did.
 #    The sweep now reads maintained sources only. It skips build output,

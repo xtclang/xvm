@@ -361,20 +361,25 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
         }
 
         /**
-         * Array construction with one size per dimension (issue #453), from
-         * `manualTests/errors.x`. The reference parser reads the brackets as an argument
-         * list; that multi-dimensional arrays are not implemented yet is a compiler error.
+         * Multi-dimensional arrays (issue #453): one size per dimension in construction, as in
+         * `manualTests/errors.x`, one `?` per dimension in array types, and one index per
+         * dimension in access. The reference parser accepts all of them; that multi-dimensional
+         * arrays are not implemented yet is a compiler error.
          */
         @Test
-        @DisplayName("should parse array construction with several dimensions")
-        fun shouldParseMultiDimensionalArrayConstruction() {
+        @DisplayName("should parse multi-dimensional array construction, types and access")
+        fun shouldParseMultiDimensionalArrays() {
             val uri = freshUri()
             val source =
                 """
                 module myapp {
                     void run() {
                         Int[] array = new Int[7, (i) -> -1];
-                        Int[] sized = new Int[3];
+                        Int[?] sized = new Int[3];
+                        Int[?,?] matrix = new Int[2, 3]((i, j) -> i + j);
+                        Int[?,?,?] cube = new Int[2, 3, 4];
+                        Type t = Int[?,?];
+                        matrix[0, 1] = matrix[1, 2];
                     }
                 }
                 """.trimIndent()
