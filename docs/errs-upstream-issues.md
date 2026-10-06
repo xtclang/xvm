@@ -61,6 +61,39 @@ local plugin. The Marketplace default remains 0.21.0, so its workarounds remain 
 if the local snapshot passes. UP02/UP04–UP06/UP09–UP11/UP14/UP18/UP21/UP25/UP26 are not repaired
 by these nine commits; UP20 concerns the test Driver, UP15 the server's LSP4J and UP17 the platform.
 
+### Local plugin acceptance, 2026-10-06
+
+XVM checkpoint `6ece0efab` adds the explicit `-Plsp4ijPlugin=/absolute/built/plugin/directory`
+override, using Gradle `localPlugin` and Starter's local installation. The Marketplace pin stays
+0.21.0. See the [command and input contract](../lang/intellij-plugin/TESTING.md#lsp4ij-in-tests).
+Compilation and configuration-cache reuse pass. ZIP metadata extraction in the Gradle plugin
+invalidated the cache with deleted temporary paths, so the override consumes upstream's existing
+`prepareSandbox` directory instead; no custom binary extraction task is added.
+
+The native report verifies loaded 0.21.1-SNAPSHOT and records directory-content SHA-256
+`c43708c3fbd6b503076047e49546e817d58a6568b3845ec663a3f9cc21d2f925` at local upstream head
+`2ccc5a30`. This differs from the distribution ZIP checksum because it hashes sorted relative
+filenames and file contents, without ZIP metadata.
+
+| Receipt | Executed acceptance | Result |
+| --- | --- | --- |
+| `run-12526622727281847735` | CFG1–CFG3, X130, X136, X138/X139, X146, X162, X181–X185, X259 | 15 shared cases plus START pass; zero IDE errors |
+| `run-13248317061307858623` | Edits and close/reopen during startup | START/STARTUP pass; zero IDE errors |
+| `run-10384868562973039188` | Two projects, independent children, disposal and surviving-project requests | START/START_PROJECTS pass; zero IDE errors |
+
+These runs establish integration compatibility with the repaired build, including formatting/save,
+directory Move/Undo/Redo, settings replacement/reset, quick-fix discovery, dependency refresh and
+connection disposal. **XVM's release workarounds remain enabled.** Therefore the results do not
+independently prove each upstream implementation can replace its bridge. The 53 upstream tests do
+exercise upstream implementations directly; both forms of evidence are needed, and neither is a
+full upstream suite or long desktop soak.
+
+Remove bridges one at a time only after the chosen release contains the corresponding repair and
+the register's native gate passes without that bridge. UP12 removal must also preserve our current
+text/version guard; UP13 must retain Ecstasy's build-model augmentation; UP07 requires both result-ID
+and lazy-fix behavior. UP03's generic UI-thread wait remains open even on the local build. No
+production workaround was removed, no dependency default changed, and nothing was pushed upstream.
+
 ## Register
 
 “Bridged” means this branch has a local workaround, whose regression must pass before its
