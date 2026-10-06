@@ -827,3 +827,22 @@ sources; available debug text is checked but is not a complete binary/source equ
 Project settings survive server restart; invalid replacements retain accepted compiler inputs.
 Shared X266–X268 and their [batch receipt](../../docs/errs-integration-plan.md#ordered-libraries-and-attached-sources-batch-ui3ui4ui6-2026-10-06)
 record automated coverage and the remaining acceptance boundaries.
+
+
+### Machine-local JVM tuning and log support
+
+Open **Settings → Ecstasy Server Runtime and Logs**. Enter one supported JVM option per line
+(e.g. `-Xmx2G`). Apply saves locally, outside project files and Settings Sync; the explicit Restart
+button restarts running Ecstasy servers in this IDE using the saved settings.
+
+Retention defaults: 7 days, 10 MB/file, 50 MB archived per stream and five stopped-server sessions.
+Logs live under `~/.xtc/logs/lsp/server-<PID>-<start-time>/`; active files are additional to archive
+caps, active processes are protected and stopped sessions are pruned on the next server start.
+Legacy shared logs and the IDE's own protocol console are outside this policy.
+
+**Tools → Export Ecstasy Server Logs** saves a ZIP of recent log tails and current status from
+the connected server (at most eight 512 KiB tails, 4 MiB log input). It may contain local paths and
+logged diagnostics; it does not collect source files. Export requires a running server. Shared
+X269/X270 check restart boundaries, invalid settings, retention/status and installed export.
+Native OS save-dialog layout, fresh-IDE persistence and rollover stress remain manual checks.
+See the [contract and receipt](../../docs/errs-integration-plan.md#machine-local-jvm-settings-and-log-support-ui5ui6-2026-10-06).
