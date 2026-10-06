@@ -1,6 +1,8 @@
 import { setTimeout as delay } from 'node:timers/promises';
 import type Mocha from 'mocha';
 
+export const PLAYBOOK_WAIT_MS = 30_000;
+
 /** A timeout means the editor operation may still be running; never start another case. */
 export class PlaybookTimeout extends Error {}
 export class PlaybookCleanupFailure extends Error {
@@ -18,7 +20,7 @@ export function stopOnUnsafeFailure(runner: Mocha.Runner): void {
 }
 
 /** Bounds both polling and a single read that never settles. The caller must stop on timeout. */
-export async function waitFor<T>(read: () => Promise<T>, accept: (value: T) => boolean, message: string, timeoutMs = 30_000): Promise<T> {
+export async function waitFor<T>(read: () => Promise<T>, accept: (value: T) => boolean, message: string, timeoutMs = PLAYBOOK_WAIT_MS): Promise<T> {
     let last: T | undefined;
     const timer = new AbortController();
     const deadline = delay(timeoutMs, undefined, { signal: timer.signal }).then(() => {
