@@ -203,7 +203,8 @@ class CompilerPlaybookTest {
         }
         shared.validate(fixtures)
         val ideVersion = System.getProperty("xtc.playbook.ideVersion")
-        val lsp4ijVersion = System.getProperty("xtc.playbook.lsp4ijVersion")
+        val localLsp4ij = System.getProperty("xtc.playbook.lsp4ijPlugin")?.let { LocalLsp4ijPlugin.read(Path.of(it)) }
+        val lsp4ijVersion = localLsp4ij?.version ?: System.getProperty("xtc.playbook.lsp4ijVersion")
         val ideFailures = CopyOnWriteArrayList<String>()
         val selection =
             System
@@ -264,7 +265,11 @@ class CompilerPlaybookTest {
                 )
             Files.writeString(run.resolve("ide-paths.txt"), context.paths.toString())
             PluginConfigurator(context).apply {
-                installPluginFromPluginManager("com.redhat.devtools.lsp4ij", lsp4ijVersion)
+                if (localLsp4ij == null) {
+                    installPluginFromPluginManager("com.redhat.devtools.lsp4ij", lsp4ijVersion)
+                } else {
+                    installPluginFromDir(Path.of(localLsp4ij.path))
+                }
                 installPluginFromPath(Path.of(System.getProperty("path.to.build.plugin")))
                 installPluginFromDir(DiagnosticProbePlugin.create(run))
                 disablePlugins("com.intellij.kubernetes", "com.intellij.clouds.kubernetes")
@@ -325,6 +330,7 @@ class CompilerPlaybookTest {
                 mapOf(
                     "ideVersion" to ideVersion,
                     "lsp4ijVersion" to lsp4ijVersion,
+                    "localLsp4ij" to localLsp4ij,
                     "adapter" to adapter,
                     "startupOnly" to (mode == PlaybookMode.STARTUP),
                     "mode" to mode.name,
