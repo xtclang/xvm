@@ -11815,3 +11815,51 @@ Validation: `AdapterBackendTest` executes 3 tests, zero failures/errors/skips; b
 without `-Plsp.adapter` embeds `lsp.adapter=compiler`. Native IntelliJ run
 `run-1339684403623139271`, also without an adapter override, passes START and X135 with zero IDE
 errors. Runtime-default documentation and the adapter feature matrix now reflect this policy.
+
+## Build and test artifact retention (2026-10-06)
+
+Cleanup reduced the checkout from about 23 GiB to 13 GiB. The large contributors removed were
+completed IntelliJ sandbox indices/config/plugin copies, old native logs/workspaces, 334 legacy
+trace files (1.67 GiB), the redundant 1.4 GiB native installer and 616 obsolete configuration-cache
+reports. The five newest legacy traces and recent configuration-cache reports remain. No sources,
+Git data, rebase backups or registered worktrees were deleted. Approximately 6.2 GiB of retained
+worktrees and the 4.2 GiB reusable signed native IDE explain most of the remaining size.
+
+Ongoing policy:
+- Gradle IntelliJ/VS Code editor test tasks finalize with the same `PruneTestReportsTask` policy.
+  Completion markers are written after IDE exit; failed checks with confirmed exit can be pruned,
+  while unconfirmed/crashed runs remain for investigation. The default keeps five completed full
+  payloads, configurable with `-PplaybookRetainedRuns=N`. `.keep-artifacts` pins a run.
+- Every compact run result/progress receipt remains. Old workspaces, screenshots and bulky logs
+  are disposable; historical report paths above do not promise permanent retention of those files.
+  Even recent completed IntelliJ sandboxes release indices, config, plugin copies and temp data.
+  Symlinks are never traversed and directories containing Git metadata are protected.
+- Direct npm launches also mark completion. The next Gradle run or an explicit prune task applies
+  retention. Interrupted runs and deliberately pinned artifacts require manual review; retention
+  is a bound on routine completed runs, not a hard quota over every file in the repository.
+- Native IntelliJ checks product/version/build identity before reusing an extracted signed IDE.
+  A cache miss uses Starter's normal installer. An attempted direct use of Gradle's reshaped macOS
+  platform cache failed native code-signing validation; that approach was removed. The intact
+  native `.app` remains a separate cache entry from Gradle's compiler-classpath distribution.
+  Reusing it directly avoids downloading a removed installer archive on every test invocation.
+- Backend test traces now use the same process-owned retained log directory as normal logs;
+  the old shared `execution-trace` directory no longer grows on every test JVM.
+
+Validation:
+- Three `TestReportRetentionTest` regressions pass with no skips: recent/pinned/incomplete runs,
+  old failing receipts, sandbox lifetime, symlinks, Git protection and repeat cleanup.
+- Kotlin harness compilation, TypeScript compilation, changed-launcher ESLint, root/lang Spotless
+  and `git diff --check` pass. Real prune tasks store and reuse the configuration cache.
+- IntelliJ `run-1339684403623139271` passes START and X135 with zero IDE errors, prints the reused
+  native installation path and prunes its completed sandbox. The earlier Gradle-cache launch
+  experiments failed before editor acceptance and are not counted as passing runs.
+- Applied retention to 96 old completed IntelliJ runs, 186 VS Code playbook runs, 6 extension-test
+  runs and 4 lifecycle runs, preserving their compact receipts. IntelliJ sandbox contents are now
+  about 92 MiB; VS Code build output is about 105 MiB. No full feature-suite rerun was needed.
+
+Separate follow-up: combining root Spotless and the VS Code model-copy task reports an existing
+Gradle 10 implicit-dependency warning. These checks pass today; this cleanup does not claim to fix
+that independent aggregate-task relationship.
+
+Extraction: compiler-default policy is isolated in `62b9ceda6`; retain the native cache reuse,
+completion markers, pruning task/tests and report-path documentation together as test infrastructure.
