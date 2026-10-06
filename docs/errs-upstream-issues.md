@@ -1,6 +1,6 @@
 # Upstream issues affecting Ecstasy language support
 
-This is the upstream dependency register for `lagergren/errs`, updated on 2026-10-05.
+This is the upstream dependency register for `lagergren/errs`, updated on 2026-10-06.
 It complements the [implementation plan](errs-integration-plan.md) and
 [manual playbook](../lang/doc/manual-test-plan.md). Local fixes do not mean an upstream
 release contains the repair. The entries below record the branch's source inspection,
@@ -88,6 +88,26 @@ not a claim that every referenced suite was rerun for this documentation change.
 | **UP25 — LSP4IJ — constrained** | No LSP 3.18 document-content provider or refresh handler. | Matching read-only file fallback and direct library monikers; X254 executes those assertions with explicit partial status. [Details below](#up25-lsp4ij-has-no-lsp-318-library-content-provider). | Upstream virtual URI resolution, read-only views, refresh and disposal pass native X254 before advertising the capability. |
 | **UP26 — LSP4IJ — constrained** | Inline requests always use Automatic and omit selected popup context. | Native unique suggestions work; X257 has protocol-only explicit alternatives/selection. [Details below](#up26-lsp4ij-inline-completion-loses-invocation-and-popup-selection-context). | Forward invocation kind and selection, then pass native X257. |
 | **UP27 — LSP4IJ — bridged; long continuation passes** | Semantic-token and code-lens refresh fan out across connected files on the application executor, exceeding IntelliJ's concurrent non-blocking read-action limit in a long session. | `EditorRefresh` replaces that fan-out with one coalesced read/UI pass per connection and feature, retaining LSP4IJ's rendering bridges. X146 adds a many-document refresh burst; X259 retains toggling/restart acceptance. Focused and long continuation runs pass with zero IDE errors/freeze dumps. Original errors remain recorded. | Remove the bridge when upstream provides bounded batch refresh and connection-lifetime cancellation, then repeat the many-file stress and long native acceptance. |
+| **UP28 — vscode-languageclient — bridged** | Closing the transport during initialization clears the internal startup promise before `start()` returns it. The lost promise can reject unhandled while the returned promise resolves, and default error handlers display duplicate notifications. | The Ecstasy client observes both the initiating and idempotent in-flight `start()` promises, requires Running, and owns one actionable startup notification. X272 checks command rejection, one visible failure, no unhandled rejection, offline export and recovery; `run-W9g4f3` passes X269–X272. | Upstream captures and always returns/observes the original startup promise, including transport closure. Remove the double observation only after X272 passes without it. |
+
+### UP28: initialization promise lifetime (2026-10-06)
+
+Source inspection of installed `vscode-languageclient` 10.1.2 identifies the race in
+`BaseLanguageClient.start()` and `handleConnectionClosed()`: `start()` creates `_onStart`, awaits
+initialization and later returns the field; the close handler clears that field meanwhile. The
+captured rejection function can then reject a promise no caller receives. X272's deliberately
+invalid `-Xmx1K` JVM reproduces this with no compiler execution. The failing UI receipt
+`run-FpkLou` also shows multiple initialization/connection popups.
+
+The workaround uses public idempotent `start()` calls, without editing dependency files or reading
+private fields. Both promises get handlers immediately. The supported initialization-failure hook
+disables the default duplicate balloons, while the Ecstasy startup handler records the full error
+and offers Settings, Logs and Export actions once. Transport details remain in Output. The old
+instance-level `stop` monkey patch is now a normal subclass override, retaining protection against
+the library's unawaited stop during failed initialization. `// TODO VSCODE: UP28` records removal.
+
+The final focused run checks the actual visible notification as well as the command outcome;
+expected negative-test notifications are cleared between cases. No upstream issue or PR was filed.
 
 ## UP17: local workaround assessment (2026-10-05)
 
