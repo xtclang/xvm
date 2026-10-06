@@ -131,6 +131,14 @@ migration to C1/C2/C3/C4 and records the source commits and compatibility policy
 [embedding/listener guide](../docs/errs-error-listeners.md) explains the pipeline changes and
 current host contract.
 
+The [embedding compatibility table](../docs/errs-integration-plan.md#compatibility-and-migration-contract)
+also covers result records and retained constructors. `CursorBinding` currently has fourteen
+components: adding constructors preserves their descriptors, not old record-pattern arity.
+Prefer accessors for consumers that do not need deconstruction. Lists/maps are immutable
+snapshots, but their compiler/AST values still belong to the compilation attempt; copy them into
+detached host values while owning the compiler worker. Immutability of the outer collection does
+not make ASTs, constant pools or TypeInfo safe for concurrent queries.
+
 ## Assembler
 
 Status: Suitable for use

@@ -65,7 +65,7 @@ public class EmbeddingApiCompatibilityTest {
     }
 
     @Test
-    public void cursorConstructorsRemainAvailableWhileRecordPatternsIncludeArgumentValues() {
+    public void cursorConstructorsRemainAvailableWhileRecordPatternsIncludeAllFacts() {
         var type = new FileStructure("Compatibility").getModule().getIdentityConstant().getType();
         var original = new CursorBinding(List.of(), type, true);
         var candidates = new CursorBinding(List.of(), type, true, List.of(), List.of(), false);
@@ -74,6 +74,15 @@ public class EmbeddingApiCompatibilityTest {
         assertEquals(original, candidates);
         assertEquals(original, functions);
         assertEquals(original, values);
+        // Exercise every retained public descriptor, not just the oldest source constructors.
+        List.of(
+                new CursorBinding(List.of(), type, true, List.of(), List.of(), false, List.of(), List.of(), List.of()),
+                new CursorBinding(List.of(), type, true, List.of(), List.of(), false, List.of(), List.of(), List.of(), List.of()),
+                new CursorBinding(List.of(), type, true, List.of(), List.of(), false, List.of(), List.of(), List.of(), List.of(), List.of()),
+                new CursorBinding(List.of(), type, true, List.of(), List.of(), false, List.of(), List.of(), List.of(), List.of(), List.of(), List.of()),
+                new CursorBinding(List.of(), type, true, List.of(), List.of(), false, List.of(), List.of(), List.of(), List.of(), List.of(), List.of(), List.of()),
+                new CursorBinding(List.of(), type, true, List.of(), original.callFacts()))
+            .forEach(retained -> assertEquals(original, retained));
         var literalScope = original.withArgumentLiterals(List.of("0"));
         assertEquals(List.of("0"), literalScope.withCandidates(List.of()).withTypes(List.of())
                 .withFormals(List.of()).withArgumentProperties(List.of()).argumentLiterals());
@@ -84,6 +93,25 @@ public class EmbeddingApiCompatibilityTest {
                     var literals, var expressions, var enclosing, var templates) -> argumentValues.size() + properties.size() + formals.size()
                             + literals.size() + expressions.size() + enclosing.size() + templates.size();
         });
+    }
+
+    @Test
+    public void updatingCallFactsPreservesIndependentCursorProposals() {
+        var type = new FileStructure("Compatibility").getModule().getIdentityConstant().getType();
+        var scope = new CursorBinding(List.of(), type, true)
+                .withArgumentLiterals(List.of("0"))
+                .withArgumentExpressions(List.of("value"))
+                .withEnclosingExpressions(List.of("Outer.this"))
+                .withArgumentTemplates(List.of("() -> TODO()"));
+        var updated = scope.withCandidates(List.of()).withFunctions(List.of())
+                .withArgumentProperties(List.of()).withTypes(List.of()).withFormals(List.of());
+        assertTrue(updated.callsInspected());
+        assertFalse(scope.callsInspected());
+        assertEquals(scope.argumentLiterals(), updated.argumentLiterals());
+        assertEquals(scope.argumentExpressions(), updated.argumentExpressions());
+        assertEquals(scope.enclosingExpressions(), updated.enclosingExpressions());
+        assertEquals(scope.argumentTemplates(), updated.argumentTemplates());
+        assertThrows(UnsupportedOperationException.class, () -> updated.argumentTemplates().add("invalid"));
     }
 
     @Test
