@@ -102,8 +102,10 @@ internal fun ParityScenarios.runtimeSettingsCases() {
                 val destination = Files.createTempFile("ecstasy-offline-", ".zip")
                 try {
                     if (id == "X271") {
-                        val stopped = server.stop()
-                        awaitUi("server stops before offline export", 30.seconds) { stopped.isDone() }
+                        // Match the Language Servers panel's Stop action. Internal stop() leaves
+                        // the wrapper enabled, so a background editor request can restart it.
+                        withContext(OnDispatcher.EDT) { server.stopAndDisable() }
+                        awaitUi("server stops before offline export", 30.seconds) { server.getServerStatus().name() == "stopped" }
                     } else {
                         val failing =
                             JsonObject().apply {
@@ -131,8 +133,17 @@ internal fun ParityScenarios.runtimeSettingsCases() {
                             }
                         check(manifest["offline"].asBoolean)
                         if (id == "X271") {
-                            check(manifest.string("directory") == before["logs"].asJsonObject.string("directory"))
+                            val expectedDirectory = before["logs"].asJsonObject.string("directory")
+                            check(manifest.string("directory") == expectedDirectory) {
+                                "Offline export directory ${manifest.string(
+                                    "directory",
+                                )} differs from the stopped server's $expectedDirectory"
+                            }
                             check(zip.entries().asSequence().any { it.name.endsWith("server.log") })
+                            check(server.getServerStatus().name() == "stopped") { "Offline export must not start the server" }
+                            check(
+                                server.getCurrentProcessId() == before.int("pid").toLong(),
+                            ) { "Offline export must retain its stopped process" }
                         } else {
                             val launcher = zip.getInputStream(zip.getEntry("launcher.log")).reader().use { it.readText() }
                             check(launcher.contains(data["startupFailureOptions"].asJsonArray.single().asString))
