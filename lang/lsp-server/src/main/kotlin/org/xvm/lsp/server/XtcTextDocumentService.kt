@@ -445,28 +445,39 @@ class XtcTextDocumentService(
     }
 
     private fun refreshScopes(scopes: Set<String>) {
+        if (scopes.isEmpty()) return
+        val ownership = analysisScopes()
         scopes
             .mapNotNull { scope ->
                 openDocuments.entries.firstOrNull {
-                    it.value.scope == scope || adapter.analysisScope(it.key) == scope
+                    it.value.scope == scope || ownership[it.key] == scope
                 }
-            }.distinctBy { adapter.analysisScope(it.key) }
+            }.distinctBy { ownership[it.key] }
             .forEach { (uri, document) ->
-                analyseOne(uri, document.content, document.version)
+                analyseOne(uri, document.content, document.version, ownership)
             }
     }
+
+    private fun analysisScopes(): Map<String, String> =
+        if (adapter is XdkAdapter) {
+            adapter.analysisScopes(openDocuments.keys)
+        } else {
+            openDocuments.keys.associateWith(adapter::analysisScope)
+        }
 
     /** A member edit replaces the analysis future for every open document in that module. */
     private fun analyseOne(
         uri: String,
         content: String,
         version: Int,
+        ownership: Map<String, String>? = null,
     ) {
         val analysis = adapter.compileAsync(uri, content)
         val scope = adapter.analysisScope(uri)
+        val currentScopes = ownership ?: analysisScopes()
         val affected =
             openDocuments.filter { (otherUri, document) ->
-                otherUri == uri || document.scope == scope || adapter.analysisScope(otherUri) == scope
+                otherUri == uri || document.scope == scope || currentScopes[otherUri] == scope
             }
         val current =
             affected
