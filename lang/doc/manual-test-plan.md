@@ -3139,6 +3139,13 @@ its diagnostic full-GC pause is excluded from request latency. Compare `heap-100
 they do not identify reference owners or replace a heap-dominator investigation when growth remains.
 This is a bounded local regression workload, not multi-hour or cross-platform acceptance.
 
+For the longer local check, use `--cycles 1200` with another fresh output directory and compare
+the same classes through `heap-1200.txt`. The October 6 run passes all 3,600 cancellations and
+normal/EOF/normal process exits, with stable live thread-local counts. Correctness passing does
+not imply timing targets passed: that run misses one 500 ms edit-to-symbol p95 target and one
+10-second cold-graph target. Record timing comparisons separately from the script's correctness
+status, and preserve misses. See the [measurements and scope](../../docs/errs-integration-plan.md#l82-extended-platform-retention-and-lifetime-2026-10-06).
+
 ### Large-file IntelliJ diagnostic (L82 / UP17)
 
 The optional `CompilerPlaybookTest.largeFileEditing` probe reproduces the recorded UI freeze.
