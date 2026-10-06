@@ -87,6 +87,7 @@ class XdkProjectQueryLifecycleTest {
     fun `changes in another module and client cancellation retire blocked graph work`(feature: Feature) {
         for (change in Change.entries) {
             Session().use { session ->
+                val retained = session.adapter.getCachedResult(session.libraryUri)
                 session.hold.set(true)
                 val query = session.request(feature)
                 assertThat(session.entered.await(20, SECONDS))
@@ -115,11 +116,27 @@ class XdkProjectQueryLifecycleTest {
                 }
                 assertThat(query.isCancelled).describedAs("$feature / $change").isTrue()
                 session.release.countDown()
+                assertThat(session.adapter.getCachedResult(session.libraryUri)).isEqualTo(retained)
                 if (change == Change.CONFIGURATION) {
-                    assertThat(session.adapter.getCachedResult(session.libraryUri)).isNull()
-                } else {
-                    assertThat(session.adapter.getCachedResult(session.libraryUri)?.success)
-                        .isTrue()
+                    // The independent library stays valid, but graph queries must use the new graph.
+                    when (feature) {
+                        Feature.REFERENCES -> {
+                            assertThat(
+                                session.adapter
+                                    .findReferences(session.libraryUri, 0, LIBRARY.indexOf("pick"), true)
+                                    .map { it.uri },
+                            ).containsExactly(session.libraryUri)
+                        }
+
+                        Feature.RENAME -> {
+                            assertThat(
+                                session.adapter
+                                    .rename(session.libraryUri, 0, LIBRARY.indexOf("pick"), "choose")
+                                    ?.changes
+                                    ?.keys,
+                            ).containsExactly(session.libraryUri)
+                        }
+                    }
                 }
             }
         }
