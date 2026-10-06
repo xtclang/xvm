@@ -828,7 +828,7 @@ public class ModuleInfo {
         public ErrorList errs() {
             ErrorList errs = m_errs;
             if (errs == null) {
-                m_errs = errs = new ErrorList(341);
+                m_errs = errs = new ErrorList(ErrorListener.DEFAULT_MAX_ERRORS);
             }
             return errs;
         }

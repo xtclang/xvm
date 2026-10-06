@@ -1,7 +1,6 @@
 package org.xvm.api;
 
 import java.io.File;
-import java.io.IOException;
 import java.io.PrintWriter;
 
 import java.time.Instant;
@@ -13,31 +12,12 @@ import java.util.Objects;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorListener;
-import org.xvm.asm.FileStructure;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Version;
 
-import org.xvm.compiler.BuildRepository;
-import org.xvm.compiler.Compiler;
-import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.InstantRepository;
-import org.xvm.compiler.Parser;
-import org.xvm.compiler.Source;
-
-import org.xvm.compiler.Token.Id;
-
-import org.xvm.compiler.ast.Statement;
-import org.xvm.compiler.ast.StatementBlock;
-import org.xvm.compiler.ast.TypeCompositionStatement;
-
-import org.xvm.tool.Console;
-import org.xvm.tool.Launcher.LauncherException;
-import org.xvm.tool.LauncherOptions.CompilerOptions;
-import org.xvm.tool.ModuleInfo.Node;
-
-import static org.xvm.util.Handy.readFileChars;
 
 import static org.xvm.util.Severity.ERROR;
 
@@ -49,7 +29,26 @@ import static org.xvm.util.Severity.ERROR;
  * Ecstasy classes. Without configuration, EmbeddingSupport will attempt to locate the core Ecstasy
  * classes using the "XDK_HOME" OS property.
  *
- * The methods on EmbeddingSupport itself can be assumed to be thread-safe and concurrent.
+ * <p>The methods on EmbeddingSupport itself can be assumed to be thread-safe and concurrent.
+ *
+ * <p>EmbeddingSupport is a singleton because running a module requires the interpreter, and the
+ * interpreter keeps JVM-wide state. When the Connector creates its NativeContainer, the container
+ * constructs every native class template, and the template constructors assign static fields such
+ * as {@code xObject.INSTANCE} and {@code xObject.CLASS}; there are about 150 such assignments in
+ * the {@code org.xvm.runtime} classes. A second interpreter in the same JVM would overwrite them
+ * underneath the first, so there can be only one interpreter, and therefore only one
+ * EmbeddingSupport, whose core repository can be configured only once.
+ *
+ * <p>Compiling does not use the interpreter, so it does not need the singleton: a
+ * {@link ModuleCompiler} can be created for any core repository, any number of times. The compile
+ * methods here are a convenience that compile against the configured core repository.
+ *
+ * <p>The restriction could be removed by making the static runtime state belong to the runtime
+ * that creates it: the templates and class compositions that are now in static fields would be
+ * held by the NativeContainer, which already maps types to their templates, and reached through
+ * the container that each template already refers to. With no JVM-wide state left, a Connector,
+ * and with it EmbeddingSupport, could be an ordinary object created for a given core repository,
+ * and {@link #configure} would become a constructor.
  */
 public class EmbeddingSupport {
     // ----- internal (construction etc.) ----------------------------------------------------------
@@ -67,18 +66,6 @@ public class EmbeddingSupport {
     }
 
     private static final Object LOCK = new Object();
-
-    private static final Console SILENT_CONSOLE = new Console() {
-        @Override
-        public String out(Object value) {
-            return String.valueOf(value);
-        }
-
-        @Override
-        public String err(Object value) {
-            return String.valueOf(value);
-        }
-    };
 
     private volatile boolean configured;
     private ModuleRepository cfgRepo;
@@ -196,164 +183,37 @@ public class EmbeddingSupport {
     // ----- compiler support ----------------------------------------------------------------------
 
     /**
-     * Compile a module that is in a String.
+     * Compile a module that is in a String, against the configured core repository.
      *
      * @param source  the source code for an entire module to compile
      * @param input   (optional) the module repository to read any required modules from
      * @param errs    (optional) the ErrorListener to log any compiler messages to
      *
      * @return the resulting ModuleStructure, or null if a compiler error occurred
+     *
+     * @see ModuleCompiler#compile(String, ModuleRepository, ErrorListener)
      */
     public ModuleStructure compile(String source, ModuleRepository input, ErrorListener errs) {
         verifyConfigured();
-        try {
-            EmbeddingCompiler compiler = new EmbeddingCompiler(source, input, cfgRepo, errs);
-            return compiler.process() == 0
-                    ? compiler.getModule()
-                    : null;
-        } catch (RuntimeException | AssertionError e) {
-            // as in run(): the compiler runs over caller-supplied source, so a failure in it is
-            // reported here rather than thrown at the caller, who was promised a null instead
-            if (errs != null) {
-                errs.log(ERROR, ERR_INTERNAL,
-                        new Object[] {e, "Compilation failed"}, null);
-            }
-            return null;
-        }
+        return new ModuleCompiler(cfgRepo).compile(source, input, errs);
     }
 
     /**
-     * Compile a module that is in a file or directory.
+     * Compile a module that is in a file, against the configured core repository.
      *
-     * @param file    the location of the module source code on disk, either the module source file
-     *                or the directory containing a single .x file and nested contents thereof
+     * @param file    the module source file
      * @param input   (optional) the module repository to read any required modules from
      * @param output  (optional) the module repository to write any compiled modules to
      * @param errs    (optional) the ErrorListener to log any compiler messages to
      *
      * @return true if the compilation succeeded and the result was placed into the output
+     *
+     * @see ModuleCompiler#compile(File, ModuleRepository, ModuleRepository, ErrorListener)
      */
     public boolean compile(File file, ModuleRepository input, ModuleRepository output,
                            ErrorListener errs) {
-        ModuleStructure module;
-        try {
-            module = compile(new String(readFileChars(file)), input, errs);
-        } catch (IOException e) {
-            if (errs != null) {
-                errs.log(ERROR, ERR_INTERNAL,
-                        new Object[] {e, "Unable to read module " + file}, null);
-            }
-            return false;
-        }
-
-        if (module == null) {
-            assert errs == null || errs.hasSeriousErrors();
-            return false;
-        }
-
-        if (output != null) {
-            try {
-                output.storeModule(module);
-            } catch (IOException e) {
-                if (errs != null) {
-                    errs.log(ERROR, ERR_INTERNAL,
-                            new Object[] {e, "Unable to store module " + module.getName()}, module);
-                }
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
-     * Adapter that supplies the source and repositories to the standard compiler pipeline and
-     * captures its single compiled module instead of writing it to disk.
-     */
-    private static class EmbeddingCompiler
-            extends org.xvm.tool.Compiler {
-        private final String           source;
-        private final ModuleRepository inRepo;
-        private final ModuleRepository coreRepo;
-        private       ModuleStructure  module;
-
-        protected EmbeddingCompiler(String source, ModuleRepository input, ModuleRepository core,
-                                    ErrorListener errs) {
-            super(CompilerOptions.builder().build(), SILENT_CONSOLE, errs);
-
-            this.source   = source;
-            this.inRepo   = input;
-            this.coreRepo = core;
-        }
-
-        @Override
-        protected int process() {
-            ModuleRepository repoLib = ensureLibraryRepo();
-            checkErrors("repository setup");
-
-            prelinkSystemLibraries(repoLib);
-            checkErrors("system library linking");
-
-            StatementBlock block;
-            try {
-                block = new Parser(new Source(source), this).parseSource();
-            } catch (CompilerException e) {
-                return 1;
-            }
-            if (checkErrors("source parsing") != 0) {
-                return 1;
-            }
-
-            Statement stmt = block.getStatements().getLast();
-            if (!(stmt instanceof TypeCompositionStatement stmtModule) ||
-                    stmtModule.getCategory().getId() != Id.MODULE) {
-                log(ERROR, "In-memory source does not contain a module");
-                return checkErrors("source parsing");
-            }
-
-            Compiler      compiler = new Compiler(stmtModule, this);
-            FileStructure struct   = compiler.generateInitialFileStructure();
-            if (struct == null || checkErrors("module creation") != 0) {
-                return 1;
-            }
-
-            try {
-                repoLib.storeModule(struct.getModule());
-            } catch (IOException e) {
-                log(ERROR, e, "I/O exception storing module: {}", struct.getModule().getName());
-                return 1;
-            }
-
-            int result = super.compile(List.of(compiler), repoLib);
-            if (result == 0) {
-                this.module = struct.getModule();
-            }
-            return result;
-        }
-
-        @Override
-        protected int compile(List<Compiler> compilers, ModuleRepository repoLib) {
-            throw new IllegalStateException("This method must not be called");
-        }
-
-        @Override
-        protected ModuleRepository configureLibraryRepo(List<File> ignore) {
-            BuildRepository build = new BuildRepository();
-            return inRepo == null || inRepo == coreRepo
-                    ? new LinkedRepository(true, build, coreRepo)
-                    : new LinkedRepository(true, build, inRepo, coreRepo);
-        }
-
-        @Override
-        protected int emitModules(List<Node> allNodes, ModuleRepository ignore) {
-            throw new IllegalStateException("This method must not be called");
-        }
-
-        /**
-         * @return the result of the compilation
-         */
-        protected ModuleStructure getModule() {
-            return module;
-        }
+        verifyConfigured();
+        return new ModuleCompiler(cfgRepo).compile(file, input, output, errs);
     }
 
     /**
@@ -464,9 +324,7 @@ public class EmbeddingSupport {
             ErrorListener             errs) {
         verifyConfigured();
 
-        ModuleRepository repository = input == null || input == cfgRepo
-                ? cfgRepo
-                : new LinkedRepository(input, cfgRepo);
+        ModuleRepository repository = new LinkedRepository(input, cfgRepo);
         ModuleStructure module = version == null
                 ? repository.loadModule(moduleName)
                 : repository.loadModule(moduleName, version, true);

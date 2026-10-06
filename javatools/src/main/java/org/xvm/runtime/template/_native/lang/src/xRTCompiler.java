@@ -9,6 +9,7 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorList;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileRepository;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.MethodStructure;
@@ -318,7 +319,7 @@ public class xRTCompiler
         private final ErrorList m_errorList;
 
         protected CompilerAdapter(CompilerOptions options) {
-            super(options, null, m_errorList = new ErrorList(100));
+            super(options, null, m_errorList = new ErrorList(ErrorListener.DEFAULT_MAX_ERRORS));
         }
 
         // ----- accessors -------------------------------------------------------------------------

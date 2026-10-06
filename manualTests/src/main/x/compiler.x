@@ -5,15 +5,10 @@ module TestCompiler {
     void run() {
         @Inject Directory curDir;
 
-        assert File|Directory sourceFile := curDir.find("src/main/x/errors.x");
-        assert sourceFile.is(File);
-
         assert File|Directory buildDir := curDir.find("build");
         assert buildDir.is(Directory);
 
-        compile(sourceFile, buildDir);
-
-        assert sourceFile := curDir.find("src/main/x/TestSimple.x");
+        assert File|Directory sourceFile := curDir.find("src/main/x/TestSimple.x");
         assert sourceFile.is(File);
 
         compile(sourceFile, buildDir);

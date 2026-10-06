@@ -126,7 +126,7 @@ sourceSets {
             srcDir("src/main/x/jit")
 
              // TODO: tests below are meant to be compiled and run manually; consider moving them
-             //       somewhere else and filter out the negative tests
+             //       somewhere else
             exclude("**/archive/**")
             exclude("**/dbTests/**")
             exclude("**/jsondb/**")
@@ -137,8 +137,7 @@ sourceSets {
                 "**/ConstOrdinalListTest.x",
                 "**/NumericConversions.x",
                 "**/contained.x",
-                "**/container.x",
-                "**/errors.x")
+                "**/container.x")
         }
     }
 }

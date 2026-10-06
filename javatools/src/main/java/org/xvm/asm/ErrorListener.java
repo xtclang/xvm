@@ -429,6 +429,13 @@ public interface ErrorListener {
     ErrorListener RUNTIME   = new RuntimeErrorListener();
 
     /**
+     * The default maximum number of serious errors an {@link ErrorList} collects before it asks
+     * the process reporting them to abort; for example, the number of errors the compiler collects
+     * for one module in one stage.
+     */
+    int DEFAULT_MAX_ERRORS = 512;
+
+    /**
      * Indicates that the compiler probably runs inside of IntelliJ IDEA.
      */
     boolean INTELLIJ_IDEA = ManagementFactory.getRuntimeMXBean().
