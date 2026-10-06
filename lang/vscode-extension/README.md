@@ -334,7 +334,7 @@ vscode-extension/
 
 | Task | Command | What it does |
 |------|---------|--------------|
-| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs all 275 shared cases (X1–X270, CFG1–CFG3 and 7a.8–7a.9) in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
+| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs all 277 shared cases (X1–X272, CFG1–CFG3 and 7a.8–7a.9) in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
 | **Headless integration test** | `./gradlew :lang:vscode-extension:testVscodeExtension -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Spawns a real VS Code instance via `@vscode/test-electron`, loads the extension from the build tree, opens `src/test/fixtures/hello.x`, and asserts the document's `languageId === "xtc"`. The primary regression guard for the file-association pipeline. |
 | **Interactive smoke test** | `./gradlew :lang:vscode-extension:runCode -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Launches VS Code in Extension Development Host mode with `src/test/fixtures/` open. Use this to verify highlighting, hover, completion, etc. by eye. |
 | **Compile only** | `./gradlew :lang:vscode-extension:npmCompile -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Runs `tsc -p ./`; fastest feedback when editing TypeScript. |
@@ -508,9 +508,13 @@ Legacy shared logs and the IDE's own protocol console are outside this policy.
 
 **Ecstasy: Export Server Logs** saves a ZIP of recent log tails and current status from
 the connected server (at most eight 512 KiB tails, 4 MiB log input). It may contain local paths and
-logged diagnostics; it does not collect source files. Export requires a running server. Shared
-X269/X270 check restart boundaries, invalid settings, retention/status and installed export.
-Native OS save-dialog layout, fresh-IDE persistence and rollover stress remain manual checks.
+logged diagnostics; it does not collect source files. When stopped, export uses only this project’s
+last recorded launch, including up to 64 KiB of launcher output. Its manifest identifies offline
+mode and truncation and lists included files; another project’s logs are never substituted. Shared
+X269–X272 cover settings, restart, live/offline export and recovery from an intentional failed JVM
+launch. Full editor exit/reopen has a separate two-process persistence test. Native OS save-dialog
+layout and rollover stress remain manual checks. New acceptance results are tracked in the
+[UI completion batch](../../docs/errs-integration-plan.md#ui1ui7-completion-batch-2026-10-06).
 See the [contract and receipt](../../docs/errs-integration-plan.md#machine-local-jvm-settings-and-log-support-ui5ui6-2026-10-06).
 
 ### Test artifact retention
@@ -522,3 +526,11 @@ Unfinished runs are preserved for investigation. Cleanup never follows workspace
 removes Git worktrees. Direct npm runs record completion too; the next Gradle run performs pruning,
 or run `:lang:vscode-extension:pruneCompilerPlaybookReports` explicitly with both lang flags.
 The IDE download cache remains shared across runs and is not deleted by retention.
+
+
+The UI completion gate also runs `node scripts/run-vscode-tests.cjs --settings-persistence`
+after building the extension. Two complete editor launches share one disposable profile/workspace
+and verify persisted settings and user/workspace precedence. The native Settings UI groups
+Compiler, Language Service, Formatting, and Runtime and Logs. The effective status command
+reports saved origins, ignored scope overrides and connection changes awaiting restart.
+Untrusted and virtual workspaces are explicitly unsupported; remote hosts remain unvalidated.
