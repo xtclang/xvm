@@ -1043,6 +1043,8 @@ public abstract class Component
      * @param access  the accessibility of the package to create
      * @param sName   the simple (unqualified) package name to create
      * @param cond    the conditional constant for the class, or null
+     *
+     * @return the newly created PackageStructure, or null if a name collision occurred
      */
     public PackageStructure createPackage(Access access, String sName, ConditionalConstant cond) {
         assert sName != null;
@@ -1053,13 +1055,14 @@ public abstract class Component
             throw new IllegalStateException("this (" + this + ") cannot contain a package");
         }
 
-        // the check for duplicates is deferred, since it is possible (e.g. with conditionals) to
-        // have multiple components occupying the same location within the namespace at this point
-        // in the compilation
-
         int              nFlags  = Format.PACKAGE.ordinal() | access.FLAGS;
         PackageConstant  constId = getConstantPool().ensurePackageConstant(getIdentityConstant(), sName);
         PackageStructure struct  = new PackageStructure(this, nFlags, constId, cond);
+
+        if (ensureChildByNameMap().get(sName) instanceof Component sibling &&
+                Objects.equals(cond, sibling.m_cond)) {
+            return null;
+        }
 
         return addChild(struct) ? struct : null;
     }
@@ -1142,9 +1145,11 @@ public abstract class Component
      * @param accessVar  the "Var" accessibility of the property to create
      * @param constType  the type of the property to create
      * @param sName      the simple (unqualified) property name to create
+     *
+     * @return the newly created PropertyStructure, or null if a name collision occurred
      */
     public PropertyStructure createProperty(boolean fStatic, Access accessRef, Access accessVar,
-            TypeConstant constType, String sName) {
+                                            TypeConstant constType, String sName) {
         assert sName != null;
         assert accessRef != null;
         assert accessVar == null || accessRef.ordinal() <= accessVar.ordinal();
@@ -1155,15 +1160,9 @@ public abstract class Component
             throw new IllegalStateException("this (" + this + ") cannot contain a property");
         }
 
-        // the check for duplicates is deferred, since it is possible (thanks to the complexity of
-        // conditionals) to have multiple components occupying the same location within the
-        // namespace at this point in the compilation
-        // Component component = getChild(sName);
-        // if (component != null)
-        //     {
-        //     throw new IllegalStateException("cannot add a class \"" + sName
-        //             + "\" because a child with that name already exists: " + component);
-        // }
+        if (ensureChildByNameMap().get(sName) != null) {
+            return null;
+        }
 
         int               nFlags  = Format.PROPERTY.ordinal() | accessRef.FLAGS | (fStatic ? STATIC_BIT : 0);
         PropertyConstant  constId = getConstantPool().ensurePropertyConstant(getIdentityConstant(), sName);
@@ -1179,7 +1178,7 @@ public abstract class Component
      * @param constType  the type of the typedef to create
      * @param sName      the simple (unqualified) typedef name to create
      *
-     * @return the new TypedefStructure
+     * @return the new TypedefStructure, or null if a name collision occurred
      */
     public TypedefStructure createTypedef(Access access, TypeConstant constType, String sName) {
         assert sName != null;
@@ -1191,9 +1190,12 @@ public abstract class Component
             throw new IllegalStateException("this (" + this + ") cannot contain a typedef");
         }
 
+        if (ensureChildByNameMap().get(sName) != null) {
+            return null;
+        }
+
         int              nFlags  = Format.TYPEDEF.ordinal() | access.FLAGS;
-        TypedefConstant  constId = getConstantPool().ensureTypedefConstant(getIdentityConstant(),
-                sName);
+        TypedefConstant  constId = getConstantPool().ensureTypedefConstant(getIdentityConstant(), sName);
         TypedefStructure struct  = new TypedefStructure(this, nFlags, constId, null);
         struct.setType(constType);
 
@@ -1238,12 +1240,8 @@ public abstract class Component
 
     public MultiMethodStructure ensureMultiMethodStructure(String sName) {
         Component sibling = getChildByNameMap().get(sName);
-        while (sibling != null) {
-            if (sibling instanceof MultiMethodStructure mms) {
-                return mms;
-            }
-
-            sibling = sibling.getNextSibling();
+        if (sibling != null) {
+            return sibling instanceof MultiMethodStructure mms ? mms : null;
         }
 
         verifyMutable();
@@ -2198,7 +2196,7 @@ public abstract class Component
      * structures (annotations, etc.) without materializing the whole sequence.
      */
     protected Iterable<? extends XvmStructure> containedWith(Iterable<? extends XvmStructure> extras) {
-        return () -> Stream.<XvmStructure>concat(
+        return () -> Stream.concat(
                 children().stream(),
                 stream(extras)).iterator();
     }

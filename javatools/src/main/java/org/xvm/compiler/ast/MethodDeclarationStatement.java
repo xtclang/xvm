@@ -437,7 +437,9 @@ public class MethodDeclarationStatement
                 }
 
                 if (method == null) {
-                    log(errs, Severity.ERROR, Compiler.DUPLICATE_METHOD, sName);
+                    log(errs, Severity.ERROR,
+                            container.getChild(sName) instanceof MultiMethodStructure
+                                ? Compiler.DUPLICATE_METHOD : Compiler.NAME_COLLISION, sName);
                     return;
                 }
 
