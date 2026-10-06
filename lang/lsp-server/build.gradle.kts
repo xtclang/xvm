@@ -286,6 +286,8 @@ tasks.test {
     inputs.files(
         rootProject.layout.projectDirectory.file("doc/manual-test-plan.md"),
         rootProject.layout.projectDirectory.file("test-fixtures/compiler-playbook/scenarios.json"),
+        rootProject.layout.projectDirectory.file("test-fixtures/semantic-highlighting/SemanticColors.x"),
+        rootProject.layout.projectDirectory.file("test-fixtures/color-values/ColorPrototype.x"),
     )
 }
 

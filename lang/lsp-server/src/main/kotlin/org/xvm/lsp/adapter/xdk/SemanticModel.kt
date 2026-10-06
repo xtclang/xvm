@@ -83,6 +83,17 @@ class SemanticModel
             ABSTRACT,
         }
 
+        /** Resolved class format, including declarations supplied by binary dependencies. */
+        enum class TypeCategory {
+            CLASS,
+            INTERFACE,
+            MIXIN,
+            SERVICE,
+            CONST,
+            ENUM,
+            ENUM_VALUE,
+        }
+
         enum class TypeForm {
             NAMED,
             FORMAL,
@@ -198,6 +209,9 @@ class SemanticModel
             val dependency: XdkDependency.SymbolKey? = null,
             val renameable: Boolean = false,
             val documentation: String? = null,
+            val typeCategory: TypeCategory? = null,
+            /** A static callable excluding constructors, as defined by the compiler. */
+            val isFunction: Boolean = false,
         )
 
         /** A written name; a null symbol explicitly represents an unresolved occurrence. */

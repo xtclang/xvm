@@ -1080,6 +1080,9 @@ class XtcLanguageServer(
             }
 
             // Compiler semantic navigation.
+            if (AdapterCapability.DOCUMENT_COLOR in adapter.capabilities) {
+                colorProvider = Either.forLeft(true)
+            }
             if (AdapterCapability.TYPE_DEFINITION in adapter.capabilities) {
                 typeDefinitionProvider = Either.forLeft(true)
             }
