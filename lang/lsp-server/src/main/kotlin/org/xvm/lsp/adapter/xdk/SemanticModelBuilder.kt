@@ -4,6 +4,7 @@ import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.Argument
 import org.xvm.asm.ClassStructure
 import org.xvm.asm.Component.Composition
+import org.xvm.asm.Component.Format
 import org.xvm.asm.Constant
 import org.xvm.asm.ConstantPool
 import org.xvm.asm.Constants.Access
@@ -61,6 +62,7 @@ import org.xvm.lsp.adapter.xdk.SemanticModel.Symbol
 import org.xvm.lsp.adapter.xdk.SemanticModel.SymbolId
 import org.xvm.lsp.adapter.xdk.SemanticModel.SymbolKind
 import org.xvm.lsp.adapter.xdk.SemanticModel.Type
+import org.xvm.lsp.adapter.xdk.SemanticModel.TypeCategory
 import org.xvm.lsp.adapter.xdk.SemanticModel.TypeForm
 import org.xvm.lsp.adapter.xdk.SemanticModel.TypeId
 import org.xvm.lsp.util.ExecutionTrace
@@ -1517,6 +1519,7 @@ private class SemanticModelBuilder(
                 dependencies[it] ?: XdkLibrarySources.declaration(it)
             }
         val location = declaration ?: dependency?.location
+        val component = (target as? IdentityConstant)?.component
         if (target is Register) {
             registers[target] = symbol
         } else {
@@ -1534,9 +1537,21 @@ private class SemanticModelBuilder(
                 modifiers = modifiers(target),
                 dependency = dependency?.key,
                 documentation =
-                    (target as? IdentityConstant)?.component?.documentation?.trim()?.takeIf {
+                    component?.documentation?.trim()?.takeIf {
                         it.isNotEmpty()
                     },
+                typeCategory =
+                    when (component?.format) {
+                        Format.CLASS -> TypeCategory.CLASS
+                        Format.INTERFACE -> TypeCategory.INTERFACE
+                        Format.MIXIN -> TypeCategory.MIXIN
+                        Format.SERVICE -> TypeCategory.SERVICE
+                        Format.CONST -> TypeCategory.CONST
+                        Format.ENUM -> TypeCategory.ENUM
+                        Format.ENUMVALUE -> TypeCategory.ENUM_VALUE
+                        else -> null
+                    },
+                isFunction = component is MethodStructure && component.isFunction,
             )
         return symbol
     }

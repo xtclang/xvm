@@ -1032,7 +1032,7 @@
         "tokenKinds": [
           {
             "name": "leaf",
-            "type": "method"
+            "type": "function"
           },
           {
             "name": "seed",
@@ -5031,13 +5031,13 @@
       }
     },
     "X154": {
-      "title": "destructuring writes and indexed receivers retain semantic access classification",
+      "title": "resolved semantic colors distinguish types, functions, enum values and writes",
       "manual": [
         "Theme colors and token inspector presentation"
       ],
       "values": {
         "file": "Access.x",
-        "source": "module Access {\n    class Box { Int value = 0; }\n    static Int run(Box box, Int[] values, Int index) {\n        Int left = 0;\n        Int right = 0;\n        (left, right) = (1, 2);\n        ++box.value;\n        values[index] = left;\n        return left + right + box.value;\n    }\n}",
+        "source": "module Access {\n    enum Mode {Quiet, Loud}\n    class Box { Int value = 0; }\n    Int size(List<Int> input) = input.size;\n    static Int run(Box box, Int[] values, Int index) {\n        Mode mode = Mode.Quiet;\n        Int left = 0;\n        Int right = 0;\n        (left, right) = (1, 2);\n        ++box.value;\n        values[index] = left;\n        return left + right + box.value;\n    }\n}",
         "tokenKinds": [
           {
             "name": "box",
@@ -5050,6 +5050,22 @@
           {
             "name": "value",
             "type": "property"
+          },
+          {
+            "name": "run",
+            "type": "function"
+          },
+          {
+            "name": "Mode",
+            "type": "enum"
+          },
+          {
+            "name": "Quiet",
+            "type": "enumMember"
+          },
+          {
+            "name": "List",
+            "type": "interface"
           }
         ],
         "methodName": "run",

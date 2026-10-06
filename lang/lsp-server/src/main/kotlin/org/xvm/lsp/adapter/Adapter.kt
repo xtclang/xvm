@@ -52,6 +52,7 @@ interface Adapter : Closeable {
                             AdapterCapability.CALL_HIERARCHY,
                             AdapterCapability.INLAY_HINT,
                             AdapterCapability.INLINE_COMPLETION,
+                            AdapterCapability.DOCUMENT_COLOR,
                         )
                 }.toSet()
 
@@ -659,7 +660,8 @@ interface Adapter : Closeable {
      * **Adapter implementations:**
      * - *Mock:* Returns null (no type information available).
      * - *TreeSitter:* Classifies tokens from the AST using [SemanticTokenEncoder] for enhanced
-     *   highlighting beyond what TextMate provides. Opt-in via `-Plsp.semanticTokens=true`.
+     *   highlighting beyond what TextMate provides. Enabled by default; disable via
+     *   `-Plsp.semanticTokens=false`.
      * - *Compiler:* Full semantic token classification with type-aware highlighting.
      *
      * **Compiler upgrade path:** Classify every token with its semantic role (variable, parameter,
@@ -669,6 +671,16 @@ interface Adapter : Closeable {
      * @return semantic tokens data
      */
     fun getSemanticTokens(uri: String): SemanticTokens?
+
+    /** Recognized color values, independent of source-code semantic highlighting. */
+    fun getDocumentColors(uri: String): List<DocumentColor> = emptyList()
+
+    /** Offer an edit only for a currently recognized color expression at exactly this range. */
+    fun getColorPresentations(
+        uri: String,
+        range: Range,
+        color: ColorValue,
+    ): List<ColorPresentation> = emptyList()
 
     /**
      * Get inlay hints (inline type annotations, parameter names).
