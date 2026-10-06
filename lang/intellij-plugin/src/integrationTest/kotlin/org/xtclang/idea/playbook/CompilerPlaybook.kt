@@ -1339,7 +1339,7 @@ class CompilerPlaybook(
         check(completed.none { it.id == id }) { "Duplicate native case $id" }
         val start = TimeSource.Monotonic.markNow()
         println("IntelliJ playbook $id: $description")
-        if (id != "START") progress(id, "running", description)
+        if (id != "START" && id != "START_REOPEN") progress(id, "running", description)
         try {
             action()
             check(!isPluginLoaded("com.intellij.modules.ultimate")) {
@@ -1383,8 +1383,13 @@ class CompilerPlaybook(
         status: String,
         description: String,
     ) {
-        val total = if (mode == PlaybookMode.FEATURES) selectedIds.size else 1
-        val done = completed.count { it.id != "START" }
+        val total =
+            when (mode) {
+                PlaybookMode.FEATURES -> selectedIds.size
+                PlaybookMode.SETTINGS_PERSISTENCE -> 2
+                else -> 1
+            }
+        val done = completed.count { it.id != "START" && it.id != "START_REOPEN" }
         val failed = completed.count { it.status == "failed" }
         val text =
             "Ecstasy playbook: $done/$total completed, ${total - done} left | $id $status" +
