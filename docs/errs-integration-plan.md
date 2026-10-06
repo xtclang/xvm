@@ -1456,34 +1456,40 @@ and [IntelliJ settings](https://plugins.jetbrains.com/docs/intellij/settings-gui
 | Tracing, timing and notifications | VS Code `xtc.trace.server`; LSP4IJ logs; compile/API/queue timing and transient startup notifications. | Add discoverable log/queue/status views, trace level and bounded log retention/export, including human-readable queued jobs. Keep source content out of routine logs. Prefer IDE notification controls; advanced startup-notification preference only if needed. |
 | Run/debug and future providers | Run configuration scaffolding exists; persistent runtime/DAP and several LSP providers remain separate work. | R5 owns target/arguments/working directory/environment/Stop/Rerun UI; R6–R8 own debugger controls. Notebook, color and inline completion settings follow implemented capabilities, not placeholders advertised as working. |
 
-- [ ] **UI1 — Settings contract and inventory.** Map every manifest option, settings page, startup
+Local desktop implementation and acceptance are complete as of October 6; the
+[completion receipt](#ui1ui7-completion-batch-2026-10-06) records combined runs and their limits.
+Remote-host/cross-platform and long-duration release evidence remain L82. Untrusted/virtual VS Code
+workspaces are explicitly unsupported. Known UP16/UP23 failures and UP25/UP26 partial coverage remain
+open; completing this settings track does not reclassify those host limitations as passes.
+
+- [x] **UI1 — Settings contract and inventory.** Map every manifest option, settings page, startup
   property/environment option and client capability to its consumer, default, owner, scope,
   availability and live/restart behavior. Identify inert/duplicate fields and migration needs.
   Treat negotiated protocol properties (pull/push, lazy resolve, token delta) as automatic
   compatibility decisions unless a diagnostic override has a concrete use.
-- [ ] **UI2 — Scope and persistence.** Define shared semantics for application/user defaults,
+- [x] **UI2 — Scope and persistence.** Define shared semantics for application/user defaults,
   project/workspace overrides and per-folder/resource values. Retain existing source-graph
   precedence. Publish immutable validated settings, keep the last valid configuration on errors,
   and avoid overwriting concurrent rename/Undo changes. Add multi-root, missing-path, relative-URI,
   remote filesystem and restricted/untrusted-workspace cases before offering those paths.
-- [ ] **UI3 — IntelliJ Community UI.** Extend existing Compiler and Code Style settings; add a
+- [x] **UI3 — IntelliJ Community UI.** Extend existing Compiler and Code Style settings; add a
   small language-service section for relevant advanced settings and status. Use path choosers,
   actionable validation, Apply/Reset/Cancel and inheritance indicators. Reuse LSP4IJ controls where
   they already work. No Ultimate-only APIs, duplicate settings owner or second compiler process.
-- [ ] **UI4 — VS Code settings and commands.** Group settings in the native Settings UI with
+- [x] **UI4 — VS Code settings and commands.** Group settings in the native Settings UI with
   descriptions, constraints and appropriate scopes. Use language-overridable formatting controls
   and machine-local runtime paths. Improve existing graph/path commands with pickers and effective
   settings output; keep JSON editing as the advanced escape hatch. Audit actual client behavior
   before claiming per-folder support from schema scope alone.
-- [ ] **UI5 — Apply and restart behavior.** Wire L72 transport options into both clients, live
+- [x] **UI5 — Apply and restart behavior.** Wire L72 transport options into both clients, live
   presentation/formatting changes into refresh, and compiler-input changes into graph replacement.
   Restart once when a connection-time option changes, preserving buffers and pending user edits;
   ensure save hooks cannot double-format or wait for compilation. Separate incremental transport
   from the future compiler-incrementality workstream in labels and help.
-- [ ] **UI6 — Effective configuration and support view.** Show configured versus effective values,
+- [x] **UI6 — Effective configuration and support view.** Show configured versus effective values,
   source of each value, active adapter, read-only XDK, capability availability, current compilation
   and queue. Link failures to the relevant setting/log. No modal UI for normal background activity.
-- [ ] **UI7 — Acceptance and documentation.** Add shared scenarios for change/apply/cancel/reset,
+- [x] **UI7 — Acceptance and documentation.** Add shared scenarios for change/apply/cancel/reset,
   live updates, restart-required settings, persistence across restart, both adapters, multi-root
   precedence, invalid configuration retention and no duplicate save formatting. Cover Community
   IntelliJ and VS Code Settings/commands, not merely direct protocol injection. Update the feature
@@ -11414,17 +11420,17 @@ regression. Validation is complete for this selected batch:
   Project/folder closure during import, automatic build sync and remote/restricted-workspace
   acceptance remain explicit follow-ups.
 
-The following is the current UI1–UI7 remainder; older broad checklist entries describe total scope,
-not a claim that the existing settings pages have never been implemented:
+Current UI1–UI7 status (October 6); the detailed local acceptance is in the
+[completion receipt](#ui1ui7-completion-batch-2026-10-06):
 
-| Area | Implemented | Remaining work |
+| Area | Completed local scope | Remaining release evidence |
 | --- | --- | --- |
-| UI1/UI2 contract and ownership | Validated settings, inherited project service values, graph precedence, last-valid state and guarded updates. | Complete option/consumer inventory as controls expand; remote/restricted-workspace and broader multi-root precedence acceptance. |
-| UI3/UI4 settings | Community IntelliJ Compiler/Code Style/Language Service pages; VS Code native Settings, commands and path selection. Ordered library/source-attachment controls, resource-path ordering and Gradle inheritance are implemented (X266–X268). | Broader persistence/adapter-parity acceptance and consistent origin/inheritance presentation across every option. |
-| UI5 build/apply lifecycle | Live formatting/hints, restart-owned transport options, explicit import/preparation, cancellation and accepted-report ownership; automatic refresh after initial import, nested/composite aggregation, processed-resource status and native project/folder retirement (X263–X265). | Broader independent multi-root/overlapping-root precedence and remote/restricted-workspace acceptance. Conflicting source owners are rejected, not silently reconciled. |
-| UI5 runtime | Effective runtime/PID, VS Code Java home, validated machine-local JVM tuning and explicit restart in both clients (X269). | Fresh-IDE persistence and broader platform/runtime acceptance. |
-| UI6 support | Effective settings/queue reports, log toggle, import status, library/source attachments, process-owned log retention and bounded export (X270). | Offline export, broader support bundles and direct settings/log links from failures. |
-| UI7 acceptance | Shared local settings/restart/save/refresh scenarios and X260–X265 import cases pass both editors; selected receipts and corrections are recorded below. | Broader persistence/multi-root/remote/restricted-workspace and adapter parity; the current 275-case catalog has not been rerun for the settings batches. |
+| UI1/UI2 contract and ownership | Option/consumer inventory, real setting scopes, inherited values, immutable validation, graph precedence, trust refusal, multi-root rejection/precedence and last-valid state. | Remote hosts and cross-platform paths remain L82; untrusted/virtual VS Code workspaces are not offered. |
+| UI3/UI4 settings | Native Community-compatible IntelliJ pages with vertical Compiler navigation; grouped VS Code Settings and path commands; source/library/resource ordering and inheritance. | Broader platform/accessibility acceptance remains L82. |
+| UI5 build/apply lifecycle | Live updates, transport restart, explicit import/preparation, cancellation and accepted-report ownership; automatic refresh, nested/composite roots and native owner retirement. | Cross-platform/remote import and longer-running workloads remain L82. Conflicting source owners are rejected. |
+| UI5 runtime | Validated machine-local JVM tuning, explicit restart and full IDE persistence, tested with compiler and Tree-sitter. | Other platform/runtime combinations remain L82. |
+| UI6 support | Configured/effective reports, queue/log views, bounded live and offline project-owned export, persisted launcher failure records and actionable failure links. | Long-duration log rollover and broader operational evidence remain L82. Export deliberately excludes source files and other projects. |
+| UI7 acceptance | Current 277-case catalogs executed with documented continuations/corrections; both adapters tested for settings persistence, installed controls and automatic restart. | Known UP16/UP23 native VS Code failures and UP25/UP26 IntelliJ partial cases remain recorded. This is combined coverage, not one uninterrupted all-green run. |
 
 L77 awaits a real recognized color API; no color library is added solely for LSP. L78 notebooks are
 explicitly deferred by the user. L79 runtime inline values follows Run/DAP. L73's existing legacy
@@ -11867,18 +11873,19 @@ completion markers, pruning task/tests and report-path documentation together as
 
 ## UI1–UI7 completion batch (2026-10-06)
 
-Implementation is in progress; the final acceptance gate is pending. Keep the preceding receipts
-separate from the new batch. Local commits will separate settings contracts, ownership, editor UI,
-apply/reporting, support export and shared/native acceptance.
+The local desktop settings batch is implemented and accepted. Separate receipts below preserve
+failed attempts, corrections, selected reruns and full-catalog evidence. Compiler remains the
+packaged default; both adapters pass full-process settings persistence. Known editor limitations
+remain open, and remote/cross-platform/long-duration release evidence stays in L82.
 
 - UI3: Compiler settings now separate Source modules, Libraries and sources, and Build import.
   Source actions stay beside the source table; import actions have explicit Refresh/Prepare help.
-  The report is collapsed behind **Show effective paths and import details**. The shared import
+  The report is collapsed behind **Effective paths and import details**. The shared import
   probe selects Build import before operating the same shipping buttons. No compiler or settings
   persistence owner changes in this layout commit.
 - UI1 audit found that VS Code's maxLineWidth field was advertised but omitted from its formatting
-  configuration response. The settings-contract commit must send and validate it, with regression
-  coverage. Connection settings descriptions also need to describe their automatic restart.
+  configuration response. It is now sent, validated and regression-tested. Connection settings
+  descriptions state their automatic restart behavior.
 - UI6 offline support must be scoped to the last server connection owned by the selected project,
   preserve bounded launcher failure information, and never select another project's newest log.
 - UI2/7: full editor exit/reopen, independent owners, multi-root rejection/precedence, unsupported
@@ -11918,8 +11925,8 @@ disables the extension for untrusted and virtual workspaces. A remote extension 
 filesystem is architecturally possible, but is not claimed as accepted without a separate remote
 run; paths always belong to that extension host, never implicitly to the desktop client.
 
-Layout checkpoint: `397f75a6a`. Tests for formatting-margin serialization and grouped/machine
-reporting have been added; batch execution remains pending.
+Layout checkpoint: `397f75a6a`, with final vertical navigation in `15337a71c`. Tests for
+formatting-margin serialization and grouped/machine reporting pass in the smoke runs below.
 
 
 ### UI5/UI6 support export implementation
@@ -11942,7 +11949,7 @@ late status callbacks after a connection or settings-owner change.
 
 New regression tests cover retired callbacks, saved launch restoration, isolation from other project
 logs, trace ownership, symlinks, source exclusion, file truncation and export after pruning/failure.
-Execution is still deferred to the combined batch gate.
+These pass in the combined validation recorded below.
 
 
 ### UI2/UI5 owner and trust follow-up
@@ -11959,4 +11966,158 @@ IDE exit. They check machine JVM/log settings, project source graph, service pre
 server PID; VS Code also checks user versus workspace inlay precedence. IntelliJ uses the shipping
 settings pages and verifies that untrusted Gradle import is refused without replacing the model.
 Shared X271/X272 exercise stopped/failed-launch export and recovery in both installed clients.
-All new acceptance remains pending execution; no previous green receipt establishes these cases.
+The new acceptance receipts below establish these cases; older green runs are not substituted.
+
+
+### UI completion validation records (chronological)
+
+- Production Kotlin, unit-test Kotlin, integration-test Kotlin and TypeScript compiled; lang
+  SpotlessCheck passed before the visual follow-up.
+- IntelliJ unit XML: 120 tests, zero failures/errors/skips, including three offline support tests.
+- VS Code `extension-tests/run-LIxda8`: 49 checks passed, including settings consumers and offline
+  archives. The compiler editing workload completed 40 error/recovery cycles.
+- The first protocol run has two class-loading failures while another Gradle build replaced shared
+  outputs. Both missing classes exist in the final JAR. Preserve this failed receipt under
+  `lsp-server/build/reports/ui-settings-acceptance/`; rerun with build invocations serialized.
+- IntelliJ `run-17775428663235251614`: 17 of 19 selected scenarios pass, plus START. X260 loses
+  visibility of its import button before the duplicate-request assertion; X261 then cannot see
+  its expected resource inputs. Restore the Build import tab before each driver button action and
+  retain the failed receipt. X269–X272 pass, including the intentional failed JVM and recovery.
+- The first two-process IntelliJ persistence attempt writes successfully, but its second launch
+  hits the harness's duplicate START identifier. Give reopen its own bootstrap result before
+  rerunning; no persistence pass is claimed yet.
+- Visual review rejected stretched buttons and excessive blank space. Build import now uses the
+  same Kotlin UI DSL as the project wizard: normal-size buttons, native smaller help text,
+  Gradle inputs/Import status groups and collapsible details. A standalone dialog sizes to the
+  active tab; the normal Settings window retains control of its own bounds. Visual verification
+  of this follow-up and the remaining broader gates are pending.
+
+- The same overlapping-build attempt ended with 2,130 backend tests, 107 failures and two skips;
+  99 failures are missing classes, including shaded Gson helpers. Several remaining configuration
+  assertions depend on those failed classes. No pass is claimed for this invalidated batch; its
+  failing XMLs are preserved under `ui-settings-acceptance/overlapping-build-unit/`. The complete
+  serialized rerun remains required.
+- VS Code persistence `run-nZG1Ds` exposed a harness assumption: single-folder settings are reported
+  as folder origins by VS Code. The persistence run now uses an explicit `.code-workspace` file and
+  omits the default folder-level hint override, so it actually exercises user/workspace precedence.
+  This failed receipt remains separate from the forthcoming two-process result.
+- Visual follow-up: `276a3250f` switches Build import to native Kotlin UI DSL; `9ed679ee7` corrects
+  import-tab restoration and persistence bootstrap/workspace ownership. Both compile before rerun.
+- Corrected import acceptance `run-4147833334833547866` passes X260/X261/X262 without IDE errors.
+  The actual Build import window was captured during this run: compact left-aligned buttons,
+  subdued help, native section dividers and collapsed details replace the stretched layout.
+- VS Code two-process persistence `extension-tests/run-fWbld3` passes write and read phases with
+  different server PIDs. User/workspace, source graph, JVM and log preferences survive full exit.
+- IntelliJ `run-16565912187442326077` reaches the reopen comparison and exposes an actual storage
+  defect: the pinned IDE's XML serializer omits unannotated final scalar fields. A standalone
+  round trip of the compiled runtime and support-log state produces empty XML and default values.
+  Explicit field bindings preserve immutable state; regression tests cover both state classes.
+  Reopen acceptance remains pending until the repaired plugin runs.
+- The serialized stdio rerun exposes a tracing-test assertion defect: queue records have no
+  `operation` field, so `anySatisfy` throws a null-pointer exception before inspecting API records.
+  Use nullable lookup so nonmatching records fail the assertion normally. No production trace
+  format change is required. The corrected assertion still requires compile timing and reply timing.
+- Serialized backend run: 2,130 tests, zero failures/errors and two existing Tree-sitter navigation
+  skips. The complete stdio run has 80 passes and the assertion defect above; its corrected test
+  passes on rerun (`73c4ee179`). IntelliJ headless validation now passes all 122 tests with no skips,
+  including both XML serialization regressions (`6d7b50a72`). Native restart acceptance and the
+  complete editor catalogs remain outstanding.
+
+### Timeout isolation and acceptance follow-up
+
+- IntelliJ persistence `run-7326867442734256276` passes both complete-process launches, including
+  nondefault JVM/log preferences and the recorded support session. The accompanying timeout
+  classifier selection initially passes three tests; the strengthened selection passes four,
+  including an expected-refusal assertion wrapping a timeout.
+- Full VS Code `run-XzYJel` executes all 277 cases: 271 pass and six fail. X130 reproduces UP16
+  after successful Move/Undo/Redo/resource assertions; X218 retains the accepted UP23 host Undo
+  limitation. Neither failure is silently converted into a pass.
+- The other four failures have concrete follow-ups. X148 dispatched Undo with Output focused;
+  focus the real source input once before each history operation. X256 accepted before ghost
+  text was rendered; wait for the expected visible suffix, then commit once. X259's workspace
+  toggle was masked by the harness's folder-level default; remove that redundant bootstrap
+  override. X272 exposes the initialization-promise lifetime defect now recorded as UP28.
+- VS Code `run-gsQKRh` passes all 12 selected cases in a multi-root workspace: X135/X147/X148,
+  X255–X259 and X269–X272. Undo, inline rendering and hint toggling finish in seconds without
+  longer deadlines or replayed mutations. The stronger notification follow-up `run-FpkLou`
+  retains its X272 failure; final `run-W9g4f3` passes X269–X272 with one startup-error notification,
+  no unhandled promise rejection, offline export and recovery. Expected invalid-configuration
+  notifications are checked and cleared between scenarios.
+- Both harnesses stop their IDE run on timeout, cancellation or cleanup failure. Later cases stay
+  not run. Ordinary settled assertions may be collected after successful workspace cleanup.
+  VS Code read deadlines bound a nonresponding provider as well as polling; four pure Mocha
+  regressions cover pending reads, refusal/success and actual runner abortion. IntelliJ preserves
+  driver timeouts through wrapped/suppressed exceptions and expected-refusal checks. The status
+  bar describes the current VS Code wait and its elapsed time/deadline.
+- IntelliJ full attempt `run-3889400514004330687` passes five shared cases plus START, then stops
+  at 7a.8's 45-second warning deadline. An unrelated Move dialog was visible; no move was
+  submitted and no subsequent case ran in that IDE. The fresh continuation
+  `run-5002803267212129057` completes the remaining catalog: combined with the first five
+  cases, 274 shared scenarios pass, X254/X257 retain UP25/UP26 partial coverage, and X271 fails.
+  Both runs retain their original failures; the Move dialog origin remains unproven.
+- IntelliJ `run-8834183462259923991` passes START/START_PROJECTS: two projects retain independent
+  connections and pending work. This supplements the complete-process persistence result.
+- Execution traces now identify unnamed threads as `virtual-<id>` or `platform-<id>`, retaining
+  the numeric thread ID. All three trace regressions pass (`11678516a`). Test isolation is
+  `319ba27e4`; native VS Code focus/rendering and workspace-default correction are `fd088f897`.
+
+- The vertical-navigation follow-up replaces the Compiler dialog's tab row with a bordered page
+  list and stacks normal-width build actions with their help. The selected page owns the dialog's
+  preferred size; navigating preserves the same draft controls. The library probe now explicitly
+  selects its page and checks that navigating away and back preserves the edited table.
+- Focused native `run-8383781544397149220` passes the three import cases and X269/X270/X272.
+  Three library cases expose the probe's missing page selection. X271's improved assertion shows
+  a different PID, not a timestamp mismatch: internal wrapper `stop()` leaves automatic startup
+  enabled. Match the user's Stop action with `stopAndDisable()`, then require the offline export
+  to preserve both the stopped state and process identity. This is a harness correction; the
+  project-owned export must continue using the most recently recorded launch.
+
+The following receipts close the corrected native and alternative-adapter gates. They do not
+relabel the full failed VS Code run or its recorded UP16/UP23 host limitations.
+
+- Corrected native `run-8778326141068942537` passes START and all ten selected cases:
+  X260–X262 and X266–X272, with zero IDE failures. The live dialog was visually inspected with
+  bordered vertical navigation, compact stacked actions, smaller help and expandable details.
+  Layout commit: `15337a71c`; offline Stop test correction: `a94f1ec05`.
+- VS Code compiler smoke `extension-tests/run-fQUkhF` passes all 54 tests. The added crash/restart
+  case verifies the same client connection initializes a new server PID, preserves unsaved text
+  and resumes hover. The 40 error/recovery cycles finish with p50 610 ms and p95 612 ms.
+
+- Tree-sitter IntelliJ `run-6749401871977790942` passes both complete IDE launches, verifying the
+  actual TreeSitter adapter, persisted JVM/log limits, incremental transport, project preferences
+  and a different server PID. Compiler-only feature cases remain restricted to compiler builds.
+
+- Tree-sitter VS Code `extension-tests/run-cFWVWQ` passes 53 common smoke tests, including automatic
+  server restart with unsaved text; the compiler-only workload is explicitly skipped. Persistence
+  `extension-tests/run-LXUiIb` passes write/read in separate editor processes and records TreeSitter
+  with distinct server PIDs. Adapter/persistence and common restart checks are `2027e2701`.
+
+Combined compiler catalog coverage after the recorded corrections: **IntelliJ 275 passed, two
+partial (X254/UP25 and X257/UP26); VS Code 275 passed, two failed (X130/UP16 and X218/UP23)**.
+This covers all 277 shared cases across runs, rather than claiming an uninterrupted green run.
+The settings batch does not expand AST/embedding APIs, restore unsafe refactorings, or implement
+Run/DAP, notebook or color providers. Those retain their explicit workstreams.
+
+Final lifecycle gate `project-lifecycle/run-lOFP5S` passes with two VS Code windows sharing one
+Electron process: independent server PIDs, 5,001 references in the surviving project, closure
+while work is pending, and unsaved-text restoration with a new PID on reopen. Compiler artifacts
+were rebuilt after the alternative-adapter tests; the packaged version properties confirm
+`lsp.adapter=compiler`. Root and lang SpotlessCheck pass.
+
+Final checkpoint map for future PR extraction:
+
+| Commit | Slice |
+| --- | --- |
+| `6d7b50a72` | Persist immutable runtime/support state with real IDE XML round-trip regressions. |
+| `73c4ee179` | Correct trace assertions for heterogeneous events. |
+| `11678516a` | Give unnamed execution-trace threads readable identities. |
+| `319ba27e4` | Stop both GUI runners after timeout/cancellation/failed cleanup; preserve expected-refusal failures. |
+| `fd088f897` | Wait for actual native editor/ghost-text state before history or inline acceptance; correct workspace hint precedence. |
+| `0d72ab973` | UP28 initialization-promise workaround, single actionable startup failure and stronger X272 assertions. |
+| `15337a71c` | Vertical Compiler navigation, stacked build actions and page-aware native probes. |
+| `a94f1ec05` | X271 uses the native Stop action and verifies stopped-process ownership after export. |
+| `2027e2701` | Automatic restart/unsaved-text smoke coverage, bounded smoke waits and both-adapter persistence; remove obsolete startup feature claims. |
+
+All work remains on `lagergren/errs`; these final checkpoints are local until the user requests a
+push. Follow-up release work is L82 (remote/platform/scale/long-duration evidence) plus the recorded
+upstream issues. Embedded Run/DAP remains the independent runtime track.
