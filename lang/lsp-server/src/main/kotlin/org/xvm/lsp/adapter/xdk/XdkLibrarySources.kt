@@ -2,22 +2,12 @@ package org.xvm.lsp.adapter.xdk
 
 import org.xvm.asm.ClassStructure
 import org.xvm.asm.ConstantPool
-import org.xvm.asm.ErrorList
 import org.xvm.asm.MethodStructure
 import org.xvm.asm.constants.IdentityConstant
 import org.xvm.asm.constants.ModuleConstant
 import org.xvm.asm.constants.MultiMethodConstant
-import org.xvm.compiler.CompilerException
-import org.xvm.compiler.Parser
-import org.xvm.compiler.Source
-import org.xvm.compiler.Token
-import org.xvm.compiler.ast.AstNode
-import org.xvm.compiler.ast.MethodDeclarationStatement
-import org.xvm.compiler.ast.PropertyDeclarationStatement
-import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.lsp.adapter.ReadOnlyDocument
 import org.xvm.lsp.adapter.SymbolMoniker
-import org.xvm.lsp.util.ExecutionTrace
 import java.net.URI
 import java.nio.file.Files
 import java.security.MessageDigest
@@ -36,19 +26,12 @@ internal object XdkLibrarySources {
         val revision: String,
     )
 
-    private data class Declaration(
-        val path: List<String>,
-        val range: SemanticModel.Range,
-        val firstLine: Int,
-        val lastLine: Int,
-    )
-
     private data class SourceFile(
         val module: String,
         val path: String,
         val uri: String,
         val document: ReadOnlyDocument,
-        val declarations: List<Declaration>,
+        val declarations: List<LibraryDeclaration>,
     ) {
         // Evaluated only on the compiler worker. The cached value contains copied ranges/IDs only.
         val monikers by lazy { declarationMonikers(this) }
@@ -181,51 +164,7 @@ internal object XdkLibrarySources {
         Files.createDirectories(file.parent)
         Files.writeString(file, text)
         check(file.toFile().setReadOnly()) { "Cannot protect bundled source $path" }
-        val errors = ErrorList()
-        val root =
-            try {
-                ExecutionTrace.api("Parser.parseSource(library-source)") {
-                    Parser(Source(text), errors).parseSource()
-                }
-            } catch (_: CompilerException) {
-                null
-            }
-        val declarations =
-            buildList {
-                fun visit(
-                    node: AstNode,
-                    parents: List<String>,
-                ) {
-                    val token =
-                        when (node) {
-                            is TypeCompositionStatement -> node.nameToken
-                            is MethodDeclarationStatement -> node.nameToken
-                            is PropertyDeclarationStatement -> node.nameToken
-                            else -> null
-                        }
-                    val module = node is TypeCompositionStatement && node.category.id == Token.Id.MODULE
-                    val names = if (token == null || module) parents else parents + token.valueText
-                    if (token != null) {
-                        fun at(position: Long) =
-                            SemanticModel.Position(
-                                Source.calculateLine(position),
-                                Source.calculateOffset(position),
-                            )
-                        add(
-                            Declaration(
-                                names,
-                                SemanticModel.Range(at(token.startPosition), at(token.endPosition)),
-                                Source.calculateLine(node.startPosition),
-                                Source.calculateLine(node.endPosition),
-                            ),
-                        )
-                    }
-                    node.childNodes().forEach { visit(it, names) }
-                }
-                if (root != null && !errors.hasSeriousErrors()) {
-                    visit(root, path.substringBeforeLast('/', "").split('/').drop(1))
-                }
-            }
+        val declarations = libraryDeclarations(text, path)
         val virtualUri = URI(SCHEME, module, "/${XdkLibraries.revision(module)}/${entry.revision}/$path", null, null).toASCIIString()
         return SourceFile(
             module,

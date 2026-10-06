@@ -279,9 +279,31 @@ class XdkAdapter
         override val readOnlyDocumentSchemes = setOf(XdkLibrarySources.SCHEME)
 
         override fun readOnlyDocument(uri: String): ReadOnlyDocument? =
-            synchronized(lifecycle) { if (closed) null else XdkLibrarySources.document(uri) }
+            synchronized(lifecycle) {
+                if (closed) {
+                    null
+                } else {
+                    XdkLibrarySources.document(uri) ?: dependencies.modules.values.firstNotNullOfOrNull { dependency ->
+                        dependency.documents[uri] ?: dependency.documents.values.find { it.uri == uri }
+                    }
+                }
+            }
 
-        private fun isLibraryDocument(uri: String): Boolean = uri.startsWith("${XdkLibrarySources.SCHEME}:") || XdkLibrarySources.owns(uri)
+        private fun isLibraryDocument(uri: String): Boolean =
+            uri.startsWith("${XdkLibrarySources.SCHEME}:") ||
+                XdkLibrarySources.owns(uri) || synchronized(lifecycle) { dependencies.modules.values.any { uri in it.documents } }
+
+        internal fun libraryConfiguration(): List<Map<String, Any>> =
+            synchronized(lifecycle) {
+                dependencies.modules.values.map { dependency ->
+                    mapOf(
+                        "module" to dependency.module,
+                        "revision" to dependency.revision,
+                        "readOnly" to true,
+                        "sources" to dependency.documents.values.map { it.uri },
+                    )
+                }
+            }
 
         /** Library queries share compiler serialization, cancellation, tracing and shutdown. */
         private fun libraryMonikers(
@@ -955,14 +977,17 @@ class XdkAdapter
         /**
          * Install one evaluated build snapshot; validation completes before either live input changes.
          */
-        internal fun replaceBuildInputs(inputs: XdkBuildModel.Inputs): Set<String> {
+        internal fun replaceBuildInputs(
+            inputs: XdkBuildModel.Inputs,
+            automatic: Boolean = false,
+        ): Set<String> {
             val replacement = XdkProject(inputs.modules)
             val artifacts = XdkDependencies(inputs.binaries)
             val (retired, probes) =
                 synchronized(lifecycle) {
                     check(!closed) { "XDK adapter is closed" }
                     discovery.updateAndGet {
-                        it.copy(explicit = true, buildModel = true, problem = null)
+                        it.copy(explicit = !automatic, buildModel = !automatic, problem = null)
                     }
                     if (
                         project.sameConfiguration(replacement) &&
