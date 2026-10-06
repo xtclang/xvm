@@ -1,6 +1,8 @@
 package org.xvm.lsp.adapter
 
+import ch.qos.logback.classic.LoggerContext
 import com.google.gson.JsonParser
+import org.slf4j.LoggerFactory
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.compiler.Source
@@ -12,6 +14,9 @@ import java.nio.file.Path
 object PrepareLibraryPlaybook {
     @JvmStatic
     fun main(args: Array<String>) {
+        check(
+            LoggerFactory.getILoggerFactory() is LoggerContext,
+        ) { "Playbook fixture logging must use Logback, not javatools' no-op provider" }
         val fixture =
             JsonParser
                 .parseString(Files.readString(Path.of(args[0])))
