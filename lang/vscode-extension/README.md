@@ -19,8 +19,8 @@ Ecstasy is a modular, object-oriented language designed for secure, multi-tenant
 
 ## Features
 
-- **Syntax highlighting** for `.x` files via a TextMate grammar generated from the official tree-sitter parser
-- **Semantic tokens** — types, methods, properties, annotations, and modifiers (`static`, `@RO`, `abstract`, etc.) get richer colour from the language server
+- **Syntax highlighting** for `.x` files via a TextMate grammar generated from the shared language DSL
+- **Semantic tokens** — compiler-resolved types (including imported types), enum members, functions, methods, parameters and properties refine the theme's colors. Declaration, readonly, static, abstract, write and documentation modifiers supply optional emphasis. Try the [semantic-color demo](../doc/manual-test-plan.md#compiler-semantic-color-prototype); classification coverage differs between adapters.
 - **Language Server Protocol (LSP)** — hover, completions, go-to-definition, find references, document outline, inlay hints, and diagnostics
 - **Debug Adapter Protocol (DAP)** — launch and step-debug Ecstasy modules with breakpoints, variables, and call stack inspection
 - **Tasks** — auto-discovered Gradle Build / Test / Clean / Run tasks for any workspace that contains a `build.gradle.kts`

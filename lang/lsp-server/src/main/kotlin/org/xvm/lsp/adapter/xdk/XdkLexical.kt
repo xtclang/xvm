@@ -294,6 +294,12 @@ internal object XdkLexical {
 
                     else -> return@flatMap emptyList()
                 }
+            val modifiers =
+                if (token.id == Token.Id.ENC_COMMENT && token.text.startsWith("/**")) {
+                    SemanticTokenLegend.modifierBitmask("documentation")
+                } else {
+                    0
+                }
             (token.range.start.line..token.range.end.line).mapNotNull { line ->
                 val start = if (line == token.range.start.line) token.range.start.column else 0
                 val end =
@@ -306,7 +312,7 @@ internal object XdkLexical {
                         start,
                         end - start,
                         SemanticTokenLegend.typeIndex.getValue(kind),
-                        0,
+                        modifiers,
                     )
                 }
             }

@@ -1238,7 +1238,7 @@ backend/protocol/editor, cancellation, stale-result and performance acceptance r
 | L74 monikers | Implemented and validated: normalized artifact identities, source/binary equality, overload/generic calls, replacement, private/local visibility and shared X252/X253. | Bounded to current successful semantic snapshots. L75 adds direct library document monikers; no LSIF exporter or native moniker browser is claimed. |
 | L75 document content | Negotiated immutable virtual source content/refresh and direct library monikers pass backend, packaged and selected acceptance. | IntelliJ uses protected file fallback until LSP4IJ implements content providers (UP25). |
 | L76 inline completion | Compiler cursor projection, capability negotiation, cancellation and shared X255–X258 pass batched backend and selected editor validation. | Plain names/expected-type values only. LSP4IJ native invocation/selection constraints are UP26; no generative service is implied. |
-| L77 colors | No color-value provider exists. | Decide which XTC values have unambiguous color meaning and reversible source edits. Implement that scope or record why it is inapplicable. |
+| L77 colors | Opt-in fixture prototype implements document colors and picker presentations for compiler-resolved `ColorPrototype.Rgba` constructors. | Native picker acceptance and a real library/product contract remain. No public XDK color API or default color provider is introduced. |
 | L78 notebooks | Current ownership is file/module based; there are no notebook sessions. | Decide whether XTC notebooks are a product requirement, then define cell/module identity and execution order before synchronization. Record an explicit exclusion if out of scope. |
 | L79 debug inline values | Compiler inlay hints are not runtime values; DAP remains a stub. | Depend on R6–R7 real sessions, stack/source mapping and stop-state ownership; define evaluation safety before exposing values. |
 | L80 negotiation | Current producer/provider audit is complete, including link-tooltip, per-signature parameter and pull-related-info gates. Generic IntelliJ text-edit guarding and shared X144 retain their passing receipts. | Generic resource/snippet/confirmation edits remain refused; native Rename/Move owns resource edits. New producers must extend negotiation and tests; host/release acceptance remains under L81/L82. |
@@ -1324,13 +1324,14 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
   read-only libraries, canceled and obsolete results. Whole-method generation and an AI service
   are outside this compiler feature. Commit the contract, semantic projection/tests, protocol/tests,
   then shared native acceptance cases; batch validation after implementation.
-- [ ] **L77 — Color support (deferred; outside the current compiler/file-editor completion gate).** Define supported XTC color values, then implement
-  `textDocument/documentColor` and `textDocument/colorPresentation`, including exact round-trip
-  edits. No color provider is currently advertised. The user chose recognized Ecstasy color APIs
-  only (2026-10-05), not arbitrary color-looking strings. No applicable standard color API was found
-  in the checked XDK/platform sources. Do not invent a graphics library solely to fill this LSP
-  checkbox. A future ordinary library on the module path supplies the type/API; an explicit
-  semantic mapping then enables swatches and safe picker edits.
+- [ ] **L77 — Color support (fixture prototype implemented; public API remains deferred).**
+  The user authorized a bounded prototype on 2026-10-06. `textDocument/documentColor` and
+  `textDocument/colorPresentation` now support an explicit fixture constructor behind
+  `XTC_LSP_COLOR_PROTOTYPE=true` / `-Dxtc.lsp.colorPrototype=true`; no provider is advertised
+  by default. Compiler identity and UInt8 channel literals establish the meaning, not arbitrary
+  color-looking strings. See the [prototype record](#l77-color-value-prototype-2026-10-06).
+  A public library contract and native picker acceptance remain before promotion. No graphics
+  library is added to the XDK solely to fill this LSP checkbox.
 - [ ] **L78 — Notebook documents (explicitly deferred).** Define XTC cell/module semantics and implement
   `notebookDocument/didOpen`, `didChange`, `didSave`, `didClose` and notebook synchronization
   capabilities. Current source trees/file overlays do not constitute notebook support. The user
@@ -12521,3 +12522,107 @@ Local implementation checkpoint: `8e24df2ec` owns the scope-resolution/invalidat
 regressions and workload mode. It is a language-server implementation slice; no Java compiler,
 AST, embedding API or advertised feature changed. Keep these tests with the implementation when
 extracting a future PR, and rerun them independently after extraction.
+
+## Compiler semantic-color prototype (2026-10-06)
+
+Source-code highlighting is independent of L77's color-value swatches/pickers. The current DSL
+generates TextMate scopes and Tree-sitter captures; the Tree-sitter adapter additionally emits
+syntax-based LSP semantic tokens. The compiler already emits resolved symbol identities and
+declaration/static/readonly/abstract/write modifiers. Keep these layers and the shared standard
+LSP legend. A separate palette or Ecstasy-specific token taxonomy is not needed for this slice.
+
+The prototype copies resolved class formats and the compiler's `isFunction` fact into immutable
+LSP symbols. Presentation can now classify imported/binary types even without a local declaration,
+enum members at declarations and references, and static functions without misclassifying
+constructors. Java lexical projection preserves the documentation-comment modifier on every
+line. All changes are in `lang`; no AST/embedding API changes, new mutable compiler fields,
+retained compiler objects, extra compilation or TypeInfo construction are required.
+
+The [demo workspace](../lang/test-fixtures/semantic-highlighting/semantic-colors.code-workspace)
+uses theme colors with optional bold declarations, underlined writes and italic static functions
+and documentation comments. Its intentionally lowercase type and uppercase parameter show why
+resolved identities are better than spelling heuristics. The [manual recipe](../lang/doc/manual-test-plan.md#compiler-semantic-color-prototype)
+includes TextMate comparison and token inspection. Semantic tokens now default on in the installed
+IntelliJ launcher as well as VS Code and Gradle development/playbook launches. Explicit system
+property/environment overrides still allow a TextMate-only comparison. This does not enable
+L77's fixture-only color-value provider.
+
+- [x] Preserve source/binary class categories, enum members, function/constructor distinctions and
+  documentation comments; retain the existing 23 token types and 10 modifiers.
+- [x] Add a compilable theme-respecting demo and exact backend assertions, including references,
+  bundled `List`, ordinary comments/string negative controls and all three line-ending forms.
+- [x] Update shared X41/X154 expectations consumed by both IDE drivers and correct overstated
+  annotation/deprecation claims in the manual capability table.
+- [x] Enable semantic tokens by default in installed IntelliJ plugins, matching the server,
+  VS Code and existing development/playbook defaults; retain explicit opt-out overrides.
+- [ ] Run selected native X41/X154 acceptance and inspect light/dark/high-contrast themes before
+  treating the prototype as visually accepted. No new GUI run is claimed for this slice.
+- [ ] Investigate compiler-backed annotation/decorator occurrences and bundled-library provenance
+  (`defaultLibrary`) using resolved identities, with alias/shadowing controls. Do not guess from
+  names or hardcode only the ecstasy module.
+- [ ] Add deprecation classification only when there is a real supported Ecstasy deprecation
+  contract. Tree-sitter's syntactic `@Deprecated` recognition does not establish one.
+
+Service/mixin-specific custom token types remain a possible later design, requiring useful theme
+fallbacks in both editors. For now they use standard class/interface categories. Mutation emphasis
+stays optional in the demo rather than becoming a global visual default.
+
+Validation: 43 tests pass with zero failures/errors/skips across `XdkSemanticColorTest`,
+`XdkLexicalTest`, `XdkPresentationTest`, `XdkSemanticTokenProtocolTest`, `SemanticModelTest`,
+`XdkL65ClosureTest`, `XdkPresentationScaleTest` and `SemanticTokenReportsTest`. This includes
+current-source recovery/no-stale-token controls, snapshot isolation, mutation highlights and
+full/range/delta negotiation. Root and language-server Spotless checks pass; the real test task
+runs with configuration cache enabled. Shared X154 is compiled headlessly; that is not a native
+UI receipt.
+
+The default-on IntelliJ follow-up passes 17 focused plugin capability/JAR-resolution tests with
+zero failures/errors/skips. Root, server and IntelliJ Spotless checks pass. The plugin compiles
+with the installed-launcher default changed; no additional native GUI run is claimed.
+
+## L77 color-value prototype (2026-10-06)
+
+The fixture [`ColorPrototype.x`](../lang/test-fixtures/color-values/ColorPrototype.x) defines
+`const Rgba(UInt8 red, UInt8 green, UInt8 blue, UInt8 alpha = 255) {}`. Its contract is byte-valued
+sRGB with straight alpha; zero is transparent and 255 opaque. This is a test module, not a public
+XDK color/graphics API. The fixed module/type identity intentionally scopes this experiment.
+
+The compiler adapter opts in at construction. The packaged launcher reads
+`XTC_LSP_COLOR_PROTOTYPE=true` or `-Dxtc.lsp.colorPrototype=true` once, before capability negotiation.
+Normal compiler, Tree-sitter and mock capabilities remain unchanged. The prototype advertises
+`colorProvider` only when enabled; no plugin-specific protocol extension is needed.
+
+`XdkColorPrototype` copies recognized construction sites after successful compilation on the
+existing serial worker. Existing constructor/initializer bindings prove the selected module,
+class, shorthand constructor, parameter types/names, default alpha and written argument mapping.
+Import/typedef aliases and binary-only dependencies work through that identity. No AST changes,
+retained compiler references, TypeInfo reconstruction or application execution are required.
+Private analysis snapshots hold immutable color sites and retire with their existing source scope.
+
+Only explicit integer literals in 0–255 are supported (decimal, hex and separators included).
+Dynamic expressions, references to constants/locals, compound constant expressions, unrelated
+same-named types, other constructors, altered defaults and failed compilations produce no swatch.
+RGB is required; alpha may be omitted. Picker values are validated as finite normalized channels
+and rounded to the nearest byte. One edit replaces the current recognized constructor range;
+numeric tokens change while aliases, labels, argument order, comments and line endings survive.
+A missing alpha is inserted only when the requested alpha is not opaque. No additional edits or
+imports are returned. Source line offsets are indexed once per source during capture; raw text
+is used because Java `Source.toString(start, end)` normalizes CRLF.
+
+- [x] Fixture contract, opt-in capability and adapter/query plumbing.
+- [x] Compiler-bound recognition, named/default channels, binary import and typedef aliases.
+- [x] Round-trip picker edits, alpha insertion, byte quantization and original-text preservation.
+- [x] Negative controls for dynamic/invalid values, wrong identities/defaults, malformed ranges,
+  old ranges after edits, failed compilation and document closure.
+- [x] Real packaged-server opt-in and color/edit/recompile round trip over stdio.
+- [ ] Native VS Code and Community-compatible IntelliJ picker rendering, apply/cancel and Undo/Redo
+  acceptance using the same fixture. This is a manual prototype recipe, outside the 277-case
+  default catalog; no native acceptance is claimed yet.
+- [ ] Decide whether a real Ecstasy graphics/UI library needs this contract, then replace the
+  fixture mapping with that supported identity before considering default enablement. Broader
+  color spaces, named colors, constant evaluation, conversions and runtime values remain outside
+  this experiment.
+
+The [manual recipe](../lang/doc/manual-test-plan.md#l77-color-value-prototype) covers both editors.
+The focused validation run passes 93 backend/protocol/capability/highlighting tests plus one
+packaged stdio test, with zero failures/errors/skips. This is a prototype receipt, not full L77
+completion or a full IDE suite run.

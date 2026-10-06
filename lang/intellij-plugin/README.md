@@ -18,6 +18,9 @@ IntelliJ IDEA plugin for Ecstasy language support.
 - **New Project Wizard** - Create XTC projects directly from IntelliJ (File → New → Project → XTC)
 - **Run Configurations** - Run XTC applications via Gradle or `xtc run`
 - **Syntax Highlighting** - Full syntax highlighting for `.x` files (via TextMate grammar)
+- **Semantic Highlighting** - Enabled by default; compiler-resolved types, functions, enum members
+  and other symbols refine the editor's theme colors. See the
+  [highlighting playbook](../doc/manual-test-plan.md#19-semantic-tokens) for examples and opt-out settings.
 - **Language Features via LSP** - hover, completion, go-to-definition, find references, outline,
   auto-indent on type (see [LSP Server README](../lsp-server/README.md) for details)
 - **Code Style Settings** - Configurable indentation defaults under
