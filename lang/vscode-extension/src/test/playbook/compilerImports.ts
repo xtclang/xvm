@@ -29,6 +29,18 @@ export function compilerImportCases(): void {
             const settings = vscode.workspace.getConfiguration('xtc.compiler');
             const previousGraph = settings.inspect('sourceModules')?.workspaceValue;
             const ui = await WorkbenchUi.connect();
+            async function startImport(command: string) {
+                const pending = vscode.commands.executeCommand(command);
+                if (vscode.workspace.workspaceFolders!.length > 1) {
+                    const picker = ui.page.locator('.quick-input-widget:visible');
+                    await picker.getByPlaceholder('Select workspace folder').waitFor({ state: 'visible', timeout: 10_000 });
+                    await picker.locator('.monaco-list-row')
+                        .filter({ has: ui.page.getByText(vscode.workspace.workspaceFolders![0].name, { exact: true }) })
+                        .click({ timeout: 5_000 });
+                    await picker.waitFor({ state: 'hidden', timeout: 10_000 });
+                }
+                return { pending };
+            }
             const executions = new Set<vscode.TaskExecution>();
             const tasks = vscode.tasks.onDidStartTask(event => {
                 if (event.execution.task.definition.type === 'xtc-model') executions.add(event.execution);
@@ -90,7 +102,7 @@ export function compilerImportCases(): void {
                             'Synchronize compiler fixture', 'Gradle', new vscode.ProcessExecution(path.join(root, 'gradlew'), ['help', '--console=plain'], { cwd: root }));
                         await vscode.tasks.executeTask(task);
                         await eventually(async () => fs.stat(aggregate).then(() => true, () => false), Boolean, 'Automatic import publishes its aggregate');
-                    })() : vscode.commands.executeCommand(command);
+                    })() : (await startImport(command)).pending;
                     await eventually(async () => fs.readFile(path.join(control, `${operation}.started`), 'utf8').catch(() => ''),
                         value => value === (step.prepare ? 'prepareXtcLspModel' : 'exportXtcLspModel'), 'Real Gradle task published its output and is waiting');
                     // Force a consumer read while the task is gated, even if the watcher has not fired.
@@ -98,7 +110,7 @@ export function compilerImportCases(): void {
                     assert.deepStrictEqual(accepted(), baseline, 'Pending output cannot replace the accepted report');
                     await noErrors(document.uri);
                     if (step.duplicate) {
-                        await vscode.commands.executeCommand('xtc.refreshCompilerBuild');
+                        await (await startImport('xtc.refreshCompilerBuild')).pending;
                         await ui.page.locator('.notification-list-item').filter({ hasText: 'already running' }).waitFor({ state: 'visible' });
                         assert.strictEqual(executions.size, 1, 'Duplicate request must not create another native task');
                     }
