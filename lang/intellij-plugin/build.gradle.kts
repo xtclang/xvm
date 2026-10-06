@@ -874,12 +874,21 @@ val test =
         }
     }
 
+val pruneCompilerPlaybookReports =
+    tasks.register<PruneTestReportsTask>("pruneCompilerPlaybookReports") {
+        group = "verification"
+        description = "Retain five completed playbook payloads and all compact results"
+        reportsDirectory.set(layout.buildDirectory.dir("reports/compiler-playbook"))
+        retainedRuns.set(providers.gradleProperty("playbookRetainedRuns").map(String::toInt).orElse(5))
+    }
+
 // Launch the packaged plugin in an isolated IDE using JetBrains' Starter/Driver test task.
 // This suite is opt-in; ordinary plugin tests do not open an IDE window.
 intellijPlatformTesting.testIdeUi.register("testCompilerPlaybook") {
     task {
         description = "Run the compiler playbook's IntelliJ acceptance cases in an isolated IDE"
         dependsOn(":lsp-server:prepareLibraryPlaybook")
+        finalizedBy(pruneCompilerPlaybookReports)
         // Starter uses JNA for native process/window integration in this test JVM.
         jvmArgs("--enable-native-access=ALL-UNNAMED")
         testClassesDirs = integrationTestSourceSet.output.classesDirs

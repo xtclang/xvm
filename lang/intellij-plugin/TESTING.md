@@ -72,6 +72,21 @@ server traces and screenshots are under `build/reports/compiler-playbook/run-*`.
 summary alone is insufficient: inspect skipped counts, per-case statuses and `ideFailures`.
 `--rerun-tasks --no-build-cache` forces a complete re-execution when required.
 
+The compiler is now the default build adapter; `-Plsp.adapter=compiler` remains an explicit override.
+The native driver reuses its cached signed IntelliJ distribution and JBR when the product and
+version match. No installer download or extraction is needed for an existing installation. macOS
+native acceptance retains a signed `.app`: Gradle's reshaped compiler-classpath distribution cannot
+be launched through the signed native executable. Config, plugins and indices remain isolated per run.
+
+After native runs, `pruneCompilerPlaybookReports` keeps the five newest completed runs' workspaces,
+logs, screenshots and reports. Older runs retain compact results/progress files; their bulky
+payloads are removed. Disposable sandbox indices, plugin copies, config and temp data are removed
+after confirmed shutdown even for recent runs. Set `-PplaybookRetainedRuns=N` to change the count,
+or create `.keep-artifacts` in a `run-*` directory to preserve its payloads. Unfinished runs are
+left for investigation. The task is also safe to invoke separately; it never follows payload
+symlinks or deletes Git worktrees. Compact receipts are intentionally retained without a count limit.
+
+
 The sections below provide testing approaches and examples; consult `build.gradle.kts` and the
 version catalog for the active dependencies and task wiring, rather than copying older examples
 as current build configuration.
