@@ -11420,11 +11420,11 @@ not a claim that the existing settings pages have never been implemented:
 | Area | Implemented | Remaining work |
 | --- | --- | --- |
 | UI1/UI2 contract and ownership | Validated settings, inherited project service values, graph precedence, last-valid state and guarded updates. | Complete option/consumer inventory as controls expand; remote/restricted-workspace and broader multi-root precedence acceptance. |
-| UI3/UI4 settings | Community IntelliJ Compiler/Code Style/Language Service pages; VS Code native Settings, commands and path selection. | Ordered library/source-attachment editing, improved ordered resource/path editing and consistent origin/inheritance presentation. |
+| UI3/UI4 settings | Community IntelliJ Compiler/Code Style/Language Service pages; VS Code native Settings, commands and path selection. Ordered library/source-attachment controls, resource-path ordering and Gradle inheritance are implemented (X266–X268). | Broader persistence/adapter-parity acceptance and consistent origin/inheritance presentation across every option. |
 | UI5 build/apply lifecycle | Live formatting/hints, restart-owned transport options, explicit import/preparation, cancellation and accepted-report ownership; automatic refresh after initial import, nested/composite aggregation, processed-resource status and native project/folder retirement (X263–X265). | Broader independent multi-root/overlapping-root precedence and remote/restricted-workspace acceptance. Conflicting source owners are rejected, not silently reconciled. |
 | UI5 runtime | Effective bundled server/runtime, VS Code Java home and restart actions. | Validated advanced JVM options with machine-local scope and an explicit restart boundary. |
-| UI6 support | Effective settings/queue reports, log toggle, import outcome/time. | Source-attachment/library presentation, log export/retention and links from failures to settings/logs. |
-| UI7 acceptance | Shared local settings/restart/save/refresh scenarios and X260–X265 import cases pass both editors; selected receipts and corrections are recorded below. | Broader persistence/multi-root/remote/restricted-workspace and adapter parity; the complete 270-case catalog has not been rerun for this batch. |
+| UI6 support | Effective settings/queue reports, log toggle, import outcome/time, library/source-attachment presentation and reload. | Log export/retention and links from failures to settings/logs. |
+| UI7 acceptance | Shared local settings/restart/save/refresh scenarios and X260–X265 import cases pass both editors; selected receipts and corrections are recorded below. | Broader persistence/multi-root/remote/restricted-workspace and adapter parity; the current 273-case catalog has not been rerun for the library-controls batch. |
 
 L77 awaits a real recognized color API; no color library is added solely for LSP. L78 notebooks are
 explicitly deferred by the user. L79 runtime inline values follows Run/DAP. L73's existing legacy
@@ -11626,8 +11626,8 @@ Explicit source overrides are never rewritten by model refresh. Automatic export
 initial imported report; VS Code additionally requires a trusted local workspace and observes
 public Gradle task events, not a private Java-extension sync API. Untagged external exports remain
 observable. Conflicting overlapping-root models are rejected; broad independent multi-root
-precedence, remote/restricted-workspace acceptance, library/source-attachment editing, advanced
-JVM settings and log export remain open.
+precedence, remote/restricted-workspace acceptance, advanced JVM settings and log export remain open.
+The following batch implements library/source-attachment editing.
 
 
 ## Ordered libraries and attached sources batch (UI3/UI4/UI6, 2026-10-06)
@@ -11649,11 +11649,65 @@ Missing paths, malformed binaries, bundled-library overrides and invalid attachm
 replacement before live compiler inputs change. Applied binary bytes and source snapshots remain
 immutable until the next successful configuration/refresh. No compiler AST API change is required.
 
-Validation and editor receipts pending until all four slices are complete.
+Validation is complete for the selected batch. The final correction is `7283f8fa1`:
+VS Code normalizes URI authorities to lowercase, so attached-source URIs now keep the
+case-sensitive module name in the path under the fixed `attached` authority. Backend regression
+assertions exercise lookup through both fallback and virtual URIs. No upstream workaround is
+needed. The same commit fixes three harness assumptions: QuickPick/InputBox reuse the same input,
+VS Code appends keyboard instructions to input prompts, and directory URI spelling can include a
+trailing slash. IntelliJ X268 now creates its source-module fixture before editing resource roots.
+
+- Final backend library/configuration/content selection: **33 passed**, zero failures/errors/skips.
+  This includes real compilation, first-module precedence, source-text mismatch rejection,
+  attachment removal, binary/source navigation and the existing bundled-library content protocol.
+- IntelliJ unit tests: **114 passed**, zero failures/errors/skips. VS Code extension suite:
+  **41 passed**. Both native drivers compile; changed TypeScript passes ESLint without warnings;
+  root/lang Spotless checks and `git diff --check` pass. The real Gradle task graph stores and
+  then reuses the configuration cache; the repeat is an up-to-date/cache check, not a second
+  claimed execution of those tests.
+- VS Code 1.140.0 `run-uZLiO0` passes X129/X254/X260/X263 and exposes the initial X266 picker
+  timeout and X267/X268 uppercase-module URI defect. Corrected `run-Fpp8xO` passes X267
+  (navigation, restart and removal/restoration); it retains the prompt-selector and directory-URI
+  assertion failures. Final `run-HTMdex` passes X266/X268 in 4.8/1.2 seconds. All seven selected
+  cases therefore have passing receipts across these runs, not one uninterrupted green run.
+- IntelliJ 2026.2.3/LSP4IJ 0.21.0 with Ultimate disabled: `run-5914234873745700022` passes
+  START/X129/X260/X263/X266/X267, retains X254's existing UP25 partial status, and exposes
+  X268's missing fixture row. Corrected `run-5018889098298757849` passes START/X268.
+  Both runs record zero IDE errors. X267 opens the protected fallback source, verifies the
+  declaration/text, reconnects, and checks binary removal/restoration.
+- Shared catalog: **273 scenarios**, SHA-256
+  `3fed772fe79319f297766d9964953ecf0328c945b99dd134c0775d974c7ab54c`.
+  Preserve the failed first receipts. This is selected acceptance, not a complete catalog rerun.
+
+Acceptance bounds: persistence is tested across server restart and settings reset/reopen, not a
+fresh IDE/project restart. IntelliJ drives the actual settings components on the EDT; VS Code
+X266 drives the visible picker. X267 attachment setup uses the installed page/settings API.
+X268 verifies resource-order persistence, not every native file chooser or resource-dialog action.
+Visual layout, arbitrary multi-root ownership, remote/restricted workspaces and cross-platform
+acceptance remain manual/follow-up work. Directory attachments only are supported; archives,
+external-source declaration monikers and full semantic analysis of library text remain outside
+this slice. Files on disk are resnapshotted on apply/reload, not continuously watched.
 
 Implementation checkpoints: `02d71f3c9` owns the library/attachment contract, shared declaration
 parser and backend regressions; `f5c363462` owns IntelliJ controls and persistence validation;
-`c5c5e6cca` owns VS Code Settings/pickers and equivalent validation. X266–X268 extend the shared
+`c5c5e6cca` owns VS Code Settings/pickers and equivalent validation; `44da32b8d` owns shared
+fixtures, their Gradle producer and both editor drivers. X266–X268 extend the shared
 catalog to 273 cases. Both native tasks build the same compiler-produced library fixture first.
 The controls intentionally use project/workspace scope, matching the existing source graph;
 arbitrary independent per-folder library precedence is not implied by VS Code schema scope.
+
+
+Extraction: the backend contract, detached source index and shared bundled-source parser belong
+with `02d71f3c9`, including `7283f8fa1`'s URI correction and regression. IntelliJ and VS Code controls
+can be extracted independently on top of that contract. Their shared fixture/task and matching
+driver assertions from `44da32b8d` travel with the respective client slice, including the harness
+corrections in `7283f8fa1`. Each future PR must pass independently; these integrated receipts do
+not establish independent extractability. No local LSP4IJ snapshot, Java AST change or embedding
+API expansion is required.
+
+Next settings work remains explicit:
+
+- [ ] Validated machine-local JVM/runtime controls in both clients, with clear restart ownership.
+- [ ] Exportable diagnostics/log bundles, retention controls and direct settings/log links from failures.
+- [ ] Complete option/origin inventory and fresh-project persistence, multi-root, restricted/remote
+  and adapter-parity acceptance. Keep unsupported environments explicit.
