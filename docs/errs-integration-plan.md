@@ -11650,3 +11650,10 @@ replacement before live compiler inputs change. Applied binary bytes and source 
 immutable until the next successful configuration/refresh. No compiler AST API change is required.
 
 Validation and editor receipts pending until all four slices are complete.
+
+Implementation checkpoints: `02d71f3c9` owns the library/attachment contract, shared declaration
+parser and backend regressions; `f5c363462` owns IntelliJ controls and persistence validation;
+`c5c5e6cca` owns VS Code Settings/pickers and equivalent validation. X266–X268 extend the shared
+catalog to 273 cases. Both native tasks build the same compiler-produced library fixture first.
+The controls intentionally use project/workspace scope, matching the existing source graph;
+arbitrary independent per-folder library precedence is not implied by VS Code schema scope.

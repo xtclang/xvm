@@ -1,3 +1,4 @@
+import { librarySettingsCases } from './librarySettings';
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 import { getClient } from '../../lsp-client';
@@ -78,6 +79,7 @@ suite('XdkAdapter playbook', function () {
     inlineCompletionCases();
     refreshOverlapCases();
     compilerImportCases();
+    librarySettingsCases();
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {
