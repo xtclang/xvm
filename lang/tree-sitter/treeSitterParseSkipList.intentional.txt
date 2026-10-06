@@ -22,8 +22,6 @@
 # directory that contains lib_*/ and manualTests/). Blank lines and
 # `#` comments are ignored.
 
-# === sock-shop archive — genuine syntax errors ===
-# socks-catalog.x:100 -- PARSER-03: Expected token "]"; found ")".
-# socks-user.x:219    -- PARSER-03: Expected token "as"; found IDENTIFIER.
-manualTests/src/main/x/archive/sock-shop/socks-catalog.x
-manualTests/src/main/x/archive/sock-shop/socks-user.x
+# Archived examples (archive/ directories) are not swept at all, so the two
+# archived sock-shop files with genuine PARSER-03 errors no longer need to
+# be listed here.

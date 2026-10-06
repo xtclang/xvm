@@ -3,8 +3,8 @@
  *
  *     xec -L . oauth.xtc test.xqiz.it 192.168.1.40:8080/8090 192.168.1.30
  */
-module oauth
-        incorporates WebApp {
+@WebApp
+module oauth {
 
     package net   import net.xtclang.org;
     package web   import web.xtclang.org;
@@ -49,7 +49,7 @@ module oauth
     }
 
     Authenticator createAuthenticator() {
-        return new DigestAuthenticator(new FixedRealm("Hello", ["admin"="password"]));
+        return new DigestAuthenticator(new FixedRealm("Hello", "admin", "password"));
     }
 
     @HttpsRequired
@@ -58,6 +58,7 @@ module oauth
     service Simple {
         @Default @Get
         String home(Session session, RequestIn request) {
+            assert val http1 := &request.revealAs((protected Http1Request));
             return $|<!DOCTYPE html>
                     |<html lang="en">
                     |<head>
@@ -78,8 +79,8 @@ module oauth
                     |</ul>
                     |
                     |<table style="font-family:'Courier New'">
-                    |<tr><td>user</td><td>{session.userId? : "<anonymous>"}</td></tr>
-                    |<tr><td>tls</td><td>{request.as(Http1Request).info.tls}</td></tr>
+                    |<tr><td>user</td><td>{session.principal?.name : "<anonymous>"}</td></tr>
+                    |<tr><td>tls</td><td>{request.tls}</td></tr>
                     |{{for (val t : request.cookies()) {$.append($"<tr><td>cookie {t[0]}</td><td>{t[1]}</td></tr>");}}}
                     |<tr><td>originator</td><td>{request.originator}</td></tr>
                     |<tr><td>client</td><td>{request.client}</td></tr>
@@ -87,7 +88,7 @@ module oauth
                     |<tr><td>method</td><td>{request.method}</td></tr>
                     |<tr><td>uri</td><td>{request.uri}</td></tr>
                     |<tr><td>scheme</td><td>{request.scheme}</td></tr>
-                    |<tr><td>route</td><td>{request.as(Http1Request).info.routeTrace}</td></tr>
+                    |<tr><td>route</td><td>{http1.info.routeTrace}</td></tr>
                     |<tr><td>authority</td><td>{request.authority}</td></tr>
                     |<tr><td>path</td><td>{request.path}</td></tr>
                     |<tr><td>protocol</td><td>{request.protocol}</td></tr>

@@ -129,9 +129,7 @@ sourceSets {
              //       somewhere else and filter out the negative tests
             exclude("**/archive/**")
             exclude("**/dbTests/**")
-            exclude("**/json/**")
             exclude("**/jsondb/**")
-            exclude("**/codex/**")
             exclude("**/multiModule/**")
             exclude("**/webTests/**")
             exclude(
@@ -497,10 +495,6 @@ val testModuleNames = listOf(
 val runParallel = tasks.register<XtcRunTask>("runParallel") {
     group = "application"
     description = "Run all known tests in parallel through the parallel test runner."
-    // TODO: Re-enable TestIO here after the intermittent TypeSystem.implicitTypes initialization
-    // race is fixed. It still runs through the other manual test paths, but keeping it out of the
-    // parallel runner avoids a known flaky interpreter crash in CI for now.
-    val excludedModules = setOf("")
     module {
         verbose = false
         moduleName = "Runner"
@@ -510,7 +504,7 @@ val runParallel = tasks.register<XtcRunTask>("runParallel") {
         //   Now instead we have to explicitly specify the module names. IMPLEMENT THIS!
         //
         // TODO: CI integration test  for third party xdk dependency
-        moduleArgs(testModuleNames.filter { it !in excludedModules })
+        moduleArgs(testModuleNames)
     }
 }
 
@@ -521,11 +515,9 @@ val runParallel = tasks.register<XtcRunTask>("runParallel") {
 val runSequential = tasks.register<XtcRunTask>("runSequential") {
     group = "application"
     description = "Run all known tests sequentially, one after another."
-    // TODO: TestAnnotations is currently failing - fix the test and remove this exclusion
     // TODO: The runner.x in parallel tests apparently just swallows and prints exceptions WTF?
     // TODO: We should integrate this with xUnit instead maybe? OR finally implement negative and positive tests.
-    val excludedModules = setOf("TestAnnotations")
-    testModuleNames.filter { it !in excludedModules }.forEach { moduleName(it) }
+    testModuleNames.forEach { moduleName(it) }
 }
 
 // The same compiled module exercises the numeric subset supported by both backends.

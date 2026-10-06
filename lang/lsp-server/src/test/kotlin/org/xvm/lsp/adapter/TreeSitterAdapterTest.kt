@@ -334,6 +334,142 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
         }
 
         /**
+         * Module compositions (issue #453): like a class, a module can incorporate a mixin,
+         * named by a bare type, a qualified generic type, or a type with arguments, as in
+         * `manualTests/dbTests/PeopleTest.x`, `archive/addressDB_imdb/module.x` and
+         * `jsondb/jsondb_test.x`. It can also implement interfaces.
+         */
+        @Test
+        @DisplayName("should parse module incorporates and implements clauses")
+        fun shouldParseModuleCompositions() {
+            val sources =
+                listOf(
+                    "module AddressBookDB incorporates Database {}",
+                    "module AddressBookDB_imdb incorporates imdb_.CatalogMetadata<AddressBookSchema_> {}",
+                    """module PeopleTest incorporates TerminalApp.Mixin("People DB Test") { void run() {} }""",
+                    "module jsondb_test.xtclang.org incorporates test_db.TestCatalogMetadata implements Service {}",
+                )
+
+            for (source in sources) {
+                val result = ts.compile(freshUri(), source)
+
+                assertThat(result.success).describedAs(source).isTrue()
+                assertThat(result.diagnostics)
+                    .describedAs(source)
+                    .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+            }
+        }
+
+        /**
+         * Multi-dimensional arrays (issue #453): one size per dimension in construction, as in
+         * `manualTests/errors.x`, one `?` per dimension in array types, and one index per
+         * dimension in access. The reference parser accepts all of them; that multi-dimensional
+         * arrays are not implemented yet is a compiler error.
+         */
+        @Test
+        @DisplayName("should parse multi-dimensional array construction, types and access")
+        fun shouldParseMultiDimensionalArrays() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        Int[] array = new Int[7, (i) -> -1];
+                        Int[?] sized = new Int[3];
+                        Int[?,?] matrix = new Int[2, 3]((i, j) -> i + j);
+                        Int[?,?,?] cube = new Int[2, 3, 4];
+                        Type t = Int[?,?];
+                        matrix[0, 1] = matrix[1, 2];
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * A typed local declaration can discard its value with `_` (issue #453), as in
+         * `manualTests/errors.x`: `Int _ = node.valDerivedPro;`. The val/var form already
+         * accepted it.
+         */
+        @Test
+        @DisplayName("should parse wildcard name in typed variable declaration")
+        fun shouldParseWildcardInTypedVariableDeclaration() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        Int _ = node.valDerivedPro;
+                        val _ = compute();
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * A short-form property accessor with a block body can be followed by the property's
+         * initial value, as in `javatools_bridge/.../web/RequestInfoImpl.x`.
+         */
+        @Test
+        @DisplayName("should parse initial value after property accessor block")
+        fun shouldParseInitialValueAfterPropertyAccessorBlock() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class RequestInfo {
+                        private Boolean[] hopsTls.get() {
+                            return super();
+                        } = [];
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * An annotated type literal as a variable's initial value, as in
+         * `tck/.../constructors/Reflect.x`. The annotated type is only a value there, so an
+         * annotated declaration with a qualified type still parses as a declaration.
+         */
+        @Test
+        @DisplayName("should parse annotated type literal as initial value")
+        fun shouldParseAnnotatedTypeLiteralAsInitialValue() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        @Inject ecstasy.io.Console console;
+                        Class<Base> clz = @M Base;
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
          * The exact shape of `manualTests/annos.x#testAnnotations3()` reported
          * as a false negative in issue #459: a local `annotation ... into ...`
          * declaration inside a method body, followed by annotated local classes
