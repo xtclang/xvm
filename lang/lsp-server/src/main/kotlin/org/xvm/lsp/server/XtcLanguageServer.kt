@@ -726,7 +726,7 @@ class XtcLanguageServer(
                 ) {
                     evaluated!!.modules
                 } else {
-                    compiler.effectiveSourceModules()
+                    compiler.sourceModuleInputs()
                 },
                 evaluated?.binaries.orEmpty(),
             )
