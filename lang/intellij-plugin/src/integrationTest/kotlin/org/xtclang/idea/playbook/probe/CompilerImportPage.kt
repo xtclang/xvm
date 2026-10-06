@@ -16,6 +16,7 @@ import org.xtclang.idea.lsp.CompilerBuildModel
 import org.xtclang.idea.lsp.CompilerProjectConfigurable
 import javax.swing.JButton
 import javax.swing.JComponent
+import javax.swing.JTabbedPane
 import javax.swing.JTextArea
 
 /** Display the shipping Compiler settings component; activate its buttons without pointer input. */
@@ -28,6 +29,7 @@ class CompilerImportPage private constructor(
     init {
         title = "Ecstasy Compiler — import playbook"
         isModal = false
+        (component as JTabbedPane).selectedIndex = component.indexOfTab("Build import")
         init()
     }
 
