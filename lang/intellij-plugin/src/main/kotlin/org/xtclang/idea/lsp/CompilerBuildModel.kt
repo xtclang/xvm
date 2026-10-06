@@ -122,7 +122,26 @@ object CompilerBuildModel {
                 "Gradle model when imported; workspace conventions otherwise"
             }
         val imports = project.service<CompilerImportService>().model
-        val status = imports.description()
+        val options = LibraryConfiguration.read(CompilerSettings.content(project))
+        val libraries =
+            buildList {
+                add("Bundled XDK: read-only, always included")
+                add(
+                    if (options.modulePath ==
+                        null
+                    ) {
+                        "External libraries: inherited from Gradle"
+                    } else {
+                        "External libraries: explicit project/application override (ordered)"
+                    },
+                )
+                options.modulePath.orEmpty().forEachIndexed { index, path -> add("  ${index + 1}. $path") }
+                options.sourceAttachments.forEach { attachment ->
+                    add("Attached sources for ${attachment.module} (read-only navigation):")
+                    attachment.roots.forEachIndexed { index, path -> add("  ${index + 1}. $path") }
+                }
+            }.joinToString("\n")
+        val status = imports.description() + "\n" + libraries
         val model =
             read(project)
                 ?: return "$origin\n$status\nNo Gradle model imported. Manual paths also work without a build file."
