@@ -86,7 +86,7 @@ internal data class CompilerLibraries(
                         ) {
                             "Library paths must be non-blank strings"
                         }
-                        val path = URI(element.asString)
+                        val path = URI.create(element.asString)
                         val resolved =
                             if (path.isAbsolute) {
                                 path

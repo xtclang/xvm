@@ -874,6 +874,7 @@ val test =
 intellijPlatformTesting.testIdeUi.register("testCompilerPlaybook") {
     task {
         description = "Run the compiler playbook's IntelliJ acceptance cases in an isolated IDE"
+        dependsOn(":lsp-server:prepareLibraryPlaybook")
         // Starter uses JNA for native process/window integration in this test JVM.
         jvmArgs("--enable-native-access=ALL-UNNAMED")
         testClassesDirs = integrationTestSourceSet.output.classesDirs

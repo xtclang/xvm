@@ -245,6 +245,7 @@ val testVscodeExtension =
 tasks.register<NpmTask>("testCompilerPlaybook") {
     group = "verification"
     description = "Run XdkAdapter playbook in VS Code (requires -Plsp.adapter=compiler)"
+    dependsOn(":lsp-server:prepareLibraryPlaybook")
     val selectedCases = providers.gradleProperty("compilerPlaybookCases")
     val multiRoot =
         providers.gradleProperty("compilerPlaybookMultiRoot").map(String::toBoolean).orElse(false)

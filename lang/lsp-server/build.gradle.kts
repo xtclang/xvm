@@ -415,3 +415,16 @@ val assemble =
     tasks.named("assemble") {
         dependsOn(fatJar)
     }
+
+// Shared native-editor fixtures are built through the same embedded compiler as the server.
+tasks.register<JavaExec>("prepareLibraryPlaybook") {
+    group = "verification"
+    description = "Build binary libraries and matching sources for both editor playbooks"
+    classpath = sourceSets.test.get().runtimeClasspath
+    mainClass.set("org.xvm.lsp.adapter.PrepareLibraryPlaybook")
+    val scenarios = rootProject.layout.projectDirectory.file("test-fixtures/compiler-playbook/scenarios.json")
+    val output = layout.buildDirectory.dir("generated/compiler-playbook/libraries")
+    inputs.file(scenarios)
+    outputs.dir(output)
+    args(scenarios.asFile.absolutePath, output.get().asFile.absolutePath)
+}

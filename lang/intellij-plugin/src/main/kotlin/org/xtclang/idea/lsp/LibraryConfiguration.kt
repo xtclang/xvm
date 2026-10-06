@@ -67,7 +67,7 @@ internal object LibraryConfiguration {
             val resolved =
                 paths.map { text ->
                     require(text.isNotBlank()) { "Library paths must not be blank" }
-                    val uri = base.resolve(URI(text))
+                    val uri = base.resolve(URI.create(text))
                     require(uri.scheme == "file" && uri.query == null && uri.fragment == null) { "Library paths must be local files" }
                     val path =
                         Path
