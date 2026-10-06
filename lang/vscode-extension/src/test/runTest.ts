@@ -115,6 +115,7 @@ async function main(): Promise<void> {
     } finally {
         await fs.cp(path.join(profile, 'logs'), path.join(runDirectory, 'logs'), { recursive: true }).catch(() => undefined);
         await fs.rm(profile, { recursive: true, force: true });
+        await fs.writeFile(path.join(runDirectory, '.completed'), 'VS Code exited\n');
     }
 }
 
