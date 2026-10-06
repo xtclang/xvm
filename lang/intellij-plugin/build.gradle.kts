@@ -893,7 +893,7 @@ intellijPlatformTesting.testIdeUi.register("testCompilerPlaybook") {
             libs.versions.lang.intellij.lsp4ij
                 .get(),
         )
-        systemProperty("xtc.playbook.adapter", providers.gradleProperty("lsp.adapter").getOrElse("treesitter"))
+        systemProperty("xtc.playbook.adapter", xdkProperties.stringValue("lsp.adapter", "compiler"))
         systemProperty("xtc.playbook.cases", providers.gradleProperty("intellijPlaybookCases").getOrElse(""))
         systemProperty(
             "xtc.playbook.largeFileProbe",

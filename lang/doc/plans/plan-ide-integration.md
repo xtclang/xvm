@@ -106,8 +106,8 @@ the optional operations.
 | Adapter | Backend | LSP Feature Coverage | Status |
 |---------|---------|----------------------|--------|
 | `MockAdapter` | Regex patterns | Syntax-level features without an AST | Implemented |
-| `TreeSitterAdapter` | Tree-sitter grammar | Syntax, structure and workspace index | **DEFAULT** - Implemented |
-| `XdkAdapter` | The XTC compiler, via `EmbeddingSupport` | Module diagnostics/navigation, bounded completion/signatures, type and implementation lookup, hierarchy, tokens, hints and explicit dependency source indices | **Opt-in** (`-Plsp.adapter=compiler`); Tree-sitter remains the shipped default |
+| `TreeSitterAdapter` | Tree-sitter grammar | Syntax, structure and workspace index | Explicit syntax-only alternative - Implemented |
+| `XdkAdapter` | The XTC compiler, via `EmbeddingSupport` | Module diagnostics/navigation, bounded completion/signatures, type and implementation lookup, hierarchy, tokens, hints and explicit dependency source indices | **DEFAULT** (`lsp.adapter=compiler`); Tree-sitter remains explicitly selectable |
 
 **`XdkAdapter` is no longer a placeholder.** It compiles through the embedding API and reports
 what the compiler actually says - syntax *and* semantics, with the compiler's own codes, messages
@@ -503,7 +503,7 @@ unresolved runtime delegation do not acquire invented source targets (X153).
 
 Module-root discovery follows the source-file/same-name-directory layout. Non-file URIs remain
 single-source inputs. Workspace folders supply a discovered module/dependency graph; explicit
-source settings override it. Queries compile that graph on demand without a persistent index. Tree-sitter remains the shipped default. See the
+source settings override it. Queries compile that graph on demand without a persistent index. Compiler mode is the shipped default. See the
 [module and recovery hardening results](../../../docs/errs-integration-plan.md#ninth-pass-java-parser-recovery-2026-09-22).
 
 **Data Model:** `lang/lsp-server/src/main/kotlin/org/xvm/lsp/model/`
@@ -632,7 +632,7 @@ Full tree-sitter support for fast, incremental parsing:
    rewrite schedules are not the current integration plan.
 
 7. **Compiler recovery and adapter policy**
-   - Keep Tree-sitter as the shipped default and compiler mode opt-in
+   - Ship compiler mode by default; retain explicit Tree-sitter and mock selections
    - Compiler mode stays Java-only; improve Java parser recovery without a Tree-sitter fallback
    - A combined adapter was an earlier proposal and is not the current implementation plan
 
@@ -914,7 +914,7 @@ and inlay refresh, and effective configuration/queue views. X136–X139 extend t
 Selected X118/X132/X135–X139 pass in both editors (plus IntelliJ startup and zero IDE errors), as
 recorded in the [settings receipt](../../../docs/errs-integration-plan.md#editor-settings-implementation-batch-ui1ui7-2026-09-30).
 This is not a full-catalog rerun. Full synchronization, native editor save ownership and
-Tree-sitter as the shipping adapter remain defaults. Incremental transport does not mean incremental
+compiler as the shipping adapter remain defaults (changed from Tree-sitter on October 6). Incremental transport does not mean incremental
 compilation. Invalid formatting settings and late replies cannot replace the last valid snapshot.
 
 LSP4IJ 0.21.0 does not implement native `willSaveWaitUntil`; its incorrect capability flag is cleared,
