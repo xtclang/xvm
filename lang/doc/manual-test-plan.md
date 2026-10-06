@@ -1,6 +1,6 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **275 scenarios**: X1–X270, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **277 scenarios**: X1–X272, CFG1–CFG3 and 7a.8/7a.9.
 
 Post-rebase acceptance (2026-10-05): VS Code `run-J054rk` passes 266 of all 267 cases;
 X218 remains the accepted UP23 host Undo failure. IntelliJ `run-1475359363733913185` plus
@@ -3821,7 +3821,7 @@ chooser appearance, the resource-order modal's individual actions and broad remo
 acceptance remain manual checks; the new cases do not claim complete UI coverage.
 
 
-### Machine-local runtime and logs (X269–X270)
+### Machine-local runtime and logs (X269–X272)
 
 In IntelliJ open **Settings → Ecstasy Server Runtime and Logs**. In VS Code open User Settings
 and search `xtc.java.vmOptions` / `xtc.server.logs`. Values belong to this machine, not shared
@@ -3832,10 +3832,13 @@ stopped-server sessions. Running processes are protected; cleanup runs on the ne
 | --- | --- | --- |
 | X269 | Open RuntimeSettings.x from the shared fixture. Save `-Xmx768M` (one array item in VS Code, one line in IntelliJ). Inspect effective status, restart explicitly, then try `-Xms2G` with `-Xmx1G`. In IntelliJ also cancel/reset a draft. | Saving keeps the PID; restart changes it and reports `-Xmx768M`. Invalid settings preserve the running server; fix the saved invalid VS Code setting before restarting. IntelliJ refuses Apply. Source text and diagnostics stay unchanged. |
 | X270 | Save retention of 2 days, 1 MB/file, 3 MB archives/stream and two retired sessions. Restart; run Tools → Export Ecstasy Server Logs (IntelliJ) or Ecstasy: Export Server Logs (VS Code), choose a ZIP and inspect it. Try an archive cap below the per-file cap. | Status reports the applied policy and a new process directory. ZIP contains recent server logs and manifest.json with the matching PID/policy; exported tails are bounded and truncation is declared. Invalid retention is refused without losing the connection. Restore previous settings/restart afterward. |
+| X271 | Stop the language server, then Export Server Logs. The ZIP identifies offline mode and contains only this project's recorded launcher/server session; restart restores diagnostics. | Shared X271 in both editors. |
+| X272 | Save JVM option `-Xmx1K`, restart and observe the intentional JVM startup failure. Export logs while stopped; correct/reset the option and restart. Buffers and diagnostics recover. | Shared X272 in both editors; uses a disposable test profile. |
 
 Automation checks installed settings/export operations and exact restart/status boundaries;
 it supplies the save destination rather than driving the OS chooser. Manually verify chooser
-Cancel, overwrite confirmation, reopening the IDE, and visible settings layout. To exercise
+Cancel and overwrite confirmation. Full editor exit/reopen is covered separately below; inspect
+the visible settings layout during the native run. To exercise
 retention manually, use an isolated `XTC_LSP_LOG_DIR` (VS Code/server) or `xtc.logs.directory`
 server property: create several stopped-server sessions and start another server. Live sessions
 and unrelated files must survive. Do not count a short playbook run as rollover/long-duration evidence.
@@ -3845,3 +3848,31 @@ Runtime/log selected acceptance: VS Code `run-GSU1jO` passes X135/X269/X270. Int
 `run-11382447476811663163` passes START/X135 and exposes a test selector that also matched
 spinner arrows; corrected `run-7594844964901809886` passes START/X269/X270, with zero IDE errors.
 The failed receipt is retained. This is selected acceptance, not a complete 275-case rerun.
+
+### Settings persistence and layout acceptance (UI1–UI7)
+
+IntelliJ’s **Settings → Ecstasy Compiler** page has **Source modules**, **Libraries and sources**
+and **Build import** tabs. Import commands and their explanation live on Build import; expand
+**Show effective paths and import details** for the full report. Confirm that switching tabs
+retains an unapplied draft and that Cancel leaves saved inputs unchanged. Gradle actions require
+project trust and retain the accepted model if refused or cancelled.
+
+VS Code groups native settings into Compiler, Language Service, Formatting, and Runtime and Logs.
+**Ecstasy: Show Language Service Status** distinguishes the saved origin, ignored folder/machine
+scope overrides, running values, and changes awaiting restart. Invalid explicit Java homes fail
+visibly; they do not silently select a different JDK. Untrusted and virtual workspaces are explicitly
+unsupported. Remote extension hosts are not yet accepted by this local desktop test gate.
+
+These auxiliary tests use a disposable profile twice, fully exiting between write and read. They
+verify persisted JVM/log limits, service preferences, source graph, and a new server PID. VS Code
+also verifies workspace inlay settings override user defaults; IntelliJ exercises the native trust
+refusal before any Gradle task starts. They supplement the X-case selectors rather than rename them.
+
+```bash
+./gradlew :lang:intellij-plugin:testCompilerPlaybook --tests '*CompilerPlaybookTest.settingsPersistence' \
+  -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler --no-build-cache
+# After building the VS Code extension, from lang/vscode-extension:
+node scripts/run-vscode-tests.cjs --settings-persistence
+```
+
+Implementation is ready for acceptance; the UI completion receipt records execution separately.
