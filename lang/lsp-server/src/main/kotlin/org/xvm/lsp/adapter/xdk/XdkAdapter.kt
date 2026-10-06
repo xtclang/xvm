@@ -358,6 +358,20 @@ class XdkAdapter
                 }
             }
 
+        /** One operation's ownership view; canonicalize each open path once, without a stale cache. */
+        internal fun analysisScopes(uris: Collection<String>): Map<String, String> =
+            synchronized(lifecycle) {
+                val files = (uris + overlays.keys).distinct().associateWith(XdkSources::file)
+                val openFiles = overlays.keys.mapNotNull(files::get).toSet()
+                uris.associateWith { uri ->
+                    val file = files[uri]
+                    file?.let(project::scope) ?: file?.let {
+                        val root = XdkSources.moduleRoot(it, openFiles)
+                        if (root == file) scopes[uri] ?: root.toURI().toString() else root.toURI().toString()
+                    } ?: uri
+                }
+            }
+
         /** Unsaved source buffers do not change the resource files read from disk. */
         internal fun affectedSourceScopes(uri: String): Set<String> = synchronized(lifecycle) { project.affected(analysisScope(uri)) }
 
@@ -456,12 +470,13 @@ class XdkAdapter
                     val scope = analysisScope(uri)
                     scopes[uri] = scope
                     val sourceScopes = project.buildOrder(scope).mapTo(mutableSetOf(scope)) { it.uri }
+                    val overlayScopes = analysisScopes(overlays.keys)
                     val request =
                         Request(
                             scope,
                             uri,
                             overlays.filterKeys {
-                                analysisScope(it) in sourceScopes
+                                overlayScopes[it] in sourceScopes
                             },
                             dependencies,
                             project,
@@ -872,7 +887,7 @@ class XdkAdapter
 
         private fun analysis(uri: String): Analysis? = module(uri)?.document(uri)
 
-        /** Explicit source graph; installing a new configuration retires all current attempts. */
+        /** Explicit source graph; changed inputs retire affected analyses and all pending attempts. */
         fun replaceSourceModules(modules: List<XdkSourceModule>): Set<String> = installSourceModules(modules, explicit = true)
 
         fun discoverSourceModules(): Set<String> {
@@ -908,16 +923,44 @@ class XdkAdapter
                     ) {
                         return emptySet()
                     }
-                    if (clearBuildArtifacts) dependencies = XdkDependencies(emptyList())
-                    project = replacement
-                    builds.clear()
-                    retireRequests(requests.keys.toSet())
+                    replaceProject(
+                        replacement,
+                        if (clearBuildArtifacts) XdkDependencies(emptyList()) else dependencies,
+                        force || recovered,
+                    )
                 }
             retired.forEach { it.result.cancel(false) }
             probes.forEach { it.result.cancel(false) }
             return replacement.orderedScopes(
                 retired.flatMapTo(linkedSetOf()) { replacement.affected(it.scope) + it.scope },
             )
+        }
+
+        /** Called under lifecycle. Only successful analyses with unchanged inputs may survive. */
+        private fun replaceProject(
+            replacement: XdkProject,
+            artifacts: XdkDependencies,
+            force: Boolean = false,
+        ): Pair<List<Request>, List<QueryWork>> {
+            val changed =
+                project.changedModules(replacement) +
+                    (dependencies.modules.keys + artifacts.modules.keys).filter {
+                        dependencies.modules[it]?.revision != artifacts.modules[it]?.revision
+                    }
+            val retired =
+                requests.values
+                    .filter { request ->
+                        val analysis = completed[request.scope]
+                        force || !request.result.isDone || analysis?.succeeded != true ||
+                            analysis.dependencies.any(changed::contains) ||
+                            project.buildOrder(request.scope).any { it.name in changed } ||
+                            replacement.buildOrder(request.scope).any { it.name in changed } ||
+                            request.overlays.keys.any { project.scope(it) != replacement.scope(it) }
+                    }.mapTo(linkedSetOf()) { it.scope }
+            project = replacement
+            dependencies = artifacts
+            if (force) builds.clear() else builds.keys.removeAll { it in changed || it !in replacement.modules }
+            return retireRequests(retired)
         }
 
         /** Called under lifecycle. Compiler-owned objects never enter the artifact cache. */
@@ -996,10 +1039,7 @@ class XdkAdapter
                     ) {
                         return emptySet()
                     }
-                    project = replacement
-                    dependencies = artifacts
-                    builds.clear()
-                    retireRequests(requests.keys.toSet())
+                    replaceProject(replacement, artifacts)
                 }
             retired.forEach { it.result.cancel(false) }
             probes.forEach { it.result.cancel(false) }
