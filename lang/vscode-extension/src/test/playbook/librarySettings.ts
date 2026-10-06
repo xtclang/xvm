@@ -33,9 +33,16 @@ export function librarySettingsCases(): void {
                         await ui.page.locator('.quick-input-widget:visible .monaco-list-row').filter({ hasText: label }).first().click({ timeout: 10_000 });
                     };
                     const enter = async (value: string) => {
-                        const input = ui.page.locator('.quick-input-widget:visible input').first();
+                        const widget = ui.page.locator('.quick-input-widget:visible');
+                        // QuickPick and InputBox reuse the same input element. Wait for the prompt,
+                        // then for the returned path row, before sending the next input.
+                        await widget.getByText('File URI or path relative to the single workspace folder')
+                            .waitFor({ state: 'visible', timeout: 10_000 });
+                        const input = widget.locator('input').first();
                         await input.fill(value);
                         await input.press('Enter');
+                        await widget.locator('.monaco-list-row').filter({ hasText: value }).first()
+                            .waitFor({ state: 'visible', timeout: 10_000 });
                     };
                     try {
                         const cancelled = vscode.commands.executeCommand('xtc.configureCompilerLibraries');
@@ -57,6 +64,10 @@ export function librarySettingsCases(): void {
                         await noErrors(document.uri);
                         const effective = await client().sendRequest<{ bundledXdk: { readOnly: boolean } }>('xtc/languageServiceStatus');
                         assert.ok(effective.bundledXdk.readOnly);
+                    } catch (error) {
+                        await ui.screenshot(`${id}-picker-failure`);
+                        console.error(`[${id}] Visible picker:`, await ui.page.locator('.quick-input-widget:visible').allTextContents());
+                        throw error;
                     } finally { await vscode.commands.executeCommand('workbench.action.closeQuickOpen'); await ui.close(); }
                 } else {
                     await apply([one], true);
@@ -90,7 +101,7 @@ export function librarySettingsCases(): void {
                         await settings.update('sourceModules', [{ name: 'LibraryConsumer', uri: document.uri.toString(), resourceRoots: resources }], vscode.ConfigurationTarget.Workspace);
                         await updateCompilerConfiguration();
                         const modules = await client().sendRequest<{ resourceRoots: string[] }[]>('xtc/compilerSourceModules');
-                        assert.deepStrictEqual(modules[0].resourceRoots.map(uri => vscode.Uri.parse(uri).fsPath), resources.map(uri => vscode.Uri.parse(uri).fsPath));
+                        assert.deepStrictEqual(modules[0].resourceRoots.map(uri => path.resolve(vscode.Uri.parse(uri).fsPath)), resources.map(uri => path.resolve(vscode.Uri.parse(uri).fsPath)));
                         await noErrors(document.uri);
                     }
                     await apply([]);
