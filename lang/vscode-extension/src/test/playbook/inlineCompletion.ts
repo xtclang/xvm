@@ -1,7 +1,9 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 import { InlineCompletionList, InlineCompletionTriggerKind } from 'vscode-languageclient/node';
-import { client, eventually, noErrors, playbook } from './support';
+import { focusTestEditor } from '../native-focus';
+import { WorkbenchUi } from '../workbenchUi';
+import { client, eventually, noErrors, playbook, symbols } from './support';
 
 export function inlineCompletionCases(): void {
     for (const id of ['X255', 'X256', 'X257', 'X258'] as const) {
@@ -13,7 +15,9 @@ export function inlineCompletionCases(): void {
             const configuration = vscode.workspace.getConfiguration('editor', document.uri);
             const previous = configuration.inspect<boolean>('inlineSuggest.enabled')?.workspaceValue;
             await configuration.update('inlineSuggest.enabled', true, vscode.ConfigurationTarget.Workspace);
+            const ui = await WorkbenchUi.connect();
             try {
+                await focusTestEditor(document);
                 const at = document.positionAt(offset);
                 const query = (triggerKind: InlineCompletionTriggerKind, selectedCompletionInfo?: { range: vscode.Range; text: string }) =>
                     client().sendRequest<InlineCompletionList>('textDocument/inlineCompletion', {
@@ -37,8 +41,11 @@ export function inlineCompletionCases(): void {
                     editor.selection = new vscode.Selection(at, at);
                     await vscode.commands.executeCommand('editor.action.inlineSuggest.trigger');
                     await vscode.commands.executeCommand('editor.action.inlineSuggest.showNext');
+                    const nextText = items[1].insertText;
+                    assert.ok(typeof nextText === 'string');
+                    await eventually(() => ui.inlineText(), text => text.trim() === nextText.slice(2), 'Next inline alternative is rendered');
                     await vscode.commands.executeCommand('editor.action.inlineSuggest.commit');
-                    await eventually(async () => document.getText(), text => text === source.slice(0, offset - 2) + items[1].insertText + source.slice(offset), 'Native next inline alternative is accepted');
+                    await eventually(async () => document.getText(), text => text === source.slice(0, offset - 2) + nextText + source.slice(offset), 'Native next inline alternative is accepted');
                     return;
                 }
                 assert.deepStrictEqual((await query(InlineCompletionTriggerKind.Automatic)).items.map(item => item.insertText), [data.expected]);
@@ -48,8 +55,11 @@ export function inlineCompletionCases(): void {
                     await vscode.commands.executeCommand('editor.action.inlineSuggest.hide');
                     assert.strictEqual(document.getText(), source, 'Dismissing ghost text does not edit the document');
                     await vscode.commands.executeCommand('default:type', { text: 'w' });
+                    await eventually(async () => document.getText(), text => text === source.slice(0, offset) + 'w' + source.slice(offset), 'Typed prefix reaches the document');
+                    await symbols(document);
                     await vscode.commands.executeCommand('editor.action.inlineSuggest.trigger');
                 }
+                await eventually(() => ui.inlineText(), text => text.trim() === data.expected.slice(data.mode === 'typing' ? 4 : 3), 'Inline suggestion is rendered before acceptance');
                 await vscode.commands.executeCommand('editor.action.inlineSuggest.commit');
                 const expected = source.slice(0, offset - 3) + data.expected + source.slice(offset);
                 await eventually(async () => document.getText(), text => text === expected, 'Native inline acceptance preserves the source suffix');
@@ -62,6 +72,7 @@ export function inlineCompletionCases(): void {
                     await noErrors(document.uri);
                 }
             } finally {
+                await ui.close();
                 await vscode.commands.executeCommand('editor.action.inlineSuggest.hide');
                 await configuration.update('inlineSuggest.enabled', previous, vscode.ConfigurationTarget.Workspace);
             }
