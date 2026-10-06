@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import Mocha from 'mocha';
 import * as vscode from 'vscode';
 import { showTestProgress } from '../progress';
+import { stopOnUnsafeFailure } from '../wait';
 import { selectedScenarioIds, sharedScenarioHash, sharedScenarioIds, sharedScenarioPath } from './shared';
 import { cases } from './support';
 
@@ -33,6 +34,7 @@ export async function run(): Promise<void> {
     const results: { id: string; title: string; status: string; durationMs?: number; error?: string }[] = [];
     const failures = await new Promise<number>(resolve => {
         const runner = mocha.run(resolve);
+        stopOnUnsafeFailure(runner);
         showTestProgress(runner, 'Ecstasy playbook', test => test.title);
         runner.on('pass', test => {
             results.push({ id: test.title.split(':')[0], title: test.title, status: 'passed', durationMs: test.duration });

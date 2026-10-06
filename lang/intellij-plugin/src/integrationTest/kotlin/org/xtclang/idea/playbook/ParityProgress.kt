@@ -68,7 +68,9 @@ internal fun ParityScenarios.progressCases() {
                     }
                 }
             }
-            val outcome = runCatching { protocol.await("textDocument/references", canceled) }
+            val outcome =
+                runCatching { protocol.await("textDocument/references", canceled) }
+                    .onFailure { if (it !is CancellationException && it.mustStopPlaybook()) throw it }
             check(
                 outcome.exceptionOrNull().let {
                     it is CancellationException || (it is ClientRequestFailure && it.code == ResponseErrorCode.RequestCancelled.value)
