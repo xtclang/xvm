@@ -72,7 +72,7 @@ async function main(): Promise<void> {
     await fs.mkdir(path.join(fixturesPath, '.vscode'), { recursive: true });
     await fs.writeFile(path.join(fixturesPath, '.vscode', 'settings.json'), JSON.stringify({
         'files.autoSave': 'off', 'editor.semanticHighlighting.enabled': true,
-        'editor.inlayHints.enabled': 'on', ...(!persistence ? { 'xtc.inlayHints.enabled': true } : {})
+        'editor.inlayHints.enabled': 'on'
     }, null, 2));
     console.log(`[vscode-test] Reports and isolated workspace: ${runDirectory}`);
     await fs.writeFile(path.join(reports, 'latest-run.txt'), runDirectory + '\n');
