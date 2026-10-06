@@ -1559,12 +1559,13 @@ acceptance and L82 release evidence remain; Run/DAP, color and notebooks retain
 their recorded scope. See the [runtime/log contract](../../../docs/errs-integration-plan.md#machine-local-jvm-settings-and-log-support-ui5ui6-2026-10-06).
 
 
-UI1–UI7 completion adds grouped VS Code settings and the tabbed IntelliJ Compiler page, validated
-formatting width, explicit invalid-JDK failure, project-trust checks for Gradle imports, and saved
+UI1–UI7 completion adds grouped VS Code settings, vertical page navigation in IntelliJ Compiler
+settings, validated formatting width, explicit invalid-JDK failure, project-trust checks for Gradle imports, and saved
 versus running runtime reports. Offline support ZIPs use only the project’s last recorded launch;
 shared X271/X272 cover stopped/failing servers and recovery. Complete editor exit/reopen has a
 separate persistence harness in both hosts. These are client settings/support features; adapter
-capabilities are unchanged. New acceptance is pending in the
+capabilities are unchanged. Local desktop acceptance, both-adapter persistence, combined catalog
+coverage and explicit host limitations are recorded in the
 [UI completion receipt](../../../docs/errs-integration-plan.md#ui1ui7-completion-batch-2026-10-06).
 Untrusted/virtual VS Code workspaces are explicitly unsupported; remote-host acceptance is separate
 from the local desktop gate. Tree-sitter remains an explicit build alternative to default compiler.
