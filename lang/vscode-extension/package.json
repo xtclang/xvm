@@ -113,6 +113,11 @@
             {
                 "command": "xtc.showLanguageServiceStatus",
                 "title": "Ecstasy: Show Effective Language Service Configuration"
+            },
+            {
+                "command": "xtc.configureCompilerLibraries",
+                "title": "Configure Libraries and Sources",
+                "category": "Ecstasy"
             }
         ],
         "keybindings": [
@@ -310,6 +315,55 @@
                     "default": "editor",
                     "scope": "window",
                     "description": "Owner of save formatting. Native format-on-save takes precedence to prevent duplicate edits. Changing this requires a language server restart."
+                },
+                "xtc.compiler.libraries": {
+                    "type": "object",
+                    "scope": "window",
+                    "default": {
+                        "modulePath": null,
+                        "sourceAttachments": []
+                    },
+                    "additionalProperties": false,
+                    "description": "Ordered external compiler libraries and matching read-only source attachments. Workspace-owned; use absolute file URIs in multi-root workspaces. Apply without restarting. Bundled XDK is always included.",
+                    "properties": {
+                        "modulePath": {
+                            "type": [
+                                "array",
+                                "null"
+                            ],
+                            "default": null,
+                            "items": {
+                                "type": "string"
+                            },
+                            "description": "Null inherits Gradle binary inputs; [] removes external libraries. Entries are directories or .xtc files; first module wins. Relative paths require one workspace folder."
+                        },
+                        "sourceAttachments": {
+                            "type": "array",
+                            "default": [],
+                            "items": {
+                                "type": "object",
+                                "required": [
+                                    "module",
+                                    "roots"
+                                ],
+                                "additionalProperties": false,
+                                "properties": {
+                                    "module": {
+                                        "type": "string",
+                                        "description": "Exact external binary module name."
+                                    },
+                                    "roots": {
+                                        "type": "array",
+                                        "minItems": 1,
+                                        "items": {
+                                            "type": "string"
+                                        },
+                                        "description": "Ordered matching source directories, used only for read-only navigation."
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         },
