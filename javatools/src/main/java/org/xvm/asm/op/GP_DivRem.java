@@ -91,7 +91,7 @@ public class GP_DivRem
             ObjectHandle[] ahArg = frame.getArguments(new int[] {m_nTarget, m_nArgValue}, 2);
 
             if (frame.isNextRegister(m_anRetValue[0])) {
-                frame.introduceVarCopy(m_anRetValue[0], m_nTarget); // TODO GG review this (type comes from op method)
+                frame.introduceVarCopy(m_anRetValue[0], m_nTarget);
             }
 
             if (frame.isNextRegister(m_anRetValue[1])) {
