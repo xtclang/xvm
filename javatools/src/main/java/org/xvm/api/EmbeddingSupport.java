@@ -199,10 +199,9 @@ public class EmbeddingSupport {
     }
 
     /**
-     * Compile a module that is in a file or directory, against the configured core repository.
+     * Compile a module that is in a file, against the configured core repository.
      *
-     * @param file    the location of the module source code on disk, either the module source file
-     *                or the directory containing a single .x file and nested contents thereof
+     * @param file    the module source file
      * @param input   (optional) the module repository to read any required modules from
      * @param output  (optional) the module repository to write any compiled modules to
      * @param errs    (optional) the ErrorListener to log any compiler messages to
@@ -325,9 +324,7 @@ public class EmbeddingSupport {
             ErrorListener             errs) {
         verifyConfigured();
 
-        ModuleRepository repository = input == null || input == cfgRepo
-                ? cfgRepo
-                : new LinkedRepository(input, cfgRepo);
+        ModuleRepository repository = new LinkedRepository(input, cfgRepo);
         ModuleStructure module = version == null
                 ? repository.loadModule(moduleName)
                 : repository.loadModule(moduleName, version, true);

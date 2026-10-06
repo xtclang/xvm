@@ -2,7 +2,9 @@ package org.xvm.asm;
 
 import java.io.IOException;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -17,7 +19,8 @@ public class LinkedRepository
     /**
      * Construct a LinkedRepository.
      *
-     * @param repos  a sequence of repositories to use, in order, to search through
+     * @param repos  a sequence of repositories to use, in order, to search through; null entries
+     *               and repeats of an earlier repository are skipped
      */
     public LinkedRepository(ModuleRepository... repos) {
         this(false, repos);
@@ -27,16 +30,18 @@ public class LinkedRepository
      * Construct a LinkedRepository.
      *
      * @param fReadThrough  pass true to store a copy of all read modules in the first repository
-     * @param repos         a sequence of repositories to use, in order, to search through
+     * @param repos         a sequence of repositories to use, in order, to search through; null
+     *                      entries and repeats of an earlier repository are skipped, so an optional
+     *                      repository can be passed as it is
      */
     public LinkedRepository(boolean fReadThrough, ModuleRepository... repos) {
-        assert repos != null && repos.length > 0;
-        for (ModuleRepository repo : repos) {
-            assert repo != null;
-        }
-
-        this.repos       = repos.clone();
+        this.repos       = Arrays.stream(repos)
+                                 .filter(Objects::nonNull)
+                                 .distinct()
+                                 .toArray(ModuleRepository[]::new);
         this.readThrough = fReadThrough;
+
+        assert this.repos.length > 0;
     }
 
     // ----- accessors -----------------------------------------------------------------------------

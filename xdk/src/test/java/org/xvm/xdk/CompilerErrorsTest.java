@@ -45,11 +45,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * directory is one such module.
  *
  * <p>A source file marks each line on which an error is expected with a comment naming its code,
- * for example {@code i = s.size;  // expect-error: COMPILER-36}; several codes are separated by
- * commas. The file passes if it does not compile, and the errors the compiler reports, by line and
+ * for example {@code i = s.size;  // expect-error: COMPILER-36 (s may be Null)}. The marker ends
+ * the line; several codes are separated by commas, and an explanation in parentheses may follow
+ * them. The file passes if it does not compile, and the errors the compiler reports, by line and
  * code, are exactly the marked ones: a missing error, an error on another line and an unmarked
  * error all fail. Codes are compared rather than message text, so messages can be reworded freely.
  * Warnings are not checked.
+ *
+ * <p>Markers are strict: any other comment that mentions "expect" fails the file, so that a
+ * misspelled marker cannot be silently ignored while the error it was meant to expect disappears.
  *
  * <p>The compiler works in four stages: it registers structures, resolves names, validates content
  * and generates code. Each stage can report errors, but the compiler does not go on to the next
@@ -64,8 +68,10 @@ class CompilerErrorsTest {
 
     private static final Pattern CODE = Pattern.compile(CODE_REGEX);
 
-    private static final Pattern MARKER = Pattern.compile(
-            "//\\s*expect-error:\\s*(" + CODE_REGEX + "(?:\\s*,\\s*" + CODE_REGEX + ")*)");
+    private static final Pattern MARKER = Pattern.compile("//\\s*expect-error:\\s*("
+            + CODE_REGEX + "(?:\\s*,\\s*" + CODE_REGEX + ")*)(?:\\s+\\(.*\\))?\\s*$");
+
+    private static final Pattern MENTION = Pattern.compile("//.*expect", Pattern.CASE_INSENSITIVE);
 
     private static final Comparator<Diagnostic> ORDER =
             Comparator.comparingInt(Diagnostic::line).thenComparing(Diagnostic::code);
@@ -109,6 +115,10 @@ class CompilerErrorsTest {
         String    source = Files.readString(resourceDir().resolve(fileName));
         ErrorList errs   = new ErrorList(1000);
 
+        var malformed = malformedMarkers(source);
+        assertTrue(malformed.isEmpty(),
+                () -> fileName + ": malformed expect-error markers on lines " + malformed);
+
         assertNull(compiler.compile(source, null, errs), fileName + " compiled, but must not");
 
         var expected   = expectedErrors(source);
@@ -132,6 +142,19 @@ class CompilerErrorsTest {
                     .sorted()
                     .toList();
         }
+    }
+
+    /**
+     * @return the one-based numbers of the lines with a comment that mentions "expect", but is not
+     *         a well-formed marker
+     */
+    private static List<Integer> malformedMarkers(String source) {
+        List<String> lines = source.lines().toList();
+        return IntStream.range(0, lines.size())
+                .filter(i -> MENTION.matcher(lines.get(i)).find()
+                        && !MARKER.matcher(lines.get(i)).find())
+                .mapToObj(i -> i + 1)
+                .toList();
     }
 
     /**

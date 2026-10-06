@@ -28,7 +28,6 @@ import org.xvm.compiler.ast.TypeCompositionStatement;
 import org.xvm.tool.Console;
 import org.xvm.tool.Launcher.LauncherException;
 import org.xvm.tool.LauncherOptions.CompilerOptions;
-import org.xvm.tool.ModuleInfo.Node;
 
 import static org.xvm.api.EmbeddingSupport.ERR_INTERNAL;
 
@@ -107,10 +106,9 @@ public final class ModuleCompiler {
     }
 
     /**
-     * Compile a module that is in a file or directory.
+     * Compile a module that is in a file.
      *
-     * @param file    the location of the module source code on disk, either the module source file
-     *                or the directory containing a single .x file and nested contents thereof
+     * @param file    the module source file
      * @param input   (optional) the module repository to read any required modules from
      * @param output  (optional) the module repository to write any compiled modules to
      * @param errs    (optional) the ErrorListener to log any compiler messages to
@@ -153,15 +151,15 @@ public final class ModuleCompiler {
      * Adapter that supplies the source and repositories to the standard compiler pipeline and
      * captures its single compiled module instead of writing it to disk.
      */
-    private static class EmbeddingCompiler
+    private static final class EmbeddingCompiler
             extends org.xvm.tool.Compiler {
         private final String           source;
         private final ModuleRepository inRepo;
         private final ModuleRepository coreRepo;
         private       ModuleStructure  module;
 
-        protected EmbeddingCompiler(String source, ModuleRepository input, ModuleRepository core,
-                                    ErrorListener errs) {
+        private EmbeddingCompiler(String source, ModuleRepository input, ModuleRepository core,
+                                  ErrorListener errs) {
             super(CompilerOptions.builder().build(), SILENT_CONSOLE, errs);
 
             this.source   = source;
@@ -213,7 +211,7 @@ public final class ModuleCompiler {
                 return 1;
             }
 
-            int result = super.compile(List.of(compiler), repoLib);
+            int result = compile(List.of(compiler), repoLib);
             if (result == 0) {
                 this.module = struct.getModule();
             }
@@ -234,28 +232,21 @@ public final class ModuleCompiler {
             return checkErrors(context);
         }
 
-        @Override
-        protected int compile(List<Compiler> compilers, ModuleRepository repoLib) {
-            throw new IllegalStateException("This method must not be called");
-        }
-
+        /**
+         * The build repository comes first: it receives the module being compiled and, as the
+         * launcher's does, a copy of each module read from the others. The caller's modules are
+         * searched before the core libraries; the input repository may be absent, or be the core
+         * repository itself.
+         */
         @Override
         protected ModuleRepository configureLibraryRepo(List<File> ignore) {
-            BuildRepository build = new BuildRepository();
-            return inRepo == null || inRepo == coreRepo
-                    ? new LinkedRepository(true, build, coreRepo)
-                    : new LinkedRepository(true, build, inRepo, coreRepo);
-        }
-
-        @Override
-        protected int emitModules(List<Node> allNodes, ModuleRepository ignore) {
-            throw new IllegalStateException("This method must not be called");
+            return new LinkedRepository(true, new BuildRepository(), inRepo, coreRepo);
         }
 
         /**
          * @return the result of the compilation
          */
-        protected ModuleStructure getModule() {
+        private ModuleStructure getModule() {
             return module;
         }
     }
