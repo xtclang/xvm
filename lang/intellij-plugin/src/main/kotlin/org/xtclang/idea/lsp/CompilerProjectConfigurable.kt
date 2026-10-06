@@ -13,6 +13,7 @@ import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
+import com.intellij.ui.components.JBList
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.dsl.builder.AlignX
 import com.intellij.ui.dsl.builder.panel
@@ -23,7 +24,6 @@ import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import com.redhat.devtools.lsp4ij.settings.LanguageServerSettings.LanguageServerDefinitionSettings
 import com.redhat.devtools.lsp4ij.settings.ProjectLanguageServerSettings
 import java.awt.BorderLayout
-import java.awt.Dimension
 import java.awt.GridLayout
 import java.net.URI
 import java.nio.file.Path
@@ -32,8 +32,8 @@ import java.util.concurrent.atomic.AtomicLong
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
-import javax.swing.JTabbedPane
 import javax.swing.JTextArea
+import javax.swing.ListSelectionModel
 import javax.swing.table.DefaultTableModel
 
 /** Project-local source roots, backed by the same LSP4IJ settings used by rename and Undo. */
@@ -201,63 +201,72 @@ class CompilerProjectConfigurable
             }
             discovery.addItemListener { updateSourceActions() }
             updateSourceActions()
-            return object : JTabbedPane() {
-                // A standalone dialog should size to the selected page, not the largest table
-                // hidden on another tab. The normal Settings window controls its own bounds.
-                override fun getPreferredSize(): Dimension {
-                    val size = super.getPreferredSize()
-                    val selected = selectedComponent?.preferredSize ?: return size
-                    val pages = (0 until tabCount).map { getComponentAt(it).preferredSize }
-                    return Dimension(
-                        maxOf(JBUI.scale(640), size.width - pages.maxOf { it.width } + selected.width),
-                        size.height - pages.maxOf { it.height } + selected.height,
-                    )
-                }
-            }.apply {
-                name = "xtc.compiler.tabs"
-                addTab(
-                    "Source modules",
-                    JPanel(BorderLayout(0, 12)).apply {
-                        add(
-                            JPanel(BorderLayout(0, 8)).apply {
-                                add(discovery, BorderLayout.NORTH)
-                                add(
-                                    JBLabel(
-                                        "<html>Project settings · Apply updates the running compiler.<br>" +
-                                            "Automatic: use evaluated Gradle inputs or discover sources.<br>" +
-                                            "Manual: the table replaces automatic roots; an empty table disables discovery.</html>",
-                                    ),
-                                    BorderLayout.CENTER,
-                                )
-                            },
-                            BorderLayout.NORTH,
-                        )
-                        add(JBScrollPane(table), BorderLayout.CENTER)
-                        add(sourceActions, BorderLayout.SOUTH)
-                    },
-                )
-                addTab("Libraries and sources", libraries)
-                addTab(
-                    "Build import",
-                    panel {
-                        group("Gradle inputs") {
-                            row {
-                                button("Refresh Gradle model") { refreshBuild(false) }
-                                button("Prepare generated resources") { refreshBuild(true) }
-                                button("Open build file") { openBuildFile() }
-                            }.rowComment(
-                                "Refresh reads the build model. Prepare also generates resources.<br>" +
-                                    "Your manual source and library overrides are preserved.",
+            val pages =
+                linkedMapOf(
+                    "Source modules" to
+                        JPanel(BorderLayout(0, 12)).apply {
+                            add(
+                                JPanel(BorderLayout(0, 8)).apply {
+                                    add(discovery, BorderLayout.NORTH)
+                                    add(
+                                        JBLabel(
+                                            "<html>Project settings · Apply updates the running compiler.<br>" +
+                                                "Automatic: use evaluated Gradle inputs or discover sources.<br>" +
+                                                "Manual: the table replaces automatic roots; an empty table disables discovery.</html>",
+                                        ),
+                                        BorderLayout.CENTER,
+                                    )
+                                },
+                                BorderLayout.NORTH,
                             )
-                        }
-                        group("Import status") {
-                            row { cell(status) }
-                        }
-                        collapsibleGroup("Effective paths and import details") {
-                            row { scrollCell(effective).align(AlignX.FILL) }
-                        }
-                    }.apply { border = JBUI.Borders.empty(12) },
+                            add(JBScrollPane(table), BorderLayout.CENTER)
+                            add(sourceActions, BorderLayout.SOUTH)
+                        },
+                    "Libraries and sources" to libraries,
+                    "Build import" to
+                        panel {
+                            group("Gradle inputs") {
+                                row { button("Refresh Gradle model") { refreshBuild(false) } }
+                                    .rowComment("Read the build model without generating resources.")
+                                row { button("Prepare generated resources") { refreshBuild(true) } }
+                                    .rowComment("Refresh the model and generate the compiler's resource inputs.")
+                                row { button("Open build file") { openBuildFile() } }
+                                row { comment("Your manual source and library overrides are preserved.") }
+                            }
+                            group("Import status") {
+                                row { cell(status) }
+                            }
+                            collapsibleGroup("Effective paths and import details") {
+                                row { scrollCell(effective).align(AlignX.FILL) }
+                            }
+                        },
                 )
+            // Keep each page's draft, but size the dialog to the visible page instead of a hidden
+            // table. The IDE Settings window manages its own bounds.
+            val content = JPanel(BorderLayout())
+            val navigation =
+                JBList(*pages.keys.toTypedArray()).apply {
+                    name = "xtc.compiler.navigation"
+                    accessibleContext.accessibleName = "Compiler settings pages"
+                    selectionMode = ListSelectionModel.SINGLE_SELECTION
+                    visibleRowCount = pages.size
+                    fixedCellHeight = JBUI.scale(32)
+                    border = JBUI.Borders.empty(4)
+                    addListSelectionListener {
+                        if (!it.valueIsAdjusting) {
+                            selectedValue?.let { selected ->
+                                content.removeAll()
+                                content.add(pages.getValue(selected), BorderLayout.CENTER)
+                                content.revalidate()
+                                content.repaint()
+                            }
+                        }
+                    }
+                    selectedIndex = 0
+                }
+            return JPanel(BorderLayout(JBUI.scale(16), 0)).apply {
+                add(JBScrollPane(navigation), BorderLayout.WEST)
+                add(content, BorderLayout.CENTER)
             }
         }
 
