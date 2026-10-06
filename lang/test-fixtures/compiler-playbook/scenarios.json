@@ -164,6 +164,23 @@
       "consumerFile": "LibraryConsumer.x",
       "anchor": "answer",
       "definitionLine": 1
+    },
+    "runtimeSettings": {
+      "source": "module RuntimeSettings {\n    Int value = 1;\n}\n",
+      "file": "RuntimeSettings.x",
+      "vmOptions": [
+        "-Xmx768M"
+      ],
+      "invalidOptions": [
+        "-Xms2G",
+        "-Xmx1G"
+      ],
+      "logs": {
+        "historyDays": 2,
+        "maxFileMb": 1,
+        "totalSizeMb": 3,
+        "retainedSessions": 2
+      }
     }
   },
   "cases": {
@@ -8432,6 +8449,28 @@
       "title": "invalid library replacements retain accepted inputs and ordered resources remain distinct",
       "values": {},
       "manual": [],
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X269": {
+      "title": "machine-local JVM settings apply only on restart and invalid options retain the working server",
+      "manual": [
+        "Reopen the IDE to verify application/user persistence and review Settings layout."
+      ],
+      "values": {},
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X270": {
+      "title": "log retention survives restart and the installed export saves a bounded server archive",
+      "manual": [
+        "Choose a destination and cancel through the native export save dialog; inspect the ZIP in the operating system archive viewer."
+      ],
+      "values": {},
       "intellij": {
         "coverage": "full",
         "limitations": []

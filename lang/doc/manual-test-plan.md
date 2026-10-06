@@ -1,6 +1,6 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **273 scenarios**: X1–X268, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **275 scenarios**: X1–X270, CFG1–CFG3 and 7a.8/7a.9.
 
 Post-rebase acceptance (2026-10-05): VS Code `run-J054rk` passes 266 of all 267 cases;
 X218 remains the accepted UP23 host Undo failure. IntelliJ `run-1475359363733913185` plus
@@ -3819,3 +3819,24 @@ IntelliJ operates the installed settings components; VS Code X266 drives the vis
 Attachment setup and resource-order assertions use the installed page/settings APIs. Native file
 chooser appearance, the resource-order modal's individual actions and broad remote/multi-root
 acceptance remain manual checks; the new cases do not claim complete UI coverage.
+
+
+### Machine-local runtime and logs (X269–X270)
+
+In IntelliJ open **Settings → Ecstasy Server Runtime and Logs**. In VS Code open User Settings
+and search `xtc.java.vmOptions` / `xtc.server.logs`. Values belong to this machine, not shared
+project configuration. Defaults are 7 days, 10 MB per file, 50 MB archived per stream and five
+stopped-server sessions. Running processes are protected; cleanup runs on the next server start.
+
+| Case | Actions | Expected result |
+| --- | --- | --- |
+| X269 | Open RuntimeSettings.x from the shared fixture. Save `-Xmx768M` (one array item in VS Code, one line in IntelliJ). Inspect effective status, restart explicitly, then try `-Xms2G` with `-Xmx1G`. In IntelliJ also cancel/reset a draft. | Saving keeps the PID; restart changes it and reports `-Xmx768M`. Invalid settings preserve the running server; fix the saved invalid VS Code setting before restarting. IntelliJ refuses Apply. Source text and diagnostics stay unchanged. |
+| X270 | Save retention of 2 days, 1 MB/file, 3 MB archives/stream and two retired sessions. Restart; run Tools → Export Ecstasy Server Logs (IntelliJ) or Ecstasy: Export Server Logs (VS Code), choose a ZIP and inspect it. Try an archive cap below the per-file cap. | Status reports the applied policy and a new process directory. ZIP contains recent server logs and manifest.json with the matching PID/policy; exported tails are bounded and truncation is declared. Invalid retention is refused without losing the connection. Restore previous settings/restart afterward. |
+
+Automation checks installed settings/export operations and exact restart/status boundaries;
+it supplies the save destination rather than driving the OS chooser. Manually verify chooser
+Cancel, overwrite confirmation, reopening the IDE, and visible settings layout. To exercise
+retention manually, use an isolated `XTC_LSP_LOG_DIR` (VS Code/server) or `xtc.logs.directory`
+server property: create several stopped-server sessions and start another server. Live sessions
+and unrelated files must survive. Do not count a short playbook run as rollover/long-duration evidence.
+See the [contract and validation](../../docs/errs-integration-plan.md#machine-local-jvm-settings-and-log-support-ui5ui6-2026-10-06).

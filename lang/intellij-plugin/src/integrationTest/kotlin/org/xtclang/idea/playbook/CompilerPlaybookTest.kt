@@ -299,6 +299,7 @@ class CompilerPlaybookTest {
                     addSystemProperty("idea.suppressed.plugins.id", "com.intellij.modules.ultimate")
                     addSystemProperty("xtc.lsp.semanticTokens", true)
                     addSystemProperty("xtc.trace.directory", run.resolve("server-trace").toString())
+                    addSystemProperty("xtc.logs.directory", run.resolve("server-logs").toString())
                     addSystemProperty("idea.auto.reload.plugins", false)
                 }.runIdeWithDriver(runTimeout = 30.minutes)
                 .useDriverAndCloseIde {

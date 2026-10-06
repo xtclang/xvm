@@ -37,7 +37,7 @@ owner tests use application-free indicators; shared X260 separately exercises th
 Cancel button. X261/X262 cover failed/invalid Gradle output and retry. See the
 [shared import receipt](../../docs/errs-integration-plan.md#shared-compiler-import-acceptance-and-remaining-ui-work-2026-10-05).
 
-The native suite uses the shared 273-scenario catalog (X1–X268, CFG1–CFG3, 7a.8/7a.9).
+The native suite uses the shared 275-scenario catalog (X1–X270, CFG1–CFG3, 7a.8/7a.9).
 It launches an isolated Community-capable IntelliJ environment with Ultimate disabled. Selected
 runs preserve explicit `partial` statuses where LSP4IJ cannot exercise a native feature; neither
 passing protocol assertions nor an unselected scenario count as full UI acceptance. The
@@ -875,3 +875,22 @@ neither editor bundles test binaries in source control. Use
 keeps case-sensitive module names in the virtual URI path because hosts normalize URI authorities.
 See the [batch receipt](../../docs/errs-integration-plan.md#ordered-libraries-and-attached-sources-batch-ui3ui4ui6-2026-10-06)
 for native results; a successful fallback-file check does not close UP25's virtual-editor gap.
+
+
+### Machine-local JVM tuning and log support
+
+Open **Settings → Ecstasy Server Runtime and Logs**. Enter one supported JVM option per line
+(e.g. `-Xmx2G`). Apply saves locally, outside project files and Settings Sync; the explicit Restart
+button restarts running Ecstasy servers in this IDE using the saved settings.
+
+Retention defaults: 7 days, 10 MB/file, 50 MB archived per stream and five stopped-server sessions.
+Logs live under `~/.xtc/logs/lsp/server-<PID>-<start-time>/`; active files are additional to archive
+caps, active processes are protected and stopped sessions are pruned on the next server start.
+Legacy shared logs and the IDE's own protocol console are outside this policy.
+
+**Tools → Export Ecstasy Server Logs** saves a ZIP of recent log tails and current status from
+the connected server (at most eight 512 KiB tails, 4 MiB log input). It may contain local paths and
+logged diagnostics; it does not collect source files. Export requires a running server. Shared
+X269/X270 check restart boundaries, invalid settings, retention/status and installed export.
+Native OS save-dialog layout, fresh-IDE persistence and rollover stress remain manual checks.
+See the [contract and receipt](../../docs/errs-integration-plan.md#machine-local-jvm-settings-and-log-support-ui5ui6-2026-10-06).
