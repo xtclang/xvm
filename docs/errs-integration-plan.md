@@ -1392,10 +1392,11 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
     assertion. X130, visible Cancel and the recursive-JSON X259 extension pass this run.
   - [x] Exercise the matching 264-case IntelliJ catalog across recorded continuations: 262 cases
     pass their assertions, X254/X257 retain UP25/UP26 partial status. Preserve the initial failures.
-  - [ ] Obtain one uninterrupted clean full-catalog IntelliJ run. The repaired plugin now has
-    262 passing scenarios and two known partial cases across two segments, both without IDE
-    errors/freeze dumps. X185 stopped the first segment; its popup recovery ordering was corrected
-    and the 172-case continuation passes. Preserve the original UP27/UP03 alerts and this failure.
+  - [x] Obtain one uninterrupted full-catalog IntelliJ run without new failures. October 6
+    `run-11949889098742489342` completes all 277 shared scenarios: 275 pass, X254/X257 remain
+    partial for UP25/UP26, and no IDE errors are recorded. START also passes. Shipping LSP4IJ
+    0.21.0 and all production bridges are enabled. Preserve earlier failed/segmented receipts;
+    this closes the uninterrupted-run gate, not the two native feature limitations.
   - [x] Bound native refresh work across distinct connected files, preserving latest-state refresh
     and disposal. X146 adds the many-file burst/dependency regression; X259 covers hint settings
     and restart, and native case transitions close/reopen editors. The long continuation is clean.
@@ -1404,6 +1405,13 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
     still use upstream's UI-wait path, explicitly retained under UP03.
   - [ ] Agree release budgets across supported hardware/platforms and complete prolonged-session
     acceptance. The current receipt defines provisional local comparison budgets only.
+  - [x] Preserve automatic source/resource inputs during library settings refresh. The fail-before
+    regression now proves identical notifications retain cached compilation while new files are
+    still discovered. X148 passes with the full retained-document workload after the repair.
+  - [ ] Measure and reduce genuine graph replacement cost with many open/retained documents.
+    The October 6 VS Code trace still records roughly seven seconds for a real replacement with
+    56 synchronized documents; X148's whole case takes 18.943 seconds. Removing repeated no-op
+    invalidation fixes its timeout, but does not establish the responsiveness budget.
   - [ ] Resolve the recorded host gates or retain explicit release exceptions: UP16/UP23 resource
     edits, UP25/UP26 native feature constraints and UP17 large-file editing below. The user already
     accepted UP23 as a compiler-scope exception; it is not a passing host assertion.
@@ -12281,3 +12289,139 @@ the correctness result and timings, `budget-assessment.json` separately records 
 comparison targets, and each session retains samples, traces and histograms. The tested JAR SHA-256
 is `61aa87e6215082ace8e3cc5c8bc9f0e7ee413e13931def0b483f870bc4f86d1d`.
 No production compiler or client code changed for this workload.
+
+## L82 upstream isolation and full-catalog acceptance (2026-10-06)
+
+Local upstream `2ccc5a30` was tested one bridge at a time, preserving all unrelated protections.
+UP01 process lifetime, UP07 diagnostic IDs/lazy fixes, UP08 explicit null serialization, UP13
+project/global settings, UP19 directory reconnection and UP27 bounded refresh pass their native
+selections. UP13 retains Ecstasy's evaluated build-model augmentation. Exact runs and plugin hashes
+are in the [isolation receipt](errs-upstream-issues.md#individual-bridge-isolation-2026-10-06).
+
+UP12 is not ready to replace our formatting task. Its absent-editor fix avoids the original
+exception, but closed-file save X139 fails: the upstream request follows `didClose` without
+reconnecting the buffer. Our formatting endpoint uses synchronized open content and returns no
+edits. Our override reconnects the current buffer first and also retains stale-text and UP24 Redo
+guards. Preserve the failed native receipt instead of treating the upstream unit test as full
+acceptance. UP03's generic UI wait and UP22's forced-failure recovery also remain distinct gates.
+
+UP27 isolation exposed test Driver issue UP29: a successful remote readiness predicate is checked
+again outside the polling loop, producing a false 45-second timeout after only 2.7 seconds.
+The harness now accepts each successful observation once and uses monotonic elapsed time.
+Five polling regressions plus four existing fatal-failure tests pass; the changing-readiness test
+fails against the original implementation. X137/X146/X259 pass with the UP27 bridge disabled after
+the harness fix. Actual deadlines and cancellation remain fatal; mutations are never replayed.
+All temporary production bypasses are restored before released-dependency full-catalog testing.
+
+The first full run, `run-12616284358656518241`, passes START and 159 shared scenarios, then
+fails X36 and leaves 117 not run. The three implementation targets are visibly present, but
+`popup.keyboard { enter() }` sends a global key without addressing that popup; its first row is
+selected while the source caret remains at the original interface. The harness waits 30 seconds
+for navigation, then correctly stops. There are no recorded IDE errors. This is a harness input
+failure, not evidence of a slow compiler query; preserve its screenshot and failed receipt.
+
+Navigation chooser submission now invokes the table's locally registered Enter callback on the
+EDT, once, after checking visibility, row bounds and the action's enabled state. It uses the
+platform's actual callback and still asserts chooser closure and exact file/caret destinations.
+It neither synthesizes navigation results nor sends global keyboard/mouse input. Three Swing
+regressions cover selection without focus, disabled actions, invalid rows and missing bindings;
+the five polling and four fatal-failure controls also pass. The helper deliberately requires the
+popup's local binding rather than falling back to JTable's default next-row action.
+Released-dependency `run-9791513406972193220` passes START and X22/X34/X36/X37/X38 with zero
+IDE errors; X36 completes in 3,160 ms. The full catalog is then restarted from a fresh fixture
+to obtain uninterrupted evidence rather than relabel the failed run.
+
+That second full run, `run-16286373009416011391`, completes all 277 shared scenarios:
+274 pass, X254/X257 retain their UP25/UP26 partial status, and X147 fails; START passes and
+there are zero IDE errors. X36 and closed-dirty-file formatting X139 both pass with the shipping
+bridges restored. X147's test probe still searches for the report on the initially selected
+Source modules page, but the redesigned settings UI attaches that component only when Build import
+is selected. The probe now selects that navigation entry and identifies the report by its stable
+component name. No production ownership check, barrier or assertion is relaxed.
+Focused `run-18329563558322991470` passes START/X147, including stale replies after reset,
+connection replacement, configuration replacement and disposal, with zero IDE errors.
+
+Final released-dependency `run-11949889098742489342` completes the entire catalog in one
+uninterrupted IntelliJ 2026.2.3 process with Ultimate disabled: **275 shared scenarios pass,
+X254/X257 remain partial for UP25/UP26, zero failures and zero IDE errors**. START passes too,
+so the raw JSON contains 276 passes and two partials. X36 takes 4.846 seconds, X139 2.944 seconds,
+X147 3.011 seconds, X260 8.618 seconds and intentional launch-failure recovery X272 2.328 seconds.
+LSP4IJ is the shipping 0.21.0; all seven restoration hashes match and no bypass remains active.
+The JUnit harness result is one test, zero failures/errors/skips. Copied JSON, progress and XML
+are under `lang/intellij-plugin/build/reports/upstream-isolation-2026-10-06/released-catalog/`.
+The opt-in UP17 large-file diagnostic is excluded from this ordinary catalog.
+
+| Local checkpoint | Future PR ownership |
+| --- | --- |
+| `f68488e89` | Extended 3,600-cycle platform workload receipt and manual recipe; documentation only. |
+| `04844b0ed` | IntelliJ Driver readiness polling correction, fail-before regression and UP29 record; test harness only. |
+| `b5104a971` | Native navigation chooser submission, Swing regression guards and exact-location acceptance; test harness only. |
+| `21b69158c` | Select the redesigned Build import page in X147's asynchronous-report ownership probe; test harness only. |
+
+No bridge removal or dependency upgrade is part of these checkpoints. The local LSP4IJ branch
+remains unpushed. Hardware/platform budgets, the two provisional latency misses, UP17's decorated
+large-file edit cost, remote/cross-platform acceptance and independent extracted-PR validation
+remain open; this desktop batch does not close all of L82.
+
+### Unchanged library settings caused repeated graph invalidation
+
+VS Code full run `run-JDTE2P` passes X1–X147, then X148 reaches its actual 30-second initial
+document-structure deadline. The harness stops with 129 cases not run; it does not continue after
+the timeout. This is a production configuration bug, distinct from IntelliJ's chooser input and
+report-page probe failures above.
+
+After X147's restart, the language client synchronizes 56 documents, including hidden models
+retained from previous scenarios. Six compiler configuration notifications each occupy the server's
+dispatch thread for approximately 6.1–6.3 seconds. The final server trace records 338 compile starts
+across 53 source roots. X148's first compilation itself takes 48 ms once dispatched, after the
+test's deadline. Neither a focus change nor slow compilation of the five-line extract fixture
+explains the delay.
+
+Library refresh reused `effectiveSourceModules()`, a settings-display projection that resolves
+automatic resource roots into explicit paths. Feeding that projection into `replaceBuildInputs`
+changes the input graph; automatic discovery immediately reinstates automatic roots. Every otherwise
+unchanged notification repeats that cycle and retires useful cached compilations. Keep display
+paths separate from the original immutable source inputs. The new internal `sourceModuleInputs()`
+returns those inputs without materializing automatic resources; no Java embedding or AST API changes.
+This does not skip rescanning merely because the settings JSON is unchanged.
+
+The new `CompilerConfigurationTest` regression fails before the repair because the previously valid
+cached result becomes null. Afterward, three identical updates preserve the result and compiler
+submission count, while adding a file is still discovered on the next identical update. All 17
+configuration/library/build-model tests pass without failures/errors/skips. Fail-before and after
+XML are retained under `lang/lsp-server/build/reports/configuration-refresh-2026-10-06/`.
+Selected VS Code `run-E7HXW1` passes X147/X148 (2.018 s and 1.374 s); the full accumulated-document
+run remains the acceptance check for the original timeout. The deadline and fixture assertions
+are unchanged.
+
+Checkpoint `46f18e013` owns this adapter/server input-preservation fix and regression together in
+the future compiler-configuration PR. It does not belong to the editor harness or LSP4IJ slices.
+
+The repaired full VS Code attempt `run-sDtdSi` passes X1–X217, including X148 with the accumulated
+hidden-document workload and unchanged timeout. X148's complete case takes 18.943 seconds;
+genuine graph replacements still cost roughly seven seconds in that state. Keep that scaling
+cost in L82's responsiveness work. X218 reproduces UP23's native Undo failure, reaches its
+source/resource consistency deadline, and stops the IDE with 59 cases not run. The original
+failed transaction remains untouched. This is not an uninterrupted passing catalog.
+
+Fresh multi-root continuation `run-h7Cliv` passes X219–X259, then X260 exposes a driver omission:
+the import command opens the native workspace-folder picker, while the harness waits for Gradle's
+producer file without selecting a folder. No task has started. The correction chooses the primary
+fixture folder in the actual picker, for both ordinary and duplicate-import commands, before
+waiting for the real producer. It retains the native Cancel/overlap/retry assertions and existing
+deadlines. This test change belongs to the VS Code harness slice, not the production import API.
+
+Corrected multi-root `run-ezSBxf` passes X260–X272, CFG1–CFG3 and 7a.8/7a.9: all 18 selected
+cases pass, including native import Cancel, duplicate refusal, retry, settings/export and failed
+launch recovery. X260 completes in 8.115 seconds. Combined with `run-sDtdSi` and `run-h7Cliv`,
+all 277 scenarios have results: **276 pass; X218 remains failed for UP23**. The reports contain
+no unhandled errors. This is coverage across three processes, not an uninterrupted green run;
+the original X148/X260 failures remain preserved. Checkpoint `e0987c404` owns the picker fix.
+
+The final settings/import cases intentionally produce error notifications: X261/X262 reject failed
+or malformed imports, X268 rejects invalid library replacements, X269 validates JVM options,
+X270 rejects invalid log retention, and X272 deliberately fails a JVM launch before repairing
+settings and restarting. X272 also asserts exactly one actionable launch-failure notification,
+not a cascade of initialization/connection errors. Their passing
+assertions establish retention/recovery for those scenarios; they do not make unrelated red
+notifications harmless. In particular, X218's host Undo error remains a real failed assertion.
