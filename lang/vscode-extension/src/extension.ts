@@ -20,6 +20,7 @@ import { registerCompilerPaths } from './compiler-paths';
 import { readServiceSettings } from './editor-settings';
 import { compilerSettingsLocation } from './rename-proposal';
 import { runtimeJvmOptions, runtimeLogArguments } from './runtime-settings';
+import { configuredSettings, configurationProperties } from './settings-report';
 
 function ensureXtcLanguageAssociation(document: vscode.TextDocument): void {
     if (document.fileName.endsWith('.x') && document.languageId !== 'xtc') {
@@ -127,17 +128,17 @@ export function activate(context: vscode.ExtensionContext): void {
             const revision = ++effectiveRevision;
             const resource = vscode.window.activeTextEditor?.document.uri;
             const settings = vscode.workspace.getConfiguration('xtc', resource);
-            const keys = Object.keys(context.extension.packageJSON.contributes.configuration.properties).map(key => key.slice('xtc.'.length));
-            const configured = Object.fromEntries(keys.map(key => {
-                const value = settings.inspect(key);
-                return [key, { value: settings.get(key), origin: value?.workspaceFolderValue !== undefined ? 'folder' : value?.workspaceValue !== undefined ? 'workspace' : value?.globalValue !== undefined ? 'user' : 'default' }];
-            }));
+            const configured = configuredSettings(configurationProperties(context.extension.packageJSON.contributes.configuration), resource);
             const running = getClient();
             const effective = running?.isRunning()
                 ? await running.sendRequest('xtc/languageServiceStatus').catch(error => ({ status: 'unavailable', reason: String(error) }))
                 : { status: 'not running; open an Ecstasy file or check the server log' };
             if (revision !== effectiveRevision || running !== getClient()) return undefined;
-            const report = { configured, effective, activeDocument: resource?.toString(), nativeFormatOnSave: vscode.workspace.getConfiguration('editor', { uri: resource, languageId: 'xtc' }).get('formatOnSave', false), sourceRoots: settings.get('sourceRoots', []), compilerPaths: 'Ecstasy: Show Effective Compiler Paths', log: 'Ecstasy: Show Language Server Output' };
+            const restartRequired = (() => {
+                try { return running?.isRunning() ? connectionSettingsChanged() : false; }
+                catch (error) { return { invalidSavedSettings: String(error) }; }
+            })();
+            const report = { configured, effective, restartRequired, activeDocument: resource?.toString(), nativeFormatOnSave: vscode.workspace.getConfiguration('editor', { uri: resource, languageId: 'xtc' }).get('formatOnSave', false), sourceRoots: settings.get('sourceRoots', []), compilerPaths: 'Ecstasy: Show Effective Compiler Paths', log: 'Ecstasy: Show Language Server Output' };
             effectiveOutput.clear();
             effectiveOutput.appendLine(JSON.stringify(report, null, 2));
             effectiveOutput.show(true);
