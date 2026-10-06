@@ -1350,15 +1350,18 @@ class CompilerPlaybook(
                     .also(onResult)
             progress(id, "passed", description)
         } catch (failure: Throwable) {
-            runCatching {
-                ClientTrace(this)
-                    .capture(
-                        Path
-                            .of(singleProject().getBasePath())
-                            .parent
-                            .resolve("client-trace-$id.log"),
-                    )
-            }.onFailure(failure::addSuppressed)
+            val unsafeToContinue = failure.mustStopPlaybook()
+            if (!unsafeToContinue) {
+                runCatching {
+                    ClientTrace(this)
+                        .capture(
+                            Path
+                                .of(singleProject().getBasePath())
+                                .parent
+                                .resolve("client-trace-$id.log"),
+                        )
+                }.onFailure(failure::addSuppressed)
+            }
             completed +=
                 Result(
                     id,
@@ -1367,10 +1370,10 @@ class CompilerPlaybook(
                     start.elapsedNow().inWholeMilliseconds,
                     failure.stackTraceToString(),
                 ).also(onResult)
-            runCatching { progress(id, "failed", description) }.onFailure(failure::addSuppressed)
+            if (!unsafeToContinue) runCatching { progress(id, "failed", description) }.onFailure(failure::addSuppressed)
             if (
                 !continueAfterFailure ||
-                failure is InterruptedException ||
+                unsafeToContinue ||
                 (failure !is Exception && failure !is AssertionError)
             ) {
                 throw failure

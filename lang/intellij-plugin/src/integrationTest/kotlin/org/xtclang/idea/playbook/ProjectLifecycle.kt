@@ -7,6 +7,7 @@ import com.intellij.driver.client.service
 import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.singleProject
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.time.Duration.Companion.seconds
@@ -76,7 +77,12 @@ internal fun Driver.projectLifecycle(shared: SharedScenarios) {
         type: String,
     ) {
         awaitUi("$type hover in ${file.parent.fileName}", 45.seconds) {
-            runCatching { client.query("textDocument/hover", params(file)).toString().contains("$type value") }.getOrDefault(false)
+            try {
+                client.query("textDocument/hover", params(file)).toString().contains("$type value")
+            } catch (failure: ClientRequestFailure) {
+                if (failure.code != ResponseErrorCode.ContentModified.value) throw failure
+                false
+            }
         }
     }
 
