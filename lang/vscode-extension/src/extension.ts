@@ -1,4 +1,3 @@
-import { runtimeJvmOptions, runtimeLogArguments } from './runtime-settings';
 // Ecstasy (XTC) Language Support for VS Code
 //
 // Semantic tokens are enabled by default in the LSP server. VS Code automatically
@@ -8,6 +7,7 @@ import { runtimeJvmOptions, runtimeLogArguments } from './runtime-settings';
 // TextMate remains as the fast-paint fallback during server startup.
 
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 
@@ -19,6 +19,7 @@ import { registerCommands } from './commands';
 import { registerCompilerPaths } from './compiler-paths';
 import { readServiceSettings } from './editor-settings';
 import { compilerSettingsLocation } from './rename-proposal';
+import { runtimeJvmOptions, runtimeLogArguments } from './runtime-settings';
 
 function ensureXtcLanguageAssociation(document: vscode.TextDocument): void {
     if (document.fileName.endsWith('.x') && document.languageId !== 'xtc') {
@@ -142,10 +143,10 @@ export function activate(context: vscode.ExtensionContext): void {
             effectiveOutput.show(true);
             return report;
         }),
-        vscode.commands.registerCommand('xtc.exportServerLogs', async () => {
+        vscode.commands.registerCommand('xtc.exportServerLogs', async (target?: vscode.Uri) => {
             const connection = getClient();
             if (!connection?.isRunning()) { void vscode.window.showInformationMessage('Open an Ecstasy file to connect to its server, then export logs. Previous logs remain under ~/.xtc/logs/lsp.'); return; }
-            const destination = await vscode.window.showSaveDialog({ title: 'Export Ecstasy Server Logs (includes local paths and logged diagnostics)', filters: { 'ZIP archives': ['zip'] }, defaultUri: vscode.Uri.file('ecstasy-server-logs.zip') });
+            const destination = target ?? await vscode.window.showSaveDialog({ title: 'Export Ecstasy Server Logs (includes local paths and logged diagnostics)', filters: { 'ZIP archives': ['zip'] }, defaultUri: vscode.Uri.file(path.join(os.homedir(), 'ecstasy-server-logs.zip')) });
             if (!destination) return;
             const bundle = await connection.sendRequest<{ base64: string }>('xtc/exportLogs');
             await vscode.workspace.fs.writeFile(destination, Buffer.from(bundle.base64, 'base64'));

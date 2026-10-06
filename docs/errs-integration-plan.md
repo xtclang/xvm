@@ -11422,9 +11422,9 @@ not a claim that the existing settings pages have never been implemented:
 | UI1/UI2 contract and ownership | Validated settings, inherited project service values, graph precedence, last-valid state and guarded updates. | Complete option/consumer inventory as controls expand; remote/restricted-workspace and broader multi-root precedence acceptance. |
 | UI3/UI4 settings | Community IntelliJ Compiler/Code Style/Language Service pages; VS Code native Settings, commands and path selection. Ordered library/source-attachment controls, resource-path ordering and Gradle inheritance are implemented (X266–X268). | Broader persistence/adapter-parity acceptance and consistent origin/inheritance presentation across every option. |
 | UI5 build/apply lifecycle | Live formatting/hints, restart-owned transport options, explicit import/preparation, cancellation and accepted-report ownership; automatic refresh after initial import, nested/composite aggregation, processed-resource status and native project/folder retirement (X263–X265). | Broader independent multi-root/overlapping-root precedence and remote/restricted-workspace acceptance. Conflicting source owners are rejected, not silently reconciled. |
-| UI5 runtime | Effective bundled server/runtime, VS Code Java home and restart actions. | Validated advanced JVM options with machine-local scope and an explicit restart boundary. |
-| UI6 support | Effective settings/queue reports, log toggle, import outcome/time, library/source-attachment presentation and reload. | Log export/retention and links from failures to settings/logs. |
-| UI7 acceptance | Shared local settings/restart/save/refresh scenarios and X260–X265 import cases pass both editors; selected receipts and corrections are recorded below. | Broader persistence/multi-root/remote/restricted-workspace and adapter parity; the current 273-case catalog has not been rerun for the library-controls batch. |
+| UI5 runtime | Effective runtime/PID, VS Code Java home, validated machine-local JVM tuning and explicit restart in both clients (X269). | Fresh-IDE persistence and broader platform/runtime acceptance. |
+| UI6 support | Effective settings/queue reports, log toggle, import status, library/source attachments, process-owned log retention and bounded export (X270). | Offline export, broader support bundles and direct settings/log links from failures. |
+| UI7 acceptance | Shared local settings/restart/save/refresh scenarios and X260–X265 import cases pass both editors; selected receipts and corrections are recorded below. | Broader persistence/multi-root/remote/restricted-workspace and adapter parity; the current 275-case catalog has not been rerun for the settings batches. |
 
 L77 awaits a real recognized color API; no color library is added solely for LSP. L78 notebooks are
 explicitly deferred by the user. L79 runtime inline values follows Run/DAP. L73's existing legacy
@@ -11707,7 +11707,52 @@ API expansion is required.
 
 Next settings work remains explicit:
 
-- [ ] Validated machine-local JVM/runtime controls in both clients, with clear restart ownership.
-- [ ] Exportable diagnostics/log bundles, retention controls and direct settings/log links from failures.
+- [x] Validated machine-local JVM/runtime controls in both clients, with clear restart ownership (X269; validation receipt below).
+- [x] Bounded live-server log/trace/status export and retention controls (X270; validation receipt below).
+- [ ] Offline/support-bundle expansion and direct settings/log links from failures.
 - [ ] Complete option/origin inventory and fresh-project persistence, multi-root, restricted/remote
   and adapter-parity acceptance. Keep unsupported environments explicit.
+
+
+## Machine-local JVM settings and log support (UI5/UI6, 2026-10-06)
+
+`ab414c533` adds machine-local JVM tuning and explicit restart; `47f35d3df` adds process-owned
+logs, retention and export. Shared X269/X270 and their drivers form the third slice. Tests are
+written with the slices and executed after the batch. No AST, embedding API or upstream LSP4IJ
+change is needed. Carry validation corrections with their owning extracted PR.
+
+IntelliJ exposes **Settings → Ecstasy Server Runtime and Logs**, outside project settings and
+Settings Sync. VS Code exposes machine-scoped `xtc.java.vmOptions` and `xtc.server.logs`; the
+launcher reads user-level values only. JVM arguments are separate items (lines in IntelliJ),
+with no shell parsing. Supported tuning covers heap/stack size, metaspace/code-cache caps,
+processor count and G1/Serial/Parallel/Z collectors. Duplicates, conflicting collectors,
+initial heap above maximum, overflow and launch/agent/property overrides are refused.
+Validation is structural, not a promise that the selected heap or collector can start on every
+machine. Saving does not interrupt a working server; restart uses saved settings explicitly.
+
+Normal logs live under `~/.xtc/logs/lsp/server-<PID>-<start-time>/`; trace overrides remain
+supported. Ordinary logs and timing traces each roll at 10 MB by default with a 50 MB archived
+cap per stream and seven days of history. Active files are additional to the archive cap and
+can exceed a rollover threshold by one event. At startup, pruning keeps up to five stopped-server
+sessions and removes expired sessions. Live processes, unknown files and symlinks are protected.
+Legacy shared logs are not removed automatically. Tests isolate this root in their run reports.
+These settings do not control IntelliJ/VS Code's own protocol consoles.
+
+**Tools → Export Ecstasy Server Logs** / **Ecstasy: Export Server Logs** saves a ZIP selected by
+the user. It includes current service status and up to eight recent log tails, at most 512 KiB
+each and 4 MiB of log input total. The manifest records truncation; tails may start mid-line.
+Logs can contain local paths and diagnostic messages. No source-tree crawl or source-file bundle
+is performed. Export currently requires a running connection; offline files remain accessible.
+
+X269 checks Apply/Cancel/Reset where supported, restart/PID boundaries, effective arguments and
+invalid-option retention. X270 checks applied retention, separate process directories and the
+installed export path/ZIP manifest. Both restore their original settings and restart afterward.
+The drivers bypass the OS save chooser by supplying a destination; native picker layout,
+fresh-IDE persistence, rollover stress, remote/restricted workspaces and cross-platform checks
+remain explicit acceptance work. The catalog now has 275 cases, not a claim of 275 new passes.
+
+Validation: pending headless and selected native runs after the implementation batch.
+
+The compiler-project page visual follow-up should reduce competing actions: Sources/Libraries/
+Build import tabs, clear automatic/manual source ownership, one primary Refresh action, a separate
+Prepare action and collapsible detailed output. This is a design proposal, not implemented here.
