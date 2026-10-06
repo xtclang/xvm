@@ -329,7 +329,7 @@ Logs **persist after the IDE exits** — you can always read them post-hoc.
 The LSP server writes to a separate log file:
 
 ```
-~/.xtc/logs/lsp-server.log
+~/.xtc/logs/lsp/server-*/server.log
 ```
 
 This is independent of the IDE sandbox and persists across IDE sessions.
@@ -351,7 +351,7 @@ After any Gradle test or IDE run, archive these paths as CI artifacts:
 | Artifact | Path | When |
 |---|---|---|
 | IDE log | `build/idea-sandbox/log/idea.log` | After `runIde` or `testIdeUi` |
-| LSP server log | `~/.xtc/logs/lsp-server.log` | After any LSP session |
+| LSP server log | `~/.xtc/logs/lsp/server-*/server.log` | After any LSP session |
 | Test results (XML) | `build/test-results/test/` | After `test` |
 | Test report (HTML) | `build/reports/tests/test/` | After `test` |
 | Test sandbox log | `build/idea-sandbox-test/log/idea.log` | After platform tests |
@@ -365,10 +365,10 @@ To watch logs while the IDE is running:
 tail -f lang/intellij-plugin/build/idea-sandbox/log/idea.log
 
 # LSP server log
-tail -f ~/.xtc/logs/lsp-server.log
+tail -f ~/.xtc/logs/lsp/server-*/server.log
 
 # Both, interleaved
-tail -f lang/intellij-plugin/build/idea-sandbox/log/idea.log ~/.xtc/logs/lsp-server.log
+tail -f lang/intellij-plugin/build/idea-sandbox/log/idea.log ~/.xtc/logs/lsp/server-*/server.log
 ```
 
 ---
@@ -894,3 +894,8 @@ logged diagnostics; it does not collect source files. Export requires a running 
 X269/X270 check restart boundaries, invalid settings, retention/status and installed export.
 Native OS save-dialog layout, fresh-IDE persistence and rollover stress remain manual checks.
 See the [contract and receipt](../../docs/errs-integration-plan.md#machine-local-jvm-settings-and-log-support-ui5ui6-2026-10-06).
+
+Runtime/log selected acceptance: VS Code `run-GSU1jO` passes X135/X269/X270. IntelliJ
+`run-11382447476811663163` passes START/X135 and exposes a test selector that also matched
+spinner arrows; corrected `run-7594844964901809886` passes START/X269/X270, with zero IDE errors.
+The failed receipt is retained. This is selected acceptance, not a complete 275-case rerun.
