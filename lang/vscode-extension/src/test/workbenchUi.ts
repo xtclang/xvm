@@ -36,6 +36,18 @@ export class WorkbenchUi {
         return this.page.locator('.monaco-editor:visible .view-lines [class*="dyn-rule-"]').allTextContents();
     }
 
+    async focusEditor(): Promise<void> {
+        // Focus the actual text input rather than an Output panel left open by a preceding case.
+        // DOM focus does not move the desktop pointer and never repeats an edit/history command.
+        const input = this.page.locator('.editor-group-container.active .monaco-editor:visible :is(textarea.inputarea, .native-edit-context)');
+        await input.focus({ timeout: 5_000 });
+        assert.ok(await input.evaluate(element => element === element.ownerDocument.activeElement), 'Source editor owns keyboard focus');
+    }
+
+    async inlineText(): Promise<string> {
+        return (await this.page.locator('.editor-group-container.active .monaco-editor:visible .ghost-text-decoration').allTextContents()).join('');
+    }
+
     async close(): Promise<void> { await this.browser.close(); }
 }
 
