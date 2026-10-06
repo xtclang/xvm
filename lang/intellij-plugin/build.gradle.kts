@@ -761,6 +761,10 @@ val runIdeCapturedLsp4ijVersion =
         .get()
 val runIdeCapturedPluginVersion = project.version.toString()
 val runIdeCapturedSemanticTokens = ideLspSemanticTokens
+val runIdeLspLogDirectory =
+    providers
+        .environmentVariable("XTC_LSP_LOG_DIR")
+        .orElse(providers.systemProperty("user.home").map { "$it/.xtc/logs/lsp" })
 
 val runIdeInfo =
     tasks.register<RunIdeEnvironmentReportTask>("runIdeInfo") {
@@ -792,18 +796,19 @@ val runIdeInfo =
                     ?.sorted() ?: emptyList()
             },
         )
-        lspLogFile.set(layout.file(providers.systemProperty("user.home").map { File(it, ".xtc/logs/lsp-server.log") }))
+        lspLogDirectory.set(runIdeLspLogDirectory)
     }
 
 val startLspLogTail =
     tasks.register<StartLogTailTask>("startLspLogTail") {
-        logFile.set(layout.file(providers.systemProperty("user.home").map { File(it, ".xtc/logs/lsp-server.log") }))
+        logDirectory.set(runIdeLspLogDirectory)
         threadName.set("lsp-log-tailer")
         linePrefix.set("[lsp-server] ")
     }
 
 val stopLspLogTail =
     tasks.register<StopLogTailTask>("stopLspLogTail") {
+        mustRunAfter(startLspLogTail)
         threadName.set("lsp-log-tailer")
     }
 
