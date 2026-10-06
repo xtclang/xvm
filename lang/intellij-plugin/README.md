@@ -438,7 +438,7 @@ stale sandbox state, or missing artifacts:
 [runIde] ─── Reset Commands ───
 [runIde]   Nuke sandbox (keeps IDE download):  ./gradlew :lang:intellij-plugin:clean
 [runIde]   Nuke cached IDE + metadata:         rm -rf lang/.intellijPlatform/localPlatformArtifacts
-[runIde] LSP log:  ~/.xtc/logs/lsp-server.log (tailing to console)
+[runIde] LSP log:  ~/.xtc/logs/lsp/server-*/server.log (tailing to console)
 ```
 
 Once the IDE is running and you open a `.x` file, LSP server logs are streamed
@@ -486,7 +486,7 @@ tail -f lang/.intellijPlatform/sandbox/intellij-plugin/IU-2026.2.3/log/idea.log 
 **LSP server file log** (always available, even outside `runIde`):
 
 ```bash
-tail -f ~/.xtc/logs/lsp-server.log
+tail -f ~/.xtc/logs/lsp/server-*/server.log
 ```
 
 #### Clearing Sandbox State
@@ -741,7 +741,7 @@ intellij-plugin/
 - Communication is via stdio (stdin/stdout) using JSON-RPC; logging goes to stderr
 - `XtcLanguageClient` bridges IntelliJ Code Style settings to the LSP server via `workspace/configuration`
 - LSP4IJ captures stderr and shows it in the Language Servers panel
-- The `runIde` task also tails `~/.xtc/logs/lsp-server.log` to the Gradle console
+- The `runIde` task also tails `~/.xtc/logs/lsp/server-*/server.log` to the Gradle console
 
 ## Troubleshooting
 
