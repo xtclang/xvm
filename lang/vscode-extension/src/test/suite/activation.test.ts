@@ -5,6 +5,7 @@
 
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
+import { configurationProperties } from '../../settings-report';
 
 const PUBLISHER_AND_NAME = 'xtclang.xtc-language';
 
@@ -38,7 +39,7 @@ suite('Extension activation surfaces', () => {
     });
 
     test('connection preferences are window scoped and ineffective formatting fields are explicit', () => {
-        const properties = vscode.extensions.getExtension(PUBLISHER_AND_NAME)!.packageJSON.contributes.configuration.properties;
+        const properties = configurationProperties(vscode.extensions.getExtension(PUBLISHER_AND_NAME)!.packageJSON.contributes.configuration);
         for (const key of ['textSynchronization', 'saveFormatting']) {
             assert.strictEqual(properties[`xtc.languageService.${key}`].scope, 'window');
         }
