@@ -1,5 +1,5 @@
 import * as assert from 'node:assert';
-import { validateJvmOptions } from '../../runtime-settings';
+import { validateJvmOptions, validateLogRetention } from '../../runtime-settings';
 
 suite('Machine-local JVM options', () => {
     test('supported tuning remains separate arguments', () => {
@@ -8,5 +8,9 @@ suite('Machine-local JVM options', () => {
     });
     test('launch overrides conflicting collectors and impossible heaps are rejected', () => {
         for (const options of [['-jar'], ['@options'], ['-Dxtc.adapter=mock'], ['-javaagent:agent.jar'], ['-Xmx1G -Xss1M'], ['-Xmx2G', '-Xmx1G'], ['-Xms2G', '-Xmx1G'], ['-XX:+UseG1GC', '-XX:+UseZGC'], ['-Xmx999999999999999999999G']]) assert.throws(() => validateJvmOptions(options));
+    });
+    test('retention rejects malformed values and impossible caps', () => {
+        assert.strictEqual(validateLogRetention({ historyDays: 2 }).historyDays, 2);
+        for (const value of [null, [], { historyDays: 0 }, { historyDays: 1.5 }, { totalSizeMb: 1 }, { retainedSessions: 21 }, { typo: 2 }]) assert.throws(() => validateLogRetention(value));
     });
 });
