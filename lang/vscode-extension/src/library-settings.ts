@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { getClient } from './lsp-client';
+import { getClient, updateCompilerConfiguration } from './lsp-client';
 import { LibraryOptions, normalizeLibraries } from './library-configuration';
 
 export function libraryOptions(): LibraryOptions {
@@ -47,10 +47,11 @@ export async function configureCompilerLibraries(): Promise<void> {
     let draft = libraryOptions();
     while (true) {
         const picked = await vscode.window.showQuickPick([
-            'Apply library settings', 'Edit binary paths', 'Inherit Gradle libraries', 'Add source attachment',
+            'Apply library settings', 'Reload applied libraries', 'Edit binary paths', 'Inherit Gradle libraries', 'Add source attachment',
             ...draft.sourceAttachments.map(item => `Edit sources: ${item.module}`)
         ], { title: 'Ecstasy Libraries and Sources', placeHolder: 'Bundled XDK is always included and read-only. Attached sources provide navigation only.' });
         if (!picked) return;
+        if (picked === 'Reload applied libraries') { await updateCompilerConfiguration(); return; }
         if (picked === 'Apply library settings') {
             if (before !== JSON.stringify(vscode.workspace.getConfiguration('xtc.compiler').get('libraries')) || connection !== getClient() ||
                 JSON.stringify(folders) !== JSON.stringify((vscode.workspace.workspaceFolders ?? []).map(folder => folder.uri.toString()))) {
