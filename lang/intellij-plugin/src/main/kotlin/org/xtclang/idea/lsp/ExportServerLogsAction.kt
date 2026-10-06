@@ -10,6 +10,7 @@ import com.intellij.openapi.fileChooser.FileSaverDescriptor
 import com.intellij.openapi.project.DumbAwareAction
 import com.intellij.openapi.project.Project
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
+import com.redhat.devtools.lsp4ij.ServerStatus
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.Base64
@@ -25,20 +26,6 @@ class ExportServerLogsAction : DumbAwareAction() {
 
     override fun actionPerformed(event: AnActionEvent) {
         val project = event.project ?: return
-        val wrapper =
-            LanguageServiceAccessor.getInstance(project).startedServers.firstOrNull {
-                it.serverDefinition.id ==
-                    CompilerSettings.SERVER_ID
-            }
-        if (wrapper == null) {
-            Notification(
-                "XTC Language Server",
-                "Ecstasy server logs",
-                "Open an Ecstasy file to connect to its server, then export logs. Previous logs remain under ~/.xtc/logs/lsp.",
-                NotificationType.INFORMATION,
-            ).notify(project)
-            return
-        }
         val destination =
             FileChooserFactory
                 .getInstance()
@@ -77,10 +64,9 @@ class ExportServerLogsAction : DumbAwareAction() {
         ): CompletableFuture<Void> {
             val wrapper =
                 LanguageServiceAccessor.getInstance(project).startedServers.firstOrNull {
-                    it.serverDefinition.id ==
-                        CompilerSettings.SERVER_ID
+                    it.serverDefinition.id == CompilerSettings.SERVER_ID && it.serverStatus == ServerStatus.started
                 }
-                    ?: return CompletableFuture.failedFuture(IllegalStateException("No running Ecstasy server"))
+                    ?: return CompletableFuture.runAsync { project.getService(ServerSupportLogs::class.java).export(destination) }
             return wrapper.initializedServer.thenCompose { (it as XtcLanguageServer).exportLogs() }.thenAcceptAsync { bundle ->
                 Files.write(destination, Base64.getDecoder().decode(requireNotNull(bundle["base64"])))
             }
