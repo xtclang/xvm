@@ -25,4 +25,16 @@ class ServerJvmOptionsTest {
             assertThatThrownBy { ServerJvmOptions.validate(it) }.isInstanceOf(IllegalArgumentException::class.java)
         }
     }
+
+    @Test fun `retention validates before publishing the immutable machine snapshot`() {
+        val store = ServerRuntimeSettings()
+        val before = store.state
+        assertThatThrownBy { store.install(before, before.copy(logTotalSizeMb = 1)) }.isInstanceOf(IllegalArgumentException::class.java)
+        assertThat(store.state).isEqualTo(before)
+        val next = before.copy(vmOptions = "-Xmx1G", logHistoryDays = 2, logMaxFileMb = 1, logTotalSizeMb = 3, logRetainedSessions = 2)
+        store.install(before, next)
+        assertThat(store.launchArguments()).contains("-Xmx1G", "-Dxtc.logs.historyDays=2", "-Dxtc.logs.totalSizeMb=3")
+        assertThatThrownBy { store.install(before, before) }.hasMessageContaining("changed")
+        assertThat(store.state).isEqualTo(next)
+    }
 }

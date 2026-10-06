@@ -11,6 +11,7 @@ import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.adapter.treesitter.TreeSitterAdapter
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.util.ServerLogs
 import java.io.InputStream
 import java.io.OutputStream
 import java.lang.invoke.MethodHandles
@@ -146,7 +147,8 @@ fun main(
     val (adapter, backend) = createAdapter(requested)
 
     // Log startup banner prominently
-    val logFile = "${System.getProperty("user.home")}/.xtc/logs/lsp-server.log"
+    val logFile = ServerLogs.directory.resolve("server.log").toString()
+    runCatching { ServerLogs.prune() }.onFailure { logger.warn("Could not prune inactive Ecstasy log sessions", it) }
     logger.info("========================================")
     logger.info("Ecstasy Language Server v$version")
     logger.info("backend: ${backend.displayName}")

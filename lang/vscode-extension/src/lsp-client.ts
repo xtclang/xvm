@@ -21,7 +21,7 @@ import { libraryOptions } from './library-settings';
 import { buildJvmArgs, findJavaExecutable } from './java';
 import { compilerSourceModules, moveWithConfiguration, renameWithConfiguration } from './rename-proposal';
 import { updateStatusBar } from './status-bar';
-import { runtimeJvmOptions } from './runtime-settings';
+import { runtimeJvmOptions, runtimeLogArguments } from './runtime-settings';
 
 let client: LanguageClient | undefined;
 let activeConnectionKey: string | undefined;
@@ -29,7 +29,7 @@ let activeConnectionKey: string | undefined;
 function connectionKey(): string {
     const settings = readServiceSettings();
     const config = vscode.workspace.getConfiguration('xtc');
-    return JSON.stringify([settings.textSynchronization, settings.saveFormatting, config.get('java.home', ''), config.get('sourceRoots', []), runtimeJvmOptions()]);
+    return JSON.stringify([settings.textSynchronization, settings.saveFormatting, config.get('java.home', ''), config.get('sourceRoots', []), runtimeJvmOptions(), runtimeLogArguments()]);
 }
 
 export function connectionSettingsChanged(): boolean { return connectionKey() !== activeConnectionKey; }
@@ -85,7 +85,7 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
     let lastFormatting = formattingSettings();
     const javaExecutable = await findJavaExecutable(context);
     const logLevel = process.env.XTC_LOG_LEVEL?.toUpperCase() ?? 'INFO';
-    const jvmArgs = [...runtimeJvmOptions(), ...buildJvmArgs(serverJar, logLevel)];
+    const jvmArgs = [...runtimeJvmOptions(), ...runtimeLogArguments(), ...buildJvmArgs(serverJar, logLevel)];
 
     outputChannel.appendLine('Starting Ecstasy Language Server...');
     outputChannel.appendLine(`Java: ${javaExecutable}`);
@@ -251,6 +251,7 @@ let restartRevision = 0;
 export function restartLanguageClient(context: vscode.ExtensionContext, serverJar: string, outputChannel: vscode.LogOutputChannel): Promise<void> {
     readServiceSettings();
     runtimeJvmOptions(); // Validate before stopping a working connection.
+    runtimeLogArguments();
     formattingSettings(); // Reject malformed settings before stopping a valid connection.
     restartRevision++;
     restarting ??= (async () => {

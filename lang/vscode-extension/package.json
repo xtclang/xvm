@@ -118,6 +118,11 @@
                 "command": "xtc.configureCompilerLibraries",
                 "title": "Configure Libraries and Sources",
                 "category": "Ecstasy"
+            },
+            {
+                "command": "xtc.exportServerLogs",
+                "title": "Export Server Logs",
+                "category": "Ecstasy"
             }
         ],
         "keybindings": [
@@ -373,6 +378,40 @@
                     "default": [],
                     "scope": "machine",
                     "description": "Advanced LSP JVM options, one argument per item. Supports -Xms/-Xmx/-Xss sizes (K/M/G), MaxMetaspaceSize, ReservedCodeCacheSize, ActiveProcessorCount and G1/Serial/Parallel/Z collectors. Restart Language Server to apply. Workspace overrides are ignored."
+                },
+                "xtc.server.logs": {
+                    "type": "object",
+                    "scope": "machine",
+                    "default": {
+                        "historyDays": 7,
+                        "maxFileMb": 10,
+                        "totalSizeMb": 50,
+                        "retainedSessions": 5
+                    },
+                    "additionalProperties": false,
+                    "properties": {
+                        "historyDays": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 90
+                        },
+                        "maxFileMb": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100
+                        },
+                        "totalSizeMb": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 1000
+                        },
+                        "retainedSessions": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 20
+                        }
+                    },
+                    "description": "Machine-local server log retention. Restart to apply. Caps apply separately to server and timing archives; current files are additional. Closed sessions are pruned on server start; active processes are protected. Archive cap must be at least the per-file cap."
                 }
             }
         },
