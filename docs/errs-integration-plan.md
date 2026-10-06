@@ -11920,3 +11920,26 @@ run; paths always belong to that extension host, never implicitly to the desktop
 
 Layout checkpoint: `397f75a6a`. Tests for formatting-margin serialization and grouped/machine
 reporting have been added; batch execution remains pending.
+
+
+### UI5/UI6 support export implementation
+
+Both hosts record only their own last launch in IDE-local project/workspace storage. Offline export
+uses that recorded session, never a global newest-directory search. Each server/trace file contributes
+at most a 512 KiB tail (at most eight files); launcher stderr/failure information is bounded to 64 KiB.
+Archives contain a manifest explaining the offline scope and truncation. Source files, symlinks and
+other sessions' shared trace files are excluded. Pruned server files leave an exportable launcher
+record. Failed attempts replace the previous launch record, so old healthy logs are not mislabeled
+as a current failed launch. VS Code learns the server log paths when initialization succeeds;
+before that its offline archive contains launcher information only. IntelliJ can also identify the
+process directory from the exact PID/start timestamp. Neither export needs another Java process.
+
+VS Code launch/configuration failures now offer Open Settings, Show Logs and Export Logs. IntelliJ
+keeps LSP4IJ's existing startup notification/Show Logs action rather than adding a duplicate balloon;
+Export Ecstasy Server Logs is available even without a started connection. Language Service's
+report now includes saved machine runtime settings alongside actual running values, and rejects
+late status callbacks after a connection or settings-owner change.
+
+New regression tests cover retired callbacks, saved launch restoration, isolation from other project
+logs, trace ownership, symlinks, source exclusion, file truncation and export after pruning/failure.
+Execution is still deferred to the combined batch gate.

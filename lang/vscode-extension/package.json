@@ -515,7 +515,8 @@
     "dependencies": {
         "jdk-utils": "^0.7.0",
         "jsonc-parser": "^3.3.1",
-        "vscode-languageclient": "^10.1.2"
+        "vscode-languageclient": "^10.1.2",
+        "yazl": "^3.3.1"
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
@@ -523,6 +524,8 @@
         "@types/mocha": "^10.0.10",
         "@types/node": "^24.0.0",
         "@types/vscode": "1.140.0",
+        "@types/yauzl": "^3.4.0",
+        "@types/yazl": "^3.3.1",
         "@vscode/test-electron": "^3.1.0",
         "@vscode/vsce": "^4.0.0",
         "esbuild": "^0.28.2",
@@ -532,7 +535,8 @@
         "playwright-core": "^1.63.0",
         "sharp": "^0.35.5",
         "typescript": "^6.0.3",
-        "typescript-eslint": "^8.71.0"
+        "typescript-eslint": "^8.71.0",
+        "yauzl": "^3.4.0"
     },
     "overrides": {
         "diff": "^8.0.3",

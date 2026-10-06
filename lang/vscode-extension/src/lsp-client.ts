@@ -6,6 +6,7 @@ import {
     Executable,
     LanguageClient,
     LanguageClientOptions,
+    MessageTransports,
     ServerOptions,
     State,
     Trace,
@@ -22,6 +23,8 @@ import { buildJvmArgs, findJavaExecutable } from './java';
 import { compilerSourceModules, moveWithConfiguration, renameWithConfiguration } from './rename-proposal';
 import { updateStatusBar } from './status-bar';
 import { runtimeJvmOptions, runtimeLogArguments } from './runtime-settings';
+import { supportLogs } from './support-logs';
+import { serviceFailure } from './service-notifications';
 
 let client: LanguageClient | undefined;
 let activeConnectionKey: string | undefined;
@@ -83,7 +86,13 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
     const preferences = readServiceSettings();
     const requestedKey = connectionKey();
     let lastFormatting = formattingSettings();
-    const javaExecutable = await findJavaExecutable(context);
+    const logs = supportLogs(context);
+    let launch = logs.begin('Resolving the Java runtime.\n');
+    const javaExecutable = await findJavaExecutable(context).catch(error => {
+        logs.finish(launch, `Startup failed: ${error}\n`);
+        serviceFailure(`Cannot start Ecstasy: ${error}`);
+        throw error;
+    });
     const logLevel = process.env.XTC_LOG_LEVEL?.toUpperCase() ?? 'INFO';
     const jvmArgs = [...runtimeJvmOptions(), ...runtimeLogArguments(), ...buildJvmArgs(serverJar, logLevel)];
 
@@ -175,15 +184,22 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
                     return { action: CloseAction.Restart };
                 }
                 updateStatusBar('stopped');
-                void vscode.window.showErrorMessage(
-                    `Ecstasy Language Server crashed ${crashCount} times and will not be restarted. Use "Ecstasy: Restart Language Server" to restart manually.`
-                );
+                serviceFailure(`Ecstasy Language Server crashed ${crashCount} times and will not restart automatically.`);
                 return { action: CloseAction.DoNotRestart };
             }
         }
     };
 
-    const connection = new LanguageClient(
+    const connection = new class extends LanguageClient {
+        protected override async createMessageTransports(encoding: string): Promise<MessageTransports> {
+            const id = logs.begin(`Java: ${javaExecutable}\nArguments: ${jvmArgs.join(' ')}\n`);
+            launch = id;
+            const transports = await super.createMessageTransports(encoding);
+            this.serverProcess?.stderr?.on('data', (chunk: Buffer) => logs.append(id, chunk.toString()));
+            this.serverProcess?.once('exit', (code, signal) => logs.finish(id, `\nProcess exited: code=${code}, signal=${signal ?? 'none'}\n`));
+            return transports;
+        }
+    }(
         'xtcLanguageServer',
         'Ecstasy Language Server',
         serverOptions,
@@ -212,6 +228,10 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
         if (newState === State.Running) {
             crashCount = 0;
             hasEverReachedRunning = true;
+            const id = launch;
+            void connection.sendRequest<{ logs: { directory: string; traceDirectory: string } }>('xtc/languageServiceStatus')
+                .then(status => { if (client === connection) logs.remember(id, status); })
+                .catch(error => outputChannel.warn(`Could not record Ecstasy log session: ${error}`));
         }
         
         const status = stateMap[newState as keyof typeof stateMap];
@@ -227,16 +247,8 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
         const message = err?.message ?? String(err);
         console.warn('Ecstasy Language Server failed to start:', message);
 
-        if (message.includes('UnsupportedClassVersionError') || message.includes('class file version')) {
-            void vscode.window.showErrorMessage(
-                'Ecstasy Language Server requires Java 25+. Set the "xtc.java.home" setting to your Java 25 installation path.',
-                'Open Settings'
-            ).then(choice => {
-                if (choice === 'Open Settings') {
-                    void vscode.commands.executeCommand('workbench.action.openSettings', 'xtc.java.home');
-                }
-            });
-        }
+        logs.finish(launch, `Startup failed: ${message}\n`);
+        serviceFailure(`Ecstasy Language Server could not start: ${message}`);
 
         updateStatusBar('error');
         if (client === startingClient) client = undefined;
