@@ -14,12 +14,16 @@ import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
 import com.intellij.ui.components.JBScrollPane
+import com.intellij.ui.dsl.builder.AlignX
+import com.intellij.ui.dsl.builder.panel
 import com.intellij.ui.table.JBTable
+import com.intellij.util.ui.JBUI
 import com.intellij.util.xmlb.XmlSerializerUtil
 import com.redhat.devtools.lsp4ij.LanguageServiceAccessor
 import com.redhat.devtools.lsp4ij.settings.LanguageServerSettings.LanguageServerDefinitionSettings
 import com.redhat.devtools.lsp4ij.settings.ProjectLanguageServerSettings
 import java.awt.BorderLayout
+import java.awt.Dimension
 import java.awt.GridLayout
 import java.net.URI
 import java.nio.file.Path
@@ -197,55 +201,19 @@ class CompilerProjectConfigurable
             }
             discovery.addItemListener { updateSourceActions() }
             updateSourceActions()
-            val buildActions =
-                JPanel(GridLayout(0, 2, 8, 8)).apply {
-                    add(
-                        JButton("Refresh Gradle model").apply {
-                            toolTipText = "Read evaluated inputs without generating resources."
-                            addActionListener { refreshBuild(false) }
-                        },
-                    )
-                    add(
-                        JButton("Prepare generated resources").apply {
-                            toolTipText = "Run the resource tasks declared by the evaluated Gradle model."
-                            addActionListener { refreshBuild(true) }
-                        },
-                    )
-                    add(
-                        JButton("Open build file").apply {
-                            addActionListener {
-                                val selected = table.selectedRow
-                                val modules = runCatching { modules() }.getOrNull().orEmpty()
-                                val model =
-                                    runCatching {
-                                        CompilerBuildModel.read(project)
-                                    }.getOrNull()
-                                val entries =
-                                    model
-                                        ?.get("sourceSets")
-                                        ?.asJsonArray
-                                        ?.map { it.asJsonObject }
-                                        .orEmpty()
-                                val root = modules.getOrNull(selected)?.uri
-                                val entry =
-                                    entries.firstOrNull { item ->
-                                        item["sourceFiles"].asJsonArray.any { it.asString == root }
-                                    } ?: entries.firstOrNull()
-                                entry?.get("buildFile")?.asString?.let { uri ->
-                                    LocalFileSystem
-                                        .getInstance()
-                                        .refreshAndFindFileByNioFile(Path.of(URI(uri)))
-                                        ?.let {
-                                            FileEditorManager
-                                                .getInstance(project)
-                                                .openFile(it, true)
-                                        }
-                                }
-                            }
-                        },
+            return object : JTabbedPane() {
+                // A standalone dialog should size to the selected page, not the largest table
+                // hidden on another tab. The normal Settings window controls its own bounds.
+                override fun getPreferredSize(): Dimension {
+                    val size = super.getPreferredSize()
+                    val selected = selectedComponent?.preferredSize ?: return size
+                    val pages = (0 until tabCount).map { getComponentAt(it).preferredSize }
+                    return Dimension(
+                        maxOf(JBUI.scale(640), size.width - pages.maxOf { it.width } + selected.width),
+                        size.height - pages.maxOf { it.height } + selected.height,
                     )
                 }
-            return JTabbedPane().apply {
+            }.apply {
                 name = "xtc.compiler.tabs"
                 addTab(
                     "Source modules",
@@ -271,40 +239,47 @@ class CompilerProjectConfigurable
                 addTab("Libraries and sources", libraries)
                 addTab(
                     "Build import",
-                    JPanel(BorderLayout(0, 12)).apply {
-                        add(
-                            JPanel(BorderLayout(0, 8)).apply {
-                                add(
-                                    JBLabel(
-                                        "<html>Refresh reads the Gradle model. Prepare also generates resource inputs.<br>" +
-                                            "Manual source and library overrides remain in effect after import.</html>",
-                                    ),
-                                    BorderLayout.NORTH,
-                                )
-                                add(buildActions, BorderLayout.CENTER)
-                                add(status, BorderLayout.SOUTH)
-                            },
-                            BorderLayout.NORTH,
-                        )
-                        val details = JBScrollPane(effective).apply { isVisible = false }
-                        add(
-                            JPanel(BorderLayout(0, 8)).apply {
-                                add(
-                                    JBCheckBox("Show effective paths and import details").apply {
-                                        name = "xtc.compiler.showDetails"
-                                        addItemListener {
-                                            details.isVisible = isSelected
-                                            revalidate()
-                                        }
-                                    },
-                                    BorderLayout.NORTH,
-                                )
-                                add(details, BorderLayout.CENTER)
-                            },
-                            BorderLayout.CENTER,
-                        )
-                    },
+                    panel {
+                        group("Gradle inputs") {
+                            row {
+                                button("Refresh Gradle model") { refreshBuild(false) }
+                                button("Prepare generated resources") { refreshBuild(true) }
+                                button("Open build file") { openBuildFile() }
+                            }.rowComment(
+                                "Refresh reads the build model. Prepare also generates resources.<br>" +
+                                    "Your manual source and library overrides are preserved.",
+                            )
+                        }
+                        group("Import status") {
+                            row { cell(status) }
+                        }
+                        collapsibleGroup("Effective paths and import details") {
+                            row { scrollCell(effective).align(AlignX.FILL) }
+                        }
+                    }.apply { border = JBUI.Borders.empty(12) },
                 )
+            }
+        }
+
+        private fun openBuildFile() {
+            val selected = table.selectedRow
+            val modules = runCatching { modules() }.getOrNull().orEmpty()
+            val model = runCatching { CompilerBuildModel.read(project) }.getOrNull()
+            val entries =
+                model
+                    ?.get("sourceSets")
+                    ?.asJsonArray
+                    ?.map { it.asJsonObject }
+                    .orEmpty()
+            val root = modules.getOrNull(selected)?.uri
+            val entry =
+                entries.firstOrNull { item ->
+                    item["sourceFiles"].asJsonArray.any { it.asString == root }
+                } ?: entries.firstOrNull()
+            entry?.get("buildFile")?.asString?.let { uri ->
+                LocalFileSystem.getInstance().refreshAndFindFileByNioFile(Path.of(URI(uri)))?.let {
+                    FileEditorManager.getInstance(project).openFile(it, true)
+                }
             }
         }
 
