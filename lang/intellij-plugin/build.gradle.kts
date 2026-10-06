@@ -39,11 +39,12 @@ val xdkVersion: String = project.version.toString()
 val releaseChannel: String = xdkProperties.stringValue("xdk.intellij.release.channel", "alpha")
 
 // Explicit development override; Marketplace remains the default for ordinary builds.
-val localLsp4ijPlugin = providers.gradleProperty("lsp4ijPlugin").map { path ->
-    require(File(path).isAbsolute) { "lsp4ijPlugin must be an absolute path to a built plugin directory" }
-    require(File(path, "lib").isDirectory) { "lsp4ijPlugin must name a built plugin directory containing lib/: $path" }
-    File(path)
-}
+val localLsp4ijPlugin =
+    providers.gradleProperty("lsp4ijPlugin").map { path ->
+        require(File(path).isAbsolute) { "lsp4ijPlugin must be an absolute path to a built plugin directory" }
+        require(File(path, "lib").isDirectory) { "lsp4ijPlugin must name a built plugin directory containing lib/: $path" }
+        File(path)
+    }
 
 // Publishing is disabled by default. Enable with: ./gradlew publishPlugin -PenablePublish=true
 val enablePublish = providers.gradleProperty("enablePublish").map { it.toBoolean() }.getOrElse(false)
@@ -768,7 +769,10 @@ val parentPublishLocal =
 val runIdeCapturedIdeVersion = ideVersion
 val runIdeCapturedSinceBuild = intellijSinceBuild
 val runIdeCapturedLsp4ijVersion =
-    localLsp4ijPlugin.map { "local plugin: $it" }.orElse(libs.versions.lang.intellij.lsp4ij.get())
+    localLsp4ijPlugin.map { "local plugin: $it" }.orElse(
+        libs.versions.lang.intellij.lsp4ij
+            .get(),
+    )
 val runIdeCapturedPluginVersion = project.version.toString()
 val runIdeCapturedSemanticTokens = ideLspSemanticTokens
 val runIdeLspLogDirectory =

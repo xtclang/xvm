@@ -1891,6 +1891,18 @@ zero skips; LSP compilation, Kotlin checks and root Spotless also pass.
 
 #### Broader AST placement inventory
 
+**Current boundary review, October 6:** `ast.partial` now contains seven files: the original four
+incomplete nodes, `IncompleteLocalDeclaration`, `PartialSyntax` and `ProposedLiteralToken`.
+These own incomplete syntax, source spans, traversal and proposal-only tokens. `PartialQueries`
+remains the narrow public semantic bridge in the root AST package; `CursorScope`,
+`PartialArgument`, `PartialCallResolver` and `PartialConstructionResolver` retain package-private
+access to compiler validation/parenting. Moving them mechanically would expose internals or
+duplicate type rules. AST1/AST3/AST5 are complete; AST2/AST4 remain optional, evidence-led
+simplifications, not missing LSP APIs. Complete-program provenance still belongs to the compiler's
+attempt collector, and detached models, indexing, edits and IDE policy remain in Kotlin under
+`lang/lsp-server`. The [current compatibility contract](errs-integration-plan.md#compatibility-and-migration-contract)
+now lists the fourteen-component cursor result; older dated arity descriptions below are historical.
+
 P1–P4 isolates all four branch-added incomplete-syntax nodes in `ast.partial`. The table accounts
 for every changed Java file beneath `compiler/ast` relative to merge-base `4a1eae6f7` through P3:
 **49 modified existing files and 12 additions**. Several files contain more than one kind of change;
