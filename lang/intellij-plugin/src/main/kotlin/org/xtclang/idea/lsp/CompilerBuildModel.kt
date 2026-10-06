@@ -6,6 +6,7 @@ import com.google.gson.JsonObject
 import com.google.gson.JsonParser
 import com.intellij.execution.configurations.GeneralCommandLine
 import com.intellij.execution.process.CapturingProcessHandler
+import com.intellij.ide.trustedProjects.TrustedProjects
 import com.intellij.openapi.components.service
 import com.intellij.openapi.diagnostic.logger
 import com.intellij.openapi.progress.ProcessCanceledException
@@ -179,6 +180,10 @@ object CompilerBuildModel {
         prepare: Boolean,
         finished: (String?) -> Unit,
     ) {
+        if (!TrustedProjects.isProjectTrusted(project)) {
+            finished("Trust this project before running its Gradle build. Previous compiler inputs retained.")
+            return
+        }
         val service = project.service<CompilerImportService>()
         ProgressManager
             .getInstance()
