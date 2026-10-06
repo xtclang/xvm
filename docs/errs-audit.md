@@ -1,3 +1,13 @@
+**Ordered compiler libraries and attached sources (2026-10-06):** both editors now expose ordered
+external binary paths and per-module source-directory attachments. Null paths inherit Gradle;
+empty paths remove external libraries while retaining the bundled XDK. Attachments supply read-only
+navigation snapshots, not writable compilation units. Invalid replacements retain accepted inputs.
+Shared X266–X268 extend the catalog to 273 cases. The final headless/client gate passes 33
+backend tests, 114 IntelliJ units and 41 VS Code extension tests without failures or skips.
+X266–X268 pass both editors after the URI and fixture corrections; existing X254 retains UP25
+in IntelliJ. Exact native validation and corrections are recorded in the [batch receipt](errs-integration-plan.md#ordered-libraries-and-attached-sources-batch-ui3ui4ui6-2026-10-06).
+No AST or Java embedding API change was needed.
+
 # Failures with nowhere to go
 
 **Compiler workspace synchronization (2026-10-05):** both clients now aggregate evaluated nested

@@ -563,3 +563,17 @@ cancellation is guarded by import identity; the configuration cache is reused ac
 Automatic exports require an initial imported report; VS Code uses public Gradle task events in
 trusted local workspaces. The catalog has 270 cases; this was a selected run, not a full rerun.
 See the [contract, failures and commit map](../../../docs/errs-integration-plan.md#compiler-workspace-synchronization-batch-ui5ui6-2026-10-05).
+
+
+UI3/UI4/UI6 now expose ordered external libraries and module-specific source attachments in both
+clients. Null paths inherit evaluated Gradle binaries independently of source-graph overrides;
+empty paths remove external binaries, with the bundled XDK always retained. Attachments create
+read-only declaration-navigation snapshots and do not become source modules or change advertised
+LSP capabilities. The source/identity checks are bounded by artifact metadata and available debug
+text; matching sources are required. External attachment views do not yet export declaration
+monikers or support arbitrary semantic queries inside library source text. IntelliJ uses protected
+fallback files (UP25); VS Code uses the virtual content provider. Shared X266–X268 cover the controls,
+persistence, navigation and invalid-input retention. See the
+[contract and validation](../../../docs/errs-integration-plan.md#ordered-libraries-and-attached-sources-batch-ui3ui4ui6-2026-10-06).
+Advanced JVM settings, log export/retention, broader multi-root/remote-workspace acceptance and
+L82 release evidence remain separate work; Run/DAP, color and notebooks retain their recorded scope.
