@@ -810,3 +810,20 @@ checks displayed consumer inlays while applying the real Language Service settin
 changing a dependency and restarting; the consumer text/version must remain unchanged.
 This complements the existing two-project lifetime check. See the
 [L81 receipt](../../docs/errs-integration-plan.md#l81-native-acceptance-closure-2026-10-05).
+
+
+### Ordered libraries and attached sources
+
+**Settings → Ecstasy Compiler → Libraries and sources** edits ordered external binary paths
+and per-module source-directory attachments. Use **Inherit binary libraries from Gradle** to keep
+build-model ownership, or clear the list to remove external libraries. The bundled XDK is always
+present and read-only. Apply persists the draft; Reset/Cancel discards pending changes. **Reload
+applied libraries** rereads saved paths without a restart. The source-module tab also offers
+**Order resource directories…** with native path selection and automatic-resource inheritance.
+
+Attachments supply navigation-only snapshots; they do not add compiler source modules. IntelliJ
+opens protected fallback files until LSP4IJ supports our virtual library editor (UP25). Use matching
+sources; available debug text is checked but is not a complete binary/source equivalence proof.
+Project settings survive server restart; invalid replacements retain accepted compiler inputs.
+Shared X266–X268 and their [batch receipt](../../docs/errs-integration-plan.md#ordered-libraries-and-attached-sources-batch-ui3ui4ui6-2026-10-06)
+record automated coverage and the remaining acceptance boundaries.
