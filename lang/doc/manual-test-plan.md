@@ -2,6 +2,15 @@
 
 The current catalog has **277 scenarios**: X1–X272, CFG1–CFG3 and 7a.8/7a.9.
 
+Latest selected acceptance after the L82 configuration-responsiveness repair (2026-10-06):
+X147/X148/X259 pass in VS Code `run-WbMUZ7` and IntelliJ `run-13789526801058807403`.
+IntelliJ also passes START with zero IDE errors on shipping LSP4IJ 0.21.0. Separate 56-buffer
+and real-platform workloads verify exact symbols/diagnostics, affected compilation counts,
+source hashes and process exit. See the
+[receipt and timing limits](../../docs/errs-integration-plan.md#l82-configuration-responsiveness-2026-10-06).
+The full-catalog receipts below precede this repair; the new selection does not replace their
+recorded upstream exceptions.
+
 Latest IntelliJ acceptance (2026-10-06): `run-11949889098742489342` completes all 277 in one
 uninterrupted process: 275 pass, X254/X257 remain partial for UP25/UP26, zero failures and zero
 IDE errors. START also passes. This uses shipping LSP4IJ 0.21.0 and all production workarounds;
@@ -3162,6 +3171,35 @@ normal/EOF/normal process exits, with stable live thread-local counts. Correctne
 not imply timing targets passed: that run misses one 500 ms edit-to-symbol p95 target and one
 10-second cold-graph target. Record timing comparisons separately from the script's correctness
 status, and preserve misses. See the [measurements and scope](../../docs/errs-integration-plan.md#l82-extended-platform-retention-and-lifetime-2026-10-06).
+
+For configuration responsiveness with many retained editor buffers, run this separately from other
+builds and compiler workloads:
+
+```bash
+python3 lang/scripts/compiler-workload.py \
+  --jar lang/lsp-server/build/libs/lsp-server-0.4.4-SNAPSHOT-all.jar \
+  --output lang/lsp-server/build/reports/configuration-workload/generated \
+  --configuration-documents 56 --cycles 3
+python3 lang/scripts/compiler-workload.py \
+  --workspace ../platform \
+  --jar lang/lsp-server/build/libs/lsp-server-0.4.4-SNAPSHOT-all.jar \
+  --output lang/lsp-server/build/reports/configuration-workload/platform \
+  --configuration-documents 56 --cycles 3
+```
+
+The generated case changes one module's resource configuration, repeats it, removes the graph and
+restores it while all 56 buffers remain open. A single-module change should submit one compilation;
+the identical update should submit none. Full removal/restoration may recompile all modules.
+The real-project case opens up to 56 source documents and adds/removes an unrelated temporary module
+outside the source checkout. Existing successful modules should retain their analyses. Every phase
+checks unchanged symbols and diagnostics, records notification-to-status and settled latency, and
+requires server exit. Source hashes must remain unchanged. Timing data and compile counts live in
+`results.json`; a correctness pass alone is not a response-time guarantee.
+
+Use X147/X148/X259 for the subsequent selected native check: replace/reset compiler settings,
+restart while a report is pending, extract with Undo/Redo, and refresh an untouched consumer after
+dependency edits. Keep the usual deadlines. The generated workload supplies the many-buffer scale
+evidence; a three-case native selection does not reproduce the full catalog's retained workload.
 
 ### Large-file IntelliJ diagnostic (L82 / UP17)
 

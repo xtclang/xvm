@@ -1,8 +1,10 @@
 # Integrating the embedding diagnostics work
 
-Latest October 6 checkpoint: [UI1–UI7 acceptance](#ui1ui7-completion-batch-2026-10-06)
-covers all 277 shared cases across recorded runs: IntelliJ 275 passed/two partial; VS Code
-275 passed/two explicit upstream failures. The [local upstream and API review](#local-upstream-acceptance-and-api-boundary-review-2026-10-06)
+Latest full-catalog checkpoint: [L82 acceptance](#l82-upstream-isolation-and-full-catalog-acceptance-2026-10-06)
+covers all 277 shared cases: IntelliJ 275 passed/two partial in one uninterrupted process;
+VS Code 276 passed/UP23 failed across three recorded processes. The earlier
+[UI1–UI7 acceptance](#ui1ui7-completion-batch-2026-10-06) and
+[local upstream and API review](#local-upstream-acceptance-and-api-boundary-review-2026-10-06)
 adds nine reconciled LSP4IJ repair commits, opt-in local-plugin acceptance, a real platform
 navigation fix and the current embedding/AST contract. It does not replace the full-run failures
 or claim that production compatibility bridges have been removed.
@@ -1408,10 +1410,13 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
   - [x] Preserve automatic source/resource inputs during library settings refresh. The fail-before
     regression now proves identical notifications retain cached compilation while new files are
     still discovered. X148 passes with the full retained-document workload after the repair.
-  - [ ] Measure and reduce genuine graph replacement cost with many open/retained documents.
-    The October 6 VS Code trace still records roughly seven seconds for a real replacement with
-    56 synchronized documents; X148's whole case takes 18.943 seconds. Removing repeated no-op
-    invalidation fixes its timeout, but does not establish the responsiveness budget.
+  - [x] Measure and reduce genuine graph replacement cost with many open/retained documents.
+    The 56-buffer reproduction reduces graph-reset dispatch from 8.48–8.60 seconds to
+    226–242 ms. A one-module change compiles one module instead of 56; adding/removing an
+    unrelated module beside the real platform graph compiles none instead of 11. The
+    [configuration responsiveness receipt](#l82-configuration-responsiveness-2026-10-06)
+    records correctness, cancellation and timing separately. Hardware-wide release budgets
+    and the independent large-file editor cost below remain open.
   - [ ] Resolve the recorded host gates or retain explicit release exceptions: UP16/UP23 resource
     edits, UP25/UP26 native feature constraints and UP17 large-file editing below. The user already
     accepted UP23 as a compiler-scope exception; it is not a passing host assertion.
@@ -12425,3 +12430,94 @@ settings and restarting. X272 also asserts exactly one actionable launch-failure
 not a cascade of initialization/connection errors. Their passing
 assertions establish retention/recovery for those scenarios; they do not make unrelated red
 notifications harmless. In particular, X218's host Undo error remains a real failed assertion.
+
+## L82 configuration responsiveness (2026-10-06)
+
+The remaining real configuration delay has two causes. Refresh repeatedly resolves the same open
+document scopes; each fallback lookup canonicalizes all overlay paths again. Nested document/scope
+loops turn a graph reset with 56 buffers into hundreds of thousands of filesystem path operations.
+A separate global invalidation discards every module analysis when just one source input changes.
+The baseline JVM profile's leading sampled frame is `UnixFileSystem.canonicalize0`; the packaged
+reproduction preserves the same open buffers and notification ordering without opening an IDE.
+
+Scope resolution now creates an operation-local ownership map and canonicalizes each overlay URI
+once per map. Compilation submission and diagnostic refresh share those resolved paths rather than
+repeating lookup for each comparison. This is not a persistent filesystem cache: the next operation
+sees new roots and filesystem changes. No new mutable AST field, compiler cache, public embedding
+API, LSP method or capability is added.
+
+Graph replacement validates before publication and compares immutable source configurations plus
+binary revisions. It retires changed owners, their dependency closures and consumers, changed source
+ownership, failed analyses and pending compilations. Successful independent analyses and compatible
+detached builds remain useful. All graph-wide queries still retire; recovery from a discovery problem
+still forces invalidation. Installation remains under the existing lifecycle lock, cancellation
+callbacks run after releasing it, and compilation remains on the existing serialized worker.
+
+Regression coverage includes source and evaluated-build replacement, transitive edge changes, moved
+roots, missing-dependency recovery, binary replacement, source-over-binary precedence, cancellation,
+unsaved roots and canonical aliases. The existing configuration test also verifies that discovery of
+an unrelated module preserves the open consumer's result and submission count. Two new tests fail
+against `f9aedbc6d` because its global retirement also removes `Independent.x`; the failed XML is
+retained. The operation-local ownership test is additional coverage for the new internal helper.
+
+`compiler-workload.py --configuration-documents 56 --cycles 3` records dispatch and settled timing,
+compile counts, source hashes, compiler serialization and process exit. With `--workspace ../platform`,
+it opens real source documents and adds/removes an unrelated temporary source module outside that
+checkout. Each phase preserves exact document symbols and diagnostics. The
+[manual recipe](../lang/doc/manual-test-plan.md#bounded-l82-regression-and-memory-checkpoint)
+distinguishes this many-buffer evidence from selected native X147/X148/X259 acceptance.
+
+Evidence is under `lang/lsp-server/build/reports/configuration-workload/l82-2026-10-06/`.
+The isolated pre-fix JAR belongs to `f9aedbc6d`; `baseline.json` records its SHA-256, and
+`baseline-tests.xml` records the two failing controls. `baseline-scope-profile.jfr` and its compact
+JSON describe a separate shallow-path diagnostic run. Timing comparisons must use the matching
+repository-path before/after runs, not compare that diagnostic run with the longer-path fixture.
+
+Three sequential cycles per workload give these ranges on this machine. No other build, IDE run
+or compiler workload ran alongside the measured processes.
+
+| Workload / operation | Before dispatch | After dispatch | Before / after compilations per change | Before / after settled checks |
+|---|---|---|---|---|
+| 56 independent modules: change one module | 321–348 ms | 11–13 ms | 56 / 1 | 3.44–3.67 s / 0.45–0.51 s |
+| Same 56 buffers: remove explicit graph | 8.48–8.60 s | 226–242 ms | 56 / 56 | 8.94–9.05 s / 3.47–3.54 s |
+| Same 56 buffers: restore graph | 306–316 ms | 123–156 ms | 56 / 56 | 3.39–3.52 s / 3.41–3.44 s |
+| Platform, 49 source documents: add/remove unrelated module | 23–25 ms | 8–12 ms | 11 / 0 | 4.91–5.11 s / 1.87–1.90 s |
+
+Dispatch is notification-to-first-status-reply, not time spent in a single method. Settled timing
+includes serial symbol and diagnostic checks for every open document; platform's unchanged-config
+control also spends roughly 1.9 seconds on those checks. Removing/restoring the entire graph still
+legitimately recompiles all 56 modules. All four before/after workloads preserve exact symbols,
+diagnostics and source hashes, record at most one active compiler API thread, and exit normally.
+`before/`, `after/`, `platform-before/` and `platform-after/` contain the comparable JSON/traces.
+The final measured JAR SHA-256 is
+`87fd6d132b415e5f3b7bcf9ec3a0b72522002c066de6ecca917ef082f3bdb049`; the baseline is
+`c5ccde09abc324088dbab967f315410a79c498ded93483faba843e68567d39bf`.
+
+The full backend run executes 2,137 tests: two existing shadowed-local navigation skips and two
+failures in the graph-query cancellation test's obsolete expectation that an unchanged library
+must lose its analysis. Its cancellation assertions already pass. The corrected test requires
+the exact retained library result and fresh reference/rename results excluding the removed
+consumer. The subsequent 23-test configuration/query rerun passes without failures/errors/skips.
+Combined evidence is 2,135 backend passes and two existing skips; this is a full run plus a focused
+correction, not a second uninterrupted green full run. The separately packaged transport suite
+passes all 81 tests. Original XML and corrected XML remain in `tests/test/`,
+`tests/compilerStdioTest/` and `tests/rerun/` respectively.
+
+Selected native acceptance on this implementation passes unchanged shared X147/X148/X259 in both
+editors. VS Code 1.140.0 multi-root `run-WbMUZ7` passes all three in about eight seconds; individual
+case times are 2.041, 1.366 and 3.363 seconds. IntelliJ 2026.2.3 `run-13789526801058807403`
+passes START plus all three with zero IDE errors, Ultimate disabled and shipping LSP4IJ 0.21.0.
+Its selected case times are 2.962, 5.268 and 7.260 seconds; the Gradle XML records one executed
+harness test with zero failures/errors/skips. Both processes exit normally. Compact receipts are
+copied into `native/vscode/` and `native/intellij/` under the evidence directory.
+
+No native timeout was widened, failed case suppressed, or full catalog claimed for this batch.
+The catalog remains 277 scenarios. These selected checks cover settings/report ownership,
+extraction with Undo/Redo and rendered dependency/settings refresh across restart; the generated
+and platform workloads provide the many-document measurements. The prior full-catalog host
+exceptions UP23/UP25/UP26 and the independent UP17 large-file editor limitation remain recorded.
+
+Local implementation checkpoint: `8e24df2ec` owns the scope-resolution/invalidation changes,
+regressions and workload mode. It is a language-server implementation slice; no Java compiler,
+AST, embedding API or advertised feature changed. Keep these tests with the implementation when
+extracting a future PR, and rerun them independently after extraction.
