@@ -5,10 +5,12 @@ import org.xvm.asm.FileStructure
 import org.xvm.asm.ModuleRepository
 import org.xvm.asm.constants.IdentityConstant
 import org.xvm.compiler.BuildRepository
+import org.xvm.lsp.adapter.ReadOnlyDocument
 import org.xvm.lsp.util.ExecutionTrace
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
+import java.io.File
 import java.security.MessageDigest
 import java.util.HexFormat
 import java.util.Map.copyOf as immutableMap
@@ -23,7 +25,15 @@ class XdkDependency
         val module: String,
         private val artifact: ByteArray,
         declarations: Map<Int, SemanticModel.SourceLocation>,
+        documents: Map<String, ReadOnlyDocument> = emptyMap(),
     ) {
+        internal val documents: Map<String, ReadOnlyDocument> = immutableMap(documents)
+
+        internal fun withSources(roots: List<File>): XdkDependency {
+            val index = XdkAttachedSources.read(this, roots)
+            return XdkDependency(module, artifact, index.declarations, index.documents)
+        }
+
         internal val symbolIndex: XdkArtifactSymbols by lazy { XdkArtifactSymbols.capture(artifact) }
 
         val declarations: Map<Int, SemanticModel.SourceLocation> = immutableMap(declarations)
