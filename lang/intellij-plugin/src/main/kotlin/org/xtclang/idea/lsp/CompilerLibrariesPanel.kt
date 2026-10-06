@@ -45,6 +45,7 @@ internal class CompilerLibrariesPanel(
         )
         add(
             JPanel(FlowLayout(FlowLayout.LEADING)).apply {
+                add(JButton("Reload applied libraries").apply { addActionListener { CompilerBuildModel.publish(project) } })
                 add(JButton("Add attachment").apply { addActionListener { rows.addRow(arrayOf("", "")) } })
                 add(
                     JButton("Choose source directory").apply {
