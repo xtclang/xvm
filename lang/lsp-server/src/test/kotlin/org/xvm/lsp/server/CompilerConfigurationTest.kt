@@ -59,6 +59,9 @@ class CompilerConfigurationTest {
             session.configure(config)
             assertThat(session.adapter.effectiveSourceModules().map { it.name })
                 .containsExactlyInAnyOrder("Library", "Consumer", "Added")
+            assertThat(session.adapter.getCachedResult(session.uri)).isEqualTo(before)
+            assertThat(session.adapter.compilerQueueSnapshot()["submittedTotal"])
+                .isEqualTo(submitted)
             session.expect(false)
         }
     }
