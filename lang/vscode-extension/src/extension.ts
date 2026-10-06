@@ -1,4 +1,4 @@
-import { runtimeJvmOptions } from './runtime-settings';
+import { runtimeJvmOptions, runtimeLogArguments } from './runtime-settings';
 // Ecstasy (XTC) Language Support for VS Code
 //
 // Semantic tokens are enabled by default in the LSP server. VS Code automatically
@@ -142,6 +142,15 @@ export function activate(context: vscode.ExtensionContext): void {
             effectiveOutput.show(true);
             return report;
         }),
+        vscode.commands.registerCommand('xtc.exportServerLogs', async () => {
+            const connection = getClient();
+            if (!connection?.isRunning()) { void vscode.window.showInformationMessage('Open an Ecstasy file to connect to its server, then export logs. Previous logs remain under ~/.xtc/logs/lsp.'); return; }
+            const destination = await vscode.window.showSaveDialog({ title: 'Export Ecstasy Server Logs (includes local paths and logged diagnostics)', filters: { 'ZIP archives': ['zip'] }, defaultUri: vscode.Uri.file('ecstasy-server-logs.zip') });
+            if (!destination) return;
+            const bundle = await connection.sendRequest<{ base64: string }>('xtc/exportLogs');
+            await vscode.workspace.fs.writeFile(destination, Buffer.from(bundle.base64, 'base64'));
+            outputChannel.info(`Exported Ecstasy server logs to ${destination.fsPath}`);
+        }),
         vscode.commands.registerCommand('xtc.restartServer', async () => {
             if (serverExists) {
                 await restartLanguageClient(context, serverJar, outputChannel);
@@ -156,13 +165,14 @@ export function activate(context: vscode.ExtensionContext): void {
             }
         }),
         vscode.workspace.onDidChangeConfiguration(event => {
-            if (event.affectsConfiguration('xtc.java.vmOptions')) {
+            if (event.affectsConfiguration('xtc.java.vmOptions') || event.affectsConfiguration('xtc.server.logs')) {
                 try {
                     runtimeJvmOptions();
-                    void vscode.window.showInformationMessage('Ecstasy JVM settings saved. Restart the language server to apply them.', 'Restart now', 'Open Settings')
+                    runtimeLogArguments();
+                    void vscode.window.showInformationMessage('Ecstasy runtime/log settings saved. Restart the language server to apply them.', 'Restart now', 'Open Settings')
                         .then(choice => choice === 'Restart now' ? vscode.commands.executeCommand('xtc.restartServer')
                             : choice === 'Open Settings' ? vscode.commands.executeCommand('workbench.action.openSettings', 'xtc.java.vmOptions') : undefined);
-                } catch (error) { void vscode.window.showErrorMessage(`Invalid Ecstasy JVM settings; running server retained: ${error}`); }
+                } catch (error) { void vscode.window.showErrorMessage(`Invalid Ecstasy runtime/log settings; running server retained: ${error}`); }
             }
             if (event.affectsConfiguration('xtc.trace.server')) {
                 void applyTraceConfig();
