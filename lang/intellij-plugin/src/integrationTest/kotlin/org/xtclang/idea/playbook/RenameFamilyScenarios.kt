@@ -11,6 +11,7 @@ import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 import com.intellij.driver.sdk.ui.components.elements.button
 import com.intellij.driver.sdk.ui.components.elements.dialog
 import com.intellij.driver.sdk.ui.ui
+import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.time.Duration.Companion.seconds
@@ -40,6 +41,22 @@ fun Driver.renameFamily(
 
     val editor = open(data.text("file"))
     clean(editor)
+    if (data.values.has("navigationAnchor")) {
+        val prefix = editor.text.substringBefore(data.text("navigationAnchor"))
+        val references =
+            ClientProtocol(this)
+                .query(
+                    "textDocument/references",
+                    mapOf(
+                        "textDocument" to mapOf("uri" to Path.of(editor.editor.getVirtualFile().getPath()).toUri().toString()),
+                        "position" to mapOf("line" to prefix.count { it == '\n' }, "character" to prefix.substringAfterLast('\n').length),
+                        "context" to mapOf("includeDeclaration" to true),
+                    ),
+                ).asJsonArray
+                .map { Path.of(URI.create(it.asJsonObject["uri"].asString)) }
+                .sorted()
+        check(references == data.strings("navigationFiles").map(root::resolve).sorted()) { references.toString() }
+    }
     val request = files.single { "$id/${it["file"].asString}" == data.text("file") }
     withContext(OnDispatcher.EDT) {
         val opened =

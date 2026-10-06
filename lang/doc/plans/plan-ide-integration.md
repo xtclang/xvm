@@ -12,7 +12,7 @@ and refactoring proofs still fail closed. This adds no AST state or compiler lis
 See [scope, ownership and validation](../../../docs/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
 
 
-> **Last Updated**: 2026-10-06 (ordered libraries and source attachments)
+> **Last Updated**: 2026-10-06 (settings acceptance and implicit-package navigation)
 
 The P1–P4 compiler organization checkpoint moves the four incomplete-syntax nodes into
 `org.xvm.compiler.ast.partial` and updates the adapter's imports. It changes no advertised LSP
@@ -186,7 +186,7 @@ See the [L83 task and ownership record](../../../docs/errs-integration-plan.md#p
 | Go-to-definition (same file) | By name | By name | **Done** - semantic, incl. method calls |
 | Go-to-definition (cross-file) | - | Via workspace index | **Done** - resolved identities within a module, across the complete discovered/configured source graph and into dependencies with host-supplied source indices or configured matching source attachments |
 | Find references (same file) | Decl only | By name | **Done** - by identity, not by name |
-| Find references (cross-file) | - | - | **Done** - exact identities across the current module or the complete configured source graph, including unopened consumers and binary-member uses |
+| Find references (cross-file) | - | - | **Done** - exact identities across the current module or the complete configured source graph, including unopened consumers, implicit-package companions and binary-member uses; synthetic unnamed package views contribute semantic facts but never file targets |
 | Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Partial** - visible locals/parameters, narrowed types, implicit members, imported/enclosing types and static functions/constants; qualified dot/prefix and bare-name/empty statement completion with exact token edits; compiler-fitted locals/parameters and implicit properties/constants in empty final positional and pending named argument slots, including qualified/grouped values and slots before later arguments; member/return and parameter-header type prefixes use the enclosing compiler scope; flat and parameterized qualifiers use visible nested types with substituted aliases; registered formals and empty generic slots complete; mid-token edits replace the entire final identifier, including generic base names before written type arguments; import-producing completion for public source/bundled types uses whole-graph proof and atomic additional edits (backend/protocol tests and the new X105 variants pass in both editors); syntax name suggestions for written explicit-type declarations and contextual keywords/eleven templates now have passing backend and shared X149/X150 coverage in both editors; empty property/parameter names after complete named types, including primary constructors and EOF, have passing backend/protocol coverage and shared X151 acceptance in both editors; latest additions include ordinary enclosing-instance values, inferred-local naming clues and compiler-fitted lambda templates, with passing backend and expanded shared X150–X152 receipts in both editors |
 | Syntax errors | Markers | Full | **Done** - the compiler's own codes and spans |
 | Semantic errors | - | - | **Done** - the reason this adapter exists |
@@ -214,6 +214,12 @@ See the [L83 task and ownership record](../../../docs/errs-integration-plan.md#p
 | Call hierarchy (callers/callees) | - | - | **Partial** - static selected source calls across the complete source graph, with method/lambda ownership and incoming/outgoing grouping; digest-bound handles reject stale sources |
 
 #### Compiler completeness snapshot
+
+The October 6 platform recheck fixes unnamed implicit-package views in the joined navigation
+index, without changing the compiler/AST API or advertised capabilities. The regression fails
+before the fix; shared X117 now checks root/companion references before native Rename/Undo in
+both editors. Selected native checks pass on released dependencies. See the
+[diagnosis and receipts](../../../docs/errs-audit.md) and [real-project tour](../../../demo.md).
 
 Source audit at `511195564` (2026-09-27): **all 24 project-defined adapter capabilities have
 compiler implementations**, plus push diagnostics and document/workspace synchronization.
