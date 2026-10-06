@@ -229,12 +229,23 @@ val packageExtension =
 // Not wired into `check` by default because on headless Linux runners this
 // needs `xvfb-run` (or a similar virtual display). The intent is that local
 // developers run it explicitly, and CI opt-in via xvfb if/when desired.
+val pruneTestReports =
+    listOf("compiler-playbook", "extension-tests", "project-lifecycle", "explorer-probe").map { report ->
+        tasks.register<PruneTestReportsTask>("prune${report.split('-').joinToString("") { it.replaceFirstChar(Char::uppercase) }}Reports") {
+            group = "verification"
+            description = "Retain five completed $report payloads and all compact results"
+            reportsDirectory.set(layout.buildDirectory.dir("reports/$report"))
+            retainedRuns.set(providers.gradleProperty("playbookRetainedRuns").map(String::toInt).orElse(5))
+        }
+    }
+
 val testVscodeExtension =
     tasks.register<NpmTask>("testVscodeExtension") {
         group = "verification"
         description = "Run headless integration tests for the VS Code extension"
         dependsOn(npmCompile, copyTextMateGrammar, copyLanguageConfig, copyLspServer, copyDapServer, copyLicense, generateIcons)
         args.set(listOf("run", "test:vscode"))
+        finalizedBy(pruneTestReports)
         // Cache directory used by @vscode/test-electron to keep the downloaded
         // VS Code build across runs; declared as input so a corrupted cache
         // can be cleared by `./gradlew :lang:vscode-extension:clean`.
@@ -244,7 +255,8 @@ val testVscodeExtension =
 // Runs the compiler playbook inside VS Code and the host/protocol checks referenced by it.
 tasks.register<NpmTask>("testCompilerPlaybook") {
     group = "verification"
-    description = "Run XdkAdapter playbook in VS Code (requires -Plsp.adapter=compiler)"
+    description = "Run XdkAdapter playbook in VS Code"
+    finalizedBy(pruneTestReports)
     dependsOn(":lsp-server:prepareLibraryPlaybook")
     val selectedCases = providers.gradleProperty("compilerPlaybookCases")
     val multiRoot =
