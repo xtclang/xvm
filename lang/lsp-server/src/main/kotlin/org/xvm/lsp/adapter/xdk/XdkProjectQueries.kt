@@ -198,7 +198,7 @@ internal class XdkProjectQueries(
                         .orEmpty()
                         .entries
                 }.associate { it.toPair() }
-        val declared = models.associate { it.sourceName to it.id }
+        val declared = models.mapNotNull { model -> model.sourceName?.let { it to model.id } }.toMap()
         val aliases =
             models
                 .flatMap { it.symbols }
@@ -211,10 +211,14 @@ internal class XdkProjectQueries(
                             ?: group.first()
                     group.map { it.id to canonical.id }
                 }.toMap()
+        // Implicit package directories contribute synthetic, unnamed source views. Merge their
+        // shared semantic facts, but only real source files can be workspace navigation targets.
         val views =
-            SemanticModel.joined(models, aliases).associateBy {
-                uris.getValue(requireNotNull(it.sourceName))
-            }
+            SemanticModel
+                .joined(models, aliases)
+                .mapNotNull { model ->
+                    model.sourceName?.let { uris.getValue(it) to model }
+                }.toMap()
         if (!isCurrent()) return null
         val complete =
             project.modules.values.all { module ->
