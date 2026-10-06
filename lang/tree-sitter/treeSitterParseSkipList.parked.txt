@@ -73,7 +73,10 @@
 #    whitespace the TODO scanner needs for `is_hspace(peek)` and
 #    breaks ~16 files with `TODO foo bar` text. Sweep 876/876.
 #
-# Sweep is at 880/880 with 13 parked entries (newly uncovered, see below).
+# 13 entries were then parked, uncovered when the 19-file
+# intentional.txt was re-checked: 4 files parsed cleanly and joined the
+# sweep, and 2 with genuine PARSER-NN errors stayed in intentional.txt.
+# Items 5 and 6 closed all 13.
 #
 # 5. Access-qualified types (issue #459): `.as(protected Foo<K, V>)` and
 #    `.revealAs((protected Foo))` closed by adding `access_qualified_type`
@@ -82,31 +85,21 @@
 #    Un-parked the 5 jsondb storage/tx_manager/test_db files. The
 #    remaining jsondb_test.x entry needs module-level `incorporates`,
 #    which is a separate gap.
-
-# === Newly-uncovered grammar gaps (formerly hidden in intentional.txt) ===
 #
-# The `intentional.txt` skip list previously held 19 files under the
-# rationale "intentionally not parseable by tree-sitter". Re-checking
-# revealed the categorization was wrong:
-#   - 4 files parse cleanly with both tree-sitter and the Java
-#     reference compiler -- moved into the active sweep.
-#   - 2 files (sock-shop/socks-catalog.x, sock-shop/socks-user.x) have
-#     genuine PARSER-NN errors from the Java compiler too; remain in
-#     intentional.txt with a corrected header.
-#   - The 13 below are real tree-sitter grammar gaps -- the Java
-#     compiler parses them cleanly (only emits semantic / verify
-#     errors), but tree-sitter produces ERROR nodes. These should be
-#     triaged in a follow-up PR; the goal is to get them all into
-#     the active sweep just like the originally-parked entries above.
-#
-# Each entry is annotated with the tree-sitter ERROR-node count from
-# the time of un-parking, as a rough proxy for triage size.
-
-manualTests/src/main/x/archive/AddressBookDB.x                              # 2 errors
-manualTests/src/main/x/archive/addressDB_imdb/module.x                      # 3 errors
-manualTests/src/main/x/archive/addressDB_json/module.x                      # 3 errors
-manualTests/src/main/x/archive/sock-shop/socks-cart.x                       # 2 errors
-manualTests/src/main/x/dbTests/PeopleTest.x                                 # 3 errors
-manualTests/src/main/x/jsondb/jsondb_test.x                                 # 2 errors
-manualTests/src/main/x/webTests/oauth.x                                     # 2 errors
-manualTests/src/main/x/errors.x                                             # 4 errors
+# 6. Issue #453 closed the remaining 8 entries:
+#    - Module compositions: `module_declaration` accepted only `delegates`.
+#      It now also takes `implements` and `incorporates`, as the reference
+#      parser's parseCompositions() does for any type, e.g. `module PeopleTest
+#      incorporates TerminalApp.Mixin("People DB Test") {` (7 files).
+#      `incorporates_clause` is prec.right so a following `(` is always its
+#      argument list, which matters for a module without a body.
+#    - Array construction with one size per dimension: `new Int[7, (i) -> -1]`
+#      in errors.x. The reference parser reads the brackets as an argument
+#      list; multi-dimensional arrays not being implemented is a compiler error.
+#    - errors.x also declares `Int _ = node.valDerivedPro;`: the typed variable
+#      declaration now accepts the `_` wildcard name, as the val/var form did.
+#    The sweep now reads maintained sources only. It skips build output,
+#    whose two copies of lib_ecstasy's implicit.x were counted in earlier
+#    totals in this file (so those depended on what had been built), and
+#    archived examples (archive/ directories), which hold 4 of the 7 module
+#    files above. Sweep 926/926, with nothing skipped.

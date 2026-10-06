@@ -229,7 +229,10 @@ module.exports = grammar({
             repeat($.annotation),
             'module',
             field('name', $.qualified_name),
-            repeat($.delegates_clause),
+            // The type compositions a module can have (the reference parser uses the same parseCompositions()
+            // as for classes), e.g. `module PeopleTest incorporates TerminalApp.Mixin("People DB Test") {`.
+            // Not `extends`: a module cannot extend a class, and with the optional body `extends T (` is ambiguous.
+            repeat(choice($.implements_clause, $.incorporates_clause, $.delegates_clause)),
             optional(field('body', $.module_body)),
         ),
 
@@ -575,9 +578,11 @@ module.exports = grammar({
         implements_clause: $ => seq('implements', commaSep1($.type_expression)),
         // Incorporates can be conditional: incorporates conditional Mixin<Type extends Constraint>
         // Uses $._non_bi_type after 'conditional' to avoid conflict with conditional_type in type_expression
+        // prec.right: a '(' after the type is always its argument list, as in the reference parser; this
+        // matters where nothing has to follow the clause, e.g. a module declaration without a body
         incorporates_clause: $ => choice(
-            seq('incorporates', 'conditional', $._non_bi_type, optional($.arguments)),
-            seq('incorporates', $.type_expression, optional($.arguments)),
+            prec.right(seq('incorporates', 'conditional', $._non_bi_type, optional($.arguments))),
+            prec.right(seq('incorporates', $.type_expression, optional($.arguments))),
         ),
         // Delegates clause: delegates Type(expr)
         delegates_clause: $ => seq('delegates', $.type_expression, '(', $._expression, ')'),
@@ -874,13 +879,14 @@ module.exports = grammar({
                 ';',
             ),
             // Typed form without val/var: @Annotation private static Type x = expr;
+            // The wildcard discards the value here too: `Int _ = node.value;`
             // prec(1) to prefer variable declaration over expression statement when ambiguous
             prec(1, seq(
                 repeat($.annotation),
                 optional($.visibility_modifier),
                 optional('static'),
                 field('type', $.type_expression),
-                field('name', $.identifier),
+                field('name', choice($.identifier, $.wildcard)),
                 optional(seq(choice('=', ':='), field('value', $._expression))),
                 ';',
             )),
@@ -1339,7 +1345,8 @@ module.exports = grammar({
         // prec.left on the array form ensures the optional initializer arguments are greedily consumed
         new_expression: $ => choice(
             seq('new', repeat($.annotation), field('type', $.type_expression), field('arguments', $.arguments), optional(field('body', $.anonymous_inner_class_body))),
-            prec.left(seq('new', repeat($.annotation), field('type', $.type_expression), '[', field('size', $._expression), ']', optional(field('arguments', $.arguments)))),
+            // One size per dimension, e.g. `new Int[7, (i) -> -1]` (the reference parser reads an argument list)
+            prec.left(seq('new', repeat($.annotation), field('type', $.type_expression), '[', commaSep1(field('size', $._expression)), ']', optional(field('arguments', $.arguments)))),
             seq('new', repeat($.annotation), field('type', $.type_expression), '[', ']'),  // empty array: new Type[]
             seq(field('object', $._expression), '.', 'new', repeat($.annotation), field('type', $.type_expression), field('arguments', $.arguments)),  // outer new: expr.new [@Anno(...)]* Type(args)
             seq(field('object', $._expression), '.', 'new', field('arguments', $.arguments)),  // expr.new(args) - outer copy

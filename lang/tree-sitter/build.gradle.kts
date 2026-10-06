@@ -543,7 +543,7 @@ val validateTreeSitterGrammar = tasks.register<Exec>("validateTreeSitterGrammar"
 
 /**
  * Test parsing XTC files from the XDK libraries using tree-sitter CLI.
- * Uses the 675+ .x files in lib_* directories as a comprehensive test corpus.
+ * Uses the .x sources in lib_* and manualTests as a comprehensive test corpus.
  *
  * Supports filtering via -PtestFiles=pattern to test specific files.
  * Shows timing information sorted by parse time.
@@ -618,8 +618,13 @@ abstract class TreeSitterParseTestTask @Inject constructor(
         val filter = fileFilter.orNull
         val showTimingInfo = showTiming.getOrElse(true)
 
+        // Maintained sources only. Build output holds copies of some sources (e.g. lib_ecstasy's
+        // implicit.x), which would double-count them and make the totals depend on what has been
+        // built, and archived examples are not maintained.
+        val excludedDirNames = setOf("build", "archive")
         var xtcFiles = libDirs.get().flatMap { libDir ->
             libDir.walkTopDown()
+                .onEnter { it == libDir || it.name !in excludedDirNames && !it.name.startsWith(".") }
                 .filter { it.isFile && it.extension == "x" }
                 .toList()
         }
@@ -777,7 +782,8 @@ val testTreeSitterParse = tasks.register<TreeSitterParseTestTask>("testTreeSitte
     // shapes, multi-return destructuring, package-import resource providers,
     // etc. Both must parse cleanly for the grammar to be considered correct,
     // and including manualTests/ here means CI catches regressions on those
-    // shapes without needing per-file unit tests for everything.
+    // shapes without needing per-file unit tests for everything. Archived
+    // examples (archive/ directories) and build output are not swept.
     val xdkLibDirs = compositeRoot.listFiles { f ->
         f.isDirectory && f.name.startsWith("lib_")
     }?.toList() ?: emptyList()
@@ -785,10 +791,10 @@ val testTreeSitterParse = tasks.register<TreeSitterParseTestTask>("testTreeSitte
     libDirs.set(xdkLibDirs + listOfNotNull(manualTestsDir))
 
     // Skip list of .x files deliberately excluded from the parse sweep.
-    // Two companion files: `intentional.txt` for files permanently excluded
-    // from the XTC compile (archive/, dbTests/, errors.x, etc.) and
-    // `parked.txt` for genuine grammar gaps that we want to fix. Either may
-    // be absent; both are loaded when present.
+    // Two companion files: `intentional.txt` for files with genuine syntax
+    // errors that the reference compiler also rejects, and `parked.txt` for
+    // genuine grammar gaps that we want to fix. Either may be absent; both
+    // are loaded when present.
     skipListFiles.from(
         layout.projectDirectory.file("treeSitterParseSkipList.intentional.txt"),
         layout.projectDirectory.file("treeSitterParseSkipList.parked.txt"),
