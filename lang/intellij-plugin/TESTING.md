@@ -65,6 +65,13 @@ shipping LSP4IJ 0.21.0; all production bridges are restored. The earlier navigat
 report-page probe failures are fixed without replaying mutations or extending timeouts. See the
 [L82 acceptance record](../../docs/errs-integration-plan.md#l82-upstream-isolation-and-full-catalog-acceptance-2026-10-06).
 
+The later L82 configuration-responsiveness implementation passes START/X147/X148/X259 in
+`run-13789526801058807403`, with zero IDE errors on the same shipping dependency and Community
+feature set. VS Code passes the matching selection. The 56-buffer and real-platform measurements
+are separate packaged-server workloads; see the
+[configuration receipt](../../docs/errs-integration-plan.md#l82-configuration-responsiveness-2026-10-06).
+This selected rerun does not replace the earlier full-catalog receipt or its native limitations.
+
 From the composite root:
 
 ```bash

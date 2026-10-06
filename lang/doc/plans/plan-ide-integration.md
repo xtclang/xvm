@@ -12,7 +12,7 @@ and refactoring proofs still fail closed. This adds no AST state or compiler lis
 See [scope, ownership and validation](../../../docs/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
 
 
-> **Last Updated**: 2026-10-06 (settings acceptance and implicit-package navigation)
+> **Last Updated**: 2026-10-06 (configuration responsiveness and selected acceptance)
 
 The latest [L82 acceptance record](../../../docs/errs-integration-plan.md#l82-upstream-isolation-and-full-catalog-acceptance-2026-10-06)
 separates native harness corrections, the production unchanged-library-settings invalidation bug,
@@ -20,8 +20,16 @@ individual upstream bridge replacement tests and full-catalog outcomes. These re
 capability or Java embedding/AST API. VS Code covers all 277 scenarios across recorded runs:
 276 pass and X218 retains the UP23 Undo failure. IntelliJ completes all 277 in one uninterrupted
 released-dependency run: 275 pass, X254/X257 retain UP25/UP26 partial status, zero failures and
-zero IDE errors. Genuine many-document graph replacement cost and the other explicitly listed
-release gates remain open.
+zero IDE errors. The subsequent
+[configuration responsiveness batch](../../../docs/errs-integration-plan.md#l82-configuration-responsiveness-2026-10-06)
+reduces 56-buffer graph-reset dispatch from roughly 8.5 seconds to 0.23 seconds and preserves
+successful independent module analyses. It uses operation-local scope maps and existing lifecycle
+ownership, with no new AST state, embedding API or advertised capability. Real platform checks
+retain all 49 documents' symbols/diagnostics and avoid 11 unnecessary recompilations per unrelated
+graph change. Hardware-wide response budgets, long-duration release evidence and UP17's
+decorated-editor cost remain open. X147/X148/X259 pass with the repaired server in both editors;
+IntelliJ also passes START with zero IDE errors. This is selected follow-up acceptance, not a
+new full-catalog run.
 
 The P1–P4 compiler organization checkpoint moves the four incomplete-syntax nodes into
 `org.xvm.compiler.ast.partial` and updates the adapter's imports. It changes no advertised LSP

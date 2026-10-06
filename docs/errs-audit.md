@@ -5,8 +5,23 @@ automatic resource roots into explicit roots; discovery changed them back and re
 compilations repeatedly. Preserve the original immutable source inputs instead. The new regression
 fails before the fix and passes afterward, including discovery of a newly added file under unchanged
 settings. All 17 configuration/library/build-model tests pass. X148 passes in the full accumulated
-document workload, but genuine graph replacements still take roughly seven seconds there; that
-remaining responsiveness work stays open in L82.
+document workload. The subsequent L82 configuration repair below addresses genuine graph changes.
+
+**L82 configuration responsiveness (2026-10-06):** repeated scope lookup canonicalized every open
+path inside nested refresh loops, while graph replacement discarded even independent successful
+analyses. Operation-local ownership maps and dependency-aware retirement remove that work without
+a persistent path cache or new AST/API state. In the 56-buffer reproduction, graph-reset dispatch
+drops from 8.48–8.60 seconds to 226–242 ms; a single-module change submits one compilation instead
+of 56. With 49 real platform documents open, adding/removing an unrelated module submits none
+instead of 11. Symbols, diagnostics, source hashes and serialized compiler access remain correct.
+Full backend testing plus the corrected query-test rerun gives 2,135 passes and two existing skips;
+all 81 packaged transport tests pass. Preserve the two superseded test expectations and their
+failed XML alongside the corrected rerun. See the
+[measurements and validation](errs-integration-plan.md#l82-configuration-responsiveness-2026-10-06).
+Selected X147/X148/X259 pass in VS Code `run-WbMUZ7` and IntelliJ
+`run-13789526801058807403`; IntelliJ also passes START with zero IDE errors on shipping LSP4IJ.
+This is selected acceptance of the new implementation, not a new full-catalog run.
+Release budgets across hardware and the separate UP17 decorated-editor cost remain open.
 
 Final IntelliJ acceptance completes all 277 shared scenarios in one uninterrupted process:
 275 pass, X254/X257 retain UP25/UP26 partial status, zero failures and zero IDE errors. START
