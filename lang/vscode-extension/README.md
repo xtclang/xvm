@@ -354,6 +354,10 @@ the left of the test window's status bar. **Ecstasy tests** identifies the smoke
 **Ecstasy playbook** identifies the compiler catalog. Long names have a full tooltip. Focused
 playbook runs use the selected total. Both runners use isolated workspaces and profiles; smoke
 logs remain under `build/reports/extension-tests/run-*/`.
+The compiler runner also shows its current read-only wait with elapsed time and a deadline.
+Timeouts and failed fixture cleanup stop that IDE run; remaining selected cases stay not run.
+Expected refusal tests identify the actual refusal rather than accepting any failure. Resume
+remaining IDs in a fresh isolated window after diagnosis; completed edits are never replayed.
 
 Post-rebase acceptance on 1.140.0: the 34 smoke tests pass; `run-J054rk` completes the 267-case
 catalog with 266 passes and the existing X218/UP23 native Undo failure. Separate-instance and
@@ -534,3 +538,9 @@ and verify persisted settings and user/workspace precedence. The native Settings
 Compiler, Language Service, Formatting, and Runtime and Logs. The effective status command
 reports saved origins, ignored scope overrides and connection changes awaiting restart.
 Untrusted and virtual workspaces are explicitly unsupported; remote hosts remain unvalidated.
+
+October 6 UI acceptance: compiler smoke passes 54 tests, Tree-sitter passes 53 common tests with
+the compiler-only workload skipped, and both adapters pass full editor exit/reopen persistence.
+Automatic server restart preserves unsaved text. The full 277-case catalog plus targeted corrections
+has 275 passes and retains X130/UP16 and X218/UP23 as failures, not successful acceptance. See the
+[UI completion receipt](../../docs/errs-integration-plan.md#ui1ui7-completion-batch-2026-10-06).
