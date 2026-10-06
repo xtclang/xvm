@@ -1384,6 +1384,10 @@ and tested, or record a deliberate exclusion from the full XTC editor target.
   - [x] Identify and fix repeatable compiler-worker heap growth. Three post-fix 400-cycle platform
     sessions retain stable transient-local counts; normal/EOF/normal shutdown and source hashes pass.
     The 5,000/20,000-method semantic comparison also passes, with one compilation per fixture.
+  - [x] Extend the platform retention/lifetime check to three 1,200-cycle sessions. All 3,600
+    cancellations, source hashes, serialized compiler access and process exits pass. Live growth
+    stays below 93 KB between cycles 100 and 1,200. Two provisional latency targets are missed;
+    see the [extended workload receipt](#l82-extended-platform-retention-and-lifetime-2026-10-06).
   - [x] Run the complete 264-case VS Code catalog: 263 pass, X218 remains a failed UP23 host Undo
     assertion. X130, visible Cancel and the recursive-JSON X259 extension pass this run.
   - [x] Exercise the matching 264-case IntelliJ catalog across recorded continuations: 262 cases
@@ -12241,3 +12245,39 @@ through [the rebase table](errs-rebase-2026-10-05.tsv); they have not been silen
 No additional AST mutation, public compiler accessor or library split was needed by this review.
 Root/lang SpotlessCheck and `git diff --check` pass. The local-plugin build-script formatting
 follow-up changes no provider, dependency or runtime behavior.
+
+## L82 extended platform retention and lifetime (2026-10-06)
+
+The packaged server at `996c9e576` was exercised before any native IDE/build workload, using
+the existing eleven-module platform graph, a 2 GiB heap, RSS sampling and live histograms every
+100 edits. This extends each previous 400-cycle session to **1,200 cycles**. All three sessions
+pass their correctness assertions: 49 initially clean diagnostic document reports, 1,200 actual
+cancellations each, useful symbols/hover and clean diagnostics after every edit. Sources remain
+unchanged. Each process records exactly 1,211 `compileModule(tree)` calls (11 initial modules
+plus 1,200 edited-module compiles), at most one active compiler API thread and one running job.
+All three owned PIDs are absent after the expected normal/EOF/normal exits.
+
+| Session / exit | Live bytes at cycle 100 | At cycle 1,200 | Growth | Edit-to-symbol p95 | Cold graph |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Normal / 0 | 91,174,056 | 91,186,248 | 12,192 | 334.8 ms | 5.504 s |
+| Transport EOF / 1 | 91,104,880 | 91,197,792 | 92,912 | 501.6 ms | 5.566 s |
+| Fresh process, normal / 0 | 91,020,112 | 91,110,376 | 90,264 | 398.3 ms | 11.385 s |
+
+The live `TransientThreadLocal` count is **3,212 at every checkpoint**. Sampled peak heap is
+650 MiB; sampled peak RSS is approximately 1.11 GiB. These are sampled observations, not proof
+of absolute peak usage. Warm hover p95 stays below 2.3 ms. No sampler errors occurred.
+
+**Correctness/lifetime passed; all provisional timing budgets did not.** Session two exceeds the
+500 ms edit-to-symbol p95 target by 1.6 ms; session three exceeds the 10-second cold graph target.
+The compiler's own p95 rises from 219 ms in session one to 394 ms in session two, rather than
+showing concurrent compiler entry. Session three also has slower cold compiler/semantic work.
+This receipt does not establish the cause of that timing variation, relax the targets or call the
+latency gate green. Hardware/platform budgets and longer interactive workloads remain open.
+
+Reproduce with the manual workload command, replacing its cycle count with `--cycles 1200` and
+using a fresh output directory. Evidence is under
+`lang/lsp-server/build/reports/platform-workload/l82-2026-10-06-extended/`: `results.json` records
+the correctness result and timings, `budget-assessment.json` separately records the two failed
+comparison targets, and each session retains samples, traces and histograms. The tested JAR SHA-256
+is `61aa87e6215082ace8e3cc5c8bc9f0e7ee413e13931def0b483f870bc4f86d1d`.
+No production compiler or client code changed for this workload.
