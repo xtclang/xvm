@@ -117,6 +117,9 @@ class ExecutionTraceTest {
                         it["event"].asString == "start"
                 },
             ).allSatisfy { assertThat(it["depth"].asInt).isEqualTo(1) }
+            assertThat(trace.entries).allSatisfy {
+                assertThat(it["thread"].asString).isEqualTo("virtual-${it["threadId"].asLong}")
+            }
             assertThatThrownBy {
                 ExecutionTrace.api("exceptional") { error("source text must not be logged") }
             }.isInstanceOf(IllegalStateException::class.java)
