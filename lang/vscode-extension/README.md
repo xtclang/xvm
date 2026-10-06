@@ -334,7 +334,7 @@ vscode-extension/
 
 | Task | Command | What it does |
 |------|---------|--------------|
-| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs all 273 shared cases (X1–X268, CFG1–CFG3 and 7a.8–7a.9) in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
+| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs all 275 shared cases (X1–X270, CFG1–CFG3 and 7a.8–7a.9) in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
 | **Headless integration test** | `./gradlew :lang:vscode-extension:testVscodeExtension -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Spawns a real VS Code instance via `@vscode/test-electron`, loads the extension from the build tree, opens `src/test/fixtures/hello.x`, and asserts the document's `languageId === "xtc"`. The primary regression guard for the file-association pipeline. |
 | **Interactive smoke test** | `./gradlew :lang:vscode-extension:runCode -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Launches VS Code in Extension Development Host mode with `src/test/fixtures/` open. Use this to verify highlighting, hover, completion, etc. by eye. |
 | **Compile only** | `./gradlew :lang:vscode-extension:npmCompile -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Runs `tsc -p ./`; fastest feedback when editing TypeScript. |
@@ -493,3 +493,22 @@ native path selection. Shared X266–X268 cover library settings, attached-sourc
 restart persistence, invalid replacements and resource order. The catalog now has 273 cases;
 see the [batch receipt](../../docs/errs-integration-plan.md#ordered-libraries-and-attached-sources-batch-ui3ui4ui6-2026-10-06)
 for the selected validation and corrections.
+
+
+### Machine-local JVM tuning and log support
+
+Use machine-scoped User Settings `xtc.java.vmOptions` (e.g. `["-Xmx2G"]`) and
+`xtc.server.logs`. Workspace JSON cannot override these launch controls. Saving leaves the
+current server running; use **Ecstasy: Restart Language Server** to apply them.
+
+Retention defaults: 7 days, 10 MB/file, 50 MB archived per stream and five stopped-server sessions.
+Logs live under `~/.xtc/logs/lsp/server-<PID>-<start-time>/`; active files are additional to archive
+caps, active processes are protected and stopped sessions are pruned on the next server start.
+Legacy shared logs and the IDE's own protocol console are outside this policy.
+
+**Ecstasy: Export Server Logs** saves a ZIP of recent log tails and current status from
+the connected server (at most eight 512 KiB tails, 4 MiB log input). It may contain local paths and
+logged diagnostics; it does not collect source files. Export requires a running server. Shared
+X269/X270 check restart boundaries, invalid settings, retention/status and installed export.
+Native OS save-dialog layout, fresh-IDE persistence and rollover stress remain manual checks.
+See the [contract and receipt](../../docs/errs-integration-plan.md#machine-local-jvm-settings-and-log-support-ui5ui6-2026-10-06).

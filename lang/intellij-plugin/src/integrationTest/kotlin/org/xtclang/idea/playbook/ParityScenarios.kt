@@ -30,6 +30,7 @@ class ParityScenarios(
         refreshOverlapCases()
         compilerImportCases()
         librarySettingsCases()
+        runtimeSettingsCases()
     }
 
     internal fun case(

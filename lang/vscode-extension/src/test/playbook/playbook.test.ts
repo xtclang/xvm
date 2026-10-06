@@ -1,4 +1,3 @@
-import { librarySettingsCases } from './librarySettings';
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 import { getClient } from '../../lsp-client';
@@ -9,6 +8,7 @@ import { editingClosureCases, formattingBreadthCases, linkedScopeCases, structur
 import { configurationCases, dependencyCases } from './dependencies';
 import { graphCases, indexingCases, libraryContentCases, monikerCases } from './graph';
 import { inlineCompletionCases } from './inlineCompletion';
+import { librarySettingsCases } from './librarySettings';
 import { liveWorkspaceCases } from './liveWorkspace';
 import { localRefactoringCases, memberActionCases } from './memberActions';
 import { moduleCases } from './modules';
@@ -19,6 +19,7 @@ import { refreshOverlapCases, reliabilityCases } from './reliability';
 import { propertyCases } from './properties';
 import { renameCases } from './rename';
 import { renameFamilyCases } from './renameFamilies';
+import { runtimeSettingsCases } from './runtimeSettings';
 import { editScenario, scenarioOffset, scenarioText, shared } from './shared';
 import { semanticCases, semanticClosureCases } from './semantics';
 import { syntaxCompletionCases } from './syntaxCompletion';
@@ -80,6 +81,7 @@ suite('XdkAdapter playbook', function () {
     refreshOverlapCases();
     compilerImportCases();
     librarySettingsCases();
+    runtimeSettingsCases();
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {
