@@ -32,7 +32,6 @@ import org.xvm.tool.LauncherOptions.CompilerOptions;
 import static org.xvm.api.EmbeddingSupport.ERR_INTERNAL;
 
 import static org.xvm.util.Handy.readFileChars;
-
 import static org.xvm.util.Severity.ERROR;
 
 /**
@@ -46,7 +45,7 @@ import static org.xvm.util.Severity.ERROR;
  * <p>The compile methods report the same errors as the command-line compiler: every error found in
  * a compiler stage, with the compilation stopping at the end of the first stage that found any.
  */
-public final class ModuleCompiler {
+public class ModuleCompiler {
     private static final Console SILENT_CONSOLE = new Console() {
         @Override
         public String out(Object value) {
@@ -151,7 +150,7 @@ public final class ModuleCompiler {
      * Adapter that supplies the source and repositories to the standard compiler pipeline and
      * captures its single compiled module instead of writing it to disk.
      */
-    private static final class EmbeddingCompiler
+    private static class EmbeddingCompiler
             extends org.xvm.tool.Compiler {
         private final String           source;
         private final ModuleRepository inRepo;
