@@ -27,9 +27,12 @@ internal object CompilerConfiguration {
 
     fun automatic(raw: Any?): Boolean = objectValue(raw)?.get("sourceModules")?.isJsonNull == true
 
-    fun buildModel(raw: Any?): XdkBuildModel? {
+    fun buildModel(
+        raw: Any?,
+        includeExplicit: Boolean = false,
+    ): XdkBuildModel? {
         val config = objectValue(raw) ?: return null
-        if (config["sourceModules"]?.let { !it.isJsonNull } == true) return null
+        if (!includeExplicit && config["sourceModules"]?.let { !it.isJsonNull } == true) return null
         val models = config["buildModels"]?.takeUnless { it.isJsonNull } ?: return null
         require(models.isJsonArray) { "buildModels must be an array" }
         return models.asJsonArray

@@ -11628,3 +11628,25 @@ public Gradle task events, not a private Java-extension sync API. Untagged exter
 observable. Conflicting overlapping-root models are rejected; broad independent multi-root
 precedence, remote/restricted-workspace acceptance, library/source-attachment editing, advanced
 JVM settings and log export remain open.
+
+
+## Ordered libraries and attached sources batch (UI3/UI4/UI6, 2026-10-06)
+
+Four implementation slices: shared compiler library configuration, IntelliJ controls, VS Code
+controls, and shared native acceptance. Tests are written with each slice and run after the batch.
+
+Contract: `xtc.compiler.libraries.modulePath` is an ordered list of local file URIs or paths
+relative to a single workspace root. Null/omitted inherits evaluated Gradle binaries; an empty
+list removes external binaries, never the bundled XDK. The first binary for a module wins in an
+explicit path list; ambiguous normalized duplicate paths are rejected. Source graph overrides
+remain independent of library inheritance. Multi-root configurations must use absolute file URIs.
+`sourceAttachments` contains module names with ordered source-directory roots. These provide
+read-only navigation snapshots and do not add compilation units or source dependency edges.
+Artifact source paths, declaration namespaces and debug spans select targets; available method
+debug text must match. Ambiguous declarations are omitted. Attach matching source versions;
+this is not a binary/source reproducibility proof for declarations without debug text.
+Missing paths, malformed binaries, bundled-library overrides and invalid attachments reject the
+replacement before live compiler inputs change. Applied binary bytes and source snapshots remain
+immutable until the next successful configuration/refresh. No compiler AST API change is required.
+
+Validation and editor receipts pending until all four slices are complete.
