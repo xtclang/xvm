@@ -787,6 +787,11 @@ same. Omit the property to return to the released dependency. Using the built di
 the Gradle plugin's temporary ZIP metadata extraction invalidating configuration-cache reuse.
 No local path or snapshot is committed as a default, and no plugin is published by this task.
 
+The October 6 local nine-repair build passes the 15-case settings/formatting/move/quick-fix/refresh
+selection, startup editing and two-project disposal, with zero IDE errors. These runs keep the
+release bridges enabled; the [upstream register](../../docs/errs-upstream-issues.md#local-plugin-acceptance-2026-10-06)
+distinguishes integration compatibility from the per-bridge removal gates.
+
 LSP4IJ is the most complex dependency. For platform tests, you need it on the test
 classpath so that the `lsp4ij:server` and `lsp4ij:fileNamePatternMapping` extensions
 in `plugin.xml` resolve correctly.
