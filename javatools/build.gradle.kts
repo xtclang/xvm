@@ -24,7 +24,7 @@ val xdkJavaToolsProvider = configurations.register("xdkJavaToolsProvider") {
     }
 }
 
-val testEcstasyModule by configurations.creating {
+val testEcstasyModule = configurations.register("testEcstasyModule") {
     isCanBeResolved = true
     isCanBeConsumed = false
     attributes {
