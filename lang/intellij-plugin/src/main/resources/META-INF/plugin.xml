@@ -32,6 +32,10 @@
     <depends>com.redhat.devtools.lsp4ij</depends>
 
     <actions>
+        <action id="xtc.exportServerLogs" class="org.xtclang.idea.lsp.ExportServerLogsAction"
+                text="Export Ecstasy Server Logs" description="Save recent server logs, timing traces and status as a ZIP">
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
         <action id="xtc.resolveCodeAction" class="org.xtclang.idea.lsp.XtcResolveCodeAction"/>
         <action id="xtc.toggleServerLog" class="org.xtclang.idea.lsp.XtcServerLogAction"
                 text="Toggle Ecstasy Language Server Log"
@@ -48,7 +52,7 @@
         <applicationConfigurable id="xtc.service.defaults" parentId="language"
                                  displayName="Ecstasy Language Service Defaults"
                                  instance="org.xtclang.idea.lsp.LanguageServiceApplicationConfigurable"/>
-        <applicationConfigurable id="xtc.runtime" parentId="language" displayName="Ecstasy Server Runtime"
+        <applicationConfigurable id="xtc.runtime" parentId="language" displayName="Ecstasy Server Runtime and Logs"
                                  instance="org.xtclang.idea.lsp.ServerRuntimeConfigurable"/>
         <projectConfigurable id="xtc.service" parentId="language"
                              displayName="Ecstasy Language Service"
