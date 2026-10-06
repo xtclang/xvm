@@ -73,7 +73,7 @@ object ServerRuntimePage {
                 }
 
                 "restart" -> {
-                    controls.filterIsInstance<JButton>().single().doClick()
+                    controls.filterIsInstance<JButton>().single { it.name == "xtc.runtime.restart" }.doClick()
                 }
 
                 else -> {
