@@ -66,6 +66,7 @@ import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.AdapterCapability
 import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.XdkBuildModel
 import org.xvm.lsp.adapter.xdk.XdkDependency
 import org.xvm.lsp.adapter.xdk.XdkLibraries
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
@@ -402,7 +403,9 @@ class XtcLanguageServer(
                 try {
                     val raw = CompilerConfiguration.initial(params.initializationOptions)
                     val model = CompilerConfiguration.buildModel(raw)
-                    if (model != null) {
+                    if (applyLibraryConfiguration(raw, folders, model)) {
+                        // All source and binary inputs were validated and installed together.
+                    } else if (model != null) {
                         textDocumentService.refreshDependencies {
                             adapter.replaceBuildInputs(model.resolve())
                         }
@@ -680,7 +683,9 @@ class XtcLanguageServer(
             if (settings.closed || compilerSettings.get() !== settings) return
             try {
                 val model = CompilerConfiguration.buildModel(raw)
-                if (model != null) {
+                if (applyLibraryConfiguration(raw, settings.folders, model)) {
+                    updateResourceWatchers()
+                } else if (model != null) {
                     val inputs = model.resolve()
                     textDocumentService.refreshDependencies {
                         (adapter as XdkAdapter).replaceBuildInputs(inputs)
@@ -700,6 +705,36 @@ class XtcLanguageServer(
                 reportCompilerConfigError(e)
             }
         }
+    }
+
+    private fun applyLibraryConfiguration(
+        raw: Any?,
+        folders: List<String>,
+        model: XdkBuildModel?,
+    ): Boolean {
+        val libraries = CompilerLibraries.read(raw, folders) ?: return false
+        val compiler = adapter as XdkAdapter
+        val explicit = CompilerConfiguration.modules(raw, folders)
+        val evaluated =
+            model?.resolve()
+                ?: if (libraries.modulePath == null) CompilerConfiguration.buildModel(raw, includeExplicit = true)?.resolve() else null
+        val inputs =
+            XdkBuildModel.Inputs(
+                explicit ?: if (model !=
+                    null
+                ) {
+                    evaluated!!.modules
+                } else {
+                    compiler.effectiveSourceModules()
+                },
+                evaluated?.binaries.orEmpty(),
+            )
+        val replacement = inputs.copy(binaries = libraries.resolve(inputs.binaries))
+        val automatic = model == null && explicit == null && CompilerConfiguration.automatic(raw)
+        textDocumentService.refreshDependencies {
+            compiler.replaceBuildInputs(replacement, automatic) + if (automatic) compiler.discoverSourceModules() else emptySet()
+        }
+        return true
     }
 
     private fun reportCompilerConfigError(failure: IllegalArgumentException) {
@@ -1193,6 +1228,7 @@ class XtcLanguageServer(
                     } else {
                         null
                     },
+                "compilerLibraries" to (adapter as? XdkAdapter)?.libraryConfiguration(),
                 "compilerQueue" to (adapter as? XdkAdapter)?.compilerQueueSnapshot(),
                 "heap" to
                     ManagementFactory.getMemoryMXBean().heapMemoryUsage.let {
