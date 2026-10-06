@@ -140,7 +140,7 @@ class XtcLspConnectionProvider(
                     // until client rendering is
                     // stable
                 ) +
-                listOf("xtc.trace.directory", "xtc.trace.level").mapNotNull { key ->
+                listOf("xtc.trace.directory", "xtc.trace.level", "xtc.logs.directory").mapNotNull { key ->
                     System.getProperty(key)?.let { "-D$key=$it" }
                 },
         )
