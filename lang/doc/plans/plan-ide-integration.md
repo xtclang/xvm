@@ -220,7 +220,7 @@ See the [L83 task and ownership record](../../../docs/errs-integration-plan.md#p
 | Range formatting | Trailing WS in range | Structural formatting in range | **Partial** - same token-preserving formatter, bounded to selected lines |
 | On-type formatting | - | Structural formatting on trigger characters | **Partial** - current-line indentation/whitespace on configured trigger characters |
 | Workspace symbols | - | Fuzzy search (4-tier) | **Done** - on-demand substring search across discovered/configured sources including unopened modules; independent healthy modules survive a broken neighbor |
-| Semantic tokens | - | Lexer-based (18 contexts) | **Partial** - Java lexical comments/literals/keywords plus resolved names, declarations, readonly/static/abstract modifiers and writes |
+| Semantic tokens | - | Syntax-based classification | **Partial** - Java lexical comments/literals/keywords plus resolved names, declarations, readonly/static/abstract modifiers and writes. Compiler class formats include imported types and enum members; static functions exclude constructors; documentation comments carry their modifier. Theme rendering, annotation-specific/deprecation/library-provenance classification remain separate. |
 | Code lenses | - | Run action on module declarations | **Done** - module Run action through the existing client command |
 | Linked editing | - | Same-file identifiers | **Partial** - resolved locals/lambda parameters and explicit aliases (including same-spelling aliases) within one successful source snapshot; callable parameter slots require Rename; no proposed-name proof |
 | Inlay hints | - | - | **Partial** - inferred local/destructured types, lambda parameters/returns and selected positional parameter names after successful compilation; named arguments/defaults omitted |
@@ -266,7 +266,7 @@ local or import-alias declarations and inherited written member contracts, prese
 | Cross-project monikers | Artifact-based import/export/local identities; backend and selected acceptance pass in both editors | L74 |
 | Server-provided document content/refresh | Negotiated revision-owned bundled virtual content and refresh; protected file fallback in IntelliJ (UP25); host source indexes remain file locations | L75 |
 | Inline completion | Compiler names/values, automatic ambiguity suppression and explicit alternatives; selected-range and revision guards | L76; native IntelliJ invocation/selection remains UP26 |
-| Document colors and color presentations | Ordinary token coloring; no color-value provider | L77 |
+| Document colors and color presentations | Opt-in fixture RGBA constructor prototype; default provider remains off. Compiler identity, aliases, byte literals and picker round trips are tested; native rendering and a public library contract remain pending. | L77 |
 | Notebook synchronization | File/module document sessions | L78 |
 | Debug inline values | Compiler type/parameter inlay hints; no runtime values | L79 |
 | Application work-done progress, refresh, partial results and trace controls | Negotiated progress/create/cancel, lifecycle gating, coalesced refresh and runtime trace are implemented and tested. Bounded partial-result batches, actual Tree-sitter scan progress and shared X143 pass. X145 verifies native progress-model cancellation and restart during pending work in both editors. Both editors pass visible Cancel, X146/X147 refresh/report ownership and X259 rendered settings/restart overlap. Shared-process native window lifetime passes; UP15 retains its upstream classification gap. | L81 / X141, X143, X145–X147, X259; [coverage map](../manual-test-plan.md#protocol-and-lifecycle-coverage-map) |
@@ -1561,7 +1561,8 @@ overlap refusal, failed/invalid output retention and retry. Both editors use a c
 producer and native controls; acceptance receipts are recorded in the integration plan.
 The current remaining settings work is listed explicitly in
 [the UI remainder](../../../docs/errs-integration-plan.md#shared-compiler-import-acceptance-and-remaining-ui-work-2026-10-05).
-L77 color support awaits an applicable recognized Ecstasy library API; the user explicitly deferred
+L77 now has an opt-in fixture-only RGBA prototype for document colors and picker edits; a recognized
+public Ecstasy library API and native acceptance remain pending. The user explicitly deferred
 L78 notebooks while file-based tooling is completed. L79 follows the runtime/DAP track.
 
 
