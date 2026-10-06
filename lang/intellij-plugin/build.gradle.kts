@@ -38,6 +38,13 @@ plugins {
 val xdkVersion: String = project.version.toString()
 val releaseChannel: String = xdkProperties.stringValue("xdk.intellij.release.channel", "alpha")
 
+// Explicit development override; Marketplace remains the default for ordinary builds.
+val localLsp4ijPlugin = providers.gradleProperty("lsp4ijPlugin").map { path ->
+    require(File(path).isAbsolute) { "lsp4ijPlugin must be an absolute path to a built plugin directory" }
+    require(File(path, "lib").isDirectory) { "lsp4ijPlugin must name a built plugin directory containing lib/: $path" }
+    File(path)
+}
+
 // Publishing is disabled by default. Enable with: ./gradlew publishPlugin -PenablePublish=true
 val enablePublish = providers.gradleProperty("enablePublish").map { it.toBoolean() }.getOrElse(false)
 val enablePublishProvider = providers.gradleProperty("enablePublish").map { it.toBoolean() }.orElse(false)
@@ -374,11 +381,15 @@ dependencies {
         bundledPlugin("com.intellij.java")
         bundledPlugin("com.intellij.gradle")
         bundledPlugin("org.jetbrains.plugins.textmate")
-        plugin(
-            "com.redhat.devtools.lsp4ij",
-            libs.versions.lang.intellij.lsp4ij
-                .get(),
-        )
+        if (localLsp4ijPlugin.isPresent) {
+            localPlugin(localLsp4ijPlugin)
+        } else {
+            plugin(
+                "com.redhat.devtools.lsp4ij",
+                libs.versions.lang.intellij.lsp4ij
+                    .get(),
+            )
+        }
         pluginVerifier()
         testFramework(TestFrameworkType.Starter, configurationName = integrationTestSourceSet.implementationConfigurationName)
     }
@@ -757,8 +768,7 @@ val parentPublishLocal =
 val runIdeCapturedIdeVersion = ideVersion
 val runIdeCapturedSinceBuild = intellijSinceBuild
 val runIdeCapturedLsp4ijVersion =
-    libs.versions.lang.intellij.lsp4ij
-        .get()
+    localLsp4ijPlugin.map { "local plugin: $it" }.orElse(libs.versions.lang.intellij.lsp4ij.get())
 val runIdeCapturedPluginVersion = project.version.toString()
 val runIdeCapturedSemanticTokens = ideLspSemanticTokens
 val runIdeLspLogDirectory =
@@ -897,6 +907,10 @@ intellijPlatformTesting.testIdeUi.register("testCompilerPlaybook") {
         include("**/*Test.class")
         useJUnitPlatform()
         systemProperty("xtc.playbook.ideVersion", ideVersion)
+        localLsp4ijPlugin.orNull?.let { pluginDirectory ->
+            inputs.dir(pluginDirectory).withPropertyName("localLsp4ijPlugin")
+            systemProperty("xtc.playbook.lsp4ijPlugin", pluginDirectory.absolutePath)
+        }
         systemProperty(
             "xtc.playbook.lsp4ijVersion",
             libs.versions.lang.intellij.lsp4ij
