@@ -60,12 +60,6 @@ public final class ModuleCompiler {
         }
     };
 
-    /**
-     * The maximum number of errors a module accumulates before its compilation stops in the middle
-     * of a stage; the same limit the command-line compiler uses for each module.
-     */
-    private static final int MAX_MODULE_ERRORS = 341;
-
     private final ModuleRepository coreRepo;
 
     /**
@@ -187,7 +181,7 @@ public final class ModuleCompiler {
             // its errors to a list of its own, which is passed on to this tool at the end of each
             // stage; this tool stops at the first error logged to it, so a stage logging to it
             // directly would stop at its first error instead of reporting all of them
-            ErrorList errsModule = new ErrorList(MAX_MODULE_ERRORS);
+            ErrorList errsModule = new ErrorList(ErrorListener.DEFAULT_MAX_ERRORS);
 
             StatementBlock block;
             try {
