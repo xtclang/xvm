@@ -1,6 +1,6 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
-import { focusTestWindow } from '../native-focus';
+import { focusTestEditor, focusTestWindow } from '../native-focus';
 import { discovered } from './liveWorkspace';
 import { diagnostics, eventually, noErrors, playbook, position } from './support';
 
@@ -102,8 +102,7 @@ export function localRefactoringCases(ids: readonly ('X148' | 'X156' | 'X157' | 
             if (destination !== document) assert.strictEqual(document.getText(), data.source);
             await noErrors(document.uri);
             for (const [command, expected] of [['undo', original], ['redo', data.expected], ['undo', original]]) {
-                await focusTestWindow();
-                await vscode.commands.executeCommand('workbench.action.focusActiveEditorGroup');
+                await focusTestEditor(destination);
                 await vscode.commands.executeCommand(command);
                 await eventually(async () => destination.getText(), text => text === expected, `${command} local refactoring`);
                 if (destination !== document) assert.strictEqual(document.getText(), data.source);
