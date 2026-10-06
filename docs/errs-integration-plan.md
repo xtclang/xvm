@@ -1,5 +1,12 @@
 # Integrating the embedding diagnostics work
 
+Latest October 6 checkpoint: [UI1–UI7 acceptance](#ui1ui7-completion-batch-2026-10-06)
+covers all 277 shared cases across recorded runs: IntelliJ 275 passed/two partial; VS Code
+275 passed/two explicit upstream failures. The [local upstream and API review](#local-upstream-acceptance-and-api-boundary-review-2026-10-06)
+adds nine reconciled LSP4IJ repair commits, opt-in local-plugin acceptance, a real platform
+navigation fix and the current embedding/AST contract. It does not replace the full-run failures
+or claim that production compatibility bridges have been removed.
+
 Latest feature checkpoint: [L76 inline completion](#l76-compiler-inline-completion-2026-10-05)
 passes backend, packaged transport and selected acceptance in both editors. IntelliJ native explicit
 invocation/selection context remains UP26; read-only virtual content remains UP25. L77–L79 retain
@@ -47,8 +54,8 @@ master's dependencies and passes 455 tests (three existing skips), including all
 regressions. [PR #653](https://github.com/xtclang/xvm/pull/653) targets `master`, with review
 requested from `ggleyzer`; see the diagnosis for the exact size and checks.
 
-Current inventory: updated 2026-10-05, including the bounded L62–L67 closures, L74–L76 features,
-L80/L81 acceptance and the L82 combined regression/retention checkpoint below. This is the active task list;
+Current inventory: updated 2026-10-06, including the bounded L62–L67 closures, L74–L76 features,
+L80/L81 acceptance, UI1–UI7 and the L82 combined regression/retention checkpoint below. This is the active task list;
 dated records retain their historical scope and results. Checkboxes distinguish completed acceptance from
 implemented-but-unverified work and planned features. Compiler API changes get separate C-series
 extraction boundaries when their implementations establish what is required.
@@ -60,7 +67,8 @@ rename, actions, formatting, semantic tokens, hints and hierarchies still have e
 Separate go-to-declaration now passes backend, protocol and selected editor validation. Several
 other protocol features still have no handler.
 The [adapter matrix and absent-feature inventory](../lang/doc/plans/plan-ide-integration.md#compiler-completeness-snapshot)
-separate those states. Tree-sitter remains the shipped default; compiler mode remains opt-in.
+separate those states. Compiler mode ships by default as of October 6; Tree-sitter remains an
+explicit build alternative.
 
 The accepted [embedded execution and debugging plan](../lang/doc/plans/plan-embedded-execution.md)
 extends the overall XTC tooling goal with R1–R8. Both IDEs should use one compile/build contract
@@ -5041,7 +5049,7 @@ against each extracted slice's own prerequisites; the integrated result cannot e
 | Runtime pool name | Deprecated `getConstantPool()` still delegates to `ensureRuntimePool()` and retains its runtime-initialization behavior. Compiler clients use `Compilation.pool()` |
 | `Compilation` record | Three- through seven-argument constructors remain. Current eight-component pattern includes module, file, ast, sourceTrees, callBindings, functionBindings, constructorBindings and initializerBindings. Prefer accessors/`forFile(...)` for clients not needing deconstruction |
 | `PartialAnalysis` record | Three-, four- and five-argument constructors remain; current six-component pattern adds callBindings, cursorBindings and functionBindings to sourceTrees, sites, pool |
-| `CursorBinding` record | Three-, six-, seven- and eight-argument constructors remain; the nine-component pattern adds argumentProperties after argumentValues. Function candidates expose types/positional mappings; argumentValues contains accepted locals/parameters and argumentProperties contains accepted property/constant identities and validated types. |
+| `CursorBinding` record | Updated October 6: the three-argument and six- through thirteen-argument constructors remain, plus the grouped five-argument `CallFacts` constructor. The current **fourteen-component** pattern is variables, thisType, instance, types, candidates, callsInspected, functions, argumentValues, argumentProperties, formals, argumentLiterals, argumentExpressions, enclosingExpressions, argumentTemplates. The last five carry written formal constraints and compiler-fitted insertion proposals. Accessors avoid deconstruction-arity migration; no Context is retained. |
 | `InvocationBinding.Argument` record | Three- and four-argument constructors remain. Current five-component pattern includes `label`; positional and legacy construction has a null label. A legacy `named=true` is not proof that a label span was supplied |
 | LSP rename | Additive, bounded and negotiated through client `documentChanges` support. No unversioned fallback. The default adapter method retains existing synchronous adapters; compiler rename runs asynchronously |
 
@@ -12121,3 +12129,115 @@ Final checkpoint map for future PR extraction:
 All work remains on `lagergren/errs`; these final checkpoints are local until the user requests a
 push. Follow-up release work is L82 (remote/platform/scale/long-duration evidence) plus the recorded
 upstream issues. Embedded Run/DAP remains the independent runtime track.
+
+## Local upstream acceptance and API boundary review (2026-10-06)
+
+This completes the four-step follow-up to UI1–UI7: reconcile the local upstream work, make it
+testable without changing released dependencies, exercise that combined plugin, then recheck
+the real platform sources and the compiler/adapter boundary. All checkpoints stay local on
+`lagergren/errs` until a push is requested; the LSP4IJ repair branch also remains unpushed.
+
+### Upstream compatibility evidence
+
+- The [upstream register](errs-upstream-issues.md) now lists all nine repair commits through
+  `2ccc5a30`, based on upstream `4796cf99`. UP03 repairs destination preflight only; its generic
+  UI-thread wait remains open. The combined targeted upstream run passes **53 tests**, with no
+  failures/errors/skips, and builds the plugin. Earlier fail-before controls remain recorded.
+- `-Plsp4ijPlugin=/absolute/path/to/built/plugin/directory` selects a local plugin for both
+  compilation and the installed native harness. The directory must contain `lib/`; no copied
+  binary is committed. Its plugin descriptor/version and content hash enter the native report.
+  Omitting the property continues to use Marketplace **0.21.0**. A real compile followed by a
+  repeated invocation reuses Gradle's configuration cache. The directory form avoids transient
+  archive extraction paths invalidating that cache.
+- Local-plugin `run-12526622727281847735` passes START and 15 shared cases: CFG1–CFG3, X130,
+  X136, X138/X139, X146, X162, X181–X185 and X259. `run-13248317061307858623` passes edits and
+  close/reopen during startup; `run-10384868562973039188` passes independent project lifetime. All
+  three have zero IDE errors. Exact plugin hashes and commands are in the upstream register
+  and [IntelliJ testing guide](../lang/intellij-plugin/TESTING.md).
+- These native runs retain production bridges. They establish combined compatibility, not that
+  any individual bridge is redundant. Keep every bridge on the released default. Before
+  removing one, bypass only that bridge against its upstream fix and repeat its relevant
+  native regression, preserving host-owned guards: UP12 document/version checks, UP13 evaluated
+  build-model augmentation, and both halves of UP07 diagnostic ownership/lazy actions.
+
+### Real-project repair and acceptance
+
+The read-only packaged-server recheck uses sibling platform commit `8df5449`. All eleven modules
+compile, with 49 diagnostic document reports and no errors, yet the first references request
+exposed `XdkProjectQueries.navigation` requiring a filename for synthetic implicit-package views.
+`common/tools` and `platformUI/api` provide real examples. The adapter now joins their shared
+semantic facts before omitting unnamed views from the file index. It still requires valid source
+URIs for named views. No parser, compiler listener, AST node or public embedding API changed.
+
+The minimal `Library.x`/`Library/tools/Helper.x` regression fails before the fix and passes after
+it, including exact references and the companion's workspace symbol. **30 selected adapter and
+boundary tests plus 14 Java compatibility/ownership tests pass**, without failures/errors/skips.
+Shared X117 now checks real-file references before native Rename/Undo in both editors. The
+catalog remains 277 cases. Released-dependency IntelliJ `run-5458566801610906172` passes START
+and X117 with zero IDE errors; VS Code 1.140.0 `run-Cao6we` passes X117 with zero failures.
+
+The final platform probe also confirms six `sendRequest` references/incoming callers, five
+OAuth subtypes, four `authorizationUrl` implementations, read-only binary-source navigation,
+26 inlay hints, completion, the four-parameter incomplete signature with `group` active, deliberate
+error diagnostics followed by clean recovery, and exactly three versioned local-rename edits.
+Source hashes remain unchanged and the server exits normally. Local results and traces are in
+`lang/lsp-server/build/reports/platform-demo/2026-10-06-final/`; the original failed probe and
+fail-before regression remain under `2026-10-06/`. This is packaged-server evidence, not a claim
+that the entire [updated manual demo](../demo.md) ran through native IntelliJ menus. No application
+code was executed and no external credentials or network calls were part of that probe.
+
+### Current API and AST contract
+
+- The [compatibility table](#compatibility-and-migration-contract) now reflects all **14**
+  `CursorBinding` components, instead of its obsolete nine-component snapshot. Tests exercise
+  every retained public constructor and verify that call-fact updates preserve independent
+  immutable insertion proposals. Retained constructors preserve their descriptors; record
+  deconstruction clients must migrate arity. Prefer accessors for hosts without that need.
+- `Compilation` retains its three- through seven-argument constructors and eight-component
+  result; `PartialAnalysis` retains three through five and has six components;
+  `InvocationBinding.Argument` retains three/four and has five. `getConstantPool()` remains a
+  deprecated alias for `ensureRuntimePool()`. `ErrorListener.log` changing boolean to void is
+  still an explicit source/binary break: choose the breaking release/version before publication.
+- `ast.partial` has seven files: five incomplete syntax nodes, `PartialSyntax` and
+  `ProposedLiteralToken`. Root `PartialQueries` is the narrow semantic bridge. Its package-private
+  scope, argument and call/construction helpers stay beside compiler validation/parenting;
+  moving them mechanically would expose internals or duplicate compiler rules. AST1/AST3/AST5
+  are complete; AST2/AST4 remain optional investigations, not prerequisites for the current API.
+- Result collections are immutable, but compiler/AST/constant-pool values remain owned by their
+  compilation attempt. Snapshot them into detached Kotlin values while owning the compiler
+  worker. LSP indexes, edits and IDE policy stay in `lang`; collection immutability does not make
+  a compiler graph safe for concurrent queries. The current ownership regressions pass.
+
+### Extraction and remaining gates
+
+Keep the existing listener/compiler/adapter/client separation. The navigation repair belongs
+with detached graph queries and their tests, independent of the Java ABI migration and upstream
+dependency experimentation. The constructor tests travel with the corresponding cursor/result
+API slices; they do not require the IntelliJ override. Update the manual demo and capability
+matrix with the client slices that actually provide those features. Historical commit IDs map
+through [the rebase table](errs-rebase-2026-10-05.tsv); they have not been silently rewritten here.
+
+| Local checkpoint | Future PR ownership |
+| --- | --- |
+| `6b8792754` | Upstream issue inventory and fail-before evidence; documentation only. |
+| `6ece0efab` | Optional local-plugin build/native-harness plumbing and reproducibility metadata; default release unchanged. |
+| `c965ca57b` | Focused local-plugin native acceptance and explicit bridge-removal conditions. |
+| `0c6fae9f7` | Detached graph navigation repair, minimized fail-before test, shared X117 and both drivers; no Java API prerequisite beyond the existing graph model. |
+| API boundary review (this checkpoint) | Constructor/proposal compatibility regressions, ownership/AST placement contract, updated platform demo and extraction map. |
+
+- [ ] Remove a production bridge only after a released upstream repair and its individual
+  replacement proof; the combined local-plugin pass is insufficient. UP17 is an IntelliJ
+  Platform issue, and UP25/UP26 are still feature/context limitations.
+- [ ] L82: preserve UP16's VS Code Explorer failure and accepted UP23 Undo limitation, then
+  obtain the remaining uninterrupted-catalog, cross-platform/remote, scale and prolonged-run
+  evidence. The focused runs above do not close those gates.
+- [ ] Decide the breaking embedding-API release/version and test every extracted PR independently.
+  The integrated branch passing does not establish that any extracted slice builds alone.
+- [ ] Continue L73/R1–R8 reusable execution/DAP as a separate runtime workstream. L77 colors
+  await a recognized Ecstasy color API; L78 notebooks stay deferred by the user's decision;
+  L79 debugger inline values require the runtime/debugging context. None is silently counted as
+  complete compiler-only functionality.
+
+No additional AST mutation, public compiler accessor or library split was needed by this review.
+Root/lang SpotlessCheck and `git diff --check` pass. The local-plugin build-script formatting
+follow-up changes no provider, dependency or runtime behavior.
