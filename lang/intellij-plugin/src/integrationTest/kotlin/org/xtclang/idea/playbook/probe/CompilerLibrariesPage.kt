@@ -39,6 +39,8 @@ object CompilerLibrariesPage {
         val before = content(project)
         val page = CompilerProjectConfigurable(project)
         val component = page.createComponent()
+        val navigation = descendants(component).filterIsInstance<JList<*>>().single { it.name == "xtc.compiler.navigation" }
+        navigation.setSelectedValue("Libraries and sources", true)
         val values = JsonParser.parseString(json).asJsonObject
         val controls = descendants(component).toList()
         val inherit = controls.filterIsInstance<JCheckBox>().single { it.text == "Inherit binary libraries from Gradle" }
@@ -56,6 +58,9 @@ object CompilerLibrariesPage {
             val value = attachment.asJsonObject
             value["roots"].asJsonArray.forEach { rows.addRow(arrayOf(value["module"].asString, it.asString)) }
         }
+        navigation.setSelectedValue("Build import", true)
+        navigation.setSelectedValue("Libraries and sources", true)
+        check(descendants(component).any { it === table }) { "Changing pages must preserve the edited controls" }
         when (action) {
             "cancel" -> {
                 check(content(project) == before)
