@@ -1,3 +1,4 @@
+import { configureCompilerLibraries, editOrderedPaths, libraryOptions } from './library-settings';
 import { randomUUID } from 'node:crypto';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
@@ -134,6 +135,10 @@ export function registerCompilerPaths(context: vscode.ExtensionContext): void {
     const report = async () => {
         output.clear();
         output.appendLine(compilerSourceModules() === null ? 'Effective source origin: Gradle model where imported; workspace conventions otherwise.' : 'Effective source origin: explicit workspace override (preserved across Gradle refresh).');
+        output.appendLine('Bundled XDK: read-only, always included.');
+        const libraries = libraryOptions();
+        output.appendLine(libraries.modulePath === null ? 'External binary paths: inherited from Gradle.' : 'External binary paths: explicit workspace/application override (ordered).');
+        output.appendLine(JSON.stringify(libraries, null, 2));
         const modules = await getClient()?.sendRequest<SourceModule[]>('xtc/compilerSourceModules');
         output.appendLine(JSON.stringify(modules ?? [], null, 2));
         compilerBuildModels().forEach(model => output.appendLine(describeBuildModel(model)));
@@ -177,12 +182,15 @@ export function registerCompilerPaths(context: vscode.ExtensionContext): void {
                 ? (await vscode.window.showOpenDialog({ canSelectFiles: true, canSelectFolders: false, canSelectMany: false, filters: { Ecstasy: ['x'] }, defaultUri: owner.uri }))?.[0]?.toString()
                 : await vscode.window.showInputBox({ prompt: 'Module root file URI or path relative to the selected workspace folder', value: previous?.uri });
             if (!uri) return;
-            const resources = await vscode.window.showInputBox({ prompt: 'Ordered resource paths as a JSON array; blank = conventions, [] = none', value: previous?.resourceRoots == null ? '' : JSON.stringify(previous.resourceRoots) });
+            const resourceMode = await vscode.window.showQuickPick(['Automatic resource directories', 'Edit ordered resource directories']);
+            if (!resourceMode) return;
+            const resources = resourceMode === 'Automatic resource directories' ? null :
+                await editOrderedPaths(previous?.resourceRoots ?? [], 'Ecstasy Resource Directories', true);
             if (resources === undefined) return;
             const dependencies = await vscode.window.showInputBox({ prompt: 'Source dependencies, separated by commas', value: previous?.dependencies?.join(', ') ?? '' });
             if (dependencies === undefined) return;
             const resolve = (value: string) => value.startsWith('file:') ? vscode.Uri.parse(value).toString() : vscode.Uri.file(path.resolve(owner.uri.fsPath, value)).toString();
-            const roots: unknown = resources.trim() ? JSON.parse(resources) : null;
+            const roots = resources;
             if (roots !== null && (!Array.isArray(roots) || roots.some(value => typeof value !== 'string'))) throw new Error('Resource roots must be a JSON array of paths.');
             const replacement: SourceModule = { name, uri: resolve(uri), dependencies: dependencies.split(',').map(value => value.trim()).filter(Boolean), resourceRoots: roots === null ? null : (roots as string[]).map(resolve) };
             draft.assertCurrent();
@@ -230,6 +238,7 @@ export function registerCompilerPaths(context: vscode.ExtensionContext): void {
             event.added.forEach(watch);
             changed();
         }),
+        vscode.commands.registerCommand('xtc.configureCompilerLibraries', guarded(configureCompilerLibraries)),
         vscode.commands.registerCommand('xtc.configureCompilerPaths', guarded(configure)),
         vscode.commands.registerCommand('xtc.showCompilerPaths', guarded(report)),
         vscode.commands.registerCommand('xtc.refreshCompilerBuild', guarded(() => refreshCompilerBuild())),
