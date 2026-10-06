@@ -12,7 +12,7 @@ and refactoring proofs still fail closed. This adds no AST state or compiler lis
 See [scope, ownership and validation](../../../docs/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
 
 
-> **Last Updated**: 2026-10-05 (L74 artifact identities and selected editor acceptance)
+> **Last Updated**: 2026-10-06 (ordered libraries and source attachments)
 
 The P1–P4 compiler organization checkpoint moves the four incomplete-syntax nodes into
 `org.xvm.compiler.ast.partial` and updates the adapter's imports. It changes no advertised LSP
@@ -185,7 +185,7 @@ See the [L83 task and ownership record](../../../docs/errs-integration-plan.md#p
 | Syntax highlighting | - | TextMate + semantic tokens (lexer) | TextMate plus Java lexical tokens and compiler-resolved names |
 | Document symbols | Full | Full | **Done** - from the AST, with real ranges |
 | Go-to-definition (same file) | By name | By name | **Done** - semantic, incl. method calls |
-| Go-to-definition (cross-file) | - | Via workspace index | **Done** - resolved identities within a module, across the complete discovered/configured source graph and into dependencies with host-supplied source indices |
+| Go-to-definition (cross-file) | - | Via workspace index | **Done** - resolved identities within a module, across the complete discovered/configured source graph and into dependencies with host-supplied source indices or configured matching source attachments |
 | Find references (same file) | Decl only | By name | **Done** - by identity, not by name |
 | Find references (cross-file) | - | - | **Done** - exact identities across the current module or the complete configured source graph, including unopened consumers and binary-member uses |
 | Completions | Keywords | Context-aware keywords/types/locals/members/imports | **Partial** - visible locals/parameters, narrowed types, implicit members, imported/enclosing types and static functions/constants; qualified dot/prefix and bare-name/empty statement completion with exact token edits; compiler-fitted locals/parameters and implicit properties/constants in empty final positional and pending named argument slots, including qualified/grouped values and slots before later arguments; member/return and parameter-header type prefixes use the enclosing compiler scope; flat and parameterized qualifiers use visible nested types with substituted aliases; registered formals and empty generic slots complete; mid-token edits replace the entire final identifier, including generic base names before written type arguments; import-producing completion for public source/bundled types uses whole-graph proof and atomic additional edits (backend/protocol tests and the new X105 variants pass in both editors); syntax name suggestions for written explicit-type declarations and contextual keywords/eleven templates now have passing backend and shared X149/X150 coverage in both editors; empty property/parameter names after complete named types, including primary constructors and EOF, have passing backend/protocol coverage and shared X151 acceptance in both editors; latest additions include ordinary enclosing-instance values, inferred-local naming clues and compiler-fitted lambda templates, with passing backend and expanded shared X150–X152 receipts in both editors |
@@ -1531,7 +1531,7 @@ unsaved source after close while work is pending. The 19 focused backend/transpo
 UP15 remains upstream; full-catalog/scale/cross-platform evidence remains L82. This closes acceptance
 for existing providers and adds no AST, embedding or production language capability. See the
 [receipt and commit map](../../../docs/errs-integration-plan.md#l81-native-acceptance-closure-2026-10-05).
-The current shared catalog has 270 scenarios (X1–X265 plus the five configuration/stress IDs).
+The current shared catalog has 273 scenarios (X1–X268 plus the five configuration/stress IDs).
 
 
 The October 5 UI5–UI7 continuation adds shared X260–X262 for real Gradle import cancellation,
@@ -1541,3 +1541,17 @@ The current remaining settings work is listed explicitly in
 [the UI remainder](../../../docs/errs-integration-plan.md#shared-compiler-import-acceptance-and-remaining-ui-work-2026-10-05).
 L77 color support awaits an applicable recognized Ecstasy library API; the user explicitly deferred
 L78 notebooks while file-based tooling is completed. L79 follows the runtime/DAP track.
+
+
+UI3/UI4/UI6 now expose ordered external libraries and module-specific source attachments in both
+clients. Null paths inherit evaluated Gradle binaries independently of source-graph overrides;
+empty paths remove external binaries, with the bundled XDK always retained. Attachments create
+read-only declaration-navigation snapshots and do not become source modules or change advertised
+LSP capabilities. The source/identity checks are bounded by artifact metadata and available debug
+text; matching sources are required. External attachment views do not yet export declaration
+monikers or support arbitrary semantic queries inside library source text. IntelliJ uses protected
+fallback files (UP25); VS Code uses the virtual content provider. Shared X266–X268 cover the controls,
+persistence, navigation and invalid-input retention. See the
+[contract and validation](../../../docs/errs-integration-plan.md#ordered-libraries-and-attached-sources-batch-ui3ui4ui6-2026-10-06).
+Advanced JVM settings, log export/retention, broader multi-root/remote-workspace acceptance and
+L82 release evidence remain separate work; Run/DAP, color and notebooks retain their recorded scope.

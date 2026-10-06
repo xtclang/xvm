@@ -3806,4 +3806,16 @@ attachment on disk does not edit a running compiler artifact.
 
 Both drivers share the Ecstasy fixture in the scenario catalog. `prepareLibraryPlaybook` builds
 its binaries through the embedding API before either editor run. No binary fixture is checked in.
-Native receipts for this batch are pending combined validation.
+Selected acceptance (2026-10-06): VS Code `run-uZLiO0` passes X129/X254/X260/X263;
+`run-Fpp8xO` passes X267; corrected `run-HTMdex` passes X266/X268. The initial runs exposed
+URI hostname normalization and picker/URI-spelling assumptions, all fixed and retained as failed
+receipts. IntelliJ `run-5914234873745700022` passes START/X129/X260/X263/X266/X267 and keeps
+X254 partial for UP25; `run-5018889098298757849` passes START/X268 after creating its source-row
+fixture explicitly. Both IntelliJ runs record zero IDE errors. The backend selection passes 33
+tests, IntelliJ units 114, and VS Code extension tests 41, without failures or skips.
+
+These cases verify settings reset/reopen and server restart, not reopening the IDE/project itself.
+IntelliJ operates the installed settings components; VS Code X266 drives the visible picker.
+Attachment setup and resource-order assertions use the installed page/settings APIs. Native file
+chooser appearance, the resource-order modal's individual actions and broad remote/multi-root
+acceptance remain manual checks; the new cases do not claim complete UI coverage.
