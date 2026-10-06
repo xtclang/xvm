@@ -512,3 +512,13 @@ logged diagnostics; it does not collect source files. Export requires a running 
 X269/X270 check restart boundaries, invalid settings, retention/status and installed export.
 Native OS save-dialog layout, fresh-IDE persistence and rollover stress remain manual checks.
 See the [contract and receipt](../../docs/errs-integration-plan.md#machine-local-jvm-settings-and-log-support-ui5ui6-2026-10-06).
+
+### Test artifact retention
+
+Gradle editor test tasks finish by pruning disposable report payloads. The five newest completed
+runs retain workspaces and diagnostic logs; older runs keep compact result files. Change the count
+with `-PplaybookRetainedRuns=N`, or pin a run with a `.keep-artifacts` file in its report directory.
+Unfinished runs are preserved for investigation. Cleanup never follows workspace symlinks or
+removes Git worktrees. Direct npm runs record completion too; the next Gradle run performs pruning,
+or run `:lang:vscode-extension:pruneCompilerPlaybookReports` explicitly with both lang flags.
+The IDE download cache remains shared across runs and is not deleted by retention.
