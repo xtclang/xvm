@@ -782,13 +782,15 @@ val testTreeSitterParse = tasks.register<TreeSitterParseTestTask>("testTreeSitte
     // shapes, multi-return destructuring, package-import resource providers,
     // etc. Both must parse cleanly for the grammar to be considered correct,
     // and including manualTests/ here means CI catches regressions on those
-    // shapes without needing per-file unit tests for everything. Archived
-    // examples (archive/ directories) and build output are not swept.
+    // shapes without needing per-file unit tests for everything. The native
+    // bridge (javatools_bridge/) and the compatibility kit (tck/) are swept
+    // too. Archived examples (archive/ directories) and build output are not.
     val xdkLibDirs = compositeRoot.listFiles { f ->
         f.isDirectory && f.name.startsWith("lib_")
     }?.toList() ?: emptyList()
     val manualTestsDir = File(compositeRoot, "manualTests/src/main/x").takeIf { it.isDirectory }
-    libDirs.set(xdkLibDirs + listOfNotNull(manualTestsDir))
+    val otherSourceDirs = listOf("javatools_bridge", "tck").map { File(compositeRoot, it) }.filter { it.isDirectory }
+    libDirs.set(xdkLibDirs + otherSourceDirs + listOfNotNull(manualTestsDir))
 
     // Skip list of .x files deliberately excluded from the parse sweep.
     // Two companion files: `intentional.txt` for files with genuine syntax

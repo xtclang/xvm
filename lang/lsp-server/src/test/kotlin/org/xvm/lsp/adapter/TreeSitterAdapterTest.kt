@@ -413,6 +413,58 @@ class TreeSitterAdapterTest : TreeSitterTestBase() {
         }
 
         /**
+         * A short-form property accessor with a block body can be followed by the property's
+         * initial value, as in `javatools_bridge/.../web/RequestInfoImpl.x`.
+         */
+        @Test
+        @DisplayName("should parse initial value after property accessor block")
+        fun shouldParseInitialValueAfterPropertyAccessorBlock() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    class RequestInfo {
+                        private Boolean[] hopsTls.get() {
+                            return super();
+                        } = [];
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
+         * An annotated type literal as a variable's initial value, as in
+         * `tck/.../constructors/Reflect.x`. The annotated type is only a value there, so an
+         * annotated declaration with a qualified type still parses as a declaration.
+         */
+        @Test
+        @DisplayName("should parse annotated type literal as initial value")
+        fun shouldParseAnnotatedTypeLiteralAsInitialValue() {
+            val uri = freshUri()
+            val source =
+                """
+                module myapp {
+                    void run() {
+                        @Inject ecstasy.io.Console console;
+                        Class<Base> clz = @M Base;
+                    }
+                }
+                """.trimIndent()
+
+            val result = ts.compile(uri, source)
+
+            assertThat(result.success).isTrue()
+            assertThat(result.diagnostics)
+                .noneMatch { it.severity == Diagnostic.Severity.ERROR }
+        }
+
+        /**
          * The exact shape of `manualTests/annos.x#testAnnotations3()` reported
          * as a false negative in issue #459: a local `annotation ... into ...`
          * declaration inside a method body, followed by annotated local classes

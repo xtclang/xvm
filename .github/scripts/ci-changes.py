@@ -70,6 +70,8 @@ GROUPS = (
     ("corpus", (
         "lib_*/**.x",
         "manualTests/src/main/x/**.x",
+        "javatools_bridge/**.x",
+        "tck/**.x",
     )),
 )
 # Where each group's sources refer to version catalog entries.

@@ -103,3 +103,15 @@
 #    totals in this file (so those depended on what had been built), and
 #    archived examples (archive/ directories), which hold 4 of the 7 module
 #    files above. Sweep 926/926, with nothing skipped.
+#
+# 7. The sweep now also covers the native bridge (javatools_bridge/) and the
+#    compatibility kit (tck/), which needed two more shapes:
+#    - A short-form property accessor with a block body followed by the
+#      property's initial value, as the reference parser allows:
+#      `private Boolean[] hopsTls.get() { ... } = [];` (RequestInfoImpl.x).
+#    - An annotated type literal as a variable's initial value:
+#      `Class<Base> clz = @M Base;` (tck Reflect.x). It is a `_value` only
+#      after '=' in a variable declaration, not an `_expression`: as an
+#      expression it competed with annotated declarations such as
+#      `@Inject ecstasy.io.Console console;` and broke 5 files.
+#    Sweep 1032/1032, with nothing skipped.
