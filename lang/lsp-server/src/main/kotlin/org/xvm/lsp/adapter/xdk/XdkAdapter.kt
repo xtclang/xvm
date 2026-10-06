@@ -14,7 +14,10 @@ import org.xvm.lsp.adapter.CallHierarchyOutgoingCall
 import org.xvm.lsp.adapter.CodeAction
 import org.xvm.lsp.adapter.CodeLens
 import org.xvm.lsp.adapter.CodeLensCommand
+import org.xvm.lsp.adapter.ColorPresentation
+import org.xvm.lsp.adapter.ColorValue
 import org.xvm.lsp.adapter.CompletionItem
+import org.xvm.lsp.adapter.DocumentColor
 import org.xvm.lsp.adapter.DocumentHighlight
 import org.xvm.lsp.adapter.DocumentLink
 import org.xvm.lsp.adapter.FoldingRange
@@ -84,6 +87,7 @@ class XdkAdapter
             ModuleRepository?,
             ErrorListener,
         ) -> EmbeddingSupport.PartialAnalysis,
+        private val colorPrototype: Boolean = false,
     ) : AbstractAdapter() {
         private val compiler = CompilerCalls(compileSource, compileTree, analyzeCursor)
         private val formattingPreferences = AtomicReference<FormattingConfig?>()
@@ -115,7 +119,10 @@ class XdkAdapter
             },
         )
 
-        constructor() :
+        constructor() : this(false)
+
+        /** Opt-in test-fixture color contract; not a standard Ecstasy color library. */
+        constructor(colorPrototype: Boolean) :
             this(
                 { source, repository, errors ->
                     XdkLibraries.configure()
@@ -126,6 +133,7 @@ class XdkAdapter
                     EmbeddingSupport.instance().compileModule(sources, repository, errors)
                 },
                 ::analyzeIncomplete,
+                colorPrototype,
             )
 
         internal fun compilerQueueSnapshot(): Map<String, Any> = queueTrace.snapshot()
@@ -163,7 +171,7 @@ class XdkAdapter
                 AdapterCapability.DOCUMENT_LINK,
                 AdapterCapability.CODE_LENS,
                 AdapterCapability.LINKED_EDITING,
-            )
+            ) + if (colorPrototype) setOf(AdapterCapability.DOCUMENT_COLOR) else emptySet()
 
         private data class Discovery(
             val folders: List<File> = emptyList(),
@@ -881,6 +889,7 @@ class XdkAdapter
             val symbols: List<SymbolInfo> = emptyList(),
             val ast: AstNode? = null,
             val semantics: SemanticModel? = null,
+            val colors: List<XdkColorPrototype.Site> = emptyList(),
         )
 
         private fun module(uri: String): ModuleAnalysis? = completed[analysisScope(uri)]
@@ -1332,6 +1341,7 @@ class XdkAdapter
                     compilation.sourceTrees().forEach { putAll(XdkAst.rootsBySource(it)) }
                 }
             val semantics = compilation.compiledSemantics(dependencies, errs, navigation = moduleName != null)
+            val colors = if (colorPrototype) XdkColorPrototype.capture(compilation) else emptyMap()
             val navigation = semantics.navigation
             val views = semantics.models
             val sourceUris = sources?.sourceUris ?: roots.keys.associateWith { it }
@@ -1348,6 +1358,7 @@ class XdkAdapter
                         XdkSymbols.of(uri, ast),
                         ast,
                         views.firstOrNull { it.sourceName == sourceName },
+                        colors[sourceName].orEmpty(),
                     )
                 }
             val dependencySources =
@@ -1476,6 +1487,19 @@ class XdkAdapter
         override fun getSemanticTokens(uri: String): SemanticTokens? =
             analysis(uri)?.semantics?.let {
                 XdkPresentation.tokens(it, XdkLexical.tokens(currentText(uri).orEmpty()))
+            }
+
+        override fun getDocumentColors(uri: String): List<DocumentColor> = XdkColorPrototype.colors(analysis(uri)?.colors.orEmpty())
+
+        override fun getColorPresentations(
+            uri: String,
+            range: Range,
+            color: ColorValue,
+        ): List<ColorPresentation> =
+            if (readOnlyDocument(uri) != null) {
+                emptyList()
+            } else {
+                listOfNotNull(analysis(uri)?.colors?.singleOrNull { it.range == range }?.presentation(color))
             }
 
         private fun currentText(uri: String): String? =

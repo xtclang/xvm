@@ -8,6 +8,8 @@ import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
 import org.eclipse.lsp4j.CallHierarchyOutgoingCallsParams
 import org.eclipse.lsp4j.CallHierarchyPrepareParams
 import org.eclipse.lsp4j.ClientCapabilities
+import org.eclipse.lsp4j.Color
+import org.eclipse.lsp4j.ColorPresentationParams
 import org.eclipse.lsp4j.CompletionItemKind
 import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.ConfigurationParams
@@ -16,6 +18,7 @@ import org.eclipse.lsp4j.DiagnosticCapabilities
 import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
+import org.eclipse.lsp4j.DocumentColorParams
 import org.eclipse.lsp4j.DocumentDiagnosticParams
 import org.eclipse.lsp4j.DocumentHighlightParams
 import org.eclipse.lsp4j.DocumentLinkCapabilities
@@ -115,6 +118,34 @@ class XdkStdioTest {
     }
 
     @TempDir lateinit var directory: Path
+
+    @Test
+    fun `packaged color prototype uses the opt in launcher and round trips picker edits`() {
+        val source =
+            """
+            module ColorPrototype {
+                const Rgba(UInt8 red, UInt8 green, UInt8 blue, UInt8 alpha = 255) {}
+                Rgba sample() = new Rgba(255, 128, 0);
+            }
+            """.trimIndent()
+        Session(packagedJar(), directory, colorPrototype = true).use { session ->
+            session.initialize()
+            session.open(source)
+            assertThat(session.diagnosticsAt(1).diagnostics).isEmpty()
+            val service = session.server.textDocumentService
+            val document = TextDocumentIdentifier(URI)
+            val before = session.await(service.documentColor(DocumentColorParams(document))).single()
+            assertThat(before.color).isEqualTo(Color(1.0, 128 / 255.0, 0.0, 1.0))
+            val wanted = Color(0.0, 0.0, 1.0, 128 / 255.0)
+            val edit = session.await(service.colorPresentation(ColorPresentationParams(document, wanted, before.range))).single().textEdit
+            assertThat(edit.newText).isEqualTo("new Rgba(0, 0, 255, alpha = 128)")
+            assertThat(edit.range).isEqualTo(before.range)
+            session.change(source.replace("new Rgba(255, 128, 0)", edit.newText), 2)
+            assertThat(session.diagnosticsAt(2).diagnostics).isEmpty()
+            assertThat(session.await(service.documentColor(DocumentColorParams(document))).single().color).isEqualTo(wanted)
+            session.shutdownAndExit()
+        }
+    }
 
     @Test
     fun `packaged inline completion preserves UTF16 positions and source suffixes`() {
@@ -1740,6 +1771,7 @@ class XdkStdioTest {
         jar: Path,
         directory: Path,
         invalidXdkHome: Boolean = false,
+        private val colorPrototype: Boolean = false,
     ) : AutoCloseable {
         // Keep child traces after JUnit deletes its temporary workspace, without mixing sessions.
         val traceDirectory =
@@ -1766,6 +1798,7 @@ class XdkStdioTest {
             ).apply {
                 directory(directory.toFile())
                 environment().remove("XDK_HOME")
+                environment()["XTC_LSP_COLOR_PROTOTYPE"] = colorPrototype.toString()
                 if (invalidXdkHome) {
                     environment()["XDK_HOME"] = directory.resolve("absent-xdk").toString()
                 }
@@ -1910,6 +1943,11 @@ class XdkStdioTest {
             assertThat(initialized.capabilities.monikerProvider.left).isTrue()
             assertThat(initialized.capabilities.callHierarchyProvider.left).isTrue()
             assertThat(initialized.capabilities.inlayHintProvider.left).isTrue()
+            if (colorPrototype) {
+                assertThat(initialized.capabilities.colorProvider.left).isTrue()
+            } else {
+                assertThat(initialized.capabilities.colorProvider).isNull()
+            }
             assertThat(initialized.capabilities.semanticTokensProvider).isNotNull()
             assertThat(initialized.capabilities.hoverProvider.left).isTrue()
             assertThat(initialized.capabilities.referencesProvider.right.workDoneProgress).isTrue()
