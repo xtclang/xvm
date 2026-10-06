@@ -8,6 +8,7 @@ import org.xtclang.idea.lsp.SourceModuleConfiguration
 import java.awt.Component
 import java.awt.Container
 import java.util.concurrent.CompletableFuture
+import javax.swing.JList
 import javax.swing.JTextArea
 
 /**
@@ -23,9 +24,20 @@ class CompilerReportPage private constructor(
         }
     private val component = page.createComponent()
 
+    init {
+        descendants(component)
+            .filterIsInstance<JList<*>>()
+            .single { it.name == "xtc.compiler.navigation" }
+            .setSelectedValue("Build import", true)
+    }
+
     fun reset() = page.reset()
 
-    fun text(): String = descendants(component).filterIsInstance<JTextArea>().single().text
+    fun text(): String =
+        descendants(component)
+            .filterIsInstance<JTextArea>()
+            .single { it.name == "xtc.compiler.details" }
+            .text
 
     fun complete(
         index: Int,
