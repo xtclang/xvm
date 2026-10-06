@@ -95,24 +95,25 @@ class XdkDistribution(
                 "xdk_home_delegation" to """
                         |@rem Setup the command line
                         |
-                        |if defined XDK_HOME if exist "%XDK_HOME%\" (
+                        |rem Variables are expanded when a parenthesized block is parsed, so one statement per line
+                        |if not defined XDK_HOME goto xdkHomeChecked
                         |    rem === if a same-named script is in XDK_HOME, use it instead of this script ===
-                        |    set "XDK_CMD=%XDK_HOME%\bin\%APP_BASE_NAME%"
-                        |    if exist "%XDK_CMD%" (
+                        |    set "XDK_CMD=%XDK_HOME%\bin\%~nx0"
+                        |    if not exist "%XDK_CMD%" goto xdkHomeLibs
                         |        for %%F in ("%XDK_CMD%") do set "XDK_ID=%%~fF"
                         |        for %%F in ("%~f0") do set "APP_ID=%%~fF"
-                        |        if /I not "%XDK_ID%"=="%APP_ID%" (
+                        |        if /I "%XDK_ID%"=="%APP_ID%" goto xdkHomeLibs
                         |            "%XDK_ID%" %*
-                        |            goto end
-                        |        )
-                        |    )
+                        |            goto exitWithErrorLevel
+                        |:xdkHomeLibs
                         |    rem === use the libraries specified by XDK_HOME ===
                         |    set "APP_HOME=%XDK_HOME%"
-                        |)
+                        |:xdkHomeChecked
                         |
-                        |if not exist %APP_HOME%\javatools\javatools.jar (
+                        |if not exist "%APP_HOME%\javatools\javatools.jar" (
                         |    echo Unable to locate a valid XDK in "%APP_HOME%"; set XDK_HOME to the "xdk" directory containing "bin\", "lib\", and "javatools\"
-                        |    goto fail
+                        |    "%COMSPEC%" /c exit 1
+                        |    goto exitWithErrorLevel
                         |)
                         |
                         |set CLASSPATH=%APP_HOME%\javatools\javatools.jar
@@ -149,6 +150,11 @@ class XdkDistribution(
                         |
                         |    # switch to using the libs etc. from the XDK at XDK_HOME
                         |    APP_HOME="${'$'}XDK_HOME"
+                        |fi
+                        |
+                        |if [ ! -f "${'$'}APP_HOME/javatools/javatools.jar" ]; then
+                        |    echo "Unable to locate a valid XDK in \"${'$'}APP_HOME\"; set XDK_HOME to the \"xdk\" directory containing \"bin/\", \"lib/\", and \"javatools/\"" >&2
+                        |    exit 1
                         |fi
                         |""".trimMargin()
             )

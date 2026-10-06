@@ -58,6 +58,16 @@ val xdkJavaToolsJitBridge = configurations.register("xdkJavaToolsJitBridge") {
     }
 }
 
+val testEcstasyModule = configurations.register("testEcstasyModule") {
+    description = "Resolves the compiled ecstasy module that TypeConstantL1SpecializationTest loads"
+    isCanBeResolved = true
+    isCanBeConsumed = false
+    attributes {
+        attribute(CATEGORY_ATTRIBUTE, objects.named(LIBRARY))
+        attribute(LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("xtc"))
+    }
+}
+
 /**
  * Local configuration to provide an xdk-distribution, which contains versioned zip and tar.gz XDKs.
  */
@@ -110,6 +120,8 @@ dependencies {
     xdkJavaTools(libs.javatools)
     // Test dependencies for integration tests
     testImplementation(libs.javatools)
+    testImplementation(libs.javatools.utils)
+    testEcstasyModule(libs.xdk.ecstasy)
     xdkJavaToolsJitBridge(libs.javatools.jitbridge)
     xtcModule(libs.xdk.ecstasy)
     xtcModule(libs.xdk.aggregate)
@@ -507,6 +519,14 @@ tasks.matching { it.group == "distribution" && it.name.contains("install") }.con
 tasks.withType<Tar>().configureEach {
     compression = Compression.GZIP
     archiveExtension = "tar.gz"
+}
+
+// TypeConstantL1SpecializationTest loads the compiled ecstasy module from the test classpath.
+// Consuming the lib-ecstasy artifact carries the compile dependency and tracks the module as a test input.
+tasks.processTestResources {
+    from(testEcstasyModule) {
+        include("ecstasy.xtc")
+    }
 }
 
 // Configure test task to run integration tests after XDK is fully built

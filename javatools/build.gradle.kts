@@ -24,15 +24,6 @@ val xdkJavaToolsProvider = configurations.register("xdkJavaToolsProvider") {
     }
 }
 
-val testEcstasyModule by configurations.creating {
-    isCanBeResolved = true
-    isCanBeConsumed = false
-    attributes {
-        attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
-        attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("xtc"))
-    }
-}
-
 dependencies {
     compileOnly(libs.jetbrains.annotations)
     implementation(libs.javatools.utils)
@@ -45,7 +36,6 @@ dependencies {
     implementation(libs.slf4j.nop) // to avoid startup warnings while preserving no-op logging
     testCompileOnly(libs.jetbrains.annotations)
     testImplementation(libs.javatools.utils)
-    testEcstasyModule(libs.xdk.ecstasy)
 }
 
 /**
@@ -219,14 +209,6 @@ tasks.test {
     inputs.files(listOf("lib_net", "lib_json", "lib_web").map { File(compositeRoot, "$it/src/main/x") })
         .withPropertyName("siblingModuleSources")
         .withPathSensitivity(PathSensitivity.RELATIVE)
-}
-
-// TypeConstantL1SpecializationTest needs the compiled module, not a pre-existing XDK installation.
-// Consuming its artifact carries the compile dependency and tracks the module as a test input.
-tasks.processTestResources {
-    from(testEcstasyModule) {
-        include("ecstasy.xtc")
-    }
 }
 
 val versionOutputTest = tasks.register<Test>("versionOutputTest") {

@@ -39,3 +39,8 @@ dependencies {
     val foojay = libs.plugins.foojay.resolver.get()
     implementation("${foojay.pluginId}:${foojay.pluginId}.gradle.plugin:${foojay.version}")
 }
+
+// Hold these local plugins to the stricter validation Gradle applies to published plugins.
+tasks.validatePlugins {
+    enableStricterValidation = true
+}

@@ -10,10 +10,12 @@ import org.gradle.api.tasks.Optional
 import org.gradle.api.tasks.PathSensitive
 import org.gradle.api.tasks.PathSensitivity
 import org.gradle.api.tasks.TaskAction
+import org.gradle.api.tasks.UntrackedTask
 import java.io.File
 import java.io.RandomAccessFile
 import kotlin.concurrent.thread
 
+@UntrackedTask(because = "Runtime reporting task reads live sandbox state and should never be state-tracked")
 abstract class RunIdeEnvironmentReportTask : DefaultTask() {
     @get:Input
     abstract val ideVersion: Property<String>
@@ -45,11 +47,6 @@ abstract class RunIdeEnvironmentReportTask : DefaultTask() {
     @get:Optional
     @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val lspLogFile: RegularFileProperty
-
-    init {
-        doNotTrackState("Runtime reporting task reads live sandbox state and should never be state-tracked")
-        outputs.upToDateWhen { false }
-    }
 
     @TaskAction
     fun report() {
@@ -93,6 +90,7 @@ abstract class RunIdeEnvironmentReportTask : DefaultTask() {
     }
 }
 
+@UntrackedTask(because = "Runtime log tail task manages background thread state and should never be state-tracked")
 abstract class StartLogTailTask : DefaultTask() {
     @get:InputFile
     @get:Optional
@@ -104,11 +102,6 @@ abstract class StartLogTailTask : DefaultTask() {
 
     @get:Input
     abstract val linePrefix: Property<String>
-
-    init {
-        doNotTrackState("Runtime log tail task manages background thread state and should never be state-tracked")
-        outputs.upToDateWhen { false }
-    }
 
     @TaskAction
     fun startTail() {
@@ -140,14 +133,10 @@ abstract class StartLogTailTask : DefaultTask() {
     }
 }
 
+@UntrackedTask(because = "Runtime log tail stop task manages background thread state and should never be state-tracked")
 abstract class StopLogTailTask : DefaultTask() {
     @get:Input
     abstract val threadName: Property<String>
-
-    init {
-        doNotTrackState("Runtime log tail stop task manages background thread state and should never be state-tracked")
-        outputs.upToDateWhen { false }
-    }
 
     @TaskAction
     fun stopTail() {

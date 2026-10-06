@@ -646,6 +646,12 @@ jobs:
                 inspect_gradle_cache "after manual tests"
                 echo "✅ Manual tests completed"
 
+            # Runs the launcher scripts of the distribution the build produced: the POSIX scripts on
+            # Ubuntu, the .bat scripts on Windows.
+            - name: Test the XDK launcher scripts
+              shell: bash
+              run: .github/scripts/test-launchers.sh xdk/build/distributions/xdk-*.zip
+
             # The main build ran the IntelliJ plugin checks (the lang composite attached, the Plugin
             # Verifier) and passed; later runs of this pull request on the same inputs skip them.
             - name: Record IntelliJ plugin checks pass
@@ -1169,7 +1175,9 @@ jobs:
                     echo "❌ build-and-test failed or was cancelled"
                     exit 1
                   fi
-                  if [ "$INTEGRATION_RESULT" != "success" ]; then
+                  if [ "$INTEGRATION_RESULT" = "skipped" ] && [ "${{ github.event.inputs.platforms }}" = "windows-latest" ]; then
+                    echo "✅ integration-test skipped: it needs the Ubuntu build, which a Windows-only run does not have"
+                  elif [ "$INTEGRATION_RESULT" != "success" ]; then
                     echo "❌ integration-test failed or was cancelled"
                     exit 1
                   fi
@@ -1181,7 +1189,9 @@ jobs:
         name: Plugin integration test
         needs: build-and-test
         runs-on: ubuntu-latest
-        if: success()
+        # Tests the consumer Maven repository that only the Ubuntu build uploads, so a
+        # Windows-only dispatch has nothing to test.
+        if: success() && github.event.inputs.platforms != 'windows-latest'
 
         steps:
             - name: Checkout XVM

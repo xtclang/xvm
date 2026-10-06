@@ -1,4 +1,4 @@
-package org.xvm.asm.constants;
+package org.xvm.xdk;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,6 +23,9 @@ import org.xvm.asm.Component.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
 import org.xvm.asm.FileStructure;
+
+import org.xvm.asm.constants.TerminalTypeConstant;
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.util.Auto;
 
