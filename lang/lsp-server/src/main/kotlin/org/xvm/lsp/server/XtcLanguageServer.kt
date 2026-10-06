@@ -76,6 +76,7 @@ import org.xvm.lsp.model.toLsp
 import org.xvm.lsp.treesitter.SemanticTokenLegend
 import org.xvm.lsp.util.ExecutionTrace
 import org.xvm.lsp.util.ProgressLabels
+import org.xvm.lsp.util.ServerLogs
 import java.io.IOException
 import java.lang.management.ManagementFactory
 import java.net.URI
@@ -1211,6 +1212,8 @@ class XtcLanguageServer(
                 "version" to version,
                 "pid" to ProcessHandle.current().pid(),
                 "runtime" to System.getProperty("java.runtime.version"),
+                "jvmOptions" to ManagementFactory.getRuntimeMXBean().inputArguments.filter { it.startsWith("-X") },
+                "logs" to ServerLogs.status(),
                 "textSynchronization" to if (synchronization.incremental) "incremental" else "full",
                 "serverSaveFormatting" to
                     (synchronization.formatOnSave && synchronization.waitUntil),
@@ -1240,6 +1243,12 @@ class XtcLanguageServer(
                     },
             ),
         )
+
+    @JsonRequest("xtc/exportLogs")
+    fun exportLogs(): CompletableFuture<Map<String, String>> =
+        supplyAsync("xtc/exportLogs", "bounded server log archive") {
+            ServerLogs.export(languageServiceStatus().join())
+        }
 
     @JsonRequest("xtc/healthCheck")
     fun healthCheck(): CompletableFuture<Map<String, Any>> =
