@@ -64,6 +64,8 @@ internal fun Driver.settingsPersistence(
         }
     }
     val status = ClientProtocol(this).query("xtc/languageServiceStatus", emptyMap<String, String>()).asJsonObject
+    val expectedAdapter = if (System.getProperty("xtc.playbook.adapter") == "treesitter") "TreeSitter" else "XDK"
+    check(status["adapter"].asString == expectedAdapter) { "Settings ran against the wrong packaged backend: $status" }
     check(status["textSynchronization"].asString == "incremental")
     check(status["jvmOptions"].asJsonArray.contains(data["vmOptions"].asJsonArray.single()))
     check(status["logs"].asJsonObject["retention"] == data["logs"])
