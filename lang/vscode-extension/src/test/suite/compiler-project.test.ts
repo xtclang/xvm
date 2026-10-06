@@ -30,7 +30,7 @@ suite('Compiler editor acceptance', function () {
     suiteSetup(async function () {
         await vscode.extensions.getExtension('xtclang.xtc-language')!.activate();
         await eventually(() => !!getClient()?.initializeResult, 'language server initialization');
-        // These cases require the opt-in compiler build; the shipped Tree-sitter suite still runs.
+        // These cases require the default compiler build; Tree-sitter runs the common smoke tests.
         if (!getClient()!.initializeResult!.capabilities.typeHierarchyProvider) { this.skip(); }
     });
 

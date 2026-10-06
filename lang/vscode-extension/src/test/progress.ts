@@ -1,5 +1,6 @@
 import type Mocha from 'mocha';
 import * as vscode from 'vscode';
+import { PLAYBOOK_WAIT_MS } from './wait';
 
 interface WaitStep { readonly token: symbol; readonly message?: string; readonly elapsed?: number }
 const waits = new vscode.EventEmitter<WaitStep>();
@@ -45,9 +46,10 @@ export function showTestProgress(runner: Mocha.Runner, title: string, label: (te
         const active = [...activeWaits.values()].pop();
         const message = active?.message;
         if (message === undefined) { show(`${caption(current)} — running`, current.fullTitle()); return; }
-        const detail = `${current.fullTitle()}\nWaiting: ${message} (${active?.elapsed}s / 30s)`;
+        const timing = `${active?.elapsed}s / ${PLAYBOOK_WAIT_MS / 1000}s`;
+        const detail = `${current.fullTitle()}\nWaiting: ${message} (${timing})`;
         const short = message.length > 58 ? `${message.slice(0, 55)}…` : message;
-        show(`${current.title.split(':')[0]} — ${short} (${active?.elapsed}s / 30s)`, detail);
+        show(`${current.title.split(':')[0]} — ${short} (${timing})`, detail);
     });
     show('starting', `Starting ${title}`);
     runner.on('test', test => { current = test; show(`${caption(test)} — running`, test.fullTitle()); });
