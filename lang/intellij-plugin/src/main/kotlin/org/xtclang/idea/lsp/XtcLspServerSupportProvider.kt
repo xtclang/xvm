@@ -40,7 +40,7 @@ private object LspBuildProperties {
         get() = properties.getProperty("lsp.version", "?")
 
     val adapter: String
-        get() = properties.getProperty("lsp.adapter", "mock")
+        get() = properties.getProperty("lsp.adapter", "compiler")
 
     val buildTime: String
         get() = properties.getProperty("lsp.build.time", "?")

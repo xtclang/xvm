@@ -399,7 +399,7 @@ feature:
 The LSP server supports multiple adapters. See [LSP Server README](../lsp-server/README.md) for details.
 
 ```bash
-# Run with default adapter (tree-sitter - AST-based)
+# Run with the default compiler adapter and bundled XDK
 ./gradlew :lang:intellij-plugin:runIde
 
 # Run with mock adapter (regex-based, no native dependencies)
