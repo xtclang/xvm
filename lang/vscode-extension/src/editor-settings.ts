@@ -16,14 +16,14 @@ export function nativeFormatOnSave(document: vscode.TextDocument): boolean {
 
 export function formattingSettings(): object {
     const config = vscode.workspace.getConfiguration('xtc.formatting');
-    const integer = (key: string, fallback: number) => {
+    const integer = (key: string, fallback: number, maximum = 32) => {
         const value = config.get<unknown>(key, fallback);
-        if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > 32) {
-            throw new Error(`Ecstasy formatting.${key} must be an integer from 1 to 32`);
+        if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > maximum) {
+            throw new Error(`Ecstasy formatting.${key} must be an integer from 1 to ${maximum}`);
         }
         return value;
     };
     const insertSpaces = config.get<unknown>('insertSpaces', true);
     if (typeof insertSpaces !== 'boolean') throw new Error('Ecstasy formatting.insertSpaces must be a boolean');
-    return { indentSize: integer('indentSize', 4), continuationIndentSize: integer('continuationIndentSize', 8), insertSpaces };
+    return { indentSize: integer('indentSize', 4), continuationIndentSize: integer('continuationIndentSize', 8), maxLineWidth: integer('maxLineWidth', 120, 1000), insertSpaces };
 }

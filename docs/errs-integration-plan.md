@@ -1443,7 +1443,7 @@ and [IntelliJ settings](https://plugins.jetbrains.com/docs/intellij/settings-gui
 
 | Area | Current implementation | Planned user control and ownership |
 | --- | --- | --- |
-| Backend and feature availability | Adapter selected by packaged build/runtime configuration; Tree-sitter ships by default. | Show active adapter/version and a feature matrix with unavailable reasons. Assess a restart-required backend selector only for packages containing the required implementations; never silently fall back or imply an unavailable backend can be enabled. |
+| Backend and feature availability | Adapter selected by packaged build/runtime configuration; compiler ships by default (Tree-sitter remains available explicitly). | Show active adapter/version and a feature matrix with unavailable reasons. Assess a restart-required backend selector only for packages containing the required implementations; never silently fall back or imply an unavailable backend can be enabled. |
 | Source graph, resources and discovery | VS Code `xtc.compiler.sourceModules` plus configure/show/refresh/prepare commands; IntelliJ Ecstasy Compiler table, discovery switch and effective-input display. | Improve path pickers and ordered resource lists; preserve omitted/null versus empty semantics. Show origin (Gradle model, discovery, explicit override), dependencies, validation errors and reset-to-model. Work without Gradle and support multiple roots without ambiguous relative paths. |
 | Build import and generated inputs | Both plugins have explicit Gradle model refresh/preparation. | Expose import state, last refresh, pending generated inputs, cancellation and actionable failure. Use evaluated Gradle inputs; never infer paths by reading build-script text or run builds on every keystroke. |
 | Libraries, XDK and external sources | Bundled XDK is implicit/read-only; build models provide inputs; VS Code `xtc.sourceRoots` is machine-overridable. | Show effective read-only libraries and source attachments; add ordered host library/source overrides only where the backend has a supported contract. Distinguish source indexing from compiler module dependencies. Keep the bundled XDK usable without any external installation. |
@@ -11884,3 +11884,39 @@ apply/reporting, support export and shared/native acceptance.
 - UI2/7: full editor exit/reopen, independent owners, multi-root rejection/precedence, unsupported
   virtual/restricted workspaces, adapter parity, and the current complete catalogs are acceptance
   requirements. Do not label the batch complete based only on unit tests or selected GUI cases.
+
+### UI1/UI4 current setting contract
+
+This supersedes the historical 2026-09-30 inventory above. Compiler is the packaged default;
+Tree-sitter remains an explicitly built alternative. No live backend selector is offered.
+
+| Setting / UI owner | Default and consumer | Scope / application |
+| --- | --- | --- |
+| VS Code java.home | Empty: JDK discovery, cached runtime, then download; `findJavaExecutable`. Invalid explicit paths fail visibly rather than selecting another runtime. | User/workspace connection; no folder override; automatic restart, buffers resynchronized. IntelliJ uses LSP4IJ/JBR runtime selection. |
+| java.vmOptions / Runtime and Logs | Empty list; validated launcher arguments. | Machine user/application only, excluded from shared settings; explicit restart. |
+| server.logs / Runtime and Logs | 7 days, 10 MB files, 50 MB archives per stream, 5 closed sessions; ServerLogs/Logback. | Machine user/application only; explicit restart. |
+| sourceRoots | Empty extra indexing roots; SourceRootResolver. Compiler dependencies/attached navigation sources use compiler.libraries. | Window connection, no folder override; automatic restart. |
+| languageService.textSynchronization | Full; client initialization transport. | VS Code user/workspace; IntelliJ inherited application/project field; automatic restart. |
+| languageService.saveFormatting | Editor; native format-on-save wins over server save edits. | Connection/restart; VS Code automatic restart. IntelliJ server option disabled for UP02. |
+| inlayHints.enabled / Language Service | Visible; client presentation filter and native inlay preferences. | VS Code resource; IntelliJ application/project; live. |
+| trace.server | Off; VS Code client tracing. IntelliJ reuses LSP4IJ trace controls. | Window; live. |
+| formatting.indentSize / continuationIndentSize / insertSpaces | 4 / 8 / true; formatting configuration response. | VS Code window; IntelliJ project Code Style; live. |
+| formatting.maxLineWidth / right margin | 120; compiler safe-boundary wrapping. | Window/Code Style, live; Tree-sitter does not implement compiler wrapping. The missing VS Code serialization is now fixed. |
+| formatting.tabSize | Legacy 4; deliberately deprecated and ignored. | Use native editor.tabSize for visual width. No new owner or misleading folder support. |
+| compiler.sourceModules / Compiler Sources | Null: evaluated Gradle/discovery; []: explicit empty graph. | Window/project, live guarded replacement; relative paths only with one workspace root. |
+| compiler.libraries / Compiler Libraries | Null modulePath inherits Gradle; [] removes external entries; attachments default empty. | Window/project, live; bundled read-only XDK remains included. |
+| Refresh / Prepare / effective paths | Evaluated build model; Prepare executes declared resource tasks. | Explicit project/workspace command, cancellable; accepted model retained on failure. |
+| xtc.logLevel / XTC_LOG_LEVEL | INFO, launcher logging. | Startup environment/property; restart, not a portable project field. |
+| xtc.lsp.semanticTokens / XTC_LSP_SEMANTIC_TOKENS | Packaged launcher/harness choice; effective advertisement is shown in service status. | Startup; native editor highlighting controls remain authoritative for display. |
+| xtc.trace.directory / xtc.trace.level / xtc.logs.directory / XTC_LSP_LOG_DIR | Process-owned logging defaults with development/test overrides. | Startup/local paths; bounded export does not crawl source roots. |
+| LSP capability negotiation | Pull/push, delta, resolve, edit support and provider availability. | Automatic; status exposes capabilities, no switches that bypass proof or refusal rules. |
+
+VS Code now groups settings into Compiler, Language Service, Formatting, and Runtime and Logs.
+Effective configuration reports the scopes the consumer reads, identifies ignored machine/folder
+overrides, and shows whether saved connection settings require a restart. The manifest explicitly
+disables the extension for untrusted and virtual workspaces. A remote extension host with a local
+filesystem is architecturally possible, but is not claimed as accepted without a separate remote
+run; paths always belong to that extension host, never implicitly to the desktop client.
+
+Layout checkpoint: `397f75a6a`. Tests for formatting-margin serialization and grouped/machine
+reporting have been added; batch execution remains pending.
