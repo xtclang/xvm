@@ -463,14 +463,14 @@ Requires `JAVA_HOME` or `XTC_JAVA_HOME` pointing to Java 25+.
 
 ### 3. Verify Which Adapter is Active
 
-The server runs out of process and writes its own log to `~/.xtc/logs/lsp-server.log`, for both
+The server runs out of process and writes its own log to `~/.xtc/logs/lsp/server-*/server.log`, for both
 editors. It announces itself on startup:
 
 ```
 ========================================
 Ecstasy Language Server v<version>
 backend: Tree-sitter
-log file: /Users/you/.xtc/logs/lsp-server.log
+log file: /Users/you/.xtc/logs/lsp/server-<PID>-<start-time>/server.log
 ========================================
 ```
 
@@ -784,7 +784,7 @@ is observable under mock or tree-sitter.
 | 7a.9 | A file that has gone badly wrong | Paste a hundred lines of non-Ecstasy text into a `.x` file | Diagnostics stop at a hundred serious errors rather than filling the panel with consequences of the first one |
 | 7a.10 | References follow meaning, not spelling | Two classes each with a property `x`; Shift+F12 on one | Only that class's `x`. A text search cannot do this, and neither can a grammar |
 
-Execution trace files are `~/.xtc/logs/lsp-trace-<pid>-<process-start>.jsonl`; native IntelliJ runs
+Execution trace files are `~/.xtc/logs/lsp/server-<pid>-<process-start>/lsp-trace-<pid>-<process-start>.jsonl`; native IntelliJ runs
 save them in `run-*/server-trace/`. They include compiler queue counts and lists, javatools phase
 and API timings, process/thread IDs, and server request-to-reply latency. Use the
 [trace guide](../lsp-server/README.md#compiler-queue-and-api-timing) for field meanings and controls.
@@ -1627,7 +1627,7 @@ task too: a later build without it can restore the default backend.
 ```
 
 Open a scratch folder in that editor window. Confirm `backend: Ecstasy Compiler` in
-`~/.xtc/logs/lsp-server.log`; the health-check adapter name is `XDK`. The matching XDK libraries
+`~/.xtc/logs/lsp/server-*/server.log`; the health-check adapter name is `XDK`. The matching XDK libraries
 are bundled, so no `XDK_HOME`, extracted distribution or separate compiler installation is needed.
 Confirm the backend in the log even when colors look familiar: compiler semantic tokens cover
 resolved names, while the editor's TextMate colors and snippets also remain available.
@@ -3840,3 +3840,8 @@ retention manually, use an isolated `XTC_LSP_LOG_DIR` (VS Code/server) or `xtc.l
 server property: create several stopped-server sessions and start another server. Live sessions
 and unrelated files must survive. Do not count a short playbook run as rollover/long-duration evidence.
 See the [contract and validation](../../docs/errs-integration-plan.md#machine-local-jvm-settings-and-log-support-ui5ui6-2026-10-06).
+
+Runtime/log selected acceptance: VS Code `run-GSU1jO` passes X135/X269/X270. IntelliJ
+`run-11382447476811663163` passes START/X135 and exposes a test selector that also matched
+spinner arrows; corrected `run-7594844964901809886` passes START/X269/X270, with zero IDE errors.
+The failed receipt is retained. This is selected acceptance, not a complete 275-case rerun.

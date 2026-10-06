@@ -1,7 +1,9 @@
 **Machine-local JVM settings and log support (2026-10-06):** both clients now validate JVM tuning
 and log retention before replacing launch settings. Saving requires an explicit restart. Server
 logs are isolated by PID/start time; export creates a bounded ZIP of recent logs, timing traces and
-status. Shared X269/X270 bring the catalog to 275 cases. Validation is pending for this batch;
+status. Shared X269/X270 bring the catalog to 275 cases. The selected tests pass: 3 server-log
+regressions, 3 development-tail regressions, 117 IntelliJ units, 44 VS Code extension tests and
+X135/X269/X270 in both editors. IntelliJ required a corrected Restart selector and focused rerun;
 see the [contract and receipt](errs-integration-plan.md#machine-local-jvm-settings-and-log-support-ui5ui6-2026-10-06).
 
 **Ordered compiler libraries and attached sources (2026-10-06):** both editors now expose ordered
