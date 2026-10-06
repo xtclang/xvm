@@ -401,6 +401,14 @@ class ParityWorkspace(
         }
 
     override fun close() {
+        try {
+            restoreWorkspace()
+        } catch (failure: Throwable) {
+            throw PlaybookCleanupFailure(failure)
+        }
+    }
+
+    private fun restoreWorkspace() {
         with(driver) {
             dismissPopups()
             val manager = service<FileEditorManager>(singleProject())

@@ -3,6 +3,8 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { getClient } from '../../lsp-client';
+import { withTestWait } from '../progress';
+import { mustStopPlaybook, PlaybookCleanupFailure, waitFor } from '../wait';
 import { catalog, ScenarioId, ScenarioValues, shared, sharedScenarioIds, validateSharedFixtures } from './shared';
 
 export const manualPath = path.resolve(__dirname, '../../../../doc/manual-test-plan.md');
@@ -16,14 +18,7 @@ export function client() {
 }
 
 export async function eventually<T>(read: () => Promise<T>, accept: (value: T) => boolean, message: string): Promise<T> {
-    const deadline = Date.now() + 30_000;
-    let last: T;
-    do {
-        last = await read();
-        if (accept(last)) { return last; }
-        await new Promise(resolve => setTimeout(resolve, 75));
-    } while (Date.now() < deadline);
-    assert.fail(`${message}: ${JSON.stringify(last)}`);
+    return withTestWait(message, () => waitFor(read, accept, message));
 }
 
 export async function loadFixtures(): Promise<void> {
@@ -258,6 +253,9 @@ export function playbook<K extends ScenarioId>(id: K, body: (workspace: Workspac
         const workspace = new Workspace(path.join(root, id));
         try { await body(workspace, scenario.values); }
         catch (error) {
+            // A timed-out command can still be mutating the disposable editor. The runner aborts;
+            // do not start competing cleanup actions or proceed to another case in that window.
+            if (mustStopPlaybook(error)) throw error;
             const report = process.env.XTC_PLAYBOOK_REPORT_DIR;
             if (report) {
                 for (const document of vscode.workspace.textDocuments.filter(doc => doc.uri.fsPath.startsWith(workspace.directory + path.sep))) {
@@ -267,9 +265,10 @@ export function playbook<K extends ScenarioId>(id: K, body: (workspace: Workspac
                 }
             }
             try { await workspace.dispose(); }
-            catch (cleanupError) { console.error(`Case ${id} also failed during fixture cleanup:`, cleanupError); }
+            catch (cleanupError) { throw new PlaybookCleanupFailure([error, cleanupError]); }
             throw error;
         }
-        await workspace.dispose();
+        try { await workspace.dispose(); }
+        catch (error) { throw new PlaybookCleanupFailure([error]); }
     });
 }
