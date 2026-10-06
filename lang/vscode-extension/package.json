@@ -364,6 +364,15 @@
                             }
                         }
                     }
+                },
+                "xtc.java.vmOptions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "default": [],
+                    "scope": "machine",
+                    "description": "Advanced LSP JVM options, one argument per item. Supports -Xms/-Xmx/-Xss sizes (K/M/G), MaxMetaspaceSize, ReservedCodeCacheSize, ActiveProcessorCount and G1/Serial/Parallel/Z collectors. Restart Language Server to apply. Workspace overrides are ignored."
                 }
             }
         },

@@ -48,6 +48,8 @@
         <applicationConfigurable id="xtc.service.defaults" parentId="language"
                                  displayName="Ecstasy Language Service Defaults"
                                  instance="org.xtclang.idea.lsp.LanguageServiceApplicationConfigurable"/>
+        <applicationConfigurable id="xtc.runtime" parentId="language" displayName="Ecstasy Server Runtime"
+                                 instance="org.xtclang.idea.lsp.ServerRuntimeConfigurable"/>
         <projectConfigurable id="xtc.service" parentId="language"
                              displayName="Ecstasy Language Service"
                              instance="org.xtclang.idea.lsp.LanguageServiceProjectConfigurable"/>

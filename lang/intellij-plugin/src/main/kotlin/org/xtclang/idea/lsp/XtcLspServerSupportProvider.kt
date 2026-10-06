@@ -131,14 +131,15 @@ class XtcLspConnectionProvider(
         val jarIndex = commands.indexOf("-jar")
         commands.addAll(
             jarIndex,
-            listOf(
-                "-Dapple.awt.UIElement=true", // macOS: no dock icon
-                "-Djava.awt.headless=true", // No GUI components
-                "-Dxtc.logLevel=$logLevel", // Pass log level to LSP server
-                "-D$SEMANTIC_TOKENS_SYSTEM_PROPERTY=$semanticTokens", // Keep semantic tokens opt-in
-                // until client rendering is
-                // stable
-            ) +
+            ServerRuntimeSettings.getInstance().state.arguments() +
+                listOf(
+                    "-Dapple.awt.UIElement=true", // macOS: no dock icon
+                    "-Djava.awt.headless=true", // No GUI components
+                    "-Dxtc.logLevel=$logLevel", // Pass log level to LSP server
+                    "-D$SEMANTIC_TOKENS_SYSTEM_PROPERTY=$semanticTokens", // Keep semantic tokens opt-in
+                    // until client rendering is
+                    // stable
+                ) +
                 listOf("xtc.trace.directory", "xtc.trace.level").mapNotNull { key ->
                     System.getProperty(key)?.let { "-D$key=$it" }
                 },
