@@ -158,9 +158,13 @@ internal class XdkSources
             fun moduleRoot(
                 uri: String,
                 overlays: Map<String, String>,
-            ): File? {
-                val file = file(uri) ?: return null
-                val openFiles = overlays.keys.mapNotNull(::file).toSet()
+            ): File? = file(uri)?.let { moduleRoot(it, overlays.keys.mapNotNull(::file).toSet()) }
+
+            /** Reuse canonical overlay paths within one operation, never across filesystem changes. */
+            fun moduleRoot(
+                file: File,
+                openFiles: Set<File>,
+            ): File {
                 var root = file
                 var directory = file.parentFile
                 while (directory?.parentFile != null) {
