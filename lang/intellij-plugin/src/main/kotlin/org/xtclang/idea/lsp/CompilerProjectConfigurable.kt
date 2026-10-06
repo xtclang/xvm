@@ -9,6 +9,7 @@ import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.options.Configurable
 import com.intellij.openapi.options.ConfigurationException
 import com.intellij.openapi.project.Project
+import com.intellij.openapi.ui.DialogWrapper
 import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.ui.components.JBCheckBox
 import com.intellij.ui.components.JBLabel
@@ -27,6 +28,7 @@ import java.util.concurrent.atomic.AtomicLong
 import javax.swing.JButton
 import javax.swing.JComponent
 import javax.swing.JPanel
+import javax.swing.JTabbedPane
 import javax.swing.JTextArea
 import javax.swing.table.DefaultTableModel
 
@@ -50,7 +52,9 @@ class CompilerProjectConfigurable
                 ),
                 0,
             )
-        private val table = JBTable(rows)
+        private val table = JBTable(rows).apply { name = "Ecstasy source modules" }
+        private val libraries = CompilerLibrariesPanel(project)
+        private var originalLibraries = LibraryOptions()
 
         // Settings dialogs have an explicit reset/apply lifecycle. This snapshot prevents a stale
         // dialog from overwriting a graph changed by rename or another settings editor.
@@ -91,9 +95,15 @@ class CompilerProjectConfigurable
                     BorderLayout.NORTH,
                 )
                 add(
-                    JPanel(BorderLayout(0, 8)).apply {
-                        add(JBScrollPane(table), BorderLayout.CENTER)
-                        add(JBScrollPane(effective), BorderLayout.SOUTH)
+                    JTabbedPane().apply {
+                        addTab(
+                            "Source modules",
+                            JPanel(BorderLayout(0, 8)).apply {
+                                add(JBScrollPane(table), BorderLayout.CENTER)
+                                add(JBScrollPane(effective), BorderLayout.SOUTH)
+                            },
+                        )
+                        addTab("Libraries and sources", libraries)
                     },
                     BorderLayout.CENTER,
                 )
@@ -157,6 +167,39 @@ class CompilerProjectConfigurable
                                                     )
                                                 }
                                             }
+                                    }
+                                }
+                            },
+                        )
+                        add(
+                            JButton("Order resource directories…").apply {
+                                addActionListener {
+                                    val row = table.selectedRow
+                                    if (row >= 0 && !discovery.isSelected) {
+                                        table.cellEditor?.stopCellEditing()
+                                        val current = modules()?.get(row)?.resourceRoots
+                                        val paths = OrderedPaths(project, "Resource directories", true).apply { reset(current.orEmpty()) }
+                                        val automatic = JBCheckBox("Use automatic resource directories", current == null)
+                                        val dialog =
+                                            object : DialogWrapper(project) {
+                                                init {
+                                                    title = "Ecstasy Resource Directories"
+                                                    init()
+                                                }
+
+                                                override fun createCenterPanel(): JComponent =
+                                                    JPanel(BorderLayout(0, 8)).apply {
+                                                        add(automatic, BorderLayout.NORTH)
+                                                        add(paths, BorderLayout.CENTER)
+                                                    }
+                                            }
+                                        if (dialog.showAndGet()) {
+                                            rows.setValueAt(
+                                                if (automatic.isSelected) "" else Gson().toJson(paths.paths),
+                                                row,
+                                                3,
+                                            )
+                                        }
                                     }
                                 }
                             },
@@ -306,12 +349,16 @@ class CompilerProjectConfigurable
                 }
             }
 
-        override fun isModified(): Boolean = table.isEditing || runCatching { modules() != original }.getOrDefault(true)
+        override fun isModified(): Boolean =
+            table.isEditing || libraries.editing ||
+                runCatching { modules() != original || libraries.options() != originalLibraries }.getOrDefault(true)
 
         override fun reset() {
             table.cellEditor?.cancelCellEditing()
             refreshEffectivePaths()
             original = SourceGraphConfiguration.read(CompilerSettings.content(project))
+            originalLibraries = LibraryConfiguration.read(CompilerSettings.content(project))
+            libraries.reset(originalLibraries)
             discovery.isSelected = original == null
             table.isEnabled = !discovery.isSelected
             rows.rowCount = 0
@@ -329,18 +376,24 @@ class CompilerProjectConfigurable
 
         override fun apply() {
             table.cellEditor?.stopCellEditing()
+            libraries.stopEditing()
             try {
                 val content = CompilerSettings.content(project)
                 require(SourceGraphConfiguration.read(content) == original) {
                     "Compiler source graph changed while this dialog was open. Reset before applying."
                 }
+                require(LibraryConfiguration.read(content) == originalLibraries) {
+                    "Compiler libraries changed while this dialog was open. Reset before applying."
+                }
                 val next = modules()
-                val replacement =
+                val nextLibraries = libraries.options()
+                val graph =
                     SourceGraphConfiguration.configure(
                         LanguageServiceSettings.content(project) ?: content,
                         next,
                         Path.of(requireNotNull(project.basePath)).toUri(),
                     )
+                val replacement = LibraryConfiguration.configure(graph, nextLibraries, Path.of(requireNotNull(project.basePath)).toUri())
                 val settings =
                     ProjectLanguageServerSettings
                         .getInstance(project)
@@ -355,6 +408,7 @@ class CompilerProjectConfigurable
                     .getInstance(project)
                     .updateSettings(CompilerSettings.SERVER_ID, copy)
                 original = next
+                originalLibraries = nextLibraries
             } catch (failure: IllegalArgumentException) {
                 throw ConfigurationException(failure.message ?: "Invalid compiler source graph")
             }
