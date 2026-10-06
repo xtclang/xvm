@@ -4005,12 +4005,14 @@
       }
     },
     "X117": {
-      "title": "implicit package rename moves the nested directory",
+      "title": "implicit package references retain real files and rename moves the nested directory",
       "manual": [],
       "values": {
         "file": "App.x",
         "anchor": "tools",
         "replacement": "helpers",
+        "navigationAnchor": "Box",
+        "navigationFiles": ["App.x", "App/tools/deep/Box.x"],
         "files": [
           {
             "file": "App.x",
