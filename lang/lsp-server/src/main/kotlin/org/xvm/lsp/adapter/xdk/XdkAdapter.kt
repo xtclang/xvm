@@ -1839,6 +1839,9 @@ class XdkAdapter
                 renameAsync(uri, line, column, newName).thenApply { it?.let(::XdkRenameProposal) }
             }
 
+        /** Preserve automatic resource roots when replacing only the graph's binary inputs. */
+        internal fun sourceModuleInputs(): List<XdkSourceModule> = synchronized(lifecycle) { project.buildOrder() }
+
         /** Detached effective inputs for host settings views; never compiler-owned objects. */
         internal fun effectiveSourceModules(): List<XdkSourceModule> =
             synchronized(lifecycle) {
