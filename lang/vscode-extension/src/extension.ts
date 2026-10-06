@@ -1,3 +1,4 @@
+import { runtimeJvmOptions } from './runtime-settings';
 // Ecstasy (XTC) Language Support for VS Code
 //
 // Semantic tokens are enabled by default in the LSP server. VS Code automatically
@@ -155,6 +156,14 @@ export function activate(context: vscode.ExtensionContext): void {
             }
         }),
         vscode.workspace.onDidChangeConfiguration(event => {
+            if (event.affectsConfiguration('xtc.java.vmOptions')) {
+                try {
+                    runtimeJvmOptions();
+                    void vscode.window.showInformationMessage('Ecstasy JVM settings saved. Restart the language server to apply them.', 'Restart now', 'Open Settings')
+                        .then(choice => choice === 'Restart now' ? vscode.commands.executeCommand('xtc.restartServer')
+                            : choice === 'Open Settings' ? vscode.commands.executeCommand('workbench.action.openSettings', 'xtc.java.vmOptions') : undefined);
+                } catch (error) { void vscode.window.showErrorMessage(`Invalid Ecstasy JVM settings; running server retained: ${error}`); }
+            }
             if (event.affectsConfiguration('xtc.trace.server')) {
                 void applyTraceConfig();
             }
