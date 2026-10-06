@@ -84,6 +84,7 @@ class CapabilityContractTest {
             AdapterCapability.RANGE_FORMATTING -> "documentRangeFormattingProvider"
             AdapterCapability.ON_TYPE_FORMATTING -> "documentOnTypeFormattingProvider"
             AdapterCapability.DOCUMENT_LINK -> "documentLinkProvider"
+            AdapterCapability.DOCUMENT_COLOR -> "colorProvider"
             AdapterCapability.SIGNATURE_HELP -> "signatureHelpProvider"
             AdapterCapability.SEMANTIC_TOKENS -> "semanticTokensProvider"
             AdapterCapability.WORKSPACE_SYMBOL -> "workspaceSymbolProvider"

@@ -5,8 +5,28 @@ import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkLexical
+import org.xvm.lsp.treesitter.SemanticTokenLegend
 
 class XdkLexicalTest {
+    @ParameterizedTest
+    @ValueSource(strings = ["\n", "\r\n", "\r"])
+    fun `documentation comments retain their modifier on every line only`(newline: String) {
+        val lines =
+            listOf("/** A document.", " * Another line. */", "/* Ordinary block. */", "// Ordinary line.", "\"/** Not a comment. */\"")
+        val tokens = XdkLexical.tokens(lines.joinToString(newline))
+        assertThat(tokens).hasSize(lines.size)
+        assertThat(tokens.map { SemanticTokenLegend.tokenTypes[it[3]] })
+            .containsExactly("comment", "comment", "comment", "comment", "string")
+        assertThat(tokens.map { it[4] })
+            .containsExactly(
+                SemanticTokenLegend.modifierBitmask("documentation"),
+                SemanticTokenLegend.modifierBitmask("documentation"),
+                0,
+                0,
+                0,
+            )
+    }
+
     @ParameterizedTest
     @ValueSource(strings = ["\n", "\r\n", "\r"])
     @Timeout(10)
