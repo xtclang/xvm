@@ -163,12 +163,7 @@ fun main(
         }
 
         AdapterBackend.COMPILER -> {
-            logger.info(
-                "the compiler provides: diagnostics, symbols, hover, same-file navigation, highlights, folding and selection",
-            )
-            logger.info(
-                "not yet from the compiler: completion, rename, formatting or project-wide compilation",
-            )
+            logger.info("compiler features are negotiated with the connected editor during initialization")
             logger.info("the compiler uses the XDK libraries bundled with this server")
         }
 

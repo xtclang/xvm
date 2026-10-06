@@ -28,7 +28,8 @@ export async function run(): Promise<void> {
     await vscode.window.showTextDocument(await vscode.workspace.openTextDocument(file));
     if (phase === 'write') await vscode.commands.executeCommand('xtc.restartServer');
     await eventually(async () => getClient()?.isRunning(), running => running === true, 'Persisted connection starts');
-    const status = await getClient()!.sendRequest<{ pid: number; jvmOptions: string[]; textSynchronization: string; logs: { retention: object } }>('xtc/languageServiceStatus');
+    const status = await getClient()!.sendRequest<{ adapter: string; pid: number; jvmOptions: string[]; textSynchronization: string; logs: { retention: object } }>('xtc/languageServiceStatus');
+    assert.ok(['XDK', 'TreeSitter'].includes(status.adapter), 'Persistence must use a real packaged adapter');
     assert.strictEqual(status.textSynchronization, 'incremental');
     assert.ok(status.jvmOptions.includes(data.vmOptions[0]));
     assert.deepStrictEqual(status.logs.retention, data.logs);
@@ -41,5 +42,5 @@ export async function run(): Promise<void> {
     assert.deepStrictEqual(saved.get('compiler.sourceModules'), [{ name: 'RuntimeSettings', uri: file.toString(), resourceRoots: [] }]);
     const previous = path.join(root.fsPath, '..', 'settings-write.json');
     if (phase === 'read') assert.notStrictEqual(JSON.parse(await fs.readFile(previous, 'utf8')).pid, status.pid);
-    await fs.writeFile(path.join(root.fsPath, '..', `settings-${phase}.json`), JSON.stringify({ status: 'passed', pid: status.pid, configured: report!.configured }, null, 2) + '\n');
+    await fs.writeFile(path.join(root.fsPath, '..', `settings-${phase}.json`), JSON.stringify({ status: 'passed', adapter: status.adapter, pid: status.pid, configured: report!.configured }, null, 2) + '\n');
 }

@@ -5,15 +5,15 @@
 // adapter selection broken, etc.) — none of which the per-surface tests
 // above would notice, because they don't exercise actual LSP traffic.
 //
-// Slow by design: starting the LSP server JVM + tree-sitter native lib
-// load takes a few seconds even on a warm machine; we poll up to 30s.
+// Starting the server JVM and selected adapter takes a few seconds; reads have a 30s deadline.
 
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
+import { getClient } from '../../lsp-client';
+import { waitFor } from '../wait';
 
 const PUBLISHER_AND_NAME = 'xtclang.xtc-language';
 const STARTUP_TIMEOUT_MS = 30_000;
-const POLL_INTERVAL_MS = 250;
 
 async function waitForHover(uri: vscode.Uri, position: vscode.Position): Promise<vscode.Hover[]> {
     // The built-in `vscode.executeHoverProvider` command returns hovers from
@@ -23,20 +23,9 @@ async function waitForHover(uri: vscode.Uri, position: vscode.Position): Promise
     // hover entry. Polling on this signal is more reliable than scraping the
     // output channel for "Backend: TreeSitter" because it actually verifies
     // end-to-end LSP RPC, not just startup logging.
-    const deadline = Date.now() + STARTUP_TIMEOUT_MS;
-    let lastResult: vscode.Hover[] = [];
-    while (Date.now() < deadline) {
-        lastResult = (await vscode.commands.executeCommand<vscode.Hover[]>(
-            'vscode.executeHoverProvider',
-            uri,
-            position,
-        )) ?? [];
-        if (lastResult.length > 0) {
-            return lastResult;
-        }
-        await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
-    }
-    return lastResult;
+    return waitFor(async () => (await vscode.commands.executeCommand<vscode.Hover[]>(
+        'vscode.executeHoverProvider', uri, position)) ?? [],
+    hovers => hovers.length > 0, 'Language server responds to hover', STARTUP_TIMEOUT_MS);
 }
 
 suite('LSP startup', function () {
@@ -72,5 +61,40 @@ suite('LSP startup', function () {
                 '(missing JAR, wrong Java version, tree-sitter native lib not loaded). ' +
                 'Check the "Ecstasy Language Server" output channel from a manual run.',
         );
+    });
+
+    test('an unexpected server exit restarts the existing connection and preserves unsaved text', async () => {
+        const fixture = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, 'hello.x');
+        const document = await vscode.workspace.openTextDocument(fixture);
+        await vscode.window.showTextDocument(document);
+        const original = document.getText();
+        const offset = original.indexOf('console.print');
+        assert.ok(offset > 0, 'hello.x contains console.print');
+        const at = document.positionAt(offset);
+        await waitForHover(fixture, at);
+        const connection = getClient();
+        assert.ok(connection);
+        assert.ok(connection.isRunning());
+        const initialized = connection.initializeResult;
+        const before = await connection.sendRequest<{ pid: number }>('xtc/languageServiceStatus');
+        assert.ok(Number.isSafeInteger(before.pid) && before.pid > 0, 'Only terminate this isolated server');
+        try {
+            const edit = new vscode.WorkspaceEdit();
+            edit.insert(fixture, document.positionAt(original.length), '\n// unsaved restart control\n');
+            assert.ok(await vscode.workspace.applyEdit(edit));
+            const unsaved = document.getText();
+            process.kill(before.pid, 'SIGTERM');
+            await waitFor(async () => connection.isRunning() && connection.initializeResult !== initialized,
+                Boolean, 'Automatic restart completes initialization');
+            assert.strictEqual(getClient(), connection, 'The installed client owns its automatic restart');
+            const after = await connection.sendRequest<{ pid: number }>('xtc/languageServiceStatus');
+            assert.notStrictEqual(after.pid, before.pid);
+            assert.strictEqual(document.getText(), unsaved);
+            assert.ok((await waitForHover(fixture, at)).length > 0, 'The restarted server analyzes the reopened buffer');
+        } finally {
+            const restore = new vscode.WorkspaceEdit();
+            restore.replace(fixture, new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length)), original);
+            assert.ok(await vscode.workspace.applyEdit(restore));
+        }
     });
 });
