@@ -9,12 +9,14 @@ import com.intellij.driver.sdk.WaitForException
 import com.intellij.driver.sdk.invokeAction
 import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
+import com.intellij.driver.sdk.ui.components.elements.JTableUiComponent
 import com.intellij.driver.sdk.ui.components.elements.accessibleList
 import com.intellij.driver.sdk.ui.components.elements.accessibleTable
 import com.intellij.driver.sdk.ui.components.elements.button
 import com.intellij.driver.sdk.ui.components.elements.dialog
 import com.intellij.driver.sdk.ui.components.elements.popup
 import com.intellij.driver.sdk.ui.components.elements.tree
+import com.intellij.driver.sdk.ui.remote.Component
 import com.intellij.driver.sdk.ui.ui
 import kotlin.time.Duration.Companion.seconds
 
@@ -162,11 +164,18 @@ fun Driver.chooseTargets(
             .entries
             .single { (_, cells) -> cells.values.any { it.contains(selected) } }
             .key
-    withContext(OnDispatcher.EDT) {
-        cast(table.component, NativeTableSelection::class).setRowSelectionInterval(row, row)
-    }
-    popup.keyboard { enter() }
+    chooseNavigationRow(table, row)
     awaitUi("selected declaration closes the chooser", 15.seconds) { popup.notPresent() }
+}
+
+/** Invoke the chooser's registered Enter action once, independent of desktop keyboard focus. */
+internal fun Driver.chooseNavigationRow(
+    table: JTableUiComponent,
+    row: Int,
+) {
+    withContext(OnDispatcher.EDT) {
+        utility(NativeNavigationChooser::class).choose(table.component, row)
+    }
 }
 
 fun Driver.quickFix(
@@ -242,11 +251,11 @@ interface NativeListSelection {
     fun setSelectedIndex(index: Int)
 }
 
-@Remote("javax.swing.JTable")
-interface NativeTableSelection {
-    fun setRowSelectionInterval(
-        start: Int,
-        end: Int,
+@Remote("org.xtclang.idea.playbook.probe.NavigationChooser", plugin = "org.xtclang.playbook.probe")
+internal interface NativeNavigationChooser {
+    fun choose(
+        component: Component,
+        row: Int,
     )
 }
 
