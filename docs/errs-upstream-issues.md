@@ -135,6 +135,26 @@ not a claim that every referenced suite was rerun for this documentation change.
 | **UP26 — LSP4IJ — constrained** | Inline requests always use Automatic and omit selected popup context. | Native unique suggestions work; X257 has protocol-only explicit alternatives/selection. [Details below](#up26-lsp4ij-inline-completion-loses-invocation-and-popup-selection-context). | Forward invocation kind and selection, then pass native X257. |
 | **UP27 — LSP4IJ — bridged; long continuation passes** | Semantic-token and code-lens refresh fan out across connected files on the application executor, exceeding IntelliJ's concurrent non-blocking read-action limit in a long session. | `EditorRefresh` replaces that fan-out with one coalesced read/UI pass per connection and feature, retaining LSP4IJ's rendering bridges. X146 adds a many-document refresh burst; X259 retains toggling/restart acceptance. Focused and long continuation runs pass with zero IDE errors/freeze dumps. Original errors remain recorded. | Remove the bridge when upstream provides bounded batch refresh and connection-lifetime cancellation, then repeat the many-file stress and long native acceptance. |
 | **UP28 — vscode-languageclient — bridged** | Closing the transport during initialization clears the internal startup promise before `start()` returns it. The lost promise can reject unhandled while the returned promise resolves, and default error handlers display duplicate notifications. | The Ecstasy client observes both the initiating and idempotent in-flight `start()` promises, requires Running, and owns one actionable startup notification. X272 checks command rejection, one visible failure, no unhandled rejection, offline export and recovery; `run-W9g4f3` passes X269–X272. | Upstream captures and always returns/observes the original startup promise, including transport closure. Remove the double observation only after X272 passes without it. |
+| **UP29 — IntelliJ test Driver — bridged** | `waitFor` checks a successful predicate again after leaving its loop. A changed connection state can then produce an immediate false timeout; its deadline also uses wall-clock time. | Test-only `UiWaits` accepts each observation once and uses a monotonic deadline. Five regressions cover changing readiness, pending reads, actual timeout, cancellation and nullable values. Restart/refresh X137/X146/X259 pass with the UP27 bridge disabled. | Driver accepts the successful observation without another remote read and uses elapsed monotonic time; the regression and restart selection pass without our polling implementation. |
+
+### UP29: a successful readiness observation was checked again (2026-10-06)
+
+While isolating UP27, `run-14660696367669321710` reported a 45-second connection-start timeout
+after only 2,739 ms in X137. It recorded no IDE errors or compiler crash. Inspection of pinned
+Driver SDK 262.10968.63's `waits.kt` found that `waitFor` calls its checker both in the loop
+condition and again after leaving the loop. A remote predicate can return true, then false as
+the connection changes, without exhausting the deadline. This is separate from UP20's modal
+dispatch problem and is not a defect in the Ecstasy compiler or LSP4IJ.
+
+The regression's predicate succeeds exactly once: it fails against the old implementation and
+passes when the successful result is returned immediately. `UiWaits` now uses monotonic elapsed
+time and fresh observations for pending conditions. Genuine expiry still throws `WaitForException`;
+getter failures and cancellation propagate without retrying actions. The polling loop does not
+change Driver's remote-call timeout or replay edits. Five polling and four existing fatal-failure
+tests pass without skips. Fixed native `run-10049174372853142451` passes START/X137/X146/X259
+with zero IDE errors, with our UP27 refresh bridge disabled against local LSP4IJ `2ccc5a30`.
+The failed run and fail-before XML remain in the local isolation evidence; no upstream issue
+or PR has been filed.
 
 ### UP28: initialization promise lifetime (2026-10-06)
 
