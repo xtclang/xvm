@@ -37,11 +37,12 @@ class CompilerImportPage private constructor(
 
     fun click(label: String) {
         ApplicationManager.getApplication().assertIsDispatchThread()
+        (component as JTabbedPane).selectedIndex = component.indexOfTab("Build import")
         UIUtil
             .uiTraverser(component)
             .filter(JButton::class.java)
             .single { it.text == label }
-            .also { check(it.isShowing && it.isEnabled) }
+            .also { check(it.isShowing && it.isEnabled) { "$label: showing=${it.isShowing}, enabled=${it.isEnabled}" } }
             .doClick()
     }
 
