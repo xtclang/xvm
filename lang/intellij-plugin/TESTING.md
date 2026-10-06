@@ -58,6 +58,13 @@ layout/support rerun has no IDE errors. Full-exit settings persistence also pass
 and Tree-sitter. These are combined receipts, not a single uninterrupted green run; see the
 [UI completion record](../../docs/errs-integration-plan.md#ui1ui7-completion-batch-2026-10-06).
 
+The final October 6 L82 run, `run-11949889098742489342`, completes all 277 shared scenarios in
+one uninterrupted process: 275 pass, X254/X257 remain partial for UP25/UP26, zero failures and
+zero IDE errors. START also passes. This uses IntelliJ 2026.2.3 with Ultimate disabled and
+shipping LSP4IJ 0.21.0; all production bridges are restored. The earlier navigation-chooser and
+report-page probe failures are fixed without replaying mutations or extending timeouts. See the
+[L82 acceptance record](../../docs/errs-integration-plan.md#l82-upstream-isolation-and-full-catalog-acceptance-2026-10-06).
+
 From the composite root:
 
 ```bash
@@ -792,12 +799,32 @@ selection, startup editing and two-project disposal, with zero IDE errors. These
 release bridges enabled; the [upstream register](../../docs/errs-upstream-issues.md#local-plugin-acceptance-2026-10-06)
 distinguishes integration compatibility from the per-bridge removal gates.
 
+The subsequent [individual isolation receipt](../../docs/errs-upstream-issues.md#individual-bridge-isolation-2026-10-06)
+tests UP01/UP07/UP08/UP13/UP19/UP27 with only that bridge disabled, then restores the original
+source. Those selections pass. UP12's absent-editor fix still fails closed-dirty-file save because
+the upstream formatting path does not reconnect that buffer; retain the production override.
+Each local experiment retains its patch, source/plugin hashes and native JSON under
+`build/reports/upstream-isolation-2026-10-06/`. A passing bypass experiment does not authorize
+removal on the Marketplace default, which lacks these local repairs.
+
 Readiness polling accepts a successful observation once, using a monotonic deadline. Pinned
 Driver `waitFor` rechecks success and can falsely report a timeout during connection replacement
 (UP29). `UiWaitsTest` covers this race, actual expiry, pending reads, cancellation and null values;
 `PlaybookFailureTest` retains fatal timeout/cancellation behavior. These tests run without opening
 an IDE through `testCompilerPlaybook --tests '*UiWaitsTest' --tests '*PlaybookFailureTest'`.
 The wrapper only retries observations; edit/refactoring actions remain outside polling loops.
+
+Multi-target navigation chooses the visible Show Usages table through its locally registered
+Enter callback, once. Driver's `popup.keyboard` sends a global key rather than addressing the
+popup, which left X36's visible chooser unsubmitted in a full run. The helper checks row/action
+validity, then native acceptance still requires closure and exact file/caret destinations.
+`NavigationChooserTest` covers the binding/selection guards without opening an IDE. This is a
+harness input correction, not a production LSP4IJ workaround or a replacement protocol request.
+
+X147's controlled asynchronous report probe selects **Build import** through the settings
+navigation list before reading `xtc.compiler.details`. Unselected pages are detached from the
+component tree. Keep its EDT publication barriers and stale-response assertions when changing
+settings layouts; selecting the page does not replace the production report implementation.
 
 LSP4IJ is the most complex dependency. For platform tests, you need it on the test
 classpath so that the `lsp4ij:server` and `lsp4ij:fileNamePatternMapping` extensions
