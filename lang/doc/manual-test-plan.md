@@ -2,6 +2,23 @@
 
 The current catalog has **277 scenarios**: X1–X272, CFG1–CFG3 and 7a.8/7a.9.
 
+Latest IntelliJ acceptance (2026-10-06): `run-11949889098742489342` completes all 277 in one
+uninterrupted process: 275 pass, X254/X257 remain partial for UP25/UP26, zero failures and zero
+IDE errors. START also passes. This uses shipping LSP4IJ 0.21.0 and all production workarounds;
+the opt-in UP17 large-file diagnostic remains separate.
+
+Latest VS Code acceptance (2026-10-06): `run-sDtdSi`, `run-h7Cliv` and `run-ezSBxf`
+cover all 277 scenarios in multi-root mode: 276 pass and X218 retains the UP23 native Undo
+failure. X148's configuration-invalidation timeout is fixed with a fail-before backend regression;
+X260's driver now selects the native folder picker before starting its real Gradle checks.
+Timeouts stop the affected process; continuations start with fresh fixtures. This is combined
+coverage, not an uninterrupted green run. See the
+[current acceptance receipt](../../docs/errs-integration-plan.md#l82-upstream-isolation-and-full-catalog-acceptance-2026-10-06).
+
+Error notifications are expected during the negative import/settings cases X261/X262, X268–X270
+and deliberately failed JVM launch X272. Verify the specified retention/recovery afterward.
+An unexpected popup or X218's known failed Undo is not converted into a passing result.
+
 Post-rebase acceptance (2026-10-05): VS Code `run-J054rk` passes 266 of all 267 cases;
 X218 remains the accepted UP23 host Undo failure. IntelliJ `run-1475359363733913185` plus
 `run-7075359973250470210` covers all 267: 265 pass and X254/X257 retain UP25/UP26 partial status,

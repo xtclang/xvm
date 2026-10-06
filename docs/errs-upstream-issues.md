@@ -59,7 +59,7 @@ In particular, correcting UP03's target makes genuine preflight requests visible
 same-path request was short-circuited. Keep our bridges until testing real Move/Undo/Redo with the
 local plugin. The Marketplace default remains 0.21.0, so its workarounds remain necessary even
 if the local snapshot passes. UP02/UP04–UP06/UP09–UP11/UP14/UP18/UP21/UP25/UP26 are not repaired
-by these nine commits; UP20 concerns the test Driver, UP15 the server's LSP4J and UP17 the platform.
+by these nine commits; UP20/UP29 concern the test Driver, UP15 the server's LSP4J and UP17 the platform.
 
 ### Local plugin acceptance, 2026-10-06
 
@@ -93,6 +93,49 @@ the register's native gate passes without that bridge. UP12 removal must also pr
 text/version guard; UP13 must retain Ecstasy's build-model augmentation; UP07 requires both result-ID
 and lazy-fix behavior. UP03's generic UI-thread wait remains open even on the local build. No
 production workaround was removed, no dependency default changed, and nothing was pushed upstream.
+
+### Individual bridge isolation, 2026-10-06
+
+Each experiment removes only the named bridge against local upstream `2ccc5a30`, then restores
+the exact original source before the next experiment. The directory hash remains
+`c43708c3fbd6b503076047e49546e817d58a6568b3845ec663a3f9cc21d2f925`. Other release bridges stay
+enabled, so these are individual replacement tests, not a bridge-free client or an upstream release.
+
+| Bypassed bridge | Native receipt | Observed result |
+| --- | --- | --- |
+| UP08 configuration null serializer | `run-8451509337335907324` | START, X266/X268 and CFG1–CFG3 pass. |
+| UP13 project/global settings merge; Ecstasy build-model augmentation retained | `run-11755227473631525514` | START, X136/X263/X266 and CFG1–CFG3 pass. |
+| UP19 directory document reconnection | `run-15122368369408409885` | START, X118/X161/X162/X163 pass, including Move/Undo/Redo and continued unsaved editing. |
+| UP27 bounded refresh | `run-10049174372853142451` | START, X137/X146/X259 pass after repairing the test Driver's UP29 false timeout. The original failed run is retained. |
+| UP07 diagnostic result IDs and lazy-fix revision transport | `run-6029084721418368820` | START, X181–X185/X202/X213 pass, including selected quick fixes, closed companion edits and Undo/Redo. |
+| UP12 formatting-task override | `run-5841657495710292898` | START/X138 pass; X139 fails on the closed dirty file after its actual 30-second deadline. Open-file save formatting passes. |
+| UP01 process-lifetime guard | `run-3342461100631013271`, `run-11321889258000442887` | START/STARTUP and START/START_PROJECTS pass: startup editing/close/reopen and independent two-project disposal. |
+
+All these runs record zero IDE errors. UP12 is **not** an accepted replacement. Its local repair
+prevents the absent-editor dereference, but `findFormattingServer` only selects an existing
+server through `processLanguageServers`; it does not reconnect a closed document. The trace has
+`didClose(ClosedServiceSave.x)`, then formatting with no intervening `didOpen`. Our server's
+formatting handler intentionally uses synchronized open content and returns no edits without it;
+the dirty closed file remains unformatted. Our override uses `getLanguageServers(file, ...)`,
+which connects the current buffer before requesting edits. Upstream needs an equivalent content
+ownership path for this client contract, as well as the retained text/version and UP24 Redo guards,
+before this override can be removed. The nullable-editor unit regression alone did not establish
+closed-file save acceptance. No production workaround is removed by this experiment.
+
+Local evidence is under `lang/intellij-plugin/build/reports/upstream-isolation-2026-10-06/`.
+Each issue retains original/probe source, the exact patch and hashes, and copied native JSON.
+UP19/UP12 also retain the originally requested patches and the formatter's reviewed blank-line
+normalization. An extra passing X137/X146/X259 run (`run-1240742388975151681`) occurred while
+UP19 was still bypassed; it is recorded under UP19 and is not UP27 replacement evidence.
+UP03 remains only a destination-preflight repair, not a generic UI-wait fix. UP22 has no XVM
+bridge to bypass; ordinary restart/typing acceptance is not a forced transport-failure test.
+All bypasses are restored byte-for-byte before the full released-dependency acceptance run.
+
+Released-dependency `run-11949889098742489342` subsequently completes all 277 shared scenarios
+in one IntelliJ process: 275 pass, X254/X257 remain partial for UP25/UP26, zero failures and zero
+IDE errors; START also passes. It uses shipping 0.21.0 with all production bridges restored,
+including the UP12 override. This is baseline acceptance, not acceptance of an upstream-only
+client. UP23 still fails in VS Code's full attempt; no known host limitation is relabeled a pass.
 
 ## Register
 
@@ -473,6 +516,13 @@ ordering problem, not renewed compiler proof failure.
 
 After the master rebase, `run-J054rk` on the same VS Code 1.140.0 baseline completes all 267
 cases with 266 passes and the identical X218 failure. It remains an explicit failed assertion.
+
+The October 6 full attempt `run-sDtdSi` passes X1–X217, then reproduces the same child-first
+Undo failure in X218. The source/resource consistency wait reaches its real 30-second deadline,
+so the current harness aborts that IDE and records 59 cases as not run. Do not replay the partial
+transaction or downgrade this to a pass; any continuation uses fresh fixtures in a new process.
+X130 passes independently in this run. This is separate from the repaired X148 configuration
+invalidation timeout recorded in the integration plan.
 
 The compiler proposal normalizes both input orders to child-first and coalesces inherited child
 paths. IntelliJ applies that complete ordered transaction. VS Code's participant cannot replace,
