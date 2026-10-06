@@ -33,6 +33,8 @@ class CompilerPlaybookTest {
 
     @Test fun focusRecovery() = runPlaybook(PlaybookMode.FOCUS_RECOVERY)
 
+    @Test fun settingsPersistence() = runPlaybook(PlaybookMode.SETTINGS_PERSISTENCE)
+
     @Test fun projectLifecycle() = runPlaybook(PlaybookMode.PROJECT_LIFECYCLE)
 
     @Test
@@ -296,20 +298,23 @@ class CompilerPlaybookTest {
             )
             // The full playbook exceeds Starter's ten-minute default; individual waits
             // remain bounded so an unresponsive editor still fails promptly.
-            context
-                .disableUltimateModule()
-                .applyVMOptionsPatch {
-                    // Prevent trial/license startup from dynamically re-enabling the paid module.
-                    addSystemProperty("request.trial", false)
-                    addSystemProperty("idea.suppressed.plugins.id", "com.intellij.modules.ultimate")
-                    addSystemProperty("xtc.lsp.semanticTokens", true)
-                    addSystemProperty("xtc.trace.directory", run.resolve("server-trace").toString())
-                    addSystemProperty("xtc.logs.directory", run.resolve("server-logs").toString())
-                    addSystemProperty("idea.auto.reload.plugins", false)
-                }.runIdeWithDriver(runTimeout = 30.minutes)
-                .useDriverAndCloseIde {
-                    cases.run(this)
+            val configured =
+                context
+                    .disableUltimateModule()
+                    .applyVMOptionsPatch {
+                        // Prevent trial/license startup from dynamically re-enabling the paid module.
+                        addSystemProperty("request.trial", false)
+                        addSystemProperty("idea.suppressed.plugins.id", "com.intellij.modules.ultimate")
+                        addSystemProperty("xtc.lsp.semanticTokens", true)
+                        addSystemProperty("xtc.trace.directory", run.resolve("server-trace").toString())
+                        addSystemProperty("xtc.logs.directory", run.resolve("server-logs").toString())
+                        addSystemProperty("idea.auto.reload.plugins", false)
+                    }
+            repeat(if (mode == PlaybookMode.SETTINGS_PERSISTENCE) 2 else 1) { phase ->
+                configured.runIdeWithDriver(runTimeout = 30.minutes).useDriverAndCloseIde {
+                    cases.run(this, phase)
                 }
+            }
             Files.writeString(run.resolve(".completed"), "IDE closed\n")
             check(ideFailures.isEmpty()) { ideFailures.joinToString("\n\n") }
         } finally {
@@ -329,6 +334,7 @@ class CompilerPlaybookTest {
                             PlaybookMode.FOCUS_RECOVERY -> setOf("START_FOCUS")
                             PlaybookMode.LARGE_FILE -> setOf("START_LARGE_FILE")
                             PlaybookMode.PROJECT_LIFECYCLE -> setOf("START_PROJECTS")
+                            PlaybookMode.SETTINGS_PERSISTENCE -> setOf("START_SETTINGS_0", "START_SETTINGS_1")
                         },
                     "sharedScenarios" to
                         mapOf(

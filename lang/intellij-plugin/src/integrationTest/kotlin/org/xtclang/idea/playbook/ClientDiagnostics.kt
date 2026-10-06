@@ -54,6 +54,8 @@ interface StartedLanguageServer {
 
     fun getServerCapabilitiesSync(): ClientValue
 
+    fun stop(): ClientFuture
+
     fun restart()
 
     fun getCurrentProcessId(): Long?

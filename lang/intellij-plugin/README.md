@@ -842,7 +842,17 @@ Legacy shared logs and the IDE's own protocol console are outside this policy.
 
 **Tools → Export Ecstasy Server Logs** saves a ZIP of recent log tails and current status from
 the connected server (at most eight 512 KiB tails, 4 MiB log input). It may contain local paths and
-logged diagnostics; it does not collect source files. Export requires a running server. Shared
-X269/X270 check restart boundaries, invalid settings, retention/status and installed export.
-Native OS save-dialog layout, fresh-IDE persistence and rollover stress remain manual checks.
+logged diagnostics; it does not collect source files. When stopped, export uses only this project’s
+last recorded launch, including up to 64 KiB of launcher output. Its manifest identifies offline
+mode and truncation and lists included files; another project’s logs are never substituted. Shared
+X269–X272 cover settings, restart, live/offline export and recovery from an intentional failed JVM
+launch. Full editor exit/reopen has a separate two-process persistence test. Native OS save-dialog
+layout and rollover stress remain manual checks. New acceptance results are tracked in the
+[UI completion batch](../../docs/errs-integration-plan.md#ui1ui7-completion-batch-2026-10-06).
 See the [contract and receipt](../../docs/errs-integration-plan.md#machine-local-jvm-settings-and-log-support-ui5ui6-2026-10-06).
+
+
+The **Ecstasy Compiler** page separates **Source modules**, **Libraries and sources** and
+**Build import**. Import buttons stay with their help; the detailed paths/report are expandable.
+No compiler inputs are changed by switching tabs. The Language Service page distinguishes saved
+machine runtime settings from the running server; stale replies cannot replace a newer report.

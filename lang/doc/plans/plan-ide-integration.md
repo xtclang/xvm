@@ -138,8 +138,7 @@ installation is required. The three bootstrap checks are minimum health assertio
 Configured source modules also carry ordered resource roots. Conventional Gradle resources use
 compiler layout deduction; custom/unmanaged roots use explicit project settings in both hosts.
 Resource contents, creation/deletion and configuration participate in cache invalidation and
-diagnostic refresh. Evaluated Gradle import and a path-picker/origin view remain planned, not
-implemented; see [PLAT2](../../../docs/errs-integration-plan.md#resource-configuration-and-build-model-integration-plat2--l67).
+diagnostic refresh. Evaluated Gradle import, source/resource path pickers and effective origin reports are implemented; see [PLAT2](../../../docs/errs-integration-plan.md#resource-configuration-and-build-model-integration-plat2--l67).
 Hover identifies resolved occurrences, completed calls retain parameter mapping between written
 arguments, and inferred/narrowed nominal types retain type-definition targets. Member completion
 can retain a prefix before existing call parentheses, including chained receivers.
@@ -1531,7 +1530,7 @@ unsaved source after close while work is pending. The 19 focused backend/transpo
 UP15 remains upstream; full-catalog/scale/cross-platform evidence remains L82. This closes acceptance
 for existing providers and adds no AST, embedding or production language capability. See the
 [receipt and commit map](../../../docs/errs-integration-plan.md#l81-native-acceptance-closure-2026-10-05).
-The current shared catalog has 275 scenarios (X1–X270 plus the five configuration/stress IDs).
+The current shared catalog has 277 scenarios (X1–X272 plus the five configuration/stress IDs).
 
 
 The October 5 UI5–UI7 continuation adds shared X260–X262 for real Gradle import cancellation,
@@ -1556,5 +1555,16 @@ persistence, navigation and invalid-input retention. See the
 Machine-local JVM settings, explicit restart, process-owned log retention and bounded live-server
 export are implemented with shared X269/X270 (selected acceptance passes in both editors). They add host support controls,
 not compiler semantics or a new advertised LSP capability. Broader multi-root/remote-workspace
-acceptance, offline export and L82 release evidence remain; Run/DAP, color and notebooks retain
+acceptance and L82 release evidence remain; Run/DAP, color and notebooks retain
 their recorded scope. See the [runtime/log contract](../../../docs/errs-integration-plan.md#machine-local-jvm-settings-and-log-support-ui5ui6-2026-10-06).
+
+
+UI1–UI7 completion adds grouped VS Code settings and the tabbed IntelliJ Compiler page, validated
+formatting width, explicit invalid-JDK failure, project-trust checks for Gradle imports, and saved
+versus running runtime reports. Offline support ZIPs use only the project’s last recorded launch;
+shared X271/X272 cover stopped/failing servers and recovery. Complete editor exit/reopen has a
+separate persistence harness in both hosts. These are client settings/support features; adapter
+capabilities are unchanged. New acceptance is pending in the
+[UI completion receipt](../../../docs/errs-integration-plan.md#ui1ui7-completion-batch-2026-10-06).
+Untrusted/virtual VS Code workspaces are explicitly unsupported; remote-host acceptance is separate
+from the local desktop gate. Tree-sitter remains an explicit build alternative to default compiler.
