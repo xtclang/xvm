@@ -28,7 +28,7 @@ internal class ServerRuntimeSettings : SerializablePersistentStateComponent<Serv
             )
     }
 
-    fun launchArguments(): List<String> = state.arguments() + state.logArguments()
+    fun launchArguments(): List<String> = state.let { it.arguments() + it.logArguments() }
 
     fun install(
         expected: Options,
