@@ -15,6 +15,7 @@ import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.elements.button
 import com.intellij.driver.sdk.ui.components.elements.dialog
 import com.intellij.driver.sdk.ui.ui
+import org.junit.jupiter.api.Assertions.assertThrows
 import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
@@ -703,14 +704,13 @@ internal fun ParityScenarios.platformCases() {
             )
         } else {
             check(
-                runCatching {
+                assertThrows(ClientRequestFailure::class.java) {
                     query(
                         "textDocument/semanticTokens/full/delta",
                         document,
                         extra = mapOf("previousResultId" to full.string("resultId")),
                     )
-                }.exceptionOrNull()
-                    ?.message
+                }.message
                     ?.contains("not negotiated") == true,
             )
         }
@@ -777,8 +777,7 @@ internal fun ParityScenarios.platformCases() {
             check(resolved.string("title") == action.string("title"))
             replace(document, "\n" + data.string("source"))
             check(
-                runCatching { protocol.query("codeAction/resolve", action) }
-                    .exceptionOrNull()
+                assertThrows(ClientRequestFailure::class.java) { protocol.query("codeAction/resolve", action) }
                     ?.message
                     ?.contains("expired or changed") == true,
             )
@@ -1036,8 +1035,7 @@ internal fun ParityScenarios.platformCases() {
         ).filter { it.second.has("data") }
             .forEach { (method, item) ->
                 check(
-                    runCatching { protocol.query(method, item) }
-                        .exceptionOrNull()
+                    assertThrows(ClientRequestFailure::class.java) { protocol.query(method, item) }
                         ?.message
                         ?.contains("expired or changed") == true,
                 )
