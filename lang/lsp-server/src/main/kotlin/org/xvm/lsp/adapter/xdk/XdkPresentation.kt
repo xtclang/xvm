@@ -6,6 +6,7 @@ import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.adapter.SemanticTokens
 import org.xvm.lsp.adapter.xdk.SemanticModel.Role
 import org.xvm.lsp.adapter.xdk.SemanticModel.SymbolKind
+import org.xvm.lsp.adapter.xdk.SemanticModel.TypeCategory
 import org.xvm.lsp.adapter.xdk.SemanticModel.Usage
 import org.xvm.lsp.treesitter.SemanticTokenLegend
 
@@ -71,20 +72,22 @@ internal object XdkPresentation {
                             }
 
                             SymbolKind.TYPE -> {
-                                when (model.typeDeclarations[symbol.id]?.category) {
-                                    "class",
-                                    "service",
+                                when (symbol.typeCategory) {
+                                    TypeCategory.CLASS,
+                                    TypeCategory.SERVICE,
                                     -> "class"
 
-                                    "interface",
-                                    "mixin",
+                                    TypeCategory.INTERFACE,
+                                    TypeCategory.MIXIN,
                                     -> "interface"
 
-                                    "const" -> "struct"
+                                    TypeCategory.CONST -> "struct"
 
-                                    "enum" -> "enum"
+                                    TypeCategory.ENUM -> "enum"
 
-                                    else -> "type"
+                                    TypeCategory.ENUM_VALUE -> "enumMember"
+
+                                    null -> "type"
                                 }
                             }
 
@@ -93,7 +96,7 @@ internal object XdkPresentation {
                             }
 
                             SymbolKind.METHOD -> {
-                                "method"
+                                if (symbol.isFunction) "function" else "method"
                             }
 
                             SymbolKind.PROPERTY -> {

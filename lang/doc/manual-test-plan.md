@@ -633,7 +633,7 @@ also covers method-implementation lookup.
 | 1.6 | Editor color scheme sanity | Open a `.x` file in IntelliJ | Editor background matches the active theme (not a solid white fallback) |
 | 1.7 | TextMate + semantic token layering | Open a `.x` file with types, methods, and annotations | Base TextMate colors remain sane; semantic tokens refine symbols instead of washing out the theme |
 
-**Note:** Tree-sitter supplies syntax-based semantic tokens. The opt-in compiler adapter additionally
+**Note:** Tree-sitter supplies syntax-based semantic tokens. The default compiler adapter additionally
 classifies resolved usage sites as properties, locals or parameters and supplies semantic modifiers;
 see X41 in the compiler playbook. TextMate remains the lexical coloring layer.
 
@@ -1420,38 +1420,116 @@ and VS Code render them automatically from the LSP server response — no plugin
 ### 19. Semantic Tokens
 
 **LSP Method:** `textDocument/semanticTokens/full`
-**Status:** ✅ Done (enabled by default)
+**Status:** Implemented; classification coverage depends on the adapter and theme
 **Works with:** Tree-sitter and compiler adapters (both IntelliJ and VS Code)
 
-Semantic tokens layer on top of TextMate highlighting, providing AST-aware coloring
-that TextMate's regex patterns cannot achieve. The server logs `semantic tokens ENABLED`
-at startup to confirm they're active.
+Semantic tokens layer on top of TextMate highlighting. Tree-sitter classifies syntax; the
+compiler adapter additionally uses resolved identities. TextMate can recognize many declaration
+patterns, but cannot reliably resolve imports, shadowing or writes. The server logs
+`semantic tokens ENABLED` at startup to confirm they are active. Categories do not prescribe RGB
+colors, and a theme can give multiple categories the same appearance.
 
 **How to verify:**
-- *IntelliJ:* Open a `.x` file — types, methods, properties, and annotations should
-  have distinct colors. Check LSP server log for `semantic tokens ENABLED`.
-- *VS Code:* Same — semantic tokens are automatically layered on top of TextMate.
+- *IntelliJ:* Installed plugins, Gradle `runIde` and the playbook enable semantic tokens by default.
+  To compare the TextMate baseline, use `XTC_LSP_SEMANTIC_TOKENS=false` in the IDE's environment
+  or `-Dxtc.lsp.semanticTokens=false` in its JVM options, then restart the IDE. For Gradle
+  `runIde`, use `-Pxtc.intellij.semanticTokens=false`. Check the server log before judging colors.
+- *VS Code:* Semantic highlighting defaults on for Ecstasy; use **Developer: Inspect Editor Tokens
+  and Scopes** to distinguish actual classifications from coincident theme colors.
 
 | # | Test | Steps | Expected Result |
 |---|------|-------|-----------------|
 | 19.1 | Types colored distinctly | Open file with `String name;` and `Int count;` | `String` and `Int` have type color (different from `name`/`count`) |
 | 19.2 | Methods vs properties | Open file with `void foo()` and `String name;` | `foo` has method color, `name` has property color |
-| 19.3 | Annotations as decorators | Add `@Override` or `@Inject` | Annotation name has decorator color |
-| 19.4 | Deprecated strikethrough | Add `@Deprecated class Old {}` | `Old` shown with strikethrough |
+| 19.3 | Annotations as decorators | Add `@Override` | Tree-sitter supplies decorator classification; compiler-specific annotation classification remains a follow-up. TextMate has an annotation scope. |
+| 19.4 | Deprecated strikethrough | Inspect a syntactic `@Deprecated` example with Tree-sitter | Tree-sitter recognizes the spelling; this is not evidence of an Ecstasy deprecation API. Compiler deprecation classification is not implemented. |
 | 19.5 | new Foo() as type | Write `new Person()` | `Person` colored as type, not method |
 | 19.6 | Method call coloring | Write `getName()` | `getName` colored as method call |
-| 19.7 | Static modifier | Add `static void helper()` | `helper` may show italic (static modifier) |
+| 19.7 | Static functions | Add `static void helper()` and a call to it | Compiler tokens classify both as `function.static`; instance methods and constructors remain `method`. Appearance is theme-dependent. |
 | 19.8 | Enum members | Write `enum Color { Red, Green, Blue }` | `Red`, `Green`, `Blue` colored as enum members |
 | 19.9 | Parameter highlighting | Write `void foo(Int count)` | `count` has parameter color |
 | 19.10 | Namespace coloring | `module myapp` declaration | `myapp` colored as namespace |
 | 19.11 | Server log confirmation | Check LSP server log at startup | Shows `semantic tokens ENABLED (23 types, 10 modifiers)` |
+| 19.12 | Documentation comments | Compare `/** Documentation */`, `/* Ordinary */` and a string containing `/**` | Compiler tokens add `documentation` only to documentation comments, including each line of a multiline comment. |
+
+#### Compiler semantic-color prototype
+
+Open [`semantic-colors.code-workspace`](../test-fixtures/semantic-highlighting/semantic-colors.code-workspace)
+in VS Code with the compiler extension, then open `SemanticColors.x`. The workspace only adds
+optional font styling: **bold declarations**, underlined writes, italic static functions and italic
+documentation comments. Foreground colors remain entirely theme-owned. Disable
+`[xtc].editor.semanticHighlighting.enabled` temporarily to compare the TextMate baseline, then
+enable it again. The same `.x` fixture works in IntelliJ with semantic tokens enabled; the VS Code
+workspace styling is not an IntelliJ setting.
+
+Inspect lowercase `counter` as `class`, uppercase `Count` as `parameter`, `count` as `property`,
+`next` as `variable`, `Reader` and imported `List` as `interface`, `Mode` as `enum`, and both uses
+of `Quiet` as `enumMember`. `create` is `function.static` at its declaration and call; `read` is
+`method`. The `count += 1` target has `modification`; its reads do not. This is source-code
+highlighting, separate from L77 color-value swatches and pickers.
+
+`XdkSemanticColorTest` compiles this fixture and checks classifications. Shared X41/X154 check
+functions, enum values, imported interfaces and writes in both editor drivers. New classifications
+require their next selected native acceptance run; theme rendering itself remains a manual check.
 
 ---
 
+### L77 color-value prototype
+
+This opt-in experiment is separate from syntax/semantic highlighting. The ordinary fixture
+[`ColorPrototype.x`](../test-fixtures/color-values/ColorPrototype.x) defines a four-byte `Rgba`
+const: sRGB channels, straight alpha, opaque by default. It is not an XDK library API.
+The server recognizes that resolved constructor identity, including aliases, rather than matching
+arbitrary `Color` names or `"#ff8000"` strings. Normal launches advertise no color provider.
+
+Build and launch an isolated VS Code development host from the repository root:
+
+```bash
+./gradlew :lang:vscode-extension:assemble -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
+XTC_LSP_COLOR_PROTOTYPE=true code --new-window \
+  --user-data-dir /tmp/ecstasy-color-prototype \
+  --extensionDevelopmentPath="$PWD/lang/vscode-extension" \
+  "$PWD/lang/test-fixtures/color-values"
+```
+
+The separate, reusable profile ensures an already running VS Code process does not discard the
+prototype environment. Keep **Editor: Color Decorators** enabled. For IntelliJ, start the
+development IDE with the same environment, then open `lang/test-fixtures/color-values` as a project:
+
+```bash
+XTC_LSP_COLOR_PROTOTYPE=true ./gradlew :lang:intellij-plugin:runIde \
+  -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
+```
+
+Both hosts use standard `textDocument/documentColor` / `textDocument/colorPresentation` requests.
+LSP4IJ implements color squares and its native chooser through its
+[document color support](https://github.com/redhat-developer/lsp4ij/blob/main/docs/LSPSupport.md#document-color).
+The server can alternatively be started directly with `-Dxtc.lsp.colorPrototype=true` before
+`-jar`. Startup logs confirm the experimental `ColorPrototype.Rgba` mapping is enabled.
+
+Use the same steps in either editor, without saving changes to the tracked fixture:
+
+| Check | Action | Expected result |
+|---|---|---|
+| Swatches | Open `ColorPrototype.x` and wait for successful analysis | `accent` is opaque orange; `translucent()` has RGB 200/80/40 and alpha 128/255. |
+| Apply | Open `accent`'s picker and choose blue with approximately half opacity | Its byte literals change and an `alpha = …` argument appears; the edited source compiles and the swatch agrees within byte rounding. |
+| Named arguments | Change the color returned by `translucent()` | Blue/red/alpha/green stay in their written order and retain labels; only numeric values change. |
+| Cancel and Undo | Cancel a picker change, then apply another, Undo and Redo | Cancellation preserves source; Undo/Redo restores the corresponding source and color. Record actual host behavior. |
+| Dynamic/ordinary text | Inspect `dynamic(red)` and `ordinaryText` | Neither receives a swatch. No runtime expressions are evaluated. |
+| Failure and recovery | Change a channel to 256, then restore it | Compiler diagnostic and no stale swatch/edit while the compilation fails; swatches return after repair. |
+| Baseline | Relaunch without the prototype environment/property | No `colorProvider`; normal semantic token coloring continues independently. |
+
+Backend tests cover binary and typedef aliases, same-named unrelated types, comments, trailing
+commas, UTF-16 columns, CRLF/LF/CR preservation, rounding, changed defaults, stale ranges and
+document closure. References and compound constant expressions are deliberately outside the
+literal-only prototype. The real packaged stdio test verifies opt-in and an edit/recompile round
+trip. Native picker apply/cancel/Undo/Redo remains unverified; this recipe is outside the default
+277-case catalog until those host checks are implemented and accepted.
+
 ## XdkAdapter Playbook
 
-Run this section with the opt-in **compiler** backend in either editor. Tree-sitter remains the
-shipped default. These checks cover the current compiler feature surface, including semantic
+Run this section with the **compiler** backend in either editor, now the repository build default.
+These checks cover the current compiler feature surface, including semantic
 answers that a syntax parser cannot supply. They do not require running the test program.
 
 ### Automated VS Code run
@@ -1920,7 +1998,7 @@ module Consumers {
 |---|--------|-----------------|
 | X39 | Show incoming calls for the Int `leaf`, then outgoing calls for `run`. | Incoming groups two sites under `run` and one under `<lambda>`. Outgoing `run` lists the Int and String overload separately; the lambda's call is not attributed to `run`. |
 | X40 | Expand the lambda's outgoing calls. Inspect the dynamic `fn()` call. | The lambda leads to Int `leaf`; `fn()` does not invent a statically selected edge. Call ranges navigate to the caller's source. |
-| X41 | Inspect tokens for `leaf`, `seed`, `number` and the `number +=` target. Select `number` to highlight occurrences. | Method, parameter and variable kinds reflect resolved identities. Static/declaration/modification modifiers are present where applicable. Highlights distinguish the write and subsequent read. Theme colors may coincide. |
+| X41 | Inspect tokens for `leaf`, `seed`, `number` and the `number +=` target. Select `number` to highlight occurrences. | Function, parameter and variable kinds reflect resolved identities. Static/declaration/modification modifiers are present where applicable. Highlights distinguish the write and subsequent read. Theme colors may coincide. |
 | X42 | Inspect inline hints in `run`; compare positional and named calls. Then use the shared `inferred` source with a destructured pair and `(value) -> value`. | `number: Int` and `label: String` inferred-type hints; `input:` and `text:` before positional values. The named call has no redundant hints and omitted default `extra` has none. Explicit declarations get no inferred-type hint. The original fixture also has an inferred `Int` lambda return (three type hints total); the additional shared source has two destructured types plus lambda parameter/return types (four total). |
 | X43 | Keep hierarchy items open, insert a blank line before `run`, then reopen hierarchy. Break the module with an unfinished declaration, correct it and close/reopen the file. | Fresh results use current ranges. Old hierarchy items do not resolve against the edited snapshot. A parse failure clears semantic answers; correction restores them. |
 | X44 | In the section D two-file fixture, add `static Int target(Int n) = n;` to Project and `Int callTarget() = target(1);` to Child, then close Child and show incoming calls on `target`. | `callTarget` and its call site point to the closed Child source. An unsaved member edit moves the result; stale positions are not reused. |
@@ -3309,7 +3387,7 @@ L65 closure additions (execution pending):
 | ID | Manual actions | Expected result |
 | --- | --- | --- |
 | X153 | Open each shared Dispatch.x variant. Use Go to Implementation on `box.value`, then `text.size()`, then the interface-valued delegate call. | The covariant property reaches its written getter; the conditional mixin reaches its written method. A runtime-only delegate has no guessed target. Both drivers check exact source positions; IntelliJ follows the native navigation action. |
-| X154 | Open shared Access.x. Inspect tokens and highlight usages of the destructured `left`/`right`, incremented `box.value` and `values[index]` assignment. | Destructured variables and the incremented property are writes. The receiver and index expressions remain reads. Both drivers check exact positions and modification flags; IntelliJ also checks native token consumption and highlights. |
+| X154 | Open shared Access.x. Inspect `Mode`, `Quiet`, imported `List`, static `run`, and usages of destructured `left`/`right`, incremented `box.value` and `values[index]`. | Types are classified as enum, enumMember and interface; `run` is a function. Destructured variables and the incremented property are writes. Receiver/index expressions remain reads. Both drivers consume the same expectations; IntelliJ also checks native token consumption and highlights. |
 
 
 | Case | Manual action | Expected result |

@@ -12,6 +12,10 @@ import org.eclipse.lsp4j.CodeAction
 import org.eclipse.lsp4j.CodeActionParams
 import org.eclipse.lsp4j.CodeLens
 import org.eclipse.lsp4j.CodeLensParams
+import org.eclipse.lsp4j.Color
+import org.eclipse.lsp4j.ColorInformation
+import org.eclipse.lsp4j.ColorPresentation
+import org.eclipse.lsp4j.ColorPresentationParams
 import org.eclipse.lsp4j.Command
 import org.eclipse.lsp4j.CompletionItem
 import org.eclipse.lsp4j.CompletionItemKind
@@ -23,6 +27,7 @@ import org.eclipse.lsp4j.DidChangeTextDocumentParams
 import org.eclipse.lsp4j.DidCloseTextDocumentParams
 import org.eclipse.lsp4j.DidOpenTextDocumentParams
 import org.eclipse.lsp4j.DidSaveTextDocumentParams
+import org.eclipse.lsp4j.DocumentColorParams
 import org.eclipse.lsp4j.DocumentDiagnosticParams
 import org.eclipse.lsp4j.DocumentDiagnosticReport
 import org.eclipse.lsp4j.DocumentFormattingParams
@@ -110,6 +115,7 @@ import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.AdapterCapability
 import org.xvm.lsp.adapter.CodeLensCommand
+import org.xvm.lsp.adapter.ColorValue
 import org.xvm.lsp.adapter.FormattingConfig
 import org.xvm.lsp.adapter.InlineCompletionContext
 import org.xvm.lsp.adapter.SymbolMoniker
@@ -1592,6 +1598,39 @@ class XtcTextDocumentService(
                     }
                 }
             }
+        }
+
+    override fun documentColor(params: DocumentColorParams): CompletableFuture<List<ColorInformation>> =
+        supplyAsync("textDocument/documentColor", params.textDocument.uri, uri = params.textDocument.uri, progress = params) {
+            requireResolve(AdapterCapability.DOCUMENT_COLOR in adapter.capabilities, "Color values")
+            if (!openDocuments.containsKey(params.textDocument.uri)) return@supplyAsync emptyList()
+            adapter.getDocumentColors(params.textDocument.uri).map {
+                ColorInformation(it.range.toLsp(), Color(it.color.red, it.color.green, it.color.blue, it.color.alpha))
+            }
+        }
+
+    override fun colorPresentation(params: ColorPresentationParams): CompletableFuture<List<ColorPresentation>> =
+        supplyAsync("textDocument/colorPresentation", params.textDocument.uri, uri = params.textDocument.uri, progress = params) {
+            requireResolve(AdapterCapability.DOCUMENT_COLOR in adapter.capabilities, "Color values")
+            val color = params.color
+            val range = params.range
+            if (listOf(color.red, color.green, color.blue, color.alpha).any { !it.isFinite() || it !in 0.0..1.0 } ||
+                listOf(range.start.line, range.start.character, range.end.line, range.end.character).any { it < 0 } ||
+                range.start.line > range.end.line || (range.start.line == range.end.line && range.start.character > range.end.character)
+            ) {
+                throw ResponseErrorException(
+                    ResponseError(ResponseErrorCode.InvalidParams, "Expected normalized RGBA channels and an ordered source range", null),
+                )
+            }
+            if (!openDocuments.containsKey(params.textDocument.uri)) return@supplyAsync emptyList()
+            adapter
+                .getColorPresentations(
+                    params.textDocument.uri,
+                    toAdapterRange(range),
+                    ColorValue(color.red, color.green, color.blue, color.alpha),
+                ).map {
+                    ColorPresentation(it.label).apply { textEdit = TextEdit(it.textEdit.range.toLsp(), it.textEdit.newText) }
+                }
         }
 
     /**

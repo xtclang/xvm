@@ -1,0 +1,16 @@
+{
+    "folders": [{ "path": "." }],
+    "settings": {
+        "[xtc]": {
+            "editor.semanticHighlighting.enabled": true
+        },
+        "editor.semanticTokenColorCustomizations": {
+            "rules": {
+                "*.declaration:xtc": { "bold": true },
+                "*.modification:xtc": { "underline": true },
+                "function.static:xtc": { "italic": true },
+                "comment.documentation:xtc": { "italic": true }
+            }
+        }
+    }
+}
