@@ -2,9 +2,12 @@ package org.xvm.xdk;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 
-import java.nio.charset.StandardCharsets;
+import java.net.URISyntaxException;
+import java.net.URL;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import java.util.Comparator;
 import java.util.List;
@@ -14,11 +17,12 @@ import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import org.xvm.api.ModuleCompiler;
 
@@ -37,7 +41,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Negative compiler tests: modules that must not compile, each checked for exactly the errors the
- * compiler is expected to report.
+ * compiler is expected to report. Each {@code .x} file in the {@code compiler-errors} test resource
+ * directory is one such module.
  *
  * <p>A source file marks each line on which an error is expected with a comment naming its code,
  * for example {@code i = s.size;  // expect-error: COMPILER-36}; several codes are separated by
@@ -46,15 +51,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * error all fail. Codes are compared rather than message text, so messages can be reworded freely.
  * Warnings are not checked.
  *
- * <p>All the cases in a file are compiled together. The compiler reports every error it finds in a
- * phase, but it stops at the end of the first phase that found any, so a case whose error is found
- * in an earlier phase than the others' needs a file of its own.
+ * <p>The compiler works in four stages: it registers structures, resolves names, validates content
+ * and generates code. Each stage can report errors, but the compiler does not go on to the next
+ * stage once a stage has reported any. All the cases in a file are compiled together, so they must
+ * all fail in the same stage, and a case that fails in another stage needs a file of its own. For
+ * example, every case in {@code errors.x} fails in code generation.
  */
 class CompilerErrorsTest {
-    private static final Pattern MARKER =
-            Pattern.compile("//\\s*expect-error:\\s*([A-Z]+-[A-Z0-9]+(?:\\s*,\\s*[A-Z]+-[A-Z0-9]+)*)");
+    private static final String RESOURCE_DIR = "/compiler-errors";
 
-    private static final Pattern CODE = Pattern.compile("[A-Z]+-[A-Z0-9]+");
+    private static final String CODE_REGEX = "[A-Z]+-[A-Z0-9]+";
+
+    private static final Pattern CODE = Pattern.compile(CODE_REGEX);
+
+    private static final Pattern MARKER = Pattern.compile(
+            "//\\s*expect-error:\\s*(" + CODE_REGEX + "(?:\\s*,\\s*" + CODE_REGEX + ")*)");
 
     private static final Comparator<Diagnostic> ORDER =
             Comparator.comparingInt(Diagnostic::line).thenComparing(Diagnostic::code);
@@ -93,19 +104,34 @@ class CompilerErrorsTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = "errors.x")
-    void reportsExactlyTheMarkedErrors(String fileName) throws IOException {
-        String    source = readResource("/compiler-errors/" + fileName);
+    @MethodSource("negativeTestFiles")
+    void reportsExactlyTheMarkedErrors(String fileName) throws IOException, URISyntaxException {
+        String    source = Files.readString(resourceDir().resolve(fileName));
         ErrorList errs   = new ErrorList(1000);
 
         assertNull(compiler.compile(source, null, errs), fileName + " compiled, but must not");
 
-        SortedSet<Diagnostic> expected   = expectedErrors(source);
-        SortedSet<Diagnostic> reported   = reportedErrors(errs);
-        List<Diagnostic>      missing    = expected.stream().filter(not(reported::contains)).toList();
-        List<Diagnostic>      unexpected = reported.stream().filter(not(expected::contains)).toList();
+        var expected   = expectedErrors(source);
+        var reported   = reportedErrors(errs);
+        var missing    = expected.stream().filter(not(reported::contains)).toList();
+        var unexpected = reported.stream().filter(not(expected::contains)).toList();
         assertTrue(missing.isEmpty() && unexpected.isEmpty(),
-                () -> fileName + ": missing " + missing + ", unexpected " + unexpected);
+                () -> fileName + ": missing " + missing + ", unexpected " + unexpected
+                        + (missing.isEmpty() ? "" : "; all of a file's cases must fail in the"
+                                + " same compiler stage, as the compiler stops after a stage"
+                                + " with errors"));
+    }
+
+    /**
+     * @return the names of the negative test files: all the .x files in the resource directory
+     */
+    static List<String> negativeTestFiles() throws IOException, URISyntaxException {
+        try (Stream<Path> files = Files.list(resourceDir())) {
+            return files.map(file -> file.getFileName().toString())
+                    .filter(name -> name.endsWith(".x"))
+                    .sorted()
+                    .toList();
+        }
     }
 
     /**
@@ -131,10 +157,9 @@ class CompilerErrorsTest {
                 .collect(toCollection(() -> new TreeSet<>(ORDER)));
     }
 
-    private static String readResource(String path) throws IOException {
-        try (InputStream in = CompilerErrorsTest.class.getResourceAsStream(path)) {
-            assertNotNull(in, () -> "Missing test resource " + path);
-            return new String(in.readAllBytes(), StandardCharsets.UTF_8);
-        }
+    private static Path resourceDir() throws URISyntaxException {
+        URL dir = CompilerErrorsTest.class.getResource(RESOURCE_DIR);
+        assertNotNull(dir, () -> "Missing test resource directory " + RESOURCE_DIR);
+        return Path.of(dir.toURI());
     }
 }

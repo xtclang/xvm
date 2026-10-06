@@ -45,7 +45,7 @@ import static org.xvm.util.Severity.ERROR;
  * with its own core repository, can exist in one JVM. Each call to compile is independent.
  *
  * <p>The compile methods report the same errors as the command-line compiler: every error found in
- * a compilation phase, with the compilation stopping at the end of the first phase that found any.
+ * a compiler stage, with the compilation stopping at the end of the first stage that found any.
  */
 public final class ModuleCompiler {
     private static final Console SILENT_CONSOLE = new Console() {
@@ -62,7 +62,7 @@ public final class ModuleCompiler {
 
     /**
      * The maximum number of errors a module accumulates before its compilation stops in the middle
-     * of a phase; the same limit the command-line compiler uses for each module.
+     * of a stage; the same limit the command-line compiler uses for each module.
      */
     private static final int MAX_MODULE_ERRORS = 341;
 
@@ -93,7 +93,7 @@ public final class ModuleCompiler {
                     ? compiler.getModule()
                     : null;
         } catch (LauncherException e) {
-            // the compiler stops at the end of a phase that logged errors; those errors are already
+            // the compiler stops at the end of a stage that logged errors; those errors are already
             // in "errs", so this is an ordinary failed compile, as it is for the command-line
             // compiler. A tool-level failure is logged only to the silent console, so report it
             if (errs != null && !errs.hasSeriousErrors()) {
@@ -185,7 +185,7 @@ public final class ModuleCompiler {
 
             // as each module does in the command-line compiler (ModuleInfo.Node), the module logs
             // its errors to a list of its own, which is passed on to this tool at the end of each
-            // phase; this tool stops at the first error logged to it, so a phase logging to it
+            // stage; this tool stops at the first error logged to it, so a stage logging to it
             // directly would stop at its first error instead of reporting all of them
             ErrorList errsModule = new ErrorList(MAX_MODULE_ERRORS);
 
@@ -230,7 +230,7 @@ public final class ModuleCompiler {
          * Pass the errors the module has logged on to this tool, and check them.
          *
          * @param errsModule  the module's error list
-         * @param context     the compilation phase being checked
+         * @param context     the compiler stage being checked
          *
          * @return 0 if no serious errors, 1 if serious errors exist but do not require an abort
          */
