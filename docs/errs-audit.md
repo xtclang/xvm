@@ -1,3 +1,10 @@
+**Build/test artifact retention (2026-10-06):** cleanup reduced this checkout from approximately
+23 GiB to 13 GiB while preserving all Git worktrees and compact test receipts. Gradle editor tests
+now retain five completed payloads, protect pinned/unfinished runs and remove disposable IntelliJ
+sandbox state after confirmed shutdown. Native IntelliJ reuses its matching signed installation;
+backend traces share process-log retention. See the
+[cleanup receipt](errs-integration-plan.md#build-and-test-artifact-retention-2026-10-06).
+
 **Compiler default (2026-10-06):** compiler mode now ships by default in `gradle.properties`,
 packaged server metadata and missing-metadata fallbacks. Explicit Tree-sitter/mock builds remain
 available. The three adapter-selection regressions and a no-override IntelliJ START/X135 run pass.

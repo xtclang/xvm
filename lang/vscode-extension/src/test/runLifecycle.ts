@@ -129,6 +129,7 @@ exports.activate = () => {
             status: 'passed', vscodeWindows: 2, separateProfiles: !sharedProcess, sharedProcess, installedExtensions: true,
             primary: first, closing: closed, reopened
         }, null, 2) + '\n');
+        await fs.writeFile(path.join(directory, '.completed'), 'Native lifecycle windows exited\n');
     } catch (error) {
         const failure = JSON.stringify({ status: 'failed', error: String(error) }, null, 2) + '\n';
         await fs.writeFile(path.join(directory, 'launcher-failure.json'), failure);

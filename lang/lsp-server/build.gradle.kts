@@ -253,13 +253,7 @@ tasks.withType<Test>().configureEach {
             .get()
             .asFile.absolutePath,
     )
-    systemProperty(
-        "xtc.trace.directory",
-        layout.buildDirectory
-            .dir("reports/execution-trace")
-            .get()
-            .asFile.absolutePath,
-    )
+    // Keep traces in the same process-owned directory so closed-session retention covers both logs.
 }
 
 tasks.test {

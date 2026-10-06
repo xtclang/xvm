@@ -653,7 +653,7 @@ Request spans run from server receipt through reply serialization/write; they in
 queue waits, but not the editor's later rendering time. Notifications record document versions and
 diagnostic counts. Source buffers, protocol payloads and exception messages are excluded.
 
-JVM test traces are under `build/reports/execution-trace`; packaged-server tests use per-test
+JVM test logs and traces share retained `build/reports/server-logs/server-<PID>-<start>/` directories; packaged-server tests use per-test
 subdirectories there so their traces survive temporary workspace cleanup. IntelliJ playbook runs
 place each child server's trace in their report's `server-trace/` directory, preserving restarts as
 separate files.
