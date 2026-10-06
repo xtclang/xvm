@@ -248,11 +248,16 @@ class CompilerPlaybookTest {
                 }
             }
         try {
+            val testCase = TestCase(IdeInfo.IdeaUltimate, LocalProjectInfo(workspace)).withVersion(ideVersion)
             val context =
                 Starter.newContext(
                     "XtcCompilerPlaybook-${run.fileName}",
-                    TestCase(IdeInfo.IdeaUltimate, LocalProjectInfo(workspace))
-                        .withVersion(ideVersion),
+                    testCase.copy(
+                        ideInfo =
+                            testCase.ideInfo.copy(
+                                getInstaller = { CachedIdeInstaller(testCase.ideInfo.getInstaller(it)) },
+                            ),
+                    ),
                 )
             Files.writeString(run.resolve("ide-paths.txt"), context.paths.toString())
             PluginConfigurator(context).apply {
@@ -305,6 +310,7 @@ class CompilerPlaybookTest {
                 .useDriverAndCloseIde {
                     cases.run(this)
                 }
+            Files.writeString(run.resolve(".completed"), "IDE closed\n")
             check(ideFailures.isEmpty()) { ideFailures.joinToString("\n\n") }
         } finally {
             // Restore global Starter state even if serializing or writing the report fails.
