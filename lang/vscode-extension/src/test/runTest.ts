@@ -72,13 +72,13 @@ async function main(): Promise<void> {
     await fs.mkdir(path.join(fixturesPath, '.vscode'), { recursive: true });
     await fs.writeFile(path.join(fixturesPath, '.vscode', 'settings.json'), JSON.stringify({
         'files.autoSave': 'off', 'editor.semanticHighlighting.enabled': true,
-        'editor.inlayHints.enabled': 'on', 'xtc.inlayHints.enabled': true
+        'editor.inlayHints.enabled': 'on', ...(!persistence ? { 'xtc.inlayHints.enabled': true } : {})
     }, null, 2));
     console.log(`[vscode-test] Reports and isolated workspace: ${runDirectory}`);
     await fs.writeFile(path.join(reports, 'latest-run.txt'), runDirectory + '\n');
     // Folder retirement needs an existing workspace container. Converting a single-folder
     // extension-test window into a new workspace would replace the running test host itself.
-    const workspaceFile = multiRoot || selected.includes('X265') ? path.join(runDirectory, 'compiler.code-workspace') : undefined;
+    const workspaceFile = persistence || multiRoot || selected.includes('X265') ? path.join(runDirectory, 'compiler.code-workspace') : undefined;
     if (workspaceFile) {
         await fs.mkdir(path.join(runDirectory, 'external'), { recursive: true });
         await fs.writeFile(workspaceFile, JSON.stringify({
