@@ -52,8 +52,14 @@ internal fun Driver.settingsPersistence(
     } else {
         val saved = JsonParser.parseString(Files.readString(expected)).asJsonObject
         withContext(OnDispatcher.EDT) {
-            check(runtime.content() == saved["runtime"].asString)
-            check(service.content(project) == saved["project"].asString)
+            val actualRuntime = runtime.content()
+            val actualProject = service.content(project)
+            check(actualRuntime == saved["runtime"].asString) {
+                "Runtime settings after restart: expected ${saved["runtime"].asString}, got $actualRuntime"
+            }
+            check(actualProject == saved["project"].asString) {
+                "Project settings after restart: expected ${saved["project"].asString}, got $actualProject"
+            }
             lifecycle.show(project, file.toString())
         }
     }

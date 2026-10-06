@@ -6,6 +6,7 @@ import com.intellij.openapi.components.Service
 import com.intellij.openapi.components.State
 import com.intellij.openapi.components.Storage
 import com.intellij.openapi.components.StoragePathMacros
+import com.intellij.util.xmlb.annotations.OptionTag
 import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.LinkOption.NOFOLLOW_LINKS
@@ -21,11 +22,11 @@ import java.util.zip.ZipOutputStream
 @State(name = "EcstasySupportLogs", storages = [Storage(StoragePathMacros.WORKSPACE_FILE)])
 internal class ServerSupportLogs : SerializablePersistentStateComponent<ServerSupportLogs.Session>(Session()) {
     data class Session(
-        @JvmField val id: String = "",
-        @JvmField val started: String = "",
-        @JvmField val launcher: String = "No Ecstasy server launch recorded.",
-        @JvmField val directory: String = "",
-        @JvmField val traceDirectory: String = "",
+        @field:OptionTag @JvmField val id: String = "",
+        @field:OptionTag @JvmField val started: String = "",
+        @field:OptionTag @JvmField val launcher: String = "No Ecstasy server launch recorded.",
+        @field:OptionTag @JvmField val directory: String = "",
+        @field:OptionTag @JvmField val traceDirectory: String = "",
     )
 
     fun begin(description: String): String =
