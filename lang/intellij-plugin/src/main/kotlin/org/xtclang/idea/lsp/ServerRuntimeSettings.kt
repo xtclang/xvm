@@ -13,6 +13,10 @@ import com.intellij.openapi.components.Storage
 internal class ServerRuntimeSettings : SerializablePersistentStateComponent<ServerRuntimeSettings.Options>(Options()) {
     data class Options(
         @JvmField val vmOptions: String = "",
+        @JvmField val logHistoryDays: Int = 7,
+        @JvmField val logMaxFileMb: Int = 10,
+        @JvmField val logTotalSizeMb: Int = 50,
+        @JvmField val logRetainedSessions: Int = 5,
     ) {
         fun arguments(): List<String> =
             ServerJvmOptions.validate(
@@ -24,11 +28,14 @@ internal class ServerRuntimeSettings : SerializablePersistentStateComponent<Serv
             )
     }
 
+    fun launchArguments(): List<String> = state.arguments() + state.logArguments()
+
     fun install(
         expected: Options,
         replacement: Options,
     ) {
         replacement.arguments()
+        replacement.logArguments()
         updateState {
             require(it == expected) { "Runtime settings changed while this page was open. Reset before applying." }
             replacement
@@ -38,4 +45,16 @@ internal class ServerRuntimeSettings : SerializablePersistentStateComponent<Serv
     companion object {
         fun getInstance(): ServerRuntimeSettings = ApplicationManager.getApplication().getService(ServerRuntimeSettings::class.java)
     }
+}
+
+internal fun ServerRuntimeSettings.Options.logArguments(): List<String> {
+    require(logHistoryDays in 1..90 && logMaxFileMb in 1..100 && logTotalSizeMb in logMaxFileMb..1000 && logRetainedSessions in 1..20) {
+        "Log retention: days 1–90, file MB 1–100, archive MB at least file MB and at most 1000, retired sessions 1–20"
+    }
+    return listOf(
+        "-Dxtc.logs.historyDays=$logHistoryDays",
+        "-Dxtc.logs.maxFileMb=$logMaxFileMb",
+        "-Dxtc.logs.totalSizeMb=$logTotalSizeMb",
+        "-Dxtc.logs.retainedSessions=$logRetainedSessions",
+    )
 }
