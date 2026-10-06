@@ -27,7 +27,7 @@ export function runtimeSettingsCases(): void {
             assert.ok(applied.jvmOptions.includes(data.vmOptions[0]));
             if (id === 'X269') {
                 await settings.update('java.vmOptions', data.invalidOptions, vscode.ConfigurationTarget.Global);
-                await assert.rejects(() => vscode.commands.executeCommand('xtc.restartServer'), /heap/);
+                await assert.rejects(async () => vscode.commands.executeCommand('xtc.restartServer'), /heap/);
                 assert.strictEqual((await status()).pid, applied.pid);
                 await noErrors(document.uri);
             } else {
@@ -40,7 +40,7 @@ export function runtimeSettingsCases(): void {
                 assert.ok(archive.includes(Buffer.from('manifest.json')) && archive.includes(Buffer.from('server.log')));
                 assert.ok(archive.length < 6 * 1024 * 1024);
                 await settings.update('server.logs', { ...data.logs, totalSizeMb: 0 }, vscode.ConfigurationTarget.Global);
-                await assert.rejects(() => vscode.commands.executeCommand('xtc.restartServer'), /retention/i);
+                await assert.rejects(async () => vscode.commands.executeCommand('xtc.restartServer'), /retention/i);
                 assert.strictEqual((await status()).pid, applied.pid);
             }
             assert.strictEqual(document.getText(), data.source);
