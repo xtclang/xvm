@@ -42,8 +42,9 @@ class CompilerPlaybookTest {
     fun largeFileEditing() = runPlaybook(PlaybookMode.LARGE_FILE)
 
     private fun runPlaybook(mode: PlaybookMode) {
-        require(System.getProperty("xtc.playbook.adapter") == "compiler") {
-            "Run with -Plsp.adapter=compiler"
+        val adapter = System.getProperty("xtc.playbook.adapter")
+        require(adapter == "compiler" || (adapter == "treesitter" && mode == PlaybookMode.SETTINGS_PERSISTENCE)) {
+            "Feature playbooks require -Plsp.adapter=compiler; settings persistence also supports treesitter"
         }
         val reports = Files.createDirectories(Path.of(System.getProperty("xtc.playbook.reports")))
         val run = Files.createTempDirectory(reports, "run-")
@@ -324,7 +325,7 @@ class CompilerPlaybookTest {
                 mapOf(
                     "ideVersion" to ideVersion,
                     "lsp4ijVersion" to lsp4ijVersion,
-                    "adapter" to "compiler",
+                    "adapter" to adapter,
                     "startupOnly" to (mode == PlaybookMode.STARTUP),
                     "mode" to mode.name,
                     "selectedCases" to
