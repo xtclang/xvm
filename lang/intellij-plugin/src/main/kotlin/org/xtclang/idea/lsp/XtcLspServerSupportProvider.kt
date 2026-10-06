@@ -89,6 +89,8 @@ class XtcLspConnectionProvider(
     private val project: Project,
 ) : OSProcessStreamConnectionProvider() {
     private val logger = logger<XtcLspConnectionProvider>()
+    private val support = project.getService(ServerSupportLogs::class.java)
+    private val launch = support.begin("Resolving the bundled Ecstasy server and Java runtime.\n")
     private val lifetime = ConnectionLifetime({ super.start() }, { super.stop() })
 
     companion object {
@@ -108,6 +110,16 @@ class XtcLspConnectionProvider(
     }
 
     init {
+        addLogErrorHandler { support.append(launch, it) }
+        try {
+            configureCommand()
+        } catch (failure: Exception) {
+            support.append(launch, "Startup failed: ${failure.message}\n")
+            throw failure
+        }
+    }
+
+    private fun configureCommand() {
         val serverJar = findServerJar()
 
         // Log level: system property > environment variable > INFO default
@@ -153,6 +165,7 @@ class XtcLspConnectionProvider(
                 project.basePath?.let { withWorkDirectory(it) }
             }
         setCommandLine(commandLine)
+        support.append(launch, "Command: ${commandLine.commandLineString}\n")
 
         logger.info(
             "Ecstasy LSP command configured (v${LspBuildProperties.version}, " +
@@ -173,7 +186,13 @@ class XtcLspConnectionProvider(
         // LSP4IJ starts on a pooled thread: project disposal or cancellation can stop the
         // provider first. Its OS provider otherwise starts even after its stop flag is set.
         if (project.isDisposed) lifetime.stop()
-        lifetime.start()
+        try {
+            lifetime.start()
+            pid?.let { support.process(launch, it) }
+        } catch (failure: Exception) {
+            support.append(launch, "Startup failed: ${failure.message}\n")
+            throw failure
+        }
 
         logger.info(
             "Ecstasy LSP Server process started (v${LspBuildProperties.version}, adapter=${LspBuildProperties.adapter}, pid=$pid)",
@@ -203,6 +222,7 @@ class XtcLspConnectionProvider(
     override fun stop() {
         logger.info("Stopping Ecstasy LSP Server")
         lifetime.stop()
+        support.append(launch, "\nConnection stopped.\n")
         logger.info("Ecstasy LSP Server stopped")
     }
 

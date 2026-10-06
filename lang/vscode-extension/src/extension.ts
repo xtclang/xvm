@@ -21,6 +21,8 @@ import { readServiceSettings } from './editor-settings';
 import { compilerSettingsLocation } from './rename-proposal';
 import { runtimeJvmOptions, runtimeLogArguments } from './runtime-settings';
 import { configuredSettings, configurationProperties } from './settings-report';
+import { supportLogs } from './support-logs';
+import { serviceFailure } from './service-notifications';
 
 function ensureXtcLanguageAssociation(document: vscode.TextDocument): void {
     if (document.fileName.endsWith('.x') && document.languageId !== 'xtc') {
@@ -146,11 +148,12 @@ export function activate(context: vscode.ExtensionContext): void {
         }),
         vscode.commands.registerCommand('xtc.exportServerLogs', async (target?: vscode.Uri) => {
             const connection = getClient();
-            if (!connection?.isRunning()) { void vscode.window.showInformationMessage('Open an Ecstasy file to connect to its server, then export logs. Previous logs remain under ~/.xtc/logs/lsp.'); return; }
             const destination = target ?? await vscode.window.showSaveDialog({ title: 'Export Ecstasy Server Logs (includes local paths and logged diagnostics)', filters: { 'ZIP archives': ['zip'] }, defaultUri: vscode.Uri.file(path.join(os.homedir(), 'ecstasy-server-logs.zip')) });
             if (!destination) return;
-            const bundle = await connection.sendRequest<{ base64: string }>('xtc/exportLogs');
-            await vscode.workspace.fs.writeFile(destination, Buffer.from(bundle.base64, 'base64'));
+            const archive = connection?.isRunning()
+                ? Buffer.from((await connection.sendRequest<{ base64: string }>('xtc/exportLogs')).base64, 'base64')
+                : await supportLogs(context).export();
+            await vscode.workspace.fs.writeFile(destination, archive);
             outputChannel.info(`Exported Ecstasy server logs to ${destination.fsPath}`);
         }),
         vscode.commands.registerCommand('xtc.restartServer', async () => {
@@ -174,7 +177,7 @@ export function activate(context: vscode.ExtensionContext): void {
                     void vscode.window.showInformationMessage('Ecstasy runtime/log settings saved. Restart the language server to apply them.', 'Restart now', 'Open Settings')
                         .then(choice => choice === 'Restart now' ? vscode.commands.executeCommand('xtc.restartServer')
                             : choice === 'Open Settings' ? vscode.commands.executeCommand('workbench.action.openSettings', 'xtc.java.vmOptions') : undefined);
-                } catch (error) { void vscode.window.showErrorMessage(`Invalid Ecstasy runtime/log settings; running server retained: ${error}`); }
+                } catch (error) { serviceFailure(`Invalid Ecstasy runtime/log settings; running server retained: ${error}`); }
             }
             if (event.affectsConfiguration('xtc.trace.server')) {
                 void applyTraceConfig();
@@ -197,7 +200,7 @@ export function activate(context: vscode.ExtensionContext): void {
                     void restartLanguageClient(context, serverJar, outputChannel).catch(error => outputChannel.error(`Ecstasy restart failed: ${error}`));
                 } catch (error) {
                     outputChannel.error(`Invalid Ecstasy settings; previous connection retained: ${error}`);
-                    void vscode.window.showErrorMessage(`Invalid Ecstasy settings; previous connection retained: ${error}`);
+                    serviceFailure(`Invalid Ecstasy settings; previous connection retained: ${error}`);
                 }
             }
         })
