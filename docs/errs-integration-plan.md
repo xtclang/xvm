@@ -11802,3 +11802,16 @@ Extraction/checkpoint map for this batch:
 
 Carry the launcher compatibility work with the log layout; carry the native corrections with
 shared scenarios. The fixture provider fix is independently extractable with its generator.
+
+## Compiler default (2026-10-06)
+
+At the user's request, `lsp.adapter=compiler` is now the repository default. Server build metadata,
+launcher fallback and IntelliJ fallback/acceptance configuration agree. IntelliJ acceptance reads
+through `xdkProperties` so a composite-root setting is not lost. Tree-sitter and mock remain
+explicit build-time alternatives; no adapter implementation or capability boundary changed.
+Historical Tree-sitter-default receipts above describe the policy at their original date.
+
+Validation: `AdapterBackendTest` executes 3 tests, zero failures/errors/skips; building `fatJar`
+without `-Plsp.adapter` embeds `lsp.adapter=compiler`. Native IntelliJ run
+`run-1339684403623139271`, also without an adapter override, passes START and X135 with zero IDE
+errors. Runtime-default documentation and the adapter feature matrix now reflect this policy.

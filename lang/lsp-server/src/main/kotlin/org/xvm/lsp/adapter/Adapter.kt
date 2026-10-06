@@ -18,13 +18,14 @@ import java.util.concurrent.CompletableFuture
  * |---------------------|----------------------|--------------|----------------------------------|
  * | `MockAdapter`       | `adapter.mock`       | Regex        | Testing and fallback             |
  * | `TreeSitterAdapter` | `adapter.treesitter` | Tree-sitter  | Syntax-aware (~80% LSP features) |
- * | `XdkAdapter`        | `adapter.xdk`        | XDK Compiler | (future) Full semantic features  |
+ * | `XdkAdapter`        | `adapter.xdk`        | XDK Compiler | Compiler semantic features  |
  *
  * ## Backend Selection
  *
- * Select at build time: `./gradlew :lang:lsp-server:build -Plsp.adapter=treesitter`
+ * Select at build time: `./gradlew :lang:lsp-server:build -Plsp.adapter=compiler`
  *
- * - `treesitter` (default): Syntax-aware parsing, requires native library
+ * - `compiler` (default): Compiler diagnostics and semantic features, with bundled XDK modules
+ * - `treesitter`: Syntax-aware parsing, requires native library
  * - `mock`: Regex-based, no native dependencies
  */
 interface Adapter : Closeable {

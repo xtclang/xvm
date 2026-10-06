@@ -72,13 +72,13 @@ internal enum class AdapterBackend(
                     MOCK
                 }
 
-                null,
                 "treesitter",
                 "tree-sitter",
                 -> {
                     TREE_SITTER
                 }
 
+                null,
                 "compiler",
                 "xtc",
                 "full",
