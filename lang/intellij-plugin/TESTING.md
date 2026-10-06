@@ -766,6 +766,27 @@ The XTC plugin depends on three bundled/third-party plugins:
 
 ### LSP4IJ in Tests
 
+Ordinary builds, `runIde` and the native playbook use the Marketplace version pinned in the
+catalog (currently 0.21.0). To test an unpushed local repair, first run `prepareSandbox` in its checkout, then
+pass the same explicit override to the XVM task:
+
+```bash
+./gradlew :lang:intellij-plugin:testCompilerPlaybook \
+  --tests '*CompilerPlaybookTest.compilerPlaybook' \
+  -Plsp4ijPlugin="$HOME/src/lsp4ij/build/idea-sandbox/IC-2024.2/plugins/lsp4ij" \
+  -PintellijPlaybookCases=X130,X138,X139,X146,X162,X181,X185,X259 \
+  -Plsp.adapter=compiler -PincludeBuildLang=true -PincludeBuildAttachLang=true --no-build-cache
+```
+
+`lsp4ijPlugin` must be an absolute path to the built plugin directory containing `lib/`. Gradle's
+`localPlugin` dependency handles the compile/test sandbox; Starter copies that same directory
+instead of downloading the Marketplace release. The native report records its path, descriptor
+version and SHA-256 of sorted relative filenames and contents; startup verifies the loaded version.
+The directory contents are declared task inputs, including when the snapshot version stays the
+same. Omit the property to return to the released dependency. Using the built directory avoids
+the Gradle plugin's temporary ZIP metadata extraction invalidating configuration-cache reuse.
+No local path or snapshot is committed as a default, and no plugin is published by this task.
+
 LSP4IJ is the most complex dependency. For platform tests, you need it on the test
 classpath so that the `lsp4ij:server` and `lsp4ij:fileNamePatternMapping` extensions
 in `plugin.xml` resolve correctly.
