@@ -35,6 +35,9 @@ internal fun ParityScenarios.librarySettingsCases() {
                 ),
             )
             val document = open(data.string("consumerFile"), data.string("consumer"))
+            if (id == "X268") {
+                configure(listOf(SharedScenarios.SourceModule("LibraryConsumer", document.uri, emptyList())))
+            }
             with(driver) {
                 val page = utility(CompilerLibrariesPage::class)
                 val project = singleProject()

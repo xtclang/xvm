@@ -13,6 +13,7 @@ import org.xvm.lsp.adapter.xdk.XdkBuildModel
 import org.xvm.lsp.adapter.xdk.XdkLibraries
 import org.xvm.lsp.adapter.xdk.toDependency
 import java.io.ByteArrayOutputStream
+import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -72,7 +73,12 @@ class CompilerLibrariesTest {
             val target = requireNotNull(adapter.findDefinition(uri, 0, consumer.indexOf("value")))
             assertThat(target.startLine).isEqualTo(1)
             assertThat(target.uri).isNotEqualTo(sources.resolve("Attached.x").toUri().toString())
-            assertThat(adapter.readOnlyDocument(target.uri)?.text).isEqualTo(text)
+            val document = requireNotNull(adapter.readOnlyDocument(target.uri))
+            assertThat(document.text).isEqualTo(text)
+            val virtual = URI.create(document.uri)
+            assertThat(virtual.host).isEqualTo("attached")
+            assertThat(virtual.path).startsWith("/Attached/")
+            assertThat(adapter.readOnlyDocument(virtual.toASCIIString())).isEqualTo(document)
             assertThat(adapter.effectiveSourceModules()).isEmpty()
             adapter.replaceDependencies(emptyList())
             assertThat(adapter.readOnlyDocument(target.uri)).isNull()
