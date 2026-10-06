@@ -38,9 +38,15 @@ class ParityScenarios(
         body: ParityWorkspace.(JsonObject) -> Unit,
     ) {
         execute(id) {
-            ParityWorkspace(driver, id, fixtures, shared).use { workspace ->
+            val workspace = ParityWorkspace(driver, id, fixtures, shared)
+            try {
                 workspace.body(shared.scenarios.getValue(id).values)
+            } catch (failure: Throwable) {
+                // Do not race cleanup with a driver command that may still be running.
+                if (!failure.mustStopPlaybook()) runCatching(workspace::close).onFailure(failure::addSuppressed)
+                throw failure
             }
+            workspace.close()
         }
     }
 }
