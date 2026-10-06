@@ -85,6 +85,12 @@ export function renameFamilyCases(ids: readonly (typeof renameCases[number] | 'X
                 }
                 const document = await workspace.open(data.file);
                 await noErrors(document.uri);
+                if ('navigationAnchor' in data) {
+                    const references = await vscode.commands.executeCommand<vscode.Location[]>(
+                        'vscode.executeReferenceProvider', document.uri, position(document, data.navigationAnchor));
+                    assert.deepStrictEqual(references?.map(reference => reference.uri.fsPath).sort(),
+                        data.navigationFiles.map(file => workspace.uri(file).fsPath).sort());
+                }
                 for (const file of data.files.filter(file => file.file !== data.file)) {
                     assert.ok(!vscode.workspace.textDocuments.some(document => !document.isClosed && document.uri.fsPath === workspace.uri(file.file).fsPath),
                         `Consumer must be closed before rename: ${file.file}`);
