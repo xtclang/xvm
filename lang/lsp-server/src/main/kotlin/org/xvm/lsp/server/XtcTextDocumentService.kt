@@ -967,7 +967,7 @@ class XtcTextDocumentService(
                     params.position.line,
                     params.position.character,
                 )?.let {
-                    Either.forLeft<List<Location>, List<LocationLink>>(listOf(it.toLsp()))
+                    Either.forLeft(listOf(it.toLsp()))
                 } ?: Either.forLeft(emptyList())
         }
 
@@ -1091,8 +1091,8 @@ class XtcTextDocumentService(
             }
         }
 
-    private fun toLspSelectionRange(range: AdapterSelectionRange): org.eclipse.lsp4j.SelectionRange =
-        org.eclipse.lsp4j.SelectionRange().apply {
+    private fun toLspSelectionRange(range: AdapterSelectionRange): SelectionRange =
+        SelectionRange().apply {
             this.range = range.range.toLsp()
             this.parent = range.parent?.let { toLspSelectionRange(it) }
         }
@@ -1223,7 +1223,7 @@ class XtcTextDocumentService(
                     params.position.line,
                     params.position.character,
                 )?.let { result ->
-                    Either3.forSecond<Range, PrepareRenameResult, PrepareRenameDefaultBehavior>(
+                    Either3.forSecond(
                         PrepareRenameResult().apply {
                             range = result.range.toLsp()
                             placeholder = result.placeholder
@@ -1368,7 +1368,7 @@ class XtcTextDocumentService(
                         )
                     } +
                     edit.renames.map { (from, to) ->
-                        Either.forRight<TextDocumentEdit, ResourceOperation>(
+                        Either.forRight(
                             RenameFile(from, to, RenameFileOptions(false, false)),
                         )
                     }
@@ -1420,7 +1420,7 @@ class XtcTextDocumentService(
                     // Legacy clients receive a bounded opaque handle, never an arbitrary edit to
                     // execute.
                     if (handle == null) return@mapNotNull null
-                    return@mapNotNull Either.forLeft<Command, CodeAction>(
+                    return@mapNotNull Either.forLeft(
                         Command(
                             action.title,
                             ClientPresentation.APPLY_CODE_ACTION,
@@ -1429,7 +1429,7 @@ class XtcTextDocumentService(
                     )
                 }
                 val proposed = if (handle == null) edit?.let(::protocolEdit) else null
-                Either.forRight<Command, CodeAction>(
+                Either.forRight(
                     CodeAction().apply {
                         title = action.title
                         this.kind = action.kind.toLsp()
@@ -2175,22 +2175,21 @@ class XtcTextDocumentService(
     private fun AdapterLocation.toLsp(): Location =
         Location(server.readOnlyDocuments.present(uri), Range(Position(startLine, startColumn), Position(endLine, endColumn)))
 
-    private fun AdapterTypeHierarchyItem.toLsp(defaultUri: String): org.eclipse.lsp4j.TypeHierarchyItem {
+    private fun AdapterTypeHierarchyItem.toLsp(defaultUri: String): TypeHierarchyItem {
         val resolvedUri = this.uri.ifEmpty { defaultUri }
-        return org.eclipse.lsp4j
-            .TypeHierarchyItem(
-                this.name,
-                this.kind.toLsp(),
-                server.readOnlyDocuments.present(resolvedUri),
-                this.range.toLsp(),
-                this.selectionRange.toLsp(),
-            ).apply {
-                this.detail = this@toLsp.detail
-                this.data = this@toLsp.data
-            }
+        return TypeHierarchyItem(
+            this.name,
+            this.kind.toLsp(),
+            server.readOnlyDocuments.present(resolvedUri),
+            this.range.toLsp(),
+            this.selectionRange.toLsp(),
+        ).apply {
+            this.detail = this@toLsp.detail
+            this.data = this@toLsp.data
+        }
     }
 
-    private fun org.eclipse.lsp4j.TypeHierarchyItem.toAdapter(): AdapterTypeHierarchyItem =
+    private fun TypeHierarchyItem.toAdapter(): AdapterTypeHierarchyItem =
         AdapterTypeHierarchyItem(
             name = name,
             kind = SymbolInfo.SymbolKind.CLASS,
@@ -2206,9 +2205,9 @@ class XtcTextDocumentService(
                 },
         )
 
-    private fun AdapterCallHierarchyItem.toLspCallItem(): org.eclipse.lsp4j.CallHierarchyItem {
+    private fun AdapterCallHierarchyItem.toLspCallItem(): CallHierarchyItem {
         val result =
-            org.eclipse.lsp4j.CallHierarchyItem(
+            CallHierarchyItem(
                 this.name,
                 this.kind.toLsp(),
                 server.readOnlyDocuments.present(this.uri),
@@ -2220,7 +2219,7 @@ class XtcTextDocumentService(
         return result
     }
 
-    private fun org.eclipse.lsp4j.CallHierarchyItem.toAdapterCallItem(): AdapterCallHierarchyItem =
+    private fun CallHierarchyItem.toAdapterCallItem(): AdapterCallHierarchyItem =
         AdapterCallHierarchyItem(
             name = name,
             kind = SymbolInfo.SymbolKind.METHOD,
@@ -2236,7 +2235,7 @@ class XtcTextDocumentService(
                 },
         )
 
-    private fun toAdapterRange(range: org.eclipse.lsp4j.Range) =
+    private fun toAdapterRange(range: Range) =
         AdapterRange(
             AdapterPosition(range.start.line, range.start.character),
             AdapterPosition(range.end.line, range.end.character),

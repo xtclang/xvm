@@ -251,6 +251,8 @@ class SemanticModelTest {
         assertThat(missing.type).isNull()
         val at = position(source, "missing")
         assertThat(model.definitionAt(at.line, at.column)).isNull()
+        assertThat(model.implementationLocationsAt(at.line, at.column)).isEmpty()
+        assertThat(model.implementationLocationsAt(0, 0)).isEmpty()
         assertThat(model.referencesAt(at.line, at.column, true)).isEmpty()
         assertThat(model.typeAt(at.line, at.column)).isNull()
     }

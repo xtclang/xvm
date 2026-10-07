@@ -51,6 +51,7 @@ import org.xvm.compiler.ast.TypedefStatement
 import org.xvm.compiler.ast.VariableDeclarationStatement
 import org.xvm.compiler.ast.VariableTypeExpression
 import org.xvm.compiler.ast.partial.IncompleteLocalDeclaration
+import org.xvm.compiler.ast.partial.IncompleteStatement
 import org.xvm.lsp.adapter.xdk.SemanticModel.ExpressionType
 import org.xvm.lsp.adapter.xdk.SemanticModel.Occurrence
 import org.xvm.lsp.adapter.xdk.SemanticModel.Position
@@ -70,6 +71,7 @@ import org.xvm.lsp.util.ExecutionTrace
 import java.util.Collections
 import java.util.IdentityHashMap
 import java.util.UUID
+import kotlin.jvm.optionals.getOrNull
 import java.util.List.copyOf as immutableList
 import java.util.Set.copyOf as immutableSet
 
@@ -145,7 +147,7 @@ internal class CompiledSemantics(
     val artifact: XdkDependency?,
 )
 
-/** Emit once, then associate copied bindings with artifact identities; failed attempts have none. */
+/** Emit once, then associate copied bindings with artifact identities only when compilation succeeds. */
 internal fun EmbeddingSupport.Compilation.compiledSemantics(
     dependencies: XdkDependencies.Open,
     errors: ErrorListener,
@@ -868,7 +870,7 @@ private class SemanticModelBuilder(
     private fun copyCall(
         source: Source?,
         site: SourceLocation,
-        callee: SemanticModel.Range,
+        callee: Range,
         binding: InvocationBinding,
         caller: SymbolId?,
         construction: Boolean = false,
@@ -1038,7 +1040,7 @@ private class SemanticModelBuilder(
         )
         val sites =
             analysis.sites().map { site ->
-                val operation = site.argumentCall.orElse(site)
+                val operation: IncompleteStatement = site.argumentCall.getOrNull() ?: site
                 val parents = generateSequence(site.parent) { it.parent }.toList()
                 val owner =
                     parents.filterIsInstance<TypeCompositionStatement>().firstOrNull()?.component
@@ -1750,6 +1752,11 @@ private class SemanticModelBuilder(
 
     private fun type(constant: TypeConstant?): TypeId? {
         if (constant == null || !copyableType(constant)) return null
+        return copyType(constant)
+    }
+
+    /** Copy a graph already checked by [copyableType]; recursive edges reuse interned IDs. */
+    private fun copyType(constant: TypeConstant): TypeId {
         typeIds[constant]?.let {
             return it
         }
@@ -1757,18 +1764,18 @@ private class SemanticModelBuilder(
         typeIds[constant] = id // intern before following recursive type relationships
         val arguments =
             if (constant.isParamsSpecified && !constant.isRelationalType) {
-                constant.paramTypes.map { type(it)!! }
+                constant.paramTypes.map(::copyType)
             } else {
                 emptyList()
             }
         val underlying =
             when {
                 constant.isRelationalType -> {
-                    listOf(type(constant.underlyingType)!!, type(constant.underlyingType2)!!)
+                    listOf(copyType(constant.underlyingType), copyType(constant.underlyingType2))
                 }
 
                 constant.isModifyingType -> {
-                    listOf(type(constant.underlyingType)!!)
+                    listOf(copyType(constant.underlyingType))
                 }
 
                 else -> {

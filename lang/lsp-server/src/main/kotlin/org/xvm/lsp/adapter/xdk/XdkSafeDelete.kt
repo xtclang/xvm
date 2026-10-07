@@ -2,13 +2,10 @@ package org.xvm.lsp.adapter.xdk
 
 import org.xvm.asm.Constants.Access
 import org.xvm.asm.ErrorList
-import org.xvm.compiler.CompilerException
 import org.xvm.compiler.Lexer
-import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AnnotationExpression
-import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.compiler.ast.PropertyDeclarationStatement
 import org.xvm.compiler.ast.StatementBlock
@@ -37,19 +34,9 @@ internal object XdkSafeDelete {
         val declaration = symbol.declaration ?: return null
         val identity = facts.constants[symbol.id] as? ProofIdentity.Source ?: return null
         val errors = ErrorList()
-        val root =
-            try {
-                ExecutionTrace.api("Parser.parseSource(safe-delete)") { Parser(Source(text), errors).parseSource() }
-            } catch (_: CompilerException) {
-                return null
-            }
-        if (errors.hasSeriousErrors()) return null
+        val root = XdkRefactoringSyntax.parse(text, errors, "safe-delete") ?: return null
 
-        fun tree(
-            node: AstNode,
-            parent: AstNode? = null,
-        ): Sequence<Pair<AstNode, AstNode?>> = sequenceOf(node to parent) + node.childNodes().asSequence().flatMap { tree(it, node) }
-        val parents = tree(root).toMap()
+        val parents = XdkRefactoringSyntax.tree(root).toMap()
 
         fun at(value: Long) = SemanticModel.Position(Source.calculateLine(value), Source.calculateOffset(value))
         val member =
@@ -74,7 +61,7 @@ internal object XdkSafeDelete {
                 }
             } ?: return null
         if (parents[parents[member]] !is TypeCompositionStatement) return null
-        if (tree(member).any { (node, _) -> node is AnnotationExpression }) return null
+        if (XdkRefactoringSyntax.tree(member).any { (node, _) -> node is AnnotationExpression }) return null
         val start = XdkRename.offset(text, at(member.startPosition)) ?: return null
         val end = XdkRename.offset(text, at(member.endPosition)) ?: return null
         val terminator = Regex("[ \t]*;").find(text, end)?.takeIf { it.range.first == end }
