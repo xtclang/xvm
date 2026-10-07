@@ -4068,7 +4068,7 @@ leaves the wrapper enabled and does not represent the user's Stop action.
 On the multiline generic `echo` header, select **Generate documentation comment**. The skeleton
 must precede the complete header and contain the declared formal/value parameter names and return
 entry. Existing documentation suppresses the action. Undo, Redo and Undo must restore the exact
-shared source with clean diagnostics. Both editor drivers implement this case; acceptance is pending.
+shared source with clean diagnostics. Both editor drivers pass this case (October 7 selected acceptance).
 
 ### Theme-based highlighting follow-up (X276/X277)
 
@@ -4097,3 +4097,9 @@ visual comparisons; normal native runs leave it alone.
 
 All four focused cases pass in both editors; final X277 grammar/recovery checks and the six VS Code
 startup comparisons are recorded in the [completion receipt](../../docs/errs-integration-plan.md#theme-based-source-highlighting-completion-2026-10-07).
+
+Documentation/reference acceptance (October 7): VS Code `run-coeJEN` passes X131/X278 and
+`run-ubCdfK` passes X279 after fixing scoped configuration forwarding. IntelliJ
+`run-6731819376946689872` passes START/X131/X278/X279 with zero IDE errors. X279 verifies native
+reference navigation, current consumer counts and the live toggle retaining Run; a timed-out toggle
+in the first VS Code attempt was a failed test, not accepted evidence.

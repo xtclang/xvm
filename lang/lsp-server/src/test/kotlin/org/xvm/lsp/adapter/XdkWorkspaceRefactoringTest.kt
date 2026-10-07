@@ -95,12 +95,13 @@ class XdkWorkspaceRefactoringTest {
             source("Broken", "module Broken { Missing value; }")
             adapter.refreshDiscoveredSources()
             assertThat(
-                adapter.getCodeActions(
-                    uri,
-                    Range(Position(0, 0), Position(0, text.length)),
-                    emptyList(),
-                ),
-            ).isEmpty()
+                adapter
+                    .getCodeActions(
+                        uri,
+                        Range(Position(0, 0), Position(0, text.length)),
+                        emptyList(),
+                    ).map { it.title },
+            ).containsExactly("Generate documentation comment")
         }
     }
 
@@ -276,12 +277,13 @@ class XdkWorkspaceRefactoringTest {
             adapter.initializeWorkspace(listOf(directory.toString()))
             assertThat(adapter.compile(uri, text).diagnostics).isNotEmpty()
             assertThat(
-                adapter.getCodeActions(
-                    uri,
-                    Range(Position(0, 0), Position(0, text.length)),
-                    emptyList(),
-                ),
-            ).isEmpty()
+                adapter
+                    .getCodeActions(
+                        uri,
+                        Range(Position(0, 0), Position(0, text.length)),
+                        emptyList(),
+                    ).map { it.title },
+            ).containsExactly("Generate documentation comment")
         }
     }
 

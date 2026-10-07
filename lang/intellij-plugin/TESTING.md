@@ -1010,3 +1010,8 @@ TextMate token types, rejecting a plain-text lexical fallback. Select either by 
 X ID. Normal runs retain the current color scheme. Selected X41/X154/X276/X277 and the final X277
 regression run pass with zero IDE failures; see the
 [receipt](../../docs/errs-integration-plan.md#theme-based-source-highlighting-completion-2026-10-07).
+
+October 7 documentation/reference selection: `run-6731819376946689872` passes START/X131/X278/X279
+with zero IDE errors. X278 activates the native intention and Undo/Redo. X279 inspects rendered
+Code Vision entries, invokes the installed entry's click handler without moving the mouse, selects
+an unopened consumer through Show Usages, then checks edit refresh and the live reference setting.

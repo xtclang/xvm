@@ -9,12 +9,15 @@ import java.awt.event.MouseEvent
 /** Inspect installed Code Vision entries and activate their real click handler without moving the pointer. */
 object CodeLensUi {
     @JvmStatic
-    fun titles(editor: Editor): List<String> =
-        editor.lensContextIfCreated
-            ?.validPairResult
-            ?.mapNotNull { (_, entry) -> (entry as? TextCodeVisionEntry)?.text }
-            ?.toList()
-            .orEmpty()
+    fun titles(editor: Editor): List<String> {
+        val context = editor.lensContextIfCreated ?: return emptyList()
+        return context
+            .getValidPairResult()
+            .map { it.second }
+            .filterIsInstance<TextCodeVisionEntry>()
+            .map { it.text }
+            .toList()
+    }
 
     @JvmStatic
     fun click(
@@ -23,7 +26,7 @@ object CodeLensUi {
     ) {
         val entry =
             requireNotNull(editor.lensContextIfCreated)
-                .validPairResult
+                .getValidPairResult()
                 .map { it.second }
                 .filterIsInstance<ClickableTextCodeVisionEntry>()
                 .single { it.text == title }
