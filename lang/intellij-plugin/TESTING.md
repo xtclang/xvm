@@ -37,7 +37,7 @@ owner tests use application-free indicators; shared X260 separately exercises th
 Cancel button. X261/X262 cover failed/invalid Gradle output and retry. See the
 [shared import receipt](../../docs/errs-integration-plan.md#shared-compiler-import-acceptance-and-remaining-ui-work-2026-10-05).
 
-The native suite uses the shared 277-scenario catalog (X1–X272, CFG1–CFG3, 7a.8/7a.9).
+The native suite uses the shared 282-scenario catalog (X1–X277, CFG1–CFG3, 7a.8/7a.9).
 It launches an isolated Community-capable IntelliJ environment with Ultimate disabled. Selected
 runs preserve explicit `partial` statuses where LSP4IJ cannot exercise a native feature; neither
 passing protocol assertions nor an unselected scenario count as full UI acceptance. The
@@ -1002,3 +1002,11 @@ The UI completion gate includes `--tests '*CompilerPlaybookTest.settingsPersiste
 and completely exits two IDE processes using one disposable project/profile. See the
 [settings acceptance steps](../doc/manual-test-plan.md#settings-persistence-and-layout-acceptance-ui1ui7)
 for exact commands and layout checks.
+
+X276 checks compiler-resolved annotations, aliases, shadowing and bundled ownership, including
+installed decorator markup. X277 checks lexical string/escape/keyword styles against controls,
+absence of broad semantic overlays and exact damage/repair recovery. It explicitly requires
+TextMate token types, rejecting a plain-text lexical fallback. Select either by its stable
+X ID. Normal runs retain the current color scheme. Selected X41/X154/X276/X277 and the final X277
+regression run pass with zero IDE failures; see the
+[receipt](../../docs/errs-integration-plan.md#theme-based-source-highlighting-completion-2026-10-07).

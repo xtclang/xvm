@@ -184,6 +184,51 @@
       "startupFailureOptions": [
         "-Xmx1K"
       ]
+    },
+    "colorPrototype": {
+      "cases": [
+        "X273",
+        "X274",
+        "X275"
+      ],
+      "file": "ColorPrototype.x",
+      "source": "/**\n * L77 fixture only: byte-valued sRGB with straight (unpremultiplied) alpha.\n * This is not a public XDK graphics/color API.\n */\nmodule ColorPrototype {\n    const Rgba(UInt8 red, UInt8 green, UInt8 blue, UInt8 alpha = 255) {}\n\n    Rgba accent = new Rgba(255, 128, 0);\n\n    Rgba translucent() {\n        return new Rgba(blue = 40, red = 200, alpha = 128, green = 80);\n    }\n\n    // Dynamic values and color-looking text deliberately have no swatch.\n    Rgba dynamic(UInt8 red) = new Rgba(red, 128, 0);\n    String ordinaryText = \"#ff8000\";\n}\n",
+      "colors": [
+        {
+          "anchor": "new Rgba(255, 128, 0)",
+          "rgba": [
+            255,
+            128,
+            0,
+            255
+          ]
+        },
+        {
+          "anchor": "new Rgba(blue = 40, red = 200, alpha = 128, green = 80)",
+          "rgba": [
+            200,
+            80,
+            40,
+            128
+          ]
+        }
+      ],
+      "invalid": {
+        "from": "new Rgba(255, 128, 0)",
+        "to": "new Rgba(256, 128, 0)"
+      },
+      "themes": {
+        "vscode": [
+          "Default Dark Modern",
+          "Default Light Modern",
+          "Default High Contrast"
+        ],
+        "intellij": [
+          "Darcula",
+          "IntelliJ Light",
+          "High contrast"
+        ]
+      }
     }
   },
   "cases": {
@@ -226,8 +271,8 @@
             "severity": "ERROR",
             "codePrefix": "COMPILER-",
             "messageContains": "",
-            "rangeStart": "\u00a7String value = 2;",
-            "rangeEnd": "return \u00a7value + this.value;"
+            "rangeStart": "§String value = 2;",
+            "rangeEnd": "return §value + this.value;"
           },
           {
             "edit": {
@@ -237,8 +282,8 @@
             "severity": "ERROR",
             "codePrefix": "COMPILER-",
             "messageContains": "missing",
-            "rangeStart": "Object value = \u00a7missing;",
-            "rangeEnd": "Object value = missing\u00a7;"
+            "rangeStart": "Object value = §missing;",
+            "rangeEnd": "Object value = missing§;"
           }
         ],
         "cleanAppend": "// ERROR: test\n"
@@ -282,14 +327,14 @@
         "file": "Navigation.x",
         "locations": [
           {
-            "cursor": "return \u00a7value + this.value;",
+            "cursor": "return §value + this.value;",
             "targetFile": "Navigation.x",
-            "target": "Int \u00a7value = 2;"
+            "target": "Int §value = 2;"
           },
           {
-            "cursor": "this.\u00a7value",
+            "cursor": "this.§value",
             "targetFile": "Navigation.x",
-            "target": "Int \u00a7value = 1;"
+            "target": "Int §value = 1;"
           }
         ]
       },
@@ -323,8 +368,8 @@
       ],
       "values": {
         "bodies": [
-          "box.\u00a7;",
-          "box.it\u00a7;"
+          "box.§;",
+          "box.it§;"
         ],
         "label": "item",
         "type": {
@@ -349,7 +394,7 @@
           "from": "void run(Box<String> box, String itemParameter, Object value) {}",
           "to": "void run(Box<String> box, String itemParameter, Object value) { Int size = getValue().si; }"
         },
-        "cursor": "getValue().si\u00a7;",
+        "cursor": "getValue().si§;",
         "label": "size",
         "accepted": {
           "from": "getValue().si;",
@@ -365,7 +410,7 @@
       "title": "flow-narrowed receiver completion",
       "manual": [],
       "values": {
-        "body": "if (value.is(String)) { Int size = value.si\u00a7; }",
+        "body": "if (value.is(String)) { Int size = value.si§; }",
         "label": "size",
         "acceptedSuffix": ".size;"
       },
@@ -378,7 +423,7 @@
       "title": "scope excludes unreadable and later locals",
       "manual": [],
       "values": {
-        "body": "Int itemLocal = 1; Int itemUnassigned; item\u00a7; Int itemLater = 2;",
+        "body": "Int itemLocal = 1; Int itemUnassigned; item§; Int itemLater = 2;",
         "include": [
           "itemLocal",
           "itemParameter"
@@ -397,7 +442,7 @@
       "title": "empty statement scope inserts without deleting syntax",
       "manual": [],
       "values": {
-        "body": "\u00a7",
+        "body": "§",
         "label": "itemParameter"
       },
       "intellij": {
@@ -409,7 +454,7 @@
       "title": "implicit members respect shadowing and closed scopes",
       "manual": [],
       "values": {
-        "body": "ite\u00a7;",
+        "body": "ite§;",
         "include": [
           "item",
           "itemMethod",
@@ -420,7 +465,7 @@
           "source": "\\bT\\b",
           "flags": ""
         },
-        "shadowedBody": "{ Int itemClosed = 1; } Int item = 2; ite\u00a7;",
+        "shadowedBody": "{ Int itemClosed = 1; } Int item = 2; ite§;",
         "shadowedType": {
           "source": "Int",
           "flags": ""
@@ -436,7 +481,7 @@
       "title": "static completion enforces access and receiver kind",
       "manual": [],
       "values": {
-        "body": "Tools.item\u00a7;",
+        "body": "Tools.item§;",
         "include": [
           "itemFunction",
           "itemConstant",
@@ -475,7 +520,7 @@
             "addition": "import ecstasy.text.*;"
           }
         ],
-        "body": "${0}\u00a7;",
+        "body": "${0}§;",
         "moduleStart": "module Editing {",
         "moduleWithImport": "module Editing { ${0}"
       },
@@ -490,7 +535,7 @@
       "values": {
         "file": "Editing.x",
         "method": "void run(Box<String> box, String itemParameter, Object value) {}",
-        "incompleteMethod": "void run(Box<String> box, String itemParameter, Object value) { /* \ud83d\ude00 */ Int size = getValue().si\u00a7; }",
+        "incompleteMethod": "void run(Box<String> box, String itemParameter, Object value) { /* 😀 */ Int size = getValue().si§; }",
         "lineBreak": {
           "source": "\\n",
           "flags": "g"
@@ -520,7 +565,7 @@
             "type": "Int"
           }
         ],
-        "body": "box.choose(${0}, \u00a7);",
+        "body": "box.choose(${0}, §);",
         "expected": 1
       },
       "intellij": {
@@ -532,7 +577,7 @@
       "title": "named arguments map to the declared parameter",
       "manual": [],
       "values": {
-        "body": "box.pair(second = \"x\", first = \u00a7);",
+        "body": "box.pair(second = \"x\", first = §);",
         "expected": 1,
         "type": {
           "source": "String",
@@ -557,11 +602,11 @@
       "values": {
         "variants": [
           {
-            "body": "box.generic(\"x\", \u00a7);",
+            "body": "box.generic(\"x\", §);",
             "type": "String"
           },
           {
-            "body": "box.generic(\u00a7);",
+            "body": "box.generic(§);",
             "type": "U"
           }
         ],
@@ -577,9 +622,9 @@
       "manual": [],
       "values": {
         "bodies": [
-          "box.choose(True, \u00a7);",
-          "box.pair(unknown = \u00a7);",
-          "box.pair(first = \"x\", first = \u00a7);"
+          "box.choose(True, §);",
+          "box.pair(unknown = §);",
+          "box.pair(first = \"x\", first = §);"
         ],
         "signatureCount": 0
       },
@@ -596,8 +641,8 @@
           true,
           false
         ],
-        "instanceBody": "pair(itemLocal, \u00a7);",
-        "staticBody": "Tools.join(\"x\", \u00a7);",
+        "instanceBody": "pair(itemLocal, §);",
+        "staticBody": "Tools.join(\"x\", §);",
         "replaceFrom": "class Tools {",
         "replaceWith": "class Tools { static String join(String first, String second) = first;",
         "activeParameter": 1,
@@ -613,10 +658,10 @@
       "title": "named-slot ambiguity and selected overload navigation",
       "manual": [],
       "values": {
-        "body": "box.pair(second = \"x\", \u00a7);",
+        "body": "box.pair(second = \"x\", §);",
         "bodies": [
-          "box.choose(\"x\", \"y\"); \u00a7",
-          "box.choose(1, 2); \u00a7"
+          "box.choose(\"x\", \"y\"); §",
+          "box.choose(1, 2); §"
         ],
         "anchor": "box.choose",
         "offset": 4,
@@ -688,7 +733,7 @@
       "values": {
         "memberFile": "Project/Child.x",
         "method": "String answer()",
-        "incompleteMethod": "void inspect() { ite\u00a7; }\n    String answer()",
+        "incompleteMethod": "void inspect() { ite§; }\n    String answer()",
         "types": [
           "Int",
           "String",
@@ -768,10 +813,10 @@
       "title": "rapid edits and cursor requests converge on current text",
       "manual": [],
       "values": {
-        "incompleteBody": "box.choose(1, \u00a7);",
+        "incompleteBody": "box.choose(1, §);",
         "integerCall": "choose(1,",
         "stringCall": "choose(\"x\",",
-        "completedBody": "box.choose(1, 2); \u00a7",
+        "completedBody": "box.choose(1, 2); §",
         "completedCall": "choose(1, 2)",
         "offset": 10,
         "pattern": {
@@ -796,7 +841,7 @@
         "Dismissing the actual popup and keyboard responsiveness"
       ],
       "values": {
-        "body": "box.it\u00a7;",
+        "body": "box.it§;",
         "cancellationCodes": [
           -32800,
           -32801
@@ -841,11 +886,11 @@
       "manual": [],
       "values": {
         "bodies": [
-          "box.pair(unknown = \u00a7);",
-          "box.pair(first = \"x\", first = \u00a7);",
-          "box.pair(True, \u00a7);",
-          "box.pair(\"x\", \"y\", \u00a7);",
-          "missing(\u00a7);"
+          "box.pair(unknown = §);",
+          "box.pair(first = \"x\", first = §);",
+          "box.pair(True, §);",
+          "box.pair(\"x\", \"y\", §);",
+          "missing(§);"
         ],
         "completionCount": 0
       },
@@ -1132,9 +1177,9 @@
       "values": {
         "file": "Consumer.x",
         "location": {
-          "cursor": "lib.\u00a7value",
+          "cursor": "lib.§value",
           "targetFile": "Library.x",
-          "target": "Int \u00a7value() = 1;"
+          "target": "Int §value() = 1;"
         }
       },
       "intellij": {
@@ -2356,10 +2401,10 @@
       "values": {
         "file": "Editing.x",
         "source": "module Editing { String StringValue = \"x\"; ${0} Int later = 1; }",
-        "marker": "\u00a7",
+        "marker": "§",
         "variants": [
           {
-            "declaration": "void damaged(Map<Int, List<Str\u00a7>> value) {}",
+            "declaration": "void damaged(Map<Int, List<Str§>> value) {}",
             "selected": "String",
             "include": [
               "String"
@@ -2368,7 +2413,7 @@
             "repairedDeclaration": "void damaged(Map<Int, List<String>> value) {}"
           },
           {
-            "declaration": "void damaged(Map<Str\u00a7, Int> value) {}",
+            "declaration": "void damaged(Map<Str§, Int> value) {}",
             "selected": "String",
             "include": [
               "String"
@@ -2377,7 +2422,7 @@
             "repairedDeclaration": "void damaged(Map<String, Int> value) {}"
           },
           {
-            "declaration": "List<Str\u00a7> property;",
+            "declaration": "List<Str§> property;",
             "selected": "String",
             "include": [
               "String"
@@ -2386,7 +2431,7 @@
             "repairedDeclaration": "List<String> property;"
           },
           {
-            "declaration": "List<Str\u00a7> damaged() = [\"x\"];",
+            "declaration": "List<Str§> damaged() = [\"x\"];",
             "selected": "String",
             "include": [
               "String"
@@ -2395,7 +2440,7 @@
             "repairedDeclaration": "List<String> damaged() = [\"x\"];"
           },
           {
-            "declaration": "void damaged(List<(Int | Str\u00a7)> value) {}",
+            "declaration": "void damaged(List<(Int | Str§)> value) {}",
             "selected": "String",
             "include": [
               "String"
@@ -2404,7 +2449,7 @@
             "repairedDeclaration": "void damaged(List<(Int | String)> value) {}"
           },
           {
-            "declaration": "void damaged(Object + Str\u00a7 value) {}",
+            "declaration": "void damaged(Object + Str§ value) {}",
             "selected": "String",
             "include": [
               "String"
@@ -2413,7 +2458,7 @@
             "repairedDeclaration": "void damaged(Object + String value) {}"
           },
           {
-            "declaration": "void damaged(Object - Str\u00a7 value) {}",
+            "declaration": "void damaged(Object - Str§ value) {}",
             "selected": "String",
             "include": [
               "String"
@@ -2422,7 +2467,7 @@
             "repairedDeclaration": "void damaged(Object - String value) {}"
           },
           {
-            "declaration": "void damaged(List<ecstasy.text.Str\u00a7> value) {}",
+            "declaration": "void damaged(List<ecstasy.text.Str§> value) {}",
             "selected": "StringBuffer",
             "include": [
               "StringBuffer"
@@ -2431,7 +2476,7 @@
             "repairedDeclaration": "void damaged(List<ecstasy.text.StringBuffer> value) {}"
           },
           {
-            "declaration": "void damaged(Map<Int, List<Str\u00a7 value) {}",
+            "declaration": "void damaged(Map<Int, List<Str§ value) {}",
             "selected": "String",
             "include": [
               "String"
@@ -2456,10 +2501,10 @@
       "values": {
         "file": "Editing.x",
         "source": "module Editing { class Base {} interface Face {} mixin Feature {} class Owner { static class Nested {} } String StringValue = \"x\"; ${0} Int later = 1; }",
-        "marker": "\u00a7",
+        "marker": "§",
         "variants": [
           {
-            "declaration": "class Damaged extends Bas\u00a7 { Int inside = 1; }",
+            "declaration": "class Damaged extends Bas§ { Int inside = 1; }",
             "selected": "Base",
             "include": [
               "Base"
@@ -2468,7 +2513,7 @@
             "repairedDeclaration": "class Damaged extends Base { Int inside = 1; }"
           },
           {
-            "declaration": "interface Damaged extends Fac\u00a7 {}",
+            "declaration": "interface Damaged extends Fac§ {}",
             "selected": "Face",
             "include": [
               "Face"
@@ -2477,7 +2522,7 @@
             "repairedDeclaration": "interface Damaged extends Face {}"
           },
           {
-            "declaration": "class Damaged implements Fac\u00a7 {}",
+            "declaration": "class Damaged implements Fac§ {}",
             "selected": "Face",
             "include": [
               "Face"
@@ -2486,7 +2531,7 @@
             "repairedDeclaration": "class Damaged implements Face {}"
           },
           {
-            "declaration": "mixin Damaged into Bas\u00a7 {}",
+            "declaration": "mixin Damaged into Bas§ {}",
             "selected": "Base",
             "include": [
               "Base"
@@ -2495,7 +2540,7 @@
             "repairedDeclaration": "mixin Damaged into Base {}"
           },
           {
-            "declaration": "class Damaged incorporates Fea\u00a7 {}",
+            "declaration": "class Damaged incorporates Fea§ {}",
             "selected": "Feature",
             "include": [
               "Feature"
@@ -2504,7 +2549,7 @@
             "repairedDeclaration": "class Damaged incorporates Feature {}"
           },
           {
-            "declaration": "class Damaged(Face value) delegates Fac\u00a7(value) {}",
+            "declaration": "class Damaged(Face value) delegates Fac§(value) {}",
             "selected": "Face",
             "include": [
               "Face"
@@ -2513,7 +2558,7 @@
             "repairedDeclaration": "class Damaged(Face value) delegates Face(value) {}"
           },
           {
-            "declaration": "class Damaged extends Owner.Nes\u00a7 {}",
+            "declaration": "class Damaged extends Owner.Nes§ {}",
             "selected": "Nested",
             "include": [
               "Nested"
@@ -2522,7 +2567,7 @@
             "repairedDeclaration": "class Damaged extends Owner.Nested {}"
           },
           {
-            "declaration": "interface Damaged extends List<Str\u00a7> {}",
+            "declaration": "interface Damaged extends List<Str§> {}",
             "selected": "String",
             "include": [
               "String"
@@ -2531,7 +2576,7 @@
             "repairedDeclaration": "interface Damaged extends List<String> {}"
           },
           {
-            "declaration": "interface Damaged extends List<Str\u00a7 {}",
+            "declaration": "interface Damaged extends List<Str§ {}",
             "selected": "String",
             "include": [
               "String"
@@ -2556,10 +2601,10 @@
       "values": {
         "file": "Editing.x",
         "source": "module Editing { class Owner<Element> { class Item {} typedef Element as Alias; } class Container<Element> { ${0} } }",
-        "marker": "\u00a7",
+        "marker": "§",
         "variants": [
           {
-            "declaration": "void damaged(Ele\u00a7 value) {}",
+            "declaration": "void damaged(Ele§ value) {}",
             "selected": "Element",
             "include": [
               "Element"
@@ -2571,7 +2616,7 @@
             "repairedDeclaration": "void damaged(Element value) {}"
           },
           {
-            "declaration": "void damaged(List<\u00a7> value) {}",
+            "declaration": "void damaged(List<§> value) {}",
             "selected": "Element",
             "include": [
               "Element"
@@ -2583,7 +2628,7 @@
             "repairedDeclaration": "void damaged(List<Element> value) {}"
           },
           {
-            "declaration": "void damaged(Map<\u00a7, Int> value) {}",
+            "declaration": "void damaged(Map<§, Int> value) {}",
             "selected": "String",
             "include": [
               "String"
@@ -2595,7 +2640,7 @@
             "repairedDeclaration": "void damaged(Map<String, Int> value) {}"
           },
           {
-            "declaration": "void damaged(Owner<String>.Ite\u00a7 value) {}",
+            "declaration": "void damaged(Owner<String>.Ite§ value) {}",
             "selected": "Item",
             "include": [
               "Item"
@@ -2607,7 +2652,7 @@
             "repairedDeclaration": "void damaged(Owner<String>.Item value) {}"
           },
           {
-            "declaration": "void damaged(Owner<String>.Ali\u00a7 value) {}",
+            "declaration": "void damaged(Owner<String>.Ali§ value) {}",
             "selected": "Alias",
             "include": [
               "Alias"
@@ -2619,7 +2664,7 @@
             "repairedDeclaration": "void damaged(Owner<String>.Alias value) {}"
           },
           {
-            "declaration": "void damaged(List<Str\u00a7ing> value) {}",
+            "declaration": "void damaged(List<Str§ing> value) {}",
             "selected": "String",
             "include": [
               "String"
@@ -2631,7 +2676,7 @@
             "repairedDeclaration": "void damaged(List<String> value) {}"
           },
           {
-            "declaration": "void damaged(ecstasy.text.Str\u00a7ingBuffer value) {}",
+            "declaration": "void damaged(ecstasy.text.Str§ingBuffer value) {}",
             "selected": "StringBuffer",
             "include": [
               "StringBuffer"
@@ -2643,7 +2688,7 @@
             "repairedDeclaration": "void damaged(ecstasy.text.StringBuffer value) {}"
           },
           {
-            "declaration": "void damaged(Owner<String>.Ite\u00a7m value) {}",
+            "declaration": "void damaged(Owner<String>.Ite§m value) {}",
             "selected": "Item",
             "include": [
               "Item"
@@ -2671,11 +2716,11 @@
       "manual": [],
       "values": {
         "file": "Editing.x",
-        "marker": "\u00a7",
+        "marker": "§",
         "source": "module Editing { class Pair(Int number, String text) {} class Box { Int number = 1; String numberText = \"x\"; private Int numberHidden = 2; } /** Accepts a number and text. */ void pair(Int number, String text) {} void flag(Boolean value) {} void nullable(String? value) {} void character(Char value) {} void decimal(Dec value) {} void binary(Byte[] value) {} void array(String[] value) {} void map(Map<String, Int> value) {} void tuple(Tuple value) {} void run(Int number, String numberText, Box box, function void(Int, String) fn) { ${0}; } }",
         "variants": [
           {
-            "declaration": "pair(nu\u00a7, \"x\")",
+            "declaration": "pair(nu§, \"x\")",
             "selected": "number",
             "include": [
               "number"
@@ -2687,7 +2732,7 @@
             "repairedDeclaration": "pair(number, \"x\")"
           },
           {
-            "declaration": "pair((nu\u00a7), \"x\")",
+            "declaration": "pair((nu§), \"x\")",
             "selected": "number",
             "include": [
               "number"
@@ -2699,7 +2744,7 @@
             "repairedDeclaration": "pair((number), \"x\")"
           },
           {
-            "declaration": "pair(((nu\u00a7)), \"x\")",
+            "declaration": "pair(((nu§)), \"x\")",
             "selected": "number",
             "include": [
               "number"
@@ -2711,7 +2756,7 @@
             "repairedDeclaration": "pair(((number)), \"x\")"
           },
           {
-            "declaration": "pair(\u00a7, \"x\")",
+            "declaration": "pair(§, \"x\")",
             "selected": "number",
             "include": [
               "number"
@@ -2723,7 +2768,7 @@
             "repairedDeclaration": "pair(number, \"x\")"
           },
           {
-            "declaration": "pair(number = nu\u00a7, text = \"x\")",
+            "declaration": "pair(number = nu§, text = \"x\")",
             "selected": "number",
             "include": [
               "number"
@@ -2735,7 +2780,7 @@
             "repairedDeclaration": "pair(number = number, text = \"x\")"
           },
           {
-            "declaration": "pair(box.nu\u00a7, \"x\")",
+            "declaration": "pair(box.nu§, \"x\")",
             "selected": "number",
             "include": [
               "number"
@@ -2747,7 +2792,7 @@
             "repairedDeclaration": "pair(box.number, \"x\")"
           },
           {
-            "declaration": "pair((box.nu\u00a7), \"x\")",
+            "declaration": "pair((box.nu§), \"x\")",
             "selected": "number",
             "include": [
               "number"
@@ -2759,7 +2804,7 @@
             "repairedDeclaration": "pair((box.number), \"x\")"
           },
           {
-            "declaration": "fn(nu\u00a7, \"x\")",
+            "declaration": "fn(nu§, \"x\")",
             "selected": "number",
             "include": [
               "number"
@@ -2771,7 +2816,7 @@
             "repairedDeclaration": "fn(number, \"x\")"
           },
           {
-            "declaration": "new Pair(nu\u00a7, \"x\")",
+            "declaration": "new Pair(nu§, \"x\")",
             "selected": "number",
             "include": [
               "number"
@@ -2783,7 +2828,7 @@
             "repairedDeclaration": "new Pair(number, \"x\")"
           },
           {
-            "declaration": "pair(1 + nu\u00a7, \"x\")",
+            "declaration": "pair(1 + nu§, \"x\")",
             "selected": "number",
             "include": [
               "number"
@@ -2795,7 +2840,7 @@
             "repairedDeclaration": "pair(1 + number, \"x\")"
           },
           {
-            "declaration": "pair(1 + \u00a7, \"x\")",
+            "declaration": "pair(1 + §, \"x\")",
             "selected": "number",
             "include": [
               "number"
@@ -2807,7 +2852,7 @@
             "repairedDeclaration": "pair(1 + number, \"x\")"
           },
           {
-            "declaration": "pair(-nu\u00a7, \"x\")",
+            "declaration": "pair(-nu§, \"x\")",
             "selected": "number",
             "include": [
               "number"
@@ -2819,7 +2864,7 @@
             "repairedDeclaration": "pair(-number, \"x\")"
           },
           {
-            "declaration": "pair(2 * (1 + nu\u00a7), \"x\")",
+            "declaration": "pair(2 * (1 + nu§), \"x\")",
             "selected": "number",
             "include": [
               "number"
@@ -2831,7 +2876,7 @@
             "repairedDeclaration": "pair(2 * (1 + number), \"x\")"
           },
           {
-            "declaration": "pair(1 + box.nu\u00a7, \"x\")",
+            "declaration": "pair(1 + box.nu§, \"x\")",
             "selected": "number",
             "include": [
               "number"
@@ -2843,7 +2888,7 @@
             "repairedDeclaration": "pair(1 + box.number, \"x\")"
           },
           {
-            "declaration": "fn(1 + nu\u00a7, \"x\")",
+            "declaration": "fn(1 + nu§, \"x\")",
             "selected": "number",
             "include": [
               "number"
@@ -2855,7 +2900,7 @@
             "repairedDeclaration": "fn(1 + number, \"x\")"
           },
           {
-            "declaration": "new Pair(1 + nu\u00a7, \"x\")",
+            "declaration": "new Pair(1 + nu§, \"x\")",
             "selected": "number",
             "include": [
               "number"
@@ -2867,7 +2912,7 @@
             "repairedDeclaration": "new Pair(1 + number, \"x\")"
           },
           {
-            "declaration": "pair(\u00a7, \"x\")",
+            "declaration": "pair(§, \"x\")",
             "selected": "0",
             "include": [
               "0"
@@ -2886,7 +2931,7 @@
             "signatureDocumentationContains": "Accepts a number and text."
           },
           {
-            "declaration": "pair(number = \u00a7, text = \"x\")",
+            "declaration": "pair(number = §, text = \"x\")",
             "selected": "0",
             "include": [
               "0"
@@ -2905,7 +2950,7 @@
             "signatureDocumentationContains": "Accepts a number and text."
           },
           {
-            "declaration": "pair(1 + \u00a7, \"x\")",
+            "declaration": "pair(1 + §, \"x\")",
             "selected": "0",
             "include": [
               "0"
@@ -2924,7 +2969,7 @@
             "signatureDocumentationContains": "Accepts a number and text."
           },
           {
-            "declaration": "fn(\u00a7, \"x\")",
+            "declaration": "fn(§, \"x\")",
             "selected": "0",
             "include": [
               "0"
@@ -2942,7 +2987,7 @@
             "activeParameter": 0
           },
           {
-            "declaration": "new Pair(\u00a7, \"x\")",
+            "declaration": "new Pair(§, \"x\")",
             "selected": "0",
             "include": [
               "0"
@@ -2960,7 +3005,7 @@
             "activeParameter": 0
           },
           {
-            "declaration": "pair(1, \u00a7)",
+            "declaration": "pair(1, §)",
             "selected": "\"\"",
             "include": [
               "\"\""
@@ -2982,7 +3027,7 @@
             ]
           },
           {
-            "declaration": "flag(Tr\u00a7)",
+            "declaration": "flag(Tr§)",
             "selected": "True",
             "include": [
               "True"
@@ -3000,7 +3045,7 @@
             "activeParameter": 0
           },
           {
-            "declaration": "nullable(Nu\u00a7)",
+            "declaration": "nullable(Nu§)",
             "selected": "Null",
             "include": [
               "Null"
@@ -3018,7 +3063,7 @@
             "activeParameter": 0
           },
           {
-            "declaration": "character(\u00a7)",
+            "declaration": "character(§)",
             "selected": "' '",
             "include": [
               "' '"
@@ -3036,7 +3081,7 @@
             "activeParameter": 0
           },
           {
-            "declaration": "decimal(\u00a7)",
+            "declaration": "decimal(§)",
             "selected": "0.0",
             "include": [
               "0.0"
@@ -3054,7 +3099,7 @@
             "activeParameter": 0
           },
           {
-            "declaration": "binary(\u00a7)",
+            "declaration": "binary(§)",
             "selected": "#00",
             "include": [
               "#00"
@@ -3072,7 +3117,7 @@
             "activeParameter": 0
           },
           {
-            "declaration": "array(\u00a7)",
+            "declaration": "array(§)",
             "selected": "[]",
             "include": [
               "[]"
@@ -3090,7 +3135,7 @@
             "activeParameter": 0
           },
           {
-            "declaration": "map(\u00a7)",
+            "declaration": "map(§)",
             "selected": "Map:[]",
             "include": [
               "Map:[]"
@@ -3108,7 +3153,7 @@
             "activeParameter": 0
           },
           {
-            "declaration": "tuple(\u00a7)",
+            "declaration": "tuple(§)",
             "selected": "Tuple:()",
             "include": [
               "Tuple:()"
@@ -3143,11 +3188,11 @@
       "manual": [],
       "values": {
         "file": "Editing.x",
-        "marker": "\u00a7",
+        "marker": "§",
         "source": "module Editing { ${0} }",
         "variants": [
           {
-            "declaration": "void damaged(Li\u00a7st<String> value) {}",
+            "declaration": "void damaged(Li§st<String> value) {}",
             "selected": "List",
             "include": [
               "List"
@@ -3159,7 +3204,7 @@
             "repairedDeclaration": "void damaged(List<String> value) {}"
           },
           {
-            "declaration": "void damaged(Li\u00a7<String> value) {}",
+            "declaration": "void damaged(Li§<String> value) {}",
             "selected": "List",
             "include": [
               "List"
@@ -3171,7 +3216,7 @@
             "repairedDeclaration": "void damaged(List<String> value) {}"
           },
           {
-            "declaration": "void damaged(Map<Int, Li\u00a7st<String>> value) {}",
+            "declaration": "void damaged(Map<Int, Li§st<String>> value) {}",
             "selected": "List",
             "include": [
               "List"
@@ -3316,13 +3361,13 @@
         "file": "AutoImports.x",
         "completions": [
           {
-            "source": "module AutoImports { Doc\u00a7ument value; }",
+            "source": "module AutoImports { Doc§ument value; }",
             "label": "Document",
             "importText": "import xml.Document;",
             "expected": "module AutoImports {\npackage xml import xml.xtclang.org;\nimport xml.Document;\n Document value; }"
           },
           {
-            "source": "module AutoImports { Wid\u00a7get value; }",
+            "source": "module AutoImports { Wid§get value; }",
             "label": "Widget",
             "importText": "import importLibrary.Widget;",
             "expected": "module AutoImports {\npackage importLibrary import ImportLibrary;\nimport importLibrary.Widget;\n Widget value; }"
@@ -3356,7 +3401,7 @@
       "values": {
         "file": "Editing.x",
         "source": "module Editing { ${0} }",
-        "marker": "\u00a7",
+        "marker": "§",
         "prefixLength": 3,
         "exclude": [
           "value",
@@ -3364,7 +3409,7 @@
         ],
         "variants": [
           {
-            "declaration": "void damaged(function Str\u00a7(Int) value) {}",
+            "declaration": "void damaged(function Str§(Int) value) {}",
             "selected": "String",
             "include": [
               "String"
@@ -3373,7 +3418,7 @@
             "repairedDeclaration": "void damaged(function String(Int) value) {}"
           },
           {
-            "declaration": "void damaged(function void(Str\u00a7) value) {}",
+            "declaration": "void damaged(function void(Str§) value) {}",
             "selected": "String",
             "include": [
               "String"
@@ -3382,7 +3427,7 @@
             "repairedDeclaration": "void damaged(function void(String) value) {}"
           },
           {
-            "declaration": "void damaged(function (Int, Str\u00a7)(Int) value) {}",
+            "declaration": "void damaged(function (Int, Str§)(Int) value) {}",
             "selected": "String",
             "include": [
               "String"
@@ -3391,7 +3436,7 @@
             "repairedDeclaration": "void damaged(function (Int, String)(Int) value) {}"
           },
           {
-            "declaration": "void damaged(function void(List<Str\u00a7>) value) {}",
+            "declaration": "void damaged(function void(List<Str§>) value) {}",
             "selected": "String",
             "include": [
               "String"
@@ -3400,7 +3445,7 @@
             "repairedDeclaration": "void damaged(function void(List<String>) value) {}"
           },
           {
-            "declaration": "void damaged(Function<<Str\u00a7>, <Int>> value) {}",
+            "declaration": "void damaged(Function<<Str§>, <Int>> value) {}",
             "selected": "String",
             "include": [
               "String"
@@ -3409,7 +3454,7 @@
             "repairedDeclaration": "void damaged(Function<<String>, <Int>> value) {}"
           },
           {
-            "declaration": "void damaged(Function<<Int>, <Str\u00a7>> value) {}",
+            "declaration": "void damaged(Function<<Int>, <Str§>> value) {}",
             "selected": "String",
             "include": [
               "String"
@@ -3418,7 +3463,7 @@
             "repairedDeclaration": "void damaged(Function<<Int>, <String>> value) {}"
           },
           {
-            "declaration": "void damaged(function void(Str\u00a7 value) {}",
+            "declaration": "void damaged(function void(Str§ value) {}",
             "selected": "String",
             "include": [
               "String"
@@ -3427,7 +3472,7 @@
             "repairedDeclaration": "void damaged(function void(String) value) {}"
           },
           {
-            "declaration": "void damaged(Function<<Str\u00a7 value) {}",
+            "declaration": "void damaged(Function<<Str§ value) {}",
             "selected": "String",
             "include": [
               "String"
@@ -3448,7 +3493,7 @@
       "values": {
         "file": "Editing.x",
         "source": "module Editing { ${0} }",
-        "marker": "\u00a7",
+        "marker": "§",
         "prefixLength": 0,
         "exclude": [
           "value",
@@ -3456,7 +3501,7 @@
         ],
         "variants": [
           {
-            "declaration": "void damaged(ecstasy.text.\u00a7 value) {}",
+            "declaration": "void damaged(ecstasy.text.§ value) {}",
             "selected": "StringBuffer",
             "include": [
               "StringBuffer"
@@ -3468,7 +3513,7 @@
             "repairedDeclaration": "void damaged(ecstasy.text.StringBuffer value) {}"
           },
           {
-            "declaration": "void damaged(ecstasy.te\u00a7xt.StringBuffer value) {}",
+            "declaration": "void damaged(ecstasy.te§xt.StringBuffer value) {}",
             "selected": "text",
             "include": [
               "text"
@@ -3480,7 +3525,7 @@
             "repairedDeclaration": "void damaged(ecstasy.text.StringBuffer value) {}"
           },
           {
-            "declaration": "void damaged((Int | \u00a7) value) {}",
+            "declaration": "void damaged((Int | §) value) {}",
             "selected": "String",
             "include": [
               "String"
@@ -3492,7 +3537,7 @@
             "repairedDeclaration": "void damaged((Int | String) value) {}"
           },
           {
-            "declaration": "void damaged(List<(Int | \u00a7)> value) {}",
+            "declaration": "void damaged(List<(Int | §)> value) {}",
             "selected": "String",
             "include": [
               "String"
@@ -3504,7 +3549,7 @@
             "repairedDeclaration": "void damaged(List<(Int | String)> value) {}"
           },
           {
-            "declaration": "void damaged(Object + \u00a7 value) {}",
+            "declaration": "void damaged(Object + § value) {}",
             "selected": "String",
             "include": [
               "String"
@@ -3516,7 +3561,7 @@
             "repairedDeclaration": "void damaged(Object + String value) {}"
           },
           {
-            "declaration": "void damaged(Object - \u00a7 value) {}",
+            "declaration": "void damaged(Object - § value) {}",
             "selected": "String",
             "include": [
               "String"
@@ -3528,7 +3573,7 @@
             "repairedDeclaration": "void damaged(Object - String value) {}"
           },
           {
-            "declaration": "void damaged((\u00a7 | Int) value) {}",
+            "declaration": "void damaged((§ | Int) value) {}",
             "selected": "String",
             "include": [
               "String"
@@ -3552,7 +3597,7 @@
       "values": {
         "file": "Editing.x",
         "source": "module Editing { ${0} }",
-        "marker": "\u00a7",
+        "marker": "§",
         "prefixLength": 3,
         "exclude": [
           "value",
@@ -3560,7 +3605,7 @@
         ],
         "variants": [
           {
-            "declaration": "(Int, Str\u00a7) damaged() { return 1, \"x\"; }",
+            "declaration": "(Int, Str§) damaged() { return 1, \"x\"; }",
             "selected": "String",
             "include": [
               "String"
@@ -3572,7 +3617,7 @@
             "repairedDeclaration": "(Int, String) damaged() { return 1, \"x\"; }"
           },
           {
-            "declaration": "(Int count, Str\u00a7 text) damaged() { return 1, \"x\"; }",
+            "declaration": "(Int count, Str§ text) damaged() { return 1, \"x\"; }",
             "selected": "String",
             "include": [
               "String"
@@ -3584,7 +3629,7 @@
             "repairedDeclaration": "(Int count, String text) damaged() { return 1, \"x\"; }"
           },
           {
-            "declaration": "<T> void damaged(Str\u00a7 value) {}",
+            "declaration": "<T> void damaged(Str§ value) {}",
             "selected": "String",
             "include": [
               "String"
@@ -3596,7 +3641,7 @@
             "repairedDeclaration": "<T> void damaged(String value) {}"
           },
           {
-            "declaration": "<T> Str\u00a7 damaged(T value) = \"x\";",
+            "declaration": "<T> Str§ damaged(T value) = \"x\";",
             "selected": "String",
             "include": [
               "String"
@@ -3608,7 +3653,7 @@
             "repairedDeclaration": "<T> String damaged(T value) = \"x\";"
           },
           {
-            "declaration": "<T extends Str\u00a7> void damaged(T value) {}",
+            "declaration": "<T extends Str§> void damaged(T value) {}",
             "selected": "String",
             "include": [
               "String"
@@ -3620,7 +3665,7 @@
             "repairedDeclaration": "<T extends String> void damaged(T value) {}"
           },
           {
-            "declaration": "class Damaged<T extends Str\u00a7> {}",
+            "declaration": "class Damaged<T extends Str§> {}",
             "selected": "String",
             "include": [
               "String"
@@ -3632,7 +3677,7 @@
             "repairedDeclaration": "class Damaged<T extends String> {}"
           },
           {
-            "declaration": "package damaged incorporates SharedMi\u00a7 {} mixin SharedMixin into Package {}",
+            "declaration": "package damaged incorporates SharedMi§ {} mixin SharedMixin into Package {}",
             "selected": "SharedMixin",
             "include": [
               "SharedMixin"
@@ -3644,7 +3689,7 @@
             "repairedDeclaration": "package damaged incorporates SharedMixin {} mixin SharedMixin into Package {}"
           },
           {
-            "declaration": "<Element extends String> void damaged(Ele\u00a7 value) {}",
+            "declaration": "<Element extends String> void damaged(Ele§ value) {}",
             "selected": "Element",
             "include": [
               "Element"
@@ -3656,7 +3701,7 @@
             "repairedDeclaration": "<Element extends String> void damaged(Element value) {}"
           },
           {
-            "declaration": "class Damaged<Element extends String>(Ele\u00a7 value) {}",
+            "declaration": "class Damaged<Element extends String>(Ele§ value) {}",
             "selected": "Element",
             "include": [
               "Element"
@@ -3668,7 +3713,7 @@
             "repairedDeclaration": "class Damaged<Element extends String>(Element value) {}"
           },
           {
-            "declaration": "<Element extends String, Other extends Element> void damaged(Oth\u00a7 value) {}",
+            "declaration": "<Element extends String, Other extends Element> void damaged(Oth§ value) {}",
             "selected": "Other",
             "include": [
               "Other"
@@ -3680,7 +3725,7 @@
             "repairedDeclaration": "<Element extends String, Other extends Element> void damaged(Other value) {}"
           },
           {
-            "declaration": "<String> void damaged(Str\u00a7 value) {}",
+            "declaration": "<String> void damaged(Str§ value) {}",
             "selected": "String",
             "include": [
               "String"
@@ -3692,7 +3737,7 @@
             "repairedDeclaration": "<String> void damaged(String value) {}"
           },
           {
-            "declaration": "interface Chain<T> {} <Element extends Chain<Element>> void damaged(Ele\u00a7 value) {}",
+            "declaration": "interface Chain<T> {} <Element extends Chain<Element>> void damaged(Ele§ value) {}",
             "selected": "Element",
             "include": [
               "Element"
@@ -3708,7 +3753,7 @@
             }
           },
           {
-            "declaration": "interface Chain<T> {} class Damaged<Element extends Chain<Element>>(Ele\u00a7 value) {}",
+            "declaration": "interface Chain<T> {} class Damaged<Element extends Chain<Element>>(Ele§ value) {}",
             "selected": "Element",
             "include": [
               "Element"
@@ -3724,7 +3769,7 @@
             }
           },
           {
-            "declaration": "interface Chain<T> {} <Element extends Chain<Element> + Stringable> void damaged(Ele\u00a7 value) {}",
+            "declaration": "interface Chain<T> {} <Element extends Chain<Element> + Stringable> void damaged(Ele§ value) {}",
             "selected": "Element",
             "include": [
               "Element"
@@ -3740,7 +3785,7 @@
             }
           },
           {
-            "declaration": "interface Chain<T> {} <Element extends immutable Chain<Element>> void damaged(Ele\u00a7 value) {}",
+            "declaration": "interface Chain<T> {} <Element extends immutable Chain<Element>> void damaged(Ele§ value) {}",
             "selected": "Element",
             "include": [
               "Element"
@@ -3756,7 +3801,7 @@
             }
           },
           {
-            "declaration": "interface Chain<T> {} <Element extends Chain<Element>?> void damaged(Ele\u00a7 value) {}",
+            "declaration": "interface Chain<T> {} <Element extends Chain<Element>?> void damaged(Ele§ value) {}",
             "selected": "Element",
             "include": [
               "Element"
@@ -3772,7 +3817,7 @@
             }
           },
           {
-            "declaration": "interface Chain<T> {} <Element extends Chain<Ele\u00a7>> void damaged(Element value) {}",
+            "declaration": "interface Chain<T> {} <Element extends Chain<Ele§>> void damaged(Element value) {}",
             "selected": "Element",
             "include": [
               "Element"
@@ -4012,7 +4057,10 @@
         "anchor": "tools",
         "replacement": "helpers",
         "navigationAnchor": "Box",
-        "navigationFiles": ["App.x", "App/tools/deep/Box.x"],
+        "navigationFiles": [
+          "App.x",
+          "App/tools/deep/Box.x"
+        ],
         "files": [
           {
             "file": "App.x",
@@ -4277,17 +4325,17 @@
         "hoverExpected": "String echo(String value)",
         "signatures": [
           {
-            "text": "module Demo { <T> T echo(T value, T backup) = value; String run() = echo(\"a\", \u00a7\"b\"); }",
+            "text": "module Demo { <T> T echo(T value, T backup) = value; String run() = echo(\"a\", §\"b\"); }",
             "active": 1
           },
           {
-            "text": "module Demo { <T> T echo(T value, T backup) = value; String run() = echo(backup = \"b\", \u00a7value = \"a\"); }",
+            "text": "module Demo { <T> T echo(T value, T backup) = value; String run() = echo(backup = \"b\", §value = \"a\"); }",
             "active": 0
           }
         ],
         "completions": [
-          "module Demo { String run(String text) = text.tr\u00a7(); }",
-          "module Demo { String run(String text) = text.trim().tr\u00a7(); }"
+          "module Demo { String run(String text) = text.tr§(); }",
+          "module Demo { String run(String text) = text.trim().tr§(); }"
         ],
         "completion": "trim",
         "narrowedSource": "module Demo { package json import json.xtclang.org; import json.Doc; import json.JsonObject; String run(Doc value) { assert value.is(JsonObject); return value.toString(); } }",
@@ -4463,7 +4511,7 @@
       "values": {
         "file": "SaveRanges.x",
         "module": "SaveRanges",
-        "source": "module SaveRanges {\nInt value = 1;\nString text = \"\ud83d\ude00\";\n}\n",
+        "source": "module SaveRanges {\nInt value = 1;\nString text = \"😀\";\n}\n",
         "ranges": [
           {
             "start": {
@@ -4634,7 +4682,7 @@
       "manual": [],
       "values": {
         "file": "ProtocolEncoding.x",
-        "source": "module ProtocolEncoding { Int run() { String marker = \"\ud83d\ude00\"; Int value = 1; return value; } }\n",
+        "source": "module ProtocolEncoding { Int run() { String marker = \"😀\"; Int value = 1; return value; } }\n",
         "anchor": "value",
         "expected": "Int"
       },
@@ -6046,8 +6094,8 @@
           {
             "file": "App.x",
             "destination": "App.x",
-            "source": "module App {\r\n    tools /* \u03b1 */ . Box.Part make() = new tools // keep namespace note\r\n        . Box.Part();\r\n}",
-            "expected": "module App {\r\n     /* \u03b1 */  Box.Part make() = new  // keep namespace note\r\n         Box.Part();\r\n}"
+            "source": "module App {\r\n    tools /* α */ . Box.Part make() = new tools // keep namespace note\r\n        . Box.Part();\r\n}",
+            "expected": "module App {\r\n     /* α */  Box.Part make() = new  // keep namespace note\r\n         Box.Part();\r\n}"
           },
           {
             "file": "App/tools/Box.x",
@@ -7985,7 +8033,7 @@
         "file": "Structure.x",
         "variants": [
           {
-            "source": "module Structure {\n    typedef Int as Alias;\n    Object current(String value) {\n        /* \ud83d\ude00 */ return [value.si;\n    }\n    Int later() = 42;\n}",
+            "source": "module Structure {\n    typedef Int as Alias;\n    Object current(String value) {\n        /* 😀 */ return [value.si;\n    }\n    Int later() = 42;\n}",
             "symbols": [
               "Structure",
               "Alias",
@@ -7996,7 +8044,7 @@
             "foldLine": 2
           },
           {
-            "source": "module Structure {\n    typedef Int as Alias;\n    Object current(String value) {\n        /* \ud83d\ude00 */ return (1, value.si;\n    }\n    Int later() = 42;\n}",
+            "source": "module Structure {\n    typedef Int as Alias;\n    Object current(String value) {\n        /* 😀 */ return (1, value.si;\n    }\n    Int later() = 42;\n}",
             "symbols": [
               "Structure",
               "Alias",
@@ -8007,7 +8055,7 @@
             "foldLine": 2
           },
           {
-            "source": "module Structure {\n    typedef Int as Alias;\n    Object current(String value) {\n        /* \ud83d\ude00 */ return use(value.si;\n    }\n    Int later() = 42;\n}",
+            "source": "module Structure {\n    typedef Int as Alias;\n    Object current(String value) {\n        /* 😀 */ return use(value.si;\n    }\n    Int later() = 42;\n}",
             "symbols": [
               "Structure",
               "Alias",
@@ -8018,7 +8066,7 @@
             "foldLine": 2
           },
           {
-            "source": "module Structure {\n    typedef Int as Alias;\n    void current(Int value, Str) {\n        /* \ud83d\ude00 */ Int retained = 1;\n    }\n    Int later() = 42;\n}",
+            "source": "module Structure {\n    typedef Int as Alias;\n    void current(Int value, Str) {\n        /* 😀 */ Int retained = 1;\n    }\n    Int later() = 42;\n}",
             "symbols": [
               "Structure",
               "Alias",
@@ -8183,11 +8231,11 @@
     "X255": {
       "title": "accept and undo a compiler-backed inline name",
       "manual": [
-        "Place the caret at \u00a7 (remove the marker). Invoke inline completion, accept the ghost suffix, then undo once."
+        "Place the caret at § (remove the marker). Invoke inline completion, accept the ghost suffix, then undo once."
       ],
       "values": {
         "file": "X255/InlineValues.x",
-        "source": "module InlineValues {\n    void run() {\n        Int answer = 42;\n        Int result = ans\u00a7;\n    }\n}\n",
+        "source": "module InlineValues {\n    void run() {\n        Int answer = 42;\n        Int result = ans§;\n    }\n}\n",
         "mode": "accept",
         "expected": "answer"
       },
@@ -8199,11 +8247,11 @@
     "X256": {
       "title": "dismiss ghost text and keep suggestions current while typing",
       "manual": [
-        "Place the caret at \u00a7 (remove the marker). Dismiss the ghost suggestion, type w after ans, then accept the updated suffix."
+        "Place the caret at § (remove the marker). Dismiss the ghost suggestion, type w after ans, then accept the updated suffix."
       ],
       "values": {
         "file": "X256/InlineValues.x",
-        "source": "module InlineValues {\n    void run() {\n        Int answer = 42;\n        Int result = ans\u00a7;\n    }\n}\n",
+        "source": "module InlineValues {\n    void run() {\n        Int answer = 42;\n        Int result = ans§;\n    }\n}\n",
         "mode": "typing",
         "expected": "answer"
       },
@@ -8215,11 +8263,11 @@
     "X257": {
       "title": "respect ambiguity and the selected completion item",
       "manual": [
-        "Place the caret at \u00a7 (remove the marker). Check automatic ambiguity suppression, invoke alternatives explicitly, and test popup-selection range/extension constraints."
+        "Place the caret at § (remove the marker). Check automatic ambiguity suppression, invoke alternatives explicitly, and test popup-selection range/extension constraints."
       ],
       "values": {
         "file": "X257/InlineValues.x",
-        "source": "module InlineValues {\n    void run() {\n        Int answer = 42;\n        Int another = 7;\n        Int result = an\u00a7;\n    }\n}\n",
+        "source": "module InlineValues {\n    void run() {\n        Int answer = 42;\n        Int another = 7;\n        Int result = an§;\n    }\n}\n",
         "mode": "selection",
         "expected": "answer"
       },
@@ -8233,11 +8281,11 @@
     "X258": {
       "title": "complete a type-compatible value in an unfinished call",
       "manual": [
-        "Place the caret at \u00a7 (remove the marker). Invoke and accept answer in the incomplete Int argument; answerText must not be offered. Repair the missing delimiters and verify diagnostics clear."
+        "Place the caret at § (remove the marker). Invoke and accept answer in the incomplete Int argument; answerText must not be offered. Repair the missing delimiters and verify diagnostics clear."
       ],
       "values": {
         "file": "X258/InlineValues.x",
-        "source": "module InlineValues {\n    void consume(Int value) {}\n    void run() {\n        Int answer = 42;\n        String answerText = \"incompatible\";\n        consume(ans\u00a7\n    }\n}\n",
+        "source": "module InlineValues {\n    void consume(Int value) {}\n    void run() {\n        Int answer = 42;\n        String answerText = \"incompatible\";\n        consume(ans§\n    }\n}\n",
         "mode": "incomplete",
         "expected": "answer"
       },
@@ -8515,6 +8563,147 @@
         "limitations": []
       }
     },
+    "X273": {
+      "title": "color swatches and native picker edits preserve positional and named arguments",
+      "manual": [],
+      "values": {
+        "mode": "apply"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X274": {
+      "title": "dismiss the color picker without edits and verify native Undo and Redo",
+      "manual": [],
+      "values": {
+        "mode": "history"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X275": {
+      "title": "invalid color source removes stale swatches and repair restores them",
+      "manual": [],
+      "values": {
+        "mode": "recovery"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X276": {
+      "title": "resolved annotations and bundled library ownership use theme semantic categories",
+      "manual": [],
+      "values": {
+        "file": "Highlighting.x",
+        "source": "module Highlighting {\n    package json import json.xtclang.org;\n    import ecstasy.annotations.Override as Replaces;\n    class Base { String describe() = \"base\"; }\n    annotation Marked into Object {}\n    @Marked class Child extends Base {\n        @Replaces String describe() = \"child\";\n    }\n    @ecstasy.annotations.Override String toString() = \"annotations\";\n    class Other {\n        class Override {}\n        Override echo(Override value) = value;\n    }\n    json.JsonObject library(json.JsonObject value) = value;\n    class JsonObject {}\n    JsonObject local(JsonObject value) = value;\n}\n",
+        "tokens": [
+          {
+            "anchor": "@Marked",
+            "offset": 1,
+            "text": "Marked",
+            "type": "decorator",
+            "library": false
+          },
+          {
+            "anchor": "@Replaces",
+            "offset": 1,
+            "text": "Replaces",
+            "type": "decorator",
+            "library": true
+          },
+          {
+            "anchor": "@ecstasy.annotations.Override",
+            "offset": 21,
+            "text": "Override",
+            "type": "decorator",
+            "library": true
+          },
+          {
+            "anchor": "class Override",
+            "offset": 6,
+            "text": "Override",
+            "type": "class",
+            "library": false
+          },
+          {
+            "anchor": "Override echo",
+            "offset": 0,
+            "text": "Override",
+            "type": "class",
+            "library": false
+          },
+          {
+            "anchor": "json.JsonObject library",
+            "offset": 5,
+            "text": "JsonObject",
+            "type": "type",
+            "library": true
+          },
+          {
+            "anchor": "JsonObject local",
+            "offset": 0,
+            "text": "JsonObject",
+            "type": "class",
+            "library": false
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X277": {
+      "title": "theme lexical detail survives semantic overlays and damaged source repair",
+      "manual": [],
+      "values": {
+        "file": "ThemeFallback.x",
+        "source": "module ThemeFallback {\n    /** A documented class. */\n    class Sample {\n        Int value = 0x2A;\n        String literal = \"control\\ttext\";\n        Int first() { return 1; }\n        static String escaped() = \"escaped\\ntext\";\n        String interpolated() = $\"value={value}\";\n        String describe() {\n            return \"ready\";\n        }\n    }\n}\n",
+        "lexical": [
+          "0x2A",
+          "static",
+          "\\n",
+          "return",
+          "\"ready\""
+        ],
+        "recovery": [
+          {
+            "from": "\"escaped\\ntext\"",
+            "to": "\"escaped"
+          },
+          {
+            "from": "$\"value={value}\"",
+            "to": "$\"value={value.}\""
+          },
+          {
+            "from": "Int value = 0x2A;",
+            "to": "Int value = ;"
+          }
+        ],
+        "matchingStyles": [
+          {
+            "left": "\"control\\ttext\"",
+            "right": "\"escaped\\ntext\"",
+            "length": 15
+          },
+          {
+            "left": "return 1;",
+            "right": "return \"ready\";",
+            "length": 6
+          }
+        ]
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
@@ -8580,7 +8769,7 @@
         "code": "VERIFY-75",
         "messageContains": "annotation",
         "count": 1,
-        "declaration": "@Atomic @Override Int \u00a7x",
+        "declaration": "@Atomic @Override Int §x",
         "edit": {
           "from": "@Atomic @Override",
           "to": "@Override"
