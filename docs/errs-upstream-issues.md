@@ -26,7 +26,8 @@ issue and must not be used as the tracking issue for UP01.
 
 Local upstream repair work is now authorized in `~/src/lsp4ij`, on the unpushed branch
 `lagergren/local-lsp-repairs`, based on upstream `main` at `4796cf99` (0.21.1-SNAPSHOT).
-All ten local commits are listed below, with regression tests. These are local repairs,
+The first ten local commits are listed below, with regression tests; the additional October 7
+batch is recorded separately below. These are local repairs,
 not released fixes or permission to remove the bridges here. XVM still uses LSP4IJ 0.21.0;
 testing a local build must be explicit. UP17 belongs to IntelliJ Platform, not this repair branch.
 
@@ -59,8 +60,63 @@ not full-suite or XVM native acceptance.
 In particular, correcting UP03's target makes genuine preflight requests visible where the old
 same-path request was short-circuited. Keep our bridges until testing real Move/Undo/Redo with the
 local plugin. The Marketplace default remains 0.21.0, so its workarounds remain necessary even
-if the local snapshot passes. UP02/UP04–UP06/UP09–UP11/UP14/UP18/UP21/UP25/UP26 are not repaired
-by these nine commits; UP20/UP29 concern the test Driver, UP15 the server's LSP4J and UP17 the platform.
+if the local snapshot passes. The later repairs below extend this historical checkpoint;
+UP20/UP29 concern the test Driver, UP15 the server's LSP4J and UP17 the platform.
+
+### Additional local LSP4IJ repairs, 2026-10-07
+
+The same unpushed branch now contains separate issue-specific repairs and regression tests for
+the remaining LSP4IJ-owned entries. Follow-up commits retain corrections found during combined
+testing. None changes XVM's released dependency or removes a production bridge.
+
+| Issue | Local implementation and remaining boundary |
+| --- | --- |
+| UP02 | Native pre-save `willSave` notifications preserve the save reason and captured saved text. Unsupported `willSaveWaitUntil` is no longer advertised; applying its returned edits before persistence remains unimplemented. |
+| UP03 | Resource renames honor the destination directory and escaped basename, preserve children, and handle collisions before mutation. Generic before-change VFS preflight still waits on the UI thread; general transaction rollback is not implemented. |
+| UP04 | Workspace/rename edits validate document versions, connection and document lifetimes, modification stamps, newly opened targets, and confirmation requirements before mutation. Versions cannot collide after reopening a document on the same connection. |
+| UP05 | Dynamic external watch roots have shared leases, scoped refresh, missing-root discovery and disposal. Registration replacement cannot reuse an older refresh generation. No filesystem-root traversal is introduced. |
+| UP09 | Open/change/close notifications share ordered dispatch. Folding replies validate their original document lifetime without taking a read lock in the reply callback. |
+| UP10 | Signature help uses current overload/parameter metadata, including offset labels and absent parameter metadata. |
+| UP11 | Resolved actions apply in guarded native Undo commands. Resolve and command dispatch stay on the original connection, off the UI thread; command fallback edits use the same ownership checks. Completion includes the follow-up command response. |
+| UP12 | Temporary formatting connections are released when their last scope ends; existing connections and documents opened or adopted by another feature retain ownership. |
+| UP14 | Dependency analysis invalidates cached and pending semantic results even when consumer text is unchanged. Cache lookup is atomic with cancellation; nonphysical PSI retains stamp-based caching. |
+| UP18 | Native snippet expansion respects `InsertTextMode.AsIs`, exact whitespace, placeholder navigation and Undo. |
+| UP19 follow-up | Individual file Rename/Move now shares the deferred reconnection used for directories. The old URI is retired before reconnecting current editor content; no document connection is awaited under the VFS write lock. |
+| UP21 | Only transaction-owned closed buffers are persisted after apply, Undo and Redo. Resource recreation resolves the current buffer again; unrelated drafts and current editor ownership are preserved. |
+| UP25 | Static LSP 3.18 document-content providers resolve supported non-file URIs to read-only views, with refresh, cancellation, coalescing and connection disposal. Native X254 acceptance is still required. |
+| UP26 | Inline requests forward explicit invocation and the selected completion's actual insertion text/range, including decorated lookup items. Snippet selections without a faithful literal representation are omitted. Native X257 acceptance is still required. |
+
+UP02 and UP03 are partial repairs. A synchronous save callback cannot safely emulate
+`willSaveWaitUntil` by blocking the UI, and generic VFS preflight needs an asynchronous native
+refactoring entry point. Do not remove those constraints based on the other fixes.
+
+Combined testing exposed two lock-order problems: folding response validation initially took
+a read lock while a typed handler held the write lock; a file-rename callback then waited for
+document reconnection under the VFS write lock. Their captured thread dumps are retained under
+`/private/tmp/lsp4ij-remaining-2026-10-07/`. The aborted runs are not passing evidence, even where
+Gradle's test logger printed a success summary before reporting the terminated worker.
+
+Final validation at local head `614a4787629fc75afbf667dde1c8f04cf7e7f900`:
+
+- The full upstream suite discovered 611 tests: **608 passed, 3 existing ignored tests,
+  zero failures or errors**, across 119 JUnit XML suites. The ignored tests are the two
+  Docker Bake inline-completion cases and the Perl multiple-item inline-completion case,
+  already marked unstable when run with the full suite. No new exclusion was added.
+- The forced run used `./gradlew test --rerun-tasks --no-build-cache --max-workers=2`
+  with JDK 21 and the project's IntelliJ 2024.2 baseline. A temporary Gradle init script
+  set each test task's `java.io.tmpdir` to `file('build/repair-test-tmp').canonicalPath`
+  to avoid macOS `/var` versus `/private/var` VFS path mismatches. The configuration cache
+  was reused. XML receipts and counts are retained in
+  `/private/tmp/lsp4ij-remaining-2026-10-07/final-full-suite/`.
+- `buildPlugin prepareSandbox` also passed. The resulting
+  `~/src/lsp4ij/build/distributions/lsp4ij-0.21.1-SNAPSHOT.zip` has SHA-256
+  `e5e79a040ef1652b2450ac739fd42b43d33c494630604ecc6082bde23e9435f7`.
+- These are upstream fixture tests and a plugin build, not XVM GUI replacement acceptance.
+  The branch and artifact remain local and unpushed.
+
+The local plugin remains an experimental replacement. Every production bridge still requires
+its individual native acceptance gate below, including unchanged-consumer refresh, real
+Move/Undo/Redo, closed-file formatting, and the two currently partial native feature scenarios.
 
 ### Local LSP4J repairs, 2026-10-07
 
