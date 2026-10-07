@@ -918,7 +918,7 @@ internal class XdkProjectQueries(
             if (complete) {
                 emptyList()
             } else {
-                // Header and body attempts have separate snapshot identities for the same source.
+                // Header and body attempts to have separate snapshot identities for the same source.
                 before.models
                     .filter { it.sourceName == source }
                     .flatMap { model -> XdkMissingDeclarations.candidates(text, range, model, before) }

@@ -39,7 +39,8 @@ data class SymbolInfo(
 
     fun withChildren(newChildren: List<SymbolInfo>): SymbolInfo = copy(children = newChildren)
 
-    fun withDocumentation(doc: String?): SymbolInfo = copy(documentation = doc)
+    // TODO: Do we need these?
+    // fun withDocumentation(doc: String?): SymbolInfo = copy(documentation = doc)
 
-    fun withTypeSignature(sig: String?): SymbolInfo = copy(typeSignature = sig)
+    // fun withTypeSignature(sig: String?): SymbolInfo = copy(typeSignature = sig)
 }

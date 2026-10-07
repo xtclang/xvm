@@ -12,7 +12,7 @@ import org.xvm.lsp.model.SymbolInfo.SymbolKind
  * Backend-agnostic code action provider that works with any [AdapterTree]/[AdapterNode]
  * implementation.
  *
- * Currently offers:
+ * Currently, offers:
  * - Organize imports (sort alphabetically)
  * - Remove unused imports (names not referenced elsewhere in the file)
  * - Generate documentation comment (insert skeleton with @param entries)

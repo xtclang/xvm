@@ -2,9 +2,7 @@ package org.xvm.lsp.adapter.xdk
 
 import org.xvm.asm.Constants.Access
 import org.xvm.asm.ErrorList
-import org.xvm.compiler.CompilerException
 import org.xvm.compiler.Lexer
-import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AnnotationExpression
@@ -44,19 +42,9 @@ internal object XdkMemberInline {
         if (symbol.declarationSource != source) return null
         val declaration = symbol.declaration ?: return null
         val errors = ErrorList()
-        val root =
-            try {
-                ExecutionTrace.api("Parser.parseSource(inline-member)") { Parser(Source(text), errors).parseSource() }
-            } catch (_: CompilerException) {
-                return null
-            }
-        if (errors.hasSeriousErrors()) return null
+        val root = XdkRefactoringSyntax.parse(text, errors, "inline-member") ?: return null
 
-        fun tree(
-            node: AstNode,
-            parent: AstNode? = null,
-        ): Sequence<Pair<AstNode, AstNode?>> = sequenceOf(node to parent) + node.childNodes().asSequence().flatMap { tree(it, node) }
-        val parents = tree(root).toMap()
+        val parents = XdkRefactoringSyntax.tree(root).toMap()
 
         fun at(value: Long) = SemanticModel.Position(Source.calculateLine(value), Source.calculateOffset(value))
 
@@ -116,8 +104,13 @@ internal object XdkMemberInline {
         ) {
             return null
         }
-        if (tree(member).any { (node, _) -> node is AnnotationExpression }) return null
-        if (tree(expression).any { (node, _) -> node is LambdaExpression || node is TypeCompositionStatement }) return null
+        if (XdkRefactoringSyntax.tree(member).any { (node, _) -> node is AnnotationExpression }) return null
+        if (XdkRefactoringSyntax.tree(expression).any { (node, _) ->
+                node is LambdaExpression || node is TypeCompositionStatement
+            }
+        ) {
+            return null
+        }
         val expressionRange = range(expression)
         val useRange = range(use)
         if (useRange.start >= expressionRange.start && useRange.end <= expressionRange.end) return null

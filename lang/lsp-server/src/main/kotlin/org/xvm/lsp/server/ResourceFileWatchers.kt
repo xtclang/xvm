@@ -238,7 +238,7 @@ internal class ResourceFileWatchers(
     }
 
     private companion object {
-        val logger = LoggerFactory.getLogger(ResourceFileWatchers::class.java)
+        val logger = LoggerFactory.getLogger(ResourceFileWatchers::class.java)!!
 
         fun attempt(action: () -> CompletableFuture<Void>): CompletableFuture<Void> =
             try {
