@@ -13034,3 +13034,46 @@ and no upstream issues or PRs were opened.
   remove each compatibility boundary only after its existing acceptance gate passes.
 - [ ] Obtain separate authorization before submitting upstream issues/PRs or pushing either
   repair branch. IntelliJ Platform and VS Code repair work remains deferred.
+
+## Additional local LSP4IJ repairs (2026-10-07)
+
+The user authorized the remaining LSP4IJ-owned repairs as separate local commits. The
+`~/src/lsp4ij` branch now extends its earlier ten-commit checkpoint with document/edit ownership,
+external watcher roots, ordered startup, signature help, guarded code actions, temporary
+formatting connections, dependency-cache invalidation, snippet indentation, closed-file
+persistence, virtual document content and inline-completion context. The
+[upstream register](errs-upstream-issues.md#additional-local-lsp4ij-repairs-2026-10-07)
+records each UP identifier and its acceptance boundary.
+
+Tests cover native Undo/Redo, close/reopen and server replacement, typing while a response is
+pending, unrelated unsaved documents, resource creation followed by moves, decorated completion
+items, read-only virtual content refresh and concurrent cache cancellation. Combined upstream
+testing also exposed lock-order problems in folding replies and file-rename reconnection;
+captured thread dumps and aborted runs remain evidence, not passing test receipts.
+
+The final upstream run at `614a4787` completed with **608 passing tests, 3 existing ignored
+tests, zero failures or errors** across 119 XML suites. It forced execution without the build
+cache, reused the configuration cache, and used a canonical test temporary directory to avoid
+macOS VFS path aliases. `buildPlugin prepareSandbox` passed at the same head. The upstream
+register records the artifact checksum and retained test receipts; this does not substitute
+for XVM GUI acceptance against the replacement plugin.
+
+- [x] Implement and add regression coverage for UP04/UP05/UP09/UP10/UP11/UP12/UP14/UP18/UP19/UP21
+  and the bounded UP25/UP26 features in the local upstream branch.
+- [x] Add native UP02 `willSave` dispatch and truthful capability negotiation.
+- [ ] Finish UP02 `willSaveWaitUntil` through a safe asynchronous pre-save lifecycle.
+- [ ] Finish UP03 generic asynchronous preflight and transaction rollback; destination-aware
+  resource renames alone do not complete that scope.
+- [ ] Run the individual native replacement gates against this new local plugin, especially
+  X254 virtual library content and X257 inline invocation/selection. Keep release bridges and
+  partial scenario status until those checks pass.
+
+This work does not change XVM's LSP4IJ 0.21.0 pin, install the local LSP4J repair in the plugin,
+remove any production workaround, or authorize an upstream push/PR. IntelliJ Platform and
+VS Code fixes remain deferred. The unrelated ServerLogs nullability cleanup is committed
+separately as `de5c32277`; its three log-retention/export tests and Kotlin formatting check pass.
+The `XtcLanguageServer` inspection cleanup is separately committed as `a242b389c`: corrected
+KDoc references, explicit public `Unit` return types, an unused lambda parameter removed, and
+a narrow unused suppression for the JSON-RPC log-export entry point. The combined server,
+transport-lifecycle and log tests pass **29/29, zero skipped**, with Kotlin compilation and
+formatting checks passing.
