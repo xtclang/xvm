@@ -180,6 +180,8 @@ export function moduleCases(): void {
         for (const capability of data.unsupportedCapabilities) {
             assert.ok(!capabilities[capability as keyof typeof capabilities], capability);
         }
+        assert.strictEqual(Boolean(capabilities[data.prototypeCapability as keyof typeof capabilities]),
+            process.env.XTC_LSP_COLOR_PROTOTYPE === 'true', data.prototypeCapability);
         for (const capability of data.supportedCapabilities) {
             assert.ok(capabilities[capability as keyof typeof capabilities], capability);
         }
