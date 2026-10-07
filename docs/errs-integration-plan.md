@@ -13000,3 +13000,37 @@ The final shared catalog SHA-256 is
 UP17, agreed latency/heap budgets, prolonged operational workloads, cross-platform/remote-host
 acceptance and independent extracted-PR validation remain separate L82 work. This checkpoint does
 not claim an entirely green VS Code catalog or complete LSP release acceptance.
+
+## Local LSP4J repairs for UP06 and UP15 (2026-10-07)
+
+The user authorized a separate `~/src/lsp4j` checkout, extending the local upstream work
+beyond LSP4IJ, and deferred IntelliJ Platform and VS Code repairs. Branch
+`lagergren/local-lsp-repairs` starts at upstream `57eeaa40` (1.1.0-SNAPSHOT) and contains
+two separate, unpushed commits:
+
+- `b47e8923` repairs UP06's `relatedDocuments` union decoding in full, unchanged and partial
+  diagnostic reports. The discriminator belongs on these protocol map fields, using the
+  existing Gson and `EitherTypeAdapter` machinery.
+- `13dfc35b` repairs UP15's typed-parameter classification while retaining request IDs in all
+  field orders, notification silence and framed-stream recovery. Actual malformed JSON,
+  including invalid trailing content, remains `ParseError`. Existing positional/list decoding
+  behavior is preserved.
+
+The final regressions fail against original production code: four of six UP06 tests and
+three of six UP15 tests fail. After restoring the repairs, all **375 upstream tests pass**
+with zero failures/errors/skips in a forced all-module run on JDK 17. The
+[upstream register](errs-upstream-issues.md#local-lsp4j-repairs-2026-10-07) records the
+test breakdown, source base, evidence paths and replacement gates.
+
+This checkpoint changes no Ecstasy dependency or production workaround. Server LSP4J remains
+1.0.0, and the IntelliJ UP06 adapter remains installed. Local library correctness does not
+establish binary/source compatibility or native acceptance for replacing the bundled client
+library. The existing UP15 stdio expectation continues to record the shipping dependency's
+behavior until a compatible repaired build is explicitly tested there. No commits were pushed
+and no upstream issues or PRs were opened.
+
+- [x] Repair the two recorded LSP4J defects locally, with separate commits and failing controls.
+- [ ] Validate a compatible repaired LSP4J build in the server and bundled IntelliJ client;
+  remove each compatibility boundary only after its existing acceptance gate passes.
+- [ ] Obtain separate authorization before submitting upstream issues/PRs or pushing either
+  repair branch. IntelliJ Platform and VS Code repair work remains deferred.
