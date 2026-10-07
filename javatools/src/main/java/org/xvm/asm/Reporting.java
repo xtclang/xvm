@@ -5,12 +5,12 @@ import static java.util.Objects.requireNonNull;
 /**
  * A diagnostic destination that can be diverted for a lexical scope.
  *
- * The parser and name resolver use this when callbacks cannot take a listener parameter.
+ * <p>The parser and name resolver use this when callbacks cannot take a listener parameter.
  * Scopes must be closed in reverse order, normally by try-with-resources. Each scope restores
  * its predecessor even when the operation throws. An inactive resolver has a null destination;
  * an active scope always has a listener.
  *
- * This holder controls lifetime, not ownership or concurrency. Owners remain confined to one
+ * <p>This holder controls lifetime, not ownership or concurrency. Owners remain confined to one
  * compiler operation; sharing a holder across threads is not supported.
  */
 public final class Reporting {

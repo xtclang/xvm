@@ -11,7 +11,7 @@ import static org.xvm.asm.ErrorListener.in;
 /**
  * Tests that {@link ErrorList} suppresses only genuine duplicates.
  *
- * An ErrorList drops any error whose UID it has already seen, so anything the UID fails to
+ * <p>An ErrorList drops any error whose UID it has already seen, so anything the UID fails to
  * distinguish is not merely reported once - it is discarded, uncounted and unannounced.
  */
 public class ErrorDeduplicationTest {

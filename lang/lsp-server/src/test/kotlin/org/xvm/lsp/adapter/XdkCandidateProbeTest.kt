@@ -105,7 +105,7 @@ class XdkCandidateProbeTest {
         listOf(ErrorList(ErrorList.FIRST_ERROR), ErrorListener.cancellable(ErrorList()) { true })
             .forEach { listener ->
                 val stopped = analyze(call, listener)
-                assertThat(stopped.pool()).isEmpty()
+                assertThat(stopped.pool()).isNull()
                 assertThat(stopped.cursorBindings()).isEmpty()
                 assertThat(stopped.callBindings()).isEmpty()
                 val recovered = analyze(call)
@@ -155,7 +155,7 @@ class XdkCandidateProbeTest {
         val analysis = EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, listener ?: errors)
         if (listener == null) {
             assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
-            assertThat(analysis.pool()).isPresent()
+            assertThat(analysis.pool()).isNotNull()
             assertThat(
                 analysis
                     .sites()
