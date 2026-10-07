@@ -2190,14 +2190,14 @@ not belong there simply because the LSP consumes them.
   Anonymous captures, clone rejection, shadowing and rename/reference provenance pass the combined
   regression batch. The public result shape is unchanged. Keep this extraction with anonymous
   capture provenance when splitting PRs; these complete-program facts remain in the root package.
-- [ ] **AST4 — Audit a unified declaration-provenance result before migrating fields.**
-  `Parameter.m_arg` and `NameResolver.m_resolvedNames` are branch-added semantic state. A future
-  attempt-owned collector could publish declaration/qualified-segment facts alongside call facts
-  and remove node-specific state, but it must also work during declaration-only queries, lazy
-  parameter allocation, failed/retried resolution, generated methods and speculative clones.
-  First write lifecycle/clone regressions and map all writers/readers. Proceed only if collector
-  plumbing and publication filtering are simpler than the present ownership. This is an investigation,
-  not a promised mechanical move or a prerequisite for submitting the bounded partial-node PR.
+- [x] **AST4 — Audit a unified declaration-provenance result before migrating fields.**
+  The [October 7 ownership audit](#ast4-declaration-provenance-ownership-audit-2026-10-07) maps writers,
+  readers, phases and clone behavior. Retain `Parameter.m_arg` and `NameResolver.m_resolvedNames`
+  with their current owners: declaration registration, lazy register allocation and live resolution
+  need different lifetimes from final call-fact publication. Replacing them with one collector would
+  add propagation, speculative-scope rules and API compatibility work without removing compiler-side
+  queries. This completes the investigation; it does not promise a migration. Reconsider only with
+  a concrete consumer or provenance defect that justifies a different ownership contract.
 
 The following stay in their current owners:
 
@@ -2288,7 +2288,8 @@ Validation on 2026-09-29 passes **200 tests**, with zero failures, errors or ski
   editor run or playbook scenario change is claimed for these internal extractions.
 
 At this checkpoint AST2 remained conditional on a simpler internal fitting contract; its later
-implementation is recorded in the October 7 AST2 checkpoint. AST4 remains a lifecycle investigation.
+implementation is recorded in the October 7 AST2 checkpoint. The subsequent AST4 audit retains
+the existing declaration/resolver owners after examining their lifetimes.
 Independent extracted PRs must still run their own validation.
 
 ## Composition audit follow-up
@@ -12224,7 +12225,8 @@ code was executed and no external credentials or network calls were part of that
   scope, argument and call/construction helpers stay beside compiler validation/parenting;
   moving them mechanically would expose internals or duplicate compiler rules. AST1/AST3/AST5
   are complete; AST2/AST4 were still optional investigations at this review. The later October 7
-  AST2 checkpoint extracts candidate reporting without changing this package boundary.
+  AST2 checkpoint extracts candidate reporting without changing this package boundary, and AST4
+  concludes that the current declaration/resolver ownership should remain.
 - Result collections are immutable, but compiler/AST/constant-pool values remain owned by their
   compilation attempt. Snapshot them into detached Kotlin values while owning the compiler
   worker. LSP indexes, edits and IDE policy stay in `lang`; collection immutability does not make
@@ -12790,7 +12792,7 @@ This is the natural boundary identified by AST2: partial-query result policy lea
 AST base, while compiler argument fitting stays with its existing owner. The resolver remains in
 the root AST package because it uses protected argument collection and package-private fitting.
 No public API, mutable field, wrapper result, parenting access or duplicate inference is added.
-AST4 remains a separate, optional declaration-provenance lifecycle investigation.
+The subsequent AST4 declaration-provenance audit is recorded below.
 
 Validation covers **260 distinct tests**, zero final failures/errors/skips: 24 Java syntax,
 cursor-collection and embedding-compatibility tests; 228 existing adapter tests for incomplete
@@ -12810,3 +12812,73 @@ Root and LSP-server `spotlessCheck` and `git diff --check` pass.
 No editor behavior or capability changes, so existing shared call/constructor scenarios remain
 applicable; no GUI suite was rerun for this internal extraction. Keep all three Java edits and
 `XdkCandidateProbeTest` together when extracting the change, and validate that PR independently.
+
+## AST4 declaration-provenance ownership audit (2026-10-07)
+
+**Decision: retain the current owners.** This audit finds no simpler common collector lifetime for
+`Parameter.m_arg` and `NameResolver.m_resolvedNames`. No production code, public accessor, mutable
+field or result record is added. These facts describe ordinary programs too; placing them in
+`ast.partial` would misrepresent their purpose.
+
+| State | Writers and phase | Readers and required behavior |
+| --- | --- | --- |
+| Class type-formal parameter target | `TypeCompositionStatement.registerStructures`: associates the registered type-parameter property identity. | `SemanticModelBuilder` reads the declaration identity before body registers exist. |
+| Primary-constructor property parameter target | `TypeCompositionStatement` associates either the synthesized property or an existing corresponding property during registration. | `SemanticModelBuilder` and `CompilerPropertyRelations` preserve the written declaration and property ownership. |
+| Method type-formal parameter target | `MethodDeclarationStatement.resolveNames`: associates the method's `TypeParameterConstant`. | The semantic model retains a formal identity, not the register allocated for its runtime representation. |
+| Ordinary value parameter target | `StatementBlock.RootContext.initNameMap`: lazily associates a register only with the matching source method and signature slot. | The semantic model normalizes the register; bodyless methods instead use the resolved signature slot and source span. A missing register is legitimate. |
+| Lambda source parameter target | `LambdaBindings.bind`, called during root register allocation and implicit-dereference rebinding in body validation. | Typed parameters use their AST association; name-only parameters use token/register pairs. Synthetic capture parameters map separately to enclosing registers. |
+| Qualified-name prefix targets | `NameResolver` appends after resolving the first name, an ordinary dotted segment or a formal dotted segment. | `NamedTypeExpression.getNameBindings` passively pairs source tokens with known targets, including a proven prefix before a later failure. |
+
+`Parameter.setResolvedTarget` has six assignment sites across four classes; its setter remains
+package-private. `NameResolver.getResolvedNames` has one direct reader, `NamedTypeExpression`.
+That node's bindings are consumed by Kotlin's `SemanticModelBuilder`, `CompilerImportAliases` and
+`CompilerTypeNames`, but also by Java's `CursorScope` visibility/type queries and
+`InitializerBinding.capture`. The latter preserves initializer references before a temporary
+compiled method is discarded. The resolver history therefore cannot become solely a final LSP
+result: compiler queries need it during compilation and transient probes.
+
+Resolution and clone boundaries:
+
+- Deferred resolution can resume; successful segments are recorded once. A failed suffix preserves
+  its proven prefix, and terminal retries do not append bindings or repeat diagnostics.
+  `getResolvedNames` and `getNameBindings` return immutable list snapshots without initiating resolution.
+- `AstNode.clone` copies ordinary fields and clones registered children. Java `transient` does not
+  clear a field during cloning. A cloned parameter initially retains its target; rebinding its slot
+  does not rewrite the original slot. The referenced compiler objects are still worker-owned.
+- `NamedTypeExpression.getNameResolver` detects an inherited resolver whose node is the original
+  and creates a resolver for the clone before resuming it. Passive reads before that call can still
+  see inherited resolver history; a raw AST clone is not an independent compilation result.
+- A lambda clone clears its generated-method identity. `getSourceBindings` checks that identity
+  against its context, so it cannot expose the original lambda's binding collection. Typed parameter
+  children still inherit their scalar targets; that is distinct from publishing generated-method facts.
+- Embedding compilation starts from fresh source parsing/source ownership. The Kotlin adapter
+  copies semantic facts under exclusive compiler-worker ownership. Immutable collections do not
+  make their AST, register or constant contents safe for concurrent compiler mutation.
+
+A replacement collector would need propagation through `Compiler`, `StageMgr`, declaration
+registration, root contexts, standalone resolver/type probes and generated initializer/lambda work.
+It would also need separate speculative scopes and publication rules: the existing invocation
+collector publishes fitting, validated calls from surviving source trees, whereas declarations and
+proven name prefixes are useful before body validation and after later resolution failures.
+Returning all declaration facts alongside existing results would change `Compilation`,
+`DeclarationAnalysis` and `PartialAnalysis` contracts; compatibility overloads would be needed.
+Keeping today's node getters would additionally require a route back to collector ownership.
+
+A read-only aggregate built from the current getters would be less invasive, but would retain the
+fields and duplicate projection already performed by Kotlin. Moving the live resolver list into a
+wrapper would retain the same mutation and lifetime with extra indirection. Neither meets AST4's
+requirement to simplify ownership. A future consumer needing a canonical declaration snapshot, or
+a demonstrated stale association reaching published results, would justify revisiting this decision;
+define speculative publication and clone ownership first in that case.
+
+Validation: **166 distinct tests pass, zero failures/errors/skips** (19 Java and 147 adapter
+tests). Seven new cases in `DeclarationProvenanceTest` and `XdkDeclarationProvenanceTest` cover
+the resolution, parameter and clone boundaries above; existing tests exercise listener restoration,
+embedding compatibility, declaration analysis, semantic models, parameter/lambda/property rename,
+generic/qualified/compound headers and candidate-probe isolation. After readability cleanup, all
+seven new cases pass a forced focused rerun. Both runs use `--rerun-tasks --no-build-cache`;
+the combined summary/XML and final focused XML are retained under
+`lang/lsp-server/build/reports/ast4-2026-10-07/`.
+
+Root and LSP-server `spotlessCheck` and `git diff --check` pass. No native IDE run or new playbook
+scenario is needed because this investigation changes no production behavior or playbook operation.

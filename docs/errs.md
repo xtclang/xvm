@@ -282,7 +282,9 @@ and 395 LSP tests, with zero failures or skips, plus root/lang Spotless. AST5 ad
 syntax queries in `partial` and passes another focused 258-test batch. AST1 and AST3 move scope
 collection and capture projection into their existing helpers; their combined 200-test batch and
 root/lang Spotless checks pass. AST2 subsequently moves candidate-result preparation into
-`PartialCallResolver`, with 260 distinct regression tests passing; AST4 remains conditional.
+`PartialCallResolver`, with 260 distinct regression tests passing. AST4's ownership audit is complete:
+retain declaration associations and live resolver history with their current owners; a unified
+collector would add lifecycle plumbing without simplifying compiler queries.
 Moving every compiler fix into a tooling package would misrepresent its ownership.
 
 **Process lifecycle:** Gene's orphan-server report exposed missing EOF cleanup and an IntelliJ
@@ -1901,10 +1903,12 @@ access to compiler validation/parenting. Moving them mechanically would expose i
 duplicate type rules. AST1/AST2/AST3/AST5 are complete. AST2 moves candidate-result preparation
 from `AstNode` into `PartialCallResolver`, sharing the unchanged fitter through a package-private
 final callback overload; 260 distinct regression tests pass in the
-[October 7 checkpoint](errs-integration-plan.md#ast2-candidate-result-ownership-2026-10-07). AST4
-remains an optional, evidence-led simplification, not a missing LSP API. Complete-program
-provenance still belongs to the compiler's
-attempt collector, and detached models, indexing, edits and IDE policy remain in Kotlin under
+[October 7 checkpoint](errs-integration-plan.md#ast2-candidate-result-ownership-2026-10-07).
+The [AST4 audit](errs-integration-plan.md#ast4-declaration-provenance-ownership-audit-2026-10-07)
+is also complete: retain declaration/resolver associations with their current compiler owners;
+their live-query and clone lifetimes differ from final call-fact publication. Complete-program
+provenance remains with compiler owners and attempt collectors as appropriate. Detached models,
+indexing, edits and IDE policy remain in Kotlin under
 `lang/lsp-server`. The [current compatibility contract](errs-integration-plan.md#compatibility-and-migration-contract)
 now lists the fourteen-component cursor result; older dated arity descriptions below are historical.
 
@@ -1917,11 +1921,11 @@ the placement decision covers the whole file while future PRs still separate unr
 | --- | --- |
 | `partial.IncompleteStatement`, `partial.IncompleteExpression`, `partial.IncompleteDeclarationStatement`, `partial.IncompleteTypeCompositionStatement` | Incomplete syntax, original ranges, child ownership, failure diagnostics and non-emission. Moved. Their own child fields are private; final header lists still clone by fresh construction. |
 | `PartialQueries`, `CursorScope`, `PartialArgument`, `PartialCallResolver`, `PartialConstructionResolver` | Stateless partial-query semantics in the ordinary package. Only the semantic boundary is public; helpers retain package access to validation, inference and type representation. AST1 moved scope collection here; AST2 moves candidate-result preparation into `PartialCallResolver`. AST5 extracted shared read-only syntax operations into `partial`. |
-| `LambdaBindings`, `AnonymousClassBindings` | Existing extracted provenance helpers for complete and incomplete programs, tied to register/capture allocation. Keep write access package-private. AST3 moved anonymous-property projection into its current owner; AST4 investigates a future common lifetime. |
+| `LambdaBindings`, `AnonymousClassBindings` | Existing extracted provenance helpers for complete and incomplete programs, tied to register/capture allocation. Keep write access package-private. AST3 moved anonymous-property projection into its current owner; AST4 retains the existing lifetimes after auditing generated-method and clone ownership. |
 | `AstNode`, `Context`, `StageMgr`, `Statement`, `StatementBlock` | Traversal, validation bookkeeping, attempt-owned collectors and register allocation belong to ordinary compilation. AST1 removed cursor-specific scope collection from `Context`; AST2 removes candidate-result preparation from `AstNode`, retaining its ordinary fitter and synchronous package-private observer. Preserve real compiler phase hooks. |
 | `InvocationExpression`, `LambdaExpression`, `NewExpression` | Passive syntax/selected-method access and capture/call publication at the point the compiler establishes the facts. Required hooks remain; no additional query cache. Ordinary constructor preparation is shared by real validation and probes, not duplicated. |
 | `MethodDeclarationStatement`, `PropertyDeclarationStatement`, `TypeCompositionStatement` | Declaration tokens, parameter association, collector propagation and source-owned initializer/header staging. These changes require the actual declaration and stage; small passive getters remain appropriate. |
-| `Parameter`, `NameResolver`, `NamedTypeExpression` | Parameters and qualified source segments retain actual compiler bindings; `getNameBindings()` is also used by compiler-side visibility checks, not just Kotlin. External reconstruction would expose private resolver state or redo lookup. AST4 audits collector alternatives before changing lifetime. |
+| `Parameter`, `NameResolver`, `NamedTypeExpression` | Parameters and qualified source segments retain actual compiler bindings; `getNameBindings()` is also used by compiler-side visibility checks, not just Kotlin. AST4 retains these owners: a unified collector needs additional phase/probe propagation, publication rules and compatibility plumbing. New lifecycle tests cover deferred/failed resolution, declarations, lazy registers and clones. |
 | `ImportStatement`, `TypedefStatement`, `VariableDeclarationStatement` | Passive alias/name/register access. These are natural syntax/semantic observation APIs, with no new query algorithm to extract. |
 | `NameExpression`, `AssignmentStatement`, `SequentialAssignExpression` | Passive resolved-name access plus ordinary generic method-value/atomic binary-AST fixes and reporting changes. Keep code generation in its compiler owner; extract those bug fixes as independent PR hunks, not tooling classes. |
 | `ValidationScope`, `ForEachStatement`, `ForStatement`, `WhileStatement`, `TryStatement` | Paired context/listener state and guaranteed restoration around real compiler callbacks. These are error-listener correctness changes, not partial-AST features. |
