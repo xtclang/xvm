@@ -33,6 +33,7 @@ class ParityScenarios(
         runtimeSettingsCases()
         colorCases()
         highlightingCases()
+        documentationCases()
     }
 
     internal fun case(
