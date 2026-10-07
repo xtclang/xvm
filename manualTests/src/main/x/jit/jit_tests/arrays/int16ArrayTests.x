@@ -1,8 +1,6 @@
 
 package int16ArrayTests {
 
-    @Inject Console console;
-
     void run() {
 
         shouldCreateWithCapacity();

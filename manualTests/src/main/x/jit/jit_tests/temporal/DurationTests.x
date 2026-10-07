@@ -1,7 +1,5 @@
 class DurationTests {
 
-    @Inject Console console;
-
     void run() {
         testCreateDuration();
         testCreateDurationFromString();

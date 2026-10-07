@@ -2,8 +2,6 @@ import ecstasy.io.IOException;
 
 class Int128Tests {
 
-    @Inject Console console;
-
     void run() {
 
         // Comparison tests

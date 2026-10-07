@@ -1,6 +1,4 @@
 package fbindTests {
-        @Inject Console console;
-
         void run() {
 
             testBindPrimitive();

@@ -3,8 +3,6 @@
  */
 class ElementAccessorTests {
 
-    @Inject Console console;
-
     void run() {
         testAccessPrimitiveElement();
         testAccessNullablePrimitiveElement();
