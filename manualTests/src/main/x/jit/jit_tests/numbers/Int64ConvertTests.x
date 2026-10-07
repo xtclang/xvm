@@ -3,8 +3,6 @@
  */
 class Int64ConvertTests {
 
-    @Inject Console console;
-
     void run() {
 
         // Int64.MinValue is -0x8000_0000_0000_0000 the lowest byte is 0x0000 == 0

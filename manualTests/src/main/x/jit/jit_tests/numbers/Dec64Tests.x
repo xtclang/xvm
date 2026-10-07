@@ -1,7 +1,5 @@
 class Dec64Tests {
 
-    @Inject Console console;
-
     void run() {
         // Comparison tests
         testDec64CompareEq();

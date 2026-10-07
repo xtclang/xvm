@@ -3,8 +3,6 @@
  */
 class Int16ConvertTests {
 
-    @Inject Console console;
-
     void run() {
         // Int16.MinValue is 0x8000 the lowest byte is zero
         testInt16ToInt8(Int16.MinValue, 0);

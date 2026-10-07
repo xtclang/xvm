@@ -3,8 +3,6 @@
  */
 class GpOrTests {
 
-    @Inject Console console;
-
     void run() {
         testGpOrInt();
         testGpOrIntConstants();

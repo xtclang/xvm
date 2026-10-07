@@ -3,8 +3,6 @@
  */
 class IpAndTests {
 
-    @Inject Console console;
-
     void run() {
         testIpAndInt();
         testIpAndUInt();

@@ -3,8 +3,6 @@
  */
 class GpAndTests {
 
-    @Inject Console console;
-
     void run() {
         testGpAndInt();
         testGpAndIntConstants();

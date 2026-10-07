@@ -1,6 +1,4 @@
 package mixinTests {
-    @Inject Console console;
-
     void run() {
 
         test1();

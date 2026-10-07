@@ -3,8 +3,6 @@
  */
 class IpModTests {
 
-    @Inject Console console;
-
     void run() {
         testIpModInt();
         testIpModUInt();

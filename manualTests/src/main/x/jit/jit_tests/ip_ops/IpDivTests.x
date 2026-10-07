@@ -3,8 +3,6 @@
  */
 class IpDivTests {
 
-    @Inject Console console;
-
     void run() {
         testIpDivInt();
         testIpDivUInt();

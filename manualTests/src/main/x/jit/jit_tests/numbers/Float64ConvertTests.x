@@ -3,8 +3,6 @@
  */
 class Float64ConvertTests {
 
-    @Inject Console console;
-
     void run() {
 
         testFloat64ToFloat32(-1000.456, -1000.456);

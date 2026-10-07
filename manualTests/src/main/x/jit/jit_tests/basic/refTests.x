@@ -1,8 +1,6 @@
 package refTests {
 
     void run() {
-        @Inject Console console;
-
         test1();
         test2();
         test3();
@@ -102,8 +100,6 @@ package refTests {
         Int n = 1;
 
         void testStandard() {
-            @Inject Console console;
-
             Ref<String> ref = &r;
             assert ref.get() == "RO";
             assert ref.assigned;

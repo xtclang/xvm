@@ -1,8 +1,6 @@
 
 package charArrayTests {
 
-    @Inject Console console;
-
     // Obtain the largest valid Char
     Char maxChar() {
         Int MaxChar = 0x10FFFF;

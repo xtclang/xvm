@@ -3,8 +3,6 @@
  */
 class UInt16ConvertTests {
 
-    @Inject Console console;
-
     void run() {
         testUInt16ToInt8(0, 0);
         testUInt16ToInt8(100, 100);

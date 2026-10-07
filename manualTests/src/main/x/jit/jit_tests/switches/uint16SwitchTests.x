@@ -2,8 +2,6 @@
  * Various types of switch statement using UInt16 values.
  */
 package uint16SwitchTests {
-    @Inject Console console;
-
     void run() {
 
         testSimpleSwitch();

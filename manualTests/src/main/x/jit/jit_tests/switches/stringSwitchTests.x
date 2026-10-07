@@ -2,8 +2,6 @@
  * Various types of switch statement using String values.
  */
 package stringSwitchTests {
-    @Inject Console console;
-
     void run() {
 
         testSimpleSwitch();

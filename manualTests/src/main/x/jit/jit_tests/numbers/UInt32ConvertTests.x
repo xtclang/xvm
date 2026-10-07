@@ -3,8 +3,6 @@
  */
 class UInt32ConvertTests {
 
-    @Inject Console console;
-
     void run() {
 
         testUInt32ToInt8(0, 0);

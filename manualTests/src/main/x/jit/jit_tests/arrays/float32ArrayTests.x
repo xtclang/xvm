@@ -1,8 +1,6 @@
 
 package float32ArrayTests {
 
-    @Inject Console console;
-
     void run() {
 
         shouldCreateWithCapacity();

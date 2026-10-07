@@ -3,8 +3,6 @@
  */
 class GpShrAllTests {
 
-    @Inject Console console;
-
     void run() {
         testGpShrAllInt();
         testGpShrAllIntConstants();

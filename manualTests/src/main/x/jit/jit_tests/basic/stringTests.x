@@ -1,7 +1,5 @@
 package stringTests {
 
-    @Inject Console console;
-
     void run() {
 
         shouldGetCharArrayForEmptyString();

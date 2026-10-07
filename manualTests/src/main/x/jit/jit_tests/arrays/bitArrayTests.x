@@ -1,8 +1,6 @@
 
 package bitArrayTests {
 
-    @Inject Console console;
-
     void run() {
         shouldCreateWithCapacity();
         shouldCreateArrayInitializedWithZeroValue();

@@ -3,8 +3,6 @@
  */
 class Int32ConvertTests {
 
-    @Inject Console console;
-
     void run() {
 
         // Int32.MinValue is 0x80000000 the lowest byte is 0x0000 == 0

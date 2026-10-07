@@ -3,8 +3,6 @@
  */
 class GpDivTests {
 
-    @Inject Console console;
-
     void run() {
         testGpDivInt();
         testGpDivIntConstants();

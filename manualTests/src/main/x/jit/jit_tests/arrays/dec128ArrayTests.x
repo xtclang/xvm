@@ -1,8 +1,6 @@
 
 package dec128ArrayTests {
 
-    @Inject Console console;
-
     void run() {
 
         shouldCreateWithCapacity();

@@ -3,8 +3,6 @@
  */
 class IpOrTests {
 
-    @Inject Console console;
-
     void run() {
         testIpOrInt();
         testIpOrUInt();

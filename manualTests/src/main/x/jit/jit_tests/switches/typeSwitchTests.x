@@ -2,8 +2,6 @@
  * Various types of switch statement switching on is(_) for type matching.
  */
 package typeSwitchTests {
-    @Inject Console console;
-
     void run() {
 
         testSimpleSwitch();

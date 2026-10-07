@@ -3,8 +3,6 @@
  */
 class GpXorTests {
 
-    @Inject Console console;
-
     void run() {
         testGpXorInt();
         testGpXorUInt();

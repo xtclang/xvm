@@ -2,8 +2,6 @@
  * Various types of switch statement using Enum values.
  */
 package enumSwitchTests {
-    @Inject Console console;
-
     void run() {
 
         testSimpleSwitch();

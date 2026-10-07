@@ -3,8 +3,6 @@
  */
 class GpModTests {
 
-    @Inject Console console;
-
     void run() {
         testGpModInt();
         testGpModIntConstants();

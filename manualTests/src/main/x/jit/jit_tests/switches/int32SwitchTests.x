@@ -2,8 +2,6 @@
  * Various types of switch statement using Int32 values.
  */
 package int32SwitchTests {
-    @Inject Console console;
-
     void run() {
 
         testSimpleSwitch();

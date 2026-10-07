@@ -1,7 +1,5 @@
 package basicSwitchTests {
 
-    @Inject Console console;
-
     void run() {
 
         testSwitchOnProperties();

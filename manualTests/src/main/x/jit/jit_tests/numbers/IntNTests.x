@@ -1,7 +1,5 @@
 class IntNTests {
 
-    @Inject Console console;
-
     void run() {
 
         // Comparison tests

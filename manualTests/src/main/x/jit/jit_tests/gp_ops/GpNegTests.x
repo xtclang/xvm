@@ -3,8 +3,6 @@
  */
 class GpNegTests {
 
-    @Inject Console console;
-
     void run() {
         testGpNegInt8();
         testGpNegNegativeInt8();

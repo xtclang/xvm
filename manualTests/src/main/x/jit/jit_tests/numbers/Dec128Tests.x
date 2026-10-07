@@ -1,7 +1,5 @@
 class Dec128Tests {
 
-    @Inject Console console;
-
     void run() {
         // Comparison tests
         testDec128CompareEq();

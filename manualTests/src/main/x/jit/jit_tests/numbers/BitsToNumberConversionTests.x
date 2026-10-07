@@ -7,8 +7,6 @@ import ecstasy.numbers.UIntNumber;
  */
 class BitsToNumberConversionTests {
 
-    @Inject Console console;
-
     Byte[] Empty = [];
 
     void run() {

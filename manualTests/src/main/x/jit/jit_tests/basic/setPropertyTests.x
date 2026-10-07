@@ -1,7 +1,5 @@
 package setPropertyTests {
 
-    @Inject Console console;
-
     void run() {
 
         Test t = new Test(0, 0.0, "");

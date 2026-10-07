@@ -3,8 +3,6 @@
  */
 class IpMulTests {
 
-    @Inject Console console;
-
     void run() {
         testIpMulInt();
         testIpMulUInt();

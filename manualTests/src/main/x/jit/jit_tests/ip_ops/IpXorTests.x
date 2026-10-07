@@ -3,8 +3,6 @@
  */
 class IpXorTests {
 
-    @Inject Console console;
-
     void run() {
         testIpXorInt();
         testIpXorUInt();

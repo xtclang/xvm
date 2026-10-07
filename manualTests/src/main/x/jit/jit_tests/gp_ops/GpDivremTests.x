@@ -3,8 +3,6 @@
  */
 class GpDivremTests {
 
-    @Inject Console console;
-
     void run() {
         testGpDivremInt();
         testGpDivremUInt();

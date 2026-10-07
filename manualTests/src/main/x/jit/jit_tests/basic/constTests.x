@@ -1,7 +1,5 @@
 package constTests {
 
-    @Inject Console console;
-
     void run() {
 
         testEmptyConstShouldBeEqual();

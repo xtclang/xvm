@@ -3,8 +3,6 @@
  */
 class GpMulTests {
 
-    @Inject Console console;
-
     void run() {
         testGpMulInt();
         testGpMulIntConstants();

@@ -3,8 +3,6 @@
  */
 class IpShrAllTests {
 
-    @Inject Console console;
-
     void run() {
         testIpShrAllInt();
         testIpShrAllUInt();

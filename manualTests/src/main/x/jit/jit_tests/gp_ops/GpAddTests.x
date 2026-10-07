@@ -3,8 +3,6 @@
  */
 class GpAddTests {
 
-    @Inject Console console;
-
     void run() {
         testGpAddInt();
         testGpAddIntConstants();
