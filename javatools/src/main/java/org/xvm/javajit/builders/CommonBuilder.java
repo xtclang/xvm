@@ -4272,7 +4272,18 @@ public class CommonBuilder
 
             code.invokestatic(CD_this, ctorName, ctorMd);
 
-            // step 7, 8, 9, 10: TODO
+            // step 7: run the post-construction validator, if present
+            MethodInfo validator = typeInfo.getMethodBySignature(pool().sigValidator());
+            if (validator != null) {
+                JitMethodDesc validatorDesc = validator.getJitDesc(this);
+                code.aload(ctxSlot)
+                    .aload(cctxSlot)
+                    .aload(thisSlot)
+                    .invokestatic(CD_this,
+                            validator.ensureJitMethodName(typeSystem), validatorDesc.standardMD);
+            }
+
+            // steps 8, 9, 10: TODO
 
             code.labelBinding(endScope)
                 .aload(thisSlot)
