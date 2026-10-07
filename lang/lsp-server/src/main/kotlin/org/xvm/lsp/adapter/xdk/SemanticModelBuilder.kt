@@ -277,7 +277,7 @@ fun EmbeddingSupport.PartialAnalysis.semanticSnapshot(errors: ErrorListener): Pa
             return@api PartialSemanticModel(builder.unavailable(), emptyList())
         }
         val pool =
-            pool().orElse(null)
+            pool()
                 ?: return@api PartialSemanticModel(builder.unavailable(), emptyList())
         return@api ConstantPool.withPool(pool).use { builder.buildPartial(this, errors) }
     }
@@ -1034,7 +1034,7 @@ private class SemanticModelBuilder(
             nodes,
             analysis.callBindings(),
             analysis.functionBindings(),
-            analysis.pool().orElse(null),
+            analysis.pool(),
         )
         val sites =
             analysis.sites().map { site ->
