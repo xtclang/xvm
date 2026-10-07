@@ -64,8 +64,9 @@ class XtcLanguageClient(
                                     .startedServers
                                     .filter { it.serverDefinition.id == CompilerSettings.SERVER_ID }
                                     .forEach { it.restart() }
-                            } else if (before.inlayHints != next.inlayHints) {
-                                refreshInlayHints()
+                            } else {
+                                if (before.inlayHints != next.inlayHints) refreshInlayHints()
+                                if (before.referenceCodeLens != next.referenceCodeLens) refreshCodeLenses()
                             }
                         }
                     }
@@ -223,6 +224,7 @@ class XtcLanguageClient(
     override fun findSettings(section: String?): Any? =
         when (section) {
             FORMATTING_SECTION -> readFormattingSettings()
+            "xtc.codeLens" -> mapOf("references" to LanguageServiceSettings.validated(project).referenceCodeLens)
             else -> super.findSettings(section)
         }
 
