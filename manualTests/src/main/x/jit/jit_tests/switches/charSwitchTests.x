@@ -3,8 +3,6 @@
  */
 package charSwitchTests {
 
-    @Inject Console console;
-
     void run() {
 
         testSimpleSwitch();

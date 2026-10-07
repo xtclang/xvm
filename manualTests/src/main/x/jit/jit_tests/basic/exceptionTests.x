@@ -5,8 +5,6 @@ package exceptionTests {
     import ecstasy.NotAssigned;
     import ecstasy.Closed;
 
-    @Inject Console console;
-
     void run() {
 
         testException();

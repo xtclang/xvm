@@ -1,8 +1,6 @@
 
 package booleanArrayTests {
 
-    @Inject Console console;
-
     void run() {
 
         shouldCreateWithCapacity();

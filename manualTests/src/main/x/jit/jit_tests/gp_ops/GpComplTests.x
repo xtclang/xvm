@@ -3,8 +3,6 @@
  */
 class GpComplTests {
 
-    @Inject Console console;
-
     void run() {
         testGpComplInt();
         testGpComplUInt();

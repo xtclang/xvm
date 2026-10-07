@@ -1,7 +1,5 @@
 class Int64Tests {
 
-    @Inject Console console;
-
 // 2 ^ 64 = 709551616
 
     void run() {

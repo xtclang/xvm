@@ -3,8 +3,6 @@
  */
 class GpSubTests {
 
-    @Inject Console console;
-
     void run() {
         testGpSubInt();
         testGpSubIntConstants();

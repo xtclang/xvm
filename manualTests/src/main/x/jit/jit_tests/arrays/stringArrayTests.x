@@ -1,8 +1,6 @@
 
 package stringArrayTests {
 
-    @Inject Console console;
-
     void run() {
 
         shouldCreateWithCapacity();

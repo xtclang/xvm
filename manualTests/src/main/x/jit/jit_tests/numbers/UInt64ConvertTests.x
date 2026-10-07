@@ -3,8 +3,6 @@
  */
 class UInt64ConvertTests {
 
-    @Inject Console console;
-
     void run() {
 
         testUInt64ToInt8(0, 0);

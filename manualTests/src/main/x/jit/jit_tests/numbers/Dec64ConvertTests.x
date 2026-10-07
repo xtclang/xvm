@@ -3,8 +3,6 @@
  */
 class Dec64ConvertTests {
 
-    @Inject Console console;
-
     void run() {
 
         testDec64ToDec32(-1000.456, -1000.456);
