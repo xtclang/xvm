@@ -360,8 +360,8 @@ public class xRTCompiler
         }
 
         /**
-         * This method is basically a copy of {@link Compiler#process()} implementation that allows
-         * a re-entry to the "link" stage.
+         * This method follows the processing pipeline of {@link Compiler}, allowing re-entry
+         * to the "link" stage.
          *
          * @param fReenter if true, skip all steps prior to module linking
          *

@@ -67,7 +67,7 @@ import static org.xvm.util.Handy.NO_ARGS;
 /**
  * Debugger console.
  *
- * TODO implementation Watch Eval
+ * <p>TODO implementation Watch Eval
  * TODO show which variables changed when stepping
  */
 public final class DebugConsole

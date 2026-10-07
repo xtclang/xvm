@@ -407,7 +407,6 @@ public class PropertyInfo
      *
      * @param idProp      the identity of the property for this operation
      * @param setClass    the set of identities that call chain bodies can come from
-     * @param setClass    the set of identities that call chain bodies can come from
      * @param setDefault  the set of identities that default bodies can come from
      *
      * @return the resulting PropertyInfo, or null if nothing has been retained
@@ -1579,7 +1578,7 @@ public class PropertyInfo
     // ----- constants and fields ------------------------------------------------------------------
 
     /**
-     * Rank comparator for Map.Entry<PropertyConstant, PropertyInfo> objects.
+     * Rank comparator for {@code Map.Entry<PropertyConstant, PropertyInfo>} objects.
      */
     public static final Comparator<Map.Entry<PropertyConstant, PropertyInfo>> RANKER =
         Comparator.comparingInt(e -> e.getValue().getRank());

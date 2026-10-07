@@ -47,7 +47,7 @@ public class ErrorList
     /**
      * How many serious errors to tolerate when the caller has no reason to choose a number.
      *
-     * Enough that a file with a genuine spread of problems reports them all, and few enough that
+     * <p>Enough that a file with a genuine spread of problems reports them all, and few enough that
      * source which has gone badly wrong - a mismatched brace early on, say - stops rather than
      * producing a page of consequences.
      */
