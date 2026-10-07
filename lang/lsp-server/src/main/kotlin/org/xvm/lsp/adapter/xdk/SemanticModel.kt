@@ -212,6 +212,8 @@ class SemanticModel
             val typeCategory: TypeCategory? = null,
             /** A static callable excluding constructors, as defined by the compiler. */
             val isFunction: Boolean = false,
+            /** Resolved ownership in the bundled XDK, independently of source attachments. */
+            val isDefaultLibrary: Boolean = false,
         )
 
         /** A written name; a null symbol explicitly represents an unresolved occurrence. */
@@ -222,6 +224,8 @@ class SemanticModel
             val symbol: SymbolId?,
             val type: TypeId?,
             val usage: Usage? = null,
+            /** This particular use names an annotation; ordinary uses retain their type category. */
+            val annotation: Boolean = false,
         )
 
         data class ExpressionType(

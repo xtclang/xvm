@@ -580,3 +580,18 @@ export are implemented with shared X269/X270 (selected acceptance passes in both
 not compiler semantics or a new advertised LSP capability. Broader multi-root/remote-workspace
 acceptance, offline export and L82 release evidence remain; Run/DAP, color and notebooks retain
 their recorded scope. See the [runtime/log contract](../../../docs/errs-integration-plan.md#machine-local-jvm-settings-and-log-support-ui5ui6-2026-10-06).
+
+
+L77 has an opt-in fixture-only RGBA constructor prototype; ordinary launches advertise no color
+provider. Shared X273–X275 now pass native picker edits, dismissal, Undo/Redo, rendered swatch
+refresh and invalid-source recovery in both editors. X41/X154 and dark/light/high-contrast captures
+verify the independent semantic-highlighting path. A public Ecstasy color library is outside the
+scope: the user clarified on October 7 that only theme-based source highlighting is requested.
+The IDE theme chooses colors from the server's standard token classifications. See the
+[native color receipt](../../../docs/errs-integration-plan.md#l77-native-color-acceptance-2026-10-07).
+
+The October 7 source-highlighting follow-up adds resolved annotation occurrences and bundled-library
+ownership, retaining lexical escape/keyword/literal detail. Shared X276/X277 cover native rendering,
+shadowing and damaged-source repair. Separate VS Code startup configurations establish exact
+lexical foreground/font parity across three themes; the harness no longer changes themes live.
+See the [completion receipt](../../../docs/errs-integration-plan.md#theme-based-source-highlighting-completion-2026-10-07).

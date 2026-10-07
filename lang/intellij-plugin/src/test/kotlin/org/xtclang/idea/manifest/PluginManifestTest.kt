@@ -82,6 +82,8 @@ class PluginManifestTest {
                 // XtcLspServerSupportProvider
                 "fileType", // registers *.x as Ecstasy so IntelliJ does not suggest unrelated
                 // plugins
+                "lang.syntaxHighlighterFactory", // use the TextMate grammar for our native file type
+                "editorHighlighterProvider", // use TextMate's scope-aware token storage
                 "newProjectWizard.generator", // wizard entry created by XtcNewProjectWizard
                 "configurationType", // run-config type created by XtcRunConfigurationType
                 "runConfigurationProducer", // auto-create run configs from .x context
