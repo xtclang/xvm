@@ -808,11 +808,20 @@ distinguishes integration compatibility from the per-bridge removal gates.
 
 The subsequent [individual isolation receipt](../../docs/errs-upstream-issues.md#individual-bridge-isolation-2026-10-06)
 tests UP01/UP07/UP08/UP13/UP19/UP27 with only that bridge disabled, then restores the original
-source. Those selections pass. UP12's absent-editor fix still fails closed-dirty-file save because
+source. Those selections pass. At that checkpoint, UP12's absent-editor fix fails closed-dirty-file save because
 the upstream formatting path does not reconnect that buffer; retain the production override.
 Each local experiment retains its patch, source/plugin hashes and native JSON under
 `build/reports/upstream-isolation-2026-10-06/`. A passing bypass experiment does not authorize
 removal on the Marketplace default, which lacks these local repairs.
+
+The [October 7 UP12 follow-up](../../docs/errs-upstream-issues.md#up12-closed-buffer-follow-up-2026-10-07)
+at local upstream `15bb34bd` also reconnects the current closed buffer and rejects stale replies.
+With our formatting override bypassed, `run-17693623788789126287` passes START/X31/X127/X138/X139
+and records no IDE errors. The source is restored exactly afterward. Standalone formatting's
+UP24 Redo behavior and closed-buffer connection retention remain separate requirements; keep the
+production override on released 0.21.0. Restored-shipping `run-4144503954102473659` then completes
+all 284 shared cases: 282 pass, X254/X257 retain UP25/UP26 partial status, no failures or IDE errors.
+START also passes. This ordinary catalog does not include the opt-in UP17 large-file diagnostic.
 
 Readiness polling accepts a successful observation once, using a monotonic deadline. Pinned
 Driver `waitFor` rechecks success and can falsely report a timeout during connection replacement

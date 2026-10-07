@@ -4103,3 +4103,24 @@ Documentation/reference acceptance (October 7): VS Code `run-coeJEN` passes X131
 `run-6731819376946689872` passes START/X131/X278/X279 with zero IDE errors. X279 verifies native
 reference navigation, current consumer counts and the live toggle retaining Run; a timed-out toggle
 in the first VS Code attempt was a failed test, not accepted evidence.
+
+### Full catalog and UP12 follow-up (2026-10-07)
+
+Shipping IntelliJ `run-4144503954102473659` completes all 284 shared cases in one process:
+282 pass, X254/X257 remain partial for UP25/UP26, and there are no failures or IDE errors.
+START also passes. The run uses released LSP4IJ 0.21.0 with all production workarounds enabled.
+The separate local-UP12 experiment passes closed-dirty-file Save All with our formatting override
+bypassed; its source is restored exactly before this full run.
+
+VS Code's full attempt and continuations cover the same 284 cases: 281 pass, X130/UP16 and
+X218/UP23 retain their host failures, and experimental X273 fails to display native color swatches.
+Its first native color request receives `ContentModified`; a later explicit provider query returns
+the expected colors, but the 30-second rendered check still fails. A fresh selected launch reproduces
+that failure. X274/X275, theme-based highlighting X276/X277, documentation X278 and reference lenses
+X279 pass in the continuation. Do not replace this evidence with a retry that edits the source or
+toggles rendering merely to obtain a pass. The color prototype remains off by default.
+
+See the [complete checkpoint](../../docs/errs-integration-plan.md#l82-up12-follow-up-and-284-case-checkpoint-2026-10-07)
+for every receipt, the X31/X127 harness corrections and the outstanding prototype refresh investigation.
+This is combined VS Code coverage, not an uninterrupted green run. UP17's opt-in large-file test,
+prolonged workloads and cross-platform/remote-host acceptance remain separate.
