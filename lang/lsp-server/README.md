@@ -117,8 +117,9 @@ In IntelliJ: **View -> Tool Windows -> Language Servers** (LSP4IJ) to see server
 
 Compiler mode has implementations for all 27 capabilities in this project's adapter interface,
 plus push/pull diagnostics and document/workspace synchronization. Several implementations remain
-bounded; the interface does not cover every LSP feature. Debug inline values, colors, notebooks and broader refactorings are
-among the missing features. See the [explicit absent-feature inventory](../doc/plans/plan-ide-integration.md#compiler-completeness-snapshot)
+bounded; the interface does not cover every LSP feature. Debug inline values, notebooks and broader
+refactorings remain incomplete. Color values have an opt-in, fixture-only constructor prototype;
+a public Ecstasy color-library contract remains deferred. See the [explicit absent-feature inventory](../doc/plans/plan-ide-integration.md#compiler-completeness-snapshot)
 and [active L55–L83 completion checklist](../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist).
 Capability coverage, semantic completeness and native test coverage are tracked separately.
 Compiler code actions include expression/local extraction, private helper extraction for contiguous
@@ -170,7 +171,7 @@ implementation retain their separate meanings. Indexed library sources remain re
 | Signature help | None | Same-file | Selected calls and compiler-fitted incomplete-call candidates |
 | Document links | Imports | Workspace index | HTTP(S) URLs in comments/literals plus resolved module/type/alias/wildcard import sources |
 | Workspace symbols | Limited | Workspace index | Discovered/configured source graph, including unopened modules; detached per-module index reused from editor/diagnostic compilation |
-| Semantic tokens | None | Syntax-based | Java lexical tokens plus resolved names and declaration/read-only/static/write modifiers |
+| Semantic tokens | None | Syntax-based | Resolved names, annotations and bundled-library ownership; declaration/read-only/static/abstract/write and documentation modifiers. Editor lexical scopes retain string/keyword/literal detail |
 | Type-definition / implementations | None | None | Source type identities and nominal type/method implementation chains |
 | Call hierarchy | None | None | Static selected calls across the complete discovered/configured source graph |
 | Inlay hints | None | None | Inferred local/destructured types, lambda parameters/returns and selected positional parameter names |

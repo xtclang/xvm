@@ -312,6 +312,12 @@ class CompilerPlaybookTest {
                         addSystemProperty("request.trial", false)
                         addSystemProperty("idea.suppressed.plugins.id", "com.intellij.modules.ultimate")
                         addSystemProperty("xtc.lsp.semanticTokens", true)
+                        addSystemProperty(
+                            "xtc.lsp.colorPrototype",
+                            shared.common.colorPrototype["cases"].asJsonArray.any {
+                                selection.isEmpty() || it.asString in selection
+                            },
+                        )
                         addSystemProperty("xtc.trace.directory", run.resolve("server-trace").toString())
                         addSystemProperty("xtc.logs.directory", run.resolve("server-logs").toString())
                         addSystemProperty("idea.auto.reload.plugins", false)

@@ -267,7 +267,7 @@
         "method-declaration": {
             "name": "meta.method.xtc",
             "begin": "\\b((?:(?:public|private|protected|static|abstract|final|native|lazy|atomic|inject|delegate|override)\\s+)*)(<[^>]+>\\s+)?([A-Z][a-zA-Z0-9_<>?,\\s]*)\\s+([a-z_][a-zA-Z0-9_]*)\\s*(?=\\()",
-            "end": "(?=\\{|;)",
+            "end": "(?=\\{|;|=)",
             "beginCaptures": {
                 "1": {
                     "name": "storage.modifier.xtc"

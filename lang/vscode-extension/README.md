@@ -20,7 +20,7 @@ Ecstasy is a modular, object-oriented language designed for secure, multi-tenant
 ## Features
 
 - **Syntax highlighting** for `.x` files via a TextMate grammar generated from the shared language DSL
-- **Semantic tokens** — compiler-resolved types (including imported types), enum members, functions, methods, parameters and properties refine the theme's colors. Declaration, readonly, static, abstract, write and documentation modifiers supply optional emphasis. Try the [semantic-color demo](../doc/manual-test-plan.md#compiler-semantic-color-prototype); classification coverage differs between adapters.
+- **Semantic tokens** — compiler-resolved types (including imported types), enum members, functions, methods, parameters and properties refine the theme's colors. Resolved annotation uses are decorators; bundled ownership adds `defaultLibrary`. Declaration, readonly, static, abstract, write and documentation modifiers supply optional emphasis. Fine string/escape/keyword/literal scopes remain with the editor grammar. Try the [semantic-color demo](../doc/manual-test-plan.md#compiler-semantic-color-prototype); classification coverage differs between adapters.
 - **Language Server Protocol (LSP)** — hover, completions, go-to-definition, find references, document outline, inlay hints, and diagnostics
 - **Debug Adapter Protocol (DAP)** — launch and step-debug Ecstasy modules with breakpoints, variables, and call stack inspection
 - **Tasks** — auto-discovered Gradle Build / Test / Clean / Run tasks for any workspace that contains a `build.gradle.kts`
@@ -334,7 +334,7 @@ vscode-extension/
 
 | Task | Command | What it does |
 |------|---------|--------------|
-| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs all 277 shared cases (X1–X272, CFG1–CFG3 and 7a.8–7a.9) in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
+| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs all 282 shared cases (X1–X277, CFG1–CFG3 and 7a.8–7a.9) in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
 | **Headless integration test** | `./gradlew :lang:vscode-extension:testVscodeExtension -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Spawns a real VS Code instance via `@vscode/test-electron`, loads the extension from the build tree, opens `src/test/fixtures/hello.x`, and asserts the document's `languageId === "xtc"`. The primary regression guard for the file-association pipeline. |
 | **Interactive smoke test** | `./gradlew :lang:vscode-extension:runCode -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Launches VS Code in Extension Development Host mode with `src/test/fixtures/` open. Use this to verify highlighting, hover, completion, etc. by eye. |
 | **Compile only** | `./gradlew :lang:vscode-extension:npmCompile -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Runs `tsc -p ./`; fastest feedback when editing TypeScript. |
@@ -544,3 +544,17 @@ the compiler-only workload skipped, and both adapters pass full editor exit/reop
 Automatic server restart preserves unsaved text. The full 277-case catalog plus targeted corrections
 has 275 passes and retains X130/UP16 and X218/UP23 as failures, not successful acceptance. See the
 [UI completion receipt](../../docs/errs-integration-plan.md#ui1ui7-completion-batch-2026-10-06).
+
+### Experimental color-value picker
+
+The opt-in L77 prototype recognizes literal `ColorPrototype.Rgba` constructors from the shared
+fixture. It supplies native color swatches and picker edits separately from normal semantic
+highlighting. It is disabled for ordinary launches and does not introduce a public XDK color API.
+Shared X273–X275 exercise picker edits, dismissal, native Undo/Redo and diagnostic recovery.
+See the [prototype recipe and acceptance](../doc/manual-test-plan.md#l77-color-value-prototype).
+
+The playbook keeps its startup theme. For explicit theme comparisons, the Node/npm launcher accepts
+`--playbook --cases=X277 --theme="Default Light Modern"` and the optional `--lexical-baseline`.
+It writes settings before opening VS Code and exports rendered lexical styles for comparison;
+there are no live theme/highlighting toggles. See the
+[highlighting checks](../doc/manual-test-plan.md#theme-based-highlighting-follow-up-x276x277).
