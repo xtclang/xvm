@@ -8754,6 +8754,21 @@
         "limitations": []
       }
     },
+    "X278": {
+      "title": "generate compiler documentation with exact parameter names and native history",
+      "manual": [],
+      "values": {
+        "file": "Documentation.x",
+        "source": "module Documentation {\n    <T> T echo(\n            T input,\n            Int count = 1) = input;\n}\n",
+        "expected": "module Documentation {\n    /**\n     * TODO: add description.\n     * @param T TODO\n     * @param input TODO\n     * @param count TODO\n     * @return TODO\n     */\n    <T> T echo(\n            T input,\n            Int count = 1) = input;\n}\n",
+        "anchor": "echo",
+        "title": "Generate documentation comment"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "7a.8": {
       "title": "compiler-only duplicate annotation warning is delivered exactly once",
       "manual": [

@@ -5,6 +5,7 @@ import { advancedCases, pullDiagnosticCases, typeHeaderCases } from './advanced'
 import { colorCases } from './colors';
 import { compilerImportCases } from './compilerImports';
 import { completionCases } from './completion';
+import { documentationCases } from './documentation';
 import { editingClosureCases, formattingBreadthCases, linkedScopeCases, structuralRecoveryCases } from './editingClosure';
 import { configurationCases, dependencyCases } from './dependencies';
 import { graphCases, indexingCases, libraryContentCases, monikerCases } from './graph';
@@ -54,6 +55,7 @@ suite('XdkAdapter playbook', function () {
     typeHeaderCases(['X106', 'X107', 'X108']);
     renameFamilyCases();
     memberActionCases();
+    documentationCases();
     pullDiagnosticCases();
     platformCases();
     progressCases();
