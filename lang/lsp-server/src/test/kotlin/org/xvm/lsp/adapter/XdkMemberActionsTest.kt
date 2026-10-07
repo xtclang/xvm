@@ -579,7 +579,12 @@ class XdkMemberActionsTest {
         val text = "module App { interface Api { Int read(); } class Box implements Api {} }"
         workspace(text) { adapter, uri ->
             assertThat(
-                adapter.getCodeActions(uri, Range(Position(0, 0), Position(0, 0)), emptyList()),
+                adapter
+                    .getCodeActions(
+                        uri,
+                        Range(Position(0, 0), Position(0, 0)),
+                        emptyList(),
+                    ).filter { it.title.startsWith("Implement ") },
             ).isEmpty()
         }
     }

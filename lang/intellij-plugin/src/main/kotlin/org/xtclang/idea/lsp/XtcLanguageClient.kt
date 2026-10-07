@@ -218,7 +218,7 @@ class XtcLanguageClient(
     }
 
     /**
-     * Specialize only formatting. Delegating other sections preserves configured compiler graphs,
+     * Specialize editor formatting and reference-lens preferences. Other sections preserve compiler graphs,
      * null entries for unknown sections and the base client's asynchronous response ordering.
      */
     override fun findSettings(section: String?): Any? =

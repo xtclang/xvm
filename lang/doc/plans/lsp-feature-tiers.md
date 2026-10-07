@@ -105,7 +105,8 @@ nodes with a `left` field. Check if the highlighted identifier is under the `lef
 #### 1.2.3 More Code Actions
 
 **What**:
-- **Generate doc comment**: Insert a `/** */` skeleton above a method/class declaration
+- **Generate doc comment**: Implemented for the compiler adapter at written declaration headers,
+  including compiler parameter/return entries and native Undo/Redo (shared X278; selected acceptance passes in both editors).
 - **Add missing import**: When an identifier matches a workspace index symbol, offer
   to add the import (similar to "auto-import" in IntelliJ)
 - **Convert string to template**: Detect string concatenation and offer to convert to
