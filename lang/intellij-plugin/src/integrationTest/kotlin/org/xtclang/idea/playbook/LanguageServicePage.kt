@@ -22,6 +22,11 @@ interface LanguageServicePage {
         enabled: Boolean,
     )
 
+    fun referenceCodeLens(
+        project: Project,
+        enabled: Boolean,
+    )
+
     fun transport(
         project: Project,
         value: String,

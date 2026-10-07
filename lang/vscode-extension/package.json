@@ -299,6 +299,12 @@
                         "description": "Trace communication between VS Code and the Ecstasy Language Server (for debugging)",
                         "scope": "window"
                     },
+                    "xtc.codeLens.references": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Show compiler reference counts for declarations in the configured source graph. Applies immediately; Run lenses are independent. Native editor.codeLens controls also apply.",
+                        "scope": "resource"
+                    },
                     "xtc.inlayHints.enabled": {
                         "type": "boolean",
                         "default": true,

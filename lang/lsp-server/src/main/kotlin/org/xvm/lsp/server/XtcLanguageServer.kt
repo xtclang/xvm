@@ -83,6 +83,7 @@ import java.net.URI
 import java.nio.file.Path
 import java.util.Properties
 import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.measureTimedValue
@@ -357,7 +358,27 @@ class XtcLanguageServer(
     val editorFormattingConfig: FormattingConfig?
         get() = formattingState.config
 
-    fun refreshPresentation() = refresh.request(ClientRefresh.Feature.INLAYS)
+    fun refreshPresentation() = refresh.request(ClientRefresh.Feature.INLAYS, ClientRefresh.Feature.LENSES)
+
+    /** Read the document's setting without retaining a second mutable configuration cache. */
+    internal fun referenceCodeLens(uri: String): CompletableFuture<Boolean> {
+        val connection = client
+        if (!presentation.workspaceConfiguration || connection == null) return CompletableFuture.completedFuture(true)
+        val item =
+            ConfigurationItem().apply {
+                section = "xtc.codeLens"
+                scopeUri = uri
+            }
+        return CompletableFuture
+            .supplyAsync { connection.configuration(ConfigurationParams(listOf(item))) }
+            .thenCompose { it }
+            .orTimeout(10, SECONDS)
+            .thenApply { CodeLensSettings.references(it?.firstOrNull()) }
+            .exceptionally { failure ->
+                logger.warn("Reference CodeLens setting unavailable: {}", failure.message)
+                false
+            }
+    }
 
     /**
      * Helper to handle LSP requests with consistent logging and async execution.
