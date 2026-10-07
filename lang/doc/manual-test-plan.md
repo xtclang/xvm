@@ -1,6 +1,12 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **277 scenarios**: X1–X272, CFG1–CFG3 and 7a.8/7a.9.
+The current catalog has **282 scenarios**: X1–X277, CFG1–CFG3 and 7a.8/7a.9.
+
+Latest color acceptance (2026-10-07): shared X273–X275 pass in both editors, including native
+pickers, rendered RGBA, Undo/Redo and recovery. X41/X154 pass with theme screenshots.
+See the [focused receipt](../../docs/errs-integration-plan.md#l77-native-color-acceptance-2026-10-07).
+X276/X277 additionally cover annotation/library identities and lexical-theme parity through source
+damage and repair. The historical full-catalog receipts below cover 277 scenarios.
 
 Latest selected acceptance after the L82 configuration-responsiveness repair (2026-10-06):
 X147/X148/X259 pass in VS Code `run-WbMUZ7` and IntelliJ `run-13789526801058807403`.
@@ -330,7 +336,7 @@ only indentation/outer whitespace should change. Format a selected range, then t
 brace and check its indentation. An unterminated string must yield no formatting edits. Ctrl-click
 an HTTP(S) URL in a comment/string. Check the module Run lens uses the normal client run action.
 Linked editing on a local should include that declaration's uses while ignoring an equal-spelled
-local in another method. Semantic highlighting should include lexical comments/literals/keywords
+local in another method. Semantic highlighting should preserve lexical comments/literals/keywords
 as well as resolved names; inlays retain their existing compiler-derived scope.
 
 ## Current development batch: discovery and complete XDK
@@ -1441,7 +1447,7 @@ colors, and a theme can give multiple categories the same appearance.
 |---|------|-------|-----------------|
 | 19.1 | Types colored distinctly | Open file with `String name;` and `Int count;` | `String` and `Int` have type color (different from `name`/`count`) |
 | 19.2 | Methods vs properties | Open file with `void foo()` and `String name;` | `foo` has method color, `name` has property color |
-| 19.3 | Annotations as decorators | Add `@Override` | Tree-sitter supplies decorator classification; compiler-specific annotation classification remains a follow-up. TextMate has an annotation scope. |
+| 19.3 | Annotations as decorators | Add `@Override` | Compiler tokens use resolved annotation identities, including import aliases and qualified names. Same-named ordinary types keep their type category. X276 covers both editors. |
 | 19.4 | Deprecated strikethrough | Inspect a syntactic `@Deprecated` example with Tree-sitter | Tree-sitter recognizes the spelling; this is not evidence of an Ecstasy deprecation API. Compiler deprecation classification is not implemented. |
 | 19.5 | new Foo() as type | Write `new Person()` | `Person` colored as type, not method |
 | 19.6 | Method call coloring | Write `getName()` | `getName` colored as method call |
@@ -1451,8 +1457,13 @@ colors, and a theme can give multiple categories the same appearance.
 | 19.10 | Namespace coloring | `module myapp` declaration | `myapp` colored as namespace |
 | 19.11 | Server log confirmation | Check LSP server log at startup | Shows `semantic tokens ENABLED (23 types, 10 modifiers)` |
 | 19.12 | Documentation comments | Compare `/** Documentation */`, `/* Ordinary */` and a string containing `/**` | Compiler tokens add `documentation` only to documentation comments, including each line of a multiline comment. |
+| 19.13 | Bundled ownership | Compare imported/aliased XDK symbols, same-named local types and third-party binary types | Only symbols owned by bundled XDK modules carry `defaultLibrary`; source attachments do not change ownership. |
+| 19.14 | Lexical detail and recovery | Run X277 in separate dark/light/high-contrast startup configurations, then damage and repair its string, template and declaration | Semantic overlays preserve lexical escape/keyword/literal styling. Current-source tokens stay in bounds and repair restores the exact classifications. |
 
 #### Compiler semantic-color prototype
+
+This is the requested source-highlighting feature. It uses the IDE theme and requires no new
+Ecstasy library or application-color API. The separate L77 picker experiment below is opt-in.
 
 Open [`semantic-colors.code-workspace`](../test-fixtures/semantic-highlighting/semantic-colors.code-workspace)
 in VS Code with the compiler extension, then open `SemanticColors.x`. The workspace only adds
@@ -1469,8 +1480,11 @@ of `Quiet` as `enumMember`. `create` is `function.static` at its declaration and
 highlighting, separate from L77 color-value swatches and pickers.
 
 `XdkSemanticColorTest` compiles this fixture and checks classifications. Shared X41/X154 check
-functions, enum values, imported interfaces and writes in both editor drivers. New classifications
-require their next selected native acceptance run; theme rendering itself remains a manual check.
+functions, enum values, imported interfaces and writes in both editor drivers. Both cases pass in
+both editors; dark/light/high-contrast captures were visually inspected on October 7. See the
+[native receipt](../../docs/errs-integration-plan.md#l77-native-color-acceptance-2026-10-07).
+The backend suite also checks the real platform `CircularBuffer` fixture, including identical
+names used as parameters/properties/locals and incomplete-member edits followed by repair.
 
 ---
 
@@ -1514,7 +1528,7 @@ Use the same steps in either editor, without saving changes to the tracked fixtu
 | Swatches | Open `ColorPrototype.x` and wait for successful analysis | `accent` is opaque orange; `translucent()` has RGB 200/80/40 and alpha 128/255. |
 | Apply | Open `accent`'s picker and choose blue with approximately half opacity | Its byte literals change and an `alpha = …` argument appears; the edited source compiles and the swatch agrees within byte rounding. |
 | Named arguments | Change the color returned by `translucent()` | Blue/red/alpha/green stay in their written order and retain labels; only numeric values change. |
-| Cancel and Undo | Cancel a picker change, then apply another, Undo and Redo | Cancellation preserves source; Undo/Redo restores the corresponding source and color. Record actual host behavior. |
+| Dismiss and Undo | Open and dismiss the picker without selecting a new value; reopen, change opacity, Undo and Redo | Dismissal without selection preserves source. Both native pickers apply selected values immediately; closing afterward retains the edit. Undo/Redo restores the corresponding source and color. |
 | Dynamic/ordinary text | Inspect `dynamic(red)` and `ordinaryText` | Neither receives a swatch. No runtime expressions are evaluated. |
 | Failure and recovery | Change a channel to 256, then restore it | Compiler diagnostic and no stale swatch/edit while the compilation fails; swatches return after repair. |
 | Baseline | Relaunch without the prototype environment/property | No `colorProvider`; normal semantic token coloring continues independently. |
@@ -1523,8 +1537,11 @@ Backend tests cover binary and typedef aliases, same-named unrelated types, comm
 commas, UTF-16 columns, CRLF/LF/CR preservation, rounding, changed defaults, stale ranges and
 document closure. References and compound constant expressions are deliberately outside the
 literal-only prototype. The real packaged stdio test verifies opt-in and an edit/recompile round
-trip. Native picker apply/cancel/Undo/Redo remains unverified; this recipe is outside the default
-277-case catalog until those host checks are implemented and accepted.
+trip. Shared X273–X275 automate native swatches, picker edits, dismissal, Undo/Redo and error recovery.
+The launchers enable the prototype when those cases are selected, including a full catalog run.
+Native acceptance passes in VS Code `run-atPCiE` and IntelliJ `run-5420151303010878432`
+(zero IDE failures). X41/X154 also pass in both editors, with dark/light/high-contrast screenshots
+reviewed. See the [receipt and corrected harness failures](../../docs/errs-integration-plan.md#l77-native-color-acceptance-2026-10-07).
 
 ## XdkAdapter Playbook
 
@@ -3975,6 +3992,14 @@ stopped-server sessions. Running processes are protected; cleanup runs on the ne
 | X271 | Stop the language server, then Export Server Logs. The ZIP identifies offline mode and contains only this project's recorded launcher/server session; restart restores diagnostics. | Shared X271 in both editors. |
 | X272 | Save JVM option `-Xmx1K`, restart and observe the intentional JVM startup failure. Export logs while stopped; correct/reset the option and restart. Buffers and diagnostics recover. | Shared X272 in both editors; uses a disposable test profile. |
 
+### Color-value prototype (X273–X275)
+
+| ID | Action | Expected result |
+|---|---|---|
+| X273 | With the color prototype enabled, verify only two swatches in `ColorPrototype.x`; use native opacity/RGB picker controls on positional and reordered named constructors. Inspect dark/light/high-contrast schemes. | Source preserves labels, order and surrounding text; edited bytes compile and match the picker color. Both editor drivers use the shared source and negative controls. |
+| X274 | Open and dismiss the native color picker without choosing a value, then change opacity once, Undo once and Redo once. | Dismissal preserves source; Undo and Redo restore the exact corresponding constructors and reported RGBA. |
+| X275 | Change a channel from 255 to 256, then restore the source. | Compiler error removes all native color swatches; repair restores exactly the two known colors. Ordinary strings and dynamic expressions never gain swatches. |
+
 Automation checks installed settings/export operations and exact restart/status boundaries;
 it supplies the save destination rather than driving the OS chooser. Manually verify chooser
 Cancel and overwrite confirmation. Full editor exit/reopen is covered separately below; inspect
@@ -4037,3 +4062,29 @@ Final selected layout/support check: IntelliJ `run-8778326141068942537` passes X
 X266–X272, plus START, with no IDE errors. X271 uses the native Stop-and-disable operation and
 checks that export neither restarts the process nor selects another session. Internal `stop()`
 leaves the wrapper enabled and does not represent the user's Stop action.
+
+### Theme-based highlighting follow-up (X276/X277)
+
+| ID | Actions | Expected result |
+|---|---|---|
+| X276 | Open shared Highlighting.x with local, imported-aliased and qualified annotations, a shadowed Override class and bundled/local JsonObject types. Inspect semantic tokens and capture the startup theme. | Only annotation uses are decorators; only bundled ownership carries defaultLibrary. Theme colors remain in control. |
+| X277 | Compare separate startup configurations with semantic highlighting off/on in three themes. Damage the string, interpolation and declaration, repairing each before the next edit. | Escapes, literals and keywords retain lexical detail. Errors retire stale tokens; repair restores exact classifications. The interpolation expression still receives compiler semantic highlighting. |
+
+The normal harness does not cycle the visible theme or toggle semantic highlighting. To compare
+VS Code startup configurations after building the extension, run from `lang/vscode-extension`:
+
+```bash
+npm run test:playbook -- --cases=X277 --theme="Default Dark Modern"
+npm run test:playbook -- --cases=X277 --theme="Default Dark Modern" --lexical-baseline
+```
+
+Repeat with `Default Light Modern` and `Default High Contrast`. Compare `anchors` and `styles` in
+the two runs' `X277-lexical-styles.json`; they must be equal, while `semanticHighlighting` must be
+true/false respectively. The fixture also compares expression-bodied string/escape styling and
+later keywords with control fragments, catching method-header grammar state leaking into bodies.
+IntelliJ captures its current scheme, requires TextMate token types and checks installed lexical
+attributes against controls and absence of semantic overlays on lexical fragments. Change its scheme manually for additional
+visual comparisons; normal native runs leave it alone.
+
+All four focused cases pass in both editors; final X277 grammar/recovery checks and the six VS Code
+startup comparisons are recorded in the [completion receipt](../../docs/errs-integration-plan.md#theme-based-source-highlighting-completion-2026-10-07).

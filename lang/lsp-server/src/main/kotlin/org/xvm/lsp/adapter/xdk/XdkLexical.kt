@@ -274,32 +274,14 @@ internal object XdkLexical {
             }
 
     /**
-     * Absolute token tuples; semantic name bindings take precedence when the streams are merged.
+     * Documentation adds a semantic modifier absent from the lexical grammar. Leave ordinary
+     * syntax to the editor's grammar: broad string/keyword/number overlays erase finer escape,
+     * interpolation, control-keyword and literal scopes. No TextMate dependency is needed here.
      */
     fun tokens(text: String): List<List<Int>> {
         val lines = text.split(newlines)
         return lex(text).orEmpty().flatMap { token ->
-            val kind =
-                when {
-                    token.id in comments -> "comment"
-
-                    token.id in strings -> "string"
-
-                    token.id.name.startsWith("LIT_") -> "number"
-
-                    token.id != Token.Id.IDENTIFIER &&
-                        token.id.TEXT
-                            ?.firstOrNull()
-                            ?.isLetter() == true -> "keyword"
-
-                    else -> return@flatMap emptyList()
-                }
-            val modifiers =
-                if (token.id == Token.Id.ENC_COMMENT && token.text.startsWith("/**")) {
-                    SemanticTokenLegend.modifierBitmask("documentation")
-                } else {
-                    0
-                }
+            if (token.id != Token.Id.ENC_COMMENT || !token.text.startsWith("/**")) return@flatMap emptyList()
             (token.range.start.line..token.range.end.line).mapNotNull { line ->
                 val start = if (line == token.range.start.line) token.range.start.column else 0
                 val end =
@@ -311,8 +293,8 @@ internal object XdkLexical {
                         line,
                         start,
                         end - start,
-                        SemanticTokenLegend.typeIndex.getValue(kind),
-                        modifiers,
+                        SemanticTokenLegend.typeIndex.getValue("comment"),
+                        SemanticTokenLegend.modifierBitmask("documentation"),
                     )
                 }
             }

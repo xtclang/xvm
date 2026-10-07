@@ -56,7 +56,7 @@ export async function run(): Promise<void> {
         cases: [...cases].map(([id, description]) => ({ ...description, id,
             ...(results.find(result => result.id === id) ?? { status: selected.some(value => value === id) ? 'not-run' : 'not-selected' }) })),
         errors: results.filter(result => !cases.has(result.id)),
-        scope: 'VS Code extension-host/provider checks; X145 --cancel-ui activates the actual renderer control X260 activates the visible Gradle import Cancel control, and X259 inspects rendered inlay labels. Other visual appearance and physical key/menu interaction remain manual.',
+        scope: 'VS Code extension-host/provider checks; X145 --cancel-ui and X260 activate visible Cancel controls, X259 inspects rendered inlay labels, and X273–X275 exercise native color swatches, picker controls and Undo/Redo. X154/X273/X276/X277 capture the startup theme without changing it; separate X277 --theme/--lexical-baseline launches compare dark/light/high-contrast styles; X276 checks resolved annotations and library ownership, and X277 checks lexical styles and damaged-source recovery. Other visual appearance and physical key/menu interaction remain manual.',
         hostChecks: await hostResults(),
         hostChecksNote: 'Existing Gradle XML evidence; inspect timestamps. Focused editor runs do not rerun host checks.',
         supportingCoverage: {

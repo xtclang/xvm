@@ -2,11 +2,13 @@ import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 import { getClient } from '../../lsp-client';
 import { advancedCases, pullDiagnosticCases, typeHeaderCases } from './advanced';
-import { completionCases } from './completion';
+import { colorCases } from './colors';
 import { compilerImportCases } from './compilerImports';
+import { completionCases } from './completion';
 import { editingClosureCases, formattingBreadthCases, linkedScopeCases, structuralRecoveryCases } from './editingClosure';
 import { configurationCases, dependencyCases } from './dependencies';
 import { graphCases, indexingCases, libraryContentCases, monikerCases } from './graph';
+import { highlightingCases } from './highlighting';
 import { inlineCompletionCases } from './inlineCompletion';
 import { librarySettingsCases } from './librarySettings';
 import { liveWorkspaceCases } from './liveWorkspace';
@@ -82,6 +84,8 @@ suite('XdkAdapter playbook', function () {
     compilerImportCases();
     librarySettingsCases();
     runtimeSettingsCases();
+    colorCases();
+    highlightingCases();
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {
