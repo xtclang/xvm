@@ -184,7 +184,7 @@ class XdkDelimiterRecoveryTest {
         val errors = ErrorList()
         val analysis = EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, errors)
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
-        assertThat(analysis.pool()).isPresent()
+        assertThat(analysis.pool()).isNotNull()
         val site = analysis.sites().single()
         assertThat(site.source.toRawString()).isEqualTo(text)
         assertThat(site.endPosition).isEqualTo(cursor)

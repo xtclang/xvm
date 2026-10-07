@@ -64,7 +64,7 @@ public interface ComponentResolver {
         /**
          * Provide an ErrorListener to report resolution issues to.
          *
-         * Deliberately not defaulted. A default of "discard" would mean a collector that had not
+         * <p>Deliberately not defaulted. A default of "discard" would mean a collector that had not
          * thought about diagnostics and one that had decided against them looked identical at the
          * point of resolution, which is the distinction the listener exists to make. A collector
          * that genuinely wants none says so by naming a silent listener.
