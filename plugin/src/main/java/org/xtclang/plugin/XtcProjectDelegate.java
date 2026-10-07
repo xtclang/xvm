@@ -521,10 +521,10 @@ public class XtcProjectDelegate {
     /**
      * Create the XTC test task. This task runs xunit tests for XTC modules.
      * The test task depends on compile tasks and is wired into the Gradle check lifecycle.
-     * <p>
-     * The task can be skipped by setting the project property {@code -PskipXtcTests}.
-     * <p>
-     * <b>Lifecycle Design Note:</b> We intentionally wire {@code testXtc} to the {@code check}
+     *
+     * <p>The task can be skipped by setting the project property {@code -PskipXtcTests}.
+     *
+     * <p><b>Lifecycle Design Note:</b> We intentionally wire {@code testXtc} to the {@code check}
      * task rather than making the Java plugin's {@code test} task depend on it. This provides
      * granularity for projects that have both Java and XTC tests:
      * <ul>
@@ -898,8 +898,8 @@ public class XtcProjectDelegate {
      * Configures compile tasks to depend on their associated resource processing tasks.
      * For each compile task, this method looks up the source sets associated with that task
      * and adds dependencies on both XTC and Java resource processing tasks for those source sets.
-     * <p>
-     * TODO: Increase granularity for the dependencies, so that we have an xtc equivalent of the "classes" task,
+     *
+     * <p>TODO: Increase granularity for the dependencies, so that we have an xtc equivalent of the "classes" task,
      *   probably a "modules" and "&lt;sourceSetName&gt;Modules" task when getting rid of the Java base plugin.
      *
      * @param compileTasks the collection of all XtcCompileTask instances in the project

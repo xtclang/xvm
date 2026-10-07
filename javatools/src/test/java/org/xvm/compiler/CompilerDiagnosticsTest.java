@@ -22,7 +22,7 @@ import static org.xvm.asm.ErrorListener.collecting;
 /**
  * What a host is told when it compiles source that does not compile.
  *
- * These go through {@link Parser} rather than the whole compiler, because the later stages need a
+ * <p>These go through {@link Parser} rather than the whole compiler, because the later stages need a
  * built XDK and these assertions are about the diagnostics themselves - that they arrive, that
  * they carry a usable location, and that a host's own listener hears them.
  */
@@ -98,7 +98,7 @@ public class CompilerDiagnosticsTest {
      * The same host listener used for two documents accumulates both, which is what an adapter
      * compiling several files into one problem list relies on.
      *
-     * A diagnostic's identity includes the name of the source it came from, so the documents have
+     * <p>A diagnostic's identity includes the name of the source it came from, so the documents have
      * to be named for this to hold: two unnamed in-memory sources with a problem at the same
      * offset produce the same identity, and the second is dropped as a duplicate. An editor's
      * unsaved buffers are exactly that case - the text is not on disk, but the host knows the

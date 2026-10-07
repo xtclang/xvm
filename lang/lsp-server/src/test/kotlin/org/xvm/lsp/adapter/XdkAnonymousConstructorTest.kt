@@ -232,7 +232,7 @@ class XdkAnonymousConstructorTest {
             source.reset()
             val analysis =
                 EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, errors)
-            assertThat(analysis.pool()).isEmpty()
+            assertThat(analysis.pool()).isNull()
             assertThat(analysis.cursorBindings()).isEmpty()
         }
     }

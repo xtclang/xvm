@@ -65,6 +65,21 @@ public class EmbeddingApiCompatibilityTest {
     }
 
     @Test
+    public void partialAnalysisAcceptsAnAbsentPoolWithoutAnOptionalParameter() {
+        var pool = new FileStructure("PartialCompatibility").getConstantPool();
+        var syntaxOnly = new EmbeddingSupport.PartialAnalysis(List.of(), List.of(), null);
+        assertNull(syntaxOnly.pool());
+        assertTrue(syntaxOnly.callBindings().isEmpty());
+
+        List.of(
+                new EmbeddingSupport.PartialAnalysis(List.of(), List.of(), pool),
+                new EmbeddingSupport.PartialAnalysis(List.of(), List.of(), pool, Map.of()),
+                new EmbeddingSupport.PartialAnalysis(List.of(), List.of(), pool, Map.of(), Map.of()),
+                new EmbeddingSupport.PartialAnalysis(List.of(), List.of(), pool, Map.of(), Map.of(), Map.of()))
+            .forEach(analysis -> assertSame(pool, analysis.pool()));
+    }
+
+    @Test
     public void cursorConstructorsRemainAvailableWhileRecordPatternsIncludeAllFacts() {
         var type = new FileStructure("Compatibility").getModule().getIdentityConstant().getType();
         var original = new CursorBinding(List.of(), type, true);

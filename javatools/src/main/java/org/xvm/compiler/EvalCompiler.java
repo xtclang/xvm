@@ -57,7 +57,7 @@ public class EvalCompiler {
     /**
      * Create the lambda structure and compute the arguments.
      *
-     * If the compilation succeeds, the indexes for arguments could be retrieved via
+     * <p>If the compilation succeeds, the indexes for arguments could be retrieved via
      * {@link #getArgs()}; otherwise there are errors in the {@link #getErrors() error list}.
      *
      * @return the newly created lambda or null if the compilation failed

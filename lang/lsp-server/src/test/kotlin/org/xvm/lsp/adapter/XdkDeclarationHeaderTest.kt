@@ -214,7 +214,7 @@ class XdkDeclarationHeaderTest {
             source.reset()
             val stopped =
                 EmbeddingSupport.instance().analyzeIncomplete(source, cursor, null, listener)
-            assertThat(stopped.pool()).isEmpty()
+            assertThat(stopped.pool()).isNull()
             assertThat(stopped.cursorBindings()).isEmpty()
         }
     }

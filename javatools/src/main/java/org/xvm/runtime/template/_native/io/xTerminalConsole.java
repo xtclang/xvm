@@ -195,7 +195,7 @@ public class xTerminalConsole
     /**
      * Trivial DefaultHistory extension that limits the history file size.
      *
-     * Note: {@link LineReader#HISTORY_SIZE} controls the history size in memory, not on disk
+     * <p>Note: {@link LineReader#HISTORY_SIZE} controls the history size in memory, not on disk
      */
     static public class LimitedHistory
             extends DefaultHistory {

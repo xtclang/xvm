@@ -26,12 +26,12 @@ import static org.xvm.asm.ErrorListener.collecting;
 /**
  * What an editor gets, end to end.
  *
- * The rest of the listener tests check the contract a piece at a time. This one does what a
+ * <p>The rest of the listener tests check the contract a piece at a time. This one does what a
  * language server does - hold several unsaved documents, compile them through one listener, and
  * turn what comes back into placed, per-document problems - because every piece passing
  * separately is not the same as the whole thing working.
  *
- * It deliberately stops at the shape a host needs rather than at any particular protocol: a
+ * <p>It deliberately stops at the shape a host needs rather than at any particular protocol: a
  * severity, a code, a message, and a range in a named document.
  */
 public class LspRoundTripTest {
