@@ -400,7 +400,9 @@ class TextMateGenerator(
                                 "([A-Z][a-zA-Z0-9_<>?,\\s]*)\\s+" +
                                 "([a-z_][a-zA-Z0-9_]*)\\s*(?=\\()",
                         )
-                        put("end", "(?=\\{|;)")
+                        // An expression body starts at =; leaving it in the header can strand
+                        // a template closing quote and miscolor following declarations.
+                        put("end", "(?=\\{|;|=)")
                         putJsonObject("beginCaptures") {
                             putJsonObject("1") {
                                 put("name", "storage.modifier.xtc")

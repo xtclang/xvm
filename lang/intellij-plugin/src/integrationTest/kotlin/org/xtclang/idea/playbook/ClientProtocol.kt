@@ -112,6 +112,8 @@ class ClientProtocol(
             setOf(
                 "textDocument/codeAction",
                 "textDocument/codeLens",
+                "textDocument/documentColor",
+                "textDocument/colorPresentation",
                 "textDocument/documentLink",
                 "textDocument/references",
                 "textDocument/documentSymbol",

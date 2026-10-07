@@ -22,8 +22,8 @@ async function main(): Promise<void> {
         await (await import('./runLifecycle.js')).runLifecycle(extensionRoot, args.includes('--shared-process'));
         return;
     }
-    if (args.some(argument => !['--settings-persistence', '--playbook', '--multi-root', '--cancel-ui', '--explorer-move-probe', '--refresh-during-move'].includes(argument) && !argument.startsWith('--cases='))) {
-        throw new Error('Expected --playbook with optional --cases=ID[,ID], --multi-root and --cancel-ui, or --project-lifecycle with optional --shared-process, or --explorer-move-probe with optional --refresh-during-move, or --settings-persistence');
+    if (args.some(argument => !['--settings-persistence', '--playbook', '--multi-root', '--cancel-ui', '--explorer-move-probe', '--refresh-during-move'].includes(argument) && !argument.startsWith('--cases=') && !argument.startsWith('--theme=') && argument !== '--lexical-baseline')) {
+        throw new Error('Expected --playbook with optional --cases=ID[,ID], --multi-root, --cancel-ui, --theme=NAME and --lexical-baseline, or --project-lifecycle with optional --shared-process, or --explorer-move-probe with optional --refresh-during-move, or --settings-persistence');
     }
     const explorerProbe = args.includes('--explorer-move-probe');
     const refreshDuringMove = args.includes('--refresh-during-move');
@@ -47,6 +47,16 @@ async function main(): Promise<void> {
         ? (await import('./playbook/shared.js')).selectedScenarioIds(selections[0]?.slice('--cases='.length))
         : [];
     if (cancelUi && !selected.includes('X145')) throw new Error('--cancel-ui requires X145 in the selected cases');
+    const themes = args.filter(argument => argument.startsWith('--theme='));
+    const lexicalBaseline = args.includes('--lexical-baseline');
+    if (themes.length > 1 || (themes.length > 0 && !playbook)) throw new Error('Use --theme=NAME once, with --playbook');
+    const theme = themes[0]?.slice('--theme='.length) ?? 'Default Dark Modern';
+    if (themes.length && !(await import('./playbook/shared.js')).catalog.common.colorPrototype.themes.vscode.includes(theme)) {
+        throw new Error(`Unsupported playbook theme: ${theme}`);
+    }
+    if (lexicalBaseline && (!playbook || selected.length !== 1 || selected[0] !== 'X277')) {
+        throw new Error('--lexical-baseline requires --playbook --cases=X277');
+    }
     const extensionTestsPath = path.resolve(__dirname, persistence ? 'settings-persistence' : explorerProbe ? 'explorer-probe' : playbook ? 'playbook' : 'suite', 'index');
     const { version, executable } = await testVSCodeBuild(extensionRoot);
     console.log(`[vscode-test] Running on VS Code ${version} (${executable})`);
@@ -63,6 +73,9 @@ async function main(): Promise<void> {
     // Unix-domain sockets inside user-data-dir have a short OS path limit (103 on macOS).
     // Smoke tests also mutate settings; never reuse a profile or the repository fixtures.
     const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'xtc-code-'));
+    // Seed the profile before Electron creates the first workbench: no live theme transitions.
+    await fs.mkdir(path.join(profile, 'User'), { recursive: true });
+    await fs.writeFile(path.join(profile, 'User', 'settings.json'), JSON.stringify({ 'workbench.colorTheme': theme }, null, 2));
     const fixturesPath = path.join(runDirectory, 'workspace');
     if (!playbook && !explorerProbe) {
         await fs.cp(path.join(extensionDevelopmentPath, 'src', 'test', 'fixtures'), fixturesPath, {
@@ -72,7 +85,8 @@ async function main(): Promise<void> {
     await fs.mkdir(path.join(fixturesPath, '.vscode'), { recursive: true });
     await fs.writeFile(path.join(fixturesPath, '.vscode', 'settings.json'), JSON.stringify({
         'files.autoSave': 'off', 'editor.semanticHighlighting.enabled': true,
-        'editor.inlayHints.enabled': 'on'
+        'editor.inlayHints.enabled': 'on',
+        '[xtc]': { 'editor.semanticHighlighting.enabled': !lexicalBaseline }
     }, null, 2));
     console.log(`[vscode-test] Reports and isolated workspace: ${runDirectory}`);
     await fs.writeFile(path.join(reports, 'latest-run.txt'), runDirectory + '\n');
@@ -101,6 +115,7 @@ async function main(): Promise<void> {
                 `--remote-debugging-port=${uiPort}`, '--remote-debugging-address=127.0.0.1'
             ],
             extensionTestsEnv: playbook ? {
+                XTC_LSP_COLOR_PROTOTYPE: String((await import('./playbook/shared.js')).catalog.common.colorPrototype.cases.some(id => selected.includes(id as typeof selected[number]))),
                 XTC_PLAYBOOK_REPORT_DIR: runDirectory,
                 XTC_LSP_LOG_DIR: path.join(runDirectory, 'server-logs'),
                 XTC_PLAYBOOK_CASES: selected.join(','),
