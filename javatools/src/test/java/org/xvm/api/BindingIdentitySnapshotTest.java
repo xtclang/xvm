@@ -3,7 +3,6 @@ package org.xvm.api;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
@@ -158,7 +157,7 @@ public class BindingIdentitySnapshotTest {
                 Map<IncompleteStatement, CursorBinding> cursors,
                 Map<InvocationExpression, InvocationBinding.FunctionCall> functions) {
             return new EmbeddingSupport.PartialAnalysis(List.of(tree), List.of(),
-                    Optional.of(file.getConstantPool()), methods, cursors, functions);
+                    file.getConstantPool(), methods, cursors, functions);
         }
     }
 }

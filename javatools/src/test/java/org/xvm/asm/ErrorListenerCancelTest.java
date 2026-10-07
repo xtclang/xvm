@@ -19,7 +19,7 @@ import static org.xvm.asm.ErrorListener.in;
 /**
  * Abandoning the work because nobody wants the answer any more.
  *
- * The compiler already asks {@link ErrorListener#isAbortDesired} at around twenty points so that a
+ * <p>The compiler already asks {@link ErrorListener#isAbortDesired} at around twenty points so that a
  * spent budget or a FATAL stops it. Nothing drove that from outside, so a host with a reason of
  * its own - an editor whose user has typed again, a cancelled request - had no way to say so and
  * a stale analysis ran to the end.

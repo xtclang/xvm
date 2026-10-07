@@ -174,7 +174,7 @@ class XdkLiteralRecoveryTest {
                 EmbeddingSupport
                     .instance()
                     .analyzeIncomplete(Source(text, URI), cursor, null, errors)
-            assertThat(analysis.pool()).isEmpty()
+            assertThat(analysis.pool()).isNull()
             assertThat(analysis.cursorBindings()).isEmpty()
         }
     }

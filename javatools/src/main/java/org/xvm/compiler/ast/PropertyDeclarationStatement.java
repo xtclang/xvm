@@ -588,8 +588,8 @@ public class PropertyDeclarationStatement
     /**
      * Validate the specified property annotations.
      *
-     * Note: this method is similar to {@link TypeCompositionStatement#validateAnnotations} logic,
-     *       but differs in the way that it could force the node revisit.
+     * <p>This method is similar to the annotation validation in {@link TypeCompositionStatement},
+     * but differs in the way that it can force the node to be revisited.
      *
      * @param aAnno     the annotations
      * @param typeProp  the annotated property type
