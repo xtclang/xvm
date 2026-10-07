@@ -1,6 +1,6 @@
 # Upstream issues affecting Ecstasy language support
 
-This is the upstream dependency register for `lagergren/errs`, updated on 2026-10-06.
+This is the upstream dependency register for `lagergren/errs`, updated on 2026-10-07.
 It complements the [implementation plan](errs-integration-plan.md) and
 [manual playbook](../lang/doc/manual-test-plan.md). Local fixes do not mean an upstream
 release contains the repair. The entries below record the branch's source inspection,
@@ -26,7 +26,7 @@ issue and must not be used as the tracking issue for UP01.
 
 Local upstream repair work is now authorized in `~/src/lsp4ij`, on the unpushed branch
 `lagergren/local-lsp-repairs`, based on upstream `main` at `4796cf99` (0.21.1-SNAPSHOT).
-All nine local commits are listed below, with regression tests. These are local repairs,
+All ten local commits are listed below, with regression tests. These are local repairs,
 not released fixes or permission to remove the bridges here. XVM still uses LSP4IJ 0.21.0;
 testing a local build must be explicit. UP17 belongs to IntelliJ Platform, not this repair branch.
 
@@ -41,6 +41,7 @@ testing a local build must be explicit. UP17 belongs to IntelliJ Platform, not t
 | `42d073e5` | UP07: synchronizer-owned diagnostic result IDs, unchanged reports and retained/refreshed lazy fixes. |
 | `47b51259` | UP13: overlay project configuration on global defaults without mutating either store. |
 | `2ccc5a30` | UP08: preserve explicit nulls in configuration notifications while omitting unrelated optional protocol fields. |
+| `15bb34bd` | UP12 follow-up: reconnect closed dirty buffers, guard request snapshots and server lifetimes, and cancel lookup/formatting together. |
 
 The first batch's 14 new regressions fail against unfixed production files. The second batch
 adds 11 failing controls for directory connections and diagnostic ownership, then four for
@@ -111,7 +112,7 @@ enabled, so these are individual replacement tests, not a bridge-free client or 
 | UP12 formatting-task override | `run-5841657495710292898` | START/X138 pass; X139 fails on the closed dirty file after its actual 30-second deadline. Open-file save formatting passes. |
 | UP01 process-lifetime guard | `run-3342461100631013271`, `run-11321889258000442887` | START/STARTUP and START/START_PROJECTS pass: startup editing/close/reopen and independent two-project disposal. |
 
-All these runs record zero IDE errors. UP12 is **not** an accepted replacement. Its local repair
+All these runs record zero IDE errors. At this October 6 checkpoint, UP12 is **not** an accepted replacement. Its local repair
 prevents the absent-editor dereference, but `findFormattingServer` only selects an existing
 server through `processLanguageServers`; it does not reconnect a closed document. The trace has
 `didClose(ClosedServiceSave.x)`, then formatting with no intervening `didOpen`. Our server's
@@ -137,6 +138,47 @@ IDE errors; START also passes. It uses shipping 0.21.0 with all production bridg
 including the UP12 override. This is baseline acceptance, not acceptance of an upstream-only
 client. UP23 still fails in VS Code's full attempt; no known host limitation is relabeled a pass.
 
+### UP12 closed-buffer follow-up, 2026-10-07
+
+Local commit `15bb34bd` addresses the missing content connection exposed by the October 6
+experiment. Formatting now connects the current buffer before choosing a server and applies
+edits to the request's text snapshot, without requiring an editor. Text and modification-stamp
+checks reject intervening edits, including an edit followed by restoration of the old text.
+Operation-owned cancellation covers both server lookup and formatting; stopped/replaced server
+replies cannot apply. No-server lookup completes without edits, and repeated formatting reuses
+the document connection while issuing a fresh request. Existing formatter overrides and
+range-formatting preference are retained.
+
+Seven strengthened regressions fail against the preceding production implementation. The final
+combined upstream selection passes **60 tests**, zero failures/errors/skips, including all earlier
+repair regressions and formatting/settings/restart controls. The headless close fixture verifies
+the real `didClose` message after delivering the public editor-close event; it does not substitute
+for the separate native close-and-save test. XML and fail-before evidence remain in
+`/private/tmp/lsp4ij-up12-2026-10-07/`.
+
+Native `run-17693623788789126287` passes START and X31/X127/X138/X139, with zero IDE errors,
+on IntelliJ 2026.2.3 and local LSP4IJ 0.21.1-SNAPSHOT. X139 closes an unsaved tab and invokes
+native Save All; both the open and closed buffers receive the expected indentation. The entire
+Ecstasy formatting-task override was bypassed for this test, so the upstream path owns this
+result. Twelve harness polling/failure/navigation controls also pass without skips.
+
+The loaded plugin directory SHA-256 is
+`b6660b25264cf3a847b655791ec70c8b80f3146f3f2853c0131fd8b0c822b9b1`;
+the distribution ZIP SHA-256 is
+`20849d5318e18b89372c7c4ceabe0cdb15c3e8438d9611d89dd8998fff3a517f`.
+The exact original/probe source, patch, hashes, native JSON and JUnit XML are retained in
+`lang/intellij-plugin/build/reports/upstream-isolation-2026-10-07/UP12/`.
+The shipping override was restored byte-for-byte before released-dependency acceptance.
+
+**Keep the production bridge.** The Marketplace dependency remains 0.21.0. This selection
+validates save formatting, not standalone Format's UP24 Undo/Redo behavior, which the local
+repair does not change. There is also a connection-lifetime follow-up: a reconnected closed
+buffer can remain synchronized until a later editor close, file deletion, server retirement or
+project disposal. Repeated formatting reuses one synchronizer per URI, but formatting many
+different closed files can retain many connections. Safe transient ownership must account for
+another feature or editor opening the same document; an unconditional disconnect is unsafe.
+No upstream publication or production dependency change is part of this checkpoint.
+
 ## Register
 
 “Bridged” means this branch has a local workaround, whose regression must pass before its
@@ -157,7 +199,7 @@ not a claim that every referenced suite was rerun for this documentation change.
 | **UP09 — LSP4IJ — bridged** | Startup document messages can arrive out of order; folding replies can outlive the editor that requested them. | [DocumentStartupMessages](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/DocumentStartupMessages.kt) serializes messages and retires stale responses; matching unit tests cover open/change/close ownership. | Upstream passes startup typing and close/reopen regressions without the transport bridge. |
 | **UP10 — LSP4IJ — bridged** | Parameter Info retains old overload metadata after retrigger, ignores per-overload active parameters and renders absent parameter metadata as an empty signature. | [XtcParameterInfoHandler](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcParameterInfoHandler.kt) uses current metadata and preserves the label without inventing a highlighted argument. | Native signature cases, including X20 and retrigger/constructor variants, preserve the label and highlight the correct current argument without this handler. |
 | **UP11 — LSP4IJ — bridged** | Resolved code-action edits use an undo-transparent path without our version-checked write command. | [CodeActionMessages](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/CodeActionMessages.kt) routes selection through a supported client command. Resolving/listing never applies an edit. | X105/X122 import/member generation passes stale refusal and native Undo/Redo without the bridge. |
-| **UP12 — LSP4IJ — bridged** | Formatting accepts a nullable editor but dereferences it after the asynchronous reply, producing notification floods during save/closed-file formatting. | [XtcFormattingService](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcFormattingService.kt) applies against the captured document with a current-text check. | Upstream handles absent/retired editors; native formatting/save and closed-document regressions pass without the override. |
+| **UP12 — LSP4IJ — bridged** | Formatting dereferences an absent editor and fails to reconnect closed dirty buffers before querying their contents. | [XtcFormattingService](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcFormattingService.kt) connects the current buffer and checks text/version before applying edits. Local `15bb34bd` passes closed-file native save with this override bypassed; shipping 0.21.0 still needs it. | A released repair preserves absent-editor, snapshot, cancellation and server-lifetime guards; repeat native save acceptance. Retain the separate UP24 command ownership and resolve closed-buffer connection retention before removing the whole override. |
 | **UP13 — LSP4IJ — bridged** | Default `createSettings` reads global settings despite subscribing to both global and project stores. | [XtcLanguageClient](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcLanguageClient.kt) merges stores with project precedence. | Upstream merges/reset settings correctly; native project/global/inheritance acceptance passes. |
 | **UP14 — LSP4IJ — bridged** | Semantic caches keyed only to PSI stamps retain old results when a dependency changes but the consumer text does not. | [XtcLanguageClient](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcLanguageClient.kt) retires completed semantic results on compiler analysis updates; X146 observes untouched-consumer refresh. | All negotiated native providers reflect dependency edits without editing the consumer or our invalidation bridge. |
 | **UP15 — LSP4J — open** | Valid JSON with a wrongly typed parameter is classified as `ParseError` rather than `InvalidParams`. | [XdkStdioTest](../lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/XdkStdioTest.kt) records the actual library result and then exercises normal semantic requests. No production parser fork. Details below. | Repair upstream parameter-decoding classification; change the assertion to `ResponseErrorCode.InvalidParams`, retaining reader recovery. |
