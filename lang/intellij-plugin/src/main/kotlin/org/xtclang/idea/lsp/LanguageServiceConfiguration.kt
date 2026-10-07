@@ -9,6 +9,7 @@ internal data class LanguageServiceConfiguration(
     val textSynchronization: String = "full",
     val saveFormatting: String = "editor",
     val inlayHints: Boolean = true,
+    val referenceCodeLens: Boolean = true,
 ) {
     init {
         require(textSynchronization in setOf("full", "incremental")) {
@@ -80,17 +81,19 @@ internal data class LanguageServiceConfiguration(
                     }
                     it.asString
                 } ?: fallback
-            val hints =
-                value("inlayHints")?.let {
+
+            fun boolean(name: String): Boolean =
+                value(name)?.let {
                     require(it.isJsonPrimitive && it.asJsonPrimitive.isBoolean) {
-                        "inlayHints must be a boolean"
+                        "$name must be a boolean"
                     }
                     it.asBoolean
                 } ?: true
             return LanguageServiceConfiguration(
                 string("textSynchronization", "full"),
                 string("saveFormatting", "editor"),
-                hints,
+                boolean("inlayHints"),
+                boolean("referenceCodeLens"),
             )
         }
 

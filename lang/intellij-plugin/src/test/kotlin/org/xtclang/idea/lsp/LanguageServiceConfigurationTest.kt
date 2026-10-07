@@ -9,7 +9,7 @@ class LanguageServiceConfigurationTest {
     fun `service preferences do not claim ownership of an inherited source graph`() {
         assertThat(CompilerSettings.ownsGraph(null)).isFalse()
         assertThat(
-            CompilerSettings.ownsGraph("""{"xtc":{"languageService":{"inlayHints":false}}}"""),
+            CompilerSettings.ownsGraph("""{"xtc":{"languageService":{"inlayHints":false,"referenceCodeLens":false}}}"""),
         ).isFalse()
         assertThat(CompilerSettings.ownsGraph("""{"xtc":{"compiler":{"sourceModules":[]}}}"""))
             .isTrue()
@@ -20,11 +20,11 @@ class LanguageServiceConfigurationTest {
     @Test
     fun `project fields inherit global defaults without replacing the compiler graph`() {
         val global =
-            """{"xtc":{"languageService":{"textSynchronization":"incremental","inlayHints":false}}}"""
+            """{"xtc":{"languageService":{"textSynchronization":"incremental","inlayHints":false,"referenceCodeLens":false}}}"""
         val project =
             """{"xtc":{"languageService":{"saveFormatting":"server"},"compiler":{"sourceModules":[]}}}"""
         assertThat(LanguageServiceConfiguration.read(global, project))
-            .isEqualTo(LanguageServiceConfiguration("incremental", "server", false))
+            .isEqualTo(LanguageServiceConfiguration("incremental", "server", false, false))
         val replaced =
             LanguageServiceConfiguration.replace(
                 project,
@@ -33,7 +33,7 @@ class LanguageServiceConfigurationTest {
             )
         assertThat(replaced).contains("sourceModules")
         assertThat(LanguageServiceConfiguration.read(global, replaced))
-            .isEqualTo(LanguageServiceConfiguration("incremental", "editor", false))
+            .isEqualTo(LanguageServiceConfiguration("incremental", "editor", false, false))
     }
 
     @Test
@@ -50,6 +50,7 @@ class LanguageServiceConfigurationTest {
     @Test
     fun `invalid values fail before persistence and native save formatting wins`() {
         listOf(
+            """{"xtc":{"languageService":{"referenceCodeLens":"false"}}}""",
             "[]",
             "{",
             """{"xtc":{"languageService":{"textSynchronization":"patch"}}}""",

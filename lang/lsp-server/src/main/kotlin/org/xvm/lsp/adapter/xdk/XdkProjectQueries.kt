@@ -327,6 +327,8 @@ internal class XdkProjectQueries(
         includeDeclaration: Boolean,
     ): List<Location> = navigation()?.references(uri, line, column, includeDeclaration).orEmpty()
 
+    fun referenceLenses(uri: String) = navigation()?.referenceLenses(uri).orEmpty()
+
     /** Rename ordinary source methods and their complete compiler override family in this graph. */
     fun rename(
         uri: String,
@@ -1089,7 +1091,7 @@ internal class XdkProjectQueries(
             }
         return if (isCurrent()) {
             before.models
-                .filter { it.sourceName == source }
+                .filter { it.sourceName == source && Files.isWritable(File(source).toPath()) }
                 .flatMap { XdkDocumentation.actions(uri, text, range, it) }
                 .distinct() +
                 actions + missing + declarations + members +

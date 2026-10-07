@@ -136,6 +136,7 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit.SECONDS
 import kotlin.time.Duration.Companion.nanoseconds
 import org.xvm.lsp.adapter.CallHierarchyItem as AdapterCallHierarchyItem
+import org.xvm.lsp.adapter.CodeLens as AdapterCodeLens
 import org.xvm.lsp.adapter.CompletionItem as AdapterCompletionItem
 import org.xvm.lsp.adapter.DocumentLink as AdapterDocumentLink
 import org.xvm.lsp.adapter.FormattingOptions as AdapterFormattingOptions
@@ -1939,13 +1940,13 @@ class XtcTextDocumentService(
      * @see org.eclipse.lsp4j.services.TextDocumentService.codeLens
      */
     override fun codeLens(params: CodeLensParams): CompletableFuture<List<CodeLens>> =
-        supplyAsync(
+        queryAsync(
             "textDocument/codeLens",
             params.textDocument.uri,
-            { result -> "${result.size} lenses" },
-            uri = params.textDocument.uri,
-        ) {
-            adapter.getCodeLenses(params.textDocument.uri).map { l ->
+            { codeLensWork(params.textDocument.uri) },
+            workspace = true,
+        ) { lenses ->
+            lenses.map { l ->
                 CodeLens().apply {
                     range = l.range.toLsp()
                     l.command?.let { cmd ->
@@ -1971,6 +1972,30 @@ class XtcTextDocumentService(
                 }
             }
         }
+
+    private fun codeLensWork(uri: String): CompletableFuture<List<AdapterCodeLens>> {
+        val result = CompletableFuture<List<AdapterCodeLens>>()
+        val settings = server.referenceCodeLens(uri)
+        result.whenComplete { _, failure -> if (failure != null) settings.cancel(false) }
+        settings.whenComplete { enabled, failure ->
+            if (!result.isDone) {
+                if (failure != null) {
+                    result.completeExceptionally(failure)
+                } else {
+                    try {
+                        val work = adapter.getCodeLensesAsync(uri, enabled)
+                        result.whenComplete { _, error -> if (error != null) work.cancel(false) }
+                        work.whenComplete { lenses, error ->
+                            if (error == null) result.complete(lenses) else result.completeExceptionally(error)
+                        }
+                    } catch (error: Exception) {
+                        result.completeExceptionally(error)
+                    }
+                }
+            }
+        }
+        return result
+    }
 
     override fun resolveCodeLens(lens: CodeLens): CompletableFuture<CodeLens> =
         supplyAsync("codeLens/resolve", lens.range.fmt()) {

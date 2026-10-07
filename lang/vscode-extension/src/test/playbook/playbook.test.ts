@@ -5,6 +5,7 @@ import { advancedCases, pullDiagnosticCases, typeHeaderCases } from './advanced'
 import { colorCases } from './colors';
 import { compilerImportCases } from './compilerImports';
 import { completionCases } from './completion';
+import { referenceLensCases } from './referenceLenses';
 import { documentationCases } from './documentation';
 import { editingClosureCases, formattingBreadthCases, linkedScopeCases, structuralRecoveryCases } from './editingClosure';
 import { configurationCases, dependencyCases } from './dependencies';
@@ -55,7 +56,6 @@ suite('XdkAdapter playbook', function () {
     typeHeaderCases(['X106', 'X107', 'X108']);
     renameFamilyCases();
     memberActionCases();
-    documentationCases();
     pullDiagnosticCases();
     platformCases();
     progressCases();
@@ -88,6 +88,8 @@ suite('XdkAdapter playbook', function () {
     runtimeSettingsCases();
     colorCases();
     highlightingCases();
+    documentationCases();
+    referenceLensCases();
     configurationCases();
 
     playbook('7a.8', async (workspace, data) => {

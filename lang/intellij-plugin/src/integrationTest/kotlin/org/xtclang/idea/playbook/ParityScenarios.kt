@@ -34,6 +34,7 @@ class ParityScenarios(
         colorCases()
         highlightingCases()
         documentationCases()
+        referenceLensCases()
     }
 
     internal fun case(

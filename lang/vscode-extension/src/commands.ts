@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import type { Location, Position } from 'vscode-languageclient/node';
 
 import { createXtcRunTask, XtcTaskDefinition, XtcTaskProvider } from './task-provider';
 
@@ -18,6 +19,13 @@ export function registerCommands(context: vscode.ExtensionContext, outputChannel
     context.subscriptions.push(
         vscode.commands.registerCommand('xtc.openLanguageSettings', () =>
             vscode.commands.executeCommand('workbench.action.openSettings', '@ext:xtclang.xtc-language')),
+        vscode.commands.registerCommand('xtc.showReferences', (uri: string, at: Position, locations: Location[]) => {
+            const targets = locations.map(({ uri, range }) => new vscode.Location(
+                vscode.Uri.parse(uri), new vscode.Range(
+                    range.start.line, range.start.character, range.end.line, range.end.character)));
+            return vscode.commands.executeCommand('editor.action.showReferences',
+                vscode.Uri.parse(uri), new vscode.Position(at.line, at.character), targets);
+        }),
         vscode.commands.registerCommand('xtc.runModule', async (_uri: string, moduleName: string) => {
             if (!moduleName) {
                 const input = await vscode.window.showInputBox({

@@ -12891,10 +12891,11 @@ Agreed non-runtime continuation, with separate implementation commits and one co
   starts into detached Kotlin symbols, preserve annotations/indentation/line endings, use resolved
   method parameter/return slots, retain existing comments, and publish versioned edits. Shared X278
   covers native action application and Undo/Redo in both clients. Validation pending the batch.
-- [ ] Implement reference counts and navigation using the existing complete configured-graph index.
+- [x] Implement reference counts and navigation using the existing complete configured-graph index.
   Exclude declaration occurrences and generated/local symbols; omit counts when graph closure is
   unavailable. Reuse native reference presentation in both clients, lazy-resolution revision guards,
-  and a separate live preference so Run lenses remain independently available.
+  and a separate live preference so Run lenses remain independently available. Shared X279 checks
+  counts across closed consumers, native navigation, edits and the live toggle. Validation pending.
 - [ ] Run focused backend/protocol/settings tests, both selected editor drivers and formatting;
   update this receipt and the per-adapter/manual feature inventories with actual results.
 

@@ -1025,6 +1025,12 @@ interface Adapter : Closeable {
      */
     fun getCodeLenses(uri: String): List<CodeLens>
 
+    /** Reference lenses may require a cancellable configured-graph query. */
+    fun getCodeLensesAsync(
+        uri: String,
+        references: Boolean,
+    ): CompletableFuture<List<CodeLens>> = CompletableFuture.completedFuture(getCodeLenses(uri))
+
     /**
      * Resolve a code lens (fill in the command/action lazily).
      *
