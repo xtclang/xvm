@@ -107,7 +107,7 @@ internal object XdkCursorQueries {
                     text,
                     TextEdit(range, text),
                     "Compiler-validated arity; replace the TODO() body before executing this code.",
-                    snippet = text.replace("TODO()", "${'$'}{1:TODO()}${'$'}0"),
+                    snippet = text.replace("TODO()", $$"${1:TODO()}$0"),
                 )
             }
         return (
@@ -226,7 +226,7 @@ internal object XdkCursorQueries {
                         // mapping; do not infer one from commas or choose an applicable overload
                         // here.
                         val active =
-                            slot.takeIf {
+                            slot.takeIf { it ->
                                 site.arguments.none { it.label != null } &&
                                     it in candidate.parameters.indices
                             }

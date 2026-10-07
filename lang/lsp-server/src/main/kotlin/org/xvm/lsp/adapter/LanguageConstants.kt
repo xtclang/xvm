@@ -31,7 +31,7 @@ object LanguageConstants {
      * Sourced from the Ecstasy language specification. See:
      * javatools/src/main/java/org/xvm/compiler/Token.java
      */
-    val KEYWORDS: List<String> =
+    private val KEYWORDS: List<String> =
         listOf(
             // Module structure
             "module",
@@ -98,7 +98,7 @@ object LanguageConstants {
      *
      * Sourced from the Ecstasy standard library (lib_ecstasy).
      */
-    val builtInTypes: List<String> =
+    private val builtInTypes: List<String> =
         listOf(
             // Integer types
             "Int",
@@ -176,7 +176,7 @@ object LanguageConstants {
      *
      * Used to convert internal symbol representations to LSP protocol values.
      */
-    val SYMBOL_TO_COMPLETION_KIND: Map<SymbolKind, CompletionKind> =
+    private val SYMBOL_TO_COMPLETION_KIND: Map<SymbolKind, CompletionKind> =
         mapOf(
             SymbolKind.MODULE to CompletionKind.MODULE,
             SymbolKind.PACKAGE to CompletionKind.MODULE,

@@ -1,9 +1,12 @@
 package org.xvm.lsp.adapter
 
+import org.xvm.lsp.index.WorkspaceIndex
+import org.xvm.lsp.index.WorkspaceIndexer
 import org.xvm.lsp.model.CompilationResult
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
 import org.xvm.lsp.model.SymbolInfo
+import org.xvm.lsp.treesitter.SemanticTokenEncoder
 import java.io.Closeable
 import java.util.concurrent.CompletableFuture
 
@@ -116,7 +119,7 @@ interface Adapter : Closeable {
     ): CompilationResult
 
     /**
-     * Analyse a document without blocking the notification thread when the backend supports it.
+     * Analyze a document without blocking the notification thread when the backend supports it.
      * Superseded work completes with cancellation, not an empty successful analysis.
      */
     fun compileAsync(
@@ -129,7 +132,7 @@ interface Adapter : Closeable {
             CompletableFuture.failedFuture(e)
         }
 
-    /** Documents sharing this key must be analysed and invalidated together. */
+    /** Documents sharing this key must be analyzed and invalidated together. */
     fun analysisScope(uri: String): String = uri
 
     /** Scopes to refresh after an edit/close/filesystem event, in dependency order. */
@@ -851,9 +854,9 @@ interface Adapter : Closeable {
     /**
      * Find the type definition of the symbol at a position.
      *
-     * **LSP capability:** `textDocument/typeDefinition` -- navigates to the type of an expression
-     * or variable. E.g., from a variable `name` of type `String`, jumps to the `String` class
-     * definition.
+     * **LSP capability:** `textDocument/typeDefinition` -- navigates to the definition of an
+     * expression's or variable's type. For example, from a variable `name` of type `String`,
+     * jumps to the `String` class definition.
      *
      * **Editor activation:**
      * - *IntelliJ:* Ctrl+Shift+B on a variable or expression

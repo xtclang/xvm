@@ -45,7 +45,7 @@ internal class XdkCalls(
             .filter { it.method == id }
             .groupBy { it.caller }
             .mapNotNull { (caller, calls) ->
-                caller?.let(::item)?.let {
+                caller?.let(::item)?.let { it ->
                     CallHierarchyIncomingCall(it, calls.map { it.callee.toRange() }.distinct())
                 }
             }
@@ -57,7 +57,7 @@ internal class XdkCalls(
             .filter { it.caller == id }
             .groupBy { it.method }
             .mapNotNull { (target, calls) ->
-                item(target)?.let {
+                item(target)?.let { it ->
                     CallHierarchyOutgoingCall(it, calls.map { it.callee.toRange() }.distinct())
                 }
             }

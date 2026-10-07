@@ -23,9 +23,9 @@ import java.io.File
  * double-log the same dropped path during startup.
  */
 internal object SourceRootResolver {
-    const val INIT_OPTION_KEY = "xtcSourceRoots"
-    const val SYSTEM_PROPERTY = "xtc.sourceRoots"
-    const val ENV_VAR = "XTC_SOURCE_ROOTS"
+    private const val INIT_OPTION_KEY = "xtcSourceRoots"
+    private const val SYSTEM_PROPERTY = "xtc.sourceRoots"
+    private const val ENV_VAR = "XTC_SOURCE_ROOTS"
 
     private val logger = LoggerFactory.getLogger(SourceRootResolver::class.java)
 

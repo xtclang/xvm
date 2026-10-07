@@ -122,9 +122,8 @@ internal fun compilerMissingMethods(
                     owner
                 }
             val external = destinations.entries.singleOrNull { it.value.location == receiver?.destination }
-            val target = destination
-            val structure = (target?.component ?: external?.key?.component) as? ClassStructure ?: return@mapNotNull null
-            val crossOwner = target !== owner
+            val structure = (destination?.component ?: external?.key?.component) as? ClassStructure ?: return@mapNotNull null
+            val crossOwner = destination !== owner
             // Preserve concrete call types; never infer an owner's formal from equal actual types.
             // Exact lexical owner formals are rendered by memberSourceType and re-proven later.
             if (crossOwner &&
@@ -326,8 +325,8 @@ internal fun compilerMissingMethods(
                     name.calleeLocation(),
                     name.name,
                     external?.value?.insertion
-                        ?: position(requireNotNull(target).ensureBody().endPosition).let { it.copy(column = it.column - 1) },
-                    external?.value?.location ?: requireNotNull(target).location(),
+                        ?: position(requireNotNull(destination).ensureBody().endPosition).let { it.copy(column = it.column - 1) },
+                    external?.value?.location ?: requireNotNull(destination).location(),
                     "${if (crossOwner) "public" else "private"} ${if (dispatch == Dispatch.STATIC) "static " else ""}" +
                         "$generic${if (conditional) "conditional " else ""}$result ${name.name}($signature)",
                     dispatch,
