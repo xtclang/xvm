@@ -3,6 +3,8 @@ package org.xvm.lsp.adapter.xdk
 import org.xvm.lsp.adapter.CallHierarchyIncomingCall
 import org.xvm.lsp.adapter.CallHierarchyItem
 import org.xvm.lsp.adapter.CallHierarchyOutgoingCall
+import org.xvm.lsp.adapter.CodeLens
+import org.xvm.lsp.adapter.CodeLensCommand
 import org.xvm.lsp.adapter.Position
 import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.adapter.SymbolMoniker
@@ -91,6 +93,67 @@ internal class XdkWorkspaceNavigation(
                     }
             }.distinct()
             .sortedWith(compareBy(Location::uri, Location::startLine, Location::startColumn))
+    }
+
+    /** One pass over occurrences, not one full reference search per declaration. */
+    fun referenceLenses(uri: String): List<CodeLens> {
+        if (!complete) return emptyList()
+        val model = views[sourceUri(uri)] ?: return emptyList()
+        val references =
+            views
+                .flatMap { (source, view) ->
+                    view.occurrences
+                        .filter { it.role != SemanticModel.Role.DECLARATION && it.symbol != null }
+                        .map { occurrence ->
+                            occurrence.symbol to
+                                Location(
+                                    source,
+                                    occurrence.range.start.line,
+                                    occurrence.range.start.column,
+                                    occurrence.range.end.line,
+                                    occurrence.range.end.column,
+                                )
+                        }
+                }.groupBy({ it.first }, { it.second })
+        return model.symbols
+            .filter {
+                it.headerStart != null && it.declarationSource == model.sourceName &&
+                    it.kind in setOf(SemanticModel.SymbolKind.TYPE, SemanticModel.SymbolKind.METHOD, SemanticModel.SymbolKind.PROPERTY)
+            }.mapNotNull { symbol ->
+                val range = symbol.declaration ?: return@mapNotNull null
+                val locations =
+                    references[symbol.id]
+                        .orEmpty()
+                        .distinct()
+                        .sortedWith(compareBy(Location::uri, Location::startLine, Location::startColumn))
+
+                fun position(
+                    line: Int,
+                    column: Int,
+                ) = mapOf("line" to line, "character" to column)
+                CodeLens(
+                    Range(Position(range.start.line, range.start.column), Position(range.end.line, range.end.column)),
+                    CodeLensCommand(
+                        "${locations.size} ${if (locations.size == 1) "reference" else "references"}",
+                        "xtc.showReferences",
+                        listOf(
+                            uri,
+                            position(range.start.line, range.start.column),
+                            locations.map { location ->
+                                mapOf(
+                                    "uri" to location.uri,
+                                    "range" to
+                                        mapOf(
+                                            "start" to position(location.startLine, location.startColumn),
+                                            "end" to position(location.endLine, location.endColumn),
+                                        ),
+                                )
+                            },
+                        ),
+                    ),
+                )
+            }.distinctBy { it.range }
+            .sortedWith(compareBy({ it.range.start.line }, { it.range.start.column }))
     }
 
     fun monikers(
