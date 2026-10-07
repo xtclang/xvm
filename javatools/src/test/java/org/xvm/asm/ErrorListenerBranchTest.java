@@ -22,7 +22,7 @@ import static org.xvm.asm.ErrorList.UNLIMITED;
  * Tests that branching and merging behave the same for a listener supplied by a host as they do
  * for an {@link ErrorList}.
  *
- * An embedding host - an LSP server, say - implements {@link ErrorListener} to receive
+ * <p>An embedding host - an LSP server, say - implements {@link ErrorListener} to receive
  * diagnostics, and gets the interface's default {@code branch} and {@code merge}. Those defaults
  * have to agree with the ones {@link ErrorList} overrides, or the compiler behaves differently
  * depending on who is listening.

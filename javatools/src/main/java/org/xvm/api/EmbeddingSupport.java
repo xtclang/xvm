@@ -1,6 +1,7 @@
 package org.xvm.api;
 
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import static java.util.Objects.requireNonNull;
 
@@ -10,7 +11,6 @@ import java.io.PrintWriter;
 
 import java.time.Instant;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -24,7 +24,6 @@ import java.util.Set;
 import java.util.function.Function;
 
 import java.util.stream.Stream;
-import java.util.stream.StreamSupport;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
@@ -142,7 +141,7 @@ public class EmbeddingSupport {
     /**
      * A snapshot of what the compiler is holding on to.
      *
-     * An embedding host that keeps a compiler alive across many compilations - a language server
+     * <p>An embedding host that keeps a compiler alive across many compilations - a language server
      * is the obvious one - needs some way to see whether it is accumulating. These are the cheap
      * numbers: taking them costs a field read and a repository listing, so a host can log one per
      * compilation without measuring itself instead of the compiler.
@@ -294,7 +293,7 @@ public class EmbeddingSupport {
     /**
      * Obtain the constant pool of the runtime, starting one if it is not running yet.
      *
-     * This is not the pool a compilation used - that belongs to the {@link Compilation} it
+     * <p>This is not the pool a compilation used - that belongs to the {@link Compilation} it
      * produced. Asking for this one boots an interpreter: a connector builds a NativeContainer,
      * which loads a native template for every core module, so it needs the whole library and not
      * just the part the compiler bootstraps against. The old name said "get" and read like an
@@ -339,7 +338,7 @@ public class EmbeddingSupport {
     /**
      * Compile a module held in memory, as a named document.
      *
-     * A diagnostic's identity includes the name of the source it came from, so a host holding
+     * <p>A diagnostic's identity includes the name of the source it came from, so a host holding
      * several documents that are not on disk - an editor's unsaved buffers - has to be able to
      * tell them apart. Without a name, two documents with a problem at the same offset produce
      * the same identity and a listener that deduplicates discards the second. The name belongs to
@@ -360,13 +359,13 @@ public class EmbeddingSupport {
     /**
      * The outcome of compiling a source or module source tree.
      *
-     * A failed compilation used to answer with nothing but null, which threw away everything the
+     * <p>A failed compilation used to answer with nothing but null, which threw away everything the
      * attempt had built. That is most of what a host wants when it fails: the structures a
      * verification error was raised against still exist, and the pool they were interned in is
      * the only way to reach them - to ask a type what building its TypeInfo had to say, for
      * instance.
      *
-     * Recovered source trees have not entered compiler passes. Traverse their children using
+     * <p>Recovered source trees have not entered compiler passes. Traverse their children using
      * each root's Source; child parent pointers may not yet be installed. Binding maps are
      * immutable identity snapshots: keys and values compare by reference, not structural equality.
      *
@@ -462,7 +461,7 @@ public class EmbeddingSupport {
         /**
          * Walk the assembled source after successful loading/parsing.
          *
-         * A host that wants to say where something is has to come through here: a
+         * <p>A host that wants to say where something is has to come through here: a
          * {@link org.xvm.asm.Component} knows its name, its kind and its children, and nothing
          * about the text it was written in. Only the AST carries positions.
          *
@@ -494,8 +493,8 @@ public class EmbeddingSupport {
     /**
      * Compile a module's source tree using the same discovery, resource association and parse-tree
      * assembly as the CLI. The returned AST includes the member files with their original Sources.
-     * Hosts may override {@link ModuleInfo#readSource(File)} and
-     * {@link ModuleInfo#sourceEntries(File)} to supply a consistent snapshot of unsaved text and
+     * Hosts may subclass {@link ModuleInfo} and override its protected {@code readSource(File)}
+     * and {@code sourceEntries(File)} hooks to supply a consistent snapshot of unsaved text and
      * source membership. The default provider discovers and reads files from disk.
      *
      * @param sources  a fresh ModuleInfo for this attempt; do not reuse a previously parsed tree
@@ -581,7 +580,7 @@ public class EmbeddingSupport {
     /**
      * Facts retained by an explicit incomplete-source analysis, never a compiled module.
      *
-     * The available source syntax and sites may be unvalidated. A child expression supplies a
+     * <p>The available source syntax and sites may be unvalidated. A child expression supplies a
      * semantic fact only if validation succeeded (isValidated and a fitting TypeFit) and its
      * resolved target/type is available. Failed validation can leave placeholder types. An absent
      * pool means semantic analysis did not start. Cursor bindings copy visible scope and candidate
@@ -589,9 +588,16 @@ public class EmbeddingSupport {
      * or invent a missing argument/result. Consumers must copy facts while exclusively
      * owning the attempt, as with Compilation; ASTs and pools are not concurrent query objects.
      * Binding maps preserve reference identity for both keys and values and reject null entries.
+     *
+     * @param sourceTrees       available source syntax, including unvalidated recovered trees
+     * @param sites             incomplete source sites retained by this attempt
+     * @param pool              the attempt's constant pool, or null if semantic analysis did not start
+     * @param callBindings      validated method calls keyed by source invocation identity
+     * @param cursorBindings    visible scope and candidate facts keyed by incomplete site identity
+     * @param functionBindings  validated function signatures keyed by source invocation identity
      */
     public record PartialAnalysis(List<StatementBlock> sourceTrees, List<IncompleteStatement> sites,
-                                  Optional<ConstantPool> pool,
+                                  @Nullable ConstantPool pool,
                                   Map<InvocationExpression, InvocationBinding> callBindings,
                                   Map<IncompleteStatement, CursorBinding> cursorBindings,
                                   Map<InvocationExpression, InvocationBinding.FunctionCall> functionBindings) {
@@ -599,28 +605,27 @@ public class EmbeddingSupport {
             sourceTrees      = List.copyOf(sourceTrees);
             sites            = List.copyOf(sites);
             cursorBindings   = identitySnapshot(cursorBindings);
-            requireNonNull(pool, "pool");
             callBindings     = identitySnapshot(callBindings);
             functionBindings = identitySnapshot(functionBindings);
         }
 
-        /** Retain hosts that supply cursor and selected-method facts. */
+        /** Create partial facts with cursor and selected-method bindings. */
         public PartialAnalysis(List<StatementBlock> sourceTrees, List<IncompleteStatement> sites,
-                               Optional<ConstantPool> pool,
+                               @Nullable ConstantPool pool,
                                Map<InvocationExpression, InvocationBinding> callBindings,
                                Map<IncompleteStatement, CursorBinding> cursorBindings) {
             this(sourceTrees, sites, pool, callBindings, cursorBindings, Map.of());
         }
 
-        /** Retain the construction API for call/receiver-only results. */
+        /** Create partial facts with call and receiver information only. */
         public PartialAnalysis(List<StatementBlock> sourceTrees, List<IncompleteStatement> sites,
-                               Optional<ConstantPool> pool, Map<InvocationExpression, InvocationBinding> callBindings) {
+                               @Nullable ConstantPool pool, Map<InvocationExpression, InvocationBinding> callBindings) {
             this(sourceTrees, sites, pool, callBindings, Map.of());
         }
 
-        /** Retain the construction API for syntax/receiver-only results. */
+        /** Create partial facts with syntax and receiver information only. */
         public PartialAnalysis(List<StatementBlock> sourceTrees, List<IncompleteStatement> sites,
-                               Optional<ConstantPool> pool) {
+                               @Nullable ConstantPool pool) {
             this(sourceTrees, sites, pool, Map.of());
         }
     }
@@ -632,7 +637,7 @@ public class EmbeddingSupport {
      * analysis; returns, assignments, incomplete nested arguments and module member files are
      * outside this bounded contract. Complete input has no incomplete site and is not compiled.
      *
-     * Parsing reports immediately to the host and respects its budget/cancellation. Only the
+     * <p>Parsing reports immediately to the host and respects its budget/cancellation. Only the
      * recognized EOF boundary may enter compiler passes. The incomplete statement validates its
      * intact children in the real method context, then fails validation before method emission.
      * Its repeated EOF diagnostic stops the compiler internally without being delivered twice
@@ -746,23 +751,23 @@ public class EmbeddingSupport {
         ParsedSources parsed;
         try {
             if (host.isAbortDesired()) {
-                return new PartialAnalysis(List.of(), List.of(), Optional.empty());
+                return new PartialAnalysis(List.of(), List.of(), null);
             }
             parsed = parse.apply(ErrorListener.tee(syntaxErrors, host));
         } catch (CompilerException e) {
-            return new PartialAnalysis(List.of(), List.of(), Optional.empty());
+            return new PartialAnalysis(List.of(), List.of(), null);
         } catch (RuntimeException | AssertionError e) {
             host.error(ERR_INTERNAL, NOWHERE, e, "Incomplete-source parsing failed");
-            return new PartialAnalysis(List.of(), List.of(), Optional.empty());
+            return new PartialAnalysis(List.of(), List.of(), null);
         }
 
         if (parsed.root() == null) {
-            return new PartialAnalysis(parsed.sources(), List.of(), Optional.empty());
+            return new PartialAnalysis(parsed.sources(), List.of(), null);
         }
         var sites = incompleteSites(parsed.root()).distinct().toList();
         if (sites.size() != 1 || syntaxErrors.getErrors().stream().anyMatch(error ->
                 error.getSeverity().isAtLeast(ERROR) && !error.getCode().equals(boundaryCode))) {
-            return new PartialAnalysis(parsed.sources(), List.of(), Optional.empty());
+            return new PartialAnalysis(parsed.sources(), List.of(), null);
         }
 
         var cursors = new CursorBinding.Collector();
@@ -772,7 +777,7 @@ public class EmbeddingSupport {
         // Primary-constructor defaults can expose the same surviving node through both the
         // written parameter and generated property getter. Publish each identity only once.
         var surviving = incompleteSites(parsed.root()).distinct().toList();
-        return new PartialAnalysis(parsed.sources(), surviving, Optional.ofNullable(attempt.pool()),
+        return new PartialAnalysis(parsed.sources(), surviving, attempt.pool(),
                 attempt.callBindings(), cursors.finish(parsed.sources()), attempt.functionBindings());
     }
 
@@ -892,7 +897,7 @@ public class EmbeddingSupport {
         /**
          * Everything this attempt produced.
          *
-         * Each part is present when the attempt got that far and null when it did not, which the
+         * <p>Each part is present when the attempt got that far and null when it did not, which the
          * fields already say: the module is only ever assigned on success, and the file structure
          * and the AST only once they exist. So there is nothing for the caller to decide, and no
          * success flag to pass in and get wrong.
@@ -1068,7 +1073,7 @@ public class EmbeddingSupport {
     /**
      * Create a runtime container and execute the provided module.
      *
-     * A limited set of injections are made available to the module, including the console, clock,
+     * <p>A limited set of injections are made available to the module, including the console, clock,
      * and other "safe" injectable types. The FileSystem is provided as detailed by the "rootDir"
      * parameter.
      *
@@ -1097,7 +1102,7 @@ public class EmbeddingSupport {
     /**
      * Create a runtime container and execute the specified module.
      *
-     * The "customerInjector" option allows the caller to indicate an Ecstasy Injector class that
+     * <p>The "customerInjector" option allows the caller to indicate an Ecstasy Injector class that
      * will be loaded into its own container, and provided with the full set of injectable resources
      * that Ecstasy supports, also including any provided String injections; in turn, that
      * implementation provides the injections that will be available to the specified module within

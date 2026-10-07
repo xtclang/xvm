@@ -1274,7 +1274,7 @@ public class TypeInfoReal
      * If the specified property is not visible directly by this TypeInfo due to the private access,
      * obtain its origin's TypeInfo.
      *
-     * Note: this method is used only by the runtime.
+     * <p>Note: this method is used only by the runtime.
      *
      * @param idProp  the property id
      *

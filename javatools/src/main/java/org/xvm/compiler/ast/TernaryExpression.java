@@ -533,7 +533,7 @@ public class TernaryExpression
      *
      * @param atypeThen  the first type array
      * @param atypeElse  the second type array
-     * @param atypeElse  the required type array
+     * @param atypeRequired  the required type array
      *
      * @return an array of wider types
      */

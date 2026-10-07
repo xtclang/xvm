@@ -290,7 +290,7 @@ public class InvocationExpression
     /**
      * Which method this call turned out to be a call to.
      *
-     * The name in a call does not resolve to anything on its own - `print` means nothing without
+     * <p>The name in a call does not resolve to anything on its own - `print` means nothing without
      * knowing what it is being called on, and what the arguments are - so the answer is decided
      * here, while the invocation is validated, and kept here. This only makes it readable from
      * outside the compiler, which is what a host needs to answer "where is this method declared".

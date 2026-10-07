@@ -305,7 +305,7 @@ public class xFuture
     }
 
     /**
-     * Implementation of "<NewType> Future!<NewType> transform(function NewType (Referent) convert)"
+     * Implementation of {@code <NewType> Future!<NewType> transform(function NewType (Referent) convert)}
      */
     protected int invokeTransform(Frame frame, FutureHandle hThis, TypeHandle hNewType,
                                   FunctionHandle hConvert, int iReturn) {
@@ -411,8 +411,8 @@ public class xFuture
     }
 
     /**
-     * Implementation of "<NewType> Future!<NewType>
-     *                      transformOrHandle(function NewType (Referent?, Exception?) convert)"
+     * Implementation of {@code <NewType> Future!<NewType>
+     *                      transformOrHandle(function NewType (Referent?, Exception?) convert)}
      */
     protected int invokeTransformOrHandle(Frame frame, FutureHandle hThis, TypeHandle hNewType,
                                           FunctionHandle hConvert, int iReturn) {
@@ -454,8 +454,8 @@ public class xFuture
     }
 
     /**
-     * Implementation of "<OtherType, NewType> Future!<NewType> and(Future!<OtherType> other,
-     *                      function NewType (Referent, OtherType) combine)"
+     * Implementation of {@code <OtherType, NewType> Future!<NewType> and(Future!<OtherType> other,
+     *                      function NewType (Referent, OtherType) combine)}
      */
     protected int invokeAndFuture(Frame frame, FutureHandle hThis,
                                   TypeHandle hOtherType, TypeHandle hNewType,
@@ -522,7 +522,7 @@ public class xFuture
     }
 
     /**
-     * Implementation of "Future!<Referent> or(Future!<Referent> other)"
+     * Implementation of {@code Future!<Referent> or(Future!<Referent> other)}
      */
     protected int invokeOrFuture(Frame frame, FutureHandle hThis, FutureHandle hThat, int iReturn) {
         CompletableFuture<ObjectHandle> cfThis = hThis.getFuture();
@@ -542,7 +542,7 @@ public class xFuture
     }
 
     /**
-     * Implementation of "Future!<Referent> whenComplete(function void (Referent?, Exception?) notify)"
+     * Implementation of {@code Future!<Referent> whenComplete(function void (Referent?, Exception?) notify)}
      */
     protected int invokeWhenComplete(Frame frame, FutureHandle hThis, FunctionHandle hNotify, int iReturn) {
         CompletableFuture<ObjectHandle> cfThis = hThis.getFuture();

@@ -736,7 +736,7 @@ public class NamedTypeExpression
      * Considering the containing class, calculate a type for the specified target constant in the
      * absence of explicitly provided type parameters.
      *
-     * Note, the returned type should not be parameterized; it will be done later by the caller.
+     * <p>Note, the returned type should not be parameterized; it will be done later by the caller.
      *
      * @return a resulting type
      */

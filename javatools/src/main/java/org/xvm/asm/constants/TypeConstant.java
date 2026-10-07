@@ -636,9 +636,9 @@ public abstract class TypeConstant
      *
      * <p>Consider the following class inheritance diagram:
      * <pre>
-     *    B.C0 <- D.C0
+     *    B.C0 &lt;- D.C0
      *     ^
-     *    B.C1 <- D.C1
+     *    B.C1 &lt;- D.C1
      * </pre>
      *
      * <p>When a super type for D.C1 is calculated by isA() and createContributionList() logic, the
@@ -1053,10 +1053,10 @@ public abstract class TypeConstant
     }
 
     /**
-     * If T1 == T0<E> and T2.isA(T0) then return (T1 + T2) => T2<E + EC2>, where EC2 is a constraint
-     * for E on T2.
+     * If {@code T1 == T0<E>} and {@code T2.isA(T0)} then return
+     * {@code (T1 + T2) => T2<E + EC2>}, where EC2 is a constraint for E on T2.
      *
-     * <p>Note: this obviously doesn't apply to Class<T> and "into class" annotations.
+     * <p>Note: this obviously doesn't apply to {@code Class<T>} and "into class" annotations.
      */
     private static TypeConstant combineOneParameterized(ConstantPool pool,
                                                         TypeConstant t1, TypeConstant t2) {
@@ -1507,12 +1507,12 @@ public abstract class TypeConstant
     }
 
     /**
-     * Given this (formal) type A<B<C>, D<R>> that may contain a type parameter "R" and an actual
-     * type A<X<Y>, W<Z>>, find out what is the actual type of the type parameter "R".
+     * Given this (formal) type {@code A<B<C>, D<R>>} that may contain a type parameter "R" and an actual
+     * type {@code A<X<Y>, W<Z>>}, find out what is the actual type of the type parameter "R".
      *
      * @return the resolved actual type or null if there is no matching type parameter or
-     *         tha actual type topology is not the same as this type and doesn't provide enough
-     *         fidelity (e.g.: formal is Array<R> and actual is Object)
+     *         the actual type topology is not the same as this type and doesn't provide enough
+     *         fidelity (e.g.: formal is {@code Array<R>} and actual is Object)
      */
     public TypeConstant resolveTypeParameter(TypeConstant typeActual, String sFormalName) {
         return getUnderlyingType().resolveTypeParameter(typeActual, sFormalName);
@@ -1721,7 +1721,7 @@ public abstract class TypeConstant
      * Obtain the information about this type, resolved from its recursive composition, without
      * reporting anything about the attempt.
      *
-     * A TypeConstant is an interned value shared by everything, so when it is asked to build a
+     * <p>A TypeConstant is an interned value shared by everything, so when it is asked to build a
      * TypeInfo and given no listener it has no caller to ask. It used to walk up to its file
      * structure and report to whatever that file was last told - an ambient lookup which, for the
      * two thirds of these call sites that run after compilation is over, ended at a listener that
@@ -1729,7 +1729,7 @@ public abstract class TypeConstant
      * received anything, and during a compilation the file was parked on a silence anyway. So the
      * silence is said here instead of arranged elsewhere.
      *
-     * This convenience read does not report diagnostics to a host. It is used by speculative and
+     * <p>This convenience read does not report diagnostics to a host. It is used by speculative and
      * metadata queries, including provisional compositions. Diagnostics recorded by a completed
      * build remain available for replay; a caller responsible for reporting a selected source use
      * must pass its listener to {@link #ensureTypeInfo(ErrorListener)}. Silence here is not evidence
@@ -1792,7 +1792,7 @@ public abstract class TypeConstant
     /**
      * Report the diagnostics that were produced while this type's TypeInfo was built.
      *
-     * Deduplication in the receiving listener makes this idempotent: a caller that asks twice, or
+     * <p>Deduplication in the receiving listener makes this idempotent: a caller that asks twice, or
      * two callers sharing a listener, are told once.
      *
      * @param errs  the listener to replay them to
@@ -1999,8 +1999,6 @@ public abstract class TypeConstant
      * TypeInfos are all discarded.
      *
      * @param errs  the error list to log to
-     *
-     * @return a completed TypeInfo for Object
      */
     private void ensureObjectTypeInfo(ErrorListener errs) {
         ConstantPool pool       = getConstantPool();
@@ -2068,7 +2066,7 @@ public abstract class TypeConstant
      * The diagnostics produced while this type's TypeInfo was built, replayed to later callers
      * that get the memoized result; see {@link #replayDiagnostics}.
      *
-     * Empty until the TypeInfo has been built, and empty afterwards when building it had nothing
+     * <p>Empty until the TypeInfo has been built, and empty afterwards when building it had nothing
      * to say - which is the ordinary case. Never null: "not built yet" and "built quietly" are
      * the same answer to everyone who reads this, so there is nothing for a third state to say.
      */
@@ -2156,12 +2154,12 @@ public abstract class TypeConstant
     /**
      * Choose the listener to report the rest of a TypeInfo build to.
      *
-     * Once a contribution has turned out to be incomplete, what follows is reported against a
+     * <p>Once a contribution has turned out to be incomplete, what follows is reported against a
      * type that is known to be missing pieces, so the diagnostics are consequences of what is
      * absent rather than faults in the source. They are suppressed for the remainder of the
      * build; the incompleteness itself is what the caller is told, by the return value.
      *
-     * The choice is made at each use rather than by rebinding the listener, so that the errs
+     * <p>The choice is made at each use rather than by rebinding the listener, so that the errs
      * parameter still means what its signature says all the way down the method.
      *
      * @param fIncomplete  whether the build is already known to be incomplete
@@ -7248,7 +7246,7 @@ public abstract class TypeConstant
      * Obtain a unique ClassDesc that represents a "JIT Call Class Name" for this type in the
      * specified TypeSystem.
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public ClassDesc getCallableClassDesc(TypeSystem ts) {
         return ClassDesc.of(getJitCCType().ensureJitClassName(ts));
@@ -7258,7 +7256,7 @@ public abstract class TypeConstant
      * Obtain a unique ClassDesc that represents a "JIT Instance Class Name" for this type in the
      * specified TypeSystem.
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public ClassDesc getInstanceeClassDesc(TypeSystem ts) {
         return ClassDesc.of(getJitICType().ensureJitClassName(ts));
@@ -7268,7 +7266,7 @@ public abstract class TypeConstant
      * Ensure a unique Java class name that represents a "JIT Call Class Name" for this type in the
      * specified TypeSystem.
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public String ensureJitClassName(TypeSystem ts) {
         assert isSingleUnderlyingClass(true);
@@ -7379,7 +7377,7 @@ public abstract class TypeConstant
      *
      * @return {@code true} iff this type is Specializable
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public boolean isJitL2Specializable() {
         if (!isSingleUnderlyingClass(true)) {
@@ -7408,7 +7406,7 @@ public abstract class TypeConstant
      * @return {@code true} iff this type's callable JIT type is a non-canonical parameterization of
      *         a {@link #isJitL2Specializable() specializable} type
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public boolean isJitL2Specialized() {
         TypeConstant   jitType     = getJitCCType();
@@ -7508,7 +7506,7 @@ public abstract class TypeConstant
      *
      * @return a canonical JIT type
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public TypeConstant getJitCCType() {
         if (isModifyingType()) {
@@ -7525,7 +7523,7 @@ public abstract class TypeConstant
      * type that JIT compiler uses to create an instance of the corresponding type. It's the minimal
      * (the widest) type that produces the same "JIT Instance Class Name' IC(T).
      *
-     * @see doc/jit_class_names.txt
+     * @see "doc/jit_class_names.txt"
      */
     public TypeConstant getJitICType() {
         // TODO CP: plug in the new logic
@@ -8020,7 +8018,7 @@ public abstract class TypeConstant
     }
 
     /**
-     * Compare for order (<=>) two object handles that both belong to this type.
+     * Compare for order ({@code <=>}) two object handles that both belong to this type.
      *
      * @param frame    the frame
      * @param hValue1  the first handle

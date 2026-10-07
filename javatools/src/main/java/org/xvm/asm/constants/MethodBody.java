@@ -691,7 +691,7 @@ public class MethodBody {
     /**
      * The pool to resolve well-known constants against, such as the {@code @Op} annotation class.
      *
-     * The ambient one when there is one - the compiler pushes it for the pool it is working in,
+     * <p>The ambient one when there is one - the compiler pushes it for the pool it is working in,
      * which is not always the pool this body's identity belongs to. But it is a thread-local, so
      * it is simply null on any thread that has never had one pushed, and this is reached from
      * {@link #isOp()} and from {@code toString()}: a debugger, a log line or a test that so much

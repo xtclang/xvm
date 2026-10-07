@@ -2513,7 +2513,7 @@ public class Lexer
     /**
      * Log an error, with the message parameters as a trailing varargs.
      *
-     * The location is a {@link ErrorListener.Site} rather than a pair of positions so that the
+     * <p>The location is a {@link ErrorListener.Site} rather than a pair of positions so that the
      * parameters can be the tail; taking them as an array in the middle is what forces a call site
      * to build one by hand.
      */

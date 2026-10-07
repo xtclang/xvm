@@ -36,8 +36,8 @@ import org.xvm.runtime.template._native.mgmt.xCoreRepository;
 import org.xvm.runtime.template._native.reflect.xRTModuleTemplate;
 
 import static org.xvm.api.EmbeddingSupport.ERR_UNHANDLED_EXCEPTION;
+
 import static org.xvm.asm.ErrorListener.at;
-import static org.xvm.util.Severity.ERROR;
 
 /**
  * Interpreter-backed management and monitoring for one runner task.
@@ -103,7 +103,7 @@ class InterpreterControl
                 } else {
                     control.finish(-1, e.toString());
                 }
-            }).whenComplete((r, e) -> {
+            }).whenComplete((_, e) -> {
                 if (e == null) {
                     completion.complete(null);
                 } else {

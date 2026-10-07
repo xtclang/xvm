@@ -93,9 +93,9 @@ public class nType
     }
 
     /**
-     * Native implementation of "conditional Hasher<DataType> hashed()".
+     * Native implementation of {@code conditional Hasher<DataType> hashed()}.
      *
-     * TODO: this is temporary - it needs to be removed here and naturally generated
+     * <p>TODO: this is temporary - it needs to be removed here and naturally generated
      */
     public boolean hashed$p(Ctx ctx) {
         ConstantPool pool = ctx.pool();

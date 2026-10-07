@@ -34,7 +34,7 @@ public interface ErrorListener {
     /**
      * Handles the logging of an error that originates in Ecstasy source code.
      *
-     * Recording a diagnostic says nothing about whether the work should continue; ask
+     * <p>Recording a diagnostic says nothing about whether the work should continue; ask
      * {@link #isAbortDesired()} for that. The two used to be one boolean, which left a listener
      * that only wants to watch with no correct value to return - false suppressed a legitimate
      * abort and true invented one - and made whether the compiler kept going a property of who was
@@ -69,7 +69,7 @@ public interface ErrorListener {
      * Handles the logging of an error that originates in an Ecstasy XVM structure.
      *
      * @param severity    the severity level of the error; one of
-     *                    {@link Severity#INFO}, {@link Severity#WARNING,
+     *                    {@link Severity#INFO}, {@link Severity#WARNING},
      *                    {@link Severity#ERROR}, or {@link Severity#FATAL}
      * @param sCode       the error code that identifies the error message
      * @param aoParam     the parameters for the error message; may be null
@@ -90,7 +90,7 @@ public interface ErrorListener {
     /**
      * Report a diagnostic.
      *
-     * The message parameters are the trailing arguments, which is why the location is a
+     * <p>The message parameters are the trailing arguments, which is why the location is a
      * {@link Site} rather than the two shapes it takes: an {@code Object[]} in the middle of the
      * signature is what the older overloads need in order to leave room for the location after it,
      * and it is why call sites have to write {@code new Object[]&#123;...&#125;} by hand.
@@ -149,14 +149,14 @@ public interface ErrorListener {
      * A listener that hands each diagnostic to the given consumer, and answers the questions the
      * compiler asks about what it has seen.
      *
-     * This is how a host should build one. {@link ErrorListener} is a functional interface, so a
+     * <p>This is how a host should build one. {@link ErrorListener} is a functional interface, so a
      * bare lambda compiles - but a lambda only supplies {@link #log}, and inherits defaults for
      * {@link #hasSeriousErrors()}, {@link #isAbortDesired()} and {@link #hasError} that answer as
      * though nothing had been reported. The compiler asks those questions around a hundred times
      * during a compilation, to decide whether a stage may proceed, so a host that lambdas the
      * interface directly is telling the compiler that its own diagnostics did not happen.
      *
-     * Every report is delivered; this factory does not deduplicate. Use {@link ErrorList} when
+     * <p>Every report is delivered; this factory does not deduplicate. Use {@link ErrorList} when
      * repeated reports should collapse. Compiler callbacks must be serialized by the host.
      *
      * @param consumer  receives each diagnostic as it is reported
@@ -204,14 +204,14 @@ public interface ErrorListener {
     /**
      * Obtain a listener that also abandons the work when someone outside asks it to.
      *
-     * The compiler asks {@link #isAbortDesired} at around twenty points - in the lexer, the
+     * <p>The compiler asks {@link #isAbortDesired} at around twenty points - in the lexer, the
      * parser, each pass of the stage manager, and statement validation - so that a spent error
      * budget or a FATAL stops the work rather than letting it run to the end. That is the same
      * question a host needs answered when the work has become pointless for a reason the compiler
      * cannot see: an editor whose user has typed again, so the document being analysed is two
      * keystrokes stale, or a request the client has cancelled.
      *
-     * Everything else is the wrapped listener's: what it is told, what it has seen, whether it is
+     * <p>Everything else is the wrapped listener's: what it is told, what it has seen, whether it is
      * silent. Only the decision to stop is shared.
      *
      * @param errs       the listener to wrap
@@ -281,7 +281,7 @@ public interface ErrorListener {
     /**
      * Report to both listeners.
      *
-     * The abort question is answered by either: a caller that wrapped a budgeted listener has to
+     * <p>The abort question is answered by either: a caller that wrapped a budgeted listener has to
      * keep getting the stop it asked for, whatever else is also listening.
      *
      * @param first   one listener
@@ -349,10 +349,10 @@ public interface ErrorListener {
     /**
      * Where a diagnostic came from.
      *
-     * Only meaningful once more than one thing reports at a time - parallel compilation, or a
+     * <p>Only meaningful once more than one thing reports at a time - parallel compilation, or a
      * resident server serving several requests - where it answers "whose diagnostic is this".
      *
-     * Never part of the deduplication key: two reports of the same problem from two threads are
+     * <p>Never part of the deduplication key: two reports of the same problem from two threads are
      * one problem, and keying on the thread would turn every duplicate into a distinct diagnostic.
      *
      * @param thread  the name of the thread that reported it
@@ -369,7 +369,7 @@ public interface ErrorListener {
     /**
      * Where a diagnostic belongs.
      *
-     * A listener receives the location as one of a small closed set of shapes, so a host that
+     * <p>A listener receives the location as one of a small closed set of shapes, so a host that
      * republishes diagnostics - an LSP server turning them into editor squiggles, say - can switch
      * over them exhaustively instead of testing which of several nullable fields was populated.
      */
@@ -400,7 +400,7 @@ public interface ErrorListener {
      * in the same manner as this one until it is {@link #merge() merged} or discarded in the
      * (optional) context of the specified node.
      *
-     * A branch buffers errors that may or may not end up being reported, so deciding to abandon
+     * <p>A branch buffers errors that may or may not end up being reported, so deciding to abandon
      * the work is the parent's call and not the branch's: it is given {@link ErrorList#UNLIMITED}
      * rather than a budget of its own. {@link ErrorList} overrides this to pass on the budget it
      * was built with, and the two have to agree, or the compiler would do less work for a host
@@ -417,7 +417,7 @@ public interface ErrorListener {
     /**
      * Merge all errors collected by this ErrorListener into the one it was branched out of.
      *
-     * A listener that was never branched has nothing to merge and is already the sink the errors
+     * <p>A listener that was never branched has nothing to merge and is already the sink the errors
      * would be merged into, so merging it is a no-op. It is not an error: whether a listener in
      * hand is a branch is not something its holder should have to know.
      *
@@ -431,7 +431,7 @@ public interface ErrorListener {
     /**
      * Why a stretch of work is not reporting its diagnostics.
      *
-     * The three behave identically - nothing may branch on which one a listener holds - but they
+     * <p>The three behave identically - nothing may branch on which one a listener holds - but they
      * are different intentions, and saying which is meant is the point. Grepping for one of these
      * is the list of the places that meant it.
      */
@@ -441,7 +441,7 @@ public interface ErrorListener {
          * audible. The compiler constantly asks "would this expression fit that type?", and the
          * return value - not a diagnostic - is what the caller acts on.
          *
-         * Not for work whose failure the user should hear about if every alternative also fails;
+         * <p>Not for work whose failure the user should hear about if every alternative also fails;
          * that is {@link ErrorListener#branch}.
          */
         PROBE,
@@ -482,11 +482,11 @@ public interface ErrorListener {
     /**
      * Obtain a listener that discards the rest of what this one would have been told.
      *
-     * The result wraps this listener rather than being a shared constant, so the silence is a
+     * <p>The result wraps this listener rather than being a shared constant, so the silence is a
      * decision about one stretch of work instead of an anonymous gap, and
      * {@link SilentErrorListener#suppressed} can still reach what was silenced.
      *
-     * Applying it twice is the same silence, so it is safe to call per use rather than having to
+     * <p>Applying it twice is the same silence, so it is safe to call per use rather than having to
      * hold the result.
      *
      * @param why  why the diagnostics are being discarded
@@ -529,7 +529,7 @@ public interface ErrorListener {
      * Whether this listener discards what it is told, for one of the reasons {@link Silence}
      * names. {@link #silenceReason} says which.
      *
-     * Not debugging-only, despite what this said for a long time: work that exists solely to
+     * <p>Not debugging-only, despite what this said for a long time: work that exists solely to
      * produce a diagnostic is worth skipping when nobody is listening, and
      * {@code MethodDeclarationStatement} and {@code PropertyDeclarationStatement} both ask before
      * doing it. That is the one thing a caller may branch on - never on <em>which</em> silence it
@@ -546,7 +546,7 @@ public interface ErrorListener {
     /**
      * A listener that discards everything, for one of the reasons {@link Silence} names.
      *
-     * The three reasons behave identically and deliberately so - nothing may branch on which one
+     * <p>The three reasons behave identically and deliberately so - nothing may branch on which one
      * it holds - but they are not the same intention, and a host that republishes diagnostics may
      * want to treat them differently. Where the silence was derived from a real listener,
      * {@link #suppressed} still reaches it.
@@ -656,7 +656,7 @@ public interface ErrorListener {
          * Construct an ErrorInfo object.
          *
          * @param severity    the severity level of the error; one of
-         *                    {@link Severity#INFO}, {@link Severity#WARNING,
+         *                    {@link Severity#INFO}, {@link Severity#WARNING},
          *                    {@link Severity#ERROR}, or {@link Severity#FATAL}
          * @param sCode       the error code that identifies the error message
          * @param aoParam     the parameters for the error message; may be null
@@ -679,7 +679,7 @@ public interface ErrorListener {
          * Construct an ErrorInfo object.
          *
          * @param severity    the severity level of the error; one of
-         *                    {@link Severity#INFO}, {@link Severity#WARNING,
+         *                    {@link Severity#INFO}, {@link Severity#WARNING},
          *                    {@link Severity#ERROR}, or {@link Severity#FATAL}
          * @param sCode       the error code that identifies the error message
          * @param aoParam     the parameters for the error message; may be null

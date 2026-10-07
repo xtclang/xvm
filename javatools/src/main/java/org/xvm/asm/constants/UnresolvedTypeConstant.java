@@ -31,9 +31,9 @@ public class UnresolvedTypeConstant
     /**
      * Construct a place-holder constant that will eventually be replaced with a real type constant.
      *
-     * Note, that outside of "equals" and "toString" implementations, the information held by this
+     * <p>Note, that outside of "equals" and "toString" implementations, the information held by this
      * constant is not used at all. The resolution logic (see
-     * {@link org.xvm.compiler.ast.NamedTypeExpression#resolveNames) will use its own state to
+     * {@link org.xvm.compiler.ast.NamedTypeExpression#resolveNames}) will use its own state to
      * {@link #resolve(Constant) resolve} it.
      *
      * @param pool  the ConstantPool that this TypeConstant should belong to, even though it will

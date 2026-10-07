@@ -464,7 +464,7 @@ public abstract class Constant
     /**
      * The pool to work in when resolving other constants from this one.
      *
-     * The thread's pool where the compiler has bound one, and this constant's own otherwise, so
+     * <p>The thread's pool where the compiler has bound one, and this constant's own otherwise, so
      * that a constant asked to do something outside a compilation - printed by a debugger, used
      * by a test - answers rather than throwing. See {@link ConstantPool#currentOr}.
      *

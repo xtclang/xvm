@@ -186,7 +186,7 @@ public class JitConnector
     /**
      * Extract the class name from the VerifyError message that looks like:
      *
-     *      VarifyError
+     *      <p>VarifyError
      *      Location:
      *          org/xtclang/ecstasy/[ClassName].[MethodName]([MethodSignature])
      */

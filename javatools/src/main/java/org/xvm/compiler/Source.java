@@ -40,7 +40,7 @@ public class Source
     /**
      * Construct a Source from Ecstasy source code that is not in a file, naming it anyway.
      *
-     * The name a diagnostic reports is part of its identity, so a host holding several documents
+     * <p>The name a diagnostic reports is part of its identity, so a host holding several documents
      * that are not on disk - an editor's unsaved buffers - needs to be able to tell them apart.
      * Two unnamed documents with a problem at the same offset produce the same identity, and a
      * listener that deduplicates then discards the second one.

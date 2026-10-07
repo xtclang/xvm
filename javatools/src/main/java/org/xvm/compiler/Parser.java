@@ -121,7 +121,7 @@ public class Parser {
      *     AliasStatements-opt TypeDeclaration
      * }</pre>
      *
-     * Recover at statement/declaration boundaries when possible. Recovered syntax is incomplete;
+     * <p>Recover at statement/declaration boundaries when possible. Recovered syntax is incomplete;
      * callers must check their listener for errors before entering semantic compilation.
      *
      * @return the top level syntax, possibly omitting malformed statements or declarations
@@ -182,7 +182,7 @@ public class Parser {
     /**
      * Quick-scan the source for the name of the module it declares, ignoring everything else.
      *
-     * Parser diagnostics from the scan use a {@link ErrorListener.Silence#DISCARD} silence.
+     * <p>Parser diagnostics from the scan use a {@link ErrorListener.Silence#DISCARD} silence.
      * The module name itself is parsed against a separate listener so a malformed name is not
      * accepted. Lexical diagnostics
      * still use the lexer's original listener; callers performing only this scan should supply
@@ -6450,19 +6450,19 @@ public class Parser {
     /**
      * Count one level of nested parsing, to be released when the returned handle is closed:
      *
-     * <p/><code><pre>
+     * <pre><code>
      * try (var ignore = nest()) {
      *     ...
      * }
-     * </pre></code>
+     * </code></pre>
      *
-     * The parser is a recursive descent, and a level of nesting in the source costs a dozen or so
+     * <p>The parser is a recursive descent, and a level of nesting in the source costs a dozen or so
      * Java frames. Without a limit, sufficiently nested source exhausts the thread's stack, and a
      * StackOverflowError is not something a caller can be asked to handle: it escapes the compiler
      * and reaches whatever embeds it. Counting the levels turns that into an ordinary error with a
      * source position.
      *
-     * The count is shared by every construct that nests, because they nest through each other -
+     * <p>The count is shared by every construct that nests, because they nest through each other -
      * a type inside an expression inside a statement - so one budget bounds the descent no matter
      * how the source alternates between them. It counts levels of parsing rather than levels of
      * source: one construct can pass more than one guard on its way down, so the limit is a bound
@@ -6509,7 +6509,7 @@ public class Parser {
      * Begin a speculative parse: an attempt whose tokens and whose diagnostics both count only if
      * it is kept.
      *
-     * The parser used to hand-roll this, buffering nothing and throwing away every diagnostic
+     * <p>The parser used to hand-roll this, buffering nothing and throwing away every diagnostic
      * below ERROR even when the attempt was kept - which lost those diagnostics for good, because
      * a kept attempt is the real parse and nothing re-reads those tokens. An attempt is a
      * {@link ErrorListener#branch} instead, so keeping it merges what it had to say and dropping

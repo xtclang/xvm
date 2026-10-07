@@ -70,7 +70,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * <p>Here is the Component containment model, with container type on the left and containee type
  * across the top:
  *
- * <p><code><pre>
+ * <pre><code>
  *           Module  Package  Class  MultiMethod  Method  Property  |  Conditional
  * File        x                                                    |
  * Module              x       x       x                    x       |    x (version only)
@@ -79,7 +79,7 @@ import static org.xvm.util.Handy.writePackedLong;
  * Property                            x                            |    x
  * MultiMethod                                      x               |
  * Method                      x       x                    x       |    x
- * </pre></code>
+ * </code></pre>
  *
  * <p>Based on the containment model, of these types, there are three groups of containment:
  * <ul>

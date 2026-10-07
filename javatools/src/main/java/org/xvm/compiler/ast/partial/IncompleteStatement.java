@@ -32,7 +32,7 @@ import static org.xvm.asm.ErrorListener.in;
  * An explicit cursor can select a written member token or a call before its closing parenthesis;
  * the selected operation need not be malformed. The original member token is retained as syntax.
  *
- * Child fields participate in normal AST adoption/cloning; no Context, callback, or separate
+ * <p>Child fields participate in normal AST adoption/cloning; no Context, callback, or separate
  * semantic cache survives validation. Consumers copy facts only from children whose validation
  * succeeded (isValidated and a fitting TypeFit), never a failed child's placeholder type.
  */

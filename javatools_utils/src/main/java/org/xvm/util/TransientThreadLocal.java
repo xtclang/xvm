@@ -11,8 +11,8 @@ import java.util.function.Supplier;
  * A {@link ThreadLocal} variant optimized for short-lived thread-locals. Essentially, if the
  * reference to the thread-local is not {@code static}, it will be advantageous to use a
  * {@link TransientThreadLocal} rather than a {@link ThreadLocal}.
- * <p>
- * Null values are treated as absent: a null initial value is retried on the next {@link #get}, and
+ *
+ * <p>Null values are treated as absent: a null initial value is retried on the next {@link #get}, and
  * {@code set(null)} removes the entry. Empty probes therefore do not retain a short-lived local.
  *
  * @param <T> the value type

@@ -139,6 +139,11 @@ snapshots, but their compiler/AST values still belong to the compilation attempt
 detached host values while owning the compiler worker. Immutability of the outer collection does
 not make ASTs, constant pools or TypeInfo safe for concurrent queries.
 
+`PartialAnalysis` accepts and returns a nullable `ConstantPool`, matching `Compilation`: null
+means semantic analysis did not start. Its three- through six-argument constructors take the
+pool directly, without an `Optional` wrapper. Clients of the earlier branch API must recompile,
+pass the pool or null, and replace `pool().orElse(...)` with a null check.
+
 ## Assembler
 
 Status: Suitable for use

@@ -78,7 +78,7 @@ class XdkRetentionTest {
                             errors,
                         ).also {
                             observe(it)
-                            observe(it.pool().orElse(null))
+                            observe(it.pool())
                             it.sourceTrees().forEach(::observe)
                         }
                 },
