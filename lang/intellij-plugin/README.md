@@ -877,3 +877,17 @@ fixture. It supplies native color swatches and picker edits separately from norm
 highlighting. It is disabled for ordinary launches and does not introduce a public XDK color API.
 Shared X273–X275 exercise picker edits, dismissal, native Undo/Redo and diagnostic recovery.
 See the [prototype recipe and acceptance](../doc/manual-test-plan.md#l77-color-value-prototype).
+
+### Compiler documentation and reference counts
+
+The compiler adapter offers **Generate documentation comment** on written declaration headers.
+It preserves indentation and line endings, derives method parameter/return entries from the
+compiler signature, and leaves existing comments intact. The edit participates in normal Undo/Redo.
+
+Reference CodeLens shows source type, method and property usage counts across the complete configured
+source graph, including unopened consumers. Counts exclude declarations and are omitted while the
+graph cannot be resolved. Clicking a count opens the editor's native references view. External
+consumers outside the configured graph are not counted. Run lenses remain independent.
+
+Use **Ecstasy Language Service → Show Ecstasy reference counts** to toggle counts live. The
+project can inherit the application preference. IntelliJ Code Vision settings still control rendering.

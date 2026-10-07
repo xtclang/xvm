@@ -558,3 +558,17 @@ The playbook keeps its startup theme. For explicit theme comparisons, the Node/n
 It writes settings before opening VS Code and exports rendered lexical styles for comparison;
 there are no live theme/highlighting toggles. See the
 [highlighting checks](../doc/manual-test-plan.md#theme-based-highlighting-follow-up-x276x277).
+
+### Compiler documentation and reference counts
+
+The compiler adapter offers **Generate documentation comment** on written declaration headers.
+It preserves indentation and line endings, derives method parameter/return entries from the
+compiler signature, and leaves existing comments intact. The edit participates in normal Undo/Redo.
+
+Reference CodeLens shows source type, method and property usage counts across the complete configured
+source graph, including unopened consumers. Counts exclude declarations and are omitted while the
+graph cannot be resolved. Clicking a count opens the editor's native references view. External
+consumers outside the configured graph are not counted. Run lenses remain independent.
+
+Set `xtc.codeLens.references` (default `true`) to toggle counts live. The native `editor.codeLens`
+setting still controls whether VS Code renders lenses.

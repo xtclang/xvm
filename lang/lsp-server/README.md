@@ -167,6 +167,7 @@ implementation retain their separate meanings. Indexed library sources remain re
 | Inline completion | No | No | Compiler names/argument values; automatic ambiguity suppression and explicit alternatives |
 | Rename | Basic | Implemented with syntax limits | Proven source families, parameter slots, aliases and cross-module/resource moves; graph proofs and versioned edits |
 | Code actions / formatting | Basic | Implemented with syntax limits | Proven import/member/local fixes and bounded refactorings; lexer indentation, continuations and token-boundary wrapping with literal-preservation checks |
+| Documentation actions | None | None | Compiler-derived declaration comment skeletons; parameter/return entries, preserved formatting and versioned edits |
 | Folding / selection | Basic / none | Syntax AST | Compiler AST; strictly nested selection spans and exact closing-brace fold columns |
 | Signature help | None | Same-file | Selected calls and compiler-fitted incomplete-call candidates |
 | Document links | Imports | Workspace index | HTTP(S) URLs in comments/literals plus resolved module/type/alias/wildcard import sources |
@@ -176,7 +177,7 @@ implementation retain their separate meanings. Indexed library sources remain re
 | Call hierarchy | None | None | Static selected calls across the complete discovered/configured source graph |
 | Inlay hints | None | None | Inferred local/destructured types, lambda parameters/returns and selected positional parameter names |
 | Type hierarchy | None | None | Declared extends/implements across the source graph, with generic parents |
-| Code lenses / linked editing | Basic | Implemented | Module run command / identity-based local/lambda ranges and lexical import aliases |
+| Code lenses / linked editing | Basic | Implemented | Module Run and source-reference counts with native navigation / identity-based local/lambda ranges and lexical import aliases |
 | Native library | Not needed | Required | Not needed |
 
 The compiler backend bundles the same complete library set as the XDK distribution through a shared
