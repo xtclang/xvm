@@ -597,6 +597,7 @@ class XdkAdapter
 
         private enum class ProjectQueryKind {
             REFERENCES,
+            CODE_LENSES,
             MONIKERS,
             RENAME,
             RENAME_PROPOSAL,
@@ -1578,7 +1579,23 @@ class XdkAdapter
             return (XdkLexical.links(content) + links).distinctBy { it.range }.sortedBy { it.range.start.line }
         }
 
-        override fun getCodeLenses(uri: String): List<CodeLens> =
+        override fun getCodeLenses(uri: String): List<CodeLens> = getCodeLensesAsync(uri, true).join()
+
+        override fun getCodeLensesAsync(
+            uri: String,
+            references: Boolean,
+        ): CompletableFuture<List<CodeLens>> {
+            val run = runLenses(uri)
+            return if (references && hasProject(uri) && !isLibraryDocument(uri)) {
+                projectQuery(ProjectQueryKey(uri, ProjectQueryKind.CODE_LENSES), emptyList()) {
+                    run + it.referenceLenses(uri)
+                }
+            } else {
+                CompletableFuture.completedFuture(run)
+            }
+        }
+
+        private fun runLenses(uri: String): List<CodeLens> =
             analysis(uri)
                 ?.symbols
                 .orEmpty()

@@ -85,11 +85,27 @@ object LanguageServicePage {
         project: Project,
         enabled: Boolean,
     ) {
+        booleanSetting(project, "xtc.service.hints", enabled)
+    }
+
+    @JvmStatic
+    fun referenceCodeLens(
+        project: Project,
+        enabled: Boolean,
+    ) {
+        booleanSetting(project, "xtc.service.references", enabled)
+    }
+
+    private fun booleanSetting(
+        project: Project,
+        name: String,
+        enabled: Boolean,
+    ) {
         val page = LanguageServiceProjectConfigurable(project)
         try {
             val components = children(page.createComponent()).filterIsInstance<JBCheckBox>().toList()
             components.single { it.name == "xtc.service.inherit" }.isSelected = false
-            components.single { it.name == "xtc.service.hints" }.isSelected = enabled
+            components.single { it.name == name }.isSelected = enabled
             page.apply()
         } finally {
             page.disposeUIResources()

@@ -216,7 +216,7 @@ export function platformCases(): void {
         const links = await client().sendRequest<import('vscode-languageclient/node').DocumentLink[]>('textDocument/documentLink', id);
         const hints = await client().sendRequest<import('vscode-languageclient/node').InlayHint[]>('textDocument/inlayHint', { ...id, range: { start: { line: 0, character: 0 }, end: { line: 6, character: 0 } } });
         const symbols = await client().sendRequest<import('vscode-languageclient/node').WorkspaceSymbol[]>('workspace/symbol', { query: data.module });
-        const lens = lenses[0], link = links[0], hint = hints.find(item => item.data || item.tooltip)!, symbol = symbols[0];
+        const lens = lenses.find(item => item.range.start.line === 0)!, link = links[0], hint = hints.find(item => item.data || item.tooltip)!, symbol = symbols[0];
         const resolve = async <T extends { data?: unknown }>(method: string, item: T): Promise<T> => item.data ? client().sendRequest<T>(method, item) : item;
         const resolvedLens = await resolve('codeLens/resolve', lens);
         assert.deepStrictEqual(resolvedLens.range, lens.range);
