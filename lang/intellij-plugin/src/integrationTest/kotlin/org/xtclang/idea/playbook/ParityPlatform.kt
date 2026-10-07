@@ -766,7 +766,7 @@ internal fun ParityScenarios.platformCases() {
                         "context" to mapOf("diagnostics" to emptyList<Any>()),
                     ),
             ).rows()
-                .single()
+                .single { it.string("title") == data.string("actionTitle") }
         val capability = protocol.capabilities().asJsonObject["codeActionProvider"]
         if (
             capability.isJsonObject && capability.asJsonObject["resolveProvider"]?.asBoolean == true
