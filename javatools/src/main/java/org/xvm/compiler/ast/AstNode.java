@@ -21,7 +21,6 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Component;
@@ -1113,8 +1112,12 @@ public abstract class AstNode
                 mapNamedExpr, atypeReturn, setIs, setConvert, mapMethods, errs, (signature, ordered) -> {});
     }
 
-    /** Reuse ordinary argument fitting; only explicit cursor probes observe tentative signatures. */
-    private void collectMatchingMethods(
+    /**
+     * Reuse ordinary argument fitting. The package-private observer lets partial-call queries copy
+     * tentative signatures and argument order without adding cursor-result policy to the fitter.
+     * The callback runs synchronously after a match is recorded in the supplied collections.
+     */
+    final void collectMatchingMethods(
             Context                              ctx,
             TypeConstant                         typeTarget,
             TypeInfo                             infoTarget,
@@ -1348,43 +1351,6 @@ public abstract class AstNode
         if (cNameErrs > 0 || cTypeErrs == 1 || (cTypeErrs == 0 && cArityErrs == 1)) {
             errsKeep.merge();
         }
-    }
-
-    /**
-     * Test one incomplete-call candidate with the compiler's usual named-argument, conversion and
-     * generic inference rules. Cloned arguments and a child context isolate speculative changes.
-     * Missing parameters are permitted; no best-overload selection or invocation validation occurs.
-     */
-    final List<CursorBinding.Candidate> probeCallCandidate(Context ctx, TypeConstant target, TypeInfo info,
-            MethodConstant method, List<Expression> arguments, ErrorListener errs) {
-        var written = arguments.stream().map(argument -> (Expression) argument.clone()).toList();
-        var named = collectNamedArgs(written, errs);
-        if (named == null || errs.isAbortDesired()) {
-            return List.of();
-        }
-        Set<MethodConstant> direct = new HashSet<>();
-        Set<MethodConstant> converting = new HashSet<>();
-        List<CursorBinding.Candidate> result = new ArrayList<>();
-        collectMatchingMethods(ctx.enter(), target, info, Set.of(method), written, false, named,
-                null, direct, converting, new HashMap<>(), errs, (signature, ordered) -> {
-                    var resolved = signature.resolveGenericTypes(pool(), target);
-                    var original = info.getMethodById(method).getSignature();
-                    // A pending method formal is not a concrete expected type. Retain its written
-                    // formal instead of leaking PendingTypeConstant or substituting Object.
-                    var params = IntStream.range(0, resolved.getParamCount())
-                            .mapToObj(i -> resolved.getRawParams()[i].containsUnresolved()
-                                    ? original.getRawParams()[i] : resolved.getRawParams()[i])
-                            .toArray(TypeConstant[]::new);
-                    var returns = IntStream.range(0, resolved.getReturnCount())
-                            .mapToObj(i -> resolved.getRawReturns()[i].containsUnresolved()
-                                    ? original.getRawReturns()[i] : resolved.getRawReturns()[i])
-                            .toArray(TypeConstant[]::new);
-                    var copied = pool().ensureSignatureConstant(resolved.getName(), params, returns);
-                    var declaration = info.getMethodById(method).getTopmostMethodStructure(info).getIdentityConstant();
-                    InvocationBinding.arguments(written, ordered).ifPresent(mapping ->
-                            result.add(new CursorBinding.Candidate(declaration, copied, mapping, converting.contains(method))));
-                });
-        return List.copyOf(result);
     }
 
     /**

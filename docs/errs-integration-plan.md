@@ -2064,6 +2064,7 @@ and validated after the member-generation batch; the combined validation is reco
   inference helpers and `NamedTypeExpression` representation fields at their existing visibility.
   In the two retained resolvers, call package-private `probeCallCandidate` through an `AstNode`-
   typed reference: that method is not inherited by a subclass in another package.
+  AST2 later replaces those calls with a shared package-private `PartialCallResolver` method.
 - [x] **P4 — Validate and document ownership/API boundaries.** Update AST ownership notes and
   extraction map, then run field-model, parser recovery, cursor binding, identity snapshot,
   partial adapter, call/constructor/argument, delimiter and header suites. Include listener and
@@ -2172,15 +2173,14 @@ not belong there simply because the LSP consumes them.
   is removed from the unpublished API; no lang consumer used it. No state or visibility is added.
   Focused regressions cover unassigned locals, parameters, lambdas, nested scopes and repeated
   cursor queries. Keep this extraction with the cursor-scope implementation when splitting PRs.
-- [ ] **AST2 — Separate candidate-result copying from ordinary argument fitting.** The branch-added
-  `AstNode.probeCallCandidate` builds immutable `CursorBinding.Candidate` results after the ordinary
-  fitter chooses an ordering and inferred signature. Move that query orchestration to the existing
-  `PartialCallResolver` if the callback overload of `collectMatchingMethods` can become package-private
-  with no other exposure. Keep the fitting algorithm on `AstNode`; do not duplicate it or add a
-  public entry for its many working collections. The overload is currently private, so this is an
-  explicit internal-access tradeoff, not a mechanical package move. Test named/default/generic and
-  converting candidates, cancellation and cloned-argument isolation. Keep the small existing hook
-  if extraction makes the call contract harder to understand.
+- [x] **AST2 — Separate candidate-result copying from ordinary argument fitting.** Implementation
+  moves `probeCallCandidate` from `AstNode` to package-private `PartialCallResolver`, shared by
+  call and constructor queries. The existing callback overload of `collectMatchingMethods` becomes
+  package-private and final; the ordinary fitter, overload selection and its private no-observer
+  entry remain unchanged. No public API, mutable field or alternative fitting algorithm is added.
+  Cloning, child contexts, named-argument mappings, pending-formal preservation and immutable
+  results retain their existing behavior. Named/default/generic and converting candidates,
+  cancellation and cloned-argument isolation pass the [October 7 checkpoint](#ast2-candidate-result-ownership-2026-10-07).
 - [x] **AST3 — Consolidate anonymous capture projection in its existing helper.**
   `NewExpression.getCaptureOrigins()` now delegates map construction to package-private
   `AnonymousClassBindings.propertyOrigins(Component)`, passing the existing anonymous-class
@@ -2287,9 +2287,9 @@ Validation on 2026-09-29 passes **200 tests**, with zero failures, errors or ski
 - Root and lang `spotlessCheck` pass. Java/Kotlin main and test compilation pass. No new native
   editor run or playbook scenario change is claimed for these internal extractions.
 
-AST2 remains conditional on a simpler internal fitting contract; AST4 remains a lifecycle
-investigation. Neither is required to submit the bounded package/provenance changes, and neither
-is recorded as implemented. Independent extracted PRs must still run their own validation.
+At this checkpoint AST2 remained conditional on a simpler internal fitting contract; its later
+implementation is recorded in the October 7 AST2 checkpoint. AST4 remains a lifecycle investigation.
+Independent extracted PRs must still run their own validation.
 
 ## Composition audit follow-up
 
@@ -12223,7 +12223,8 @@ code was executed and no external credentials or network calls were part of that
   `ProposedLiteralToken`. Root `PartialQueries` is the narrow semantic bridge. Its package-private
   scope, argument and call/construction helpers stay beside compiler validation/parenting;
   moving them mechanically would expose internals or duplicate compiler rules. AST1/AST3/AST5
-  are complete; AST2/AST4 remain optional investigations, not prerequisites for the current API.
+  are complete; AST2/AST4 were still optional investigations at this review. The later October 7
+  AST2 checkpoint extracts candidate reporting without changing this package boundary.
 - Result collections are immutable, but compiler/AST/constant-pool values remain owned by their
   compilation attempt. Snapshot them into detached Kotlin values while owning the compiler
   worker. LSP indexes, edits and IDE policy stay in `lang`; collection immutability does not make
@@ -12775,3 +12776,37 @@ Validation:
 These are focused receipts, not a full playbook rerun. Deprecation awaits a real language contract;
 service/mixin-specific custom token categories remain optional design work. All colors continue
 to come from the IDE theme. The opt-in L77 application-color picker experiment remains separate.
+
+## AST2 candidate-result ownership (2026-10-07)
+
+`PartialCallResolver.probeCallCandidate` now owns incomplete-call argument cloning, speculative
+child contexts, immutable candidate construction, named source mappings and pending-formal
+preservation. Both method and constructor probes call this package-private helper. The existing
+callback overload of `AstNode.collectMatchingMethods` becomes package-private and final; its
+fitting algorithm and private ordinary-compilation entry are unchanged. The callback remains
+synchronous, after matching collections are updated, so conversion reporting retains its order.
+
+This is the natural boundary identified by AST2: partial-query result policy leaves the common
+AST base, while compiler argument fitting stays with its existing owner. The resolver remains in
+the root AST package because it uses protected argument collection and package-private fitting.
+No public API, mutable field, wrapper result, parenting access or duplicate inference is added.
+AST4 remains a separate, optional declaration-provenance lifecycle investigation.
+
+Validation covers **260 distinct tests**, zero final failures/errors/skips: 24 Java syntax,
+cursor-collection and embedding-compatibility tests; 228 existing adapter tests for incomplete
+calls/functions/constructors, completion/signatures, arguments, anonymous construction, array
+dimensions, partial analysis and cursor cancellation; and eight new candidate regressions.
+The new cases cover named generic/default slots, converting arguments, immutable results,
+captured-lambda clone isolation and aborted-attempt recovery for both methods and constructors.
+
+The initial forced combined run passed every existing test, but six new cases incorrectly
+required no function-call bindings anywhere in the fixture. Its completed `fn(second)` method
+body legitimately supplies one. The corrected assertion requires that exact ordinary binding
+outside the unfinished call while still rejecting speculative bindings. All eight new cases
+then pass a forced focused rerun. The original summary/failing XML and final XML are retained in
+`lang/lsp-server/build/reports/ast2-2026-10-07/`; this is combined evidence, not a second full run.
+Root and LSP-server `spotlessCheck` and `git diff --check` pass.
+
+No editor behavior or capability changes, so existing shared call/constructor scenarios remain
+applicable; no GUI suite was rerun for this internal extraction. Keep all three Java edits and
+`XdkCandidateProbeTest` together when extracting the change, and validate that PR independently.
