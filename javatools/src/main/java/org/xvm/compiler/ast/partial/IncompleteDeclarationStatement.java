@@ -27,13 +27,11 @@ import static org.xvm.asm.ErrorListener.in;
 public final class IncompleteDeclarationStatement extends Statement {
     public enum Kind { METHOD, PROPERTY }
 
-    public IncompleteDeclarationStatement(Kind kind, Token name, long start, long end,
-                                          List<IncompleteStatement> cursors) {
+    public IncompleteDeclarationStatement(Kind kind, Token name, long start, long end, List<IncompleteStatement> cursors) {
         this(kind, name, start, end, cursors, List.of());
     }
 
-    public IncompleteDeclarationStatement(Kind kind, Token name, long start, long end,
-                                          List<IncompleteStatement> cursors, List<Parameter> formals) {
+    public IncompleteDeclarationStatement(Kind kind, Token name, long start, long end, List<IncompleteStatement> cursors, List<Parameter> formals) {
         this.kind = kind;
         this.name = name;
         this.start = start;

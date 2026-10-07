@@ -143,7 +143,7 @@ class PartialSemanticModel
                     if (pendingArgumentName != null) {
                         return parameters.indexOfFirst { it.name == pendingArgumentName }.takeIf { it >= 0 }
                     }
-                    return slot.takeIf { arguments.none { it.label != null } && it in parameters.indices }
+                    return slot.takeIf { it -> arguments.none { it.label != null } && it in parameters.indices }
                 }
 
                 /** Expected type for this candidate, not an assertion that the overload is selected. */

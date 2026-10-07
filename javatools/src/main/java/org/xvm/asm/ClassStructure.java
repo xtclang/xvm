@@ -16,7 +16,6 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-import org.jetbrains.annotations.Nullable;
 import org.xvm.asm.ast.BinaryAST;
 import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.ExprAST;
@@ -206,10 +205,12 @@ public class ClassStructure
     public Annotation[] collectAnnotations(boolean fIntoClass) {
         Annotation[] annos = fIntoClass ? m_aAnnoClass : m_aAnnoMixin;
         if (annos == null) {
-            List<Annotation> listAnnos = getListAnnos(fIntoClass);
-            annos = listAnnos == null
-                    ? Annotation.NO_ANNOTATIONS
-                    : listAnnos.toArray(Annotation.NO_ANNOTATIONS);
+            annos = getContributionsAsList().stream()
+                    .filter(contrib -> contrib.getComposition() == Composition.Annotation)
+                    .map(Contribution::getAnnotation)
+                    .filter(anno -> fIntoClass ==
+                            anno.getAnnotationType().getExplicitClassInto().isIntoClassType())
+                    .toArray(Annotation[]::new);
             if (fIntoClass) {
                 m_aAnnoClass = annos;
             } else {
@@ -217,24 +218,6 @@ public class ClassStructure
             }
         }
         return isReadOnly() ? annos.clone() : annos;
-    }
-
-    private @Nullable List<Annotation> getListAnnos(boolean fIntoClass) {
-        List<Annotation> listAnnos = null;
-
-        for (Contribution contrib : getContributionsAsList()) {
-            if (contrib.getComposition() == Composition.Annotation) {
-                Annotation anno = contrib.getAnnotation();
-
-                if (fIntoClass == anno.getAnnotationType().getExplicitClassInto().isIntoClassType()) {
-                    if (listAnnos == null) {
-                        listAnnos = new ArrayList<>();
-                    }
-                    listAnnos.add(anno);
-                }
-            }
-        }
-        return listAnnos;
     }
 
     /**

@@ -229,11 +229,9 @@ class WorkspaceIndexer(
     ): List<IndexedSymbol> =
         synchronized(parseLock) {
             val tree = parser.parse(content)
-            try {
+            tree.use { tree ->
                 val symbols = queryEngine.findAllDeclarations(tree, uri)
                 flattenSymbols(symbols, uri, null)
-            } finally {
-                tree.close()
             }
         }
 

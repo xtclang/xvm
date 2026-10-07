@@ -37,19 +37,16 @@ import static org.xvm.asm.ErrorListener.in;
  * succeeded (isValidated and a fitting TypeFit), never a failed child's placeholder type.
  */
 public final class IncompleteStatement extends Statement {
-    public IncompleteStatement(Expression target, Token operator, List<Expression> arguments,
-                               List<Token> separators, long endPosition) {
+    public IncompleteStatement(Expression target, Token operator, List<Expression> arguments, List<Token> separators, long endPosition) {
         this(target, operator, arguments, separators, endPosition, Parser.UNEXPECTED_EOF);
     }
 
-    public IncompleteStatement(Expression target, Token operator, List<Expression> arguments,
-                               List<Token> separators, long endPosition, String diagnosticCode) {
+    public IncompleteStatement(Expression target, Token operator, List<Expression> arguments, List<Token> separators, long endPosition, String diagnosticCode) {
         this(target, operator, arguments, separators, endPosition, diagnosticCode, null);
     }
 
     /** A written member token selected at its end by an explicit cursor probe. */
-    public IncompleteStatement(Expression receiver, Token dot, Token memberName,
-                               long cursor, String diagnosticCode) {
+    public IncompleteStatement(Expression receiver, Token dot, Token memberName, long cursor, String diagnosticCode) {
         this(receiver, dot, List.of(), List.of(), cursor, diagnosticCode, memberName);
     }
 
@@ -65,14 +62,14 @@ public final class IncompleteStatement extends Statement {
     }
 
     /** A missing declaration name after a complete written type; never fabricate a name token. */
+    @SuppressWarnings("unused")
     public static IncompleteStatement forDeclarationName(NamedTypeExpression type, long cursor) {
         return forDeclarationName(type, type.getNameToken(), cursor);
     }
 
     /** Retain a complete wrapped or compound type and its last written token, without a new name. */
     public static IncompleteStatement forDeclarationName(TypeExpression type, Token last, long cursor) {
-        return new IncompleteStatement(type, last, List.of(), List.of(), cursor,
-                Parser.INCOMPLETE_EXPRESSION, null);
+        return new IncompleteStatement(type, last, List.of(), List.of(), cursor, Parser.INCOMPLETE_EXPRESSION, null);
     }
 
     /** Complete written type at an empty declaration-name slot; syntax only, never a binding. */
@@ -223,6 +220,7 @@ public final class IncompleteStatement extends Statement {
     }
 
     /** Forward the enclosing expression's required type without storing it on the syntax node. */
+    @SuppressWarnings("UnusedReturnValue")
     Statement validate(Context ctx, TypeConstant required, ErrorListener errs) {
         return validate(ctx, errs, () -> inspect(ctx, required, errs));
     }
@@ -249,8 +247,8 @@ public final class IncompleteStatement extends Statement {
         return syntax + " <incomplete>";
     }
 
-    private Expression       target;
-    private List<Expression> arguments;
+    private final Expression       target;
+    private final List<Expression> arguments;
 
     private final Token       operator;
     private final List<Token> separators;

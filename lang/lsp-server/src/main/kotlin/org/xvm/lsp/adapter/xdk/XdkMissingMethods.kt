@@ -104,10 +104,7 @@ internal object XdkMissingMethods {
             edit: XdkRename.Edit,
         ): Boolean {
             val source = callee.sourceName ?: return false
-            val original = plan.original[source] ?: return false
-            val changed = plan.proposed[source] ?: return false
-            val offset = XdkRename.offset(original, callee.range.start)?.let { plan.map(source, it) } ?: return false
-            val at = XdkRename.position(changed, offset)
+            val at = plan.mapPosition(source, callee.range.start) ?: return false
             val model = after.models.singleOrNull { it.sourceName == source } ?: return false
             val symbol = model.symbolAt(at.line, at.column) ?: return false
             val declaration = symbol.declaration ?: return false
@@ -144,18 +141,19 @@ internal object XdkMissingMethods {
                     old: ProofIdentity,
                     new: ProofIdentity,
                 ): Boolean =
-                    when {
-                        old in binders -> {
+                    when (old) {
+                        in binders -> {
                             binders[old] == new
                         }
 
-                        old is ProofIdentity.TypeShape && new is ProofIdentity.TypeShape -> {
+                        is ProofIdentity.TypeShape if new is ProofIdentity.TypeShape -> {
                             old.format == new.format && old.components.size == new.components.size &&
                                 old.components.zip(new.components).all { (first, second) -> sameType(first, second) }
                         }
 
-                        old is ProofIdentity.Alternatives && new is ProofIdentity.Alternatives -> {
-                            old.targets.size == new.targets.size && old.targets.all { first -> new.targets.any { sameType(first, it) } }
+                        is ProofIdentity.Alternatives if new is ProofIdentity.Alternatives -> {
+                            old.targets.size == new.targets.size &&
+                                old.targets.all { first -> new.targets.any { sameType(first, it) } }
                         }
 
                         else -> {
@@ -172,9 +170,7 @@ internal object XdkMissingMethods {
 
             fun mapped(location: SemanticModel.SourceLocation): SemanticModel.Position? {
                 if (location.sourceName != source) return null
-                val originalAt = XdkRename.offset(original, location.range.start) ?: return null
-                val changedAt = plan.map(source, originalAt) ?: return null
-                return XdkRename.position(changed, changedAt).let { SemanticModel.Position(it.line, it.column) }
+                return plan.mapPosition(source, location.range.start)
             }
             return arguments.all { argument ->
                 val use = mapped(argument.use) ?: return@all false

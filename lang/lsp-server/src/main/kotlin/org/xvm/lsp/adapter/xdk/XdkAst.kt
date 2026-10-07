@@ -168,7 +168,7 @@ internal object XdkAst {
     ): Boolean {
         val startLine = lineOf(startPosition)
         val endLine = lineOf(endPosition)
-        if (line < startLine || line > endLine) {
+        if (line !in startLine..endLine) {
             return false
         }
         if (line == startLine && column < columnOf(startPosition)) {

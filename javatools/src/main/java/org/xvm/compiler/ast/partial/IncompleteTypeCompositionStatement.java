@@ -28,13 +28,12 @@ import static org.xvm.asm.ErrorListener.in;
  * Only the selected header type participates in partial analysis, in the enclosing scope.
  */
 public final class IncompleteTypeCompositionStatement extends TypeCompositionStatement {
-    public IncompleteTypeCompositionStatement(Source source, Token category, Token name,
-            long start, long end, List<IncompleteStatement> cursors) {
+
+    public IncompleteTypeCompositionStatement(Source source, Token category, Token name, long start, long end, List<IncompleteStatement> cursors) {
         this(source, category, name, null, null, start, end, cursors, List.of());
     }
 
-    public IncompleteTypeCompositionStatement(Source source, Token category, Token name, List<Token> qualified,
-            StatementBlock body, long start, long end, List<IncompleteStatement> cursors, List<Parameter> formals) {
+    public IncompleteTypeCompositionStatement(Source source, Token category, Token name, List<Token> qualified, StatementBlock body, long start, long end, List<IncompleteStatement> cursors, List<Parameter> formals) {
         super(source, category, name, start, end);
         this.cursors = List.copyOf(cursors);
         this.formals = List.copyOf(formals);
@@ -42,8 +41,7 @@ public final class IncompleteTypeCompositionStatement extends TypeCompositionSta
         this.body = body;
     }
 
-    public IncompleteTypeCompositionStatement(Source source, Token category, Token name, StatementBlock body,
-            long start, long end, List<IncompleteStatement> cursors) {
+    public IncompleteTypeCompositionStatement(Source source, Token category, Token name, StatementBlock body, long start, long end, List<IncompleteStatement> cursors) {
         this(source, category, name, start, end, cursors);
         this.body = body;
     }

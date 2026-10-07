@@ -1,9 +1,7 @@
 package org.xvm.lsp.adapter.xdk
 
 import org.xvm.asm.ErrorList
-import org.xvm.compiler.CompilerException
 import org.xvm.compiler.Lexer
-import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AssignmentStatement
@@ -40,17 +38,9 @@ internal object XdkLocalExtraction {
         text: String,
         selection: Range,
     ): Candidate? {
-        val start = XdkRename.offset(text, SemanticModel.Position(selection.start.line, selection.start.column)) ?: return null
-        val end = XdkRename.offset(text, SemanticModel.Position(selection.end.line, selection.end.column)) ?: return null
-        if (start >= end) return null
+        val (start, end) = XdkRefactoringSyntax.selectionOffsets(text, selection) ?: return null
         val errors = ErrorList()
-        val root =
-            try {
-                ExecutionTrace.api("Parser.parseSource(extract-local)") { Parser(Source(text), errors).parseSource() }
-            } catch (_: CompilerException) {
-                return null
-            }
-        if (errors.hasSeriousErrors()) return null
+        val root = XdkRefactoringSyntax.parse(text, errors, "extract-local") ?: return null
 
         fun offset(position: Long): Int? =
             XdkRename.offset(text, SemanticModel.Position(Source.calculateLine(position), Source.calculateOffset(position)))
@@ -103,10 +93,8 @@ internal object XdkLocalExtraction {
                 selected.type ?: return null
             }
         val insertion = offset(selected.statement.startPosition) ?: return null
-        val lineStart = maxOf(text.lastIndexOf('\n', insertion - 1), text.lastIndexOf('\r', insertion - 1)) + 1
-        val indent = text.substring(lineStart, insertion)
         // Do not rewrite same-line siblings, labels, comments or expression-bodied declarations.
-        if (indent.any { it != ' ' && it != '\t' }) return null
+        val indent = XdkRefactoringSyntax.indentBefore(text, insertion) ?: return null
         val names =
             ExecutionTrace.api("Lexer.lex(extract-local)") {
                 Lexer(Source(text), errors)
@@ -137,8 +125,7 @@ internal object XdkLocalExtraction {
             method
                 .childNodes()
                 .filterIsInstance<Parameter>()
-                .filter { it.type != null && it.endPosition <= name.startPosition }
-                .singleOrNull() ?: return null
+                .singleOrNull { it.type != null && it.endPosition <= name.startPosition } ?: return null
 
         fun offset(position: Long) =
             XdkRename.offset(

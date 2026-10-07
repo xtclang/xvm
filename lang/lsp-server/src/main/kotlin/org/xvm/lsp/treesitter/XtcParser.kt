@@ -44,7 +44,7 @@ class XtcParser
         constructor() : this(loadXtcLanguage(), logInit = true)
 
         /**
-         * Create a parser using a pre-loaded language. Used by [org.xvm.lsp.index.WorkspaceIndexer] to
+         * Create a parser using a preloaded language. Used by [org.xvm.lsp.index.WorkspaceIndexer] to
          * create a dedicated parser instance without reloading the native library.
          */
         constructor(language: Language) : this(language, logInit = false)

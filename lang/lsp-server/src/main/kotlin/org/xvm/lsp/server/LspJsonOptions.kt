@@ -7,7 +7,7 @@ import com.google.gson.JsonObject
 /**
  * Reads typed values out of LSP4J `initializationOptions` / `workspace/configuration` payloads,
  * which arrive as either `Map<*, *>` or Gson `JsonObject` / `JsonElement` depending on how the
- * client serialises them. Returns `null` when a key is absent, mistyped, or can't be coerced --
+ * client serializes them. Returns `null` when a key is absent, mistyped, or can't be coerced --
  * callers supply their own defaults.
  */
 internal object LspJsonOptions {

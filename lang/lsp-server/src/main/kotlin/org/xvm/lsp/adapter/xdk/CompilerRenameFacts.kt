@@ -259,15 +259,15 @@ internal fun captureRenameFacts(
                             packageParent is ProofIdentity.Directory
                     ) -> {
                     val directory =
-                        when (val parent = packageParent) {
+                        when (packageParent) {
                             is ProofIdentity.Source -> {
-                                parent.location.sourceName?.let(::File)?.let {
+                                packageParent.location.sourceName?.let(::File)?.let {
                                     File(it.parentFile, it.nameWithoutExtension)
                                 }
                             }
 
                             is ProofIdentity.Directory -> {
-                                File(parent.path)
+                                File(packageParent.path)
                             }
                         }
                     directory?.let { ProofIdentity.Directory(File(it, constant.name).path) }
@@ -279,7 +279,7 @@ internal fun captureRenameFacts(
                     (constant.component as? MethodStructure)?.let {
                         it.isSynthetic && it.isShorthandConstructor
                     } == true -> {
-                    ProofIdentity.PrimaryConstructor(identity(requireNotNull(host)))
+                    ProofIdentity.PrimaryConstructor(identity(host))
                 }
 
                 constant is MethodConstant &&
@@ -305,7 +305,7 @@ internal fun captureRenameFacts(
                     ) {
                         ProofIdentity.Unproven()
                     } else {
-                        route.proof(identity(requireNotNull(host)), ::identity)
+                        route.proof(identity(host), ::identity)
                     }
                 }
 

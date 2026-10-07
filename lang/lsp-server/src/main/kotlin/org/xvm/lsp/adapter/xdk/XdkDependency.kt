@@ -126,7 +126,7 @@ internal data class DependencyDeclaration(
 internal class XdkDependencies(
     dependencies: List<XdkDependency>,
 ) {
-    val modules = immutableMap(dependencies.associateBy { it.module })
+    val modules: Map<String, XdkDependency> = immutableMap(dependencies.associateBy { it.module })
 
     init {
         require(modules.size == dependencies.size) { "Duplicate dependency module" }
