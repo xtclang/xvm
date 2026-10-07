@@ -626,7 +626,7 @@ class XdkRenameServerTest {
                             CodeActionContext(emptyList()),
                         ),
                     ).get(30, SECONDS)
-            val edit = actions.single().right.edit
+            val edit = actions.single { it.isRight && it.right.title == "Remove unused import 'StringBuffer'" }.right.edit
             assertThat(edit.changes).isNull()
             assertThat(
                 edit.documentChanges
