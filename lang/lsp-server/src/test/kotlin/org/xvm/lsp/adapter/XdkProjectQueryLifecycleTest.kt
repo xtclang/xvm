@@ -22,6 +22,7 @@ class XdkProjectQueryLifecycleTest {
 
     enum class Feature {
         REFERENCES,
+        CODE_LENSES,
         RENAME,
     }
 
@@ -128,6 +129,12 @@ class XdkProjectQueryLifecycleTest {
                             ).containsExactly(session.libraryUri)
                         }
 
+                        Feature.CODE_LENSES -> {
+                            val lenses = session.adapter.getCodeLenses(session.libraryUri)
+                            assertThat(lenses.filter { it.command?.command == "xtc.showReferences" })
+                                .allMatch { it.command!!.title == "0 references" }
+                        }
+
                         Feature.RENAME -> {
                             assertThat(
                                 session.adapter
@@ -153,8 +160,18 @@ class XdkProjectQueryLifecycleTest {
             session.release.countDown()
             val result = query.get(30, SECONDS)
             when (feature) {
-                Feature.REFERENCES -> assertThat(result as List<*>).isEmpty()
-                Feature.RENAME -> assertThat(result).isNull()
+                Feature.REFERENCES -> {
+                    assertThat(result as List<*>).isEmpty()
+                }
+
+                Feature.CODE_LENSES -> {
+                    assertThat((result as List<*>).filterIsInstance<CodeLens>().map { it.command?.command })
+                        .containsExactly("xtc.runModule")
+                }
+
+                Feature.RENAME -> {
+                    assertThat(result).isNull()
+                }
             }
             assertThat(session.adapter.getCachedResult(session.libraryUri)?.diagnostics).isEmpty()
         }
@@ -197,7 +214,7 @@ class XdkProjectQueryLifecycleTest {
             assertThat(quickFix.get(30, SECONDS)).allMatch {
                 it.kind == CodeAction.CodeActionKind.REFACTOR_REWRITE
             }
-            assertThat(background.get(30, SECONDS)).isEmpty()
+            assertThat(background.get(30, SECONDS).map { it.title }).containsExactly("Generate documentation comment")
         }
     }
 
@@ -259,6 +276,10 @@ class XdkProjectQueryLifecycleTest {
             when (feature) {
                 Feature.REFERENCES -> {
                     adapter.findReferencesAsync(libraryUri, 0, LIBRARY.indexOf("pick"), true)
+                }
+
+                Feature.CODE_LENSES -> {
+                    adapter.getCodeLensesAsync(libraryUri, true)
                 }
 
                 Feature.RENAME -> {
