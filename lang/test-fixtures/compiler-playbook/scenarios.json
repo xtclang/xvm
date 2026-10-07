@@ -862,9 +862,9 @@
       "values": {
         "file": "Navigation.x",
         "unsupportedCapabilities": [
-          "colorProvider",
           "inlineValueProvider"
         ],
+        "prototypeCapability": "colorProvider",
         "tabSize": 4,
         "supportedCapabilities": [
           "declarationProvider",
@@ -4364,6 +4364,7 @@
       "manual": [],
       "values": {
         "file": "Resolve.x",
+        "actionTitle": "Remove unused import 'StringBuffer'",
         "source": "module Resolve { import ecstasy.text.StringBuffer; }"
       },
       "intellij": {

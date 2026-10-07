@@ -213,6 +213,20 @@ internal fun ParityScenarios.moduleCases() {
     case("X31") { data ->
         val document = open(data.string("file"))
         val capabilities = protocol.capabilities().asJsonObject
+        val selection =
+            System
+                .getProperty("xtc.playbook.cases", "")
+                .split(',')
+                .map(String::trim)
+                .filter(String::isNotBlank)
+        val prototypeEnabled =
+            common.getAsJsonObject("colorPrototype").strings("cases").any {
+                selection.isEmpty() || it in selection
+            }
+        val prototypeCapability = data.string("prototypeCapability")
+        check((capabilities[prototypeCapability]?.takeUnless { it.isJsonNull }?.asBoolean == true) == prototypeEnabled) {
+            prototypeCapability
+        }
         data.strings("unsupportedCapabilities").forEach {
             check(
                 capabilities[it] == null ||

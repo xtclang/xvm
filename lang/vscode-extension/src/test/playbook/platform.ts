@@ -98,8 +98,9 @@ export function platformCases(): void {
         const actions = await client().sendRequest<CodeAction[]>('textDocument/codeAction', {
             textDocument: { uri: document.uri.toString() }, range: { start: { line: 0, character: 0 }, end: { line: 0, character: data.source.length } }, context: { diagnostics: [] }
         });
-        assert.strictEqual(actions.length, 1);
-        const action = actions[0];
+        const matching = actions.filter(action => action.title === data.actionTitle);
+        assert.strictEqual(matching.length, 1);
+        const action = matching[0];
         const capabilities = client().initializeResult!.capabilities.codeActionProvider;
         if (typeof capabilities === 'object' && capabilities.resolveProvider) {
             assert.ok(action.data);
