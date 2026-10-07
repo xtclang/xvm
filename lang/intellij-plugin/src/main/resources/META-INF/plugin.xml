@@ -70,6 +70,12 @@
                   fieldName="INSTANCE"
                   language="Ecstasy"
                   extensions="x"/>
+        <!-- Owning the file type bypasses TextMate's file-type registration. Reuse both its
+             grammar-backed lexer and its scope-aware editor token storage for Ecstasy. -->
+        <lang.syntaxHighlighterFactory language="Ecstasy"
+            implementationClass="org.jetbrains.plugins.textmate.language.syntax.highlighting.TextMateSyntaxHighlighterFactory"/>
+        <editorHighlighterProvider filetype="Ecstasy"
+            implementationClass="org.jetbrains.plugins.textmate.language.syntax.highlighting.TextMateEditorHighlighterProvider"/>
 
         <!-- Project Generator for New Project wizard (IntelliJ IDEA) -->
         <newProjectWizard.generator

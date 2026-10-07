@@ -30,6 +30,7 @@ import org.xvm.compiler.CursorBinding
 import org.xvm.compiler.InvocationBinding
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
+import org.xvm.compiler.ast.AnnotationExpression
 import org.xvm.compiler.ast.AssignmentStatement
 import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.ComponentStatement
@@ -714,6 +715,9 @@ private class SemanticModelBuilder(
                             it.target() ?: imported,
                             expressionType.takeIf { _ -> it.name() === node.nameToken },
                             node.source,
+                            annotation =
+                                node.parent is AnnotationExpression && it.name() === node.nameToken &&
+                                    (normalized(it.target()) as? ClassConstant)?.component?.format == Format.ANNOTATION,
                         )
                     }
                 }
@@ -1469,6 +1473,7 @@ private class SemanticModelBuilder(
         expressionType: TypeConstant?,
         source: Source?,
         usage: SemanticModel.Usage? = null,
+        annotation: Boolean = false,
     ) {
         if (token == null) return
         refer(
@@ -1477,6 +1482,7 @@ private class SemanticModelBuilder(
             target,
             expressionType,
             usage,
+            annotation,
         )
     }
 
@@ -1486,6 +1492,7 @@ private class SemanticModelBuilder(
         target: Argument?,
         expressionType: TypeConstant?,
         usage: SemanticModel.Usage? = null,
+        annotation: Boolean = false,
     ) {
         if (location in occurrences) return
         val symbol = symbol(target, name, kind(target))
@@ -1501,7 +1508,7 @@ private class SemanticModelBuilder(
                 else -> null
             }
         occurrences[location] =
-            Occurrence(location.range, name, Role.REFERENCE, symbol, type, access)
+            Occurrence(location.range, name, Role.REFERENCE, symbol, type, access, annotation)
     }
 
     private fun symbol(
@@ -1552,6 +1559,7 @@ private class SemanticModelBuilder(
                         else -> null
                     },
                 isFunction = component is MethodStructure && component.isFunction,
+                isDefaultLibrary = (target as? IdentityConstant)?.moduleConstant?.name?.let { it in XdkLibraries.moduleNames } == true,
             )
         return symbol
     }

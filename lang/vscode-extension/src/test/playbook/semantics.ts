@@ -1,6 +1,7 @@
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
 import { CallHierarchyIncomingCall, CallHierarchyItem, CallHierarchyOutgoingCall, SemanticTokens, SemanticTokensOptions } from 'vscode-languageclient/node';
+import { WorkbenchUi } from '../workbenchUi';
 import { scenarioRegex } from './shared';
 import { client, fixture, noErrors, playbook, position, symbols, targetNames, targets } from './support';
 
@@ -210,6 +211,10 @@ function semanticAccessCases(ids: readonly ('X41' | 'X154')[]): void {
             assert.ok(highlights?.some(item => item.range.contains(write) && item.kind === vscode.DocumentHighlightKind.Write));
             const read = position(document, data.anchor, data.offset);
             assert.ok(highlights?.some(item => item.range.contains(read) && item.kind === vscode.DocumentHighlightKind.Read));
+            if (id === 'X154') {
+                const ui = await WorkbenchUi.connect();
+                try { await ui.screenshot(`${id}-current-theme`); } finally { await ui.close(); }
+            }
         });
 
     }

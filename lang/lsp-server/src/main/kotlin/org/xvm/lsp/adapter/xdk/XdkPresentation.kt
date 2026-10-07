@@ -72,22 +72,26 @@ internal object XdkPresentation {
                             }
 
                             SymbolKind.TYPE -> {
-                                when (symbol.typeCategory) {
-                                    TypeCategory.CLASS,
-                                    TypeCategory.SERVICE,
-                                    -> "class"
+                                if (occurrence.annotation) {
+                                    "decorator"
+                                } else {
+                                    when (symbol.typeCategory) {
+                                        TypeCategory.CLASS,
+                                        TypeCategory.SERVICE,
+                                        -> "class"
 
-                                    TypeCategory.INTERFACE,
-                                    TypeCategory.MIXIN,
-                                    -> "interface"
+                                        TypeCategory.INTERFACE,
+                                        TypeCategory.MIXIN,
+                                        -> "interface"
 
-                                    TypeCategory.CONST -> "struct"
+                                        TypeCategory.CONST -> "struct"
 
-                                    TypeCategory.ENUM -> "enum"
+                                        TypeCategory.ENUM -> "enum"
 
-                                    TypeCategory.ENUM_VALUE -> "enumMember"
+                                        TypeCategory.ENUM_VALUE -> "enumMember"
 
-                                    null -> "type"
+                                        null -> "type"
+                                    }
                                 }
                             }
 
@@ -114,6 +118,7 @@ internal object XdkPresentation {
                     val modifiers =
                         buildList {
                             if (occurrence.role == Role.DECLARATION) add("declaration")
+                            if (symbol.isDefaultLibrary) add("defaultLibrary")
                             addAll(symbol.modifiers.map { it.name.lowercase() })
                             if (occurrence.usage == Usage.WRITE || occurrence.usage == Usage.READ_WRITE) {
                                 add("modification")

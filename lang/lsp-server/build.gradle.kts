@@ -57,7 +57,7 @@ plugins {
 // Resolve via xdkProperties which reads from the composite root's gradle.properties
 // (project.findProperty() only sees the included build's own gradle.properties, which doesn't exist)
 val lspAdapter: String = xdkProperties.stringValue("lsp.adapter", "compiler")
-val lspSemanticTokens: String = xdkProperties.stringValue("lsp.semanticTokens", "false")
+val lspSemanticTokens: String = xdkProperties.stringValue("lsp.semanticTokens", "true")
 
 // Log level: -Plog=DEBUG or XTC_LOG_LEVEL=DEBUG (default: INFO)
 // xdkProperties checks: env LOG -> gradle prop -> system prop -> composite root gradle.properties

@@ -14,16 +14,13 @@ class XdkLexicalTest {
         val lines =
             listOf("/** A document.", " * Another line. */", "/* Ordinary block. */", "// Ordinary line.", "\"/** Not a comment. */\"")
         val tokens = XdkLexical.tokens(lines.joinToString(newline))
-        assertThat(tokens).hasSize(lines.size)
+        assertThat(tokens).hasSize(2)
         assertThat(tokens.map { SemanticTokenLegend.tokenTypes[it[3]] })
-            .containsExactly("comment", "comment", "comment", "comment", "string")
+            .containsExactly("comment", "comment")
         assertThat(tokens.map { it[4] })
             .containsExactly(
                 SemanticTokenLegend.modifierBitmask("documentation"),
                 SemanticTokenLegend.modifierBitmask("documentation"),
-                0,
-                0,
-                0,
             )
     }
 
@@ -31,15 +28,14 @@ class XdkLexicalTest {
     @ValueSource(strings = ["\n", "\r\n", "\r"])
     @Timeout(10)
     fun `large lexical projections preserve UTF-16 spans without rescanning per token`(newline: String) {
-        val lines = (0 until 2000).map { "String text$it = \"😀\"; // line $it" }
+        val lines = (0 until 2000).map { "String text$it = \"😀\"; /** line $it */" }
         val source = lines.joinToString(newline, postfix = newline)
         assertThat(XdkLexical.mayUseResources(source)).isFalse()
         val tokens = XdkLexical.tokens(source)
-        assertThat(tokens).hasSize(lines.size * 2)
+        assertThat(tokens).hasSize(lines.size)
         lines.forEachIndexed { line, text ->
-            assertThat(tokens[line * 2].take(3)).containsExactly(line, text.indexOf('"'), 4)
-            assertThat(tokens[line * 2 + 1].take(3))
-                .containsExactly(line, text.indexOf("//"), text.length - text.indexOf("//"))
+            assertThat(tokens[line].take(3))
+                .containsExactly(line, text.indexOf("/**"), text.length - text.indexOf("/**"))
         }
     }
 }

@@ -17,9 +17,11 @@ IntelliJ IDEA plugin for Ecstasy language support.
 
 - **New Project Wizard** - Create XTC projects directly from IntelliJ (File → New → Project → XTC)
 - **Run Configurations** - Run XTC applications via Gradle or `xtc run`
-- **Syntax Highlighting** - Full syntax highlighting for `.x` files (via TextMate grammar)
+- **Syntax Highlighting** - TextMate grammar for `.x` files, explicitly connected to Ecstasy’s
+  native file type through TextMate’s syntax factory and editor highlighter.
 - **Semantic Highlighting** - Enabled by default; compiler-resolved types, functions, enum members
-  and other symbols refine the editor's theme colors. See the
+  annotations and bundled-library identities refine the editor's theme colors. String escapes,
+  interpolation, keywords and numeric literals retain their lexical scopes. See the
   [highlighting playbook](../doc/manual-test-plan.md#19-semantic-tokens) for examples and opt-out settings.
 - **Language Features via LSP** - hover, completion, go-to-definition, find references, outline,
   auto-indent on type (see [LSP Server README](../lsp-server/README.md) for details)
@@ -867,3 +869,11 @@ The current UI acceptance includes all ten selected import/library/runtime/suppo
 IDE errors and complete-process persistence for compiler and Tree-sitter. See the
 [UI completion receipt](../../docs/errs-integration-plan.md#ui1ui7-completion-batch-2026-10-06)
 for the full catalog's combined coverage and remaining native host limitations.
+
+### Experimental color-value picker
+
+The opt-in L77 prototype recognizes literal `ColorPrototype.Rgba` constructors from the shared
+fixture. It supplies native color swatches and picker edits separately from normal semantic
+highlighting. It is disabled for ordinary launches and does not introduce a public XDK color API.
+Shared X273–X275 exercise picker edits, dismissal, native Undo/Redo and diagnostic recovery.
+See the [prototype recipe and acceptance](../doc/manual-test-plan.md#l77-color-value-prototype).
