@@ -1975,7 +1975,18 @@ class XdkAdapter
                     it.codeActions(uri, range)
                 }
             } else {
-                CompletableFuture.completedFuture(emptyList())
+                CompletableFuture.completedFuture(
+                    if (isLibraryDocument(uri)) {
+                        emptyList()
+                    } else {
+                        analysis(uri)
+                            ?.let { analysis ->
+                                val model = analysis.semantics
+                                val text = currentText(uri)
+                                if (model == null || text == null) emptyList() else XdkDocumentation.actions(uri, text, range, model)
+                            }.orEmpty()
+                    },
+                )
             }
 
         override fun rename(

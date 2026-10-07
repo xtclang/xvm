@@ -621,6 +621,7 @@ private class SemanticModelBuilder(
                 val method = bindings[node]?.method() ?: node.resolvedMethod
                 if (callee is NameExpression && method != null) callees[callee] = method
             }
+            recordHeaderStart(node)
         }
         nodes.forEach { node ->
             when (node) {
@@ -1446,6 +1447,22 @@ private class SemanticModelBuilder(
                 )
             }
         }
+
+    private fun recordHeaderStart(node: AstNode) {
+        val declaration =
+            when (node) {
+                is TypeCompositionStatement -> node.takeUnless { it.parent is NewExpression }
+                is MethodDeclarationStatement -> node
+                is PropertyDeclarationStatement -> node
+                is TypedefStatement -> node
+                else -> null
+            } ?: return
+        val target = declaration.component?.takeUnless { it.isSynthetic }?.identityConstant ?: return
+        val id = constants[target] ?: return
+        val symbol = symbols[id] ?: return
+        val start = location(declaration.source, declaration.startPosition, declaration.startPosition).range.start
+        symbols[id] = symbol.copy(headerStart = start)
+    }
 
     private fun declare(
         token: Token?,
