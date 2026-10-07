@@ -156,6 +156,10 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
                         if (item.section === 'xtc.compiler') {
                             return compilerConfiguration();
                         }
+                        if (item.section === 'xtc.codeLens') {
+                            const resource = item.scopeUri ? vscode.Uri.parse(item.scopeUri) : undefined;
+                            return { references: vscode.workspace.getConfiguration('xtc.codeLens', resource).get('references', true) };
+                        }
                         if (item.section === 'xtc.formatting') {
                             try { lastFormatting = formattingSettings(); }
                             catch (error) { outputChannel.warn(`Retaining previous Ecstasy formatting settings: ${error}`); }

@@ -482,7 +482,9 @@ VS Code receipts above.
   selected-run receipt in both editors. The [closure table](#l63-bounded-closure-and-acceptance-2026-10-04)
   distinguishes supported forms from deliberate refusals. Arbitrary control-flow extraction,
   parameter-substituting inline and externally visible safe deletion are not claimed.
-  Doc-comment generation and reference/test lenses remain separate subfeatures. Semantic
+  Doc-comment generation and reference lenses are implemented in the
+  [October 7 follow-up](#documentation-actions-and-reference-codelens-2026-10-07), with native acceptance recorded.
+  Test lenses remain part of the deferred execution work. Semantic
   transformations require compiler evidence and versioned multi-file edit validation.
 - [x] **L64 — Completion/signature breadth and presentation, bounded closure.** Supported recursive
   bounds, fitted scalar/collection/lambda values, enclosing instances, declaration names,
@@ -12890,16 +12892,37 @@ Agreed non-runtime continuation, with separate implementation commits and one co
 - [x] Implement compiler-backed documentation skeletons at written declaration headers. Copy header
   starts into detached Kotlin symbols, preserve annotations/indentation/line endings, use resolved
   method parameter/return slots, retain existing comments, and publish versioned edits. Shared X278
-  covers native action application and Undo/Redo in both clients. Validation pending the batch.
+  covers native action application and Undo/Redo in both clients. Both selected runs pass.
 - [x] Implement reference counts and navigation using the existing complete configured-graph index.
   Exclude declaration occurrences and generated/local symbols; omit counts when graph closure is
   unavailable. Reuse native reference presentation in both clients, lazy-resolution revision guards,
   and a separate live preference so Run lenses remain independently available. Shared X279 checks
-  counts across closed consumers, native navigation, edits and the live toggle. Validation pending.
-- [ ] Run focused backend/protocol/settings tests, both selected editor drivers and formatting;
+  counts across closed consumers, native navigation, edits and the live toggle. Both selected runs pass.
+- [x] Run focused backend/protocol/settings tests, both selected editor drivers and formatting;
   update this receipt and the per-adapter/manual feature inventories with actual results.
 
 These are two medium-sized feature slices across the existing adapter and client integrations.
 The chosen design extends detached facts and existing commands; a Java AST cache or independent
 reference search would duplicate ownership. A syntax-only documentation action would lose the
 compiler's signature distinctions. No runtime service or upstream dependency change is required.
+
+Selected acceptance: VS Code `run-coeJEN` passes X131/X278. X279 exposed a missing
+`xtc.codeLens` branch in the configuration middleware: `{}` made the server retain the default
+instead of seeing the live preference. The bounded 30-second wait failed correctly. After
+forwarding the scoped setting, `run-ubCdfK` passes X279 in 3.3 seconds, including the actual rendered
+lens click, native reference peek, consumer edit, disable and re-enable. IntelliJ
+`run-6731819376946689872` passes START/X131/X278/X279 with zero IDE errors; X279 takes 4.4 seconds
+through native Code Vision, the Show Usages chooser and the real settings controls. No full-catalog
+rerun is claimed for this batch.
+
+The backend lifecycle tests now include reference lenses for source edits, close, configuration,
+repository replacement, explicit cancellation, disk changes without watcher delivery and
+superseding requests. Stale reference counts are omitted while the independent Run lens remains.
+Existing import/member tests select their intended action now that documentation is also offered
+at written headers. The new catalog IDs are validated in both drivers in the same order.
+
+Final headless gate: 112 compiler/protocol/regression tests and 10 IntelliJ settings/manifest tests
+pass, with zero failures, errors or skips in JUnit XML. IntelliJ integration-test compilation and
+VS Code assembly pass. Root and lang `spotlessCheck` and `git diff --check` pass. This includes the
+new documentation/reference tests, existing member/import refactoring tests, lazy/eager resolution,
+versioned edits, scoped preferences and the extended cancellation/lifetime matrix.
