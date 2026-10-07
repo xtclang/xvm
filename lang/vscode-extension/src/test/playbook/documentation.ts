@@ -10,7 +10,7 @@ export function documentationCases(): void {
         await discovered(workspace, async () => {
             const document = await workspace.open(data.file);
             await noErrors(document.uri);
-            const actions = () => vscode.commands.executeCommand<vscode.CodeAction[]>(
+            const actions = async () => vscode.commands.executeCommand<vscode.CodeAction[]>(
                 'vscode.executeCodeActionProvider', document.uri,
                 new vscode.Range(position(document, data.anchor), position(document, data.anchor)),
                 vscode.CodeActionKind.Source.value, 100);

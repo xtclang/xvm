@@ -104,7 +104,7 @@ class XdkResolveProtocolTest {
                             CodeActionContext(emptyList()),
                         ),
                     ).get(30, SECONDS)
-                    .single()
+                    .single { it.right.title == "Remove unused import 'StringBuffer'" }
                     .right
             assertThat(action.edit).isNull()
             assertThat(action.data).isNotNull()
@@ -147,7 +147,7 @@ class XdkResolveProtocolTest {
                             CodeActionContext(emptyList()),
                         ),
                     ).get(30, SECONDS)
-                    .single()
+                    .single { it.right.title == "Remove unused import 'StringBuffer'" }
                     .right
             assertThat(action.edit).isNotNull()
             assertThat(action.data).isNull()
