@@ -106,7 +106,7 @@ import kotlin.time.measureTimedValue
  * Select backend at build time: `./gradlew :lang:lsp-server:build -Plsp.adapter=treesitter`
  *
  * @see org.xvm.lsp.adapter.Adapter
- * @see org.xvm.lsp.adapter.TreeSitterAdapter
+ * @see org.xvm.lsp.adapter.treesitter.TreeSitterAdapter
  */
 @Suppress("LoggingSimilarMessage")
 class XtcLanguageServer(
@@ -124,7 +124,7 @@ class XtcLanguageServer(
     internal val clientTrace = ClientTrace { client }
     internal val partialResults = PartialResults(client = { client })
 
-    override fun setTrace(params: SetTraceParams) = clientTrace.configure(params.value)
+    override fun setTrace(params: SetTraceParams): Unit = clientTrace.configure(params.value)
 
     private data class EditCapabilities(
         val versioned: Boolean = false,
@@ -185,7 +185,7 @@ class XtcLanguageServer(
         }
     }
 
-    override fun cancelProgress(params: WorkDoneProgressCancelParams) = progress.cancel(params.token)
+    override fun cancelProgress(params: WorkDoneProgressCancelParams): Unit = progress.cancel(params.token)
 
     internal val supportsVersionedEdits: Boolean
         get() = editCapabilities.get().versioned
@@ -358,7 +358,7 @@ class XtcLanguageServer(
     val editorFormattingConfig: FormattingConfig?
         get() = formattingState.config
 
-    fun refreshPresentation() = refresh.request(ClientRefresh.Feature.INLAYS, ClientRefresh.Feature.LENSES)
+    fun refreshPresentation(): Unit = refresh.request(ClientRefresh.Feature.INLAYS, ClientRefresh.Feature.LENSES)
 
     /** Read the document's setting without retaining a second mutable configuration cache. */
     internal fun referenceCodeLens(uri: String): CompletableFuture<Boolean> {
@@ -769,7 +769,7 @@ class XtcLanguageServer(
     /**
      * Request formatting configuration from the client via `workspace/configuration`.
      *
-     * Sends a request for section `"xtc.formatting"`. The client (e.g., [XtcLanguageClient] in
+     * Sends a request for section `"xtc.formatting"`. The client (e.g., `XtcLanguageClient` in
      * IntelliJ) responds with IntelliJ Code Style settings. The response is parsed into an
      * [FormattingConfig] and stored as [editorFormattingConfig].
      */
@@ -1148,10 +1148,8 @@ class XtcLanguageServer(
         progress.close()
         partialResults.close()
         editCapabilities.set(EditCapabilities())
-        try {
+        adapter.use {
             textDocumentService.close()
-        } finally {
-            adapter.close()
         }
     }
 
@@ -1268,6 +1266,7 @@ class XtcLanguageServer(
             ),
         )
 
+    @Suppress("unused") // JSON-RPC entry point invoked by both editor plugins through LSP4J.
     @JsonRequest("xtc/exportLogs")
     fun exportLogs(): CompletableFuture<Map<String, String>> =
         supplyAsync("xtc/exportLogs", "bounded server log archive") {
@@ -1385,7 +1384,7 @@ class XtcLanguageServer(
         )
     }
 
-    fun refreshForFile(uri: String) = textDocumentService.refreshForFile(uri)
+    fun refreshForFile(uri: String): Unit = textDocumentService.refreshForFile(uri)
 
     /** Host API; project discovery/configuration is separate from installing matching artifacts. */
     fun replaceCompilerDependencies(dependencies: List<XdkDependency>) {
