@@ -281,8 +281,9 @@ and the [broader separation inventory](#broader-ast-placement-inventory). P1–P
 and 395 LSP tests, with zero failures or skips, plus root/lang Spotless. AST5 adds shared read-only
 syntax queries in `partial` and passes another focused 258-test batch. AST1 and AST3 move scope
 collection and capture projection into their existing helpers; their combined 200-test batch and
-root/lang Spotless checks pass. AST2 and AST4 remain conditional follow-ups; moving every compiler
-fix into a tooling package would misrepresent its ownership.
+root/lang Spotless checks pass. AST2 subsequently moves candidate-result preparation into
+`PartialCallResolver`, with 260 distinct regression tests passing; AST4 remains conditional.
+Moving every compiler fix into a tooling package would misrepresent its ownership.
 
 **Process lifecycle:** Gene's orphan-server report exposed missing EOF cleanup and an IntelliJ
 startup/cancellation race. Both have isolated fixes and process regressions; see
@@ -1891,14 +1892,18 @@ zero skips; LSP compilation, Kotlin checks and root Spotless also pass.
 
 #### Broader AST placement inventory
 
-**Current boundary review, October 6:** `ast.partial` now contains seven files: the original four
+**Current boundary review, October 7:** `ast.partial` now contains seven files: the original four
 incomplete nodes, `IncompleteLocalDeclaration`, `PartialSyntax` and `ProposedLiteralToken`.
 These own incomplete syntax, source spans, traversal and proposal-only tokens. `PartialQueries`
 remains the narrow public semantic bridge in the root AST package; `CursorScope`,
 `PartialArgument`, `PartialCallResolver` and `PartialConstructionResolver` retain package-private
 access to compiler validation/parenting. Moving them mechanically would expose internals or
-duplicate type rules. AST1/AST3/AST5 are complete; AST2/AST4 remain optional, evidence-led
-simplifications, not missing LSP APIs. Complete-program provenance still belongs to the compiler's
+duplicate type rules. AST1/AST2/AST3/AST5 are complete. AST2 moves candidate-result preparation
+from `AstNode` into `PartialCallResolver`, sharing the unchanged fitter through a package-private
+final callback overload; 260 distinct regression tests pass in the
+[October 7 checkpoint](errs-integration-plan.md#ast2-candidate-result-ownership-2026-10-07). AST4
+remains an optional, evidence-led simplification, not a missing LSP API. Complete-program
+provenance still belongs to the compiler's
 attempt collector, and detached models, indexing, edits and IDE policy remain in Kotlin under
 `lang/lsp-server`. The [current compatibility contract](errs-integration-plan.md#compatibility-and-migration-contract)
 now lists the fourteen-component cursor result; older dated arity descriptions below are historical.
@@ -1911,9 +1916,9 @@ the placement decision covers the whole file while future PRs still separate unr
 | Files | Placement and further separation decision |
 | --- | --- |
 | `partial.IncompleteStatement`, `partial.IncompleteExpression`, `partial.IncompleteDeclarationStatement`, `partial.IncompleteTypeCompositionStatement` | Incomplete syntax, original ranges, child ownership, failure diagnostics and non-emission. Moved. Their own child fields are private; final header lists still clone by fresh construction. |
-| `PartialQueries`, `CursorScope`, `PartialArgument`, `PartialCallResolver`, `PartialConstructionResolver` | Stateless partial-query semantics in the ordinary package. Only the semantic boundary is public; helpers retain package access to validation, inference and type representation. AST1 moved scope collection here; AST2 remains conditional. AST5 extracted shared read-only syntax operations into `partial`. |
+| `PartialQueries`, `CursorScope`, `PartialArgument`, `PartialCallResolver`, `PartialConstructionResolver` | Stateless partial-query semantics in the ordinary package. Only the semantic boundary is public; helpers retain package access to validation, inference and type representation. AST1 moved scope collection here; AST2 moves candidate-result preparation into `PartialCallResolver`. AST5 extracted shared read-only syntax operations into `partial`. |
 | `LambdaBindings`, `AnonymousClassBindings` | Existing extracted provenance helpers for complete and incomplete programs, tied to register/capture allocation. Keep write access package-private. AST3 moved anonymous-property projection into its current owner; AST4 investigates a future common lifetime. |
-| `AstNode`, `Context`, `StageMgr`, `Statement`, `StatementBlock` | Traversal, validation bookkeeping, attempt-owned collectors and register allocation belong to ordinary compilation. AST1 removed cursor-specific scope collection from `Context`; candidate-result preparation remains conditional (AST2). Preserve real compiler phase hooks. |
+| `AstNode`, `Context`, `StageMgr`, `Statement`, `StatementBlock` | Traversal, validation bookkeeping, attempt-owned collectors and register allocation belong to ordinary compilation. AST1 removed cursor-specific scope collection from `Context`; AST2 removes candidate-result preparation from `AstNode`, retaining its ordinary fitter and synchronous package-private observer. Preserve real compiler phase hooks. |
 | `InvocationExpression`, `LambdaExpression`, `NewExpression` | Passive syntax/selected-method access and capture/call publication at the point the compiler establishes the facts. Required hooks remain; no additional query cache. Ordinary constructor preparation is shared by real validation and probes, not duplicated. |
 | `MethodDeclarationStatement`, `PropertyDeclarationStatement`, `TypeCompositionStatement` | Declaration tokens, parameter association, collector propagation and source-owned initializer/header staging. These changes require the actual declaration and stage; small passive getters remain appropriate. |
 | `Parameter`, `NameResolver`, `NamedTypeExpression` | Parameters and qualified source segments retain actual compiler bindings; `getNameBindings()` is also used by compiler-side visibility checks, not just Kotlin. External reconstruction would expose private resolver state or redo lookup. AST4 audits collector alternatives before changing lifetime. |
