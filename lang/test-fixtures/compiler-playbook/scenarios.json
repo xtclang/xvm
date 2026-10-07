@@ -8704,6 +8704,41 @@
         "limitations": []
       }
     },
+    "X278": {
+      "title": "generate compiler documentation with exact parameter names and native history",
+      "manual": [],
+      "values": {
+        "file": "Documentation.x",
+        "source": "module Documentation {\n    <T> T echo(\n            T input,\n            Int count = 1) = input;\n}\n",
+        "expected": "module Documentation {\n    /**\n     * TODO: add description.\n     * @param T TODO\n     * @param input TODO\n     * @param count TODO\n     * @return TODO\n     */\n    <T> T echo(\n            T input,\n            Int count = 1) = input;\n}\n",
+        "anchor": "echo",
+        "title": "Generate documentation comment"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
+    "X279": {
+      "title": "reference lenses count closed consumers, navigate natively and toggle live",
+      "manual": [],
+      "values": {
+        "file": "LensLibrary.x",
+        "module": "LensLibrary",
+        "source": "module LensLibrary {\n    Int read(Int value) = value;\n    String read(String value) = value;\n    Int unused() = 0;\n    void run() { assert read(1) == 1; }\n}\n",
+        "consumerFile": "LensConsumer.x",
+        "consumerModule": "LensConsumer",
+        "consumer": "module LensConsumer {\n    package lib import LensLibrary;\n    Int result() = lib.read(2);\n}\n",
+        "changedConsumer": "module LensConsumer {\n    package lib import LensLibrary;\n    Int result() = lib.read(2) + lib.read(3);\n}\n",
+        "anchor": "read(Int",
+        "initialTitle": "2 references",
+        "changedTitle": "3 references"
+      },
+      "intellij": {
+        "coverage": "full",
+        "limitations": []
+      }
+    },
     "CFG1": {
       "title": "removing and restoring source settings replaces the graph",
       "manual": [],
@@ -8749,41 +8784,6 @@
       "title": "unchanged source settings preserve current semantics",
       "manual": [],
       "values": {},
-      "intellij": {
-        "coverage": "full",
-        "limitations": []
-      }
-    },
-    "X278": {
-      "title": "generate compiler documentation with exact parameter names and native history",
-      "manual": [],
-      "values": {
-        "file": "Documentation.x",
-        "source": "module Documentation {\n    <T> T echo(\n            T input,\n            Int count = 1) = input;\n}\n",
-        "expected": "module Documentation {\n    /**\n     * TODO: add description.\n     * @param T TODO\n     * @param input TODO\n     * @param count TODO\n     * @return TODO\n     */\n    <T> T echo(\n            T input,\n            Int count = 1) = input;\n}\n",
-        "anchor": "echo",
-        "title": "Generate documentation comment"
-      },
-      "intellij": {
-        "coverage": "full",
-        "limitations": []
-      }
-    },
-    "X279": {
-      "title": "reference lenses count closed consumers, navigate natively and toggle live",
-      "manual": [],
-      "values": {
-        "file": "LensLibrary.x",
-        "module": "LensLibrary",
-        "source": "module LensLibrary {\n    Int read(Int value) = value;\n    String read(String value) = value;\n    Int unused() = 0;\n    void run() { assert read(1) == 1; }\n}\n",
-        "consumerFile": "LensConsumer.x",
-        "consumerModule": "LensConsumer",
-        "consumer": "module LensConsumer {\n    package lib import LensLibrary;\n    Int result() = lib.read(2);\n}\n",
-        "changedConsumer": "module LensConsumer {\n    package lib import LensLibrary;\n    Int result() = lib.read(2) + lib.read(3);\n}\n",
-        "anchor": "read(Int",
-        "initialTitle": "2 references",
-        "changedTitle": "3 references"
-      },
       "intellij": {
         "coverage": "full",
         "limitations": []
