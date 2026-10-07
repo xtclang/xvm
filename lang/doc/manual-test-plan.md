@@ -4076,6 +4076,8 @@ shared source with clean diagnostics. Both editor drivers implement this case; a
 |---|---|---|
 | X276 | Open shared Highlighting.x with local, imported-aliased and qualified annotations, a shadowed Override class and bundled/local JsonObject types. Inspect semantic tokens and capture the startup theme. | Only annotation uses are decorators; only bundled ownership carries defaultLibrary. Theme colors remain in control. |
 | X277 | Compare separate startup configurations with semantic highlighting off/on in three themes. Damage the string, interpolation and declaration, repairing each before the next edit. | Escapes, literals and keywords retain lexical detail. Errors retire stale tokens; repair restores exact classifications. The interpolation expression still receives compiler semantic highlighting. |
+| X278 | Generate documentation on the multiline generic echo declaration. Undo, Redo and Undo. Invoke the action again after insertion. | Exact compiler parameter/return skeleton before the header; no duplicate comment; exact native history and clean diagnostics. |
+| X279 | Open LensLibrary with LensConsumer closed. Click the two-reference lens and navigate to the consumer. Edit the consumer; disable and re-enable reference lenses. | Native reference navigation includes both files, overloads have independent counts, the changed count is three, and disabling reference counts retains Run. |
 
 The normal harness does not cycle the visible theme or toggle semantic highlighting. To compare
 VS Code startup configurations after building the extension, run from `lang/vscode-extension`:

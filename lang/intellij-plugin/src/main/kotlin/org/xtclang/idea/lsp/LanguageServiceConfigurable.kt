@@ -37,6 +37,7 @@ open class LanguageServiceConfigurable(
         JComboBox(arrayOf("full", "incremental")).apply { name = "xtc.service.sync" }
     private val saving = JComboBox(arrayOf("editor", "server")).apply { name = "xtc.service.save" }
     private val hints = JBCheckBox("Show Ecstasy inlay hints").apply { name = "xtc.service.hints" }
+    private val references = JBCheckBox("Show Ecstasy reference counts").apply { name = "xtc.service.references" }
     private val report =
         JTextArea(14, 70).apply {
             isEditable = false
@@ -64,6 +65,8 @@ open class LanguageServiceConfigurable(
                     add(saving)
                     add(hints)
                     add(JBLabel("Native IDE inlay controls still apply."))
+                    add(references)
+                    add(JBLabel("Applies immediately; Run lenses remain available."))
                 },
                 BorderLayout.NORTH,
             )
@@ -152,6 +155,7 @@ open class LanguageServiceConfigurable(
         saving.toolTipText =
             "LSP4IJ does not implement server save edits. Use native Actions on Save."
         hints.isEnabled = editable
+        references.isEnabled = editable
     }
 
     private fun draft() =
@@ -159,6 +163,7 @@ open class LanguageServiceConfigurable(
             synchronization.selectedItem as String,
             saving.selectedItem as String,
             hints.isSelected,
+            references.isSelected,
         )
 
     override fun isModified(): Boolean =
@@ -172,6 +177,7 @@ open class LanguageServiceConfigurable(
         synchronization.selectedItem = initial.textSynchronization
         saving.selectedItem = initial.saveFormatting
         hints.isSelected = initial.inlayHints
+        references.isSelected = initial.referenceCodeLens
         updateEnabled()
         refreshReport()
     }
