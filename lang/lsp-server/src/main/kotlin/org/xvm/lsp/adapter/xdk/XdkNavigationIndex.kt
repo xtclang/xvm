@@ -44,10 +44,10 @@ internal class XdkNavigationIndex {
     fun record(
         uri: String,
         build: Build,
-    ) = current.updateAndGet { Snapshot(it.builds + (uri to build)) }
+    ): Snapshot = current.updateAndGet { Snapshot(it.builds + (uri to build)) }
 
     /** Retain reusable roots while fencing work captured before the configuration/edit change. */
-    fun retire(roots: Set<String>) = current.updateAndGet { Snapshot(it.builds.filterKeys(roots::contains)) }
+    fun retire(roots: Set<String>): Snapshot = current.updateAndGet { Snapshot(it.builds.filterKeys(roots::contains)) }
 
     fun clear() = current.set(Snapshot())
 }
