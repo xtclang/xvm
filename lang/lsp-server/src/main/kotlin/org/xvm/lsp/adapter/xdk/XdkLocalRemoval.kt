@@ -1,13 +1,10 @@
 package org.xvm.lsp.adapter.xdk
 
 import org.xvm.asm.ErrorList
-import org.xvm.compiler.CompilerException
 import org.xvm.compiler.Lexer
-import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AssignmentStatement
-import org.xvm.compiler.ast.AstNode
 import org.xvm.compiler.ast.StatementBlock
 import org.xvm.lsp.adapter.Range
 import org.xvm.lsp.util.ExecutionTrace
@@ -26,30 +23,21 @@ internal object XdkLocalRemoval {
         removable: Set<SemanticModel.SourceLocation>,
     ): Candidate? {
         val source = model.sourceName ?: return null
-        val symbol =
-            model
-                .symbolAt(selection.start.line, selection.start.column)
-                ?.takeIf { it.kind == SemanticModel.SymbolKind.VARIABLE && it.declarationSource == source } ?: return null
+        val symbol = XdkLocalDeclarations.selectedSymbol(model, selection) ?: return null
         val declaration = symbol.declaration ?: return null
         if (SemanticModel.SourceLocation(source, declaration) !in removable) return null
         val uses = model.occurrences.filter { it.symbol == symbol.id }
         if (uses.singleOrNull()?.role != SemanticModel.Role.DECLARATION) return null
         val errors = ErrorList()
-        val root =
-            try {
-                ExecutionTrace.api("Parser.parseSource(remove-local)") { Parser(Source(text), errors).parseSource() }
-            } catch (_: CompilerException) {
-                return null
-            }
-        if (errors.hasSeriousErrors()) return null
-
-        fun nodes(node: AstNode): Sequence<AstNode> = sequenceOf(node) + node.childNodes().asSequence().flatMap(::nodes)
+        val root = XdkRefactoringSyntax.parse(text, errors, "remove-local") ?: return null
 
         fun position(value: Long) = SemanticModel.Position(Source.calculateLine(value), Source.calculateOffset(value))
 
         fun offset(value: Long) = XdkRename.offset(text, position(value))
         val candidate =
-            nodes(root)
+            XdkRefactoringSyntax
+                .tree(root)
+                .map { it.first }
                 .filterIsInstance<StatementBlock>()
                 .flatMap { it.childNodes().asSequence() }
                 .filterIsInstance<AssignmentStatement>()
@@ -61,8 +49,8 @@ internal object XdkLocalRemoval {
                 ?: return null
         val start = offset(candidate.statement.startPosition) ?: return null
         val end = offset(candidate.statement.endPosition) ?: return null
-        val lineStart = maxOf(text.lastIndexOf('\n', start - 1), text.lastIndexOf('\r', start - 1)) + 1
-        if (text.substring(lineStart, start).any { it != ' ' && it != '\t' }) return null
+        val indent = XdkRefactoringSyntax.indentBefore(text, start) ?: return null
+        val lineStart = start - indent.length
         val tail = Regex("[ \t]*;").find(text, end)?.takeIf { it.range.first == end } ?: return null
         val syntaxEnd = tail.range.last + 1
         val tokens =

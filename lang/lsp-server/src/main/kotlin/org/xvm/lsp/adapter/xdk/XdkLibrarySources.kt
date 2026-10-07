@@ -100,7 +100,9 @@ internal object XdkLibrarySources {
         val symbols = XdkLibraries.symbolIndex(source.module) ?: return emptyMap()
         return ConstantPool.withPool(module.constantPool).use {
             module.constantPool.constants
+                .asSequence()
                 .toList()
+                .asSequence()
                 .filterIsInstance<IdentityConstant>()
                 .filter { it.moduleConstant.name == source.module }
                 .mapNotNull { identity ->
@@ -112,6 +114,7 @@ internal object XdkLibrarySources {
                     target.location.range to moniker
                 }.groupBy({ it.first }, { it.second })
                 .mapNotNull { (range, candidates) -> candidates.distinct().singleOrNull()?.let { range to it } }
+                .toList()
                 .toMap()
         }
     }

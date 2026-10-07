@@ -154,6 +154,7 @@ internal fun compilerMemberActions(
                     method.isAbstract,
                     info.methods.values.count { it.isAbstract && !it.isCtorOrValidator },
                     (method.signature.params + method.signature.returns)
+                        .asSequence()
                         .flatMap { it.memberClasses() }
                         .filter { it.constantPool.getImplicitlyImportedIdentity(it.name) != it }
                         .map { it.moduleConstant.name }
@@ -166,7 +167,7 @@ internal fun compilerMemberActions(
                                 importAt,
                                 "package ${aliases.getValue(it)} import $it;",
                             )
-                        },
+                        }.toList(),
                 )
             }.distinct()
     }

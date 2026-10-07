@@ -6,7 +6,7 @@ import java.io.IOException
 
 /** Evaluated, versioned host input. No build-script parsing, Gradle execution or IDE dependency. */
 internal class XdkBuildModel private constructor(
-    val sourceSets: List<SourceSet>,
+    private val sourceSets: List<SourceSet>,
 ) {
     data class SourceSet(
         val project: String,
@@ -79,6 +79,7 @@ internal class XdkBuildModel private constructor(
         XdkProject(modules)
         val binaries =
             sourceSets
+                .asSequence()
                 .flatMap { it.modulePath }
                 .distinct()
                 .flatMap { root ->
@@ -106,7 +107,7 @@ internal class XdkBuildModel private constructor(
                         "Conflicting build artifacts for $name"
                     }
                     values.first()
-                }
+                }.toList()
         return Inputs(modules, binaries)
     }
 

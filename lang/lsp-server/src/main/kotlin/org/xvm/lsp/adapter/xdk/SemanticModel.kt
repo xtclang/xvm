@@ -130,7 +130,7 @@ class SemanticModel
                 require(start <= end) { "Reversed source range" }
             }
 
-            operator fun contains(position: Position): Boolean = start <= position && position < end
+            operator fun contains(position: Position): Boolean = position in start..<end
         }
 
         data class SymbolId(
@@ -337,16 +337,16 @@ class SemanticModel
             declarations: Map<SymbolId, List<SymbolId>> = emptyMap(),
             parameters: Map<SymbolId, ParameterSlot> = emptyMap(),
         ) {
-            val symbolsById = immutableMap(symbols)
-            val typesById = immutableMap(types)
-            val symbols = immutableList(symbols.values)
-            val types = immutableList(types.values)
-            val typeDeclarations = immutableMap(typeDeclarations)
-            val typeDefinitions = immutableMap(typeDefinitions.mapValues { immutableList(it.value) })
-            val implementations = immutableMap(implementations.mapValues { immutableList(it.value) })
-            val callables = immutableMap(callables)
-            val declarations = immutableMap(declarations.mapValues { immutableList(it.value) })
-            val parameters = immutableMap(parameters)
+            val symbolsById: Map<SymbolId, Symbol> = immutableMap(symbols)
+            val typesById: Map<TypeId, Type> = immutableMap(types)
+            val symbols: List<Symbol> = immutableList(symbols.values)
+            val types: List<Type> = immutableList(types.values)
+            val typeDeclarations: Map<SymbolId, TypeDeclaration> = immutableMap(typeDeclarations)
+            val typeDefinitions: Map<TypeId, List<SymbolId>> = immutableMap(typeDefinitions.mapValues { immutableList(it.value) })
+            val implementations: Map<SymbolId, List<SymbolId>> = immutableMap(implementations.mapValues { immutableList(it.value) })
+            val callables: Map<SymbolId, Callable> = immutableMap(callables)
+            val declarations: Map<SymbolId, List<SymbolId>> = immutableMap(declarations.mapValues { immutableList(it.value) })
+            val parameters: Map<SymbolId, ParameterSlot> = immutableMap(parameters)
         }
 
         /** IDs from another snapshot return no result. */
@@ -450,7 +450,10 @@ class SemanticModel
         fun implementationLocationsAt(
             line: Int,
             column: Int,
-        ): List<SourceLocation> = locations(facts.implementations[symbolAt(line, column)?.id].orEmpty())
+        ): List<SourceLocation> {
+            val symbol = symbolAt(line, column) ?: return emptyList()
+            return locations(facts.implementations[symbol.id].orEmpty())
+        }
 
         private fun locations(ids: List<SymbolId>): List<SourceLocation> =
             ids

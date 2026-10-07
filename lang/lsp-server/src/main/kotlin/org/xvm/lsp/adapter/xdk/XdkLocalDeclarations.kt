@@ -7,9 +7,21 @@ import org.xvm.compiler.ast.AssignmentStatement
 import org.xvm.compiler.ast.TypeExpression
 import org.xvm.compiler.ast.VariableDeclarationStatement
 import org.xvm.compiler.ast.VariableTypeExpression
+import org.xvm.lsp.adapter.Range
 
 /** Plain, explicitly typed local initializers shared by conservative local refactorings. */
 internal object XdkLocalDeclarations {
+    /** Select only a local declared in this source view, never a member or dependency symbol. */
+    fun selectedSymbol(
+        model: SemanticModel,
+        selection: Range,
+    ): SemanticModel.Symbol? {
+        val source = model.sourceName ?: return null
+        return model
+            .symbolAt(selection.start.line, selection.start.column)
+            ?.takeIf { it.kind == SemanticModel.SymbolKind.VARIABLE && it.declarationSource == source }
+    }
+
     data class Initializer(
         val statement: AssignmentStatement,
         val local: VariableDeclarationStatement,
@@ -37,7 +49,7 @@ internal object XdkLocalDeclarations {
         val nameStart = offset(local.nameToken.startPosition) ?: return null
         val nameEnd = offset(local.nameToken.endPosition) ?: return null
         val valueStart = offset(statement.rValue.startPosition) ?: return null
-        if (!text.substring(start, typeStart).isBlank() || !text.substring(typeEnd, nameStart).isBlank() ||
+        if (text.substring(start, typeStart).isNotBlank() || text.substring(typeEnd, nameStart).isNotBlank() ||
             !Regex("\\s*=\\s*").matches(text.substring(nameEnd, valueStart))
         ) {
             return null

@@ -470,7 +470,7 @@ class FormattingConfigRoundTripTest {
                     insertSpaces = true,
                 )
 
-            val resolved = FormattingConfig.resolve("file:///test.x", lspOptions, editorConfig)
+            val resolved = FormattingConfig.resolve(lspOptions, editorConfig)
 
             assertThat(resolved.indentSize)
                 .describedAs("editor config (3) should win over LSP options (4)")
@@ -487,7 +487,7 @@ class FormattingConfigRoundTripTest {
                     insertSpaces = true,
                 )
 
-            val resolved = FormattingConfig.resolve("file:///test.x", lspOptions, null)
+            val resolved = FormattingConfig.resolve(lspOptions, null)
 
             assertThat(resolved.indentSize)
                 .describedAs("LSP tabSize should be used when no editor config")
@@ -503,7 +503,7 @@ class FormattingConfigRoundTripTest {
                     insertSpaces = false,
                 )
 
-            val resolved = FormattingConfig.resolve("file:///test.x", lspOptions, null)
+            val resolved = FormattingConfig.resolve(lspOptions, null)
 
             // When insertSpaces is false, XTC falls back to its own default indent size
             assertThat(resolved.indentSize)

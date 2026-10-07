@@ -419,18 +419,18 @@ class SemanticTokenEncoder {
         var prevLine = 0
         var prevColumn = 0
 
-        for (token in sortedTokens) {
-            val deltaLine = token.line - prevLine
-            val deltaStart = if (deltaLine == 0) token.column - prevColumn else token.column
+        for ((line, column, length, tokenType, tokenModifiers) in sortedTokens) {
+            val deltaLine = line - prevLine
+            val deltaStart = if (deltaLine == 0) column - prevColumn else column
 
             result.add(deltaLine)
             result.add(deltaStart)
-            result.add(token.length)
-            result.add(token.tokenType)
-            result.add(token.tokenModifiers)
+            result.add(length)
+            result.add(tokenType)
+            result.add(tokenModifiers)
 
-            prevLine = token.line
-            prevColumn = token.column
+            prevLine = line
+            prevColumn = column
         }
 
         return result

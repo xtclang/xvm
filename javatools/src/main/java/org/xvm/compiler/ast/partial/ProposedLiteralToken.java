@@ -9,6 +9,8 @@ import org.xvm.compiler.Token;
  * These tokens are never installed in the source tree or published as source bindings.
  */
 public final class ProposedLiteralToken extends Token {
+    private final String spelling;
+
     public ProposedLiteralToken(long cursor, Id id, Object value, String spelling) {
         super(cursor, cursor, id, value);
         this.spelling = spelling;
@@ -18,6 +20,4 @@ public final class ProposedLiteralToken extends Token {
     public String getString(Source source) {
         return spelling;
     }
-
-    private final String spelling;
 }
