@@ -16,6 +16,7 @@ import java.time.Instant
 import java.util.Base64
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
+import kotlin.jvm.optionals.getOrNull
 
 internal data class LogRetention(
     val historyDays: Int = 7,
@@ -126,17 +127,12 @@ internal object ServerLogs {
     private fun isActive(
         pid: Long,
         started: Long,
-    ): Boolean =
-        ProcessHandle
-            .of(pid)
-            .map { process ->
-                process.isAlive &&
-                    process
-                        .info()
-                        .startInstant()
-                        .map { it.toEpochMilli() == started }
-                        .orElse(true)
-            }.orElse(false)
+    ): Boolean {
+        val process = ProcessHandle.of(pid).getOrNull() ?: return false
+        if (!process.isAlive) return false
+        val actualStart = process.info().startInstant().getOrNull()
+        return actualStart == null || actualStart.toEpochMilli() == started
+    }
 
     fun export(status: Map<String, Any?>): Map<String, String> {
         val files =
