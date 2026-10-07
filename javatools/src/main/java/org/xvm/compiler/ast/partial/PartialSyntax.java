@@ -19,13 +19,14 @@ import org.xvm.compiler.ast.NewExpression;
  * current tree; they are not detached semantic snapshots and must not outlive that tree's ownership.
  */
 public final class PartialSyntax {
-    private PartialSyntax() {}
+    private PartialSyntax() {
+        // empty
+    }
 
     /** Include deferred anonymous source bodies without changing compiler child ownership. */
     public static Stream<AstNode> children(AstNode node) {
         var children = StreamSupport.stream(node.childNodes().spliterator(), false);
-        return node instanceof NewExpression creation
-                ? Stream.concat(children, creation.getUnregisteredBody().stream()) : children;
+        return node instanceof NewExpression creation ? Stream.concat(children, creation.getUnregisteredBody().stream()) : children;
     }
 
     /** A value cursor and its written argument slot; no inferred type or candidate is retained. */
@@ -43,8 +44,7 @@ public final class PartialSyntax {
 
     private static boolean contains(AstNode node, Predicate<IncompleteStatement> matches) {
         return node != null && (node instanceof IncompleteStatement site && matches.test(site)
-                || children(node)
-                        .anyMatch(child -> contains(child, matches)));
+                || children(node).anyMatch(child -> contains(child, matches)));
     }
 
     /** Find a value cursor in a written argument, excluding array-dimension slots. */
@@ -55,7 +55,8 @@ public final class PartialSyntax {
         }
         var arguments = call.getArguments();
         return IntStream.range(0, arguments.size()).mapToObj(index ->
-                valueCursor(arguments.get(index)).map(site -> new ArgumentCursor(site, index)))
+                valueCursor(arguments.get(index))
+                        .map(site -> new ArgumentCursor(site, index)))
                 .flatMap(Optional::stream).findFirst();
     }
 
@@ -88,7 +89,6 @@ public final class PartialSyntax {
     }
 
     private static boolean isArgumentBoundary(Expression expression) {
-        return expression instanceof LambdaExpression || expression instanceof InvocationExpression
-                || expression instanceof NewExpression;
+        return expression instanceof LambdaExpression || expression instanceof InvocationExpression || expression instanceof NewExpression;
     }
 }

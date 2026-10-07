@@ -50,7 +50,7 @@ class XtcNode
                 val end = tsNode.endByte
                 // Defensive: guard against stale byte offsets (e.g., from incremental parse without
                 // Tree.edit())
-                if (start < 0 || end < start || end > source.length) {
+                if (start !in 0..end || end > source.length) {
                     return ""
                 }
                 // Fast path: if all chars are ASCII, byte offsets == char offsets
@@ -130,7 +130,8 @@ class XtcNode
         fun child(index: Int): XtcNode? = tsNode.getChild(index).wrap()
 
         /** Get a named child node by index. */
-        @Suppress("unused") // TODO: Will be used for manual tree traversal in formatting and folding
+        @Suppress("unused")
+        private // TODO: Will be used for manual tree traversal in formatting and folding
         fun namedChild(index: Int): XtcNode? = tsNode.getNamedChild(index).wrap()
 
         /**

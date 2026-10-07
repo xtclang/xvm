@@ -148,7 +148,6 @@ internal data class ClientPresentation(
             markdown
                 .lineSequence()
                 .filterNot { it.trimStart().startsWith("```") }
-                .map { it.replace(Regex("^#{1,6}\\s+"), "").replace("`", "") }
-                .joinToString("\n")
+                .joinToString("\n") { it.replace(Regex("^#{1,6}\\s+"), "").replace("`", "") }
     }
 }

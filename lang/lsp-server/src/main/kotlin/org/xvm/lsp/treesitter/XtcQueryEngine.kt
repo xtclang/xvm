@@ -139,7 +139,7 @@ class XtcQueryEngine(
      *   methods, getters, nested types). Class/module members are visible throughout the body, so
      *   no before-cursor restriction applies.
      *
-     * The first matching declaration in the enclosing chain wins, modelling shadowing. The returned
+     * The first matching declaration in the enclosing chain wins, modeling shadowing. The returned
      * [Location] points at the declaration's `name` field (the identifier), so cmd-click lands on
      * the name itself rather than the head of the statement.
      *
@@ -419,7 +419,7 @@ class XtcQueryEngine(
             }.toList()
 
     private companion object {
-        // Used by findScopeMembers to recognise declarations inside a body.
+        // Used by findScopeMembers to recognize declarations inside a body.
         private val memberNodeKinds =
             mapOf(
                 "property_declaration" to SymbolKind.PROPERTY,
