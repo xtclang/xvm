@@ -83,7 +83,7 @@ class XdkPlatformRegressionTest {
                 .containsOnly(Parser.INCOMPLETE_EXPRESSION)
             val analysisErrors = ErrorList()
             val analysis = EmbeddingSupport.instance().analyzeIncomplete(Source(incomplete), cursor, null, analysisErrors)
-            assertThat(analysis.pool()).describedAs("%s", analysisErrors).isPresent
+            assertThat(analysis.pool()).describedAs("%s", analysisErrors).isNotNull
             assertThat(analysis.sites()).hasSize(1)
             assertThat(analysis.sites().single().source).describedAs("%s", analysisErrors).isNotNull()
             val site = analysis.sites().single()

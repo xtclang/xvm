@@ -15,7 +15,7 @@ import org.xvm.compiler.ast.Expression;
  * no implicit type, never fits a requested type, and always fails validation after inspecting the
  * intact prefix. It cannot become a value or reach code emission.
  *
- * The existing partial site is an ordinary AST child, so adoption and cloning preserve its
+ * <p>The existing partial site is an ordinary AST child, so adoption and cloning preserve its
  * receiver/argument ownership without a second semantic cache or clone-reset protocol.
  */
 public final class IncompleteExpression extends Expression {
