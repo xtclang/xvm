@@ -4063,6 +4063,13 @@ X266–X272, plus START, with no IDE errors. X271 uses the native Stop-and-disab
 checks that export neither restarts the process nor selects another session. Internal `stop()`
 leaves the wrapper enabled and does not represent the user's Stop action.
 
+### Compiler documentation action (X278)
+
+On the multiline generic `echo` header, select **Generate documentation comment**. The skeleton
+must precede the complete header and contain the declared formal/value parameter names and return
+entry. Existing documentation suppresses the action. Undo, Redo and Undo must restore the exact
+shared source with clean diagnostics. Both editor drivers implement this case; acceptance is pending.
+
 ### Theme-based highlighting follow-up (X276/X277)
 
 | ID | Actions | Expected result |

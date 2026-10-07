@@ -214,6 +214,8 @@ class SemanticModel
             val isFunction: Boolean = false,
             /** Resolved ownership in the bundled XDK, independently of source attachments. */
             val isDefaultLibrary: Boolean = false,
+            /** First written header token, including modifiers/annotations; absent on generated declarations. */
+            val headerStart: Position? = null,
         )
 
         /** A written name; a null symbol explicitly represents an unresolved occurrence. */

@@ -1088,7 +1088,11 @@ internal class XdkProjectQueries(
                 null
             }
         return if (isCurrent()) {
-            actions + missing + declarations + members +
+            before.models
+                .filter { it.sourceName == source }
+                .flatMap { XdkDocumentation.actions(uri, text, range, it) }
+                .distinct() +
+                actions + missing + declarations + members +
                 listOfNotNull(
                     extraction,
                     inline,
