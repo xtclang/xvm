@@ -39,7 +39,7 @@ internal class XdkResourceMoves(
                 .filterValues { it != "missing" }
                 .keys
                 .map(::File)
-                .associate { path(it) to it }
+                .associateBy { path(it) }
         return Directory(null, "", resources.roots.map(::path), entries)
     }
 

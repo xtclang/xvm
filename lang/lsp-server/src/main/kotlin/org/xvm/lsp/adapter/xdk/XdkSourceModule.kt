@@ -48,7 +48,7 @@ class XdkSourceModule(
 internal class XdkProject(
     modules: List<XdkSourceModule>,
 ) {
-    val modules = immutableMap(modules.associateBy { it.name })
+    val modules: Map<String, XdkSourceModule> = immutableMap(modules.associateBy { it.name })
 
     private data class Configuration(
         val name: String,

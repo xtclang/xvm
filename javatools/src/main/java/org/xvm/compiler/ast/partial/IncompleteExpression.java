@@ -80,7 +80,7 @@ public final class IncompleteExpression extends Expression {
         return site.toString();
     }
 
-    private IncompleteStatement site;
+    private final IncompleteStatement site;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(IncompleteExpression.class, "site");
 }

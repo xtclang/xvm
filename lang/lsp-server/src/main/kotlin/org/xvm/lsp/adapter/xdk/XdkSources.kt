@@ -148,9 +148,9 @@ internal class XdkSources
             fun file(name: String): File? =
                 runCatching {
                     val uri = URI(name)
-                    when {
-                        uri.scheme == "file" -> File(uri).canonicalFile
-                        uri.scheme == null && File(name).isAbsolute -> File(name).canonicalFile
+                    when (uri.scheme) {
+                        "file" -> File(uri).canonicalFile
+                        null if File(name).isAbsolute -> File(name).canonicalFile
                         else -> null
                     }
                 }.getOrNull()

@@ -1516,7 +1516,7 @@ class XdkAdapter
             } else {
                 XdkLexical.format(
                     content,
-                    FormattingConfig.resolve(uri, options, editorFormattingConfig),
+                    FormattingConfig.resolve(options, editorFormattingConfig),
                     options,
                 )
             }
@@ -1532,7 +1532,7 @@ class XdkAdapter
             } else {
                 XdkLexical.format(
                     content,
-                    FormattingConfig.resolve(uri, options, editorFormattingConfig),
+                    FormattingConfig.resolve(options, editorFormattingConfig),
                     options,
                     range,
                 )
@@ -1549,7 +1549,7 @@ class XdkAdapter
                 ?.let { text ->
                     XdkLexical.format(
                         text,
-                        FormattingConfig.resolve(uri, options, editorFormattingConfig),
+                        FormattingConfig.resolve(options, editorFormattingConfig),
                         options,
                         Range(
                             Position(line, 0),

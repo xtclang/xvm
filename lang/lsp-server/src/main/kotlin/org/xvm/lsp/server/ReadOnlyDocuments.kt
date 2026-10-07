@@ -104,6 +104,6 @@ internal class ReadOnlyDocuments(
     }
 
     private companion object {
-        val logger = LoggerFactory.getLogger(ReadOnlyDocuments::class.java)
+        val logger = LoggerFactory.getLogger(ReadOnlyDocuments::class.java)!!
     }
 }

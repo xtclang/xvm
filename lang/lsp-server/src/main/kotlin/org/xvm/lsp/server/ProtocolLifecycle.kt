@@ -52,20 +52,17 @@ internal class ProtocolLifecycle {
                         is RequestMessage -> {
                             val previous = state.get()
                             val permitted =
-                                when {
-                                    previous.phase == Phase.NEW && message.method == "initialize" -> {
+                                when (previous.phase) {
+                                    Phase.NEW if message.method == "initialize" -> {
                                         state.compareAndSet(
                                             previous,
                                             State(Phase.INITIALIZING, message.rawId),
                                         )
                                     }
 
-                                    previous.phase == Phase.READY || previous.phase == Phase.RUNNING -> {
+                                    Phase.READY, Phase.RUNNING -> {
                                         message.method != "initialize" &&
-                                            (
-                                                message.method != "shutdown" ||
-                                                    state.compareAndSet(previous, State(Phase.SHUTDOWN))
-                                            )
+                                            (message.method != "shutdown" || state.compareAndSet(previous, State(Phase.SHUTDOWN)))
                                     }
 
                                     else -> {

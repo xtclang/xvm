@@ -1,9 +1,7 @@
 package org.xvm.lsp.adapter.xdk
 
 import org.xvm.asm.ErrorList
-import org.xvm.compiler.CompilerException
 import org.xvm.compiler.Lexer
-import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AssignmentStatement
@@ -48,22 +46,12 @@ internal object XdkLocalInline {
         model: SemanticModel,
     ): Candidate? {
         val source = model.sourceName ?: return null
-        val selected =
-            model
-                .symbolAt(selection.start.line, selection.start.column)
-                ?.takeIf { it.kind == SemanticModel.SymbolKind.VARIABLE && it.declarationSource == source }
-                ?: return null
+        val selected = XdkLocalDeclarations.selectedSymbol(model, selection) ?: return null
         val declaration = selected.declaration ?: return null
         val uses = model.occurrences.filter { it.symbol == selected.id }
         if (uses.size != 2 || uses.count { it.role == SemanticModel.Role.DECLARATION } != 1) return null
         val errors = ErrorList()
-        val root =
-            try {
-                ExecutionTrace.api("Parser.parseSource(inline-local)") { Parser(Source(text), errors).parseSource() }
-            } catch (_: CompilerException) {
-                return null
-            }
-        if (errors.hasSeriousErrors()) return null
+        val root = XdkRefactoringSyntax.parse(text, errors, "inline-local") ?: return null
 
         fun position(position: Long) = SemanticModel.Position(Source.calculateLine(position), Source.calculateOffset(position))
 
@@ -127,9 +115,7 @@ internal object XdkLocalInline {
         val nextStart = offset(pair.statement.startPosition) ?: return null
         val readStart = offset(read.startPosition) ?: return null
         val readEnd = offset(read.endPosition) ?: return null
-        val lineStart = maxOf(text.lastIndexOf('\n', start - 1), text.lastIndexOf('\r', start - 1)) + 1
-        val indent = text.substring(lineStart, start)
-        if (indent.any { it != ' ' && it != '\t' }) return null
+        if (XdkRefactoringSyntax.indentBefore(text, start) == null) return null
         val trailing = text.substring(valueEnd, nextStart)
         // Do not erase comments or labels; the declaration must be on its own preceding line.
         if (!Regex("\\s*;[ \\t]*(?:\\r\\n|\\r|\\n)[ \\t\\r\\n]*").matches(trailing)) return null
@@ -160,28 +146,19 @@ internal object XdkLocalInline {
         facts: CompilerRenameFacts,
     ): Candidate? {
         val source = model.sourceName ?: return null
-        val symbol = model.symbolAt(selection.start.line, selection.start.column) ?: return null
-        if (symbol.kind != SemanticModel.SymbolKind.VARIABLE || symbol.declarationSource != source) return null
+        val symbol = XdkLocalDeclarations.selectedSymbol(model, selection) ?: return null
         val declared = SemanticModel.SourceLocation(source, symbol.declaration ?: return null)
         if (declared !in facts.removableLocals) return null
         val uses = model.occurrences.filter { it.symbol == symbol.id }
         if (uses.size != 2 || uses.count { it.role == SemanticModel.Role.DECLARATION } != 1) return null
         val use = uses.singleOrNull { it.role == SemanticModel.Role.REFERENCE && it.usage == SemanticModel.Usage.READ } ?: return null
         val errors = ErrorList()
-        val root =
-            try {
-                ExecutionTrace.api("Parser.parseSource(inline-constant-local)") { Parser(Source(text), errors).parseSource() }
-            } catch (_: CompilerException) {
-                return null
-            }
-        if (errors.hasSeriousErrors()) return null
-
-        fun nodes(node: AstNode): Sequence<AstNode> = sequenceOf(node) + node.childNodes().asSequence().flatMap(::nodes)
+        val root = XdkRefactoringSyntax.parse(text, errors, "inline-constant-local") ?: return null
 
         fun at(value: Long) = SemanticModel.Position(Source.calculateLine(value), Source.calculateOffset(value))
 
         fun offset(value: Long) = XdkRename.offset(text, at(value))
-        val all = nodes(root).toList()
+        val all = XdkRefactoringSyntax.tree(root).map { it.first }.toList()
         val local =
             all
                 .filterIsInstance<AssignmentStatement>()
@@ -195,8 +172,8 @@ internal object XdkLocalInline {
         val valueStart = offset(expression.startPosition) ?: return null
         val valueEnd = offset(expression.endPosition) ?: return null
         val start = offset(local.statement.startPosition) ?: return null
-        val lineStart = maxOf(text.lastIndexOf('\n', start - 1), text.lastIndexOf('\r', start - 1)) + 1
-        if (text.substring(lineStart, start).any { it != ' ' && it != '\t' }) return null
+        val indent = XdkRefactoringSyntax.indentBefore(text, start) ?: return null
+        val lineStart = start - indent.length
         // Keep comments and declaration trivia intact by refusing anything beyond whitespace.
         val tail = Regex("[ \t]*;[ \t]*(?:\r\n|\r|\n)").find(text, valueEnd)?.takeIf { it.range.first == valueEnd } ?: return null
         val header =

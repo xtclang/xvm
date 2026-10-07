@@ -1293,7 +1293,7 @@ class XtcLanguageServer(
 
     /**
      * Register source file watchers (and workspace resource changes in compiler mode). This enables
-     * the client to notify us when XTC files are created, changed, or deleted on disk (outside of
+     * the client to notify us when XTC files are created, changed, or deleted on disk (outside
      * the editor), which we use to keep the workspace index up to date.
      */
     private fun registerFileWatcher() {
