@@ -44,6 +44,43 @@ package propertyInitTests {
         ConstructorTest withValues =
                 new ConstructorTest(601, 602, 703, 704, new Derived("hello"));
 
+        Boolean rejected = False;
+        try {
+            new ConstructorTest(-1, Null, 700, Null, new Derived("hello"));
+        } catch (IllegalState e) {
+            rejected = True;
+        }
+        assert rejected as "validation had to fail";
+
+        class ConstructorTest(Int i, Int? ni, Int128 x, Int128? nx, Base base) {
+            construct(Int i, Int? ni, Int128 x, Int128? nx, Base base) {
+                this.i    = i;
+                this.ni   = ni;
+                this.x    = x;
+                this.nx   = nx;
+                this.base = base;
+
+                assert this.i  == i;
+                assert this.ni == ni;
+                assert this.x  == x;
+                assert this.nx == nx;
+
+                assert base.value == "getter";
+                base.value = "hello";
+                assert base.setterCalled;
+            }
+
+            assert() {
+                assert i >= 0;
+                assert x >= 0;
+                if (Int value ?= ni) {
+                    assert value >= 0;
+                }
+                if (Int128 value ?= nx) {
+                    assert value >= 0;
+                }
+            }
+        }
     }
 
     void testMethodProperty() {
@@ -344,36 +381,6 @@ package propertyInitTests {
         Int128       x    = 400;
         Int128?      nx1  = 500;
         Int128?      nx2  = Null;
-    }
-
-    class ConstructorTest(Int i, Int? ni, Int128 x, Int128? nx, Base base) {
-        construct(Int i, Int? ni, Int128 x, Int128? nx, Base base) {
-            this.i    = i;
-            this.ni   = ni;
-            this.x    = x;
-            this.nx   = nx;
-            this.base = base;
-
-            assert this.i  == i;
-            assert this.ni == ni;
-            assert this.x  == x;
-            assert this.nx == nx;
-
-            assert base.value == "getter";
-            base.value = "hello";
-            assert base.setterCalled;
-        }
-
-        assert() {
-            assert i >= 0;
-            assert x >= 0;
-            if (Int value ?= ni) {
-                assert value >= 0;
-            }
-            if (Int128 value ?= nx) {
-                assert value >= 0;
-            }
-        }
     }
 
     class Base(String value) {
