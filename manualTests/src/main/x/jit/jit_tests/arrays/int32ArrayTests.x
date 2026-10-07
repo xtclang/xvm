@@ -1,8 +1,6 @@
 
 package int32ArrayTests {
 
-    @Inject Console console;
-
     void run() {
 
         shouldCreateWithCapacity();

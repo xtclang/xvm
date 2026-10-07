@@ -3,8 +3,6 @@ package propertyInitTests {
 
     typedef String|Int as StringOrInt;
 
-    @Inject static Console console;
-
     void run() {
         testSimple();
         testConstructor();

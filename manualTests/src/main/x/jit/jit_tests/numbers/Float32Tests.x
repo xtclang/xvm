@@ -1,7 +1,5 @@
 class Float32Tests {
 
-    @Inject Console console;
-
     void run() {
         // Comparison tests
         testFloat32CompareEq();

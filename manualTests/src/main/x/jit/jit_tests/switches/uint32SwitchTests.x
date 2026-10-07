@@ -2,8 +2,6 @@
  * Various types of switch statement using UInt32 values.
  */
 package uint32SwitchTests {
-    @Inject Console console;
-
     void run() {
 
         testSimpleSwitch();

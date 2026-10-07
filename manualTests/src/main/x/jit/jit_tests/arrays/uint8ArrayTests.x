@@ -1,8 +1,6 @@
 
 package uint8ArrayTests {
 
-    @Inject Console console;
-
     void run() {
 
         shouldCreateWithCapacity();

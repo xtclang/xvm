@@ -2,8 +2,6 @@
  * Various types of switch statement using UInt64 values.
  */
 package uint64SwitchTests {
-    @Inject Console console;
-
     void run() {
 
         testSimpleSwitch();

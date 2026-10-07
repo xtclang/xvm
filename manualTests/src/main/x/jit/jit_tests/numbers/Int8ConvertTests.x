@@ -3,8 +3,6 @@
  */
 class Int8ConvertTests {
 
-    @Inject Console console;
-
     void run() {
         testInt8ToInt8(Int8.MinValue, -128);
         testInt8ToInt8(-100, -100);
