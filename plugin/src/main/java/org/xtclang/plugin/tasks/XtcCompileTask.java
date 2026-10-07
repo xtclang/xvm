@@ -69,8 +69,8 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     /**
      * Create an XTC Compile task. This goes through the Gradle build script, and task creation through
      * the project ObjectFactory.
-     * <p>
-     * The reason we need the @Inject is that the Kotlin compiler adds a secret parameter to the generated
+     *
+     * <p>The reason we need the @Inject is that the Kotlin compiler adds a secret parameter to the generated
      * constructor, if the class uses variables from the build script. That parameter is a reference to the
      * enclosing build script. As a result, the task needs to have the @Inject annotation in the constructor
      * so that Gradle will correctly instantiate the task with build script reference (which is what happens
@@ -132,8 +132,8 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
      * Override to return source-set-specific dependencies for compilation.
      * This avoids the circular dependency where a compile task's own output
      * appears in its inputs (via xtcModuleDependencies from all source sets).
-     * <p>
-     * Main compile: only external dependencies from xtcModule
+     *
+     * <p>Main compile: only external dependencies from xtcModule
      * Test compile: xtcModule + xtcModuleTest (includes main output)
      */
     @Override
@@ -300,8 +300,8 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
      * Returns all XTC source files (including subdirectory files) for incremental build tracking.
      * This ensures Gradle detects changes in subdirectory .x files that are part of the module
      * compilation unit, even though only top-level module files are passed to the XTC compiler.
-     * <p>
-     * This method fixes the incremental build issue where changes to subdirectory .x files
+     *
+     * <p>This method fixes the incremental build issue where changes to subdirectory .x files
      * (like xenia/BundlePool.x) were not triggering recompilation of the parent module.
      */
     @InputFiles

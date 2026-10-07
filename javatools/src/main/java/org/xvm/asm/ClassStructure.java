@@ -16,6 +16,8 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+import org.jetbrains.annotations.Nullable;
+
 import org.xvm.asm.constants.*;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.TypeConstant.Relation;
@@ -198,20 +200,7 @@ public class ClassStructure
     public Annotation[] collectAnnotations(boolean fIntoClass) {
         Annotation[] annos = fIntoClass ? m_aAnnoClass : m_aAnnoMixin;
         if (annos == null) {
-            List<Annotation> listAnnos = null;
-
-            for (Contribution contrib : getContributionsAsList()) {
-                if (contrib.getComposition() == Composition.Annotation) {
-                    Annotation anno = contrib.getAnnotation();
-
-                    if (fIntoClass == anno.getAnnotationType().getExplicitClassInto().isIntoClassType()) {
-                        if (listAnnos == null) {
-                            listAnnos = new ArrayList<>();
-                        }
-                        listAnnos.add(anno);
-                    }
-                }
-            }
+            List<Annotation> listAnnos = getListAnnos(fIntoClass);
             annos = listAnnos == null
                     ? Annotation.NO_ANNOTATIONS
                     : listAnnos.toArray(Annotation.NO_ANNOTATIONS);
@@ -222,6 +211,24 @@ public class ClassStructure
             }
         }
         return isReadOnly() ? annos.clone() : annos;
+    }
+
+    private @Nullable List<Annotation> getListAnnos(boolean fIntoClass) {
+        List<Annotation> listAnnos = null;
+
+        for (Contribution contrib : getContributionsAsList()) {
+            if (contrib.getComposition() == Composition.Annotation) {
+                Annotation anno = contrib.getAnnotation();
+
+                if (fIntoClass == anno.getAnnotationType().getExplicitClassInto().isIntoClassType()) {
+                    if (listAnnos == null) {
+                        listAnnos = new ArrayList<>();
+                    }
+                    listAnnos.add(anno);
+                }
+            }
+        }
+        return listAnnos;
     }
 
     /**
@@ -655,7 +662,7 @@ public class ClassStructure
     }
 
     /**
-     * @return the formal type (e.g. Map<Key, Value>)
+     * @return the formal type (e.g. {@code Map<Key, Value>})
      */
     public TypeConstant getFormalType() {
         TypeConstant typeFormal = m_typeFormal;
@@ -717,7 +724,7 @@ public class ClassStructure
     }
 
     /**
-     * @return the normalized canonical type (e.g. Map<Object, Object>)
+     * @return the normalized canonical type (e.g. {@code Map<Object, Object>})
      */
     public TypeConstant getNormalizedType() {
         TypeConstant typeNormalized = m_typeNormalized;
@@ -1068,12 +1075,10 @@ public class ClassStructure
      *
      * <p>A slight complication comes from a scenario when the annotation applies to a union of
      * types, for example:
-     * <code>
-     *   <pre>
+     * <pre><code>
      *     annotation Override
      *         into Class | Property | Method
-     *   </pre>
-     * </code>
+     * </code></pre>
      * In such a case it may be a "real" annotation, if it applies to the class itself.
      *
      * @param typeAnno  the annotation type
@@ -3734,7 +3739,7 @@ public class ClassStructure
                     List<Map.Entry<StringConstant, TypeConstant>> entries = getTypeParamsAsList();
 
                     if (id.equals(pool.clzClass()) && cActual > 0) {
-                        TypeConstant typePublic = listActual.get(0);
+                        TypeConstant typePublic = listActual.getFirst();
                         if (typePublic.isSingleUnderlyingClass(false) && !typePublic.isFormalType()) {
                             // we know a bit more about the relationship between Class formal types;
                             // prime them accordingly

@@ -19,7 +19,7 @@ import static org.xvm.asm.ErrorList.UNLIMITED;
 /**
  * A speculative parse is a branch: keeping it keeps what it had to say, dropping it drops the lot.
  *
- * The parser cannot currently report anything below ERROR, so the kept-warning case here is a
+ * <p>The parser cannot currently report anything below ERROR, so the kept-warning case here is a
  * guard rather than a reproduction. It is worth guarding: the machinery this replaced discarded
  * every sub-ERROR diagnostic unconditionally, and a kept attempt is the real parse - its tokens
  * are not put back and nothing re-reads them - so the first warning the parser ever learned to

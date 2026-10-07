@@ -55,7 +55,7 @@ class XdkPartialAnalysisTest {
             EmbeddingSupport
                 .instance()
                 .analyzeIncomplete(Source(text, URI), position(prefix), null, errors)
-        assertThat(analysis.pool()).describedAs(errors.errors.toString()).isPresent()
+        assertThat(analysis.pool()).describedAs(errors.errors.toString()).isNotNull()
         val site = analysis.sites().single()
         assertThat(site.receiver.orElseThrow().isValidated)
             .describedAs(errors.errors.toString())
@@ -124,7 +124,7 @@ class XdkPartialAnalysisTest {
             assertThat(errors.errors.map { it.code })
                 .describedAs(errors.errors.toString())
                 .containsExactly(Parser.INCOMPLETE_EXPRESSION)
-            assertThat(analysis.pool()).isPresent()
+            assertThat(analysis.pool()).isNotNull()
             val site = analysis.sites().single()
             assertThat(site.parent).isInstanceOf(IncompleteExpression::class.java)
             assertThat(site.parent.parent)
@@ -137,7 +137,7 @@ class XdkPartialAnalysisTest {
                 )
             val receiver = site.receiver.orElseThrow()
             assertThat(receiver.isValidated && receiver.typeFit.isFit).isTrue()
-            ConstantPool.withPool(analysis.pool().orElseThrow()).use {
+            ConstantPool.withPool(requireNotNull(analysis.pool())).use {
                 assertThat(receiver.type.valueString).contains("String")
             }
             assertThat((site.parent as IncompleteExpression).isValidated).isFalse()
@@ -187,7 +187,7 @@ class XdkPartialAnalysisTest {
         assertThat(errors.errors.map { it.code })
             .describedAs(errors.errors.toString())
             .containsExactly(Parser.INCOMPLETE_EXPRESSION)
-        assertThat(analysis.pool()).isPresent()
+        assertThat(analysis.pool()).isNotNull()
         val site = analysis.sites().single()
         val receiver = site.receiver.orElseThrow() as NameExpression
         assertThat(receiver.name).isEqualTo("value")
@@ -275,7 +275,7 @@ class XdkPartialAnalysisTest {
                     .analyzeIncomplete(Source("$prefix; } }", URI), position(prefix), null, errors)
             assertThat(errors.hasSeriousErrors()).isTrue()
             assertThat(errors.errors.map { it.code }).doesNotContain("EMB-5")
-            assertThat(analysis.pool()).isEmpty()
+            assertThat(analysis.pool()).isNull()
             assertThat(analysis.sites()).isEmpty()
         }
         val prefix = "module Editing { Int run() { return work(missing."
@@ -311,13 +311,13 @@ class XdkPartialAnalysisTest {
                     .instance()
                     .analyzeIncomplete(Source(text, URI), position(prefix), null, errors)
             assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
-            assertThat(analysis.pool()).isPresent()
+            assertThat(analysis.pool()).isNotNull()
             val site = analysis.sites().single()
             assertThat(site.source.toRawString()).isEqualTo(text)
             assertThat(site.endPosition).isEqualTo(position(prefix))
             val receiver = site.receiver.orElseThrow() as NameExpression
             assertThat(receiver.isValidated && receiver.typeFit.isFit).isTrue()
-            ConstantPool.withPool(analysis.pool().orElseThrow()).use {
+            ConstantPool.withPool(requireNotNull(analysis.pool())).use {
                 assertThat(receiver.type.valueString).contains("String")
             }
             val later =
@@ -389,13 +389,13 @@ class XdkPartialAnalysisTest {
                 .instance()
                 .analyzeIncomplete(sources, member, position(prefix), null, errors)
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
-        assertThat(analysis.pool()).isPresent()
+        assertThat(analysis.pool()).isNotNull()
         val site = analysis.sites().single()
         assertThat(site.source.fileName).isEqualTo(member.path)
         assertThat(site.source.toRawString()).isEqualTo(overlay)
         val receiver = site.receiver.orElseThrow() as NameExpression
         assertThat(receiver.isValidated && receiver.typeFit.isFit).isTrue()
-        ConstantPool.withPool(analysis.pool().orElseThrow()).use {
+        ConstantPool.withPool(requireNotNull(analysis.pool())).use {
             assertThat(receiver.type.valueString).contains("String")
         }
         val snapshot = analysis.semanticSnapshot(errors)
@@ -430,7 +430,7 @@ class XdkPartialAnalysisTest {
                 EmbeddingSupport
                     .instance()
                     .analyzeIncomplete(Source(prefix + suffix, URI), position(prefix), null, errors)
-            assertThat(analysis.pool()).describedAs("%s|%s", prefix, suffix).isEmpty()
+            assertThat(analysis.pool()).describedAs("%s|%s", prefix, suffix).isNull()
             assertThat(analysis.sites()).isEmpty()
             assertThat(errors.errors.map { it.code }).doesNotContain("EMB-5")
         }
@@ -590,7 +590,7 @@ class XdkPartialAnalysisTest {
                 .isEqualTo(prefix.lines().last().length)
             val receiver = site.receiver.orElseThrow()
             assertThat(receiver.isValidated && receiver.typeFit.isFit).isTrue()
-            ConstantPool.withPool(analysis.pool().orElseThrow()).use {
+            ConstantPool.withPool(requireNotNull(analysis.pool())).use {
                 assertThat(receiver.type.valueString).contains("String")
             }
         }
@@ -611,7 +611,7 @@ class XdkPartialAnalysisTest {
             EmbeddingSupport
                 .instance()
                 .analyzeIncomplete(ModuleInfo(root, false), member, position(prefix), null, errors)
-        assertThat(analysis.pool()).isEmpty()
+        assertThat(analysis.pool()).isNull()
         assertThat(analysis.sites()).isEmpty()
         assertThat(errors.errors).anyMatch { it.code != Parser.INCOMPLETE_EXPRESSION }
         assertThat(errors.errors.map { it.code }).doesNotContain("EMB-5")
@@ -640,13 +640,13 @@ class XdkPartialAnalysisTest {
                 null,
                 ErrorListener { delivered.add(it) },
             )
-        assertThat(analysis.pool()).isPresent()
+        assertThat(analysis.pool()).isNotNull()
         assertThat(delivered.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
 
         val errors = ErrorList(ErrorList.FIRST_ERROR)
         val budgeted =
             support.analyzeIncomplete(ModuleInfo(root, false), root, position(prefix), null, errors)
-        assertThat(budgeted.pool()).isEmpty()
+        assertThat(budgeted.pool()).isNull()
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
 
         val cancelled = AtomicBoolean()
@@ -664,7 +664,7 @@ class XdkPartialAnalysisTest {
                     null,
                     listener,
                 ).pool(),
-        ).isEmpty()
+        ).isNull()
         assertThat(cancelled.get()).isTrue()
         val unread =
             object : ModuleInfo(root, false) {
@@ -688,13 +688,13 @@ class XdkPartialAnalysisTest {
         val text = "module Editing { @Inject Console console; void run() { console."
         val (analysis, errors) = analyze(text)
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.UNEXPECTED_EOF)
-        assertThat(analysis.pool()).isPresent()
+        assertThat(analysis.pool()).isNotNull()
         val site = analysis.sites().single()
         assertThat(site.isCall).isFalse()
         val receiver = site.receiver.orElseThrow() as NameExpression
         assertThat(receiver.isValidated).isTrue()
         assertThat(receiver.resolvedTarget).isNotNull()
-        ConstantPool.withPool(analysis.pool().orElseThrow()).use {
+        ConstantPool.withPool(requireNotNull(analysis.pool())).use {
             assertThat(receiver.type.valueString).contains("Console")
         }
         val method = parents(site).filterIsInstance<MethodDeclarationStatement>().first()
@@ -728,7 +728,7 @@ class XdkPartialAnalysisTest {
         assertThat(receiver.isValidated).isTrue()
         assertThat(site.arguments.single().isValidated).isTrue()
         assertThat((site.target as NameExpression).resolvedTarget).isNull()
-        ConstantPool.withPool(analysis.pool().orElseThrow()).use {
+        ConstantPool.withPool(requireNotNull(analysis.pool())).use {
             assertThat(receiver.type.valueString).contains("String")
             assertThat(
                 site.arguments
@@ -744,7 +744,7 @@ class XdkPartialAnalysisTest {
         val (analysis, errors) = analyze("module Editing { void run() { Int broken = ; console.")
         assertThat(errors.errors).isNotEmpty()
         assertThat(errors.errors.map { it.code }).doesNotContain("EMB-5")
-        assertThat(analysis.pool()).isEmpty()
+        assertThat(analysis.pool()).isNull()
         assertThat(analysis.sites()).isEmpty()
     }
 
@@ -763,7 +763,7 @@ class XdkPartialAnalysisTest {
                         .orElseThrow()
                 assertThat(receiver.isValidated && receiver.typeFit.isFit).isTrue()
                 val copiedType =
-                    ConstantPool.withPool(analysis.pool().orElseThrow()).use {
+                    ConstantPool.withPool(requireNotNull(analysis.pool())).use {
                         receiver.type.valueString
                     }
                 assertThat(copiedType).contains(type)
@@ -850,13 +850,13 @@ class XdkPartialAnalysisTest {
             val (analysis, errors) = analyze("module Editing { void run(String value) { $body")
             assertThat(errors.errors).isNotEmpty()
             assertThat(errors.errors.map { it.code }).doesNotContain("EMB-5")
-            assertThat(analysis.pool()).isEmpty()
+            assertThat(analysis.pool()).isNull()
             assertThat(analysis.sites()).isEmpty()
         }
         val (complete, errors) = analyze("module Editing { void run() {} }")
         assertThat(errors.errors).isEmpty()
         assertThat(complete.sites()).isEmpty()
-        assertThat(complete.pool()).isEmpty()
+        assertThat(complete.pool()).isNull()
     }
 
     @Test
@@ -869,13 +869,13 @@ class XdkPartialAnalysisTest {
                 .instance()
                 .analyzeIncomplete(Source(text, URI), null, ErrorListener { delivered.add(it) })
         assertThat(delivered.map { it.code }).containsExactly(Parser.UNEXPECTED_EOF)
-        assertThat(analysis.pool()).isPresent()
+        assertThat(analysis.pool()).isNotNull()
 
         val errors = ErrorList(ErrorList.FIRST_ERROR)
         val budgeted =
             EmbeddingSupport.instance().analyzeIncomplete(Source(text, URI), null, errors)
         assertThat(errors.errors).hasSize(1)
-        assertThat(budgeted.pool()).isEmpty()
+        assertThat(budgeted.pool()).isNull()
 
         val cancelled = AtomicBoolean()
         val listener =
@@ -886,7 +886,7 @@ class XdkPartialAnalysisTest {
         val interrupted =
             EmbeddingSupport.instance().analyzeIncomplete(Source(text, URI), null, listener)
         assertThat(cancelled.get()).isTrue()
-        assertThat(interrupted.pool()).isEmpty()
+        assertThat(interrupted.pool()).isNull()
         val alreadyCancelled =
             EmbeddingSupport.instance().analyzeIncomplete(Source(text, URI), null, listener)
         assertThat(alreadyCancelled.sourceTrees()).isEmpty()
@@ -920,7 +920,7 @@ class XdkPartialAnalysisTest {
                 )
         assertThat(cancelled.get()).isTrue()
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.UNEXPECTED_EOF)
-        assertThat(analysis.pool()).isEmpty()
+        assertThat(analysis.pool()).isNull()
         assertThat(
             analysis
                 .sites()
