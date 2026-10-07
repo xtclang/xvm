@@ -4,8 +4,11 @@ import java.math.BigDecimal;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -18,10 +21,12 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MultiMethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.SingletonConstant;
 import org.xvm.asm.constants.TypeConstant;
+import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodKind;
 import org.xvm.asm.constants.TypedefConstant;
 
@@ -93,7 +98,7 @@ final class PartialCallResolver {
             var supplied = target.receiverArgument()
                     ? Stream.concat(Stream.of(site.getReceiver().orElseThrow()), arguments.stream()).toList() : arguments;
             return methods.stream().takeWhile(method -> !errs.isAbortDesired())
-                    .flatMap(method -> ((AstNode) site).probeCallCandidate(ctx, target.type(), info, method,
+                    .flatMap(method -> probeCallCandidate(site, ctx, target.type(), info, method,
                             supplied, probe).stream())
                     .map(candidate -> target.receiverArgument() ? candidate.withReceiverArgument() : candidate)
                     .toList();
@@ -106,6 +111,43 @@ final class PartialCallResolver {
                         validateArguments(ctx, candidate, target.receiverArgument()
                                 ? Stream.concat(Stream.of(site.getReceiver().orElseThrow()), arguments.stream()).toList()
                                 : arguments, errs)));
+    }
+
+    /**
+     * Test one incomplete-call candidate with the compiler's usual named-argument, conversion and
+     * generic inference rules. Cloned arguments and a child context isolate speculative changes.
+     * Missing parameters are permitted; no best-overload selection or invocation validation occurs.
+     */
+    static List<CursorBinding.Candidate> probeCallCandidate(AstNode site, Context ctx, TypeConstant target, TypeInfo info,
+            MethodConstant method, List<Expression> arguments, ErrorListener errs) {
+        var written = arguments.stream().map(argument -> (Expression) argument.clone()).toList();
+        var named = site.collectNamedArgs(written, errs);
+        if (named == null || errs.isAbortDesired()) {
+            return List.of();
+        }
+        Set<MethodConstant> direct = new HashSet<>();
+        Set<MethodConstant> converting = new HashSet<>();
+        List<CursorBinding.Candidate> result = new ArrayList<>();
+        site.collectMatchingMethods(ctx.enter(), target, info, Set.of(method), written, false, named,
+                null, direct, converting, new HashMap<>(), errs, (signature, ordered) -> {
+                    var resolved = signature.resolveGenericTypes(site.pool(), target);
+                    var original = info.getMethodById(method).getSignature();
+                    // A pending method formal is not a concrete expected type. Retain its written
+                    // formal instead of leaking PendingTypeConstant or substituting Object.
+                    var params = IntStream.range(0, resolved.getParamCount())
+                            .mapToObj(i -> resolved.getRawParams()[i].containsUnresolved()
+                                    ? original.getRawParams()[i] : resolved.getRawParams()[i])
+                            .toArray(TypeConstant[]::new);
+                    var returns = IntStream.range(0, resolved.getReturnCount())
+                            .mapToObj(i -> resolved.getRawReturns()[i].containsUnresolved()
+                                    ? original.getRawReturns()[i] : resolved.getRawReturns()[i])
+                            .toArray(TypeConstant[]::new);
+                    var copied = site.pool().ensureSignatureConstant(resolved.getName(), params, returns);
+                    var declaration = info.getMethodById(method).getTopmostMethodStructure(info).getIdentityConstant();
+                    InvocationBinding.arguments(written, ordered).ifPresent(mapping ->
+                            result.add(new CursorBinding.Candidate(declaration, copied, mapping, converting.contains(method))));
+                });
+        return List.copyOf(result);
     }
 
     /** testFit can use an operator's optimistic implicit type; validate each actual insertion too. */
