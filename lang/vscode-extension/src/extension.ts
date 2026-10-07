@@ -185,7 +185,7 @@ export function activate(context: vscode.ExtensionContext): void {
             if (event.affectsConfiguration('xtc.compiler.sourceModules') || event.affectsConfiguration('xtc.compiler.libraries')) {
                 void updateCompilerConfiguration().catch(error => outputChannel.error(`Compiler configuration update failed: ${error}`));
             }
-            if (event.affectsConfiguration('xtc.formatting') || event.affectsConfiguration('xtc.inlayHints.enabled')) {
+            if (event.affectsConfiguration('xtc.formatting') || event.affectsConfiguration('xtc.inlayHints.enabled') || event.affectsConfiguration('xtc.codeLens.references')) {
                 void updateEditorConfiguration().catch(error => outputChannel.error(`Editor configuration update failed: ${error}`));
             }
             const needsRestart = serverExists && (
