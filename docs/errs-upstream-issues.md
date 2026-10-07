@@ -62,6 +62,38 @@ local plugin. The Marketplace default remains 0.21.0, so its workarounds remain 
 if the local snapshot passes. UP02/UP04–UP06/UP09–UP11/UP14/UP18/UP21/UP25/UP26 are not repaired
 by these nine commits; UP20/UP29 concern the test Driver, UP15 the server's LSP4J and UP17 the platform.
 
+### Local LSP4J repairs, 2026-10-07
+
+The separate `~/src/lsp4j` checkout is based on upstream `main` at
+`57eeaa40e6b193630679ecf039895863ee715242` (1.1.0-SNAPSHOT). Its local, unpushed branch
+is also named `lagergren/local-lsp-repairs`. It contains both recorded LSP4J repairs:
+
+| Local LSP4J commit | Issue and scope |
+| --- | --- |
+| `b47e8923` | UP06: select nested full/unchanged diagnostic reports by `kind` in both complete report types and partial results. Reuse Gson's map handling and the existing `EitherTypeAdapter`; no application-side adapter registration is needed. |
+| `13dfc35b` | UP15: defer typed parameter decoding until the envelope is read, preserve IDs that follow parameters, and report `InvalidParams`. Malformed JSON, including trailing invalid input, remains `ParseError`; notifications receive no response and the next framed request still succeeds. |
+
+The final twelve regression tests were run with only the production repairs removed:
+UP06 has **four failures out of six**, and UP15 has **three failures out of six**. Restoring
+the exact repairs makes all twelve pass. A forced `./gradlew test --rerun-tasks --no-build-cache`
+across all modules then passes **375 tests, zero failures/errors/skips** on JDK 17 with
+upstream Gradle 8.6. The count comprises 128 protocol, 181 JSON-RPC, 10 debug protocol,
+52 debug JSON-RPC and four Jakarta WebSocket tests; the generator has no separate test sources.
+The copied XML, exact command/JDK path and counts are under
+`/private/tmp/lsp4j-repairs-2026-10-07/verification.json`, `final-fail-before/` and
+`final-all-modules/` in that same evidence directory.
+
+UP15 preserves the existing streaming/deferred parameter decoders and their legacy
+positional/list behavior. Only request/notification parameter conversion receives the new
+classification; response-result failures are not mislabeled as invalid parameters.
+
+These are upstream-library tests, **not XVM or native-editor replacement acceptance**.
+The Ecstasy server still uses released LSP4J 1.0.0, LSP4IJ still uses its bundled library,
+and our UP06 adapter and UP15 shipping-version assertion remain. Test a compatible release
+or explicitly selected local build before removing either boundary; this checkout is a newer
+protocol snapshot, not a change to the production dependency. No upstream push, issue or PR
+was made. IntelliJ Platform and VS Code upstream repairs are deferred by the user's instruction.
+
 ### Local plugin acceptance, 2026-10-06
 
 XVM checkpoint `6ece0efab` adds the explicit `-Plsp4ijPlugin=/absolute/built/plugin/directory`
@@ -193,7 +225,7 @@ not a claim that every referenced suite was rerun for this documentation change.
 | **UP03 — LSP4IJ — bridged; generic UI wait open** | Native file rename/move preflight happens too late; resource rename handling ignores changed parents. The VFS listener also requests old-path → same-path preflight for moves and waits on the EDT. | Guarded native entry points preserve edits/Undo. `PreflightedRenames` now completes no-op requests and exact already-approved physical operations locally. Real unowned renames still use upstream preflight. Eight endpoint/launcher regressions and the focused native run pass. Original 6–11-second wait stacks remain recorded. | Native upstream Rename/Move passes X103/X130, including consumers, resources, Undo/Redo and refusals, without our entry points or UI-thread waits. |
 | **UP04 — LSP4IJ — bridged** | Rename and generic `workspace/applyEdit` can apply stale edits without checking transmitted document versions/epochs. | [Rename handler](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcRenameHandler.kt), [snapshot guard](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcRenameEdit.kt) and [client edit handler](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcClientFeatures.kt) validate inside the write command. Unsupported generic resource/snippet/confirmation edits are refused. | Equivalent upstream ownership/version checks pass stale/closed/reopened document tests and X144; supported Rename/Move remains atomic and undoable. |
 | **UP05 — LSP4IJ — bridged** | Dynamic filesystem watcher registrations do not alone establish/refresh unknown or missing external VFS roots while the IDE stays focused. | [CompilerRootWatches](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/CompilerRootWatches.kt) owns roots and their disposal; `CompilerRootWatchesTest` and X124 cover resources. | Upstream observes creation/deletion/change under configured external roots while focused and releases watchers on disposal. |
-| **UP06 — LSP4J, bundled by LSP4IJ — bridged** | `relatedDocuments` diagnostic unions are not reliably decoded by their `kind` discriminator. | [DiagnosticReportJson](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/DiagnosticReportJson.kt) supplies the adapter; `DiagnosticReportJsonTest` checks full/unchanged reports. | Correct full/unchanged wire round trips without the adapter in the actual bundled client library. |
+| **UP06 — LSP4J, bundled by LSP4IJ — bridged; local repair tested** | `relatedDocuments` diagnostic unions are not reliably decoded by their `kind` discriminator. | [DiagnosticReportJson](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/DiagnosticReportJson.kt) supplies the adapter; `DiagnosticReportJsonTest` checks full/unchanged reports. Local LSP4J `b47e8923` passes direct regression tests; see the [repair receipt](#local-lsp4j-repairs-2026-10-07). | Correct full/unchanged wire round trips without the adapter in the actual bundled client library. |
 | **UP07 — LSP4IJ — bridged** | Automatic pulls omit `previousResultId`. Equal full reports also replace/cancel lazy fixes without refreshing the annotations that own them. | [DiagnosticResultMessages](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/DiagnosticResultMessages.kt) owns result IDs; [DiagnosticQuickFixes](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/DiagnosticQuickFixes.kt) gives delivered full reports a client-only data revision and restores original data on outgoing action requests. Lifecycle, upstream equality and opaque-data tests cover both. | Upstream must own IDs/retirement and retain equivalent lazy fixes or refresh their annotations. Verify X181 → X185 plus diagnostic/action Undo/Redo before removing either bridge. |
 | **UP08 — LSP4IJ — bridged** | Normal Gson omission of explicit null configuration fields prevents reset-to-discovery from reaching the server. | [ConfigurationJson](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/ConfigurationJson.kt) preserves explicit nulls; `ConfigurationJsonTest` covers the wire representation. | Reset-to-discovery survives native settings and transport round trips without the adapter. |
 | **UP09 — LSP4IJ — bridged** | Startup document messages can arrive out of order; folding replies can outlive the editor that requested them. | [DocumentStartupMessages](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/DocumentStartupMessages.kt) serializes messages and retires stale responses; matching unit tests cover open/change/close ownership. | Upstream passes startup typing and close/reopen regressions without the transport bridge. |
@@ -202,7 +234,7 @@ not a claim that every referenced suite was rerun for this documentation change.
 | **UP12 — LSP4IJ — bridged** | Formatting dereferences an absent editor and fails to reconnect closed dirty buffers before querying their contents. | [XtcFormattingService](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcFormattingService.kt) connects the current buffer and checks text/version before applying edits. Local `15bb34bd` passes closed-file native save with this override bypassed; shipping 0.21.0 still needs it. | A released repair preserves absent-editor, snapshot, cancellation and server-lifetime guards; repeat native save acceptance. Retain the separate UP24 command ownership and resolve closed-buffer connection retention before removing the whole override. |
 | **UP13 — LSP4IJ — bridged** | Default `createSettings` reads global settings despite subscribing to both global and project stores. | [XtcLanguageClient](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcLanguageClient.kt) merges stores with project precedence. | Upstream merges/reset settings correctly; native project/global/inheritance acceptance passes. |
 | **UP14 — LSP4IJ — bridged** | Semantic caches keyed only to PSI stamps retain old results when a dependency changes but the consumer text does not. | [XtcLanguageClient](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcLanguageClient.kt) retires completed semantic results on compiler analysis updates; X146 observes untouched-consumer refresh. | All negotiated native providers reflect dependency edits without editing the consumer or our invalidation bridge. |
-| **UP15 — LSP4J — open** | Valid JSON with a wrongly typed parameter is classified as `ParseError` rather than `InvalidParams`. | [XdkStdioTest](../lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/XdkStdioTest.kt) records the actual library result and then exercises normal semantic requests. No production parser fork. Details below. | Repair upstream parameter-decoding classification; change the assertion to `ResponseErrorCode.InvalidParams`, retaining reader recovery. |
+| **UP15 — LSP4J — release limitation; local repair tested** | Valid JSON with a wrongly typed parameter is classified as `ParseError` rather than `InvalidParams`. | [XdkStdioTest](../lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/XdkStdioTest.kt) records the actual library result and then exercises normal semantic requests. No production parser fork. Local LSP4J `13dfc35b` passes classification and transport recovery tests; see the [repair receipt](#local-lsp4j-repairs-2026-10-07). | Adopt and verify a compatible repaired dependency; change the assertion to `ResponseErrorCode.InvalidParams`, retaining reader recovery. |
 | **UP16 — VS Code — open** | Paste repaints obsolete Cut tree nodes after an Explorer refresh; cleanup throws and skips resetting move/copy state. | [Isolated reproduction and traces](errs-integration-plan.md#x130-isolated-host-defect-and-harness-focus-correction-2026-10-01), [probe](../lang/vscode-extension/src/test/explorer-move.ts) and X130. Reproduced without Ecstasy or an LSP server. No host patch or exception suppression. | Upstream reconciles/guards stale repaint targets and always resets cleanup state. Both the controlled standalone reproduction and native X130 must pass on the repaired release. |
 | **UP17 — IntelliJ Platform — open** | Removing many ranges in one document edit repeatedly traverses temporarily invalid interval subtrees on the EDT. Large-file replacement freezes the UI. | [Isolated marker probe](../lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/probe/LargeFileProbe.kt), [native driver](../lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/LargeFileEditing.kt) and [measurements](errs-integration-plan.md#l82-large-file-intellij-freeze-investigation-2026-10-01). Reproduced with unattached platform documents; bulk-update mode does not remove the cost. No production tree patch or discarded highlights. | A platform repair passes the plain-marker scaling control and actual decorated-editor replacement, preserving marker validity and UI responsiveness. A smaller workload or replacement before highlights arrive does not satisfy this gate. |
 | **UP18 — LSP4IJ — constrained** | Native snippet expansion adds source indentation even when the completion requests `InsertTextMode.AsIs`, despite advertising both modes. | [XtcClientFeatures](../lang/intellij-plugin/src/main/kotlin/org/xtclang/idea/lsp/XtcClientFeatures.kt) advertises AdjustIndentation as its default and sole supported mode. The server supplies relative template indentation. X150's first native trace (`run-9591212347662100514`) records the original capabilities, AsIs reply and doubled indentation; no IDE errors occurred. With the constraint, final native X150 passes (`run-10874571275660252562`), including exact text, snippet stops and insertion Undo. | Upstream passes the insertion mode through snippet construction/expansion. Remove the constraint only after X150 preserves exact source, placeholder navigation and Undo without it. |
@@ -337,6 +369,10 @@ which this branch already uses. The same catch/classification is present in
 [`MessageTypeAdapter` at upstream commit `57eeaa40e6b193630679ecf039895863ee715242`](https://github.com/eclipse-lsp4j/lsp4j/blob/57eeaa40e6b193630679ecf039895863ee715242/org.eclipse.lsp4j.jsonrpc/src/main/java/org/eclipse/lsp4j/jsonrpc/json/adapters/MessageTypeAdapter.java).
 There is no released dependency upgrade that removes this limitation.
 
+The October 7 [local LSP4J repair](#local-lsp4j-repairs-2026-10-07) now addresses the
+classification on an unpushed branch. The shipping assertion above still describes the
+released dependency, not that repaired checkout.
+
 ## Follow-up discipline
 
 - [ ] Prepare minimal upstream reports from the recorded evidence; obtain authorization before
@@ -344,8 +380,10 @@ There is no released dependency upgrade that removes this limitation.
 - [ ] Recheck UP15 on a repaired LSP4J release and require `InvalidParams` for typed-parameter
   failures while retaining `ParseError` for actual invalid JSON syntax.
 - [ ] Repair/report UP16 independently of compiler work; keep X130 failed whenever it reproduces.
+  VS Code upstream repair work is currently deferred by the user's instruction.
 - [ ] Prepare UP17's plain-document reproduction and native freeze profile for JetBrains. Verify
   a platform repair before closing L82; investigate editor decoration cost separately from compiler time.
+  IntelliJ Platform upstream repair work is currently deferred by the user's instruction.
 - [ ] On each relevant dependency upgrade, rerun the removal gates before deleting a bridge.
   Record the upstream issue/PR, first fixed version and replacement validation here.
 - [ ] Keep this register, source TODO identifiers and the L81/L82 acceptance status synchronized.
