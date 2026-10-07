@@ -82,6 +82,18 @@ internal object XdkRename {
                 edits.filter { it.end <= offset }.sumOf { it.text.length - (it.end - it.start) }
         }
 
+        /** Translate a written position to the proposed text of the same source file. */
+        fun mapPosition(
+            source: String,
+            at: SemanticModel.Position,
+        ): SemanticModel.Position? {
+            val original = original[source] ?: return null
+            val changed = proposed[source] ?: return null
+            val offset = offset(original, at)?.let { map(source, it) } ?: return null
+            val mapped = position(changed, offset)
+            return SemanticModel.Position(mapped.line, mapped.column)
+        }
+
         fun textEdits(source: String): List<TextEdit> =
             // Keep prefix insertions separate for binding translation, but combine an insertion
             // and a renamed token at the same position for clients requiring disjoint edits.
@@ -302,11 +314,8 @@ internal object XdkRename {
             translate: (String, Int) -> Int?,
         ): Map<Site, String>? =
             facts.resourceValues.entries.associate { (location, value) ->
-                val source = location.sourceName ?: return null
-                val text = texts[source] ?: return null
-                val start = offset(text, location.range.start)?.let { translate(source, it) } ?: return null
-                val end = offset(text, location.range.end)?.let { translate(source, it) } ?: return null
-                Site(moved(source), start, end) to (value ?: return null)
+                val site = translatedSite(location, texts, moved, translate) ?: return null
+                site to (value ?: return null)
             }
         val expected = values(before, plan.original, plan::sourceAfter, plan::map) ?: return false
         return expected == values(after, plan.proposed, { it }) { _, offset -> offset }
@@ -324,11 +333,9 @@ internal object XdkRename {
             translate: (String, Int) -> Int?,
         ): Map<Site, Target>? =
             facts.typeNames.filter { it.imported }.associate { name ->
-                val source = name.location.sourceName ?: return null
-                val text = texts[source] ?: return null
-                val start = offset(text, name.terminal.start)?.let { translate(source, it) } ?: return null
-                val end = offset(text, name.terminal.end)?.let { translate(source, it) } ?: return null
-                Site(moved(source), start, end) to (composedTarget(name.target, texts, moved, translate) ?: return null)
+                val location = SemanticModel.SourceLocation(name.location.sourceName, name.terminal)
+                val site = translatedSite(location, texts, moved, translate) ?: return null
+                site to (composedTarget(name.target, texts, moved, translate) ?: return null)
             }
         val expected = imported(before, plan.original, plan::sourceAfter, plan::map) ?: return false
         val actual = imported(after, plan.proposed, { it }) { _, offset -> offset } ?: return false
@@ -342,16 +349,7 @@ internal object XdkRename {
         plan: Plan,
     ): Boolean {
         if (after.models.any { it.status != SemanticModel.Status.COMPLETE }) return false
-        val expected =
-            edges(before, plan.original, allowUnresolved = true, sourceParameters = true) {
-                source,
-                offset,
-                ->
-                plan.map(source, offset)
-            } ?: return false
-        val actual =
-            edges(after, plan.proposed, sourceParameters = true) { _, offset -> offset }
-                ?: return false
+        val (expected, actual) = repairBindingComparison(before, after, plan) ?: return false
         if (expected.any { (site, target) -> actual[site] != target }) return false
         val knownDispatch =
             dispatch(before, plan.original) { source, offset -> plan.map(source, offset) }
@@ -410,8 +408,10 @@ internal object XdkRename {
             old: SemanticModel.SourceLocation,
             new: SemanticModel.SourceLocation,
         ): Boolean {
-            val expected = before.extraction.types[old]?.let { composedTarget(it, plan.original, { it }, plan::map) } ?: return false
-            val actual = after.extraction.types[new]?.let { composedTarget(it, plan.proposed, { it }) { _, at -> at } } ?: return false
+            val expected =
+                before.extraction.types[old]?.let { type -> composedTarget(type, plan.original, { it }, plan::map) } ?: return false
+            val actual =
+                after.extraction.types[new]?.let { type -> composedTarget(type, plan.proposed, { it }) { _, at -> at } } ?: return false
             return expected == actual
         }
         val expressionStart = insertionStart + candidate.relocation.contentOffset
@@ -703,16 +703,7 @@ internal object XdkRename {
         ) {
             return false
         }
-        val expected =
-            edges(before, plan.original, allowUnresolved = true, sourceParameters = true) {
-                path,
-                offset,
-                ->
-                plan.map(path, offset)
-            } ?: return false
-        val actual =
-            edges(after, plan.proposed, sourceParameters = true) { _, offset -> offset }
-                ?: return false
+        val (expected, actual) = repairBindingComparison(before, after, plan) ?: return false
         val oldParameters =
             memberParameterSlots(before, plan.original) { path, offset -> plan.map(path, offset) }
         val newParameters = memberParameterSlots(after, plan.proposed) { _, offset -> offset }
@@ -897,6 +888,31 @@ internal object XdkRename {
                     chain.alternatives.map { composedTarget(it, texts, moved, translate) ?: return null },
                 )
             }
+    }
+
+    /** Preserve every known input binding while requiring resolved bindings in the repaired source. */
+    private fun repairBindingComparison(
+        before: CompilerRenameFacts,
+        after: CompilerRenameFacts,
+        plan: Plan,
+    ): Pair<Map<Site, Target>, Map<Site, Target>>? {
+        val expected = edges(before, plan.original, allowUnresolved = true, sourceParameters = true, translate = plan::map) ?: return null
+        val actual = edges(after, plan.proposed, sourceParameters = true) { _, offset -> offset } ?: return null
+        return expected to actual
+    }
+
+    /** Both range boundaries must survive the edit before a proof can compare their targets. */
+    private fun translatedSite(
+        location: SemanticModel.SourceLocation,
+        texts: Map<String, String>,
+        moved: (String) -> String,
+        translate: (String, Int) -> Int?,
+    ): Site? {
+        val source = location.sourceName ?: return null
+        val text = texts[source] ?: return null
+        val start = offset(text, location.range.start)?.let { translate(source, it) } ?: return null
+        val end = offset(text, location.range.end)?.let { translate(source, it) } ?: return null
+        return Site(moved(source), start, end)
     }
 
     private data class Site(

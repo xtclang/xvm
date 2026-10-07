@@ -1,8 +1,6 @@
 package org.xvm.lsp.adapter.xdk
 
 import org.xvm.asm.ErrorList
-import org.xvm.compiler.CompilerException
-import org.xvm.compiler.Parser
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
 import org.xvm.compiler.ast.AstNode
@@ -13,7 +11,6 @@ import org.xvm.compiler.ast.NewExpression
 import org.xvm.compiler.ast.ReturnStatement
 import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.lsp.adapter.Range
-import org.xvm.lsp.util.ExecutionTrace
 
 /** Syntax chooses a writable declaration; a complete compiler repair must prove its use. */
 internal object XdkMissingDeclarations {
@@ -22,7 +19,7 @@ internal object XdkMissingDeclarations {
         val kind: SemanticModel.SymbolKind,
         val use: SemanticModel.SourceLocation,
         val edit: XdkRename.Edit,
-        val expectedType: ProofIdentity? = null,
+        private val expectedType: ProofIdentity? = null,
     ) {
         val title: String get() = "Create ${if (kind == SemanticModel.SymbolKind.TYPE) "class" else "read-only property"} '$name'"
 
@@ -31,10 +28,8 @@ internal object XdkMissingDeclarations {
             plan: XdkRename.Plan,
         ): Boolean {
             val source = use.sourceName ?: return false
-            val original = plan.original[source] ?: return false
             val changed = plan.proposed[source] ?: return false
-            val useOffset = XdkRename.offset(original, use.range.start)?.let { plan.map(source, it) } ?: return false
-            val at = XdkRename.position(changed, useOffset)
+            val at = plan.mapPosition(source, use.range.start) ?: return false
             val model = after.models.singleOrNull { it.sourceName == source } ?: return false
             val selected = model.symbolAt(at.line, at.column) ?: return false
             val declaration = selected.declaration ?: return false
@@ -46,12 +41,11 @@ internal object XdkMissingDeclarations {
                 return false
             }
             if (expectedType != null) {
-                val end = XdkRename.offset(original, use.range.end)?.let { plan.map(source, it) } ?: return false
-                val finish = XdkRename.position(changed, end)
+                val finish = plan.mapPosition(source, use.range.end) ?: return false
                 val location =
                     SemanticModel.SourceLocation(
                         source,
-                        SemanticModel.Range(SemanticModel.Position(at.line, at.column), SemanticModel.Position(finish.line, finish.column)),
+                        SemanticModel.Range(at, finish),
                     )
                 val actual = after.extraction.types[location] ?: return false
                 if (!XdkRename.sameType(expectedType, actual, plan)) return false
@@ -68,19 +62,9 @@ internal object XdkMissingDeclarations {
     ): List<Candidate> {
         val source = model.sourceName ?: return emptyList()
         val errors = ErrorList()
-        val root =
-            try {
-                ExecutionTrace.api("Parser.parseSource(missing-declarations)") { Parser(Source(text), errors).parseSource() }
-            } catch (_: CompilerException) {
-                return emptyList()
-            }
-        if (errors.hasSeriousErrors()) return emptyList()
+        val root = XdkRefactoringSyntax.parse(text, errors, "missing-declarations") ?: return emptyList()
 
-        fun tree(
-            node: AstNode,
-            parent: AstNode? = null,
-        ): Sequence<Pair<AstNode, AstNode?>> = sequenceOf(node to parent) + node.childNodes().asSequence().flatMap { tree(it, node) }
-        val parents = tree(root).toMap()
+        val parents = XdkRefactoringSyntax.tree(root).toMap()
 
         fun position(value: Long) = SemanticModel.Position(Source.calculateLine(value), Source.calculateOffset(value))
 

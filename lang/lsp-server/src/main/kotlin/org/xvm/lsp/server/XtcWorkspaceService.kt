@@ -73,9 +73,11 @@ class XtcWorkspaceService(
 
     override fun willDeleteFiles(params: DeleteFilesParams): CompletableFuture<WorkspaceEdit?> = CompletableFuture.completedFuture(null)
 
-    override fun didCreateFiles(params: CreateFilesParams) = refreshFiles(params.files.map { FileEvent(it.uri, FileChangeType.Created) })
+    override fun didCreateFiles(params: CreateFilesParams): Unit =
+        refreshFiles(params.files.map { FileEvent(it.uri, FileChangeType.Created) })
 
-    override fun didDeleteFiles(params: DeleteFilesParams) = refreshFiles(params.files.map { FileEvent(it.uri, FileChangeType.Deleted) })
+    override fun didDeleteFiles(params: DeleteFilesParams): Unit =
+        refreshFiles(params.files.map { FileEvent(it.uri, FileChangeType.Deleted) })
 
     /** File operations can arrive without watcher notifications, especially after a client edit. */
     override fun didRenameFiles(params: RenameFilesParams) {

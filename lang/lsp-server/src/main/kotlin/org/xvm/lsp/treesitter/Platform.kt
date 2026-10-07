@@ -9,7 +9,7 @@ object Platform {
     val libExtension: String
 
     /** Library name prefix ("lib" on Unix, empty on Windows) */
-    val libPrefix: String
+    private val libPrefix: String
 
     init {
         val osName = System.getProperty("os.name").lowercase()

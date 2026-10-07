@@ -294,7 +294,7 @@ class AdapterFormatter {
      * Count the number of indent-parent ancestors to determine structural nesting depth. Includes
      * the node itself if it is an indent parent type.
      */
-    internal fun countIndentDepth(node: AdapterNode): Int {
+    private fun countIndentDepth(node: AdapterNode): Int {
         var depth = 0
         generateSequence(node) { it.parent }
             .forEach { n ->
@@ -317,8 +317,7 @@ class AdapterFormatter {
     ): List<TextEdit> =
         when (ch) {
             "\n" -> handleEnter(tree, line, config)
-            "}" -> handleCloseBrace(tree, line, column, config)
-            ")" -> handleCloseParen(tree, line, column, config)
+            "}", ")" -> handleCloseDelimiter(tree, line, column, ch.single())
             ";" -> emptyList()
             else -> emptyList()
         }
@@ -504,55 +503,63 @@ class AdapterFormatter {
     }
 
     /**
-     * Handle closing brace: outdent the current line to match the line where the corresponding
-     * opening '{' lives.
+     * Outdent a closing brace or parenthesis to match its opening construct's line.
+     * Braces align with the block owner; parentheses align with the opening parenthesis.
      */
-    private fun handleCloseBrace(
+    private fun handleCloseDelimiter(
         tree: AdapterTree,
         line: Int,
         column: Int,
-        config: FormattingConfig,
+        closing: Char,
     ): List<TextEdit> {
         val source = tree.source
         val lines = source.split("\n")
-        if (line < 0 || line >= lines.size) return emptyList()
+        val currentLine = lines.getOrNull(line) ?: return emptyList()
 
-        val currentIndent = lines[line].takeWhile { it == ' ' }.length
+        val currentIndent = currentLine.takeWhile { it == ' ' }.length
 
-        // Find the '}' character position on the line and look up the AST node there.
-        // LSP sends the cursor position *after* the typed character, so try both the
-        // reported column and the actual '}' position on the line.
-        val braceCol = lines[line].indexOf('}')
+        // LSP reports the cursor after the typed character. Prefer the delimiter's actual
+        // position, falling back to the reported column if that lookup finds no node.
+        val delimiterCol = currentLine.indexOf(closing)
         val node =
-            tree.nodeAt(line, if (braceCol >= 0) braceCol else column)
+            tree.nodeAt(line, if (delimiterCol >= 0) delimiterCol else column)
                 ?: tree.nodeAt(line, column)
                 ?: return emptyList()
 
-        // Walk up to find the block or class_body that this '}' closes
-        val enclosingBlock =
-            generateSequence(node) { it.parent }
-                .firstOrNull { it.type in blockTypes || it.type in classBodyTypes }
-                ?: return emptyList()
-
-        // Find the reference line: the construct that owns the block
-        val ownerNode = enclosingBlock.parent
         val refLine =
-            when (ownerNode?.type) {
-                in declarationTypes,
-                "method_declaration",
-                "function_declaration",
-                "constructor_declaration",
-                -> ownerNode!!.startLine
+            if (closing == '}') {
+                val enclosingBlock =
+                    generateSequence(node) { it.parent }
+                        .firstOrNull { it.type in blockTypes || it.type in classBodyTypes }
+                        ?: return emptyList()
+                val ownerNode = enclosingBlock.parent
+                when (ownerNode?.type) {
+                    in declarationTypes,
+                    "method_declaration",
+                    "function_declaration",
+                    "constructor_declaration",
+                    -> ownerNode!!.startLine
 
-                in controlFlowTypes -> ownerNode!!.startLine
+                    in controlFlowTypes -> ownerNode!!.startLine
 
-                else -> enclosingBlock.startLine
+                    else -> enclosingBlock.startLine
+                }
+            } else {
+                // Parameter lists, argument lists and conditions start with an opening
+                // parenthesis. Only align to an ancestor that starts on an earlier line.
+                val enclosing =
+                    generateSequence(node) { it.parent }
+                        .firstOrNull { ancestor ->
+                            val firstChild = ancestor.children.firstOrNull()
+                            firstChild != null && firstChild.type == "(" && ancestor.startLine < line
+                        } ?: return emptyList()
+                enclosing.startLine
             }
 
         val desiredIndent = getLineIndent(source, refLine)
-
         logger.info(
-            "onTypeFormatting[close-brace]: line={} column={} refLine={} desiredIndent={} currentIndent={}",
+            "onTypeFormatting[{}]: line={} column={} refLine={} desiredIndent={} currentIndent={}",
+            if (closing == '}') "close-brace" else "close-paren",
             line,
             column,
             refLine,
@@ -560,54 +567,6 @@ class AdapterFormatter {
             currentIndent,
         )
 
-        if (desiredIndent == currentIndent) return emptyList()
-
-        return listOf(makeIndentEdit(line, currentIndent, desiredIndent))
-    }
-
-    /**
-     * Handle closing parenthesis: outdent to match the line where the opening '(' lives. This
-     * handles multi-line parameter lists, argument lists, and condition expressions.
-     */
-    private fun handleCloseParen(
-        tree: AdapterTree,
-        line: Int,
-        column: Int,
-        @Suppress("UNUSED_PARAMETER") config: FormattingConfig,
-    ): List<TextEdit> {
-        val source = tree.source
-        val lines = source.split("\n")
-        if (line < 0 || line >= lines.size) return emptyList()
-
-        val currentIndent = lines[line].takeWhile { it == ' ' }.length
-
-        // Find the ')' on this line and look up the AST node.
-        val parenCol = lines[line].indexOf(')')
-        val node =
-            tree.nodeAt(line, if (parenCol >= 0) parenCol else column)
-                ?: tree.nodeAt(line, column)
-                ?: return emptyList()
-
-        // Walk up to find a node whose opening '(' is on a different line.
-        // Parenthesized constructs in tree-sitter: argument_list, parameter_list,
-        // parenthesized_expression, condition, etc. We look for any ancestor that
-        // starts with '(' (its first child is '(') and spans multiple lines.
-        val enclosing =
-            generateSequence(node) { it.parent }
-                .firstOrNull { ancestor ->
-                    val firstChild = ancestor.children.firstOrNull()
-                    firstChild != null && firstChild.type == "(" && ancestor.startLine < line
-                } ?: return emptyList()
-
-        val desiredIndent = getLineIndent(source, enclosing.startLine)
-        logger.info(
-            "onTypeFormatting[close-paren]: line={} column={} refLine={} desiredIndent={} currentIndent={}",
-            line,
-            column,
-            enclosing.startLine,
-            desiredIndent,
-            currentIndent,
-        )
         if (desiredIndent == currentIndent) return emptyList()
 
         return listOf(makeIndentEdit(line, currentIndent, desiredIndent))
@@ -711,7 +670,7 @@ class AdapterFormatter {
         return generateSequence(node) { it.parent }.any { it.type == "case_clause" }
     }
 
-    internal fun isInsideStringLiteral(node: AdapterNode): Boolean =
+    private fun isInsideStringLiteral(node: AdapterNode): Boolean =
         generateSequence(node) { it.parent }.any { it.type in stringLiteralTypes }
 
     private fun findDeclarationIndent(
