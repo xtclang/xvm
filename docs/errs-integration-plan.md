@@ -1,15 +1,18 @@
 # Integrating the embedding diagnostics work
 
-Latest full-catalog checkpoint: [L82 acceptance](#l82-upstream-isolation-and-full-catalog-acceptance-2026-10-06)
-covers all 277 shared cases: IntelliJ 275 passed/two partial in one uninterrupted process;
-VS Code 276 passed/UP23 failed across three recorded processes. The earlier
+Latest full-catalog checkpoint: [October 7 acceptance](#l82-up12-follow-up-and-284-case-checkpoint-2026-10-07)
+covers all 284 shared cases: IntelliJ 282 passed/two partial in one uninterrupted process;
+VS Code 281 passed/three failed across the full attempt and recorded continuations. UP16/UP23
+remain host failures; X273 exposes an experimental color-picker refresh failure. The earlier
 [UI1–UI7 acceptance](#ui1ui7-completion-batch-2026-10-06) and
 [local upstream and API review](#local-upstream-acceptance-and-api-boundary-review-2026-10-06)
-adds nine reconciled LSP4IJ repair commits, opt-in local-plugin acceptance, a real platform
+add nine reconciled LSP4IJ repair commits, opt-in local-plugin acceptance, a real platform
 navigation fix and the current embedding/AST contract. It does not replace the full-run failures
 or claim that production compatibility bridges have been removed.
 
-Latest feature checkpoint: [L76 inline completion](#l76-compiler-inline-completion-2026-10-05)
+Latest feature checkpoint: [documentation actions and reference CodeLens](#documentation-actions-and-reference-codelens-2026-10-07)
+pass backend and both editors' selected acceptance, alongside the completed theme-based highlighting work.
+The earlier [L76 inline completion](#l76-compiler-inline-completion-2026-10-05) checkpoint
 passes backend, packaged transport and selected acceptance in both editors. IntelliJ native explicit
 invocation/selection context remains UP26; read-only virtual content remains UP25. L77–L79 retain
 explicit product/runtime scope decisions. [L81 native acceptance](#l81-native-acceptance-closure-2026-10-05)
@@ -56,7 +59,7 @@ master's dependencies and passes 455 tests (three existing skips), including all
 regressions. [PR #653](https://github.com/xtclang/xvm/pull/653) targets `master`, with review
 requested from `ggleyzer`; see the diagnosis for the exact size and checks.
 
-Current inventory: updated 2026-10-06, including the bounded L62–L67 closures, L74–L76 features,
+Current inventory: updated 2026-10-07, including the bounded L62–L67 closures, L74–L76 features,
 L80/L81 acceptance, UI1–UI7 and the L82 combined regression/retention checkpoint below. This is the active task list;
 dated records retain their historical scope and results. Checkboxes distinguish completed acceptance from
 implemented-but-unverified work and planned features. Compiler API changes get separate C-series
@@ -12926,3 +12929,74 @@ pass, with zero failures, errors or skips in JUnit XML. IntelliJ integration-tes
 VS Code assembly pass. Root and lang `spotlessCheck` and `git diff --check` pass. This includes the
 new documentation/reference tests, existing member/import refactoring tests, lazy/eager resolution,
 versioned edits, scoped preferences and the extended cancellation/lifetime matrix.
+
+## L82 UP12 follow-up and 284-case checkpoint (2026-10-07)
+
+Local LSP4IJ commit `15bb34bd` reconnects closed dirty buffers before formatting and preserves
+request-snapshot, cancellation and server-lifetime guards. Seven strengthened regressions fail
+before the repair; the combined upstream selection passes 60 tests without failures/errors/skips.
+Native `run-17693623788789126287` passes START/X31/X127/X138/X139 with the Ecstasy formatting
+override bypassed and no IDE errors. Its trace confirms `didClose`, a new `didOpen`, then successful
+formatting of the closed buffer. Twelve harness controls also pass. The exact source is restored
+before shipping acceptance. See the [UP12 receipt](errs-upstream-issues.md#up12-closed-buffer-follow-up-2026-10-07)
+for plugin hashes, the retained UP24 Redo requirement and closed-buffer connection-lifetime follow-up.
+The dependency remains released 0.21.0; the upstream branch remains local and unpushed.
+
+The forced combined backend gate initially reports 3,118 passes, 44 skips and one failure.
+`XdkRenameServerTest` assumes the unused-import action is the only offered action, but the new
+compiler documentation action is also valid. Commit `1e0d35d58` selects the intended action by
+its exact title, retaining its document-version and edit assertions. The forced follow-up passes
+all 35 rename/documentation/resolve tests with zero failures/errors/skips. Combined evidence is
+therefore **3,119 distinct passes and 44 existing skips**, not a second uninterrupted backend run.
+The skips comprise 40 disabled tests and four environment-gated project-creation integration
+cases; compiled XDK outputs were present. Packaged stdio contributes 82 of the passing tests.
+Root/lang formatting and VS Code assembly pass; the separate VS Code extension integration suite
+also passes all 54 tests (`run-5uWDmT`).
+
+Commit `b02c83725` corrects two shared harness assumptions in both editor drivers: X31 checks color-provider
+advertisement against the explicit prototype launch mode, while X127 selects the intended import
+action when documentation is also offered. X31 passes with the prototype off and on in both hosts;
+no production capability or stale-edit guard changes.
+
+Released-dependency IntelliJ `run-4144503954102473659` completes all **284 shared scenarios** in
+one process: **282 pass, X254/X257 retain UP25/UP26 partial status, zero failures and zero IDE
+errors**. START passes separately, so JSON reports 283 passes and two partials. IntelliJ is
+2026.2.3 with Ultimate disabled; LSP4IJ is 0.21.0 and all shipping bridges are restored. The native
+JUnit entry passes without skips. The opt-in UP17 large-file diagnostic is outside this catalog.
+
+VS Code 1.140.0 executes every shared case across the following preserved attempts:
+
+| Receipt | Passed | Failed | Selected but not run | Evidence |
+| --- | ---: | ---: | ---: | --- |
+| `run-M3Hq7b` | 214 | 4 | 66 | Full attempt: stale X31/X127 assertions, UP16 X130 and fatal UP23 X218. |
+| `run-vYJzt9` | 56 | 1 | 11 | Corrected X31/X127 and untouched X219–X272 pass; X273 reaches its real deadline. |
+| `run-ec2akp` | 0 | 1 | 11 | X273 reproduces from a fresh selected launch. |
+| `run-t9lMag` | 12 | 0 | 0 | X31 plus untouched X274–X279 and all five auxiliary cases pass. |
+| `run-HJ5zdK` | 1 | 0 | 0 | X31 alone confirms that document colors stay unadvertised by default. |
+
+The combined distinct result is **281 passed, three failed**. X130's move/resource/history
+assertions complete, but Explorer's Cut-highlight exception still fails the case. X218's native
+parent/child move Undo remains the accepted UP23 limitation and stops that process at its deadline.
+Continuations use fresh workspaces; no completed mutation is replayed in the failed workspace.
+
+X273 is a new **prototype-only open issue**, not an accepted pass or a proven upstream defect.
+In both failed attempts, the first native `documentColor` request ends with `ContentModified`
+after about 0.4 seconds. The later explicit provider query returns the exact two expected colors
+in 3–4 ms, but no native swatches appear during the 30-second wait. The harness records failure
+and stops; it does not insert an edit or toggle rendering to manufacture a pass. X274/X275 pass
+in the continuation, and all three picker cases pass in IntelliJ. Theme-based source highlighting
+X276/X277 and documentation/reference CodeLens X278/X279 pass in both hosts.
+
+- [ ] Diagnose X273's initial invalidation and native color-provider refresh/retry ownership;
+  retain fresh-launch and long-session coverage before considering this optional prototype stable.
+  Do not enable it by default or treat it as a public Ecstasy color library.
+- [ ] Carry UP16/UP23, UP25/UP26, UP24 and UP12 connection retention into their existing removal
+  gates. Passing the local UP12 save experiment does not permit removing the whole formatting bridge.
+
+Copied backend XML, native JSON, request timing excerpts and the catalog hash are retained under
+`lang/build/reports/l82/checkpoint-2026-10-07/`; individual runs retain their original logs.
+The final shared catalog SHA-256 is
+`eb7129b5ce8e6c762498baa1726cee26dc006e6f1e4e12070a3eaaf690791a8d`.
+UP17, agreed latency/heap budgets, prolonged operational workloads, cross-platform/remote-host
+acceptance and independent extracted-PR validation remain separate L82 work. This checkpoint does
+not claim an entirely green VS Code catalog or complete LSP release acceptance.
