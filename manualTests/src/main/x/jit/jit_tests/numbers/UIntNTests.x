@@ -1,7 +1,5 @@
 class UIntNTests {
 
-    @Inject Console console;
-
     void run() {
 
         // Comparison tests

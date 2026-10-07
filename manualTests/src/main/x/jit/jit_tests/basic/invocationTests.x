@@ -2,8 +2,6 @@ package invocationTests {
 
     import ecstasy.collections.NaturalHasher;
 
-    @Inject Console console;
-
     void run() {
 
         testInvokePrivateMethodAfterInterfaceCast();

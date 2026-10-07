@@ -1,8 +1,6 @@
 
 package nibbleArrayTests {
 
-    @Inject Console console;
-
     void run() {
 
         shouldCreateWithCapacity();
