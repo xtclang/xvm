@@ -12,7 +12,7 @@ and refactoring proofs still fail closed. This adds no AST state or compiler lis
 See [scope, ownership and validation](../../../docs/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
 
 
-> **Last Updated**: 2026-10-06 (configuration responsiveness and selected acceptance)
+> **Last Updated**: 2026-10-07 (native color prototype and theme acceptance)
 
 The latest [L82 acceptance record](../../../docs/errs-integration-plan.md#l82-upstream-isolation-and-full-catalog-acceptance-2026-10-06)
 separates native harness corrections, the production unchanged-library-settings invalidation bug,
@@ -198,7 +198,7 @@ See the [L83 task and ownership record](../../../docs/errs-integration-plan.md#p
 
 | Feature | Mock | Tree-sitter | Compiler (XdkAdapter) |
 |---------|------|-------------|----------|
-| Syntax highlighting | - | TextMate + semantic tokens (lexer) | TextMate plus Java lexical tokens and compiler-resolved names |
+| Syntax highlighting | - | TextMate + semantic tokens (lexer) | TextMate plus compiler-resolved names and documentation modifiers |
 | Document symbols | Full | Full | **Done** - from the AST, with real ranges |
 | Go-to-definition (same file) | By name | By name | **Done** - semantic, incl. method calls |
 | Go-to-definition (cross-file) | - | Via workspace index | **Done** - resolved identities within a module, across the complete discovered/configured source graph and into dependencies with host-supplied source indices or configured matching source attachments |
@@ -220,7 +220,7 @@ See the [L83 task and ownership record](../../../docs/errs-integration-plan.md#p
 | Range formatting | Trailing WS in range | Structural formatting in range | **Partial** - same token-preserving formatter, bounded to selected lines |
 | On-type formatting | - | Structural formatting on trigger characters | **Partial** - current-line indentation/whitespace on configured trigger characters |
 | Workspace symbols | - | Fuzzy search (4-tier) | **Done** - on-demand substring search across discovered/configured sources including unopened modules; independent healthy modules survive a broken neighbor |
-| Semantic tokens | - | Syntax-based classification | **Partial** - Java lexical comments/literals/keywords plus resolved names, declarations, readonly/static/abstract modifiers and writes. Compiler class formats include imported types and enum members; static functions exclude constructors; documentation comments carry their modifier. Theme rendering, annotation-specific/deprecation/library-provenance classification remain separate. |
+| Semantic tokens | - | Syntax-based classification | **Implemented for supported compiler facts** - resolved names, annotations, bundled-library ownership, declarations, readonly/static/abstract modifiers and writes. Imported types, enum members and static functions retain their compiler categories. Documentation comments carry their modifier; ordinary syntax retains finer editor lexical scopes. A deprecation contract and custom service/mixin categories remain deferred. |
 | Code lenses | - | Run action on module declarations | **Done** - module Run action through the existing client command |
 | Linked editing | - | Same-file identifiers | **Partial** - resolved locals/lambda parameters and explicit aliases (including same-spelling aliases) within one successful source snapshot; callable parameter slots require Rename; no proposed-name proof |
 | Inlay hints | - | - | **Partial** - inferred local/destructured types, lambda parameters/returns and selected positional parameter names after successful compilation; named arguments/defaults omitted |
@@ -266,7 +266,7 @@ local or import-alias declarations and inherited written member contracts, prese
 | Cross-project monikers | Artifact-based import/export/local identities; backend and selected acceptance pass in both editors | L74 |
 | Server-provided document content/refresh | Negotiated revision-owned bundled virtual content and refresh; protected file fallback in IntelliJ (UP25); host source indexes remain file locations | L75 |
 | Inline completion | Compiler names/values, automatic ambiguity suppression and explicit alternatives; selected-range and revision guards | L76; native IntelliJ invocation/selection remains UP26 |
-| Document colors and color presentations | Opt-in fixture RGBA constructor prototype; default provider remains off. Compiler identity, aliases, byte literals and picker round trips are tested; native rendering and a public library contract remain pending. | L77 |
+| Document colors and color presentations | Opt-in fixture RGBA constructor prototype; default provider remains off. Compiler identity, aliases, byte literals and picker round trips are tested. Shared X273–X275 pass native swatches, edits, Undo/Redo and recovery in both editors; a public library contract remains pending. | L77 |
 | Notebook synchronization | File/module document sessions | L78 |
 | Debug inline values | Compiler type/parameter inlay hints; no runtime values | L79 |
 | Application work-done progress, refresh, partial results and trace controls | Negotiated progress/create/cancel, lifecycle gating, coalesced refresh and runtime trace are implemented and tested. Bounded partial-result batches, actual Tree-sitter scan progress and shared X143 pass. X145 verifies native progress-model cancellation and restart during pending work in both editors. Both editors pass visible Cancel, X146/X147 refresh/report ownership and X259 rendered settings/restart overlap. Shared-process native window lifetime passes; UP15 retains its upstream classification gap. | L81 / X141, X143, X145–X147, X259; [coverage map](../manual-test-plan.md#protocol-and-lifecycle-coverage-map) |
@@ -608,7 +608,7 @@ Full tree-sitter support for fast, incremental parsing:
    **Compiler tokens -- bounded implementation complete:**
    - Resolved type/property/local/parameter names and module-file identities
    - Declaration, readonly/static/abstract and modification modifiers where established
-   - Java lexical tokens cover comments, literals and keywords; broader semantic classifications/modifiers remain follow-ups
+   - The Java lexer supplies documentation modifiers; resolved compiler names supply semantic categories. Ordinary comments, strings, keywords and literals retain the editor grammar’s finer scopes
 
 3. **Complete VS Code extension**
    - Finish LSP client integration
@@ -1553,7 +1553,7 @@ unsaved source after close while work is pending. The 19 focused backend/transpo
 UP15 remains upstream; full-catalog/scale/cross-platform evidence remains L82. This closes acceptance
 for existing providers and adds no AST, embedding or production language capability. See the
 [receipt and commit map](../../../docs/errs-integration-plan.md#l81-native-acceptance-closure-2026-10-05).
-The current shared catalog has 277 scenarios (X1–X272 plus the five configuration/stress IDs).
+The current shared catalog has 282 scenarios (X1–X277 plus the five configuration/stress IDs).
 
 
 The October 5 UI5–UI7 continuation adds shared X260–X262 for real Gradle import cancellation,
@@ -1561,8 +1561,12 @@ overlap refusal, failed/invalid output retention and retry. Both editors use a c
 producer and native controls; acceptance receipts are recorded in the integration plan.
 The current remaining settings work is listed explicitly in
 [the UI remainder](../../../docs/errs-integration-plan.md#shared-compiler-import-acceptance-and-remaining-ui-work-2026-10-05).
-L77 now has an opt-in fixture-only RGBA prototype for document colors and picker edits; a recognized
-public Ecstasy library API and native acceptance remain pending. The user explicitly deferred
+L77 now has an opt-in fixture-only RGBA prototype for document colors and picker edits; production
+enablement remains deferred. The October 7 scope clarification requests only theme-based source
+highlighting in the LSP server; a public Ecstasy color library is outside this work.
+Native X273–X275 and semantic X41/X154 pass in
+both editors, including reviewed dark/light/high-contrast captures. See the
+[color acceptance receipt](../../../docs/errs-integration-plan.md#l77-native-color-acceptance-2026-10-07). The user explicitly deferred
 L78 notebooks while file-based tooling is completed. L79 follows the runtime/DAP track.
 
 
@@ -1593,3 +1597,9 @@ coverage and explicit host limitations are recorded in the
 [UI completion receipt](../../../docs/errs-integration-plan.md#ui1ui7-completion-batch-2026-10-06).
 Untrusted/virtual VS Code workspaces are explicitly unsupported; remote-host acceptance is separate
 from the local desktop gate. Tree-sitter remains an explicit build alternative to default compiler.
+
+Theme highlighting follow-up: X276/X277 pass resolved annotation/library ownership and damaged-source
+recovery in both editors. The grammar ends method headers before expression bodies, preserving string
+escapes and later keywords. Native runs keep their current theme; separate VS Code startup settings
+provide dark/light/high-contrast semantic-versus-lexical comparison. See the
+[completion receipt](../../../docs/errs-integration-plan.md#theme-based-source-highlighting-completion-2026-10-07).
