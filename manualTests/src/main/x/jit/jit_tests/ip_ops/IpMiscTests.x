@@ -3,8 +3,6 @@
  */
 class IpMiscTests {
 
-    @Inject Console console;
-
     void run() {
         testInPlaceAddAssign();
     }

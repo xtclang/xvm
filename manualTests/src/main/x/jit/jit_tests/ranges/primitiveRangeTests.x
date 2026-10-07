@@ -1,7 +1,5 @@
 package primitiveRangeTests {
 
-    @Inject Console console;
-
     void run() {
         testBooleanRange();
         testInt16Range();

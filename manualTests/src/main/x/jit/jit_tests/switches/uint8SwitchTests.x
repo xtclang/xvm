@@ -2,8 +2,6 @@
  * Various types of switch statement using Uint8 values.
  */
 package uint8SwitchTests {
-    @Inject Console console;
-
     void run() {
 
         testSimpleSwitch();

@@ -2,8 +2,6 @@
  * Various types of switch statement using UInt128 values.
  */
 package uint128SwitchTests {
-    @Inject Console console;
-
     void run() {
 
         testSimpleSwitch();
