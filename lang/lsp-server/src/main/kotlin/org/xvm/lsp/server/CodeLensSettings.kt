@@ -1,10 +1,10 @@
 package org.xvm.lsp.server
 
-import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 
 internal object CodeLensSettings {
     fun references(raw: Any?): Boolean {
-        val value = Gson().toJsonTree(raw)
+        val value = GsonBuilder().serializeNulls().create().toJsonTree(raw)
         if (value.isJsonNull) return true
         require(value.isJsonObject) { "Ecstasy codeLens settings must be an object" }
         val references = value.asJsonObject["references"] ?: return true
