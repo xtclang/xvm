@@ -12882,3 +12882,23 @@ the combined summary/XML and final focused XML are retained under
 
 Root and LSP-server `spotlessCheck` and `git diff --check` pass. No native IDE run or new playbook
 scenario is needed because this investigation changes no production behavior or playbook operation.
+
+## Documentation actions and reference CodeLens (2026-10-07)
+
+Agreed non-runtime continuation, with separate implementation commits and one combined test batch:
+
+- [x] Implement compiler-backed documentation skeletons at written declaration headers. Copy header
+  starts into detached Kotlin symbols, preserve annotations/indentation/line endings, use resolved
+  method parameter/return slots, retain existing comments, and publish versioned edits. Shared X278
+  covers native action application and Undo/Redo in both clients. Validation pending the batch.
+- [ ] Implement reference counts and navigation using the existing complete configured-graph index.
+  Exclude declaration occurrences and generated/local symbols; omit counts when graph closure is
+  unavailable. Reuse native reference presentation in both clients, lazy-resolution revision guards,
+  and a separate live preference so Run lenses remain independently available.
+- [ ] Run focused backend/protocol/settings tests, both selected editor drivers and formatting;
+  update this receipt and the per-adapter/manual feature inventories with actual results.
+
+These are two medium-sized feature slices across the existing adapter and client integrations.
+The chosen design extends detached facts and existing commands; a Java AST cache or independent
+reference search would duplicate ownership. A syntax-only documentation action would lose the
+compiler's signature distinctions. No runtime service or upstream dependency change is required.
