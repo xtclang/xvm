@@ -984,7 +984,11 @@ internal fun ParityScenarios.platformCases() {
         )
         val document = open(data.string("file"))
         clean(document)
-        val lens = query("textDocument/codeLens", document).rows().single()
+        val lens =
+            query("textDocument/codeLens", document).rows().single {
+                it["range"].asJsonObject["start"].asJsonObject["line"].asInt ==
+                    0
+            }
         val resolvedLens =
             if (lens.has("data")) protocol.query("codeLens/resolve", lens).asJsonObject else lens
         check(resolvedLens["range"] == lens["range"])
