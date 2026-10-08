@@ -51,22 +51,26 @@ public final class IncompleteTypeCompositionStatement extends TypeCompositionSta
         return CHILD_FIELDS;
     }
 
+    @Override
+    @SuppressWarnings("MethodDoesntCallSuperMethod") // Preserve the covariant compatibility entry point.
+    public IncompleteTypeCompositionStatement clone() {
+        return copyTree();
+    }
+
     /**
      * Recovery syntax is never rewritten by compiler validation. Construct a fresh node instead
      * of using the general AST clone, which replaces child fields and mutable child lists.
      */
     @Override
-    public IncompleteTypeCompositionStatement clone() {
+    public IncompleteTypeCompositionStatement copyTree() {
         var copy = new IncompleteTypeCompositionStatement(source, category, name, qualified, null,
                 getStartPosition(), getEndPosition(),
-                cursors.stream().map(site -> (IncompleteStatement) site.clone()).toList(),
-                formals.stream().map(formal -> (Parameter) formal.clone()).toList());
-        copy.body = body == null ? null : copy.adopt((StatementBlock) body.clone());
+                cursors.stream().map(IncompleteStatement::copyTree).toList(),
+                formals.stream().map(formal -> (Parameter) formal.copyTree()).toList());
+        copy.body = body == null ? null : copy.adopt((StatementBlock) body.copyTree());
         copy.adopt(copy.cursors);
         copy.adopt(copy.formals);
-        copy.setParent(getParent());
-        copy.setStage(getStage());
-        return copy;
+        return copyTreeMetadataTo(copy);
     }
 
     @Override
@@ -130,7 +134,7 @@ public final class IncompleteTypeCompositionStatement extends TypeCompositionSta
         return toSignatureString() + " <incomplete>";
     }
 
-    // Immutable syntax children; clone constructs and adopts fresh lists.
+    // Immutable syntax children; copyTree constructs and adopts fresh lists.
     private final List<IncompleteStatement> cursors;
 
     private final List<Parameter> formals;

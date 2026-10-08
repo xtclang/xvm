@@ -65,15 +65,19 @@ public final class IncompleteDeclarationStatement extends Statement {
     }
 
     @Override
+    @SuppressWarnings("MethodDoesntCallSuperMethod") // Preserve the covariant compatibility entry point.
     public IncompleteDeclarationStatement clone() {
+        return copyTree();
+    }
+
+    @Override
+    public IncompleteDeclarationStatement copyTree() {
         var copy = new IncompleteDeclarationStatement(kind, name, start, end,
-                cursors.stream().map(site -> (IncompleteStatement) site.clone()).toList(),
-                formals.stream().map(formal -> (Parameter) formal.clone()).toList());
+                cursors.stream().map(IncompleteStatement::copyTree).toList(),
+                formals.stream().map(formal -> (Parameter) formal.copyTree()).toList());
         copy.adopt(copy.cursors);
         copy.adopt(copy.formals);
-        copy.setParent(getParent());
-        copy.setStage(getStage());
-        return copy;
+        return copyTreeMetadataTo(copy);
     }
 
     @Override
@@ -119,7 +123,7 @@ public final class IncompleteDeclarationStatement extends Statement {
         return kind + getNameToken().map(token -> " " + token.getValueText()).orElse("") + " <incomplete>";
     }
 
-    // Only real syntax children use the AST's ordinary adoption and clone mechanism.
+    // Only real syntax children participate in adoption and tree copying.
     private final List<IncompleteStatement> cursors;
 
     private final Kind        kind;
