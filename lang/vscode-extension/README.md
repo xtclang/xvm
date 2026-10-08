@@ -103,7 +103,7 @@ source `package.json` and development output remain unchanged.
 
 1. Open any folder containing `.x` files (or run `Ecstasy: Create New Project`).
 2. Open a `.x` source file — syntax highlighting activates immediately.
-3. Watch the bottom-right status bar for the LSP server state — once it shows `✓ XTC`, all language features are live.
+3. Watch the bottom-right status bar for the LSP server state — once it shows `✓ Ecstasy · Compiler`, the compiler language service is ready.
 
 ## Language Server
 
@@ -111,12 +111,13 @@ The LSP server starts automatically on activation. Status is shown in the status
 
 | Indicator         | Meaning                                                |
 |-------------------|--------------------------------------------------------|
-| `⟳ XTC` (spinning)| Server is starting                                     |
-| `✓ XTC`           | Server is ready                                        |
-| `⚠ XTC`           | Server encountered an error — click to restart        |
-| `✗ XTC` (red)     | Server stopped — click to restart                      |
+| `⟳ Ecstasy` (spinning)| Server is starting                                 |
+| `✓ Ecstasy · Compiler` | Server is ready; the label identifies its adapter |
+| `⚠ Ecstasy`       | Server encountered an error — click to restart        |
+| `✗ Ecstasy` (red) | Server stopped — click to restart                      |
 
-Click the status bar item to open the **XTC Language Server** output channel for logs.
+Click the ready status bar item to switch adapters. Use **Ecstasy: Show Language Server Output**
+or **Ctrl+Alt+X, then L** to open the server logs.
 
 ### Java Discovery
 
@@ -407,7 +408,15 @@ For end-to-end LSP / DAP / file-association regression coverage, see the **VS Co
 
 ### LSP adapter selection
 
-The language server supports multiple parser adapters:
+Use **Ecstasy: Switch Language Adapter**, click the ready Ecstasy status-bar item, or press
+**Ctrl+Alt+X, then A** (**Control+Option+X, then A** on macOS). Choose **Ecstasy Compiler** for
+semantic analysis or **Tree-sitter** for syntax-based features without compiler type checking.
+The choice is stored in the window-scoped `xtc.languageService.adapter` setting; changing it
+restarts the server and reopens unsaved buffers. The status bar shows the running adapter.
+
+**Bundled default** (the default setting) honors the server build's choice, normally Compiler.
+Both real adapters are included, so switching does not require rebuilding. Development builds
+can still change the bundled default:
 
 ```bash
 # Default (compiler)

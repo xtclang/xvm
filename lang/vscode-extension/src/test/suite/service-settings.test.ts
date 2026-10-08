@@ -4,11 +4,11 @@ import { parseServiceSettings, synchronizationOptions } from '../../service-sett
 suite('Language service settings contract', () => {
     test('defaults remain Full synchronization and editor-owned saving', () => {
         const settings = parseServiceSettings({});
-        assert.deepStrictEqual(settings, { textSynchronization: 'full', saveFormatting: 'editor', inlayHints: true });
+        assert.deepStrictEqual(settings, { adapter: 'default', textSynchronization: 'full', saveFormatting: 'editor', inlayHints: true });
         assert.ok(Object.isFrozen(settings));
     });
     test('invalid values never become a connection configuration', () => {
-        for (const raw of [{ textSynchronization: 'patch' }, { saveFormatting: true }, { inlayHints: 'false' }, { textSynchronization: null }]) {
+        for (const raw of [{ adapter: 'mock' }, { adapter: null }, { adapter: 'typo' }, { textSynchronization: 'patch' }, { saveFormatting: true }, { inlayHints: 'false' }, { textSynchronization: null }]) {
             assert.throws(() => parseServiceSettings(raw));
         }
     });

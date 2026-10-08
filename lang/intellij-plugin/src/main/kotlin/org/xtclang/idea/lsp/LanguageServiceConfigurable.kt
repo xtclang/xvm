@@ -35,6 +35,11 @@ open class LanguageServiceConfigurable(
         }
     private val synchronization =
         JComboBox(arrayOf("full", "incremental")).apply { name = "xtc.service.sync" }
+    private val adapter =
+        JComboBox(LanguageAdapter.entries.toTypedArray()).apply {
+            name = "xtc.service.adapter"
+            toolTipText = "Compiler provides semantic analysis; Tree-sitter provides syntax-based features."
+        }
     private val saving = JComboBox(arrayOf("editor", "server")).apply { name = "xtc.service.save" }
     private val hints = JBCheckBox("Show Ecstasy inlay hints").apply { name = "xtc.service.hints" }
     private val references = JBCheckBox("Show Ecstasy reference counts").apply { name = "xtc.service.references" }
@@ -59,6 +64,8 @@ open class LanguageServiceConfigurable(
                         add(inherit)
                         add(JBLabel("Project overrides are stored with LSP4IJ."))
                     }
+                    add(JBLabel("Language adapter (restarts automatically)"))
+                    add(adapter)
                     add(JBLabel("Text synchronization (restarts automatically)"))
                     add(synchronization)
                     add(JBLabel("Save formatting owner (restart required)"))
@@ -149,6 +156,7 @@ open class LanguageServiceConfigurable(
 
     private fun updateEnabled() {
         val editable = project == null || !inherit.isSelected
+        adapter.isEnabled = editable
         synchronization.isEnabled = editable
         // TODO LSP4IJ: UP02 — enable server save formatting when native willSaveWaitUntil is implemented.
         saving.isEnabled = false
@@ -164,6 +172,7 @@ open class LanguageServiceConfigurable(
             saving.selectedItem as String,
             hints.isSelected,
             references.isSelected,
+            (adapter.selectedItem as LanguageAdapter).setting,
         )
 
     override fun isModified(): Boolean =
@@ -173,6 +182,7 @@ open class LanguageServiceConfigurable(
     override fun reset() {
         original = LanguageServiceConfiguration.section(LanguageServiceSettings.content(project))
         initial = LanguageServiceSettings.effective(project)
+        adapter.selectedItem = LanguageAdapter.fromSetting(initial.adapter)
         inherit.isSelected = original == null
         synchronization.selectedItem = initial.textSynchronization
         saving.selectedItem = initial.saveFormatting
