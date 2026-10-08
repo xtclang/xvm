@@ -19,15 +19,12 @@ import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import java.io.File
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.Properties
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executors
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.SECONDS
-import java.util.jar.JarFile
 
 /** Runs the production launcher in child JVMs; fallback cleanup must not hide a failure to exit. */
 @Tag("compiler-stdio")
@@ -50,21 +47,7 @@ class LspProcessLifecycleTest {
     ) {
         val jar =
             Path.of(requireNotNull(System.getProperty("xtc.lsp.jar")) { "Run compilerStdioTest" })
-        // Override only build selection, exercising every shipped backend from the packaged
-        // classes.
-        // The resource directory precedes the JAR, avoiding an extra distribution build per
-        // backend.
-        val resources = Files.createDirectory(directory.resolve("resources"))
-        val properties = Properties()
-        JarFile(jar.toFile()).use { archive ->
-            archive.getInputStream(archive.getJarEntry("lsp-version.properties")).use {
-                properties.load(it)
-            }
-        }
-        properties.setProperty("lsp.adapter", backend)
-        Files.newOutputStream(resources.resolve("lsp-version.properties")).use {
-            properties.store(it, null)
-        }
+        // Exercise the same runtime override used by IDE adapter switching, from one packaged JAR.
         val workspace = Files.createDirectory(directory.resolve("workspace"))
         val source = "module Lifecycle { Int value = 1; }"
         val file = Files.writeString(workspace.resolve("Lifecycle.x"), source)
@@ -78,9 +61,9 @@ class LspProcessLifecycleTest {
                     .orElseThrow(),
                 "--enable-native-access=ALL-UNNAMED",
                 "-Duser.home=$directory",
-                "-cp",
-                "$resources${File.pathSeparator}$jar",
-                "org.xvm.lsp.server.XtcLanguageServerLauncherKt",
+                "-Dxtc.lsp.adapter=$backend",
+                "-jar",
+                jar.toString(),
             ).redirectError(stderr.toFile())
                 .start()
         val executor = Executors.newVirtualThreadPerTaskExecutor()
@@ -150,6 +133,7 @@ class LspProcessLifecycleTest {
                 ).isTrue()
             assertThat(process.exitValue()).isEqualTo(if (shutdown) 0 else 1)
             assertThat(Files.readString(stderr)).doesNotContain("falling back to mock")
+            assertThat(Files.readString(stderr)).contains("backend: ${AdapterBackend.fromSetting(backend).displayName}")
         } finally {
             // Only after the exit assertion: never count forcibly reaping a leaked child as
             // success.

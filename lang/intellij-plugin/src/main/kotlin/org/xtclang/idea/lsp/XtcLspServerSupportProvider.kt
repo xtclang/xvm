@@ -92,6 +92,8 @@ class XtcLspConnectionProvider(
     private val support = project.getService(ServerSupportLogs::class.java)
     private val launch = support.begin("Resolving the bundled Ecstasy server and Java runtime.\n")
     private val lifetime = ConnectionLifetime({ super.start() }, { super.stop() })
+    private val adapter = LanguageAdapter.fromSetting(LanguageServiceSettings.validated(project).adapter)
+    private val adapterName = if (adapter == LanguageAdapter.DEFAULT) LspBuildProperties.adapter else adapter.setting
 
     companion object {
         private const val LSP_SERVER_JAR = "xtc-lsp-server.jar"
@@ -144,6 +146,7 @@ class XtcLspConnectionProvider(
         commands.addAll(
             jarIndex,
             ServerRuntimeSettings.getInstance().launchArguments() +
+                adapter.launchArguments() +
                 listOf(
                     "-Dapple.awt.UIElement=true", // macOS: no dock icon
                     "-Djava.awt.headless=true", // No GUI components
@@ -167,7 +170,7 @@ class XtcLspConnectionProvider(
 
         logger.info(
             "Ecstasy LSP command configured (v${LspBuildProperties.version}, " +
-                "adapter=${LspBuildProperties.adapter}, semanticTokens=$semanticTokens): ${commandLine.commandLineString}",
+                "adapter=$adapterName, semanticTokens=$semanticTokens): ${commandLine.commandLineString}",
         )
     }
 
@@ -193,7 +196,7 @@ class XtcLspConnectionProvider(
         }
 
         logger.info(
-            "Ecstasy LSP Server process started (v${LspBuildProperties.version}, adapter=${LspBuildProperties.adapter}, pid=$pid)",
+            "Ecstasy LSP Server process started (v${LspBuildProperties.version}, adapter=$adapterName, pid=$pid)",
         )
 
         if (startNotificationShown.compareAndSet(false, true)) {
@@ -203,7 +206,7 @@ class XtcLspConnectionProvider(
                 content =
                     listOf(
                         "Version" to LspBuildProperties.version,
-                        "Adapter" to LspBuildProperties.adapter,
+                        "Adapter" to adapterName,
                         "PID" to pid.toString(),
                     ).joinToString(
                         separator = "&nbsp;&nbsp;·&nbsp;&nbsp;",
