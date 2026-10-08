@@ -33,7 +33,7 @@ class XdkManualCompositionRenameTest {
 
     @Test
     fun `manual conditional mixin rename preserves other conditional compositions`() {
-        val text = manualCompositionFixture("condMixinTests")
+        val text = manualCompositionFixture("condMixinTests", "TestConsole")
         val uri = source("condMixinTests", text)
         XdkAdapter().use { adapter ->
             adapter.initializeWorkspace(listOf(directory.toString()))

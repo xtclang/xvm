@@ -59,7 +59,7 @@ public class ConstantPoolAmbientTest {
         FileStructure  file = new FileStructure("test");
         ClassStructure clz  = file.getModule().createClass(
                 Access.PUBLIC, Format.CLASS, "Test", null);
-        TypeConstant   type = clz.getCanonicalType();
+        TypeConstant   type = clz.getNormalizedType();
 
         assertNotNull(type.getConstantPool());
         assertSame(file.getConstantPool(), ConstantPool.currentOr(type.getConstantPool()));
