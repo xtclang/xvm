@@ -13192,3 +13192,33 @@ I3 compiler-consumer test wiring. Refresh those existing local slices against cu
 and validate each independently before publication. Later listener/compiler and LSP/client
 slices follow their recorded prerequisites. No upstream dependency fork is a release prerequisite,
 and the local preparation decision does not authorize remote branches or PR creation.
+
+### Refreshed foundation slices
+
+The first three slices are independently re-extracted on refreshed master `f442aced6`.
+Each new local branch contains one commit directly on that base; none depends on another slice.
+The September branches remain intact. One shared worktree at
+`/private/tmp/xvm-foundations-2026-10-08` was reused sequentially to avoid three sets of build outputs;
+it is left clean on I3. No remote branch or PR has been created.
+
+| Slice | Local branch / commit | Size | Current independent validation |
+| --- | --- | --- | --- |
+| I1 | `errs/i1-diagnostic-identity-20261008` / `e649179e7` | 4 files, +132 / -3 | Five diagnostic/name regressions and two enabled `SourceTest` cases pass; three existing file tests remain `@Disabled`. SpotlessCheck passes. |
+| I2 | `errs/i2-ambient-pools-20261008` / `6c6720fa4` | 12 files, +200 / -19 | Eleven pool/diagnostic tests pass with no skips; all 24 XDK modules build and install. SpotlessCheck passes. |
+| I3 | `errs/i3-compiler-consumer-tests-20261008` / `21e8d6b2c` | 7 files, +162 / -8 | The real consumer passes twice with no skips; configuration cache is stored then reused. Root/LSP SpotlessCheck, 11 CI classifier/fingerprint cases and six result-gate controls pass. |
+
+I2's first test compilation exposed master's rename from `getCanonicalType()` to
+`getNormalizedType()`; the refreshed test uses the current API. That failed attempt is not
+acceptance evidence. The production pool patch applies without adaptation. This batch does not
+repeat September's normalized module-byte comparison on the newer base.
+
+I3 follows master's shared CI change classifier and core-check fingerprint, rather than
+reintroducing the old path-filter step. Compiler-only inputs invalidate the core acceptance
+marker, and the consumer result gate runs before saving a successful marker. Missing XML, zero
+tests, skips, failures and errors are each rejected; a real passing result is accepted. Workflow
+lint reports the same 80 pre-existing findings as master and adds none. This is local validation,
+not a remote CI result. Existing launcher/Windows gates and corpus classification are preserved.
+
+XML and CI control receipts are under `/private/tmp/xvm-foundation-receipts-2026-10-08/`.
+The integrated branch's dependency/extended-workload checkpoint is `42349aea6`. The working
+version and released LSP dependency pins remain unchanged; the planned breaking release is 0.5.0.
