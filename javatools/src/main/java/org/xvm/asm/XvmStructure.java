@@ -469,7 +469,6 @@ public abstract class XvmStructure
      * @param aoParam  the parameters of the error
      */
     public boolean log(ErrorListener errs, Severity sev, String sCode, Object ... aoParam) {
-        // TODO need a way to log to compiler error list if we have compile-time info on the location in the source code
         return ensureErrorListener(errs).log(sev, sCode, aoParam, this);
     }
 
