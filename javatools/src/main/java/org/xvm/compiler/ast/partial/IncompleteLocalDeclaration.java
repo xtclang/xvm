@@ -45,14 +45,18 @@ public final class IncompleteLocalDeclaration extends Statement {
     }
 
     @Override
+    @SuppressWarnings("MethodDoesntCallSuperMethod") // Constructor copy preserves final children.
     public IncompleteLocalDeclaration clone() {
-        var copy = new IncompleteLocalDeclaration((IncompleteStatement) cursor.clone(),
-                (Expression) initializer.clone(), end);
+        return copyTree();
+    }
+
+    @Override
+    public IncompleteLocalDeclaration copyTree() {
+        var copy = new IncompleteLocalDeclaration(cursor.copyTree(),
+                (Expression) initializer.copyTree(), end);
         copy.adopt(copy.cursor);
         copy.adopt(copy.initializer);
-        copy.setParent(getParent());
-        copy.setStage(getStage());
-        return copy;
+        return copyTreeMetadataTo(copy);
     }
 
     @Override
