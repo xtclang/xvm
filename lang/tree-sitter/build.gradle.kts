@@ -676,7 +676,7 @@ abstract class TreeSitterParseTestTask
                 libDirs.get().flatMap { libDir ->
                     libDir
                         .walkTopDown()
-                        .onEnter { it == libDir || it.name !in excludedDirNames && !it.name.startsWith(".") }
+                        .onEnter { it == libDir || (it.name !in excludedDirNames && !it.name.startsWith(".")) }
                         .filter { it.isFile && it.extension == "x" }
                         .toList()
                 }
@@ -849,9 +849,11 @@ val testTreeSitterParse =
         // shapes without needing per-file unit tests for everything. The native
         // bridge (javatools_bridge/) and the compatibility kit (tck/) are swept
         // too. Archived examples (archive/ directories) and build output are not.
-        val xdkLibDirs = compositeRoot.listFiles { f ->
-            f.isDirectory && f.name.startsWith("lib_")
-        }?.toList() ?: emptyList()
+        val xdkLibDirs =
+            compositeRoot
+                .listFiles { f ->
+                    f.isDirectory && f.name.startsWith("lib_")
+                }?.toList() ?: emptyList()
         val manualTestsDir = File(compositeRoot, "manualTests/src/main/x").takeIf { it.isDirectory }
         val otherSourceDirs = listOf("javatools_bridge", "tck").map { File(compositeRoot, it) }.filter { it.isDirectory }
         libDirs.set(xdkLibDirs + otherSourceDirs + listOfNotNull(manualTestsDir))
