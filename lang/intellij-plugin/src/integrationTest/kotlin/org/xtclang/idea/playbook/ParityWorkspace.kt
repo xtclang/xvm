@@ -31,6 +31,9 @@ class ParityWorkspace(
 ) : AutoCloseable {
     val protocol = ClientProtocol(driver)
     val trace = ClientTrace(driver)
+
+    internal fun replacementGate(id: String): Boolean = id in System.getProperty("xtc.playbook.replacementGates", "").split(',')
+
     val common =
         JsonParser
             .parseString(

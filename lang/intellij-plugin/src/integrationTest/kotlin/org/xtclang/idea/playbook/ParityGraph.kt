@@ -274,6 +274,11 @@ internal fun ParityScenarios.libraryContentCases() {
             val imported = query("textDocument/moniker", document, at).rows().single()
             val target = query("textDocument/definition", document, at).rows().single()
             val uri = target.string("uri")
+            if (replacementGate("UP25")) {
+                check(URI(uri).scheme == data.string("scheme")) { "Local UP25 gate requires virtual content: $uri" }
+                nativeLibraryContent(document, at, target, imported, data.string("monikerScheme"))
+                return@forEach
+            }
             // TODO LSP4IJ: UP25 — retain native read-only file acceptance until upstream supports
             // workspace/textDocumentContent, virtual URI resolution and refresh.
             check(URI(uri).scheme == "file")
