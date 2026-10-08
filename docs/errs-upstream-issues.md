@@ -83,8 +83,8 @@ testing. None changes XVM's released dependency or removes a production bridge.
 | UP18 | Native snippet expansion respects `InsertTextMode.AsIs`, exact whitespace, placeholder navigation and Undo. |
 | UP19 follow-up | Individual file Rename/Move now shares the deferred reconnection used for directories. The old URI is retired before reconnecting current editor content; no document connection is awaited under the VFS write lock. |
 | UP21 | Only transaction-owned closed buffers are persisted after apply, Undo and Redo. Resource recreation resolves the current buffer again; unrelated drafts and current editor ownership are preserved. |
-| UP25 | Static LSP 3.18 document-content providers resolve supported non-file URIs to read-only views, with refresh, cancellation, coalescing and connection disposal. Native X254 acceptance is still required. |
-| UP26 | Inline requests forward explicit invocation and the selected completion's actual insertion text/range, including decorated lookup items. Snippet selections without a faithful literal representation are omitted. Native X257 acceptance is still required. |
+| UP25 | Static LSP 3.18 document-content providers resolve supported non-file URIs to read-only views, with refresh, cancellation, coalescing and connection disposal. Native X254 assertions pass on October 8; the released dependency still needs its fallback. |
+| UP26 | Inline requests forward explicit invocation and the selected completion's actual insertion text/range, including decorated lookup items. Native X257 assertions pass after the October 8 session-restart repair, but the neighboring X256 typing failure blocks replacement acceptance. |
 
 UP02 and UP03 are partial repairs. A synchronous save callback cannot safely emulate
 `willSaveWaitUntil` by blocking the UI, and generic VFS preflight needs an asynchronous native
@@ -118,6 +118,70 @@ The local plugin remains an experimental replacement. Every production bridge st
 its individual native acceptance gate below, including unchanged-consumer refresh, real
 Move/Undo/Redo, closed-file formatting, and the two currently partial native feature scenarios.
 
+### Save All notification continuation, 2026-10-08
+
+Local LSP4IJ `30a5fea4` moves `willSave` dispatch to the native save-veto callback, always
+returning permission to save. The earlier listener covered individual saves but missed both
+manual and automatic Save All on IntelliJ 2024.2. Both missing-notification tests fail before
+this repair. Registered-extension discovery, save ordering and synchronizer disposal pass
+21 focused tests; the full upstream build then passes **613 tests, with 3 existing ignored
+tests and no failures/errors**. `buildPlugin prepareSandbox` also passes. XML is retained under
+`/private/tmp/lsp4ij-save-2026-10-08/`.
+
+UP02 asynchronous `willSaveWaitUntil` remains disabled. A native regression demonstrates that
+a save veto returns to its caller with an unsaved document; asynchronously retrying it later
+would break save-before-Build/Run ordering. UP03 generic asynchronous VFS preflight and rollback
+also remain open. The user confirmed that IntelliJ Platform changes remain deferred and that
+local dependency acceptance should continue. Existing XVM constraints and guarded file-operation
+entry points remain installed; neither issue is declared fully repaired.
+
+Shipping constraint reaffirmed October 8: neither the LSP4J nor LSP4IJ source checkout may become
+a prerequisite for the Ecstasy plugins. Keep released dependency defaults and repository-owned
+server/client compatibility code. The optional local builds below are upstream experiments;
+their acceptance does not itself authorize removing a production bridge or changing a pin.
+
+### Reply and virtual-document lifecycle acceptance, 2026-10-08
+
+Native acceptance against the optional local LSP4IJ build exposed two additional problems.
+Reply validation accessed PSI from a transport thread. The first repair (`bd0bdf6b`) moved
+validation into a read action, but full-suite acceptance exposed a deadlock when an on-type
+formatter consumed the reply while holding a write action. Local `81229358` instead validates
+captured document/VFS state without acquiring a read lock. It uses the document's source stamp,
+so committing the same dirty text does not discard the reply. Formatting still rejects changed
+source, but no longer cancels just because reopening a closed buffer publishes diagnostics.
+
+Local `1712c0b2` closes virtual-library editors under a write action before invalidating their
+files. Routing and pending requests retire immediately; background disposal never waits for the
+EDT. This removes the invalid-PSI error observed during native server restart.
+
+The final upstream suite executes **622 tests: 619 pass, 3 existing skips, no failures/errors**.
+The earlier full-suite run's quick-fix highlighting timeout remains recorded; that test passes
+in isolation and in the subsequent full suite. The write-lock deadlock run was terminated and
+is not counted as successful. XML and the focused regression receipts are under
+`/private/tmp/lsp4ij-reply-lifecycle-2026-10-08/`; the deadlock dump is
+`/private/tmp/lsp4ij-reply-write-lock-2026-10-08.txt`.
+
+Native `run-10005489111273893996` passes X254's virtual-library gate: actual navigation,
+read-only contents, monikers, server refresh and reopening after restart. START/X255/X256 also
+pass, with zero IDE errors. X139 save formatting passes in `run-998605254663663043` and
+`run-9561513593504862699`. None of these experiments removes the released dependency's
+fallback or its recorded partial coverage.
+
+X257 then exposed a missing platform session-restart hook: a popup's new selection could be
+accepted without reaching the provider again. Local `58f5e2ac` restarts suggestions for direct
+invocation and lookup changes. Two contract assertions fail before the fix; all six enabled
+inline tests pass afterward, with the three existing ignored tests unchanged.
+`run-1350057583691146504` passes the native X257 assertions for invocation, alternatives,
+cycling, exact insertion/Undo and the selected popup text/range, plus X258; zero IDE errors.
+The shared catalog still labels X257 partial for the shipping 0.21.0 limitation. Subsequent
+reports expose opt-in replacement-gate results separately from those catalog statuses.
+
+The combined experimental `run-1508827283781484369` passes START, X139, X181/X185/X202/X213,
+X254's additional native assertions and X255, then fails X256 at its actual 30-second deadline
+waiting for continued-typing ghost text. The server completed that request in about 217 ms;
+there were zero IDE errors. This remains an unresolved local-upstream acceptance failure,
+not a pass, and prevents declaring the experimental inline replacement ready.
+
 ### Local LSP4J repairs, 2026-10-07
 
 The separate `~/src/lsp4j` checkout is based on upstream `main` at
@@ -149,6 +213,41 @@ and our UP06 adapter and UP15 shipping-version assertion remain. Test a compatib
 or explicitly selected local build before removing either boundary; this checkout is a newer
 protocol snapshot, not a change to the production dependency. No upstream push, issue or PR
 was made. IntelliJ Platform and VS Code upstream repairs are deferred by the user's instruction.
+
+### Optional LSP4J integration acceptance, 2026-10-08
+
+A temporary init script resolves the locally published 1.1.0-SNAPSHOT only for the experiment;
+no repository or version-catalog change is retained. The repaired library passes **51 XVM
+protocol/lifecycle tests and 82 packaged stdio/process tests**, with no failures/errors/skips.
+The stdio bad-parameter assertion temporarily expects `InvalidParams`; normal requests after
+the error still succeed. Hash comparisons verify that the packaged server contains the repaired
+message decoder and diagnostic report class from the local publication.
+
+LSP4IJ also passes its full **622-test suite (619 pass, 3 existing skips)** with that library
+bundled. The native combined run above bypasses only our `DiagnosticReportJson` registration;
+configuration and other compatibility adapters remain enabled. Its diagnostic/lazy-refactoring
+cases pass without ambiguous-union failures. The X256 failure is retained separately.
+
+Both the JSON adapter registration and the shipping `ParseError` assertion are restored
+byte-for-byte before released-dependency checks. XML, class hashes and restoration hashes are
+under `/private/tmp/lsp4j-local-acceptance-2026-10-08/`. The first two temporary init scripts
+failed dependency resolution before tests ran; their stale XML is not acceptance evidence.
+
+### Released-dependency verification, 2026-10-08
+
+The restored shipping configuration passes **82 packaged stdio/process tests and 23 client
+compatibility tests**, with zero failures/errors/skips. The latter exercise diagnostic JSON,
+guarded rename preflight, startup document messages and lazy code-action messages. The server
+JAR's decoder and diagnostic-report class match the cached released LSP4J 1.0.0 classes.
+
+Native `run-6190916343008780922` uses released LSP4IJ 0.21.0, no local plugin override and no
+replacement gates. START plus X103/X130, X139, X181/X185/X202/X213 and X255/X256/X258 pass;
+X254/X257 retain their two explicit shipping limitations. There are **zero failures and zero
+IDE errors**. In particular, the experimental continued-typing failure does not reproduce in
+this released-dependency run. All production bridges remain installed; no fork is required.
+
+XML, the native report and packaged-class hashes are copied under
+`/private/tmp/lsp-shipping-acceptance-2026-10-08/`. SpotlessCheck and `git diff --check` pass.
 
 ### Local plugin acceptance, 2026-10-06
 

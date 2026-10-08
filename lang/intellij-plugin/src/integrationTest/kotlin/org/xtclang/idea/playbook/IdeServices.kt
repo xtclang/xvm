@@ -58,6 +58,8 @@ interface EditorLookup {
 
     fun isCalculating(): Boolean
 
+    fun getCurrentItem(): CompletionItem?
+
     fun setCurrentItem(item: CompletionItem)
 }
 
