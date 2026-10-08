@@ -210,6 +210,32 @@ internal fun ParityScenarios.platformCases() {
                 settle(document)
                 clean(document)
             }
+            val unsaved = data.string("edited").replace("value", "adapterSwitchProof")
+            replace(document, unsaved)
+            listOf("Tree-sitter" to "TreeSitter", "Ecstasy Compiler" to "XDK").forEach { (label, expected) ->
+                with(driver) {
+                    withContext(OnDispatcher.EDT) {
+                        utility(LanguageServicePage::class).adapter(singleProject(), label)
+                    }
+                    awaitUi("adapter restart into $label", 45.seconds) {
+                        protocol.server().getCurrentProcessId()?.let { it != previous } == true
+                    }
+                }
+                previous = protocol.server().getCurrentProcessId()
+                val status = protocol.query("xtc/languageServiceStatus", emptyMap<String, Any>()).asJsonObject
+                check(status.string("adapter") == expected)
+                check(document.text == unsaved)
+
+                fun names(rows: List<JsonObject>): List<String> =
+                    rows.flatMap { symbol ->
+                        listOf(symbol.string("name")) + symbol["children"]?.let { names(it.rows()) }.orEmpty()
+                    }
+                with(driver) {
+                    awaitUi("unsaved declaration analyzed by $label", 30.seconds) {
+                        "adapterSwitchProof" in names(query("textDocument/documentSymbol", document).rows())
+                    }
+                }
+            }
         } finally {
             with(driver) {
                 withContext(OnDispatcher.EDT) {

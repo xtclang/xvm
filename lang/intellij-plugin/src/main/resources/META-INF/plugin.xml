@@ -32,6 +32,13 @@
     <depends>com.redhat.devtools.lsp4ij</depends>
 
     <actions>
+        <action id="xtc.selectLanguageAdapter" class="org.xtclang.idea.lsp.SelectLanguageAdapterAction"
+                text="Switch Ecstasy Language Adapter"
+                description="Choose Compiler or Tree-sitter and restart the language server with open buffers preserved">
+            <keyboard-shortcut keymap="$default" first-keystroke="ctrl alt X" second-keystroke="A"/>
+            <keyboard-shortcut keymap="Mac OS X" first-keystroke="ctrl alt X" second-keystroke="A"/>
+            <add-to-group group-id="ToolsMenu" anchor="last"/>
+        </action>
         <action id="xtc.showReferences" class="com.redhat.devtools.lsp4ij.commands.editor.ShowReferencesAction"/>
         <action id="xtc.exportServerLogs" class="org.xtclang.idea.lsp.ExportServerLogsAction"
                 text="Export Ecstasy Server Logs" description="Save recent server logs, timing traces and status as a ZIP">

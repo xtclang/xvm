@@ -99,6 +99,10 @@
                 "title": "Ecstasy: Restart Language Server"
             },
             {
+                "command": "xtc.selectLanguageAdapter",
+                "title": "Ecstasy: Switch Language Adapter"
+            },
+            {
                 "command": "xtc.showServerOutput",
                 "title": "Ecstasy: Show Language Server Output"
             },
@@ -126,6 +130,11 @@
             }
         ],
         "keybindings": [
+            {
+                "command": "xtc.selectLanguageAdapter",
+                "key": "ctrl+alt+x a",
+                "when": "editorLangId == xtc"
+            },
             {
                 "command": "xtc.showServerOutput",
                 "key": "ctrl+alt+x l"
@@ -288,6 +297,19 @@
                 "title": "Ecstasy: Language Service",
                 "order": 1,
                 "properties": {
+                    "xtc.languageService.adapter": {
+                        "type": "string",
+                        "enum": ["default", "compiler", "treesitter"],
+                        "enumItemLabels": ["Bundled default", "Ecstasy Compiler", "Tree-sitter"],
+                        "enumDescriptions": [
+                            "Use the adapter chosen by this server build (normally Compiler).",
+                            "Compiler diagnostics, type resolution and semantic features.",
+                            "Syntax-based analysis without compiler type checking."
+                        ],
+                        "default": "default",
+                        "scope": "window",
+                        "description": "Language server adapter. Changes restart the server and restore open buffers. Also available through Ecstasy: Switch Language Adapter."
+                    },
                     "xtc.trace.server": {
                         "type": "string",
                         "enum": [

@@ -64,8 +64,16 @@ The LSP server uses a pluggable adapter pattern to support different parsing bac
 
 ## Adapter Selection
 
-The adapter is selected at **build time** via the `lsp.adapter` Gradle property.
-The selection is embedded in `lsp-version.properties` inside the JAR.
+Both the compiler and Tree-sitter adapters are bundled in the server JAR. Select an adapter
+in VS Code with **Ecstasy: Switch Language Adapter**, in IntelliJ with **Tools → Switch Ecstasy
+Language Adapter**, or with **Ctrl+Alt+X, then A** (**Control+Option+X, then A** on macOS).
+The IDE saves the choice, restarts the server and reopens unsaved buffers. Compiler provides
+semantic analysis; Tree-sitter provides syntax-based features without compiler type checking.
+
+The **Bundled default** choice uses `lsp.adapter` from `lsp-version.properties`, set by the
+`lsp.adapter` Gradle property (normally `compiler`). A standalone server can override that
+default at startup with `java -Dxtc.lsp.adapter=treesitter -jar <server.jar>`. Each server process
+uses one adapter for its lifetime; switching requires a new process to negotiate capabilities.
 
 ### Available Adapters
 
