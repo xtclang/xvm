@@ -39,7 +39,7 @@ final class PartialArgument {
         if (written instanceof IncompleteExpression) {
             return value;
         }
-        var copy = (Expression) written.clone();
+        var copy = (Expression) written.copyTree();
         var children = StreamSupport.stream(copy.childNodes().spliterator(), false).toList();
         children.stream().filter(Expression.class::isInstance).map(Expression.class::cast)
                 .filter(child -> PartialSyntax.valueCursor(child).isPresent())
