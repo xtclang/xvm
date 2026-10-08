@@ -97,6 +97,11 @@ public abstract class Expression
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
+    public Expression copyTree() {
+        return (Expression) super.copyTree();
+    }
+
+    @Override
     protected boolean usesSuper() {
         for (AstNode node : children()) {
             if (!(node instanceof ComponentStatement) && node.usesSuper()) {
@@ -305,7 +310,7 @@ public abstract class Expression
      */
     protected TypeFit testFitMultiExhaustive(Context ctx, TypeConstant[] atypeRequired,
                                              ErrorListener errs) {
-        Expression exprTemp = (Expression) copyTree();
+        Expression exprTemp = copyTree();
         Context    ctxTemp  = ctx.enter();
         Expression exprNew  = exprTemp.validateMulti(ctxTemp, atypeRequired, errs);
         exprTemp.discard(true);

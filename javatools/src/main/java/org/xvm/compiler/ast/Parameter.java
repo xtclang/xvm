@@ -29,6 +29,11 @@ public class Parameter
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    public Parameter copyTree() {
+        return (Parameter) super.copyTree();
+    }
+
     public TypeExpression getType() {
         return type;
     }
