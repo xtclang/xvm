@@ -8,6 +8,7 @@ package mixinTests {
         test5();
         test6();
         test7();
+        testValidators();
     }
 
     void test1() {
@@ -58,6 +59,36 @@ package mixinTests {
         Base base = new Base();
         assert base.nestedValue() == 41;
         assert base.privateValue() == 1;
+    }
+
+    void testValidators() {
+        import t8.*;
+
+        new Derived(1, 1);
+
+        Boolean baseRejected = False;
+        try {
+            new Derived(-1, 1);
+        } catch (IllegalState e) {
+            baseRejected = e.text == "base validator";
+        }
+        assert baseRejected;
+
+        Boolean mixinRejected = False;
+        try {
+            new Derived(11, 1);
+        } catch (IllegalState e) {
+            mixinRejected = e.text == "mixin validator";
+        }
+        assert mixinRejected;
+
+        Boolean derivedRejected = False;
+        try {
+            new Derived(1, -1);
+        } catch (IllegalState e) {
+            derivedRejected = e.text == "derived validator";
+        }
+        assert derivedRejected;
     }
 
     package t1 {
@@ -169,5 +200,27 @@ package mixinTests {
         }
 
         mixin Mix1 extends Mix0 {}
+    }
+
+    package t8 {
+        class Base(Int value) {
+            assert() {
+                assert value >= 0 as "base validator";
+            }
+        }
+
+        mixin Mix into Base {
+            assert() {
+                assert value <= 10 as "mixin validator";
+            }
+        }
+
+        class Derived(Int value, Int extra)
+                extends Base(value)
+                incorporates Mix {
+            assert() {
+                assert extra >= 0 as "derived validator";
+            }
+        }
     }
 }

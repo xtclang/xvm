@@ -965,6 +965,13 @@ public class MethodInfo
     }
 
     /**
+     * @return true iff this is a constructor, excluding property initializers
+     */
+    public boolean isConstructorOnly() {
+        return getTail().isConstructorOnly();
+    }
+
+    /**
      * @return true iff this is a validator
      */
     public boolean isValidator() {
@@ -1639,7 +1646,7 @@ public class MethodInfo
                 // the capped method, while the narrowing method supplies its classification and
                 // default-parameter count
                 SignatureConstant sig = getSignature();
-                yield JitMethodDesc.of(builder, typeContainer, method.isStatic(), false,
+                yield JitMethodDesc.of(builder, typeContainer, JitMethodDesc.flagsFor(method),
                         sig.getRawParams(), sig.getRawReturns(),
                         method.getTypeParamCount() + getRequiredParamCount(infoType));
             }
