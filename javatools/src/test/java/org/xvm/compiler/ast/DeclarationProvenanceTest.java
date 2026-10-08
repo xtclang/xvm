@@ -80,7 +80,7 @@ class DeclarationProvenanceTest {
         var resolver = original.getNameResolver();
         var errors = new ErrorList();
         assertEquals(NameResolver.Result.DEFERRED, resolver.resolve(errors));
-        var copy = (NamedTypeExpression) original.copyTree();
+        var copy = original.copyTree();
         var copiedResolver = copy.getNameResolver();
         assertNotSame(resolver, copiedResolver);
         assertSame(copy, copiedResolver.getNode());
@@ -103,8 +103,7 @@ class DeclarationProvenanceTest {
         assertNull(parameter.getResolvedTarget());
         var original = new Register(type, "value", 0);
         parameter.setResolvedTarget(original);
-        for (var node : List.of(parameter.copyTree(), parameter.clone())) {
-            var copy = (Parameter) node;
+        for (Parameter copy : List.of(parameter.copyTree(), (Parameter) parameter.clone())) {
             // Tree copies retain known bindings; this is not a fresh parse.
             assertSame(original, copy.getResolvedTarget());
             var replacement = new Register(type, "value", 1);

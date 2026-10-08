@@ -74,7 +74,7 @@ public final class IncompleteDeclarationStatement extends Statement {
     public IncompleteDeclarationStatement copyTree() {
         var copy = new IncompleteDeclarationStatement(kind, name, start, end,
                 cursors.stream().map(IncompleteStatement::copyTree).toList(),
-                formals.stream().map(formal -> (Parameter) formal.copyTree()).toList());
+                formals.stream().map(Parameter::copyTree).toList());
         copy.adopt(copy.cursors);
         copy.adopt(copy.formals);
         return copyTreeMetadataTo(copy);
