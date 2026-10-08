@@ -2504,7 +2504,8 @@ public class Lexer
      * Log an error.
      */
     protected void log(Severity severity, String sCode, Object[] aoParam, long lPosStart, long lPosEnd) {
-        if (m_errorListener.log(severity, sCode, aoParam, m_source, lPosStart, lPosEnd)) {
+        m_errorListener.log(severity, sCode, aoParam, m_source, lPosStart, lPosEnd);
+        if (m_errorListener.isAbortDesired()) {
             throw new CompilerException("error list is full: " + m_errorListener);
         }
     }
