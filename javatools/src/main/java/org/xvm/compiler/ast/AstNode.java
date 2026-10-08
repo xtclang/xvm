@@ -229,8 +229,37 @@ public abstract class AstNode
         return NO_FIELDS;
     }
 
+    /**
+     * Compatibility entry point for {@link #copyTree()}.
+     *
+     * @return  a tree copy of this node
+     */
     @Override
+    @SuppressWarnings("MethodDoesntCallSuperMethod") // copyTree owns allocation and copying.
     public AstNode clone() {
+        return copyTree();
+    }
+
+    /**
+     * Copy this node and its registered syntax children, preserving the concrete node type, source
+     * positions and compilation stage. Copied children belong to their copied owners. The root
+     * retains its original parent until a caller adopts it into another tree; copying does not
+     * replace or reparent any original node.
+     *
+     * <p>This is not a fresh parse or an isolated copy of all compiler state. The default
+     * implementation shallow-copies non-child fields, including resolved bindings and transient
+     * fields. Overrides must handle owned state that cannot be shared, such as a lambda's
+     * generated method. Recovery nodes construct fresh shells and copy their written syntax
+     * without carrying inherited validation or emission state.
+     *
+     * <p>The default implementation still uses shallow cloning followed by reflective copying of
+     * registered children; copied child lists are mutable. Constructor-based overrides must copy
+     * and adopt their children and preserve root metadata with {@link #copyTreeMetadataTo(AstNode)}.
+     * Specialize this method rather than {@link #clone()} so both entry points behave alike.
+     *
+     * @return  a tree copy of this node
+     */
+    public AstNode copyTree() {
         AstNode that;
         try {
             that = (AstNode) super.clone();
@@ -250,14 +279,14 @@ public abstract class AstNode
 
             if (oVal != null) {
                 if (oVal instanceof AstNode node) {
-                    AstNode nodeNew = node.clone();
+                    AstNode nodeNew = node.copyTree();
 
                     that.adopt(nodeNew);
                     oVal = nodeNew;
                 } else if (oVal instanceof List list) {
                     ArrayList<AstNode> listNew = new ArrayList<>();
                     for (AstNode node : (List<AstNode>) list) {
-                        listNew.add(node.clone());
+                        listNew.add(node.copyTree());
                     }
 
                     that.adopt(listNew);
@@ -276,6 +305,21 @@ public abstract class AstNode
         }
 
         return that;
+    }
+
+    /**
+     * Preserve the root metadata of a constructor-based tree copy. The caller is responsible for
+     * copying and adopting children; this method does not transfer validation or emission state.
+     *
+     * @param copy  the newly constructed node
+     * @param <T>   the concrete node type
+     *
+     * @return  the supplied copy with this node's parent and compilation stage
+     */
+    protected final <T extends AstNode> T copyTreeMetadataTo(T copy) {
+        copy.setParent(getParent());
+        copy.setStage(getStage());
+        return copy;
     }
 
     /**

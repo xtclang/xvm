@@ -307,7 +307,7 @@ public abstract class Expression
      */
     protected TypeFit testFitMultiExhaustive(Context ctx, TypeConstant[] atypeRequired,
                                              ErrorListener errs) {
-        Expression exprTemp = (Expression) clone();
+        Expression exprTemp = (Expression) copyTree();
         Context    ctxTemp  = ctx.enter();
         Expression exprNew  = exprTemp.validateMulti(ctxTemp, atypeRequired, errs);
         exprTemp.discard(true);

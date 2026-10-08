@@ -44,6 +44,13 @@ public final class IncompleteExpression extends Expression {
     }
 
     @Override
+    public IncompleteExpression copyTree() {
+        var copy = new IncompleteExpression(site.copyTree());
+        copy.adopt(copy.site);
+        return copyTreeMetadataTo(copy);
+    }
+
+    @Override
     public TypeConstant getImplicitType(Context ctx) {
         return null;
     }

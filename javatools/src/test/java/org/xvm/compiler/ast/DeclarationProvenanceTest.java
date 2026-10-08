@@ -80,7 +80,7 @@ class DeclarationProvenanceTest {
         var resolver = original.getNameResolver();
         var errors = new ErrorList();
         assertEquals(NameResolver.Result.DEFERRED, resolver.resolve(errors));
-        var copy = (NamedTypeExpression) original.clone();
+        var copy = (NamedTypeExpression) original.copyTree();
         var copiedResolver = copy.getNameResolver();
         assertNotSame(resolver, copiedResolver);
         assertSame(copy, copiedResolver.getNode());
@@ -103,13 +103,15 @@ class DeclarationProvenanceTest {
         assertNull(parameter.getResolvedTarget());
         var original = new Register(type, "value", 0);
         parameter.setResolvedTarget(original);
-        var copy = (Parameter) parameter.clone();
-        // Java transient fields are still copied by Object.clone; this is not a fresh parse.
-        assertSame(original, copy.getResolvedTarget());
-        var replacement = new Register(type, "value", 1);
-        copy.setResolvedTarget(replacement);
-        assertSame(replacement, copy.getResolvedTarget());
-        assertSame(original, parameter.getResolvedTarget());
+        for (var node : List.of(parameter.copyTree(), parameter.clone())) {
+            var copy = (Parameter) node;
+            // Tree copies retain known bindings; this is not a fresh parse.
+            assertSame(original, copy.getResolvedTarget());
+            var replacement = new Register(type, "value", 1);
+            copy.setResolvedTarget(replacement);
+            assertSame(replacement, copy.getResolvedTarget());
+            assertSame(original, parameter.getResolvedTarget());
+        }
     }
 
     private static class ResolvingScope extends AstNode {
