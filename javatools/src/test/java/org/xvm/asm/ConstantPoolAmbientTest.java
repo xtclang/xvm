@@ -1,67 +1,84 @@
 package org.xvm.asm;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
 import org.junit.jupiter.api.Test;
 
-import org.xvm.asm.Component.Format;
-import org.xvm.asm.Constants.Access;
-import org.xvm.asm.constants.TypeConstant;
+import org.xvm.compiler.Token.Id;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * The pool a piece of work should use, when the thread has not been told which.
- *
- * <p>{@link ConstantPool#getCurrentPool()} is a thread-local, bound by
- * {@link ConstantPool#withPool} around stretches of compilation and by the runtime container.
- * Outside those it is null, which is the ordinary state of any thread driving the compiler from
- * Java - a build tool, an embedding host, a test, a debugger evaluating a watch. Code that
- * dereferenced it threw there, and two such NullPointerExceptions were found by accident in
- * unrelated code while this work was going on.</p>
- *
- * <p>The ambient pool is preferred rather than ignored: {@code withPool} exists because the
- * compiler works across pools, so a constant's own pool is not always the right one and answering
- * from the wrong pool would be worse than answering from none.</p>
+ * Host operations select a working pool at their boundary and restore the caller's context.
  */
 public class ConstantPoolAmbientTest {
     @Test
-    public void withNoPoolBoundTheFallbackIsUsed() {
-        assertNull(ConstantPool.getCurrentPool(),
-                "the premise: a test thread has never had a pool bound");
+    public void hostScopeRestoresAnUnboundThread() {
+        assertNull(ConstantPool.getCurrentPool());
+        ConstantPool pool = new FileStructure("host").getConstantPool();
 
-        ConstantPool pool = new FileStructure("test").getConstantPool();
-
-        assertSame(pool, ConstantPool.currentOr(pool), "nothing bound, so the fallback answers");
-    }
-
-    @Test
-    public void aBoundPoolWinsOverTheFallback() {
-        ConstantPool bound    = new FileStructure("bound").getConstantPool();
-        ConstantPool fallback = new FileStructure("fallback").getConstantPool();
-
-        try (var scope = ConstantPool.withPool(bound)) {
-            assertSame(bound, ConstantPool.currentOr(fallback),
-                    "a pool bound to this thread is the one the compiler meant");
+        try (var _ = ConstantPool.withPool(pool)) {
+            assertSame(pool, ConstantPool.getCurrentPool());
         }
 
-        assertSame(fallback, ConstantPool.currentOr(fallback), "and the binding ends with the scope");
+        assertNull(ConstantPool.getCurrentPool());
     }
 
-    /**
-     * A constant asked to resolve another one outside a compilation answers from its own pool
-     * rather than throwing. This is what the unguarded readers used to do.
-     */
     @Test
-    public void aConstantResolvesFromItsOwnPoolWithNothingBound() {
-        assertNull(ConstantPool.getCurrentPool(), "the premise");
+    public void nestedScopeRestoresTheCallerAfterFailure() {
+        ConstantPool caller = new FileStructure("caller").getConstantPool();
+        ConstantPool worker = new FileStructure("worker").getConstantPool();
+        var failure = new IllegalStateException("host operation failed");
 
-        FileStructure  file = new FileStructure("test");
-        ClassStructure clz  = file.getModule().createClass(
-                Access.PUBLIC, Format.CLASS, "Test", null);
-        TypeConstant   type = clz.getNormalizedType();
+        try (var _ = ConstantPool.withPool(caller)) {
+            assertSame(failure, assertThrows(IllegalStateException.class, () -> {
+                try (var _ = ConstantPool.withPool(worker)) {
+                    assertSame(worker, ConstantPool.getCurrentPool());
+                    throw failure;
+                }
+            }));
+            assertSame(caller, ConstantPool.getCurrentPool());
+        }
 
-        assertNotNull(type.getConstantPool());
-        assertSame(file.getConstantPool(), ConstantPool.currentOr(type.getConstantPool()));
+        assertNull(ConstantPool.getCurrentPool());
+    }
+
+    @Test
+    public void crossPoolOperationsUseTheWorkingPoolRatherThanTheConstantOwner() {
+        ConstantPool owner = new FileStructure("owner").getConstantPool();
+        ConstantPool worker = new FileStructure("worker").getConstantPool();
+        var first = owner.ensureByteConstant(Constant.Format.UInt8, 1);
+        var last = owner.ensureByteConstant(Constant.Format.UInt8, 3);
+
+        try (var _ = ConstantPool.withPool(worker)) {
+            assertSame(worker, first.apply(Id.I_RANGE_I, last).getConstantPool());
+            assertSame(owner, first.getConstantPool());
+        }
+
+        assertNull(ConstantPool.getCurrentPool());
+    }
+
+    @Test
+    public void executorWorkBindsItsOwnPoolWithoutLeakingToTheNextTask() throws Exception {
+        ConstantPool caller = new FileStructure("caller").getConstantPool();
+        ConstantPool worker = new FileStructure("worker").getConstantPool();
+
+        try (var _ = ConstantPool.withPool(caller);
+             var executor = Executors.newSingleThreadExecutor()) {
+            executor.submit(() -> {
+                assertNull(ConstantPool.getCurrentPool(), "pool context is not inherited");
+                try (var _ = ConstantPool.withPool(worker)) {
+                    assertSame(worker, ConstantPool.getCurrentPool());
+                }
+                assertNull(ConstantPool.getCurrentPool());
+            }).get(10, TimeUnit.SECONDS);
+            assertNull(executor.submit(ConstantPool::getCurrentPool).get(10, TimeUnit.SECONDS));
+            assertSame(caller, ConstantPool.getCurrentPool());
+        }
+
+        assertNull(ConstantPool.getCurrentPool());
     }
 }
