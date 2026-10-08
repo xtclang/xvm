@@ -78,6 +78,7 @@ import static java.lang.constant.ConstantDescs.MTD_void;
 
 import static org.xvm.javajit.JitFlavor.NullablePrimitive;
 import static org.xvm.javajit.JitFlavor.NullableXvmPrimitive;
+import static org.xvm.javajit.TypeSystem.HASH;
 
 import static org.xvm.util.Handy.lazyAdd;
 import static org.xvm.util.Handy.lazyList;
@@ -1909,7 +1910,7 @@ public class CommonBuilder
             JitMethodDesc jmDesc  = method.getJitDesc(this);
             assembleMethod(classBuilder, method, jitName, jmDesc);
 
-            if (!typeInfo.isAbstract() && method.isCtorOrValidator() ||
+            if (!typeInfo.isAbstract() && method.isConstructorOnly() ||
                     isInterface && method.isVirtualConstructor()) {
                 String        newName = jitName.replace("construct", typeInfo.isSingleton() ? INIT : NEW);
                 JitMethodDesc newDesc = Builder.convertConstructToNew(typeInfo, art.CD(), (JitCtorDesc) jmDesc);
@@ -4229,27 +4230,31 @@ public class CommonBuilder
                 }
             }
 
-            // steps 4: a constructor context is required if a “finally” chain will exist
-            //          (assume true for now)
+            // step 4: a constructor context is required if a “finally” chain will exist
             // CtorCtx cctx = ctx.ctorCtx();
 
-            int cctxSlot = code.allocateLocal(TypeKind.REFERENCE);
-            if (debugInfo) {
-                code.localVariable(cctxSlot, "cctx", CD_CtorCtx, startScope, endScope);
+            JitCtorDesc ctorDesc   = (JitCtorDesc) constructor.getJitDesc(this);
+            boolean     hasCtorCtx = ctorDesc.hasCtorCtx();
+            int         cctxSlot   = -1;
+            if (hasCtorCtx) {
+                cctxSlot = code.allocateLocal(TypeKind.REFERENCE);
+                if (debugInfo) {
+                    code.localVariable(cctxSlot, "cctx", CD_CtorCtx, startScope, endScope);
+                }
+                code.aload(ctxSlot)
+                    .invokevirtual(CD_Ctx, "ctorCtx", md(CD_CtorCtx))
+                    .astore(cctxSlot);
             }
-            code.aload(ctxSlot)
-                .invokevirtual(CD_Ctx, "ctorCtx", md(CD_CtorCtx))
-                .astore(cctxSlot)
-            ;
 
             // step 6: call the constructor
-            // construct$17(ctx, cctx, [type], thi$, x, y, z);
-            String        ctorName = constructor.ensureJitMethodName(typeSystem);
-            JitMethodDesc ctorDesc = constructor.getJitDesc(this);
+            // construct$17(ctx, [cctx], [type], thi$, x, y, z);
+            String ctorName = constructor.ensureJitMethodName(typeSystem);
 
-            code.aload(ctxSlot)
-                .aload(cctxSlot)
-                .aload(thisSlot);
+            code.aload(ctxSlot);
+            if (hasCtorCtx) {
+                code.aload(cctxSlot);
+            }
+            code.aload(thisSlot);
 
             // if this "new$" is optimized, the underlying constructor is optimized and vice versa
             assert jmd.isOptimized == ctorDesc.isOptimized;
@@ -4272,15 +4277,35 @@ public class CommonBuilder
 
             code.invokestatic(CD_this, ctorName, ctorMd);
 
-            // step 7: run the post-construction validator, if present
+            // step 7: run each validator in the construction chain
             MethodInfo validator = typeInfo.getMethodBySignature(pool().sigValidator());
             if (validator != null) {
-                JitMethodDesc validatorDesc = validator.getJitDesc(this);
-                code.aload(ctxSlot)
-                    .aload(cctxSlot)
-                    .aload(thisSlot)
-                    .invokestatic(CD_this,
-                            validator.ensureJitMethodName(typeSystem), validatorDesc.standardMD);
+                MethodBody[] chain = validator.ensureOptimizedMethodChain(structInfo);
+                for (int depth = 0; depth < chain.length; depth++) {
+                    MethodBody       body        = chain[depth];
+                    MethodConstant   validatorId = body.getIdentity();
+                    IdentityConstant containerId = validatorId.getNamespace();
+                    Format           format      = containerId.getComponent().getFormat();
+
+                    // mixin and annotation validator bodies are generated on the incorporating class
+                    TypeConstant typeTarget = containerId.equals(thisId) || isEmbedded(format)
+                            ? thisType
+                            : typeInfo.getClassChain().get(containerId).getType();
+
+                    assert !typeTarget.isXvmPrimitive();
+                    ClassDesc cdTarget = typeTarget == thisType
+                            ? CD_this
+                            : ensureClassDesc(typeTarget);
+                    String validatorName = depth > 0 && isEmbedded(format)
+                            ? validator.ensureJitMethodName(typeSystem) + HASH + depth
+                            : validatorId.ensureJitMethodName(typeSystem);
+
+                    code.aload(ctxSlot)
+                        .aload(thisSlot)
+                        .invokestatic(cdTarget,
+                                validatorName,
+                                md(CD_void, CD_Ctx, cdTarget));
+                }
             }
 
             // steps 8, 9, 10: TODO
@@ -4371,6 +4396,17 @@ public class CommonBuilder
 
         BuildContext bctx = new BuildContext(this,
                 method.isCtorOrValidator() ? structInfo : typeInfo, method, jmd);
+        if (method.isValidator()) {
+            // assemble embedded validator bodies explicitly; there are no super() calls to reach
+            // them; see step 7 in assembleNew()
+            MethodBody[] chain = bctx.callChain;
+            for (int depth = 1; depth < chain.length; depth++) {
+                Format format = chain[depth].getIdentity().getNamespace().getComponent().getFormat();
+                if (isEmbedded(format)) {
+                    bctx.buildSuper(jitName + HASH + depth, depth);
+                }
+            }
+        }
         doAssembleMethod(classBuilder, bctx, method, jitName, md, flags);
 
         BuildContext bctxDeferred = bctx.getDeferred();
@@ -4449,12 +4485,8 @@ public class CommonBuilder
         IdentityConstant containerId = id instanceof PropertyConstant
                 ? id.getClassIdentity()
                 : id.getNamespace();
-        if (containerId.equals(thisId)) {
-            return true;
-        }
 
-        Format ownerFormat = containerId.getComponent().getFormat();
-        return ownerFormat == Format.ANNOTATION || ownerFormat == Format.MIXIN;
+        return containerId.equals(thisId) || isEmbedded(containerId.getComponent().getFormat());
     }
 
     // ----- debugging support ---------------------------------------------------------------------

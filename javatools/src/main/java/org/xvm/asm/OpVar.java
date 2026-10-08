@@ -256,7 +256,7 @@ public abstract class OpVar
         ClassDesc     cdArray = reg.cd();
         boolean       fOpt    = !typeEl.isNullable() && typeEl.isJitPrimitive(); // TODO: support for Int?[]
         TypeConstant  typeArg = fOpt ? typeEl : bctx.pool().typeObject();        // TODO: support for L1 specialization
-        JitMethodDesc jmdAdd  = JitMethodDesc.of(bctx.builder, type, false, false,
+        JitMethodDesc jmdAdd  = JitMethodDesc.of(bctx.builder, type, JitMethodDesc.JMD_VIRTUAL,
                 new TypeConstant[] {typeArg}, new TypeConstant[] {type}, 1);
 
         assert fOpt == jmdAdd.isOptimized;

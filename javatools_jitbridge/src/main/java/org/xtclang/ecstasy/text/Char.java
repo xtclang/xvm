@@ -10,7 +10,6 @@ import org.xtclang.ecstasy.numbers.UInt32;
 import org.xtclang.ecstasy.numbers.UIntN;
 
 import org.xvm.javajit.Ctx;
-import org.xvm.javajit.Ctx.CtorCtx;
 
 /**
  * Native shell for "ecstasy.text.Char".
@@ -28,7 +27,7 @@ public class Char extends nConst {
         return $box(codepoint);
     }
 
-    public static void construct$2$p(Ctx ctx, CtorCtx cctx, Char thi$, int codepoint) {
+    public static void construct$2$p(Ctx ctx, Char thi$, int codepoint) {
         thi$.codepoint = codepoint;
     }
 

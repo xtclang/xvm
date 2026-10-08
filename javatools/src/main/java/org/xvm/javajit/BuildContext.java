@@ -86,6 +86,7 @@ import static java.lang.constant.ConstantDescs.CD_void;
 import static java.lang.constant.ConstantDescs.INIT_NAME;
 
 import static org.xvm.javajit.Builder.CD_Class;
+import static org.xvm.javajit.Builder.CD_CtorCtx;
 import static org.xvm.javajit.Builder.CD_Ctx;
 import static org.xvm.javajit.Builder.CD_Exception;
 import static org.xvm.javajit.Builder.CD_JavaObject;
@@ -1088,11 +1089,15 @@ public class BuildContext {
     }
 
     /**
-     * Build the code to load the CtorCtx instance on the Java stack.
+     * Build the code to load or create a CtorCtx instance on the Java stack.
      */
     public CodeBuilder loadCtorCtx(CodeBuilder code) {
         assert isConstructor;
-        code.aload(code.parameterSlot(1));
+        if (methodDesc instanceof JitCtorDesc ctorDesc && ctorDesc.hasCtorCtx()) {
+            code.aload(code.parameterSlot(1));
+        } else {
+            loadCtx(code).invokevirtual(CD_Ctx, "ctorCtx", md(CD_CtorCtx));
+        }
         return code;
     }
 

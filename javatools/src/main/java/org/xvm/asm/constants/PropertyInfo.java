@@ -33,6 +33,9 @@ import org.xvm.javajit.TypeSystem;
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
+import static org.xvm.javajit.JitMethodDesc.JMD_STATIC;
+import static org.xvm.javajit.JitMethodDesc.JMD_VIRTUAL;
+
 /**
  * Represents the compile time and runtime information (aggregated across all contributions and
  * virtual levels) about a single property as it appears in a particular type.
@@ -1441,7 +1444,8 @@ public class PropertyInfo
      * @return the JitMethodDesc for the property getter on the specified target type
      */
     public JitMethodDesc getGetterJitDesc(Builder builder, TypeConstant typeTarget) {
-        return JitMethodDesc.of(builder, typeTarget, this.isConstant(), false,
+        return JitMethodDesc.of(builder, typeTarget,
+                this.isConstant() ? JMD_STATIC : JMD_VIRTUAL,
                 TypeConstant.NO_TYPES, new TypeConstant[] {getType()}, 0);
     }
 
@@ -1461,7 +1465,8 @@ public class PropertyInfo
      * @return the JitMethodDesc for the property setter on the specified target type
      */
     public JitMethodDesc getSetterJitDesc(Builder builder, TypeConstant typeTarget) {
-        return JitMethodDesc.of(builder, typeTarget, this.isConstant(), false,
+        return JitMethodDesc.of(builder, typeTarget,
+                this.isConstant() ? JMD_STATIC : JMD_VIRTUAL,
                 new TypeConstant[] {getType()}, TypeConstant.NO_TYPES, 1);
     }
 

@@ -202,7 +202,7 @@ public class AugmentingBuilder extends CommonBuilder {
     protected void assembleMethod(
             ClassBuilder classBuilder, MethodInfo method,
             String jitName, JitMethodDesc jmd) {
-        if (method.isCtorOrValidator()) {
+        if (method.isConstructorOnly()) {
             String        newName = jitName.replace("construct", typeInfo.isSingleton() ? INIT : NEW);
             JitMethodDesc newJmd  = Builder.convertConstructToNew(typeInfo, art.CD(), (JitCtorDesc) jmd);
             MethodModel   newMM   = newJmd.isOptimized
