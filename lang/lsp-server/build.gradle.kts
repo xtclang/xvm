@@ -1,3 +1,4 @@
+import org.gradle.process.CommandLineArgumentProvider
 import java.time.Instant
 
 plugins {
@@ -123,6 +124,25 @@ repositories {
 // Consume the tree-sitter native libraries for all supported platforms.
 // This library is built on-demand using Zig cross-compilation.
 
+// Test consumers resolve the compiled modules from the composite, without a distribution archive.
+val compilerTestModules =
+    configurations.create("compilerTestModules") {
+        isCanBeConsumed = false
+        isCanBeResolved = true
+        attributes {
+            attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+            attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("xtc"))
+        }
+    }
+
+abstract class CompilerTestModulesArguments : CommandLineArgumentProvider {
+    @get:InputFiles
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val modules: ConfigurableFileCollection
+
+    override fun asArguments(): Iterable<String> = listOf("-Dxtc.test.modules=${modules.asPath}")
+}
+
 val treeSitterNativeLib =
     configurations.create("treeSitterNativeLib") {
         isCanBeConsumed = false
@@ -134,6 +154,9 @@ val treeSitterNativeLib =
     }
 
 dependencies {
+    testImplementation(libs.javatools)
+    compilerTestModules(libs.xdk.ecstasy)
+    compilerTestModules(libs.javatools.bridge)
     // Native library from tree-sitter project
     treeSitterNativeLib(project(path = ":tree-sitter", configuration = "nativeLibraryElements"))
 
@@ -192,6 +215,11 @@ tasks.withType<JavaCompile>().configureEach {
 val classes = tasks.named("classes")
 
 tasks.test {
+    jvmArgumentProviders.add(
+        objects.newInstance<CompilerTestModulesArguments>().apply {
+            modules.from(compilerTestModules)
+        },
+    )
     useJUnitPlatform()
     testLogging {
         events("failed")
