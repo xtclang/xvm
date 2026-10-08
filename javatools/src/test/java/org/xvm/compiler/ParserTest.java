@@ -123,7 +123,7 @@ public class ParserTest {
     @Test
     public void testDeeplyNestedTypeIsReported() {
         // types recurse through their own chain, not through the expression chain. The code is
-        // not asserted here: a type is parsed inside a SafeLookAhead, which discards the errors
+        // not asserted here: a type is parsed inside a Attempt, which discards the errors
         // of an attempt that fails, so what survives is the token error the caller reports
         // instead. What matters is that the parse ends in a CompilerException rather than a
         // StackOverflowError, which assertThrows already pins, since an Error is not a
@@ -166,7 +166,7 @@ public class ParserTest {
         ErrorList errlist = new ErrorList(5);
         Parser    parser  = new Parser(new Source("name \"\\q\""), errlist);
 
-        try (Parser.SafeLookAhead attempt = parser.new SafeLookAhead()) {
+        try (Parser.Attempt attempt = parser.attempt()) {
             assertThrows(CompilerException.class, parser::next);
         }
 
