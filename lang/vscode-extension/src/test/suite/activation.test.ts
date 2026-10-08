@@ -13,6 +13,7 @@ const EXPECTED_COMMANDS = [
     'xtc.createProject',
     'xtc.runModule',
     'xtc.restartServer',
+    'xtc.selectLanguageAdapter',
     'xtc.showServerOutput',
     'xtc.hideServerOutput',
     'xtc.openLanguageSettings',
@@ -40,7 +41,7 @@ suite('Extension activation surfaces', () => {
 
     test('connection preferences are window scoped and ineffective formatting fields are explicit', () => {
         const properties = configurationProperties(vscode.extensions.getExtension(PUBLISHER_AND_NAME)!.packageJSON.contributes.configuration);
-        for (const key of ['textSynchronization', 'saveFormatting']) {
+        for (const key of ['adapter', 'textSynchronization', 'saveFormatting']) {
             assert.strictEqual(properties[`xtc.languageService.${key}`].scope, 'window');
         }
         assert.strictEqual(properties['xtc.languageService.textSynchronization'].default, 'full');
