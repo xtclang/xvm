@@ -468,8 +468,8 @@ public abstract class XvmStructure
      * @param sCode    the error code
      * @param aoParam  the parameters of the error
      */
-    public boolean log(ErrorListener errs, Severity sev, String sCode, Object ... aoParam) {
-        return ensureErrorListener(errs).log(sev, sCode, aoParam, this);
+    public void log(ErrorListener errs, Severity sev, String sCode, Object ... aoParam) {
+        ensureErrorListener(errs).log(sev, sCode, aoParam, this);
     }
 
     /**
