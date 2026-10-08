@@ -132,9 +132,14 @@ public abstract class Statement
 
         // before validating the nested code, associate this statement with the context so that any
         // "break" or "continue" can find the context to apply assignment data to
+        Context   ctxPrevious = m_ctx;
+        Statement stmt;
         m_ctx = ctx;
-        Statement stmt = validateImpl(ctx, errs);
-        m_ctx = null;
+        try {
+            stmt = validateImpl(ctx, errs);
+        } finally {
+            m_ctx = ctxPrevious;
+        }
 
         if (m_listBreaks != null) {
             for (Iterator<Break> iter = m_listBreaks.iterator(); iter.hasNext(); ) {
