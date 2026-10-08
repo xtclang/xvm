@@ -922,6 +922,7 @@ intellijPlatformTesting.testIdeUi.register("testCompilerPlaybook") {
         )
         systemProperty("xtc.playbook.adapter", xdkProperties.stringValue("lsp.adapter", "compiler"))
         systemProperty("xtc.playbook.cases", providers.gradleProperty("intellijPlaybookCases").getOrElse(""))
+        systemProperty("xtc.playbook.replacementGates", providers.gradleProperty("intellijPlaybookReplacementGates").getOrElse(""))
         systemProperty(
             "xtc.playbook.largeFileProbe",
             providers.gradleProperty("intellijLargeFileProbe").getOrElse("false"),

@@ -13077,3 +13077,118 @@ KDoc references, explicit public `Unit` return types, an unused lambda parameter
 a narrow unused suppression for the JSON-RPC log-export entry point. The combined server,
 transport-lifecycle and log tests pass **29/29, zero skipped**, with Kotlin compilation and
 formatting checks passing.
+
+## Ordered non-runtime continuation (2026-10-08)
+
+The user approved the following order. Runtime/DAP, notebooks and a public color library remain
+outside this continuation. Item 4 requires a conversation before selecting release or PR boundaries;
+this approval does not authorize pushes or upstream PRs.
+
+1. Complete the remaining safe LSP4IJ work: UP02 asynchronous pre-save edits, then UP03
+   asynchronous file-operation preflight and transaction rollback. Record platform limitations
+   explicitly; do not enable a capability or remove a bridge on the strength of a partial repair.
+2. Validate the repaired local LSP4IJ and LSP4J dependencies in the XVM server and IntelliJ
+   plugin. Exercise individual replacement gates, especially X254 virtual documents and X257
+   inline-completion context. Keep the released dependency defaults and production bridges.
+3. Extend L82 responsiveness, prolonged-session and platform acceptance. Distinguish measured
+   local results from unavailable cross-platform evidence and user-approved performance budgets.
+4. Discuss the breaking embedding-API version and independently buildable PR boundaries with
+   the user before preparing release or extraction changes.
+5. Resume Microsoft Marketplace automation only after the user resumes that work. It is
+   postponed while Cam handles the publisher-domain DNS verification. The requested TXT record
+   is `_visual-studio-marketplace-xtclang-org.xtclang.org`, with value
+   `da8e3387-7545-42fd-85dd-5f2a4654c187`. Publisher identity, publishing credentials and the
+   Microsoft upload step still need verification; the current snapshot workflow uploads the
+   VSIX to GitHub Releases only.
+
+The typed AST-copy follow-up is locally committed as `c52faf95d`. Covariant copy results remove
+casts from the new callers while preserving compile-time receiver/result constraints. The focused
+Java/compiler-consumer runs passed 150 tests with no failures, errors or skips; SpotlessCheck and
+positive/negative Java type-checking probes passed. This does not require a full AST clone migration.
+
+### Pre-save continuation and deferred Platform boundary
+
+Local LSP4IJ commit `30a5fea4` fixes another UP02 notification gap: IntelliJ 2024.2 invokes
+`beforeAnyDocumentSaving` for individual saves but skips it in Save All. A notification-only
+`FileDocumentSynchronizationVetoer` now covers both manual and automatic Save All with the
+correct reason. It does not veto, wait for a response, or start a server. Its connection lookup
+uses existing project services and an immutable snapshot of started wrappers.
+
+Both new Save All regressions fail before the repair. The repaired save, registered-extension
+discovery and synchronizer-disposal suites pass **21 tests, zero failures/errors/skips**. A
+native veto regression confirms that refusing a save returns control while the document is still
+unsaved: scheduling a later write cannot preserve callers' save-before-Build/Run ordering.
+The retained XML is under `/private/tmp/lsp4ij-save-2026-10-08/`.
+
+The user confirmed that IntelliJ Platform work remains deferred and acceptance should continue.
+UP02 `willSaveWaitUntil` stays disabled. UP03's generic asynchronous VFS preflight and transaction
+rollback remain open: the existing `beforeVfsChange` hook runs within the synchronous write
+transaction and supplies no continuation for the initiating operation. Existing XVM guarded
+entry points remain in place. Neither boundary is counted as completed by the notification fix.
+
+The user further confirmed that shipping must not require building either upstream fork.
+Released LSP4J 1.0.0 and LSP4IJ 0.21.0 remain the defaults. Required compatibility code belongs
+in this repository: server-side where possible, and in the Ecstasy IntelliJ plugin when editor
+APIs are necessary. Local upstream builds are opt-in repair and replacement experiments only.
+Platform limitations must remain explicit rather than being hidden by a custom IDE dependency.
+
+### Dependency acceptance and shipping restoration
+
+The October 8 dependency experiment is recorded in the
+[upstream register](errs-upstream-issues.md#reply-and-virtual-document-lifecycle-acceptance-2026-10-08).
+It uncovered and locally repaired reply read-lock/PSI-commit handling, virtual-editor disposal
+and inline session restart. The local LSP4J build passes 51 XVM protocol/lifecycle tests and
+82 packaged stdio/process tests; the LSP4IJ suite with it bundled passes 619 tests with three
+existing skips. Native virtual-library and explicit/selected-inline assertions pass. A neighboring
+continued-typing failure in the experimental plugin remains an adoption blocker.
+
+The temporary diagnostic-adapter bypass and bad-parameter assertion change are restored
+byte-for-byte. Released LSP4J 1.0.0/LSP4IJ 0.21.0 then pass 82 packaged tests, 23 compatibility
+tests and native `run-6190916343008780922`: START, ten fully covered shared cases and the two
+existing X254/X257 partial cases, with zero failures or IDE errors. This includes the continued
+typing case that failed experimentally. No production source, dependency pin or repository
+override from the experiment remains in the shipping tree.
+
+### Released-dependency extended workload
+
+The October 8 shipping JAR passes **three sessions of 1,800 edit/cancel cycles**, extending the
+October 6 workload from 3,600 to 5,400 cycles. The eleven-module platform workspace, 2 GiB heap,
+100-cycle live histograms and RSS sampling are unchanged. All sessions report 49 initially clean
+diagnostic documents, 1,800 actual cancellations, useful symbols/hover and clean diagnostics after
+each edit. All 50 source files remain unchanged. Normal/EOF/normal shutdown returns 0/1/0, and
+all three owned PIDs are absent afterward.
+
+| Session / exit | Live bytes at cycle 100 | At cycle 1,800 | Growth | Edit-to-symbol p95 | Cold graph |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Normal / 0 | 91,290,744 | 91,408,896 | 118,152 | 337.8 ms | 5.156 s |
+| Transport EOF / 1 | 91,235,552 | 91,306,792 | 71,240 | 328.2 ms | 5.116 s |
+| Fresh process, normal / 0 | 91,273,688 | 91,422,120 | 148,432 | 329.3 ms | 5.024 s |
+
+All existing provisional local targets pass: edit-to-symbol p95 below 500 ms, warm hover p95
+below 20 ms, cold graph below 10 seconds and retained live-heap growth below 1 MiB. Warm hover
+p95 is below 0.8 ms. Every histogram contains 3,212 `TransientThreadLocal` instances. Sampled
+peak heap is 630.4 MiB and sampled peak RSS is 1,086.5 MiB; these are observations, not absolute
+peak bounds. Samples record at most one running job, with no sampler errors. Retained traces
+show at most one active compiler API thread, but log retention removes the earliest trace segment:
+the 1,452 retained compile-completion events per session are not a whole-session compile count.
+
+Evidence is under `lang/lsp-server/build/reports/platform-workload/l82-2026-10-08-shipping/`:
+`results.json`, `budget-assessment.json`, samples, traces and histograms. The shipping JAR hash is
+`af1eba1af9b1541acebb5e2b4b7ee8e2f5fa2f5fd6e7d6c1d4be5ae12d8c6c56`; the host is macOS arm64
+with JDK 25.0.0 (25+36-LTS). No Gradle or native acceptance workload ran concurrently.
+
+This controlled workload passes; it does not erase the two October 6 timing misses or establish
+their cause. Multi-hour interactive acceptance, supported-platform/remote evidence and UP17's
+large-file editor cost remain open. The provisional targets have not become hardware-independent
+release guarantees, and L82 as a whole remains incomplete.
+
+### Release discussion
+
+The user selected **0.5.0** as the planned release boundary for the breaking listener/embedding
+API on October 8. C1/C2 must carry migration and recompilation notes. This is a release-planning
+decision; the working version remains 0.4.4-SNAPSHOT until release preparation. The user also
+selected three small foundation PRs first: I1 diagnostic identity, I2 ambient-pool guards and
+I3 compiler-consumer test wiring. Refresh those existing local slices against current master
+and validate each independently before publication. Later listener/compiler and LSP/client
+slices follow their recorded prerequisites. No upstream dependency fork is a release prerequisite,
+and the local preparation decision does not authorize remote branches or PR creation.
