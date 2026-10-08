@@ -134,14 +134,14 @@ public class WhileStatement
         Register reg = fFirst ? m_regFirst : m_regCount;
         if (reg == null) {
             // this occurs only during validate()
-            assert m_ctxLabelVars != null;
+            assert m_labelVars != null;
 
             String sLabel   = ((LabeledStatement) getParent()).getName();
             String sRegName = sLabel + '.' + sName;
             Token  tok      = new Token(keyword.getStartPosition(), keyword.getEndPosition(), Id.IDENTIFIER, sRegName);
 
             reg = ctx.createRegister(fFirst ? pool().typeBoolean() : pool().typeInt64(), sRegName);
-            m_ctxLabelVars.registerVar(tok, reg, m_errsLabelVars);
+            m_labelVars.ctx().registerVar(tok, reg, m_labelVars.errs());
 
             if (fFirst) {
                 m_regFirst = reg;
@@ -157,6 +157,18 @@ public class WhileStatement
 
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs) {
+        ValidationScope previous = m_labelVars;
+        try {
+            return validateScoped(ctx, errs);
+        } finally {
+            m_labelVars = previous;
+        }
+    }
+
+    /**
+     * Validate with callback state restored by {@link #validateImpl} on every exit.
+     */
+    private Statement validateScoped(Context ctx, ErrorListener errs) {
         // there are a set of assumptions coming in:
         // - the loop is actually going to loop, as in "it is able to execute more than once"
         //   -> while(False) obviously does not result in any execution of the body whatsoever (the
@@ -244,8 +256,7 @@ public class WhileStatement
 
             // the current context and error list are required by getLabelVar() if, in the process
             // of validation, one of the nested AST nodes requires a loop variable
-            m_ctxLabelVars  = ctx;
-            m_errsLabelVars = errs;
+            m_labelVars = new ValidationScope(ctx, errs);
             m_listContinues = null;
 
             // either enter normal or loop, depending on the assumption
@@ -411,8 +422,7 @@ public class WhileStatement
             blockOrig.discard(true);
 
             // lazily created loop vars are only created inside the validation of this statement
-            m_ctxLabelVars  = null;
-            m_errsLabelVars = null;
+            m_labelVars = null;
 
             if (ctxFork != null && !hasBreaks()) {
                 // there are no breaks out of the loop, therefore the only way to get out is for the
@@ -748,11 +758,10 @@ public class WhileStatement
     protected StatementBlock block;
     protected long           lEndPos;
 
-    private transient Label         m_labelContinue;
-    private transient Context       m_ctxLabelVars;
-    private transient ErrorListener m_errsLabelVars;
-    private transient Register      m_regFirst;
-    private transient Register      m_regCount;
+    private transient Label           m_labelContinue;
+    private transient ValidationScope m_labelVars;
+    private transient Register        m_regFirst;
+    private transient Register        m_regCount;
 
     /**
      * Generally null, unless there is a "continue" that jumps to this statement.

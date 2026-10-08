@@ -813,41 +813,32 @@ public class ModuleInfo {
 
         @Override
         public boolean isAbortDesired() {
-            return m_errs != null && m_errs.isAbortDesired();
+            return f_errs.isAbortDesired();
         }
 
         @Override
         public boolean hasSeriousErrors() {
-            return m_errs != null && m_errs.hasSeriousErrors();
+            return f_errs.hasSeriousErrors();
         }
 
         @Override
         public boolean hasError(String sCode) {
-            return m_errs != null && m_errs.hasError(sCode);
+            return f_errs.hasError(sCode);
         }
 
         /**
          * @return the list containing any errors accumulated on (or under) this node
          */
         public ErrorList errs() {
-            ErrorList errs = m_errs;
-            if (errs == null) {
-                m_errs = errs = new ErrorList(ErrorListener.DEFAULT_MAX_ERRORS);
-            }
-            return errs;
+            return f_errs;
         }
 
         /**
          * Log any errors accumulated on (or under) this node
          */
         public void logErrors(ErrorListener errs) {
-            ErrorList deferred = m_errs;
-            if (deferred != null) {
-                for (ErrorInfo err : deferred.getErrors()) {
-                    errs.log(err);
-                }
-                deferred.clear();
-            }
+            f_errs.getErrors().forEach(errs::log);
+            f_errs.clear();
         }
 
         // ----- fields ------------------------------------------------------------------------
@@ -868,9 +859,9 @@ public class ModuleInfo {
         protected ResourceDir m_resdir;
 
         /**
-         * The error list which buffers errors for the file node, if any.
+         * The diagnostic buffer owned by this node from construction onward.
          */
-        private ErrorList m_errs;
+        private final ErrorList f_errs = new ErrorList();
     }
 
     /**

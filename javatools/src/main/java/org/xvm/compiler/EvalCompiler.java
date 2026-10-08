@@ -64,7 +64,7 @@ public class EvalCompiler {
      */
     public MethodStructure createLambda(TypeConstant typeReturn) {
         ConstantPool pool = f_frame.poolContext();
-        ErrorList    errs = m_errs = new ErrorList(1);
+        ErrorList    errs = f_errs;
 
         MethodStructure      method = f_frame.f_function;
         ClassStructure       clz    = method.getContainingClass();
@@ -147,7 +147,7 @@ public class EvalCompiler {
      * @return a list of errors
      */
     public List<ErrorListener.ErrorInfo> getErrors() {
-        return m_errs.getErrors();
+        return f_errs.getErrors();
     }
 
     /**
@@ -308,9 +308,9 @@ public class EvalCompiler {
     private final Source f_source;
 
     /**
-     * The errors.
+     * Diagnostics owned by this evaluation, available before lambda compilation starts.
      */
-    private ErrorList m_errs;
+    private final ErrorList f_errs = new ErrorList(ErrorList.FIRST_ERROR);
 
     /**
      * A synthetic MethodDeclarationStatement that contains the eval body.
