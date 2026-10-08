@@ -37,7 +37,7 @@ class AstTreeCopyTest {
                 assertEquals(original.toDumpString(), copy.toDumpString());
             }
             // An ordinary node must dispatch to constructor copies for its recovery descendants.
-            for (var copy : List.of(parent.copyTree(), parent.clone())) {
+            for (StatementBlock copy : List.of(parent.copyTree(), (StatementBlock) parent.clone())) {
                 assertTreeCopy(parent, copy, null);
             }
         }
@@ -48,8 +48,7 @@ class AstTreeCopyTest {
         var original = IncompleteStatement.forArgumentPrefix(name("call"), token(Id.L_PAREN),
                 List.of(name("argument")), List.of(token(Id.COMMA)), 20, token("label"), token("prefix"));
         ((AstNode) original).introduceParentage();
-        for (var node : List.of(original.copyTree(), original.clone())) {
-            var copy = (IncompleteStatement) node;
+        for (IncompleteStatement copy : List.of(original.copyTree(), (IncompleteStatement) original.clone())) {
             assertSame(original.getOperator(), copy.getOperator());
             assertEquals(original.getSeparators(), copy.getSeparators());
             assertEquals(original.getPendingArgumentName(), copy.getPendingArgumentName());
