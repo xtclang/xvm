@@ -322,6 +322,15 @@ public class MethodBody {
     }
 
     /**
+     * @return true iff this is a constructor, excluding property initializers
+     */
+    public boolean isConstructorOnly() {
+        MethodStructure structMethod = getClassifyingMethodStructure();
+        return structMethod != null && structMethod.isConstructor() &&
+                !structMethod.isPropertyInitializer();
+    }
+
+    /**
      * @return true iff this is a virtual constructor
      */
     public boolean isVirtualConstructor() {
@@ -778,7 +787,7 @@ public class MethodBody {
         Explicit(Existence.Class),
         ;
 
-        private Implementation(Existence existence) {
+        Implementation(Existence existence) {
             EXISTS = existence;
         }
 
@@ -816,15 +825,12 @@ public class MethodBody {
         }
 
         MethodStructure   method = getClassifyingMethodStructure();
-        SignatureConstant sig    = method.resolveSignature(
-                builder.pool(), typeTarget.getJitCCType());
+        SignatureConstant sig    = method.resolveSignature(builder.pool(), typeTarget.getJitCCType());
 
         // TODO consider caching this
-        boolean fCtorOrValidator = isCtorOrValidator();
-        return JitMethodDesc.of(builder, typeTarget,
-                fCtorOrValidator || method.isStatic(), fCtorOrValidator,
+        return JitMethodDesc.of(builder, typeTarget, JitMethodDesc.flagsFor(method),
                 sig.getRawParams(), sig.getRawReturns(),
-                                method.getTypeParamCount() + method.getRequiredParamCount());
+                method.getTypeParamCount() + method.getRequiredParamCount());
     }
 
     /**
