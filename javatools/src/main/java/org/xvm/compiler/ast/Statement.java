@@ -22,6 +22,11 @@ public abstract class Statement
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
+    public Statement copyTree() {
+        return (Statement) super.copyTree();
+    }
+
+    @Override
     protected boolean usesSuper() {
         for (AstNode node : children()) {
             if (!(node instanceof ComponentStatement) && node.usesSuper()) {

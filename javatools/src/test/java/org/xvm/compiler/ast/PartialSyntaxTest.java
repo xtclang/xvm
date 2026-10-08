@@ -31,8 +31,7 @@ public class PartialSyntaxTest {
         assertFalse(creation.children().hasNext());
         assertTrue(PartialSyntax.containsAt(creation, 20));
         assertSame(originalParent, body.getParent());
-        for (var node : List.of(creation.copyTree(), creation.clone())) {
-            var copy = (NewExpression) node;
+        for (NewExpression copy : List.of(creation.copyTree(), (NewExpression) creation.clone())) {
             assertNotSame(body, copy.getUnregisteredBody().orElseThrow());
             assertTrue(PartialSyntax.containsAt(copy, 20));
         }
