@@ -215,6 +215,16 @@ public final class IncompleteStatement extends Statement {
     }
 
     @Override
+    public IncompleteStatement copyTree() {
+        var copy = new IncompleteStatement((Expression) target.copyTree(), operator,
+                arguments.stream().map(argument -> (Expression) argument.copyTree()).toList(),
+                separators, endPosition, diagnosticCode, cursorName, argumentPrefix);
+        copy.adopt(copy.target);
+        copy.adopt(copy.arguments);
+        return copyTreeMetadataTo(copy);
+    }
+
+    @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs) {
         return inspect(ctx, null, errs);
     }
