@@ -4,6 +4,7 @@ import { parseServiceSettings, ServiceSettings } from './service-settings';
 export function readServiceSettings(resource?: vscode.Uri): ServiceSettings {
     const config = vscode.workspace.getConfiguration('xtc', resource);
     return parseServiceSettings({
+        adapter: config.get('languageService.adapter'),
         textSynchronization: config.get('languageService.textSynchronization'),
         saveFormatting: config.get('languageService.saveFormatting'),
         inlayHints: config.get('inlayHints.enabled'),

@@ -32,7 +32,7 @@ let activeConnectionKey: string | undefined;
 function connectionKey(): string {
     const settings = readServiceSettings();
     const config = vscode.workspace.getConfiguration('xtc');
-    return JSON.stringify([settings.textSynchronization, settings.saveFormatting, config.get('java.home', ''), config.get('sourceRoots', []), runtimeJvmOptions(), runtimeLogArguments()]);
+    return JSON.stringify([settings.adapter, settings.textSynchronization, settings.saveFormatting, config.get('java.home', ''), config.get('sourceRoots', []), runtimeJvmOptions(), runtimeLogArguments()]);
 }
 
 export function connectionSettingsChanged(): boolean { return connectionKey() !== activeConnectionKey; }
@@ -94,7 +94,8 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
         throw error;
     });
     const logLevel = process.env.XTC_LOG_LEVEL?.toUpperCase() ?? 'INFO';
-    const jvmArgs = [...runtimeJvmOptions(), ...runtimeLogArguments(), ...buildJvmArgs(serverJar, logLevel)];
+    const adapterArgs = preferences.adapter === 'default' ? [] : [`-Dxtc.lsp.adapter=${preferences.adapter}`];
+    const jvmArgs = [...runtimeJvmOptions(), ...runtimeLogArguments(), ...adapterArgs, ...buildJvmArgs(serverJar, logLevel)];
 
     outputChannel.appendLine('Starting Ecstasy Language Server...');
     outputChannel.appendLine(`Java: ${javaExecutable}`);
@@ -259,8 +260,13 @@ async function startConnection(context: vscode.ExtensionContext, serverJar: stri
             crashCount = 0;
             hasEverReachedRunning = true;
             const id = launch;
-            void connection.sendRequest<{ logs: { directory: string; traceDirectory: string } }>('xtc/languageServiceStatus')
-                .then(status => { if (client === connection) logs.remember(id, status); })
+            void connection.sendRequest<{ adapter: string; logs: { directory: string; traceDirectory: string } }>('xtc/languageServiceStatus')
+                .then(status => {
+                    if (client === connection && connection.isRunning()) {
+                        logs.remember(id, status);
+                        updateStatusBar('ready', status.adapter);
+                    }
+                })
                 .catch(error => outputChannel.warn(`Could not record Ecstasy log session: ${error}`));
         }
         

@@ -52,7 +52,7 @@ plugins {
 // Set via Gradle property: -Plsp.adapter=mock (to override default)
 // Or in gradle.properties:  lsp.adapter=mock
 //
-// Default is 'compiler'. Tree-sitter and mock remain explicit build-time alternatives.
+// Default is 'compiler'. -Dxtc.lsp.adapter overrides it at server startup without rebuilding.
 // =============================================================================
 // Resolve via xdkProperties which reads from the composite root's gradle.properties
 // (project.findProperty() only sees the included build's own gradle.properties, which doesn't exist)
