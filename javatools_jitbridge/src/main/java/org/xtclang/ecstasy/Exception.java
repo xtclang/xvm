@@ -1,7 +1,6 @@
 package org.xtclang.ecstasy;
 
 import org.xvm.javajit.Ctx;
-import org.xvm.javajit.Ctx.CtorCtx;
 
 import org.xtclang.ecstasy.text.String;
 
@@ -26,7 +25,7 @@ public class Exception extends nConst {
      */
     public static Exception $new(Ctx ctx, Object text, Object cause) {
         Exception ex = new Exception(ctx);
-        construct(ctx, null, ex, text, cause);
+        construct(ctx, ex, text, cause);
         return ex;
     }
 
@@ -38,7 +37,7 @@ public class Exception extends nConst {
      *
      * @see org.xvm.asm.constants.MethodConstant#ensureJitMethodName
      */
-    public static void construct(Ctx ctx, CtorCtx cctx, Exception thi$, Object message, Object cause) {
+    public static void construct(Ctx ctx, Exception thi$, Object message, Object cause) {
         thi$.text       = message instanceof String text ? text : Nullable.Null.$INSTANCE;
         thi$.cause      = cause instanceof Exception e ? e : Nullable.Null.$INSTANCE;
         thi$.$exception = thi$.$createJavaException(cause instanceof Exception e ? e.$exception : null);
