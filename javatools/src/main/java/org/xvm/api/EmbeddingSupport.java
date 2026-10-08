@@ -114,6 +114,18 @@ public class EmbeddingSupport {
 
     private static final Object LOCK = new Object();
 
+    private static final Console SILENT_CONSOLE = new Console() {
+        @Override
+        public String out(Object value) {
+            return String.valueOf(value);
+        }
+
+        @Override
+        public String err(Object value) {
+            return String.valueOf(value);
+        }
+    };
+
     private volatile boolean configured;
     private ModuleRepository cfgRepo;
     private String           cfgInjector;
@@ -838,9 +850,10 @@ public class EmbeddingSupport {
     }
 
     /**
-     * Compile a module that is in a file, against the configured core repository.
+     * Compile a module that is in a file or directory, against the configured core repository.
      *
-     * @param file    the module source file
+     * @param file    the location of the module source code on disk, either the module source file
+     *                or the directory containing a single .x file and nested contents thereof
      * @param input   (optional) the module repository to read any required modules from
      * @param output  (optional) the module repository to write any compiled modules to
      * @param errs    the ErrorListener to log any compiler messages to

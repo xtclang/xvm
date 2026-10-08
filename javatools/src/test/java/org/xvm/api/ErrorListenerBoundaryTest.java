@@ -70,6 +70,16 @@ class ErrorListenerBoundaryTest {
     }
 
     @Test
+    void moduleCompilerRejectsMissingListenersBeforeCompilationOrFileAccess(@TempDir Path directory) {
+        var compiler = new ModuleCompiler(new BuildRepository());
+        assertEquals("errs", assertThrows(NullPointerException.class,
+                () -> compiler.compile("module Boundary {}", null, null)).getMessage());
+        assertEquals("errs", assertThrows(NullPointerException.class,
+                () -> compiler.compile(directory.resolve("missing.x").toFile(), null, null, null))
+                .getMessage());
+    }
+
+    @Test
     void launcherRejectsMissingListenersBeforeDispatch() {
         var console = new Console() {};
         assertEquals("errs", assertThrows(NullPointerException.class,

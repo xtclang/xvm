@@ -13257,3 +13257,46 @@ parent-to-child patches and an `index.json` with their pinned revisions. Exporti
 Git only and refuses to overwrite an existing export. Its existing publication mode still covers
 I1–I3 only. The six patches have been checked against their Git diffs, and all 11 publication
 workflow simulations still pass. Publishing remains a separate user decision.
+
+### Integrated branch rebase onto current master
+
+All pending work was committed at `85f391d38` before rebasing `lagergren/errs` onto
+`f442aced6`. The original tip remains at `backup/errs-pre-master-rebase-20261008`.
+A complete, standalone Git bundle is stored outside the checkout at
+`../xtclang2-backups/2026-10-08/before-master-rebase.bundle`; bundle verification and
+a separate bare-clone recovery check both pass. Its SHA-256 is
+`3938b42e649a9311bf3993dbffd15533e8618ad261c178ed01fcf14e4ff08adc`.
+The combined six-slice acceptance commit is also retained at
+`backup/six-slice-acceptance-20261008`.
+
+The rebase replays 664 commits at `38e24d926`. Of the original 665 patches, 645 are
+unchanged, 19 are adapted to upstream changes, and one is already covered by master's
+compiler failure handling. The backup preserves every original commit. None of the six
+review branch tips or their bases changed, and no rewritten history was pushed.
+
+Before the follow-up integration fixes, tree comparison confirms that all 823 files
+changed only by this branch remain byte-for-byte intact. Another 154 files changed only by
+master are also intact. The remaining upstream-only file, `ModuleCompiler`, adopts the
+explicit-listener contract. The existing rich embedding compiler API remains available
+alongside master's new standalone compiler. Full Git object verification passes.
+
+Post-rebase compilation exposed the missing silent console used by the rich embedding API
+and the upstream rename to `getNormalizedType()` in a regression test; both are repaired.
+The standalone compiler gains direct missing-listener coverage and documentation of shared
+repository serialization. The expanded upstream grammar corpus is retained, with only
+formatting and explicit boolean grouping adjusted. Audit receipts and the complete commit
+mapping are under `build/errs-rebase-2026-10-08/`.
+
+Forced post-rebase validation executes 557 Java compiler tests, 122 utility tests and 53 XDK
+tests without failures; 42, two and eight skips respectively are recorded. This includes both
+standalone compiler error-reporting tests. The full LSP run executes 2,204 tests with two skips
+and one failure: master's conditional-mixin fixture now needs its sibling `TestConsole` source.
+The fixture loader now includes that actual support source, and all eight affected composition
+and rename tests pass on a forced rerun. No production LSP change or assertion weakening was
+needed. The rest of the LSP suite was not repeated after this test-only repair.
+
+All 122 headless IntelliJ tests, VS Code TypeScript compilation, the maintained Tree-sitter
+parse corpus and root/language `spotlessCheck` pass. The Gradle configuration cache is stored
+and reused successfully. Original full-run XML, the affected-test rerun and the client results are retained
+with `validation.json` in the audit directory. GUI playbooks and the separate compiler-stdio
+suite were not repeated for this rebase.

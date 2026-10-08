@@ -46,7 +46,9 @@ import static org.xvm.util.Severity.ERROR;
  * <p>Unlike {@link EmbeddingSupport}, a ModuleCompiler is an ordinary object that needs no
  * configuration: compiling does not start the runtime, so it does not depend on the runtime's
  * JVM-wide state (see {@link EmbeddingSupport}), and any number of ModuleCompiler instances, each
- * with its own core repository, can exist in one JVM. Each call to compile is independent.
+ * with its own core repository, can exist in one JVM. Each call to compile has its own attempt.
+ * Hosts must serialize calls that share repositories; separate instances do not isolate mutable
+ * compiler state held by a repository.
  *
  * <p>The compile methods report the same errors as the command-line compiler: every error found in
  * a compiler stage, with the compilation stopping at the end of the first stage that found any.
