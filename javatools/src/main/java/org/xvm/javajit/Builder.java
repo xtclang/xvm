@@ -2115,6 +2115,14 @@ public abstract class Builder {
         return code;
     }
 
+    /**
+     * @return true iff code from the component of the specified format is embedded in an
+     *         incorporating class
+     */
+    public static boolean isEmbedded(Format format) {
+        return format == Format.MIXIN || format == Format.ANNOTATION;
+    }
+
     // ----- TEMPORARY: debugging support ----------------------------------------------------------
 
     /**
