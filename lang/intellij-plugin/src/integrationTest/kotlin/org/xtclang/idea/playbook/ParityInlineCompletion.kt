@@ -33,6 +33,9 @@ internal fun ParityScenarios.inlineCompletionCases() {
             ).asJsonObject["items"].rows()
             check(protocol.capabilities().asJsonObject["inlineCompletionProvider"].asBoolean)
             if (mode == "selection") {
+                if (replacementGate("UP26")) {
+                    nativeInlineAlternatives(document, offset, source)
+                }
                 check(queryInline(InlineCompletionTriggerKind.Automatic).isEmpty())
                 val alternatives = queryInline(InlineCompletionTriggerKind.Invoked).map { it.string("insertText") }
                 check(alternatives.sorted() == listOf("another", "answer"))
