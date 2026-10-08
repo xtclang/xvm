@@ -27,9 +27,9 @@ import kotlin.system.exitProcess
  * - For socket communication: `java -jar xtc-lsp.jar --socket 5007`
  *
  * Adapter Selection:
- * - The adapter is selected at build time via: ./gradlew :lang:lsp-server:fatJar
- *   -Plsp.adapter=treesitter
- * - Default is 'treesitter' (syntax-aware, requires native library bundled in JAR)
+ * - Select at startup with `java -Dxtc.lsp.adapter=treesitter -jar xtc-lsp.jar`.
+ * - Otherwise use the build default, configured with `-Plsp.adapter=compiler`.
+ * - The shipped default is 'compiler'; both real adapters are bundled in the same JAR.
  * - Use 'compiler' for real diagnostics from the Ecstasy compiler and its bundled XDK libraries
  * - Use 'mock' for regex-based features (no native dependencies)
  *
@@ -66,6 +66,12 @@ internal enum class AdapterBackend(
     ;
 
     companion object {
+        /** An IDE restart can override the bundled default without rebuilding the server. */
+        fun resolve(
+            buildSetting: String?,
+            startupSetting: String?,
+        ): AdapterBackend = fromSetting(startupSetting ?: buildSetting)
+
         fun fromSetting(setting: String? = null): AdapterBackend =
             when (setting?.lowercase()) {
                 "mock" -> {
@@ -96,9 +102,9 @@ internal enum class AdapterBackend(
 }
 
 /**
- * Create the appropriate adapter based on build configuration.
+ * Create the appropriate adapter for this server process.
  *
- * @param requested The backend selected by the build properties
+ * @param requested The backend selected at startup or by the build default
  * @return The configured adapter and which backend is active
  */
 private fun createAdapter(requested: AdapterBackend): Pair<Adapter, AdapterBackend> =
@@ -141,12 +147,12 @@ fun main(
     @Suppress("UNUSED_EXPRESSION")
     initBlock
 
-    // Load build properties to determine adapter type
+    // Read the process override before constructing any adapter or negotiating capabilities.
     val buildProps = loadBuildProperties()
-    val requested = AdapterBackend.fromSetting(buildProps.getProperty("lsp.adapter"))
+    val requested = AdapterBackend.resolve(buildProps.getProperty("lsp.adapter"), System.getProperty("xtc.lsp.adapter"))
     val version = buildProps.getProperty("lsp.version", "unknown")
 
-    // Create adapter based on build configuration
+    // Each connection owns a single adapter for its lifetime.
     val (adapter, backend) = createAdapter(requested)
 
     // Log startup banner prominently
