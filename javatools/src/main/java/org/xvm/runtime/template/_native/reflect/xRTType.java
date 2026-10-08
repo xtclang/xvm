@@ -9,7 +9,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.Constants.Access;
-import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Op;
 import org.xvm.asm.PackageStructure;
@@ -34,8 +33,8 @@ import org.xvm.asm.constants.TypeInfo;
 import org.xvm.runtime.Container;
 import org.xvm.runtime.Frame;
 import org.xvm.runtime.ObjectHandle;
-import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.DeferredArrayHandle;
+import org.xvm.runtime.ObjectHandle.DeferredCallHandle;
 import org.xvm.runtime.ObjectHandle.ExceptionHandle;
 import org.xvm.runtime.ObjectHandle.GenericHandle;
 import org.xvm.runtime.ProxyComposition;
@@ -67,6 +66,9 @@ import org.xvm.runtime.template.reflect.xClass.ClassHandle;
 import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 import org.xvm.runtime.template._native.reflect.xRTMethod.MethodHandle;
 import org.xvm.runtime.template._native.reflect.xRTProperty.PropertyHandle;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * Native RTType implementation.
@@ -671,7 +673,7 @@ public class xRTType
         }
 
         ObjectHandle[] ahFunctions;
-        if (infoTarget.isNewable(false, ErrorListener.BLACKHOLE)) {
+        if (infoTarget.isNewable(false, silent(PROBE))) {
             ConstantPool            pool        = frame.poolContext();
             TypeComposition         clzTarget   = typeTarget.ensureClass(frame);
             ArrayList<ObjectHandle> listHandles = new ArrayList<>();
@@ -1486,7 +1488,7 @@ public class xRTType
             assert !typeParent.equals(pool().typeObject());
         }
 
-        if (!infoTarget.isNewable(false, ErrorListener.BLACKHOLE)) {
+        if (!infoTarget.isNewable(false, silent(PROBE))) {
             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
 

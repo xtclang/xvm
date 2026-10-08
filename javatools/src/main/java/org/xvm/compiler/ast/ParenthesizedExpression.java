@@ -10,6 +10,9 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.UnionTypeConstant;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * Used for parenthesized expressions.
  */
@@ -27,10 +30,9 @@ public class ParenthesizedExpression
     // ----- Expression compilation ----------------------------------------------------------------
 
     @Override
-    public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive,
-                           ErrorListener errs) {
-        TypeFit fitTuple = testTupleFit(ctx, typeRequired, fExhaustive, null);
-        TypeFit fitValue = super.testFit(ctx, typeRequired, fExhaustive, null);
+    public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs) {
+        TypeFit fitTuple = testTupleFit(ctx, typeRequired, fExhaustive, silent(PROBE));
+        TypeFit fitValue = super.testFit(ctx, typeRequired, fExhaustive, silent(PROBE));
         return fitValue.betterOf(fitTuple);
     }
 
@@ -100,7 +102,7 @@ public class ParenthesizedExpression
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         if (typeRequired != null) {
             TypeFit fitTuple = testTupleFit(ctx, typeRequired, true, null);
-            TypeFit fitValue = super.testFit(ctx, typeRequired, true, null);
+            TypeFit fitValue = super.testFit(ctx, typeRequired, true, silent(PROBE));
             if (fitTuple.betterThan(fitValue)) {
                 // replace this parenthesized expression with an actual tuple expression containing
                 // the one element `(expr)`

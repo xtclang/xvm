@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorListener;
@@ -19,7 +21,10 @@ import org.xvm.asm.Version;
 
 import org.xvm.compiler.InstantRepository;
 
-import static org.xvm.util.Severity.ERROR;
+import static java.util.Objects.requireNonNull;
+
+import static org.xvm.asm.ErrorListener.NOWHERE;
+import static org.xvm.asm.ErrorListener.at;
 
 /**
  * A class used to support embedding Ecstasy tools. This implementation uses the Connector API to
@@ -187,14 +192,15 @@ public class EmbeddingSupport {
      *
      * @param source  the source code for an entire module to compile
      * @param input   (optional) the module repository to read any required modules from
-     * @param errs    (optional) the ErrorListener to log any compiler messages to
+     * @param errs    the ErrorListener to log any compiler messages to
      *
      * @return the resulting ModuleStructure, or null if a compiler error occurred
      *
      * @see ModuleCompiler#compile(String, ModuleRepository, ErrorListener)
      */
-    public ModuleStructure compile(String source, ModuleRepository input, ErrorListener errs) {
+    public ModuleStructure compile(String source, ModuleRepository input, @NotNull ErrorListener errs) {
         verifyConfigured();
+        requireNonNull(errs, "errs");
         return new ModuleCompiler(cfgRepo).compile(source, input, errs);
     }
 
@@ -204,15 +210,16 @@ public class EmbeddingSupport {
      * @param file    the module source file
      * @param input   (optional) the module repository to read any required modules from
      * @param output  (optional) the module repository to write any compiled modules to
-     * @param errs    (optional) the ErrorListener to log any compiler messages to
+     * @param errs    the ErrorListener to log any compiler messages to
      *
      * @return true if the compilation succeeded and the result was placed into the output
      *
      * @see ModuleCompiler#compile(File, ModuleRepository, ModuleRepository, ErrorListener)
      */
     public boolean compile(File file, ModuleRepository input, ModuleRepository output,
-                           ErrorListener errs) {
+                           @NotNull ErrorListener errs) {
         verifyConfigured();
+        requireNonNull(errs, "errs");
         return new ModuleCompiler(cfgRepo).compile(file, input, output, errs);
     }
 
@@ -271,7 +278,7 @@ public class EmbeddingSupport {
      *                    task-specific directory under "./.runner" that is deleted when the
      *                    returned Control is closed
      * @param injections  (optional) additional "String" and "String[]" injections
-     * @param errs        (optional) a means for the container to report uncaught exceptions and
+     * @param errs        a means for the container to report uncaught exceptions and
      *                    other errors
      *
      * @return a Control object for the running module
@@ -307,7 +314,7 @@ public class EmbeddingSupport {
      * @param customInjector  (optional) "module:class" name of a custom injector implementation to
      *                        use to provide injectable resources; when used, the "rootDir" value is
      *                        ignored
-     * @param errs            (optional) a means for the container to report uncaught exceptions and
+     * @param errs            a means for the container to report uncaught exceptions and
      *                        other errors
      *
      * @return a Control object for the running module, or null if it could not be started, in
@@ -321,18 +328,16 @@ public class EmbeddingSupport {
             File                      rootDir,
             Map<String, List<String>> injections,
             String                    customInjector,
-            ErrorListener             errs) {
+            @NotNull ErrorListener    errs) {
         verifyConfigured();
+        requireNonNull(errs, "errs");
 
         ModuleRepository repository = new LinkedRepository(input, cfgRepo);
         ModuleStructure module = version == null
                 ? repository.loadModule(moduleName)
                 : repository.loadModule(moduleName, version, true);
         if (module == null) {
-            if (errs != null) {
-                errs.log(ERROR, version == null ? ERR_NO_APP_MODULE : ERR_NO_APP_MODULE_VER,
-                        new Object[] {moduleName, version}, null);
-            }
+            errs.error(version == null ? ERR_NO_APP_MODULE : ERR_NO_APP_MODULE_VER, NOWHERE, moduleName, version);
             return null;
         }
 
@@ -352,10 +357,7 @@ public class EmbeddingSupport {
             // assertion in the structure code past this report and out to the host. Errors are
             // not caught wholesale: a VirtualMachineError says the JVM is in trouble, not that
             // this module failed to start, and handling one is not something to rely on
-            if (errs != null) {
-                errs.log(ERROR, ERR_CREATE_APP_CONTAINER,
-                        new Object[] {e, "Unable to start " + moduleName}, module);
-            }
+            errs.error(ERR_CREATE_APP_CONTAINER, at(module), e, "Unable to start " + moduleName);
             return null;
         }
     }
