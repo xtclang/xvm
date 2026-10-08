@@ -18,7 +18,8 @@ import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
 
 import org.xvm.util.Hash;
-import org.xvm.util.Severity;
+
+import static org.xvm.asm.ErrorListener.at;
 
 /**
  * Represent a type constant that will eventually be replaced with a real type constant.
@@ -517,7 +518,7 @@ public class UnresolvedTypeConstant
             return getResolvedType().validate(errs);
         }
 
-        errs.log(Severity.ERROR, Compiler.NAME_UNRESOLVABLE, new Object[]{getValueString()}, this);
+        errs.error(Compiler.NAME_UNRESOLVABLE, at(this), getValueString());
         return true;
     }
 

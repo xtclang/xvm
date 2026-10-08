@@ -56,10 +56,10 @@ its default constructor uses `DEFAULT_MAX_ERRORS`; `FIRST_ERROR` and `UNLIMITED`
 A fatal diagnostic requests an abort even with an unlimited budget.
 
 `Site.In`, `Site.At` and `Site.None` describe source spans, structures and unpositioned diagnostics.
-The severity helpers accept message arguments as trailing varargs. The old positional forms still
-work after recompilation, including source re-anchoring through a branch. The legacy `BLACKHOLE`
-constant/class remain while callers migrate to `silent(Silence.PROBE/CASCADE/DISCARD)` or a listener's
-`silence(...)` wrapper. A derived silence keeps its parent's abort request.
+The severity helpers accept message arguments as trailing varargs. The old positional forms are
+deprecated but still work after recompilation, including source re-anchoring through a branch.
+`BLACKHOLE` and `BlackholeErrorListener` are removed. Use `silent(Silence.PROBE/CASCADE/DISCARD)`
+or a listener's `silence(...)` wrapper. A derived silence keeps its parent's abort request.
 
 A custom listener's default branch buffers without an arbitrary one-error budget and observes the
 parent's abort state. `ErrorList` branches also retain their configured budget. Merging an unbranched
@@ -68,9 +68,35 @@ Callbacks must be serialized by the host; these helpers do not make compiler exe
 
 `RUNTIME` now prints diagnostics and records an abort request for ERROR/FATAL; reporting no longer
 throws. Runtime callers that depended on that exception must explicitly check `isAbortDesired()`
-and choose their own failure handling. Parser and lexer reporting sites have been migrated to that
-sequence. This slice retains the existing null/ambient listener policy; later ownership changes
-must document their additional compatibility effects separately.
+and choose their own failure handling. Parser and lexer reporting sites use that sequence.
+
+### Explicit listener migration
+
+Compilation and launcher boundaries now require a listener. `ModuleCompiler.compile`, `EmbeddingSupport.compile`/`run`,
+launcher constructors and dispatch, the compiler, lexer/parser, `StageMgr`, anonymous-class
+construction and `Component.SimpleCollector` reject null listeners. AST reporting and validation
+helpers no longer silently ignore null or replace it with a discard listener. Pass the operation's
+listener for work whose diagnostics belong to the caller. For an intentional discard, pass
+`silent(Silence.DISCARD)` explicitly; command-line entry points do this for their external delegate
+because their Console already reports diagnostics.
+
+Fit tests and other speculative paths use `silent(Silence.PROBE)` when failure is only a return
+value. `Expression.testFitAsType` no longer takes a listener; its staging and fit checks both use a
+probe. Kept validation branches still merge into the supplied listener. An incomplete TypeInfo
+build derives `errs.silence(Silence.CASCADE)` at affected calls, preserving the original parameter
+and parent abort state throughout the operation.
+
+`ResolutionCollector.getErrorListener()` is now abstract. Every implementation must provide a
+destination; `SimpleCollector` retains the one supplied to its constructor. This default removal,
+the removed blackhole names and `testFitAsType` parameter, and rejecting previously accepted nulls
+are additional compatibility changes at the same breaking release boundary as the return-type
+change. Recompile implementations and migrate their callers before publication.
+
+This slice retains the existing file/pool ambient-listener API and parser/resolver ownership.
+Their removal and scoped replacements belong to later slices. In particular, `XvmStructure.log`
+still uses its existing fallback when passed null; the explicit compilation boundaries above do
+not. The reporting-call migration alone does not establish complete diagnostic delivery on all
+compiler failures or TypeInfo cache hits.
 
 ## Assembler
 

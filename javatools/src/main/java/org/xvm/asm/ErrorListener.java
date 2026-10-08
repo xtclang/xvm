@@ -54,7 +54,10 @@ public interface ErrorListener {
      * @param source      the source code (optional)
      * @param lPosStart   the position in the source where the error was detected
      * @param lPosEnd     the position in the source at which the error concluded
+     *
+     * @deprecated use {@link #log(Severity, String, Site, Object...)} with {@link #in}
      */
+    @Deprecated
     default void log(Severity severity, String sCode, Object[] aoParam, Source source, long lPosStart, long lPosEnd) {
         log(new ErrorInfo(severity, sCode, aoParam, source, lPosStart, lPosEnd));
     }
@@ -69,7 +72,10 @@ public interface ErrorListener {
      * @param aoParam     the parameters for the error message; may be null
      * @param xs          the XvmStructure that the error is related to; may
      *                    be null
+     *
+     * @deprecated use {@link #log(Severity, String, Site, Object...)} with {@link #at}
      */
+    @Deprecated
     default void log(Severity severity, String sCode, Object[] aoParam, XvmStructure xs) {
         log(severity, sCode, at(xs), aoParam);
     }
@@ -431,35 +437,6 @@ public interface ErrorListener {
      */
     default boolean isSilent() {
         return false;
-    }
-
-    // ----- inner class: BlackholeErrorListener ---------------------------------------------------
-
-    /**
-     * A simple implementation of the ErrorListener that converts reported errors to ErrorInfo
-     * objects and routes them to a single sink method.
-     */
-    class BlackholeErrorListener
-            implements ErrorListener {
-        @Override
-        public void log(ErrorInfo err) {
-            // Retained until callers migrate to named silence.
-        }
-
-        @Override
-        public ErrorListener merge() {
-            return this;
-        }
-
-        @Override
-        public boolean isSilent() {
-            return true;
-        }
-
-        @Override
-        public String toString() {
-            return "(Blackhole)";
-        }
     }
 
     // ----- inner class: SilentErrorListener ------------------------------------------------------
@@ -832,8 +809,7 @@ public interface ErrorListener {
     ErrorListener SILENT_CASCADE = new SilentErrorListener(null, Silence.CASCADE);
     ErrorListener SILENT_DISCARD = new SilentErrorListener(null, Silence.DISCARD);
 
-    ErrorListener BLACKHOLE = new BlackholeErrorListener();
-    ErrorListener RUNTIME   = new RuntimeErrorListener();
+    ErrorListener RUNTIME = new RuntimeErrorListener();
 
     /**
      * The default maximum number of serious errors an {@link ErrorList} collects before it asks
