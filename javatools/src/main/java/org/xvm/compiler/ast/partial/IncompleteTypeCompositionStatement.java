@@ -66,8 +66,8 @@ public final class IncompleteTypeCompositionStatement extends TypeCompositionSta
         var copy = new IncompleteTypeCompositionStatement(source, category, name, qualified, null,
                 getStartPosition(), getEndPosition(),
                 cursors.stream().map(IncompleteStatement::copyTree).toList(),
-                formals.stream().map(formal -> (Parameter) formal.copyTree()).toList());
-        copy.body = body == null ? null : copy.adopt((StatementBlock) body.copyTree());
+                formals.stream().map(Parameter::copyTree).toList());
+        copy.body = body == null ? null : copy.adopt(body.copyTree());
         copy.adopt(copy.cursors);
         copy.adopt(copy.formals);
         return copyTreeMetadataTo(copy);

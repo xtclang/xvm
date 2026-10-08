@@ -1009,11 +1009,11 @@ public class NamedTypeExpression
     // ----- AstNode methods -----------------------------------------------------------------------
 
     @Override
-    public AstNode copyTree() {
+    public NamedTypeExpression copyTree() {
         NamedTypeExpression that = (NamedTypeExpression) super.copyTree();
         // the "m_exprDynamic" is not a child and has to be handled manually
         if (m_exprDynamic != null) {
-            that.m_exprDynamic = (NameExpression) m_exprDynamic.copyTree();
+            that.m_exprDynamic = m_exprDynamic.copyTree();
         }
         return that;
     }

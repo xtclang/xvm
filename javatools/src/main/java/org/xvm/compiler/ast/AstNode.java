@@ -256,6 +256,8 @@ public abstract class AstNode
      * registered children; copied child lists are mutable. Constructor-based overrides must copy
      * and adopt their children and preserve root metadata with {@link #copyTreeMetadataTo(AstNode)}.
      * Specialize this method rather than {@link #clone()} so both entry points behave alike.
+     * Declare a covariant return type when specializing, so callers can copy that node type without
+     * a cast. A caller-selected method type parameter would not enforce that relationship.
      *
      * @return  a tree copy of this node
      */

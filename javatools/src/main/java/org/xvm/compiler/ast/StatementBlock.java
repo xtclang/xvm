@@ -110,6 +110,11 @@ public class StatementBlock
 
     // ----- accessors -----------------------------------------------------------------------------
 
+    @Override
+    public StatementBlock copyTree() {
+        return (StatementBlock) super.copyTree();
+    }
+
     public List<Statement> getStatements() {
         return stmts;
     }

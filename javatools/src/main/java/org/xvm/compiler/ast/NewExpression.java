@@ -167,12 +167,12 @@ public class NewExpression
     // ----- AstNode methods -----------------------------------------------------------------------
 
     @Override
-    public AstNode copyTree() {
+    public NewExpression copyTree() {
         NewExpression that = (NewExpression) super.copyTree();
         // the "body" is not a child and has to be handled manually
         if (body != null) {
             that.body = anon == null
-                    ? (StatementBlock) body.copyTree()
+                    ? body.copyTree()
                     : that.anon.body;
         }
         return that;

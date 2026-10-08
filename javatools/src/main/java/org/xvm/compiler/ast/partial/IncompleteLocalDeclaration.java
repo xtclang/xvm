@@ -52,8 +52,7 @@ public final class IncompleteLocalDeclaration extends Statement {
 
     @Override
     public IncompleteLocalDeclaration copyTree() {
-        var copy = new IncompleteLocalDeclaration(cursor.copyTree(),
-                (Expression) initializer.copyTree(), end);
+        var copy = new IncompleteLocalDeclaration(cursor.copyTree(), initializer.copyTree(), end);
         copy.adopt(copy.cursor);
         copy.adopt(copy.initializer);
         return copyTreeMetadataTo(copy);

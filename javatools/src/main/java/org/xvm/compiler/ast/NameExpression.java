@@ -237,6 +237,11 @@ public class NameExpression
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
+    public NameExpression copyTree() {
+        return (NameExpression) super.copyTree();
+    }
+
+    @Override
     protected boolean usesSuper() {
         return "super".equals(name.getValueText()) || left != null && left.usesSuper();
     }
