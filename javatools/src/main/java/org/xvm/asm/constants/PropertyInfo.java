@@ -678,7 +678,7 @@ public class PropertyInfo
             // allowable for interfaces
             Component parent = idProp.getNamespace().getComponent();
             if (parent == null) {
-                ConstantPool pool = ConstantPool.currentOr(idProp.getConstantPool());
+                ConstantPool pool = ConstantPool.getCurrentPool();
                 if (idProp.isShared(pool)) {
                     idProp = pool.register(idProp);
                     parent = idProp.getNamespace().getComponent();

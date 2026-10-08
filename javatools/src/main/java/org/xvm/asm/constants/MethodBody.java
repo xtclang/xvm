@@ -685,19 +685,10 @@ public class MethodBody {
     }
 
     /**
-     * The pool to resolve well-known constants against, such as the {@code @Op} annotation class.
-     *
-     * <p>The ambient one when there is one - the compiler pushes it for the pool it is working in,
-     * which is not always the pool this body's identity belongs to. But it is a thread-local, so
-     * it is simply null on any thread that has never had one pushed, and this is reached from
-     * {@link #isOp()} and from {@code toString()}: a debugger, a log line or a test that so much
-     * as printed a TypeInfo threw a NullPointerException out of it. Failing that, a constant
-     * knows its own pool.
-     *
-     * @return the pool; never null
+     * @return the ConstantPool
      */
     private ConstantPool pool() {
-        return ConstantPool.currentOr(m_id.getConstantPool());
+        return ConstantPool.getCurrentPool();
     }
 
     // ----- Object methods ------------------------------------------------------------------------
