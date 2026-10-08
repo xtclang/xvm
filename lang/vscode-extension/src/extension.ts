@@ -13,6 +13,7 @@ import * as vscode from 'vscode';
 
 import { createStatusBar, updateStatusBar } from './status-bar';
 import { startLanguageClient, restartLanguageClient, stopLanguageClient, applyTraceConfig, updateCompilerConfiguration, updateEditorConfiguration, getClient, connectionSettingsChanged } from './lsp-client';
+import { selectLanguageAdapter } from './adapter-selection';
 import { XtcTaskProvider } from './task-provider';
 import { XtcDebugAdapterDescriptorFactory, XtcDebugConfigurationProvider } from './debug-adapter';
 import { registerCommands } from './commands';
@@ -163,6 +164,7 @@ export function activate(context: vscode.ExtensionContext): void {
                 vscode.window.showWarningMessage('Ecstasy Language Server JAR not found. Build the extension first.');
             }
         }),
+        vscode.commands.registerCommand('xtc.selectLanguageAdapter', selectLanguageAdapter),
 
         vscode.workspace.onDidChangeTextDocument(event => {
             if (event.document.uri.toString() === compilerSettingsLocation()?.uri.toString()) {

@@ -117,6 +117,22 @@ object LanguageServicePage {
         project: Project,
         value: String,
     ) {
+        choiceSetting(project, "xtc.service.sync", value)
+    }
+
+    @JvmStatic
+    fun adapter(
+        project: Project,
+        value: String,
+    ) {
+        choiceSetting(project, "xtc.service.adapter", value)
+    }
+
+    private fun choiceSetting(
+        project: Project,
+        name: String,
+        value: String,
+    ) {
         val page = LanguageServiceProjectConfigurable(project)
         try {
             val components = children(page.createComponent()).toList()
@@ -124,10 +140,11 @@ object LanguageServicePage {
                 .filterIsInstance<JBCheckBox>()
                 .single { it.name == "xtc.service.inherit" }
                 .isSelected = false
-            components
-                .filterIsInstance<JComboBox<*>>()
-                .single { it.name == "xtc.service.sync" }
-                .selectedItem = value
+            val choices =
+                components
+                    .filterIsInstance<JComboBox<*>>()
+                    .single { it.name == name }
+            choices.selectedIndex = (0 until choices.itemCount).single { choices.getItemAt(it).toString() == value }
             page.apply()
         } finally {
             page.disposeUIResources()

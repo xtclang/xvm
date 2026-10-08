@@ -6,6 +6,15 @@ import org.junit.jupiter.api.Test
 
 class AdapterBackendTest {
     @Test
+    fun `startup selection overrides the bundled default and rejects invalid overrides`() {
+        assertThat(AdapterBackend.resolve("compiler", "treesitter")).isEqualTo(AdapterBackend.TREE_SITTER)
+        assertThat(AdapterBackend.resolve("treesitter", "compiler")).isEqualTo(AdapterBackend.COMPILER)
+        assertThat(AdapterBackend.resolve("mock", null)).isEqualTo(AdapterBackend.MOCK)
+        assertThat(AdapterBackend.resolve(null, null)).isEqualTo(AdapterBackend.COMPILER)
+        assertThatIllegalArgumentException().isThrownBy { AdapterBackend.resolve("compiler", "typo") }
+    }
+
+    @Test
     fun `compiler is the default`() {
         assertThat(AdapterBackend.fromSetting()).isEqualTo(AdapterBackend.COMPILER)
         assertThat(AdapterBackend.fromSetting(null)).isEqualTo(AdapterBackend.COMPILER)

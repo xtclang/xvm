@@ -32,6 +32,11 @@ interface LanguageServicePage {
         value: String,
     )
 
+    fun adapter(
+        project: Project,
+        value: String,
+    )
+
     fun saveFormatting(
         project: Project,
         enabled: Boolean,
