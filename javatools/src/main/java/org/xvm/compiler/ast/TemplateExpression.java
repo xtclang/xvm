@@ -29,6 +29,9 @@ import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Handy;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 import static org.xvm.asm.Assignment.AssignedOnce;
 
 /**
@@ -103,9 +106,9 @@ public class TemplateExpression
         for (int i = 0; i < cExprs; ++i) {
             Expression     exprOld = exprs.get(i);
             TypeConstant[] atypeExpr;
-            if (exprOld.testFit(ctx, T_STRING, false, null).isFit()) {
+            if (exprOld.testFit(ctx, T_STRING, false, silent(PROBE)).isFit()) {
                 atypeExpr = A_STRING;
-            } else if (exprOld.testFit(ctx, T_OBJECT, false, null).isFit()) {
+            } else if (exprOld.testFit(ctx, T_OBJECT, false, silent(PROBE)).isFit()) {
                 atypeExpr = A_OBJECT;
             } else {
                 // void expression (e.g. a lambda-style expr explicitly appending to "$"); note that

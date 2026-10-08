@@ -15,6 +15,8 @@ import org.xvm.asm.constants.IdentityConstant;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.at;
+
 import static org.xvm.util.Handy.stream;
 
 /**
@@ -470,7 +472,7 @@ public abstract class XvmStructure
      */
     public void log(ErrorListener errs, Severity sev, String sCode, Object ... aoParam) {
         // TODO need a way to log to compiler error list if we have compile-time info on the location in the source code
-        ensureErrorListener(errs).log(sev, sCode, aoParam, this);
+        ensureErrorListener(errs).log(sev, sCode, at(this), aoParam);
     }
 
     /**

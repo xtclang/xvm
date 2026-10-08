@@ -28,6 +28,9 @@ import org.xvm.compiler.Compiler;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * A map expression is an expression containing some number (0 or more) entries, each of which has
  * a key and a value.
@@ -67,7 +70,7 @@ public class MapExpression
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        TypeConstant typeExplicit = type.ensureTypeConstant(ctx, null);
+        TypeConstant typeExplicit = type.ensureTypeConstant(ctx, silent(PROBE));
         TypeConstant typeKey      = null;
         TypeConstant typeVal      = null;
         if (typeExplicit != null) {

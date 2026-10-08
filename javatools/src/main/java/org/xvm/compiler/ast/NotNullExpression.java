@@ -24,6 +24,9 @@ import org.xvm.compiler.ast.Context.Branch;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * A short-circuiting expression for testing if a sub-expression is null, and yielding the non-null
  * value if the sub-expression is not null.
@@ -103,14 +106,14 @@ public class NotNullExpression
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs) {
         if (typeRequired != null) {
             if (typeRequired.isTypeOfType()) {
-                TypeFit fit = toTypeExpression().testFit(ctx, typeRequired, fExhaustive, ErrorListener.BLACKHOLE);
+                TypeFit fit = toTypeExpression().testFit(ctx, typeRequired, fExhaustive, silent(PROBE));
                 if (fit.isFit()) {
                     return fit;
                 }
             }
 
             TypeFit fit = expr.testFitMulti(ctx, new TypeConstant[]{pool().typeBoolean(), typeRequired},
-                    fExhaustive, ErrorListener.BLACKHOLE);
+                    fExhaustive, silent(PROBE));
             if (fit.isFit()) {
                 return fit;
             }
@@ -127,7 +130,7 @@ public class NotNullExpression
         boolean        fCond     = false;
         TypeConstant[] atypeCond = new TypeConstant[]{pool.typeBoolean(), pool.typeObject()};
         Expression     exprNew;
-        if (expr.testFitMulti(ctx, atypeCond, true, ErrorListener.BLACKHOLE).isFit()) {
+        if (expr.testFitMulti(ctx, atypeCond, true, silent(PROBE)).isFit()) {
             m_fCond = fCond = true;
 
             if (typeRequired != null) {

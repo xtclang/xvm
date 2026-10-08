@@ -40,6 +40,9 @@ import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 import static org.xvm.compiler.Lexer.isValidQualifiedModule;
 
 /**
@@ -355,7 +358,7 @@ public class NamedTypeExpression
 
         // constId has been already "auto-narrowed" by resolveNames()
         ConstantPool pool = pool();
-        TypeConstant type = calculateDefaultType(ctx, constId, ErrorListener.BLACKHOLE);
+        TypeConstant type = calculateDefaultType(ctx, constId, silent(PROBE));
 
         if (listParams != null) {
             int            cParams     = listParams.size();

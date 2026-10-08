@@ -27,7 +27,11 @@ import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
 import org.xvm.util.ListMap;
-import org.xvm.util.Severity;
+
+import static org.xvm.asm.ErrorListener.NOWHERE;
+import static org.xvm.asm.ErrorListener.Silence.DISCARD;
+import static org.xvm.asm.ErrorListener.in;
+import static org.xvm.asm.ErrorListener.silent;
 
 import static org.xvm.asm.Constants.ECSTASY_MODULE;
 import static org.xvm.asm.Constants.TURTLE_MODULE;
@@ -1028,7 +1032,7 @@ public class ModuleInfo {
         public void registerName(String name, Node node) {
             if (name != null) {
                 if (children().containsKey(name)) {
-                    log(Severity.ERROR, DUP_NAME, new Object[] {name, descriptiveName()}, null);
+                    error(DUP_NAME, ErrorListener.NOWHERE, name, descriptiveName());
                 } else {
                     children().put(name, node);
                 }
@@ -1039,7 +1043,7 @@ public class ModuleInfo {
         public void linkParseTrees() {
             Node nodePkg = sourceNode();
             if (nodePkg == null) {
-                log(Severity.ERROR, MISSING_PKG_NODE, new Object[]{descriptiveName()}, null);
+                error(MISSING_PKG_NODE, ErrorListener.NOWHERE, descriptiveName());
             } else {
                 TypeCompositionStatement typePkg = nodePkg.type();
 
@@ -1267,7 +1271,7 @@ public class ModuleInfo {
             try {
                 return readFileChars(m_file);
             } catch (IOException e) {
-                log(Severity.ERROR, READ_FAILURE, new Object[] {m_file}, null);
+                error(READ_FAILURE, ErrorListener.NOWHERE, m_file);
             }
 
             return new char[0];
@@ -1349,8 +1353,7 @@ public class ModuleInfo {
                 m_stmtAST = new Parser(source, this).parseSource();
             } catch (CompilerException e) {
                 if (!hasSeriousErrors()) {
-                    log(Severity.FATAL, Parser.FATAL_ERROR, null, source,
-                            source.getPosition(), source.getPosition());
+                    fatal(Parser.FATAL_ERROR, in(source, source.getPosition(), source.getPosition()));
                 }
             }
         }
@@ -1430,7 +1433,7 @@ public class ModuleInfo {
             if (isExplicitSourceFile(name)) {
                 try {
                     Source source = new Source(file);
-                    Parser parser = new Parser(source, ErrorListener.BLACKHOLE);
+                    Parser parser = new Parser(source, silent(DISCARD));
                     return parser.parseModuleNameIgnoreEverythingElse();
                 } catch (CompilerException | IOException ignore) {}
             } else if (isExplicitCompiledFile(name)) {

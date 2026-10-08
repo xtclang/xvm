@@ -25,6 +25,12 @@ import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
+import static java.util.Objects.requireNonNull;
+
+import static org.xvm.asm.ErrorListener.Silence.DISCARD;
+import static org.xvm.asm.ErrorListener.in;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * A recursive descent parser for Ecstasy source code.
  */
@@ -56,9 +62,7 @@ public class Parser {
             throw new IllegalArgumentException("Source required");
         }
 
-        if (errs == null) {
-            throw new IllegalArgumentException("ErrorListener required");
-        }
+        requireNonNull(errs, "errs");
 
         m_source        = source;
         m_errorListener = errs;
@@ -137,7 +141,7 @@ public class Parser {
     public String parseModuleNameIgnoreEverythingElse() {
         ErrorListener errsPrev = m_errorListener;
         try {
-            m_errorListener = ErrorListener.BLACKHOLE;
+            m_errorListener = silent(DISCARD);
 
             Loop: while (!eof()) {
                 if (match(Id.MODULE) != null) {
@@ -5617,7 +5621,7 @@ public class Parser {
         if (m_lookAhead != null) {
             m_lookAhead.log(severity, sCode, aoParam, lPosStart, lPosEnd);
         } else {
-            m_errorListener.log(severity, sCode, aoParam, m_source, lPosStart, lPosEnd);
+            m_errorListener.log(severity, sCode, in(m_source, lPosStart, lPosEnd), aoParam);
             if (m_errorListener.isAbortDesired()) {
                 m_fAvoidRecovery = true;
                 throw new CompilerException("error list is full: " + m_errorListener);
