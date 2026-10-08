@@ -24,6 +24,8 @@ import java.util.function.Consumer;
 
 import java.util.stream.Stream;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -46,7 +48,10 @@ import org.xvm.compiler.Constants;
 import org.xvm.util.Handy;
 import org.xvm.util.Hash;
 import org.xvm.util.ListMap;
-import org.xvm.util.Severity;
+
+import static java.util.Objects.requireNonNull;
+
+import static org.xvm.asm.ErrorListener.at;
 
 import static org.xvm.util.Handy.readIndex;
 import static org.xvm.util.Handy.readMagnitude;
@@ -2012,8 +2017,8 @@ public abstract class Component
                 }
                 if (m_FVisited != null && m_FVisited.booleanValue() == fAllowInto) {
                     // recursive contribution
-                    collector.getErrorListener().log(Severity.FATAL, Constants.VE_CYCLICAL_CONTRIBUTION,
-                            new Object[] {getName(), contrib.getComposition().toString().toLowerCase()}, this);
+                    collector.getErrorListener().fatal(Constants.VE_CYCLICAL_CONTRIBUTION, at(this),
+                            getName(), contrib.getComposition().toString().toLowerCase());
                     return ResolutionResult.ERROR;
                 }
 
@@ -3528,8 +3533,8 @@ public abstract class Component
      */
     public static class SimpleCollector
             implements ResolutionCollector {
-        public SimpleCollector(ErrorListener errs) {
-            m_errs = errs;
+        public SimpleCollector(@NotNull ErrorListener errs) {
+            m_errs = requireNonNull(errs, "errs");
         }
 
         @Override
