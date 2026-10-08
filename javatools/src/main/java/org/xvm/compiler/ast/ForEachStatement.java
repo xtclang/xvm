@@ -27,11 +27,11 @@ import org.xvm.asm.ast.StmtBlockAST;
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IntConstant;
+import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
+import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.PropertyInfo;
 import org.xvm.asm.constants.RangeConstant;
-import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
@@ -48,6 +48,9 @@ import org.xvm.compiler.ast.Context.Branch;
 import org.xvm.compiler.ast.Expression.Assignable;
 
 import org.xvm.util.Severity;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 import static org.xvm.util.Handy.indentLines;
 
@@ -375,7 +378,7 @@ public class ForEachStatement
                     case ITERABLE -> pool.typeIterable();
                 };
 
-                if (exprRVal.testFit(ctx, typeRVal, false, null).isFit()) {
+                if (exprRVal.testFit(ctx, typeRVal, false, silent(PROBE)).isFit()) {
                     atypeLVals = fValid ? exprLVal.getTypes() : null;
                     break;
                 }
@@ -403,7 +406,7 @@ public class ForEachStatement
                     typeRValExact = pool.ensureParameterizedTypeConstant(typeRVal, atypeLVals);
                 }
 
-                if (exprRVal.testFit(ctx, typeRValExact, false, null).isFit()) {
+                if (exprRVal.testFit(ctx, typeRValExact, false, silent(PROBE)).isFit()) {
                     typeRVal = typeRValExact;
                 } else {
                     // the specific container type didn't fit; proceed with the basic type,

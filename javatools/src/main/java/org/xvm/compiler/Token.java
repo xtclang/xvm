@@ -7,6 +7,9 @@ import org.xvm.asm.ErrorListener;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.NOWHERE;
+import static org.xvm.asm.ErrorListener.in;
+
 import static org.xvm.util.Handy.appendChar;
 import static org.xvm.util.Handy.appendString;
 
@@ -322,8 +325,9 @@ public class Token
             aoParam = new Object[] {source == null ? toString() : getString(source)};
         }
 
-        errs.log(severity, sCode, aoParam, source,
-                source == null ? 0L : getStartPosition(), source == null ? 0L : getEndPosition());
+        errs.log(severity, sCode, source == null
+                ? NOWHERE
+                : in(source, getStartPosition(), getEndPosition()), aoParam);
     }
 
     // ----- Object methods ------------------------------------------------------------------------
