@@ -1543,7 +1543,7 @@ public class MethodInfo
      * @return the ConstantPool
      */
     private ConstantPool pool() {
-        return ConstantPool.currentOr(getIdentity().getConstantPool());
+        return ConstantPool.getCurrentPool();
     }
 
     // ----- JIT support ---------------------------------------------------------------------------

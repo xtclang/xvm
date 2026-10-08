@@ -2404,40 +2404,32 @@ Things turned up along the way that are real, are not this branch's to fix, and 
 forgotten. Each is written with what was measured, so the next person does not have to re-derive
 it.
 
-### The ambient constant pool *(made safe; ownership still ambient)*
+### The ambient constant pool *(explicit scopes retained after I2 review)*
 
-`ConstantPool.getCurrentPool()` is a thread-local, bound by `withPool` around stretches of
-compilation and by the runtime container. It can be null on ordinary host, test and debugger
-threads outside those scopes. Eighteen readers guarded in `610873fb6` already existed in the branch
-base `4a1eae6f7`. The MethodBody formatting failure was exposed during this branch's tests; the
-broader guard hardens the same pre-existing assumption, not eighteen independently reproduced
-crashes.
+**Review correction, 2026-10-08:** the owner-fallback proposal described in earlier versions of
+this document was withdrawn in [PR #678](https://github.com/xtclang/xvm/pull/678). Gene correctly
+identified the compiler contract: operations that depend on the current pool enter a
+`ConstantPool.withPool(pool)` scope. Compiler result inspection is also such an operation. A host
+worker binds its own context, restores the caller's context on exit, and copies facts before
+exposing them to concurrent request threads.
 
-**Provenance correction, 2026-09-22:** the earlier text grouped `FileStructure.getErrorListener()`
-with new failures found in this branch. Its null-pool defect had already been fixed on master by
-`5effa757d` (#548, 2026-08-31), before both the original documented baseline and the current merge
-base. This branch subsequently removed that ambient listener lookup in `0af497641`. See the
+The original MethodBody failure was observed while formatting an assertion outside that scope.
+It demonstrated an unscoped inspection failure, not a requirement to change eighteen readers or
+make the owning pool an implicit fallback. The later broad audit was preventative, not eighteen
+independently reproduced compiler-adapter failures. The recorded module-output comparison tested
+ordinary build compatibility of the old proposal; it did not establish that the proposal was
+necessary.
+
+`currentOr`, `poolInUse` and their consumers are removed. The revised `ConstantPoolAmbientTest`
+and `MethodBodyAmbientPoolTest` exercise explicit scopes, cross-pool working context, restoration
+and executor isolation. The adapter retains scoped semantic extraction and detached snapshots;
+`CompilerPoolScopeTest` tests its entry and exit behavior with absent and unrelated caller pools.
+This does not change compiler concurrency or diagnostic-listener ownership.
+
+The earlier `FileStructure.getErrorListener()` null-pool fix was already on master in
+`5effa757d` (#548, 2026-08-31). Its provenance and the later removal of ambient listener lookup are
+separate from this decision; see the
 [source/history breakdown](errs-error-listeners.md#ambient-constant-pools-pre-existing-defects-versus-branch-changes).
-
-All eighteen are guarded now, in a separate commit so it can be reviewed and moved on its own:
-
-```java
-ConstantPool.currentOr(fallback)   // the primitive
-Constant.poolInUse()               // for a constant, its own pool as the fallback
-```
-
-The ambient pool is **preferred, not replaced**. `withPool` exists precisely because the compiler
-works across pools, so a constant's own pool is not always the one the caller meant, and answering
-from the wrong pool is worse than answering from none. What says the preference order is right:
-the recorded XDK output comparison found byte-identical modules after normalizing the known
-timestamp difference. That is evidence for the exercised build paths, not proof that every guarded
-operation ran. The fallback changes only the case where no pool is bound.
-
-**What is not fixed is the ownership.** "Which pool am I working in" is still a property of the
-thread rather than of the work, and that is still an ownership parameter in disguise - the same
-mistake as the ambient listener, which this branch deleted rather than guarded. Guarding it
-removes the crashes, not the design. Doing it properly is the same shape of job as the listener
-propagation below, and wants the same owner.
 
 ### Propagating a listener to the TypeInfo builders
 
