@@ -204,6 +204,31 @@ A future compiler adapter with full type resolution would enable:
 ./gradlew :lang:lsp-server:fatJar
 ```
 
+## Compiler-consumer validation
+
+Run the required compiler smoke test from the composite root:
+
+```bash
+./gradlew :lang:lsp-server:test --tests org.xvm.lsp.adapter.CompilerConsumerTest --rerun-tasks --no-build-cache \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true
+```
+
+The test compiles a module through the existing Java embedding API. Gradle supplies `javatools`
+and the compiled Ecstasy/native-bridge module variants, including their dependencies. No installed
+XDK, `XDK_HOME`, distribution archive or IDE packaging task is required. Missing module inputs fail
+the test rather than skipping it. `compilerTestModules` declares the inputs, and a test JVM argument
+provider carries their directories into the shared fixture without task-action access to Gradle's
+project model.
+
+The shared CI change classifier includes compiler, libraries and shared build inputs in the core
+checks and their cache fingerprint, independently of IDE publication. Its result gate requires
+this suite to execute with zero skips, failures or errors. Add consumer suites to that gate as
+later integration slices land.
+
+Lang's lifecycle leaves IntelliJ and VS Code packaging detached unless explicitly enabled with
+`-PincludeBuildAttachIntellijPlugin=true` or `-PincludeBuildAttachVsCodeExtension=true`; direct plugin
+tasks remain available. The root's existing lang inclusion defaults are unchanged.
+
 ## Tree-sitter Native Library
 
 The tree-sitter adapter requires native libraries (`libtree-sitter-xtc`). These are built

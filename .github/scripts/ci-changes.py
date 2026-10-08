@@ -7,17 +7,18 @@ of lang checks, each only when the change touches what it reads:
   intellij  the main build with the lang composite attached, and the IntelliJ Plugin Verifier
   vscode    the VS Code extension's headless tests and VSIX
 
-Files fall into five groups (a file belongs to the first group that matches it):
+Files fall into six groups (a file belongs to the first group that matches it):
   intellij  the IntelliJ plugin, and the file it syncs from javatools
   vscode    the VS Code extension, and the files it bundles from the repository root
   docs      documentation: markdown anywhere and the doc/ tree, apart from what the VSIX bundles
   build     everything else the lang build reads: the rest of lang/, the build-logic it includes,
             the Gradle wrapper and the root build configuration
   corpus    the XDK sources the core checks parse as test data
+  compiler  compiler, XDK and Gradle plugin inputs exercised by the compiler LSP consumer
 Version catalog entries belong to the group whose sources use them (resolved through version.ref),
 so an entry only one plugin's build uses affects only that plugin.
 
-A build change needs every check, a corpus change only the core checks, and a plugin change
+A build change needs every check, a compiler or corpus change only the core checks, and a plugin change
 only that plugin's checks. Each check's fingerprint hashes the groups it reads, so a pull request
 push that leaves them unchanged (a rebase, a commit elsewhere) can skip a check that passed.
 
@@ -56,8 +57,9 @@ GROUPS = (
     )),
     ("build", (
         "lang/**",
-        "build-logic/settings-plugins/**",
-        "build-logic/common-plugins/**",
+        "build-logic/**",
+        ".github/workflows/commit.yml",
+        ".github/scripts/ci-changes.py",
         "gradlew",
         "gradlew.bat",
         "gradle/wrapper/**",
@@ -66,6 +68,15 @@ GROUPS = (
         "build.gradle.kts",
         "gradle.properties",
         "version.properties",
+    )),
+    ("compiler", (
+        "javatools/**",
+        "javatools_utils/**",
+        "javatools_bridge/**",
+        "javatools_turtle/**",
+        "lib_*/**",
+        "xdk/**",
+        "plugin/**",
     )),
     ("corpus", (
         "lib_*/**.x",
@@ -79,12 +90,13 @@ CATALOG = "gradle/libs.versions.toml"
 CATALOG_USERS = {
     "intellij": ("lang/intellij-plugin",),
     "vscode": ("lang/vscode-extension",),
+    "compiler": ("javatools", "javatools_utils", "javatools_bridge", "javatools_turtle", "plugin", "xdk"),
     "build": ("lang", ":(exclude)lang/intellij-plugin", ":(exclude)lang/vscode-extension",
               "build-logic/settings-plugins", "build-logic/common-plugins"),
 }
-NEEDS = {"build": ("core", "intellij", "vscode"), "corpus": ("core",), "intellij": ("intellij",), "vscode": ("vscode",),
+NEEDS = {"build": ("core", "intellij", "vscode"), "corpus": ("core",), "compiler": ("core",), "intellij": ("intellij",), "vscode": ("vscode",),
          "docs": ()}
-READS = {"core": ("build", "corpus"), "intellij": ("build", "intellij"), "vscode": ("build", "vscode")}
+READS = {"core": ("build", "corpus", "compiler"), "intellij": ("build", "intellij"), "vscode": ("build", "vscode")}
 # Build sources only: docs under lang/ show catalog accessors in examples.
 SOURCES = ("**/*.kts", "**/*.kt", "**/*.gradle", "**/*.java")
 ACCESSOR = r'libs\.[A-Za-z0-9_.]+|find(Library|Version|Plugin|Bundle)\("[^"]+"\)'
