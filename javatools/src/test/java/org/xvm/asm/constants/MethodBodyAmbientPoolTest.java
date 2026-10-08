@@ -10,50 +10,45 @@ import org.xvm.asm.FileStructure;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.Parameter;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * {@link MethodBody} must not depend on an ambient "current pool" being bound to the calling
- * thread.
- *
- * <p>It asked {@code ConstantPool.getCurrentPool()} for the pool to resolve {@code @Op} against,
- * and dereferenced the answer. That is a thread-local: it is null on any thread which has not had
- * a pool pushed onto it, which is every thread that is not inside a compilation - a debugger
- * evaluating a watch, a log line, a test. The two methods that reach it are {@link MethodBody#isOp()}
- * and {@code toString()}, so printing a MethodBody threw a NullPointerException out of the very
- * code meant to describe it, and an assertion failure mentioning one failed to report itself.</p>
- *
- * <p>This is the same fault as the one {@code FileStructure.getErrorListener()} had, in the same
- * shape, from the same thread-local. Both use the owning pool when none is bound.</p>
+ * Method inspection uses the host's explicit working-pool scope, as compilation does.
  */
 public class MethodBodyAmbientPoolTest {
     @Test
-    public void aMethodBodyDescribesItselfWithNoAmbientPoolBound() {
-        MethodBody body = bodyOnAThreadWithNoPool();
+    public void aHostCanInspectAMethodWithinItsPoolScope() {
+        assertNull(ConstantPool.getCurrentPool());
+        MethodBody body = body();
 
-        assertDoesNotThrow(() -> body.toString(), "printing it must not need an ambient pool");
-        assertNotNull(body.toString());
+        try (var _ = ConstantPool.withPool(body.getIdentity().getConstantPool())) {
+            assertFalse(body.isOp());
+            assertTrue(body.toString().contains("go"));
+        }
+
+        assertNull(ConstantPool.getCurrentPool());
     }
 
     @Test
-    public void isOpAnswersWithNoAmbientPoolBound() {
-        MethodBody body = bodyOnAThreadWithNoPool();
+    public void inspectionPreservesAnExplicitAlternateWorkingPool() {
+        MethodBody body = body();
+        ConstantPool worker = new FileStructure("worker").getConstantPool();
 
-        assertDoesNotThrow(() -> body.isOp(), "asking whether it is an operator must not need one either");
+        try (var _ = ConstantPool.withPool(worker)) {
+            assertFalse(body.isOp());
+            assertTrue(body.toString().contains("go"));
+            assertSame(worker, ConstantPool.getCurrentPool());
+        }
+
+        assertNull(ConstantPool.getCurrentPool());
     }
 
-    /**
-     * Build a MethodBody, having first checked the premise: this thread has no pool bound, which
-     * is what makes the test meaningful rather than accidental.
-     */
-    private static MethodBody bodyOnAThreadWithNoPool() {
-        assertNull(ConstantPool.getCurrentPool(),
-                "the premise: a test thread has never had a pool pushed onto it");
-
-        FileStructure   file   = new FileStructure("test");
-        ClassStructure  clz    = file.getModule().createClass(
+    private static MethodBody body() {
+        FileStructure file = new FileStructure("test");
+        ClassStructure clz = file.getModule().createClass(
                 Access.PUBLIC, Format.CLASS, "Test", null);
         MethodStructure method = clz.createMethod(false, Access.PUBLIC, null,
                 Parameter.NO_PARAMS, "go", Parameter.NO_PARAMS, true, true);
