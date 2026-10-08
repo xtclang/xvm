@@ -5784,7 +5784,7 @@ above identify old candidate patches, not additional changes to merge into the i
 | L1 | Connect the diagnostic-only XDK adapter and prove publication | `bb3c4c62c`, `535b9d80e`, `26c8fa9c1`, `849bb7a04`, `9e951df3e`, `ddc0b063d`, `45fa0ab13`, `f98b0fe87` | I1, I3, C4, E1 |
 | L2 | Complete cancellation and document lifecycle handling | `d92f93fb3`, `9e951df3e`, `ddc0b063d`, `45fa0ab13` | L1; includes the listener cancellation decorator |
 | L3 | Add the outline and structural AST features | `91d1b08e1`, `956d56f41`, `ddc0b063d`, `f98b0fe87` | E1, L2 |
-| L4 | Snapshot semantic facts in Kotlin and use them for navigation and hover | `956d56f41`, `ddc0b063d`, `f98b0fe87` | E2, L3; I2 for ambient-pool handling |
+| L4 | Snapshot semantic facts in Kotlin and use them for navigation and hover | `956d56f41`, `ddc0b063d`, `f98b0fe87` | E2, L3; preserve explicit working-pool scopes (see revised I2) |
 | E3 | Compile source trees with host text/membership and member cancellation | `c33b013eb`, `28e9fd540` | E1, C3; L2's listener decorator for cancellation; I3 for compiled-XDK tests |
 | L5 | Add module sessions, per-file publication and cross-file navigation | `c33b013eb` | E3, L2, L4 |
 | L6 | Copy direct inheritance edges and support source type hierarchy | `c33b013eb` | L5 |
@@ -5893,24 +5893,32 @@ Verify different end positions, colliding parameter hashes, two named buffers, a
 positive control. No LSP, runtime or TypeInfo ownership changes belong here. This is a bug fix
 with an additive source constructor; genuinely distinct diagnostics become visible.
 
-### I2 — Guard ambient constant-pool reads
+### I2 — Preserve explicit compiler pool scopes
 
-**Contract:** using or describing a constant outside an ambient pool scope does not throw merely
-because the calling thread has no pool; a bound pool still takes precedence over the fallback.
+**Review correction, 2026-10-08 ([PR #678](https://github.com/xtclang/xvm/pull/678)):**
+Gene's boundary contract is correct. Hosts inspecting compiler objects must bind the appropriate
+working pool with `ConstantPool.withPool(pool)` on the executing thread and restore it afterward.
+The owning pool of an individual constant is not a replacement for that operation-wide context.
 
-Take the final combined state of `cae4f9452` and `610873fb6`, including `currentOr`, `poolInUse`
-and their consumers. Do not land the first MethodBody workaround and then replace it in a second
-PR. Review each fallback for ownership, particularly cross-pool operations and the connector.
+The revised I2 withdraws `currentOr`, `poolInUse` and all eighteen fallback sites. Its remaining
+changes document and test the existing contract: nested and exceptional restoration, executor
+isolation, cross-pool constant operations and scoped MethodBody inspection. Production behavior
+and existing APIs remain unchanged. Do not re-extract the superseded fallback commits
+`cae4f9452` and `610873fb6` from the historical source map.
 
-All eighteen guarded reads predate this branch. The earlier FileStructure null-pool fix is already
-in the base via `5effa757d` (#548); it is not an additional fix to extract here. C4 removes that
-listener lookup altogether. The [listener write-up](errs-error-listeners.md#ambient-constant-pools-pre-existing-defects-versus-branch-changes)
-records the provenance and distinguishes reproduced failures from preventative guards.
+The LSP's semantic extraction boundaries already establish scopes and export detached facts for
+request-thread queries. Keep those boundaries, and validate the current adapter with the fallback
+implementation removed. `CompilerPoolScopeTest` additionally checks successful and failed
+compilation, snapshot/artifact extraction and partial member queries with both unbound and
+unrelated bound caller pools. The I2 tests document a contract; I2 is no longer a production
+behavior prerequisite for the adapter.
 
-Use `MethodBodyAmbientPoolTest` and `ConstantPoolAmbientTest`, including the bound-pool precedence
-case. Compare compiled XDK output with the baseline after removing only the known timestamp
-difference. This PR guards null ambient reads; it does not make the compiler concurrent or replace
-ambient pool ownership.
+The fallback-free adapter run executed 1,785 tests with no failures or errors; two pre-existing
+Tree-sitter navigation placeholders remained disabled. All six new LSP boundary cases and all
+six revised Java pool-scope cases passed without skips. These checks used the current adapter
+implementation with the I2 production changes removed, and the packaged server bytecode was
+checked to contain neither fallback helper. The packaged compiler-server protocol suite also
+passed all 82 cases without failures, errors or skips. Root and LSP Spotless checks passed.
 
 ### I3 — Establish compiler-consumer test wiring
 
