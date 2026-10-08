@@ -9,7 +9,7 @@
 
 import * as assert from 'node:assert';
 import * as vscode from 'vscode';
-import { getClient } from '../../lsp-client';
+import { connectionSettingsChanged, getClient } from '../../lsp-client';
 import { waitFor } from '../wait';
 
 const PUBLISHER_AND_NAME = 'xtclang.xtc-language';
@@ -95,6 +95,50 @@ suite('LSP startup', function () {
             const restore = new vscode.WorkspaceEdit();
             restore.replace(fixture, new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length)), original);
             assert.ok(await vscode.workspace.applyEdit(restore));
+        }
+    });
+
+    test('switching adapters restarts the server and reopens unsaved buffers in both backends', async function () {
+        this.timeout(150_000);
+        const fixture = vscode.Uri.joinPath(vscode.workspace.workspaceFolders![0].uri, 'hello.x');
+        const document = await vscode.workspace.openTextDocument(fixture);
+        await vscode.window.showTextDocument(document);
+        const original = document.getText();
+        const settings = vscode.workspace.getConfiguration('xtc');
+        const saved = settings.inspect('languageService.adapter')?.workspaceValue;
+        await waitFor(async () => getClient()?.isRunning() ?? false, Boolean, 'Initial server running');
+        const insertion = original.indexOf('@Inject');
+        assert.ok(insertion >= 0, 'hello.x contains an injected property');
+        const edit = new vscode.WorkspaceEdit();
+        edit.insert(fixture, document.positionAt(insertion), 'Int adapterSwitchProof = 42;\n    ');
+        assert.ok(await vscode.workspace.applyEdit(edit));
+        const unsaved = document.getText();
+        const names = (symbols: vscode.DocumentSymbol[]): string[] => symbols.flatMap(symbol => [symbol.name, ...names(symbol.children ?? [])]);
+        try {
+            for (const [choice, expected] of [['treesitter', 'TreeSitter'], ['compiler', 'XDK']]) {
+                const previous = getClient();
+                const before = await previous!.sendRequest<{ pid: number }>('xtc/languageServiceStatus');
+                await vscode.commands.executeCommand('xtc.selectLanguageAdapter', choice);
+                const current = await waitFor(async () => getClient(), value => !!value && value !== previous && value.isRunning(), `Restart into ${choice}`);
+                const status = await current!.sendRequest<{ adapter: string; pid: number }>('xtc/languageServiceStatus');
+                assert.strictEqual(status.adapter, expected);
+                assert.notStrictEqual(status.pid, before.pid);
+                assert.strictEqual(document.getText(), unsaved);
+                const symbols = await waitFor(async () => (await vscode.commands.executeCommand<vscode.DocumentSymbol[]>('vscode.executeDocumentSymbolProvider', fixture)) ?? [],
+                    value => names(value).includes('adapterSwitchProof'), `Unsaved symbol available in ${choice}`);
+                assert.ok(names(symbols).includes('adapterSwitchProof'));
+                await vscode.commands.executeCommand('xtc.selectLanguageAdapter', choice);
+                assert.strictEqual(getClient(), current, 'Selecting the saved adapter again leaves the connection intact');
+            }
+            const current = getClient();
+            await assert.rejects(async () => vscode.commands.executeCommand('xtc.selectLanguageAdapter', 'invalid'), /adapter/);
+            assert.strictEqual(getClient(), current, 'An invalid selection leaves the working connection intact');
+        } finally {
+            const restore = new vscode.WorkspaceEdit();
+            restore.replace(fixture, new vscode.Range(document.positionAt(0), document.positionAt(document.getText().length)), original);
+            assert.ok(await vscode.workspace.applyEdit(restore));
+            await settings.update('languageService.adapter', saved, vscode.ConfigurationTarget.Workspace);
+            await waitFor(async () => !connectionSettingsChanged() && (getClient()?.isRunning() ?? false), Boolean, 'Restore original adapter');
         }
     });
 });

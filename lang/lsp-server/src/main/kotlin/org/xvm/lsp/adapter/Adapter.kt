@@ -25,7 +25,7 @@ import java.util.concurrent.CompletableFuture
  *
  * ## Backend Selection
  *
- * Select at build time: `./gradlew :lang:lsp-server:build -Plsp.adapter=compiler`
+ * Select at startup with `-Dxtc.lsp.adapter=compiler`, or set the build default with `-Plsp.adapter=compiler`.
  *
  * - `compiler` (default): Compiler diagnostics and semantic features, with bundled XDK modules
  * - `treesitter`: Syntax-aware parsing, requires native library

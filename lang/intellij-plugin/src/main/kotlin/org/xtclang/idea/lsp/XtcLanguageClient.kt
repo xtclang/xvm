@@ -58,7 +58,7 @@ class XtcLanguageClient(
                         if (!isDisposed && !project.isDisposed) {
                             val next = LanguageServiceSettings.validated(project)
                             val before = preferences.getAndSet(next)
-                            if (before.textSynchronization != next.textSynchronization) {
+                            if (next.requiresRestart(before)) {
                                 LanguageServiceAccessor
                                     .getInstance(project)
                                     .startedServers
