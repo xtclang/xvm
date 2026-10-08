@@ -48,6 +48,13 @@ public class JitCtorDesc
     protected final boolean   addType;
     protected final boolean   addOuter;
 
+    /**
+     * @return true iff the constructor signature includes a CtorCtx parameter
+     */
+    public boolean hasCtorCtx() {
+        return addCtorCtx;
+    }
+
     @Override
     public int getImplicitParamCount() {
         return super.getImplicitParamCount()

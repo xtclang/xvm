@@ -821,7 +821,7 @@ public abstract class OpCallable extends Op {
 
             fCond   = pool.isConditionalReturn(typeFn);
             jmdCall = JitMethodDesc.of(bctx.builder,
-                    null, true, false, atypeParams, atypeReturns, atypeParams.length);
+                    null, JitMethodDesc.JMD_STATIC, atypeParams, atypeReturns, atypeParams.length);
 
             boolean fTuple = isTupleReturn();
             if (fTuple) {
@@ -1080,7 +1080,9 @@ public abstract class OpCallable extends Op {
         }
 
         bctx.loadCtx(code);
-        bctx.loadCtorCtx(code);
+        if (jmdCtor instanceof JitCtorDesc ctorDesc && ctorDesc.hasCtorCtx()) {
+            bctx.loadCtorCtx(code);
+        }
         bctx.loadThis(code);
         bctx.loadCallArguments(code, jmdCtor, anArgValue);
         code.invokestatic(cdTarget, sJitCtor, md);
