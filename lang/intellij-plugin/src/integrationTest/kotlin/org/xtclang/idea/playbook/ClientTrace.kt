@@ -44,16 +44,27 @@ class ClientTrace(
     fun notifications(
         method: String,
         received: Boolean = true,
+    ): List<JsonObject> = messages(method, received, request = false)
+
+    fun requests(
+        method: String,
+        received: Boolean = false,
+    ): List<JsonObject> = messages(method, received, request = true)
+
+    private fun messages(
+        method: String,
+        received: Boolean,
+        request: Boolean,
     ): List<JsonObject> =
         with(driver) {
             val direction = if (received) "Received" else "Sending"
-            val prefix = "$direction notification '$method'\nParams: "
+            val prefix = if (request) "$direction request '$method - (" else "$direction notification '$method'\n"
             val printed =
                 withContext(OnDispatcher.EDT, semantics = LockSemantics.READ_ACTION) {
                     utility(TraceEditors::class).getInstance().getAllEditors().flatMap { editor ->
                         editor.getDocument().getText().split("[Trace - ").mapNotNull { entry ->
                             if (!entry.contains(prefix)) return@mapNotNull null
-                            val json = entry.substringAfter(prefix).substringBefore("\n\n\n").trim()
+                            val json = entry.substringAfter("\nParams: ").substringBefore("\n\n\n").trim()
                             try {
                                 JsonParser
                                     .parseString(json)
@@ -72,7 +83,7 @@ class ClientTrace(
                     .server()
                     .getTraces()
                     .map { protocol.copy(it.message()).asJsonObject }
-                    .filter { it["method"]?.asString == method && it["id"] == null }
+                    .filter { it["method"]?.asString == method && (it["id"] != null) == request }
                     .map { it["params"].asJsonObject }
             printed + queued
         }

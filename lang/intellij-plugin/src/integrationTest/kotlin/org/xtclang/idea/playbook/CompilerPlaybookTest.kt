@@ -204,6 +204,9 @@ class CompilerPlaybookTest {
         shared.validate(fixtures)
         val ideVersion = System.getProperty("xtc.playbook.ideVersion")
         val localLsp4ij = System.getProperty("xtc.playbook.lsp4ijPlugin")?.let { LocalLsp4ijPlugin.read(Path.of(it)) }
+        val replacementGates = System.getProperty("xtc.playbook.replacementGates", "").split(',').filter(String::isNotEmpty)
+        require(replacementGates.all { it in setOf("UP25", "UP26") }) { "Unknown replacement gate: $replacementGates" }
+        require(replacementGates.isEmpty() || localLsp4ij != null) { "Replacement gates require an explicit local LSP4IJ build" }
         val lsp4ijVersion = localLsp4ij?.version ?: System.getProperty("xtc.playbook.lsp4ijVersion")
         val ideFailures = CopyOnWriteArrayList<String>()
         val selection =
@@ -337,6 +340,17 @@ class CompilerPlaybookTest {
                     "ideVersion" to ideVersion,
                     "lsp4ijVersion" to lsp4ijVersion,
                     "localLsp4ij" to localLsp4ij,
+                    "replacementGates" to replacementGates,
+                    // The shared catalog retains shipping-version limitations. Report the
+                    // additional opt-in assertions separately from those default statuses.
+                    "replacementGateResults" to
+                        replacementGates.associateWith { gate ->
+                            val id = if (gate == "UP25") "X254" else "X257"
+                            when (val status = cases.results.single { it.id == id }.status) {
+                                "passed", "partial" -> if (ideFailures.isEmpty()) "passed" else "ide-failure"
+                                else -> status
+                            }
+                        },
                     "adapter" to adapter,
                     "startupOnly" to (mode == PlaybookMode.STARTUP),
                     "mode" to mode.name,
