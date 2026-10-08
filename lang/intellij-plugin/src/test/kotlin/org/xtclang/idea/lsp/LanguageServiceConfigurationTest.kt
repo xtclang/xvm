@@ -6,6 +6,26 @@ import org.junit.jupiter.api.Test
 
 class LanguageServiceConfigurationTest {
     @Test
+    fun `adapter selection preserves inherited preferences and compiler paths`() {
+        val global = """{"xtc":{"languageService":{"adapter":"compiler","inlayHints":false}}}"""
+        val project = """{"xtc":{"compiler":{"sourceModules":[]},"languageService":{"futureSetting":17}}}"""
+        val selected = LanguageServiceConfiguration.selectAdapter(project, LanguageAdapter.TREE_SITTER)
+        val before = LanguageServiceConfiguration.read(global, project)
+        val after = LanguageServiceConfiguration.read(global, selected)
+        assertThat(after).isEqualTo(before.copy(adapter = "treesitter"))
+        assertThat(selected).contains("\"sourceModules\": []", "\"futureSetting\": 17")
+        assertThat(selected).doesNotContain("inlayHints")
+        assertThat(after.requiresRestart(before)).isTrue()
+        assertThat(after.requiresRestart(after)).isFalse()
+        assertThat(after.copy(inlayHints = true).requiresRestart(after)).isFalse()
+        assertThat(LanguageAdapter.TREE_SITTER.launchArguments()).containsExactly("-Dxtc.lsp.adapter=treesitter")
+        assertThat(LanguageAdapter.COMPILER.launchArguments()).containsExactly("-Dxtc.lsp.adapter=compiler")
+        assertThat(LanguageAdapter.DEFAULT.launchArguments()).isEmpty()
+        val restored = LanguageServiceConfiguration.selectAdapter(selected, LanguageAdapter.DEFAULT)
+        assertThat(LanguageServiceConfiguration.read(global, restored).adapter).isEqualTo("default")
+    }
+
+    @Test
     fun `service preferences do not claim ownership of an inherited source graph`() {
         assertThat(CompilerSettings.ownsGraph(null)).isFalse()
         assertThat(
@@ -50,6 +70,8 @@ class LanguageServiceConfigurationTest {
     @Test
     fun `invalid values fail before persistence and native save formatting wins`() {
         listOf(
+            """{"xtc":{"languageService":{"adapter":"mock"}}}""",
+            """{"xtc":{"languageService":{"adapter":null}}}""",
             """{"xtc":{"languageService":{"referenceCodeLens":"false"}}}""",
             "[]",
             "{",

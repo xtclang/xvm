@@ -10,8 +10,10 @@ internal data class LanguageServiceConfiguration(
     val saveFormatting: String = "editor",
     val inlayHints: Boolean = true,
     val referenceCodeLens: Boolean = true,
+    val adapter: String = "default",
 ) {
     init {
+        LanguageAdapter.fromSetting(adapter)
         require(textSynchronization in setOf("full", "incremental")) {
             "Text synchronization must be full or incremental"
         }
@@ -19,6 +21,9 @@ internal data class LanguageServiceConfiguration(
             "Save formatting must be owned by the editor or server"
         }
     }
+
+    fun requiresRestart(previous: LanguageServiceConfiguration): Boolean =
+        adapter != previous.adapter || textSynchronization != previous.textSynchronization
 
     fun initializationOptions(nativeFormatOnSave: Boolean = false): Map<String, Any> =
         mapOf(
@@ -94,7 +99,23 @@ internal data class LanguageServiceConfiguration(
                 string("saveFormatting", "editor"),
                 boolean("inlayHints"),
                 boolean("referenceCodeLens"),
+                string("adapter", "default"),
             )
+        }
+
+        /** Change only the selected adapter, retaining inherited preferences and compiler paths. */
+        fun selectAdapter(
+            content: String?,
+            adapter: LanguageAdapter,
+        ): String {
+            val service = section(content) ?: JsonObject()
+            service.addProperty("adapter", adapter.setting)
+            val settings = objectValue(content)
+            val xtc =
+                settings["xtc"]?.takeUnless { it.isJsonNull }?.asJsonObject
+                    ?: JsonObject().also { settings.add("xtc", it) }
+            xtc.add("languageService", service)
+            return gson.toJson(settings)
         }
 
         /**

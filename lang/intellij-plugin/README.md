@@ -401,7 +401,15 @@ feature:
 
 #### Testing LSP Features (Language Server)
 
-The LSP server supports multiple adapters. See [LSP Server README](../lsp-server/README.md) for details.
+Use **Tools → Switch Ecstasy Language Adapter**, Find Action, or **Ctrl+Alt+X, then A**
+(**Control+Option+X, then A** on macOS) to select **Ecstasy Compiler**, **Tree-sitter** or
+**Bundled default**. The same choice is available in **Ecstasy Language Service** settings.
+Compiler provides semantic analysis; Tree-sitter provides syntax-based features without compiler
+type checking. Switching restarts the server and reopens unsaved buffers. Both adapters ship in
+the plugin, so switching does not require rebuilding or changing LSP4IJ.
+
+The default setting honors the server build's choice, normally Compiler. Development builds can
+still change that default. See [LSP Server README](../lsp-server/README.md) for details.
 
 ```bash
 # Run with the default compiler adapter and bundled XDK
@@ -796,8 +804,8 @@ steps and the distinction between server logs and protocol tracing.
 
 Language-service preferences are under **Settings → Languages & Frameworks → Ecstasy Language
 Service**; **Ecstasy Language Service Defaults** supplies application defaults. Project overrides
-share LSP4IJ storage and preserve compiler graph/Undo ownership. Changing Full/Incremental text
-transport restarts the service and restores unsaved buffers. Inlay changes and Code Style settings
+share LSP4IJ storage and preserve compiler graph/Undo ownership. Changing the language adapter or
+Full/Incremental text transport restarts the service and restores unsaved buffers. Inlay changes and Code Style settings
 apply live. The read-only effective view includes PID, runtime, capabilities, bundled read-only XDK
 libraries and compiler queue names/count. Server save edits are unavailable in LSP4IJ 0.21.0; use
 native **Actions on Save → Reformat code**. Compiler mode wraps expressions/lists at safe token
