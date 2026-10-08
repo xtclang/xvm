@@ -28,8 +28,9 @@ import org.xvm.tool.LauncherOptions.DisassemblerOptions;
 
 import org.xvm.util.Handy;
 
-import static java.time.ZoneOffset.UTC;
 import static java.util.Objects.requireNonNull;
+
+import static java.time.ZoneOffset.UTC;
 import static org.xvm.compiler.ast.FileExpression.createdTime;
 import static org.xvm.compiler.ast.FileExpression.modifiedTime;
 import static org.xvm.util.Handy.readFileBytes;
@@ -58,12 +59,12 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
     /**
      * Disassembler constructor for programmatic use.
      *
-     * @param options     pre-configured disassembler options
-     * @param console     representation of the terminal within which this command is run, or null
-     * @param errListener optional ErrorListener to receive errors, or null for no delegation
+     * @param options  pre-configured disassembler options
+     * @param console  representation of the terminal within which this command is run, or null
+     * @param errs     the ErrorListener to receive errors
      */
-    public Disassembler(DisassemblerOptions options, Console console, ErrorListener errListener) {
-        super(options, console, errListener);
+    public Disassembler(DisassemblerOptions options, Console console, ErrorListener errs) {
+        super(options, console, errs);
     }
 
     /**

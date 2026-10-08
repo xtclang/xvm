@@ -16,11 +16,14 @@ import org.junit.jupiter.api.io.TempDir;
 
 import org.xvm.asm.FileRepository;
 import org.xvm.asm.FileStructure;
-import org.xvm.asm.Version;
 import org.xvm.asm.ModuleStructure.ModuleType;
+import org.xvm.asm.Version;
 
 import org.xvm.asm.VersionTree;
 import org.xvm.tool.LauncherOptions.BundlerOptions;
+
+import static org.xvm.asm.ErrorListener.Silence.DISCARD;
+import static org.xvm.asm.ErrorListener.silent;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -82,8 +85,7 @@ class BundlerTest {
     @Test
     void testBundleCommandDispatch() {
         // -h takes the help path through the real Bundler launcher and returns success
-        int result = Launcher.launch(Launcher.CMD_BUNDLE, new String[] {"-h"},
-                new Console() {}, null);
+        int result = Launcher.launch(Launcher.CMD_BUNDLE, new String[] {"-h"}, new Console() {}, silent(DISCARD));
         assertEquals(0, result);
     }
 
@@ -206,7 +208,7 @@ class BundlerTest {
         int result = Launcher.launch(Launcher.CMD_BUNDLE, new String[] {
                 "-o", tempDir.resolve("out.xtc").toString(),
                 fileFirst.getPath(),
-                fileSecond.getPath()}, console, null);
+                fileSecond.getPath()}, console, silent(DISCARD));
 
         assertEquals(1, result);
         var output = console.getAllOutput();
@@ -265,8 +267,7 @@ class BundlerTest {
         for (var input : inputs) {
             args.add(input.getPath());
         }
-        return Launcher.launch(Launcher.CMD_BUNDLE, args.toArray(new String[0]),
-                new CaptureConsole(), null);
+        return Launcher.launch(Launcher.CMD_BUNDLE, args.toArray(new String[0]), new CaptureConsole(), silent(DISCARD));
     }
 
     private static final class CaptureConsole implements Console {

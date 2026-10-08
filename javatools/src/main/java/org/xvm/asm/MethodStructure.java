@@ -64,6 +64,10 @@ import org.xvm.runtime.Utils;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.at;
+import static org.xvm.asm.ErrorListener.silent;
+
 import static org.xvm.util.Handy.indentLines;
 import static org.xvm.util.Handy.parseDelimitedString;
 import static org.xvm.util.Handy.readIndex;
@@ -809,7 +813,7 @@ public class MethodStructure
                                          boolean fParam, Map<FormalConstant, TypeConstant> mapTypeParams) {
         if (typeResult != null) {
             // downgrade enum value types to their base type (e.g. True -> Boolean)
-            TypeInfo info = typeResult.ensureTypeInfo(ErrorListener.BLACKHOLE);
+            TypeInfo info = typeResult.ensureTypeInfo(silent(PROBE));
             if (info.getFormat() == Format.ENUMVALUE) {
                 typeResult = info.getExtends();
             }
@@ -825,7 +829,7 @@ public class MethodStructure
                     // the new parameter type is wider or the old return type is narrower; use it instead
                 } else {
                     // the type are not compatible; use the common type (TODO: consider union?)
-                    typeResult = Op.selectCommonType(typePrev, typeResult, ErrorListener.BLACKHOLE);
+                    typeResult = Op.selectCommonType(typePrev, typeResult, silent(PROBE));
                     if (typeResult == null) {
                         // different arguments cause the formal type to resolve into
                         // incompatible types
@@ -1775,8 +1779,7 @@ public class MethodStructure
                 // REVIEW need a better error?
                 AstNode node = collector.getNode();
                 if (node == null) {
-                    collector.getErrorListener().log(Severity.ERROR,
-                        Compiler.UNSUPPORTED_DYNAMIC_TYPE_PARAMS, null, this);
+                    collector.getErrorListener().error(Compiler.UNSUPPORTED_DYNAMIC_TYPE_PARAMS, at(this));
                 } else {
                     node.log(collector.getErrorListener(), Severity.ERROR,
                         Compiler.UNSUPPORTED_DYNAMIC_TYPE_PARAMS);

@@ -57,6 +57,10 @@ import org.xvm.compiler.ast.Context.CaptureContext;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.in;
+import static org.xvm.asm.ErrorListener.silent;
+
 import static org.xvm.util.Handy.indentLines;
 
 /**
@@ -183,16 +187,12 @@ public class NewExpression
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        return calculateTargetType(ctx, null);
+        return calculateTargetType(ctx, silent(PROBE));
     }
 
     private TypeConstant calculateTargetType(Context ctx, ErrorListener errs) {
         if (isValidated()) {
             return getType();
-        }
-
-        if (errs == null) {
-            errs = ErrorListener.BLACKHOLE;
         }
 
         TypeConstant typeTarget = null;
@@ -696,7 +696,7 @@ public class NewExpression
             // structures, such that we can revert it after we collect the information about the
             // captures; force a temp clone of the inner class to go through its validate() stage so
             // that we can determine what variables get captured (and if they are effectively final)
-            ensureInnerClass(ctx, AnonPurpose.CaptureAnalysis, ErrorListener.BLACKHOLE);
+            ensureInnerClass(ctx, AnonPurpose.CaptureAnalysis, silent(PROBE));
 
             // the capture information gets collected in a specialized Context that was created with
             // the inner class
@@ -1591,9 +1591,7 @@ public class NewExpression
         @Override
         public boolean requireThis(long lPos, ErrorListener errs) {
             if (getMethod().isStatic()) {
-                if (errs != null) {
-                    errs.log(Severity.ERROR, Compiler.NO_THIS, null, getSource(), lPos, lPos);
-                }
+                errs.error(Compiler.NO_THIS, in(getSource(), lPos, lPos));
                 return false;
             }
 
