@@ -13222,3 +13222,38 @@ not a remote CI result. Existing launcher/Windows gates and corpus classificatio
 XML and CI control receipts are under `/private/tmp/xvm-foundation-receipts-2026-10-08/`.
 The integrated branch's dependency/extended-workload checkpoint is `42349aea6`. The working
 version and released LSP dependency pins remain unchanged; the planned breaking release is 0.5.0.
+
+### Refreshed C1–C3 review stack
+
+The user requested C1–C3 as separate local branches before publishing any of the six slices.
+They are now a stack on the same master revision `f442aced6`: C1 depends on master, C2 on C1,
+and C3 on C2. I1–I3 remain independent of that stack and each other. No remote branch or PR
+was created. The shared extraction worktree is now left clean on C3.
+
+| Slice | Local branch / commit | Incremental size | Validation |
+| --- | --- | --- | --- |
+| C1 | `errs/c1-listener-contract-20261008` / `dfe642614` | 18 files, +1102 / -71 | 410 Java tests executed, zero failures/errors; 42 skips recorded. |
+| C2 | `errs/c2-explicit-listeners-20261008` / `cb4483dab` | 74 files, +837 / -512 | 418 Java tests executed, zero failures/errors; 42 skips recorded. |
+| C3 | `errs/c3-reporting-scopes-20261008` / `4cfd442eb` | 18 files, +875 / -159 | 439 Java tests executed, zero failures/errors; 42 skips recorded. |
+
+Each slice passes `spotlessCheck` and a forced XDK rebuild. All 24 compiled modules on each
+slice match a freshly rebuilt master baseline after normalizing only module creation timestamps,
+using the baseline serializer and the same source/build paths. All newly added tests execute.
+C3 also compiles and runs the existing `loop.x` and `exceptions.x` exercises without failure
+markers. XML, comparison and execution receipts are retained alongside the I-series receipts.
+
+The refreshed C2 also covers master's new `ModuleCompiler` boundary: missing listeners are
+rejected before compilation or file access, while its existing stage-error handling is preserved.
+C3 preserves master's parser nesting guard. Later fixes to listener state forwarding, exceptional
+restoration, documentation and test isolation are retained within their respective slices.
+The breaking listener/parser migration is documented for the planned 0.5.0 boundary.
+
+A detached integration checkout combines C3 with I1, I2 and I3 at `029c93def`. The real
+compiler-consumer test passes there with one test, no failures and no skips. This validation
+does not change the six review branch tips or their intended bases.
+
+`create-foundation-prs.py --export-diffs build/errs-review-2026-10-08` exports all six exact
+parent-to-child patches and an `index.json` with their pinned revisions. Exporting uses local
+Git only and refuses to overwrite an existing export. Its existing publication mode still covers
+I1–I3 only. The six patches have been checked against their Git diffs, and all 11 publication
+workflow simulations still pass. Publishing remains a separate user decision.
