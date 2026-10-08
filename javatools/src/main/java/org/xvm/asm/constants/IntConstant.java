@@ -718,7 +718,7 @@ public class IntConstant
         case "UInt64..UInt64":
         case "UInt128..UInt128":
         case "UIntN..UIntN":
-            return poolInUse().ensureRangeConstant(this, that);
+            return ConstantPool.getCurrentPool().ensureRangeConstant(this, that);
 
         case "Int..<Int":
         case "UInt..<UInt":
@@ -732,7 +732,7 @@ public class IntConstant
         case "UInt64..<UInt64":
         case "UInt128..<UInt128":
         case "UIntN..<UIntN":
-            return poolInUse().ensureRangeConstant(this, false, that, true);
+            return ConstantPool.getCurrentPool().ensureRangeConstant(this, false, that, true);
 
         case "Int>..Int":
         case "UInt>..UInt":
@@ -746,7 +746,7 @@ public class IntConstant
         case "UInt64>..UInt64":
         case "UInt128>..UInt128":
         case "UIntN>..UIntN":
-            return poolInUse().ensureRangeConstant(this, true, that, false);
+            return ConstantPool.getCurrentPool().ensureRangeConstant(this, true, that, false);
 
         case "Int>..<Int":
         case "UInt>..<UInt":
@@ -760,7 +760,7 @@ public class IntConstant
         case "UInt64>..<UInt64":
         case "UInt128>..<UInt128":
         case "UIntN>..<UIntN":
-            return poolInUse().ensureRangeConstant(this, true, that, true);
+            return ConstantPool.getCurrentPool().ensureRangeConstant(this, true, that, true);
 
         case "Int<<Int":
         case "Int16<<Int64":

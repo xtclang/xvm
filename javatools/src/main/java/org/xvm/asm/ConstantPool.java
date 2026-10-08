@@ -3180,7 +3180,7 @@ public class ConstantPool
         // the number of returns on the left must not exceed the number of returns on the right;
         // the only exception: "void f(X)" is allowed to be assigned to "Tuple<> f(x)"
         if (cLR > cRR) {
-            return cRR == 0 && cLR == 1 && typeLR.getParamType(0).equals(currentOr(this).typeTuple0())
+            return cRR == 0 && cLR == 1 && typeLR.getParamType(0).equals(getCurrentPool().typeTuple0())
                     ? Relation.IS_A
                     : Relation.INCOMPATIBLE;
         }
@@ -3438,33 +3438,13 @@ public class ConstantPool
     }
 
     /**
-     * The pool to work in: the one bound to this thread if there is one, and the given fallback
-     * otherwise.
+     * Return the working pool associated with the current thread.
      *
-     * <p>{@link #getCurrentPool} is a thread-local, bound by {@link #withPool} around stretches of
-     * compilation and by the runtime container. Outside those it is simply null - on a thread
-     * that is driving the compiler from ordinary Java code, in a test, in a debugger evaluating a
-     * watch - and code that dereferenced it threw there. Two such NullPointerExceptions were
-     * found by accident while doing something else, one of them in the code meant to describe a
-     * structure for a log line.
+     * <p>Hosts entering compiler operations that depend on this context must establish a
+     * {@link #withPool} scope. A constant's owning pool is not necessarily the working pool:
+     * cross-pool operations may intentionally resolve or register constants in another pool.
      *
-     * <p>The ambient pool is preferred rather than ignored, because it is not always the pool a
-     * given constant belongs to: {@link #withPool} exists precisely because the compiler works
-     * across pools, and a well-known constant fetched from the wrong one answers wrongly rather
-     * than not at all. So this changes nothing where a pool is bound, and answers instead of
-     * throwing where none is.
-     *
-     * @param poolFallback  the pool to use when no pool is bound to this thread
-     *
-     * @return the pool to work in; null only if the fallback is null
-     */
-    public static ConstantPool currentOr(ConstantPool poolFallback) {
-        ConstantPool pool = getCurrentPool();
-        return pool == null ? poolFallback : pool;
-    }
-
-    /**
-     * @return a ContextPool associated with the current thread
+     * @return the working pool, or null if none is associated with this thread
      */
     public static ConstantPool getCurrentPool() {
         return s_tloPool.get()[0];
@@ -3482,6 +3462,10 @@ public class ConstantPool
     /**
      * Temporarily update the current ConstantPool, restoring it when the returned AutoCloseable
      * is closed.
+     *
+     * <p>Use try-with-resources at the operation boundary, including when inspecting compiler
+     * results after compilation. Open and close the scope on the same thread. Work dispatched to
+     * another thread must establish its own scope; the context is not inherited.
      *
      * @param pool the new pool
      *
