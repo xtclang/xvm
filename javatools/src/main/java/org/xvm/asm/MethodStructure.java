@@ -812,8 +812,10 @@ public class MethodStructure
     private static boolean checkConflict(TypeConstant typeResult, FormalConstant constFormal,
                                          boolean fParam, Map<FormalConstant, TypeConstant> mapTypeParams) {
         if (typeResult != null) {
+            ErrorListener probe = silent(PROBE);
+
             // downgrade enum value types to their base type (e.g. True -> Boolean)
-            TypeInfo info = typeResult.ensureTypeInfo(silent(PROBE));
+            TypeInfo info = typeResult.ensureTypeInfo(probe);
             if (info.getFormat() == Format.ENUMVALUE) {
                 typeResult = info.getExtends();
             }
@@ -829,7 +831,7 @@ public class MethodStructure
                     // the new parameter type is wider or the old return type is narrower; use it instead
                 } else {
                     // the type are not compatible; use the common type (TODO: consider union?)
-                    typeResult = Op.selectCommonType(typePrev, typeResult, silent(PROBE));
+                    typeResult = Op.selectCommonType(typePrev, typeResult, probe);
                     if (typeResult == null) {
                         // different arguments cause the formal type to resolve into
                         // incompatible types
