@@ -13,7 +13,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
-import org.xvm.asm.Assignment;
 import org.xvm.asm.Component;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
@@ -22,6 +21,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Register;
+import org.xvm.asm.Assignment;
 
 import org.xvm.asm.ast.BindFunctionAST;
 import org.xvm.asm.ast.BindMethodAST;
@@ -64,11 +64,12 @@ import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
 
-import static org.xvm.asm.ErrorListener.Silence.PROBE;
-import static org.xvm.asm.ErrorListener.in;
-import static org.xvm.asm.ErrorListener.silent;
-
 import static org.xvm.util.Handy.indentLines;
+
+import static org.xvm.asm.ErrorListener.in;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * Lambda expression is an inlined function. This version uses parameters that are assumed to be
@@ -120,6 +121,25 @@ public class LambdaExpression
      */
     public MethodStructure getLambda() {
         return m_lambda;
+    }
+
+    /** The written arrow token, for source-position consumers. */
+    public Token getOperator() {
+        return operator;
+    }
+
+    /**
+     * @return the source bindings retained by this lambda's compilation context, or null before
+     *         its generated method has been validated
+     */
+    public LambdaBindings getSourceBindings() {
+        return m_ctxLambda == null || !m_ctxLambda.f_bindings.isFor(m_lambda)
+                ? null : m_ctxLambda.f_bindings;
+    }
+
+    /** Record a generated parameter through the context that owns its source associations. */
+    void bindSourceParameter(int index, Register register) {
+        m_ctxLambda.f_bindings.bind(this, m_ctxLambda, index, register);
     }
 
     /**
@@ -289,8 +309,8 @@ public class LambdaExpression
         //   passed to the lambda (via FBIND)
         // - so now, at this point, we have the signature, we have the method structure, and we just
         //   have to emit the code corresponding to the lambda
-        if (catchUpChildren(errs)) {
-            if (!body.compileMethod(method.createCode(), errs)) {
+        if (catchUpChildren(errs, mgr.getInvocationBindings())) {
+            if (!body.compileMethod(method.createCode(), errs, mgr.getInvocationBindings())) {
                 mgr.deferChildren();
             }
         }
@@ -598,8 +618,8 @@ public class LambdaExpression
 
         if (hasOnlyParamNames()) {
             if (atypeReqParams == null) {
-                errs.error(Compiler.PARAMETER_TYPES_REQUIRED, in(getSource(), paramNames.get(0).getStartPosition(),
-                        paramNames.get(cParams-1).getEndPosition()));
+                errs.error(Compiler.PARAMETER_TYPES_REQUIRED, in(getSource(), paramNames.getFirst().getStartPosition(),
+                        paramNames.getLast().getEndPosition()));
                 fValid = false;
             }
 
@@ -852,9 +872,9 @@ public class LambdaExpression
     }
 
     @Override
-    public AstNode clone() {
+    public LambdaExpression copyTree() {
         // the reference to the lambda's method structure should not be a part of the cloned state
-        LambdaExpression that = (LambdaExpression) super.clone();
+        LambdaExpression that = (LambdaExpression) super.copyTree();
         that.m_lambda = null;
         return that;
     }
@@ -1447,6 +1467,8 @@ public class LambdaExpression
                 }
             }
         }
+
+        private final LambdaBindings f_bindings = new LambdaBindings();
 
         private final TypeConstant[] f_atypeParams;
         private final String[]       f_asParams;

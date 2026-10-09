@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.xvm.asm.Annotation;
@@ -50,6 +51,7 @@ import org.xvm.asm.op.*;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
+import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
@@ -57,11 +59,12 @@ import org.xvm.compiler.ast.Context.CaptureContext;
 
 import org.xvm.util.Severity;
 
-import static org.xvm.asm.ErrorListener.Silence.PROBE;
-import static org.xvm.asm.ErrorListener.in;
-import static org.xvm.asm.ErrorListener.silent;
-
 import static org.xvm.util.Handy.indentLines;
+
+import static org.xvm.asm.ErrorListener.in;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * "New object" expression.
@@ -123,6 +126,22 @@ public class NewExpression
         return Math.max(dims, 0);
     }
 
+    /**
+     * @return a snapshot of the written constructor arguments, including array dimensions
+     */
+    public List<Expression> getArguments() {
+        return List.copyOf(args);
+    }
+
+    /**
+     * Written anonymous body before an anonymous class owns it. It is deliberately not a compiler
+     * child yet: registering/validating it requires the construction's inferred type and context.
+     * Syntax readers may inspect this borrowed node; they must not adopt or validate it themselves.
+     */
+    public Optional<StatementBlock> getUnregisteredBody() {
+        return anon == null ? Optional.ofNullable(body) : Optional.empty();
+    }
+
     @Override
     public boolean isAutoNarrowingAllowed(TypeExpression type) {
         // auto-narrowing is allowed for type parameters, but not the type itself
@@ -147,12 +166,12 @@ public class NewExpression
     // ----- AstNode methods -----------------------------------------------------------------------
 
     @Override
-    public AstNode clone() {
-        NewExpression that = (NewExpression) super.clone();
+    public NewExpression copyTree() {
+        NewExpression that = (NewExpression) super.copyTree();
         // the "body" is not a child and has to be handled manually
         if (body != null) {
             that.body = anon == null
-                    ? (StatementBlock) body.clone()
+                    ? body.copyTree()
                     : that.anon.body;
         }
         return that;
@@ -181,6 +200,31 @@ public class NewExpression
      */
     public AnonInnerClassContext getCaptureContext() {
         return m_ctxCapture;
+    }
+
+    /**
+     * @return source bindings collected by capture analysis, or null before it completes
+     */
+    public AnonymousClassBindings getSourceBindings() {
+        return m_captureBindings != null && m_captureBindings.isFor(this) ? m_captureBindings : null;
+    }
+
+    void bindSourceCapture(String name, Register captured) {
+        m_captureBindings.bind(name, captured);
+    }
+
+    /**
+     * Obtain source origins for the generated properties of a validated anonymous class.
+     * This reads existing capture data; it does not resume compilation or retain another cache.
+     *
+     * @return a snapshot of captured properties and their enclosing source registers
+     */
+    public Map<PropertyConstant, Register> getCaptureOrigins() {
+        if (!isValidated() || anon == null || anon.getComponent() == null || getSourceBindings() == null) {
+            return Map.of();
+        }
+
+        return m_captureBindings.propertyOrigins(anon.getComponent());
     }
 
     // ----- compilation (Expression) --------------------------------------------------------------
@@ -251,6 +295,9 @@ public class NewExpression
 
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
+        var bindings = ctx.getInvocationBindings();
+        var writtenArgs = bindings.isEnabled() ? List.copyOf(args) : List.<Expression>of();
+        bindings.begin(this);
         ConstantPool pool       = pool();
         TypeConstant typeSuper  = null;   // the super class type of the anon inner class
         TypeConstant typeTarget = null;   // the type to look for a constructor at (could be private)
@@ -577,8 +624,7 @@ public class NewExpression
         }
 
         // for a regular or virtual child construction, the target type must be new-able
-        if ((plan == Plan.Regular || plan == Plan.Child) &&
-                !infoTarget.isNewable(false, errsTemp)) {
+        if ((plan == Plan.Regular || plan == Plan.Child) && !infoTarget.isNewable(false, errsTemp)) {
             String sTarget = infoTarget.getType().removeAccess().getValueString();
             infoTarget.reportNotNewable(sTarget, null, false, errsTemp);
             errsTemp.merge();
@@ -669,6 +715,7 @@ public class NewExpression
             args = listArgs;
         }
 
+        var sourceArguments = InvocationBinding.arguments(writtenArgs, listArgs);
         if (validateExpressions(ctx, listArgs, idConstruct.getRawParams(), errs) == null) {
             return null;
         }
@@ -717,10 +764,10 @@ public class NewExpression
             // nested contexts in which the captured variables were declared go through their exit()
             // logic (as the variables go out of scope in the method body that contains this
             // NewExpression); for now, store off the data from the capture context
-            m_mapCapture     = ctxAnon.getCaptureMap();
-            m_mapRegisters   = ctxAnon.ensureRegisterMap();
-            m_fInstanceChild = ctxAnon.isInstanceChild();
-            m_ctxCapture     = null;
+            m_mapCapture      = ctxAnon.getCaptureMap();
+            m_captureBindings = new AnonymousClassBindings(this, ctxAnon.ensureRegisterMap());
+            m_fInstanceChild  = ctxAnon.isInstanceChild();
+            m_ctxCapture      = null;
 
             // make sure the capture names don't collide
             ClassStructure clzAnon = ctxAnon.getThisClass();
@@ -735,6 +782,11 @@ public class NewExpression
         m_plan = plan;
 
         Expression exprResult = finishValidation(ctx, typeRequired, typeResult, TypeFit.Fit, null, errs);
+        if (exprResult == this && bindings.isEnabled()) {
+            MethodConstant selected = constructor.getIdentityConstant();
+            sourceArguments.ifPresent(arguments -> bindings.record(this,
+                    new InvocationBinding(selected, selected.getSignature(), arguments)));
+        }
         clearAnonTypeInfos();
         return exprResult;
     }
@@ -1156,7 +1208,7 @@ public class NewExpression
 
         m_ctxCapture = new AnonInnerClassContext(ctx);
 
-        catchUpChildren(errs);
+        catchUpChildren(errs, ctx.getInvocationBindings());
 
         if (purpose != AnonPurpose.CaptureAnalysis) {
             // the context is ONLY retained to provide capture information
@@ -1302,11 +1354,11 @@ public class NewExpression
         anon.getComponent().setStatic(!m_fInstanceChild);
 
         // if nothing else is captured, then we're done
-        Map<String, Boolean>  mapCapture   = m_mapCapture;
-        Map<String, Register> mapRegisters = m_mapRegisters;
+        Map<String, Boolean> mapCapture = m_mapCapture;
         if (mapCapture == null || mapCapture.isEmpty()) {
             return aOldArgs;
         }
+        Map<String, Register> mapRegisters = m_captureBindings.registers();
 
         // we're going to replace the constructor by creating a new constructor that calls the old
         // one, but that first stores off all the passed-in binding values
@@ -1458,18 +1510,18 @@ public class NewExpression
      * @return the type of the value (not the Ref or Var, if implicit deref is used)
      */
     protected TypeConstant getCaptureType(String sCaptureName) {
-        assert m_mapRegisters.containsKey(sCaptureName);
+        assert m_captureBindings.registers().containsKey(sCaptureName);
 
-        return m_mapRegisters.get(sCaptureName).getType();
+        return m_captureBindings.registers().get(sCaptureName).getType();
     }
 
     /**
      * @return true iff the captured variable has been marked as being effectively final
      */
     protected boolean isCaptureFinal(String sCaptureName) {
-        assert m_mapRegisters.containsKey(sCaptureName);
+        assert m_captureBindings.registers().containsKey(sCaptureName);
 
-        return m_mapRegisters.get(sCaptureName).isEffectivelyFinal();
+        return m_captureBindings.registers().get(sCaptureName).isEffectivelyFinal();
     }
 
     /**
@@ -1478,7 +1530,7 @@ public class NewExpression
     protected boolean isImplicitDeref(String sCaptureName) {
         assert m_mapCapture.containsKey(sCaptureName);
 
-        Register reg    = m_mapRegisters.get(sCaptureName);
+        Register reg    = m_captureBindings.registers().get(sCaptureName);
         Boolean  FVar   = m_mapCapture  .get(sCaptureName);
         return FVar || !reg.isEffectivelyFinal();
     }
@@ -1639,9 +1691,10 @@ public class NewExpression
      */
     private transient Map<String, Boolean>  m_mapCapture;
     /**
-     * A map from variable name to register, built by the anonymous inner class context.
+     * The capture-analysis result: enclosing registers and source origins for their local reads.
+     * Replaces the former name-to-register map; created when capture analysis completes.
      */
-    private transient Map<String, Register> m_mapRegisters;
+    private transient AnonymousClassBindings m_captureBindings;
 
     /**
      * The construction plan:

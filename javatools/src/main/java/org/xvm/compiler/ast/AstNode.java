@@ -18,6 +18,8 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
+import java.util.function.BiConsumer;
+
 import java.util.stream.Collectors;
 
 import org.xvm.asm.Argument;
@@ -50,6 +52,7 @@ import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
+import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Source;
 
 import org.xvm.compiler.Token;
@@ -59,12 +62,13 @@ import org.xvm.compiler.ast.NameExpression.Meaning;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
-import static org.xvm.asm.ErrorListener.NOWHERE;
-import static org.xvm.asm.ErrorListener.Silence.PROBE;
-import static org.xvm.asm.ErrorListener.in;
-import static org.xvm.asm.ErrorListener.silent;
-
 import static org.xvm.util.Handy.indentLines;
+
+import static org.xvm.asm.ErrorListener.NOWHERE;
+import static org.xvm.asm.ErrorListener.in;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * Common base class for all statements and expressions.
@@ -133,13 +137,27 @@ public abstract class AstNode
     }
 
     /**
-     * Return an Iterable/Iterator that represents all the child nodes of this node.
+     * Return a one-shot cursor over the child nodes of this node. The cursor supports replacement
+     * and removal during compiler traversal. Its Iterable view uses the same cursor, not a new
+     * traversal; use {@link #childNodes()} when an independently iterable view is needed.
      *
-     * @return an Iterable of child nodes (from whence an Iterator can be obtained)
+     * @return a mutable traversal cursor
      */
     public ChildIterator children() {
         Field[] fields = getChildFields();
         return fields.length == 0 ? ChildIterator.EMPTY : new ChildIteratorImpl(fields);
+    }
+
+    /**
+     * Return a view of this node's children that starts an independent traversal for each iterator.
+     * This is a live view, not a snapshot: subsequent traversals see subsequent AST changes.
+     * Callers that need a stable list must copy it while they own the tree; iteration does not
+     * provide synchronization with compiler mutation.
+     *
+     * @return an iterable view of the child nodes
+     */
+    public Iterable<AstNode> childNodes() {
+        return this::children;
     }
 
     /**
@@ -210,8 +228,39 @@ public abstract class AstNode
         return NO_FIELDS;
     }
 
+    /**
+     * Compatibility entry point for {@link #copyTree()}.
+     *
+     * @return  a tree copy of this node
+     */
     @Override
+    @SuppressWarnings("MethodDoesntCallSuperMethod") // copyTree owns allocation and copying.
     public AstNode clone() {
+        return copyTree();
+    }
+
+    /**
+     * Copy this node and its registered syntax children, preserving the concrete node type, source
+     * positions and compilation stage. Copied children belong to their copied owners. The root
+     * retains its original parent until a caller adopts it into another tree; copying does not
+     * replace or reparent any original node.
+     *
+     * <p>This is not a fresh parse or an isolated copy of all compiler state. The default
+     * implementation shallow-copies non-child fields, including resolved bindings and transient
+     * fields. Overrides must handle owned state that cannot be shared, such as a lambda's
+     * generated method. Recovery nodes construct fresh shells and copy their written syntax
+     * without carrying inherited validation or emission state.
+     *
+     * <p>The default implementation still uses shallow cloning followed by reflective copying of
+     * registered children; copied child lists are mutable. Constructor-based overrides must copy
+     * and adopt their children and preserve root metadata with {@link #copyTreeMetadataTo(AstNode)}.
+     * Specialize this method rather than {@link #clone()} so both entry points behave alike.
+     * Declare a covariant return type when specializing, so callers can copy that node type without
+     * a cast. A caller-selected method type parameter would not enforce that relationship.
+     *
+     * @return  a tree copy of this node
+     */
+    public AstNode copyTree() {
         AstNode that;
         try {
             that = (AstNode) super.clone();
@@ -231,14 +280,14 @@ public abstract class AstNode
 
             if (oVal != null) {
                 if (oVal instanceof AstNode node) {
-                    AstNode nodeNew = node.clone();
+                    AstNode nodeNew = node.copyTree();
 
                     that.adopt(nodeNew);
                     oVal = nodeNew;
                 } else if (oVal instanceof List list) {
                     ArrayList<AstNode> listNew = new ArrayList<>();
                     for (AstNode node : (List<AstNode>) list) {
-                        listNew.add(node.clone());
+                        listNew.add(node.copyTree());
                     }
 
                     that.adopt(listNew);
@@ -257,6 +306,21 @@ public abstract class AstNode
         }
 
         return that;
+    }
+
+    /**
+     * Preserve the root metadata of a constructor-based tree copy. The caller is responsible for
+     * copying and adopting children; this method does not transfer validation or emission state.
+     *
+     * @param copy  the newly constructed node
+     * @param <T>   the concrete node type
+     *
+     * @return  the supplied copy with this node's parent and compilation stage
+     */
+    protected final <T extends AstNode> T copyTreeMetadataTo(T copy) {
+        copy.setParent(getParent());
+        copy.setStage(getStage());
+        return copy;
     }
 
     /**
@@ -646,6 +710,7 @@ public abstract class AstNode
      *                    {@link Severity#ERROR}, or {@link Severity#FATAL}
      * @param sCode       the error code that identifies the error message
      * @param aoParam     the parameters for the error message; may be null
+     *
      */
     public void log(ErrorListener errs, Severity severity, String sCode, Object... aoParam) {
         Source source = getSource();
@@ -742,6 +807,11 @@ public abstract class AstNode
      * @return true if the children got caught up; false if the catch-up aborted
      */
     protected boolean catchUpChildren(ErrorListener errs) {
+        return catchUpChildren(errs, InvocationBinding.Collector.NONE);
+    }
+
+    /** Catch up children using the enclosing compilation attempt's collector. */
+    protected boolean catchUpChildren(ErrorListener errs, InvocationBinding.Collector bindings) {
         // determine what stage we're trying to catch the children up to
         Stage stageTarget = getStage();
         if (!stageTarget.isTargetable()) {
@@ -781,7 +851,7 @@ public abstract class AstNode
         ErrorListener errsTemp = errs.branch(this);
         while (stageOldest.compareTo(stageTarget) < 0) {
             Stage    stageNext = stageOldest.nextTarget();
-            StageMgr mgrKids   = new StageMgr(listChildren, stageNext, errsTemp);
+            StageMgr mgrKids   = new StageMgr(listChildren, stageNext, errsTemp, bindings);
             for (int cTries = 0; !mgrKids.processComplete(); cTries++) {
                 if (errsTemp.isAbortDesired() || cTries > 20) {
                     mgrKids.logDeferredAsErrors(errsTemp);
@@ -1078,6 +1148,29 @@ public abstract class AstNode
             Set<MethodConstant>                  setConvert,
             Map<MethodConstant, MethodStructure> mapMethods,
             ErrorListener                        errs) {
+        collectMatchingMethods(ctx, typeTarget, infoTarget, setMethods, listExprArgs, fCall,
+                mapNamedExpr, atypeReturn, setIs, setConvert, mapMethods, errs, (signature, ordered) -> {});
+    }
+
+    /**
+     * Reuse ordinary argument fitting. The package-private observer lets partial-call queries copy
+     * tentative signatures and argument order without adding cursor-result policy to the fitter.
+     * The callback runs synchronously after a match is recorded in the supplied collections.
+     */
+    final void collectMatchingMethods(
+            Context                              ctx,
+            TypeConstant                         typeTarget,
+            TypeInfo                             infoTarget,
+            Set<MethodConstant>                  setMethods,
+            List<Expression>                     listExprArgs,
+            boolean                              fCall,
+            Map<String, Expression>              mapNamedExpr,
+            TypeConstant[]                       atypeReturn,
+            Set<MethodConstant>                  setIs,
+            Set<MethodConstant>                  setConvert,
+            Map<MethodConstant, MethodStructure> mapMethods,
+            ErrorListener                        errs,
+            BiConsumer<SignatureConstant, List<Expression>> matching) {
         ConstantPool  pool     = pool();
         int           cExprs   = listExprArgs == null ? 0 : listExprArgs.size();
         int           cReturns = atypeReturn  == null ? 0 : atypeReturn.length;
@@ -1286,6 +1379,7 @@ public abstract class AstNode
                 setIs.add(idMethod);
             }
             mapMethods.put(idMethod, method);
+            matching.accept(sigMethod, listArgs);
 
             if (fExact) {
                 return;
@@ -1859,7 +1953,8 @@ public abstract class AstNode
     }
 
     /**
-     * Collect fields by name.
+     * Collect fields by name. Nodes in another package of this compiler module grant access only
+     * to these explicitly registered child fields; their representation need not become public.
      *
      * @param clz    the class on which the fields exist
      * @param names  the field names
@@ -1886,6 +1981,14 @@ public abstract class AstNode
                                 + clzField.getSimpleName() + " on field "
                                 + clzTry.getSimpleName() + '.' + names[i]);
                     }
+                    if (!clzTry.getPackageName().equals(AstNode.class.getPackageName())
+                            && (!AstNode.class.isAssignableFrom(clz)
+                                || clz.getModule() != AstNode.class.getModule()
+                                || clzTry.getModule() != AstNode.class.getModule()
+                                || !field.trySetAccessible())) {
+                        throw new IllegalStateException("cannot access registered child field "
+                                + clzTry.getName() + '.' + names[i]);
+                    }
                     fields[i] = field;
                     continue NextField;
                 } catch (NoSuchFieldException e) {
@@ -1909,7 +2012,10 @@ public abstract class AstNode
     // ----- inner class: ChildIterator ------------------------------------------------------------
 
     /**
-     * Represents an Iterator that can also replace the most recently iterated element.
+     * Represents an Iterator that can also replace the most recently iterated element. Iterable
+     * is retained for compatibility with enhanced-for loops that mutate through this same cursor.
+     * Calling {@link #iterator()} does not restart traversal; readers can use
+     * {@link AstNode#childNodes()} for independent iterations.
      */
     public interface ChildIterator
             extends Iterable<AstNode>, Iterator<AstNode> {

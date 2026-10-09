@@ -35,10 +35,10 @@ import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.util.Handy.checkElementsNonNull;
+
 import static org.xvm.asm.ErrorListener.Silence.PROBE;
 import static org.xvm.asm.ErrorListener.silent;
-
-import static org.xvm.util.Handy.checkElementsNonNull;
 
 /**
  * Base class for all Ecstasy expressions.
@@ -97,6 +97,11 @@ import static org.xvm.util.Handy.checkElementsNonNull;
 public abstract class Expression
         extends AstNode {
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public Expression copyTree() {
+        return (Expression) super.copyTree();
+    }
 
     @Override
     protected boolean usesSuper() {
@@ -307,7 +312,7 @@ public abstract class Expression
      */
     protected TypeFit testFitMultiExhaustive(Context ctx, TypeConstant[] atypeRequired,
                                              ErrorListener errs) {
-        Expression exprTemp = (Expression) clone();
+        Expression exprTemp = copyTree();
         Context    ctxTemp  = ctx.enter();
         Expression exprNew  = exprTemp.validateMulti(ctxTemp, atypeRequired, errs);
         exprTemp.discard(true);

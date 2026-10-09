@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import java.util.stream.Collectors;
 
@@ -57,6 +58,7 @@ import org.xvm.asm.constants.TypeInfo.MethodKind;
 import org.xvm.asm.op.*;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
@@ -276,6 +278,28 @@ public class InvocationExpression
     @Override
     public long getEndPosition() {
         return lEndPos;
+    }
+
+    /**
+     * @return the expression supplying the method or function to invoke, excluding call arguments
+     */
+    public Expression getInvokedExpression() {
+        return expr;
+    }
+
+    /**
+     * Which method this call turned out to be a call to.
+     *
+     * <p>The name in a call does not resolve to anything on its own - `print` means nothing without
+     * knowing what it is being called on, and what the arguments are - so the answer is decided
+     * here, while the invocation is validated, and kept here. This only makes it readable from
+     * outside the compiler, which is what a host needs to answer "where is this method declared".
+     *
+     * @return the method this resolved to, or null if it never resolved to one, which covers a
+     *         call through a function reference as well as source that does not compile
+     */
+    public MethodConstant getResolvedMethod() {
+        return m_method == null ? null : m_method.getIdentityConstant();
     }
 
     @Override
@@ -603,6 +627,11 @@ public class InvocationExpression
 
     @Override
     protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs) {
+        InvocationBinding.Collector bindings = ctx.getInvocationBindings();
+        List<Expression> writtenArgs = bindings.isEnabled() ? List.copyOf(args) : List.of();
+        Optional<InvocationBinding> sourceBinding = Optional.empty();
+        Optional<InvocationBinding.FunctionCall> functionBinding = Optional.empty();
+        bindings.begin(this);
         // the reason for tracking success (fValid) is that we want to get as many things
         // validated as possible, but if some expressions didn't validate, we can't predictably find
         // the desired method or function (e.g. without a left expression providing validated type
@@ -807,6 +836,8 @@ public class InvocationExpression
                             : m_targetInfo.getTargetType();
                 }
 
+                Optional<List<InvocationBinding.Argument>> sourceArgs = bindings.isEnabled() && fCall && !m_fBjarne
+                        ? InvocationBinding.arguments(writtenArgs, listArgs) : Optional.empty();
                 TypeConstant[] atypeArgs = validateExpressions(ctx, listArgs, atypeParams, errs);
                 if (atypeArgs == null) {
                     return null;
@@ -873,6 +904,10 @@ public class InvocationExpression
                     }
                     if (!mapTypeParams.isEmpty()) {
                         sigMethod = sigMethod.resolveGenericTypes(pool, mapTypeParams::get);
+                    }
+                    if (sourceArgs.isPresent()) {
+                        sourceBinding = Optional.of(new InvocationBinding(method.getIdentityConstant(),
+                                sigMethod, sourceArgs.get()));
                     }
                     atypeResult = sigMethod.getRawReturns();
 
@@ -1013,6 +1048,24 @@ public class InvocationExpression
                 }
 
                 atypeResult = validateFunction(ctx, typeFn, cTypeParams, cDefaults, atypeRequired, errs);
+                if (bindings.isEnabled() && fCall && !(argMethod instanceof Register register && register.isSuper())) {
+                    TypeConstant functionType = typeFn;
+                    functionBinding = InvocationBinding.arguments(writtenArgs, writtenArgs)
+                            .map(arguments -> new InvocationBinding.FunctionCall(functionType, arguments));
+                }
+                if (bindings.isEnabled() && fCall && argMethod instanceof Register register &&
+                        register.isSuper()) {
+                    TypeInfo info = ctx.getThisType().ensureAccess(Access.PRIVATE).ensureTypeInfo(errs);
+                    MethodInfo method = info.getMethodById(ctx.getMethod().getIdentityConstant());
+                    if (method != null) {
+                        TypeConstant functionType = typeFn;
+                        sourceBinding = method.getSuperMethod(info).flatMap(target ->
+                                InvocationBinding.arguments(writtenArgs, writtenArgs).map(arguments ->
+                                        new InvocationBinding(target, pool.ensureSignatureConstant(
+                                                target.getName(), pool.extractFunctionParams(functionType),
+                                                pool.extractFunctionReturns(functionType)), arguments)));
+                    }
+                }
             }
         } else { // the expr is NOT a NameExpression
             // it has to either be a function or convertible to a function
@@ -1035,6 +1088,10 @@ public class InvocationExpression
                 }
 
                 atypeResult = validateFunction(ctx, typeFn, 0, 0, atypeRequired, errs);
+                if (bindings.isEnabled() && fCall) {
+                    functionBinding = InvocationBinding.arguments(writtenArgs, writtenArgs)
+                            .map(arguments -> new InvocationBinding.FunctionCall(typeFn, arguments));
+                }
             }
         }
 
@@ -1065,7 +1122,12 @@ public class InvocationExpression
                 }
             }
         }
-        return finishValidations(ctx, atypeRequired, atypeResult, TypeFit.Fit, null, errs);
+        Expression result = finishValidations(ctx, atypeRequired, atypeResult, TypeFit.Fit, null, errs);
+        if (result != null) {
+            sourceBinding.ifPresent(binding -> bindings.record(this, binding));
+            functionBinding.ifPresent(binding -> bindings.record(this, binding));
+        }
+        return result;
     }
 
     @Override

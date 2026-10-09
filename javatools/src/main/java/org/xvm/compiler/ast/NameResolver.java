@@ -1,5 +1,6 @@
 package org.xvm.compiler.ast;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -271,6 +272,7 @@ public class NameResolver
                 }
             }
             m_constantFirst = m_constant;
+            m_resolvedNames.add(m_constant);
 
             // first name has been resolved
             m_stage = Stage.RESOLVE_DOT_NAME;
@@ -323,6 +325,7 @@ public class NameResolver
 
                     case RESOLVED:
                         // the component resolved the name; advance to the next one
+                        m_resolvedNames.add(m_constant);
                         m_sName = m_iter.hasNext() ? m_iter.next() : null;
                         break;
 
@@ -564,12 +567,20 @@ public class NameResolver
 
         case RESOLVED:
             // the component resolved the name; advance to the next one
+            m_resolvedNames.add(m_constant);
             m_sName = m_iter.hasNext() ? m_iter.next() : null;
             return Result.RESOLVED;
 
         default:
             throw new IllegalStateException();
         }
+    }
+
+    /**
+     * @return resolved name segments in source order, without resuming resolution
+     */
+    public List<Constant> getResolvedNames() {
+        return List.copyOf(m_resolvedNames);
     }
 
     /**
@@ -811,6 +822,9 @@ public class NameResolver
      * is used to determine whether or not a virtual child name was fully qualified.
      */
     private Constant m_constantFirst;
+
+    /** Resolved prefixes in source order, retained even if a later segment cannot resolve. */
+    private final List<Constant> m_resolvedNames = new ArrayList<>();
 
     /**
      * The constant representing what the node has thus far resolved to.

@@ -1,5 +1,7 @@
 package org.xvm.compiler;
 
+import static java.util.Objects.requireNonNull;
+
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
@@ -9,8 +11,6 @@ import org.xvm.asm.constants.ModuleConstant;
 
 import org.xvm.compiler.ast.StageMgr;
 import org.xvm.compiler.ast.TypeCompositionStatement;
-
-import static java.util.Objects.requireNonNull;
 
 /**
  * A module compiler for Ecstasy code.
@@ -29,16 +29,21 @@ public class Compiler {
      * @param errs        the listener to log any errors to during the various phases of compilation
      */
     public Compiler(TypeCompositionStatement stmtModule, ErrorListener errs) {
+        this(stmtModule, errs, InvocationBinding.Collector.NONE);
+    }
+
+    /** Construct a compiler that records call facts in the supplied attempt-owned collector. */
+    public Compiler(TypeCompositionStatement stmtModule, ErrorListener errs,
+                    InvocationBinding.Collector bindings) {
         if (stmtModule == null) {
             throw new IllegalArgumentException("AST node for module required");
         }
         if (stmtModule.getCategory().getId() != Token.Id.MODULE) {
             throw new IllegalArgumentException("AST node for module is not a module statement");
         }
-        requireNonNull(errs, "errs");
-
         m_stmtModule = stmtModule;
-        m_errs       = errs;
+        f_errs       = requireNonNull(errs, "errs");
+        f_bindings   = requireNonNull(bindings, "bindings");
     }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -56,7 +61,7 @@ public class Compiler {
      */
     public ErrorListener getErrorListener() {
         validateCompiler();
-        return m_errs;
+        return f_errs;
     }
 
     /**
@@ -91,7 +96,7 @@ public class Compiler {
      * @return true if the compiler has decided to abort the process
      */
     public boolean isAbortDesired() {
-        return m_errs.isAbortDesired();
+        return f_errs.isAbortDesired();
     }
 
     // ----- public API ----------------------------------------------------------------------------
@@ -114,9 +119,9 @@ public class Compiler {
         if (getStage() == Stage.Initial) {
             setStage(Stage.Registering);
 
-            StageMgr mgr = new StageMgr(m_stmtModule, Stage.Registered, m_errs);
+            StageMgr mgr = new StageMgr(m_stmtModule, Stage.Registered, f_errs, f_bindings);
             if (!mgr.processComplete()) {
-                if (m_errs.hasSeriousErrors() || m_errs.isAbortDesired()) {
+                if (f_errs.hasSeriousErrors() || f_errs.isAbortDesired()) {
                     return null;
                 }
                 throw new CompilerException("failed to create module");
@@ -187,7 +192,7 @@ public class Compiler {
             if (!alreadyReached(Stage.Resolving)) {
                 // first time through: resolve starting from the module, and recurse down
                 setStage(Stage.Resolving);
-                m_mgr = new StageMgr(m_stmtModule, Stage.Resolved, m_errs);
+                m_mgr = new StageMgr(m_stmtModule, Stage.Resolved, f_errs, f_bindings);
             }
 
             if (fLastAttempt) {
@@ -231,7 +236,7 @@ public class Compiler {
             if (!alreadyReached(Stage.Validating)) {
                 // first time through: resolve starting from the module, and recurse down
                 setStage(Stage.Validating);
-                m_mgr = new StageMgr(m_stmtModule, Stage.Validated, m_errs);
+                m_mgr = new StageMgr(m_stmtModule, Stage.Validated, f_errs, f_bindings);
             }
 
             if (fLastAttempt) {
@@ -275,7 +280,7 @@ public class Compiler {
             if (!alreadyReached(Stage.Emitting)) {
                 // first time through: resolve starting from the module, and recurse down
                 setStage(Stage.Emitting);
-                m_mgr = new StageMgr(m_stmtModule, Stage.Emitted, m_errs);
+                m_mgr = new StageMgr(m_stmtModule, Stage.Emitted, f_errs, f_bindings);
             }
 
             if (fLastAttempt) {
@@ -285,10 +290,11 @@ public class Compiler {
             if (m_mgr.processComplete()) {
                 setStage(Stage.Emitted);
 
-                if (!m_errs.hasSeriousErrors()) {
-                    // "purge" the constant pool and do a final validation on the entire module structure
+                if (!f_errs.hasSeriousErrors()) {
+                    // "purge" the constant pool and do a final validation on the entire module
+                    // structure
                     m_structFile.reregisterConstants(true);
-                    m_structFile.validate(m_errs);
+                    m_structFile.validate(f_errs);
                 }
             }
         }
@@ -301,8 +307,8 @@ public class Compiler {
      * method will report any unresolved names as fatal errors.
      */
     public void logRemainingDeferredAsErrors() {
-        if (!m_errs.hasSeriousErrors()) {
-            m_mgr.logDeferredAsErrors(m_errs);
+        if (!f_errs.hasSeriousErrors()) {
+            m_mgr.logDeferredAsErrors(f_errs);
         }
     }
 
@@ -376,7 +382,10 @@ public class Compiler {
     /**
      * The ErrorListener to report errors to.
      */
-    private final ErrorListener m_errs;
+    private final ErrorListener f_errs;
+
+    /** Optional tooling output, confined to this compiler attempt. */
+    private final InvocationBinding.Collector f_bindings;
 
     /**
      * The FileStructure that this compiler is putting together in a series of passes.

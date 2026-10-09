@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 
 import org.xvm.asm.Argument;
@@ -55,6 +56,7 @@ import org.xvm.asm.op.Var_CN;
 import org.xvm.asm.op.Var_IN;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
@@ -106,6 +108,11 @@ public class StatementBlock
     }
 
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public StatementBlock copyTree() {
+        return (StatementBlock) super.copyTree();
+    }
 
     public List<Statement> getStatements() {
         return stmts;
@@ -300,7 +307,12 @@ public class StatementBlock
      * @return true if nothing occurred during the compilation that should stop further progress
      */
     public boolean compileMethod(Code code, ErrorListener errs) {
-        return compileMethod(new RootContext(this, code.getMethodStructure()), code, errs);
+        return compileMethod(code, errs, InvocationBinding.Collector.NONE);
+    }
+
+    /** Compile a method with the collector owned by its enclosing compilation attempt. */
+    public boolean compileMethod(Code code, ErrorListener errs, InvocationBinding.Collector bindings) {
+        return compileMethod(new RootContext(this, code.getMethodStructure(), bindings), code, errs);
     }
 
     /**
@@ -379,6 +391,7 @@ public class StatementBlock
                             Assignment asnVar = ctx.getVarAssignment(sName);
                             Register   regVal = param.deref(regVar, method);
 
+                            exprLambda.bindSourceParameter(param.getIndex(), regVal);
                             ctx.ensureNameMap().put(sName, regVal); // shadow using the capture
                             ctx.setVarAssignment(sName, asnVar);    // ... and copy its assignment
                         }
@@ -594,10 +607,21 @@ public class StatementBlock
     public static class RootContext
             extends Context {
         public RootContext(StatementBlock stmt, MethodStructure method) {
+            this(stmt, method, InvocationBinding.Collector.NONE);
+        }
+
+        public RootContext(StatementBlock stmt, MethodStructure method,
+                           InvocationBinding.Collector bindings) {
             super(null, false);
-            f_stmt   = stmt;
-            f_method = method;
-            f_holder = new AstHolder(); // temporary
+            f_stmt     = stmt;
+            f_method   = method;
+            f_holder   = new AstHolder(); // temporary
+            f_bindings = Objects.requireNonNull(bindings, "bindings");
+        }
+
+        @Override
+        public InvocationBinding.Collector getInvocationBindings() {
+            return f_bindings;
         }
 
         @Override
@@ -871,6 +895,7 @@ public class StatementBlock
                     Register     reg    = createRegister(type, sName);
                     mapByName.put(sName, reg);
                     ensureCaptureVars().put(sName, reg);
+                    exprNew.bindSourceCapture(sName, reg);
 
                     // TODO REVIEW CP
                     //      we need to know the definite assignment of the variable at the point
@@ -1284,6 +1309,20 @@ public class StatementBlock
                     }
                     mapByName.put(sName, reg);
 
+                    // Retain the binding on the source parameter for hosts reading the validated
+                    // tree. Generated methods and captured parameters may have no source parameter.
+                    if (!param.isTypeParameter() &&
+                            f_stmt.getParent() instanceof MethodDeclarationStatement declaration &&
+                            declaration.getComponent() == method && declaration.params != null) {
+                        int index = i - method.getTypeParamCount();
+                        if (index < declaration.params.size()) {
+                            declaration.params.get(index).setResolvedTarget(reg);
+                        }
+                    } else if (f_stmt.getParent() instanceof LambdaExpression lambda &&
+                            lambda.getLambda() == method) {
+                        lambda.bindSourceParameter(i, reg);
+                    }
+
                     // the variable has been definitely assigned, but not multiple times (i.e. it's
                     // still effectively final)
                     mapAssigned.put(sName, Assignment.AssignedOnce);
@@ -1454,11 +1493,12 @@ public class StatementBlock
             return map;
         }
 
-        private final StatementBlock  f_stmt;
-        private final MethodStructure f_method;
-        private final AstHolder       f_holder;
-        private       Context         m_ctxValidating;
-        private       boolean         m_fEmitting;
+        private final StatementBlock              f_stmt;
+        private final MethodStructure             f_method;
+        private final AstHolder                   f_holder;
+        private final InvocationBinding.Collector f_bindings;
+        private       Context                     m_ctxValidating;
+        private       boolean                     m_fEmitting;
 
         /**
          * A lazily created mapping of captured variables that is collected during the validation

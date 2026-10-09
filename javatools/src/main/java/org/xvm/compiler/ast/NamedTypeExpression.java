@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
@@ -40,10 +41,10 @@ import org.xvm.compiler.Token;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.compiler.Lexer.isValidQualifiedModule;
+
 import static org.xvm.asm.ErrorListener.Silence.PROBE;
 import static org.xvm.asm.ErrorListener.silent;
-
-import static org.xvm.compiler.Lexer.isValidQualifiedModule;
 
 /**
  * A type expression specifies a named type with optional parameters.
@@ -156,6 +157,39 @@ public class NamedTypeExpression
             as[i] = list.get(i).getValueText();
         }
         return as;
+    }
+
+    /**
+     * @return the final name token, excluding qualifiers and type arguments, or null if absent
+     */
+    public Token getNameToken() {
+        return names == null || names.isEmpty() ? null : names.getLast();
+    }
+
+    /** A written segment and its resolved target, or null when resolution did not reach it. */
+    public record NameBinding(Token name, Constant target) {}
+
+    /**
+     * @return each written name's binding, without initiating or resuming name resolution
+     */
+    public List<NameBinding> getNameBindings() {
+        var tokens = new ArrayList<Token>();
+        collectNameTokens(tokens);
+        List<Constant> resolved = m_resolver == null ? List.of() : m_resolver.getResolvedNames();
+        return IntStream.range(0, tokens.size()).mapToObj(i -> {
+            Constant target = i < resolved.size() ? resolved.get(i)
+                    : i == tokens.size() - 1 ? m_constId : null;
+            return new NameBinding(tokens.get(i), target);
+        }).toList();
+    }
+
+    private void collectNameTokens(List<Token> tokens) {
+        if (left instanceof NamedTypeExpression expression) {
+            expression.collectNameTokens(tokens);
+        }
+        if (names != null) {
+            tokens.addAll(names);
+        }
     }
 
     public Constant getIdentityConstant() {
@@ -702,7 +736,7 @@ public class NamedTypeExpression
      * Considering the containing class, calculate a type for the specified target constant in the
      * absence of explicitly provided type parameters.
      *
-     * Note, the returned type should not be parameterized; it will be done later by the caller.
+     * <p>Note, the returned type should not be parameterized; it will be done later by the caller.
      *
      * @return a resulting type
      */
@@ -975,11 +1009,11 @@ public class NamedTypeExpression
     // ----- AstNode methods -----------------------------------------------------------------------
 
     @Override
-    public AstNode clone() {
-        NamedTypeExpression that = (NamedTypeExpression) super.clone();
+    public NamedTypeExpression copyTree() {
+        NamedTypeExpression that = (NamedTypeExpression) super.copyTree();
         // the "m_exprDynamic" is not a child and has to be handled manually
         if (m_exprDynamic != null) {
-            that.m_exprDynamic = (NameExpression) m_exprDynamic.clone();
+            that.m_exprDynamic = m_exprDynamic.copyTree();
         }
         return that;
     }
