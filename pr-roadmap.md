@@ -1,5 +1,61 @@
 # Compiler foundations and LSP PR roadmap
 
+<a id="outside-lang-comparison"></a>
+
+## Outside-`lang/` comparison branch
+
+**Comparison branch only — no PR has been opened.** The full-reference branch also has no PR. This extra view isolates the changes to established compiler and build code so reviewers can examine them without the server/editor implementation. It does not replace or close any existing PR.
+
+Branch: `errs/compiler-foundations-reference-20261009` at `cfc0d06d4`, based directly on master `da07a0be8`.
+
+[Open the 165-file GitHub diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...cfc0d06d451060da90df8399a31ea61554a26fb5) · [Browse the branch](https://github.com/xtclang/xvm/tree/errs/compiler-foundations-reference-20261009) · [Compare with the full compiler-backed LSP](https://github.com/xtclang/xvm/compare/master...errs/full-testable-lsp-20261009).
+
+### Scope and purpose
+
+This is the exact outside-`lang/` portion of the full reference at `c63a56010`: **165 files, comprising 109 modified files and 56 new files; +13,084/−1,340 lines**. Every included file is byte-for-byte identical to the full reference. The entire `lang/` tree remains identical to the recorded master baseline; it is not deleted. No planning documents or generated build outputs were added to this branch.
+
+The combined scope includes repository read failures, embedding and diagnostic ownership, cancellation and compilation outcomes, typed AST copying and semantic facts, incomplete-source/cursor/declaration analysis, compiler correctness fixes, transient-local retention, Gradle compiler-input export, and the shared build changes needed by the complete product. This shows how much of the final implementation touches the established compiler and build outside the language-tooling tree.
+
+### Relationship to the other review units
+
+The comparison includes the applicable code from #683, #685, #686, #687, #688 and #689, plus the prepared semantic-facts and partial-analysis branches and shared product build changes. Those are overlapping views of the same implementation, not additional independent changes to merge after this branch. The compiler prerequisites are included in this comparison; its remaining dependencies are the omitted language-side consumers described below.
+
+**This exact comparison is not independently mergeable as it stands.** Removing paths by directory does not remove dependencies between those paths. Before turning this into a standalone foundation PR, defer or adapt the coupled build settings and test resources, or include their matching language-side changes. The currently prepared comparison deliberately preserves the final file contents so its diff remains faithful to the full reference.
+
+### Dependencies exposed by the directory split
+
+- `gradle.properties` enables language builds and selects the compiler adapter, while master's unchanged language tree still contains the placeholder compiler adapter.
+- `build-logic/common-plugins/src/main/kotlin/IntellijRunIdeSupport.kt` changes log-helper properties to the new directory-based interface. The unchanged master IntelliJ build still calls `lspLogFile` and `logFile`; default Gradle configuration fails at those calls.
+- `plugin/src/test/java/org/xtclang/plugin/XtcLspModelTest.java` uses the importer resource `lang/gradle/compiler-model.init.gradle`. The strict path filter omits that file, so the composite-import test fails to load it.
+- `.github/workflows/commit.yml` adds the packaged stdio task and compiler test-suite checks supplied by the full language-side changes. Those checks cannot be treated as a passing CI gate on this directory-filtered branch.
+
+These are extraction boundaries, not newly introduced differences from the tested full reference. The complete reference retains the matching consumers and resources.
+
+### Files by area
+
+| Area | Existing files modified | New files added | Total |
+| --- | ---: | ---: | ---: |
+| `javatools/` — compiler, embedding and Java regressions | 99 | 48 | 147 |
+| `plugin/` — Gradle compiler-input export | 3 | 4 | 7 |
+| `build-logic/` — log handling, report retention and tests | 1 | 3 | 4 |
+| `manualTests/` — Boolean-effects fixture and suite registration | 1 | 1 | 2 |
+| `javatools_utils/` — transient-local retention | 1 | 0 | 1 |
+| `.github/` — compiler CI checks | 1 | 0 | 1 |
+| `gradle/` — dependency versions and shared XDK library bundle | 1 | 0 | 1 |
+| `xdk/` — use the shared library bundle | 1 | 0 | 1 |
+| Root `gradle.properties` — build defaults and memory | 1 | 0 | 1 |
+| **Total outside `lang/`** | **109** | **56** | **165** |
+
+The complete file-by-file lists appear below in [existing files modified](#full-reference-modified-files) and the final [new files added](#full-reference-new-files) section. For this comparison, read the Compiler and embedding API and Gradle plugin subsections, together with the outside-`lang/` entries in Shared build, CI, runtime regression and documentation. The per-file contents and line counts are identical in both comparisons.
+
+### Validation of this comparison
+
+- XDK distribution build passed with `-PincludeBuildLang=false -PincludeBuildAttachLang=false`, and the configuration cache was stored. Root `spotlessCheck` passed.
+- Fresh Java compiler tests: **541 passed, 42 skipped, zero failures/errors**. Utility tests: **118 passed, 2 skipped, zero failures/errors**.
+- Fresh Gradle plugin tests: **49 passed, 10 skipped, 1 failure**. The failure is the composite-import test's missing excluded importer resource. It passed in the complete reference, where that resource exists.
+- Default `./gradlew help` reproduced the two unresolved log-helper properties in the unchanged master IntelliJ build. The comparison therefore does not claim default-build or standalone-merge readiness.
+- Verified the exact 165-path scope, file contents against the full reference, the unchanged `lang/` tree, and `git diff --check`. [Local verification receipt and archived JUnit XML](build/reviews/compiler-foundations-reference-20261009/validation.json).
+
 <!-- full-reference-inventory-summary:start -->
 ## Complete reference branch: file inventory
 
@@ -26,7 +82,7 @@ Of these files, **415 are test sources** and **9 are shared/runtime fixtures**. 
 The foundation comparison contains 165 files and the product comparison contains 650 files. Three paths occur in both comparisons, so the combined inventory contains **165 + 650 − 3 = 812 unique paths**. Files are listed once below, using their final status against master.
 <!-- full-reference-inventory-summary:end -->
 
-Updated **2026-10-09**. The agreed strategy is to review complete compiler/build capabilities first, then the complete LSP and editor product. There are **four existing open PRs** and **five prepared review branches with GitHub comparison links**. No PRs have been opened for those five branches; they are available for inspection before submission.
+Updated **2026-10-09**. The agreed strategy is to review complete compiler/build capabilities first, then the complete LSP and editor product. There are **six existing open PRs** and **three prepared review branches awaiting PR submission**. The full reference and outside-`lang/` reference are additional comparison branches only; neither has a PR.
 
 Recovery, cursor queries, incomplete-call/constructor fitting and declaration/header analysis are **one combined partial-analysis PR**. The LSP server, IntelliJ plugin and VS Code extension are **one product PR** after their foundations. The Gradle exporter and Boolean operand-effects correction are independent changes that can land against master.
 
@@ -34,25 +90,25 @@ The LSP needs more than the initial embedding API: #685 provides the host compil
 
 ## Current review branches and merge order
 
-These are the five proposed PRs. Counts are incremental against each recorded comparison base, excluding inherited work. Each title links to its description, prerequisites, file summary, validation evidence and complete clickable file inventory below.
+These are the five extracted review units; the Gradle exporter and Boolean correction are now published as #688 and #689, while the other three still await submission. Counts are incremental against each recorded comparison base, excluding inherited work. Each title links to its description, prerequisites, file summary, validation evidence and complete clickable file inventory below.
 
-| Proposed PR | Files | Must merge first | GitHub comparison |
+| Review unit | Files | Must merge first | GitHub comparison |
 | --- | ---: | --- | --- |
 | [Compilation-owned syntax and semantic facts](#semantic-facts) | **36** | #685 and #687; #683 through #685. | [View diff](https://github.com/xtclang/xvm/compare/errs/compiler-review-base-20261009...errs/compiler-semantic-facts-20261009) |
 | [Incomplete-source, cursor and declaration analysis](#partial-analysis) | **40** | Semantic facts, inheriting #683/#685/#687. | [View diff](https://github.com/xtclang/xvm/compare/errs/compiler-semantic-facts-20261009...errs/compiler-partial-analysis-20261009) |
-| [Gradle compiler inputs for tooling](#gradle-model) | **8** | **None — independent against master.** | [View diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...errs/gradle-project-model-20261009) |
-| [Boolean operand-effects correction](#boolean-effects) | **2** | **None — independent against master.** | [View diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...errs/compiler-conditional-effects-20261009) |
-| [Compiler-backed LSP and editor integrations](#lsp-product) | **648** | Semantic facts, partial analysis, Gradle model and #686; inherits #683/#685/#687. Preserve or reconcile the Boolean fix included in its tested base. | [View diff](https://github.com/xtclang/xvm/compare/errs/lsp-review-base-20261009...errs/lsp-editors-20261009) |
+| [Gradle compiler inputs for tooling — #688](#gradle-model) | **8** | **None — independent against master.** | [View diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...errs/gradle-project-model-20261009) |
+| [Boolean operand-effects correction — #689](#boolean-effects) | **3** | **None — independent against master.** | [View diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...errs/compiler-conditional-effects-20261009) |
+| [Compiler-backed LSP and editor integrations](#lsp-product) | **650** | Semantic facts, partial analysis, Gradle model and #686; inherits #683/#685/#687. Preserve or reconcile the Boolean fix included in its tested base. | [View diff](https://github.com/xtclang/xvm/compare/errs/lsp-review-base-20261009...errs/lsp-editors-20261009) |
 
 **Compiler merge sequence:** #683 → #685; #685 + #687 → semantic facts → partial analysis → LSP/editor product.
 
 **Independent work:** #686, #687, the Gradle exporter and the Boolean correction can progress against master without waiting for the embedding stack. The product waits for the applicable foundations above. The Boolean correction is part of its prepared compiler baseline, not an API prerequisite.
 
-**Next compiler PR to submit, when authorized:** compilation-owned syntax and semantic facts. The two independent prepared branches can be submitted alongside it. Later stacked comparisons can be reviewed now; their final bases must be reconciled against the actual merged prerequisites before landing. No submission is authorized by this document itself.
+**Next compiler PR to submit, when authorized:** compilation-owned syntax and semantic facts. The two independent branches have already been submitted as #688 and #689. Later stacked comparisons can be reviewed now; their final bases must be reconciled against the actual merged prerequisites before landing. No submission is authorized by this document itself.
 
 ## Existing open PRs
 
-GitHub state checked on 2026-10-09: all four are open and target `master`. These PRs already exist; they are not additional proposed branches to create.
+GitHub state checked while preparing the comparison: all six are open and target `master`. These PRs already exist; the two comparison branches above are not PR submissions.
 
 | Existing PR | Purpose | Prerequisites and current revision |
 | --- | --- | --- |
@@ -60,6 +116,8 @@ GitHub state checked on 2026-10-09: all four are open and target `master`. These
 | [#685 — Compiler embedding and diagnostic ownership](https://github.com/xtclang/xvm/pull/685) | One complete host-compilation lifecycle: explicit listeners, suppression and reporting scopes, speculative attempts, restoration, diagnostic replay, cancellation, source snapshots, outcomes and partial progress. | **#683.** `errs/embedding-api-combined-20261009` at `c1a98a677`, already rebased over merged #684. Reconcile against #683 when it lands. |
 | [#686 — Empty transient-thread-local retention](https://github.com/xtclang/xvm/pull/686) | Prevent empty thread-local probes from retaining short-lived compiler state in long-lived workers. | **None.** `errs/transient-locals-20261009` at `81f032cc0`. Two files; standalone transient-local test removed as requested, compiler-consumer coverage retained. |
 | [#687 — Compiler types through fitting and code generation](https://github.com/xtclang/xvm/pull/687) | Preserve bound generic callable types, argument-fit failures and concrete atomic result/receiver types in emitted and serialized code. | **None.** `errs/compiler-type-correctness-20261009` at `f29cf28c0`. Six files; semantic facts builds on these corrected compiler decisions. |
+| [#688 — Evaluated Gradle compiler inputs](https://github.com/xtclang/xvm/pull/688) | Export evaluated source sets, dependency edges and resource paths for tooling. | **None.** `errs/gradle-project-model-20261009` at `7a19d684c`; eight files. |
+| [#689 — Boolean operand effects](https://github.com/xtclang/xvm/pull/689) | Preserve required operand evaluation even when a Boolean result is constant; include the 22-check runtime regression in the standard suite. | **None.** `errs/compiler-conditional-effects-20261009` at `6d550fea1`; three files. |
 
 **Merged/superseded history:** #677 and #679 are merged foundations. #678 merged as documentation only; its withdrawn owner-pool fallback must not return. #684 is merged and its diagnostic fixes must remain. #680–#682 were closed and superseded by #685; do not reopen them or split the combined embedding lifecycle back into those historical pieces.
 
@@ -67,7 +125,7 @@ GitHub state checked on 2026-10-09: all four are open and target `master`. These
 
 The recorded master baseline is `da07a0be8`, which includes #684. The compiler comparison base `errs/compiler-review-base-20261009` combines #685 and #687 and inherits #683. The product comparison base `errs/lsp-review-base-20261009` combines the partial-analysis stack, Gradle exporter, #686 and the Boolean correction. **These two base refs are comparison aids, not PRs to submit.**
 
-All five review branches and both comparison bases are published. The Boolean branch has a later two-line console-output removal in its local worktree, already committed to the integration branch; its GitHub comparison still shows the earlier fixture. Its section calls out that difference explicitly.
+All five review branches and both comparison bases are published. The Boolean branch now includes the console-free fixture and standard runtime-suite registration. The LSP review branch and full reference both point to `c63a56010`; their trees are identical. The outside-`lang/` comparison at `cfc0d06d4` is published separately. Neither comparison has a PR.
 
 The extraction source was preserved at `errs/review-source-20261009` (`c9d16c50d`). Subsequent integration synchronization is committed and pushed as `374d9c16e` on `lagergren/errs`, including the new compiler-consumer tests and roadmap. Nothing was removed from the integration implementation merely to simplify a review branch. Remaining differences requiring a disposition are listed at the end.
 
@@ -271,7 +329,7 @@ The combined API must cover UTF-16 cursor positions, unsaved module members, bou
 
 Branch `errs/gradle-project-model-20261009` at `7a19d684c`; base `da07a0be8525962391f7e46215e4a8f277bd0b14` at `da07a0be8`.
 
-[Open this branch in GitHub’s compare view](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...errs/gradle-project-model-20261009). [Full local patch](build/reviews/remaining-branches-20261009/gradle-model.patch). No PR has been opened.
+[Open this branch in GitHub’s compare view](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...errs/gradle-project-model-20261009). [Full local patch](build/reviews/remaining-branches-20261009/gradle-model.patch). Published as [#688](https://github.com/xtclang/xvm/pull/688).
 
 ### Proposed PR description
 
@@ -335,9 +393,9 @@ Review the exported model against a real multi-project/composite consumer, inclu
 
 ## Boolean operand-effects correction
 
-Branch `errs/compiler-conditional-effects-20261009` at `4ad9f29f9`; base `da07a0be8525962391f7e46215e4a8f277bd0b14` at `da07a0be8`.
+Branch `errs/compiler-conditional-effects-20261009` at `6d550fea1`; base `da07a0be8525962391f7e46215e4a8f277bd0b14` at `da07a0be8`.
 
-[Open this branch in GitHub’s compare view](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...errs/compiler-conditional-effects-20261009). [Full local patch](build/reviews/remaining-branches-20261009/conditional-effects.patch). No PR has been opened.
+[Open this branch in GitHub’s compare view](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...errs/compiler-conditional-effects-20261009). [Full local patch](build/reviews/remaining-branches-20261009/conditional-effects.patch). Published as [#689](https://github.com/xtclang/xvm/pull/689).
 
 ### Proposed PR description
 
@@ -370,11 +428,12 @@ The production change is confined to `CondOpExpression.java`. `conditionalEffect
 | --- | ---: | --- |
 | `javatools/src/main/java/org/xvm/compiler/ast/CondOpExpression.java` | 1 | Preserve operand evaluation and correct operand assignment classification. |
 | `manualTests/src/main/x/conditionalEffects.x` | 1 | Runtime assertions for constant-result Boolean expressions and control cases. |
-| **Total** | **2** | No `lang/` or Gradle plugin changes. |
+| `manualTests/build.gradle.kts` | 1 | Register the regression in the standard runtime suite. |
+| **Total** | **3** | No `lang/` or Gradle plugin changes. |
 
-**Review-branch follow-up:** the console-free fixture is mirrored in `lagergren/errs`. The Boolean review worktree also contains the two-line removal, but that review-branch update is not yet committed or pushed. The GitHub comparison and line counts below still describe its published commit; locally the fixture is 79 lines and the branch change is +93/−1. All assertions are unchanged.
+**Synchronization:** the console-free fixture and its runtime-suite registration are committed and pushed on the Boolean branch and are present in the integration and complete-reference branches.
 
-**2 files; +95/−1.** The TestConditionalEffects runtime fixture passed all 22 checks. Formatting passed.
+**3 files; +94/−1.** The TestConditionalEffects runtime fixture passed all 22 checks. Formatting passed.
 
 ### Review and acceptance focus
 
@@ -386,7 +445,8 @@ The runtime fixture verifies exactly-once left-operand evaluation for both Boole
 | Status | File | + / − |
 | --- | --- | ---: |
 | M | [javatools/src/main/java/org/xvm/compiler/ast/CondOpExpression.java](/private/tmp/xvm-compiler-conditional-effects-20261009/javatools/src/main/java/org/xvm/compiler/ast/CondOpExpression.java) | 14 / 1 |
-| A | [manualTests/src/main/x/conditionalEffects.x](/private/tmp/xvm-compiler-conditional-effects-20261009/manualTests/src/main/x/conditionalEffects.x) | 81 / 0 |
+| M | [manualTests/build.gradle.kts](/private/tmp/xvm-compiler-conditional-effects-20261009/manualTests/build.gradle.kts) | 1 / 0 |
+| A | [manualTests/src/main/x/conditionalEffects.x](/private/tmp/xvm-compiler-conditional-effects-20261009/manualTests/src/main/x/conditionalEffects.x) | 79 / 0 |
 
 </details>
 
@@ -394,7 +454,7 @@ The runtime fixture verifies exactly-once left-operand evaluation for both Boole
 
 ## Compiler-backed LSP and editor integrations
 
-Branch `errs/lsp-editors-20261009` at `2dc91cf70`; base `errs/lsp-review-base-20261009` at `3f8aad03e`.
+Branch `errs/lsp-editors-20261009` at `c63a56010`; base `errs/lsp-review-base-20261009` at `3f8aad03e`.
 
 [Open this branch in GitHub’s compare view](https://github.com/xtclang/xvm/compare/errs/lsp-review-base-20261009...errs/lsp-editors-20261009). [Full local patch](build/reviews/remaining-branches-20261009/lsp-editors.patch). No PR has been opened.
 
@@ -425,7 +485,7 @@ This branch intentionally delivers the complete server/editor product after the 
 
 #### Changes
 
-The largest areas are `lang/lsp-server`, `lang/intellij-plugin` and `lang/vscode-extension`. Supporting changes update grammar/highlighting generation, shared fixtures, build/test integration and XDK library packaging. Focused consumer tests prove that the extracted product compiles against the extracted compiler APIs; the full native-editor acceptance run and complete product suite remain required before claiming release acceptance.
+The largest areas are `lang/lsp-server`, `lang/intellij-plugin` and `lang/vscode-extension`. Supporting changes update grammar/highlighting generation, shared fixtures, build/test integration and XDK library packaging. Focused consumer tests prove that the extracted product compiles against the extracted compiler APIs. The complete-reference validation now includes the backend/protocol suite and both native editors; the remaining native failures and partial cases are listed below.
 
 ### Files changed
 
@@ -437,10 +497,10 @@ The largest areas are `lang/lsp-server`, `lang/intellij-plugin` and `lang/vscode
 | `lang/dsl` | 15 | Grammar/highlighting model and generators with their tests. |
 | `lang/test-fixtures` | 8 | Shared compiler/editor/highlighting/workload fixtures. |
 | Other `lang/` files | 7 | Language build/docs, generated TextMate example, workload script and Tree-sitter build/docs. |
-| Outside `lang/` | 8 | CI workflow, four common build helpers, root Gradle properties/version catalog and XDK packaging. |
-| **Total** | **648** | Incremental product changes; compiler/Gradle prerequisites are excluded from this comparison. |
+| Outside `lang/` | 10 | CI workflow, four common build helpers, root Gradle properties/version catalog, XDK packaging and two runtime-fixture/suite updates. |
+| **Total** | **650** | Incremental product changes; compiler/Gradle prerequisites are excluded from this comparison. |
 
-**648 files; +110,180/−5,375.** 123 focused adapter and direct-API tests passed with no skips. The server, IntelliJ plugin and their test sources compile; VS Code TypeScript compilation passes. Root/server/IntelliJ formatting checks pass. Full native editor acceptance and the complete product suite have not been rerun for this extracted branch.
+**650 files; +109,469/−5,383.** The tree is identical to the tested full reference. Backend/protocol validation: 2,257 tests passed with two disabled; 82 packaged stdio tests passed. IntelliJ native acceptance: 282 feature cases passed and two are partial, with zero IDE failures; all separate lifecycle/settings modes passed. VS Code: 279 native cases passed and five failed (two Explorer/Undo cases and three optional color-picker cases); 55 smoke tests and all separate lifecycle/settings modes passed. Root/language formatting, 1,032 parser-corpus files and both plugin packages passed. [Complete validation receipt](build/reviews/full-testable-lsp-20261009/validation-summary.json).
 
 ### Review and acceptance focus
 
@@ -456,11 +516,11 @@ Before release acceptance, run the packaged server and both native editor paths.
 | A | [build-logic/common-plugins/src/main/kotlin/PruneTestReportsTask.kt](/private/tmp/xvm-lsp-editors-20261009/build-logic/common-plugins/src/main/kotlin/PruneTestReportsTask.kt) | 86 / 0 |
 | A | [build-logic/common-plugins/src/test/kotlin/ServerLogTailsTest.kt](/private/tmp/xvm-lsp-editors-20261009/build-logic/common-plugins/src/test/kotlin/ServerLogTailsTest.kt) | 51 / 0 |
 | A | [build-logic/common-plugins/src/test/kotlin/TestReportRetentionTest.kt](/private/tmp/xvm-lsp-editors-20261009/build-logic/common-plugins/src/test/kotlin/TestReportRetentionTest.kt) | 70 / 0 |
-| M | [gradle.properties](/private/tmp/xvm-lsp-editors-20261009/gradle.properties) | 13 / 10 |
+| M | [gradle.properties](/private/tmp/xvm-lsp-editors-20261009/gradle.properties) | 14 / 11 |
 | M | [gradle/libs.versions.toml](/private/tmp/xvm-lsp-editors-20261009/gradle/libs.versions.toml) | 16 / 2 |
-| M | [lang/README.md](/private/tmp/xvm-lsp-editors-20261009/lang/README.md) | 49 / 4 |
+| M | [lang/README.md](/private/tmp/xvm-lsp-editors-20261009/lang/README.md) | 35 / 5 |
 | M | [lang/build.gradle.kts](/private/tmp/xvm-lsp-editors-20261009/lang/build.gradle.kts) | 60 / 43 |
-| M | [lang/doc/manual-test-plan.md](/private/tmp/xvm-lsp-editors-20261009/lang/doc/manual-test-plan.md) | 3207 / 97 |
+| M | [lang/doc/manual-test-plan.md](/private/tmp/xvm-lsp-editors-20261009/lang/doc/manual-test-plan.md) | 2,799 / 101 |
 | M | [lang/dsl/src/main/kotlin/org/xtclang/tooling/LanguageModelCli.kt](/private/tmp/xvm-lsp-editors-20261009/lang/dsl/src/main/kotlin/org/xtclang/tooling/LanguageModelCli.kt) | 4 / 4 |
 | M | [lang/dsl/src/main/kotlin/org/xtclang/tooling/XtcLanguage.kt](/private/tmp/xvm-lsp-editors-20261009/lang/dsl/src/main/kotlin/org/xtclang/tooling/XtcLanguage.kt) | 60 / 16 |
 | M | [lang/dsl/src/main/kotlin/org/xtclang/tooling/generators/EmacsGenerator.kt](/private/tmp/xvm-lsp-editors-20261009/lang/dsl/src/main/kotlin/org/xtclang/tooling/generators/EmacsGenerator.kt) | 16 / 8 |
@@ -477,14 +537,14 @@ Before release acceptance, run the packaged server and both native editor paths.
 | M | [lang/dsl/src/test/kotlin/org/xtclang/tooling/DslPowerShowcaseTest.kt](/private/tmp/xvm-lsp-editors-20261009/lang/dsl/src/test/kotlin/org/xtclang/tooling/DslPowerShowcaseTest.kt) | 4 / 1 |
 | M | [lang/dsl/src/test/kotlin/org/xtclang/tooling/LanguageModelTest.kt](/private/tmp/xvm-lsp-editors-20261009/lang/dsl/src/test/kotlin/org/xtclang/tooling/LanguageModelTest.kt) | 30 / 11 |
 | M | [lang/generated-examples/xtc.tmLanguage.json](/private/tmp/xvm-lsp-editors-20261009/lang/generated-examples/xtc.tmLanguage.json) | 1 / 1 |
-| M | [lang/intellij-plugin/README.md](/private/tmp/xvm-lsp-editors-20261009/lang/intellij-plugin/README.md) | 323 / 16 |
-| M | [lang/intellij-plugin/TESTING.md](/private/tmp/xvm-lsp-editors-20261009/lang/intellij-plugin/TESTING.md) | 240 / 38 |
+| M | [lang/intellij-plugin/README.md](/private/tmp/xvm-lsp-editors-20261009/lang/intellij-plugin/README.md) | 199 / 17 |
+| M | [lang/intellij-plugin/TESTING.md](/private/tmp/xvm-lsp-editors-20261009/lang/intellij-plugin/TESTING.md) | 139 / 37 |
 | M | [lang/intellij-plugin/build.gradle.kts](/private/tmp/xvm-lsp-editors-20261009/lang/intellij-plugin/build.gradle.kts) | 120 / 10 |
 | A | [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/CachedIdeInstaller.kt](/private/tmp/xvm-lsp-editors-20261009/lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/CachedIdeInstaller.kt) | 55 / 0 |
 | A | [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ClientDiagnostics.kt](/private/tmp/xvm-lsp-editors-20261009/lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ClientDiagnostics.kt) | 151 / 0 |
 | A | [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ClientProtocol.kt](/private/tmp/xvm-lsp-editors-20261009/lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ClientProtocol.kt) | 216 / 0 |
 | A | [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ClientTrace.kt](/private/tmp/xvm-lsp-editors-20261009/lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ClientTrace.kt) | 195 / 0 |
-| A | [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/CompilerPlaybook.kt](/private/tmp/xvm-lsp-editors-20261009/lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/CompilerPlaybook.kt) | 1989 / 0 |
+| A | [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/CompilerPlaybook.kt](/private/tmp/xvm-lsp-editors-20261009/lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/CompilerPlaybook.kt) | 1,989 / 0 |
 | A | [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/CompilerPlaybookTest.kt](/private/tmp/xvm-lsp-editors-20261009/lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/CompilerPlaybookTest.kt) | 385 / 0 |
 | A | [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/CompilerSettingsPage.kt](/private/tmp/xvm-lsp-editors-20261009/lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/CompilerSettingsPage.kt) | 27 / 0 |
 | A | [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/CompletionActions.kt](/private/tmp/xvm-lsp-editors-20261009/lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/CompletionActions.kt) | 219 / 0 |
@@ -509,7 +569,7 @@ Before release acceptance, run the packaged server and both native editor paths.
 | A | [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ParityLibrarySettings.kt](/private/tmp/xvm-lsp-editors-20261009/lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ParityLibrarySettings.kt) | 131 / 0 |
 | A | [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ParityModules.kt](/private/tmp/xvm-lsp-editors-20261009/lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ParityModules.kt) | 271 / 0 |
 | A | [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ParityNavigation.kt](/private/tmp/xvm-lsp-editors-20261009/lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ParityNavigation.kt) | 329 / 0 |
-| A | [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ParityPlatform.kt](/private/tmp/xvm-lsp-editors-20261009/lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ParityPlatform.kt) | 1225 / 0 |
+| A | [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ParityPlatform.kt](/private/tmp/xvm-lsp-editors-20261009/lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ParityPlatform.kt) | 1,225 / 0 |
 | A | [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ParityProgress.kt](/private/tmp/xvm-lsp-editors-20261009/lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ParityProgress.kt) | 123 / 0 |
 | A | [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ParityReferenceLenses.kt](/private/tmp/xvm-lsp-editors-20261009/lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ParityReferenceLenses.kt) | 77 / 0 |
 | A | [lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ParityReliability.kt](/private/tmp/xvm-lsp-editors-20261009/lang/intellij-plugin/src/integrationTest/kotlin/org/xtclang/idea/playbook/ParityReliability.kt) | 285 / 0 |
@@ -654,7 +714,7 @@ Before release acceptance, run the packaged server and both native editor paths.
 | M | [lang/intellij-plugin/src/test/kotlin/org/xtclang/idea/manifest/BundledResourcesTest.kt](/private/tmp/xvm-lsp-editors-20261009/lang/intellij-plugin/src/test/kotlin/org/xtclang/idea/manifest/BundledResourcesTest.kt) | 14 / 14 |
 | M | [lang/intellij-plugin/src/test/kotlin/org/xtclang/idea/manifest/LiveTemplateRegistrationTest.kt](/private/tmp/xvm-lsp-editors-20261009/lang/intellij-plugin/src/test/kotlin/org/xtclang/idea/manifest/LiveTemplateRegistrationTest.kt) | 12 / 11 |
 | M | [lang/intellij-plugin/src/test/kotlin/org/xtclang/idea/manifest/PluginManifestTest.kt](/private/tmp/xvm-lsp-editors-20261009/lang/intellij-plugin/src/test/kotlin/org/xtclang/idea/manifest/PluginManifestTest.kt) | 57 / 14 |
-| M | [lang/lsp-server/README.md](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/README.md) | 495 / 77 |
+| M | [lang/lsp-server/README.md](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/README.md) | 468 / 77 |
 | M | [lang/lsp-server/build.gradle.kts](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/build.gradle.kts) | 134 / 25 |
 | M | [lang/lsp-server/editor-setup.md](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/editor-setup.md) | 5 / 5 |
 | M | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/AbstractAdapter.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/AbstractAdapter.kt) | 63 / 37 |
@@ -694,8 +754,8 @@ Before release acceptance, run the packaged server and both native editor paths.
 | A | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/LibraryDeclaration.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/LibraryDeclaration.kt) | 70 / 0 |
 | A | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/PartialSemanticModel.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/PartialSemanticModel.kt) | 176 / 0 |
 | A | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/SemanticModel.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/SemanticModel.kt) | 566 / 0 |
-| A | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/SemanticModelBuilder.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/SemanticModelBuilder.kt) | 2089 / 0 |
-| M | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkAdapter.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkAdapter.kt) | 2448 / 69 |
+| A | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/SemanticModelBuilder.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/SemanticModelBuilder.kt) | 2,089 / 0 |
+| M | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkAdapter.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkAdapter.kt) | 2,448 / 69 |
 | A | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkAst.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkAst.kt) | 179 / 0 |
 | A | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkAttachedSources.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkAttachedSources.kt) | 111 / 0 |
 | A | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkAutoImports.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkAutoImports.kt) | 145 / 0 |
@@ -729,10 +789,10 @@ Before release acceptance, run the packaged server and both native editor paths.
 | A | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkMoveOperations.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkMoveOperations.kt) | 30 / 0 |
 | A | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkNavigationIndex.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkNavigationIndex.kt) | 53 / 0 |
 | A | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkPresentation.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkPresentation.kt) | 252 / 0 |
-| A | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkProjectQueries.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkProjectQueries.kt) | 1506 / 0 |
+| A | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkProjectQueries.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkProjectQueries.kt) | 1,506 / 0 |
 | A | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkQualifiedName.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkQualifiedName.kt) | 87 / 0 |
 | A | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkRefactoringSyntax.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkRefactoringSyntax.kt) | 53 / 0 |
-| A | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkRename.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkRename.kt) | 1229 / 0 |
+| A | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkRename.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkRename.kt) | 1,229 / 0 |
 | A | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkRenameProposal.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkRenameProposal.kt) | 44 / 0 |
 | A | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkResourceMoves.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkResourceMoves.kt) | 80 / 0 |
 | A | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkResources.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkResources.kt) | 104 / 0 |
@@ -777,9 +837,9 @@ Before release acceptance, run the packaged server and both native editor paths.
 | A | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/server/ResourceFileWatchers.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/server/ResourceFileWatchers.kt) | 250 / 0 |
 | A | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/server/SemanticTokenReports.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/server/SemanticTokenReports.kt) | 127 / 0 |
 | M | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/server/SourceRootResolver.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/server/SourceRootResolver.kt) | 15 / 18 |
-| M | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/server/XtcLanguageServer.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/server/XtcLanguageServer.kt) | 1049 / 290 |
+| M | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/server/XtcLanguageServer.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/server/XtcLanguageServer.kt) | 1,049 / 290 |
 | M | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/server/XtcLanguageServerLauncher.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/server/XtcLanguageServerLauncher.kt) | 99 / 42 |
-| M | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/server/XtcTextDocumentService.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/server/XtcTextDocumentService.kt) | 1557 / 230 |
+| M | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/server/XtcTextDocumentService.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/server/XtcTextDocumentService.kt) | 1,557 / 230 |
 | M | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/server/XtcWorkspaceService.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/server/XtcWorkspaceService.kt) | 83 / 31 |
 | M | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/treesitter/Platform.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/treesitter/Platform.kt) | 10 / 6 |
 | M | [lang/lsp-server/src/main/kotlin/org/xvm/lsp/treesitter/SemanticTokenEncoder.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/main/kotlin/org/xvm/lsp/treesitter/SemanticTokenEncoder.kt) | 44 / 27 |
@@ -993,7 +1053,7 @@ Before release acceptance, run the packaged server and both native editor paths.
 | A | [lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/XdkRenameServerTest.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/XdkRenameServerTest.kt) | 729 / 0 |
 | A | [lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/XdkResolveProtocolTest.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/XdkResolveProtocolTest.kt) | 220 / 0 |
 | A | [lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/XdkSemanticTokenProtocolTest.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/XdkSemanticTokenProtocolTest.kt) | 146 / 0 |
-| A | [lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/XdkStdioTest.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/XdkStdioTest.kt) | 2079 / 0 |
+| A | [lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/XdkStdioTest.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/XdkStdioTest.kt) | 2,079 / 0 |
 | A | [lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/XdkSyntaxCompletionProtocolTest.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/XdkSyntaxCompletionProtocolTest.kt) | 143 / 0 |
 | M | [lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/XtcLanguageServerTest.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/test/kotlin/org/xvm/lsp/server/XtcLanguageServerTest.kt) | 47 / 28 |
 | M | [lang/lsp-server/src/test/kotlin/org/xvm/lsp/treesitter/SemanticTokensVsTextMateTest.kt](/private/tmp/xvm-lsp-editors-20261009/lang/lsp-server/src/test/kotlin/org/xvm/lsp/treesitter/SemanticTokensVsTextMateTest.kt) | 119 / 106 |
@@ -1004,14 +1064,14 @@ Before release acceptance, run the packaged server and both native editor paths.
 | A | [lang/test-fixtures/compiler-playbook/compiler-import/build.gradle.kts](/private/tmp/xvm-lsp-editors-20261009/lang/test-fixtures/compiler-playbook/compiler-import/build.gradle.kts) | 49 / 0 |
 | A | [lang/test-fixtures/compiler-playbook/compiler-import/gradle.properties](/private/tmp/xvm-lsp-editors-20261009/lang/test-fixtures/compiler-playbook/compiler-import/gradle.properties) | 4 / 0 |
 | A | [lang/test-fixtures/compiler-playbook/compiler-import/settings.gradle.kts](/private/tmp/xvm-lsp-editors-20261009/lang/test-fixtures/compiler-playbook/compiler-import/settings.gradle.kts) | 1 / 0 |
-| A | [lang/test-fixtures/compiler-playbook/scenarios.json](/private/tmp/xvm-lsp-editors-20261009/lang/test-fixtures/compiler-playbook/scenarios.json) | 8837 / 0 |
+| A | [lang/test-fixtures/compiler-playbook/scenarios.json](/private/tmp/xvm-lsp-editors-20261009/lang/test-fixtures/compiler-playbook/scenarios.json) | 8,837 / 0 |
 | A | [lang/test-fixtures/compiler-workload/platform.json](/private/tmp/xvm-lsp-editors-20261009/lang/test-fixtures/compiler-workload/platform.json) | 18 / 0 |
 | A | [lang/test-fixtures/semantic-highlighting/SemanticColors.x](/private/tmp/xvm-lsp-editors-20261009/lang/test-fixtures/semantic-highlighting/SemanticColors.x) | 29 / 0 |
 | A | [lang/test-fixtures/semantic-highlighting/semantic-colors.code-workspace](/private/tmp/xvm-lsp-editors-20261009/lang/test-fixtures/semantic-highlighting/semantic-colors.code-workspace) | 16 / 0 |
 | M | [lang/tree-sitter/build.gradle.kts](/private/tmp/xvm-lsp-editors-20261009/lang/tree-sitter/build.gradle.kts) | 965 / 866 |
 | M | [lang/tree-sitter/doc/functionality.md](/private/tmp/xvm-lsp-editors-20261009/lang/tree-sitter/doc/functionality.md) | 1 / 1 |
 | M | [lang/vscode-extension/.gitignore](/private/tmp/xvm-lsp-editors-20261009/lang/vscode-extension/.gitignore) | 1 / 0 |
-| M | [lang/vscode-extension/README.md](/private/tmp/xvm-lsp-editors-20261009/lang/vscode-extension/README.md) | 259 / 11 |
+| M | [lang/vscode-extension/README.md](/private/tmp/xvm-lsp-editors-20261009/lang/vscode-extension/README.md) | 220 / 11 |
 | M | [lang/vscode-extension/build.gradle.kts](/private/tmp/xvm-lsp-editors-20261009/lang/vscode-extension/build.gradle.kts) | 256 / 170 |
 | M | [lang/vscode-extension/package-lock.json](/private/tmp/xvm-lsp-editors-20261009/lang/vscode-extension/package-lock.json) | 82 / 26 |
 | M | [lang/vscode-extension/package.json](/private/tmp/xvm-lsp-editors-20261009/lang/vscode-extension/package.json) | 369 / 64 |
@@ -1098,6 +1158,8 @@ Before release acceptance, run the packaged server and both native editor paths.
 | A | [lang/vscode-extension/src/test/wait.ts](/private/tmp/xvm-lsp-editors-20261009/lang/vscode-extension/src/test/wait.ts) | 36 / 0 |
 | A | [lang/vscode-extension/src/test/workbenchUi.ts](/private/tmp/xvm-lsp-editors-20261009/lang/vscode-extension/src/test/workbenchUi.ts) | 62 / 0 |
 | M | [lang/vscode-extension/tsconfig.json](/private/tmp/xvm-lsp-editors-20261009/lang/vscode-extension/tsconfig.json) | 3 / 2 |
+| M | [manualTests/build.gradle.kts](/private/tmp/xvm-lsp-editors-20261009/manualTests/build.gradle.kts) | 1 / 0 |
+| M | [manualTests/src/main/x/conditionalEffects.x](/private/tmp/xvm-lsp-editors-20261009/manualTests/src/main/x/conditionalEffects.x) | 0 / 2 |
 | M | [xdk/build.gradle.kts](/private/tmp/xvm-lsp-editors-20261009/xdk/build.gradle.kts) | 1 / 22 |
 
 </details>
