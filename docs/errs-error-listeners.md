@@ -129,7 +129,7 @@ ordinary sink is a no-op. A branch buffers its diagnostics until explicitly merg
 branch discards its speculative reports. A node-associated branch can give a structure diagnostic
 the source location known by the validating AST node.
 
-Named budgets make the intended policy visible: `DEFAULT_MAX_ERRORS` is 100, `FIRST_ERROR` is one,
+Named budgets make the intended policy visible: `ErrorListener.DEFAULT_MAX_ERRORS` is 512, `FIRST_ERROR` is one,
 and `UNLIMITED` has no finite error limit. Fatal diagnostics still request an abort. These are
 collector policies; they do not promise that every invalid source can be validated to completion.
 
