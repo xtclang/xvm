@@ -46,7 +46,9 @@ import static org.xvm.util.Severity.ERROR;
  * <p>Unlike {@link EmbeddingSupport}, a ModuleCompiler is an ordinary object that needs no
  * configuration: compiling does not start the runtime, so it does not depend on the runtime's
  * JVM-wide state (see {@link EmbeddingSupport}), and any number of ModuleCompiler instances, each
- * with its own core repository, can exist in one JVM. Each call to compile is independent.
+ * with its own core repository, can exist in one JVM. Each call to compile has its own attempt.
+ * Hosts must serialize calls that share repositories; separate instances do not isolate mutable
+ * compiler state held by a repository.
  *
  * <p>The compile methods report the same errors as the command-line compiler: every error found in
  * a compiler stage, with the compilation stopping at the end of the first stage that found any.
@@ -146,6 +148,15 @@ public final class ModuleCompiler {
     }
 
     /**
+     * Forward retained read issues only after the compiler has established a dependency failure.
+     * Successful fallback and speculative repository misses must not become source errors.
+     */
+    static void reportRepositoryReadFailures(ModuleRepository repository, ErrorListener errs) {
+        repository.getReadFailures().forEach((file, cause) -> errs.error(ERR_INTERNAL, NOWHERE,
+                cause, "Dependency search skipped unreadable file " + file));
+    }
+
+    /**
      * Adapter that supplies the source and repositories to the standard compiler pipeline and
      * captures its single compiled module instead of writing it to disk.
      */
@@ -228,6 +239,24 @@ public final class ModuleCompiler {
             errsModule.logTo(this);
             errsModule.clear();
             return checkErrors(context);
+        }
+
+        @Override
+        protected void prelinkSystemLibraries(ModuleRepository repository) {
+            try {
+                super.prelinkSystemLibraries(repository);
+            } catch (LauncherException e) {
+                reportRepositoryReadFailures(repository, m_errors);
+                throw e;
+            }
+        }
+
+        @Override
+        public void log(ErrorInfo error) {
+            if (Compiler.MODULE_MISSING.equals(error.getCode())) {
+                reportRepositoryReadFailures(ensureLibraryRepo(), m_errors);
+            }
+            super.log(error);
         }
 
         /**

@@ -600,8 +600,9 @@ public abstract class Launcher<T extends LauncherOptions>
     @Override
     public void log(ErrorInfo err) {
         m_sevWorst = worstOf(m_sevWorst, err.getSeverity());
-        log(err.getSeverity(), err.toString());
+        // Console reporting may throw for FATAL; deliver the original diagnostic first.
         m_errors.log(err);
+        log(err.getSeverity(), err.toString());
     }
 
     /**
