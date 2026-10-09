@@ -304,8 +304,8 @@ private fun showHelp() {
 }
 
 /**
- * Data-driven statistics model for the language.
- * All statistics are computed once and stored in a structured format.
+ * Data-driven statistics model for the language. All statistics are computed once and stored in a
+ * structured format.
  */
 data class ModelStatistics(
     val name: String,
@@ -370,8 +370,8 @@ data class ModelStatistics(
 }
 
 /**
- * Renders statistics in a beautiful box-drawing format.
- * All widths are computed dynamically from the data.
+ * Renders statistics in a beautiful box-drawing format. All widths are computed dynamically from
+ * the data.
  */
 object StatsRenderer {
     private const val BOX_WIDTH = 64

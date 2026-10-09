@@ -9,8 +9,8 @@ import org.junit.jupiter.api.TestInstance
 /**
  * Folding range tests for [TreeSitterAdapter].
  *
- * Exercises the detection of foldable code blocks including declarations,
- * comments, and nested structures.
+ * Exercises the detection of foldable code blocks including declarations, comments, and nested
+ * structures.
  *
  * All tests are skipped (not failed) when the tree-sitter native library is unavailable.
  */
@@ -25,9 +25,9 @@ class FoldingRangeTest : TreeSitterTestBase() {
     @DisplayName("getFoldingRanges()")
     inner class FoldingRangeTests {
         /**
-         * A module containing a class containing a method produces at least 2 multi-line
-         * foldable blocks (module_declaration + class_declaration; the method_declaration
-         * may or may not match depending on the grammar's node types).
+         * A module containing a class containing a method produces at least 2 multi-line foldable
+         * blocks (module_declaration + class_declaration; the method_declaration may or may not
+         * match depending on the grammar's node types).
          */
         @Test
         @DisplayName("should find declaration blocks")
@@ -52,9 +52,9 @@ class FoldingRangeTest : TreeSitterTestBase() {
         }
 
         /**
-         * A multi-line block comment should be foldable. The adapter recognizes
-         * "comment" and "block_comment" node types. If the grammar uses a different
-         * node type, this test still passes because we only assert overall count.
+         * A multi-line block comment should be foldable. The adapter recognizes "comment" and
+         * "block_comment" node types. If the grammar uses a different node type, this test still
+         * passes because we only assert overall count.
          */
         @Test
         @DisplayName("should detect comment blocks")
@@ -81,8 +81,8 @@ class FoldingRangeTest : TreeSitterTestBase() {
         }
 
         /**
-         * Deeply nested declarations (module > class > inner class > method) should
-         * each produce a foldable range, giving at least 4 ranges.
+         * Deeply nested declarations (module > class > inner class > method) should each produce a
+         * foldable range, giving at least 4 ranges.
          */
         @Test
         @DisplayName("should fold deeply nested declarations")
@@ -103,7 +103,11 @@ class FoldingRangeTest : TreeSitterTestBase() {
 
             ts.compile(uri, source)
             val ranges = logged("shouldFoldDeeplyNestedDeclarations", ts.getFoldingRanges(uri))
-            logger.info("  folding ranges ({}): {}", ranges.size, ranges.map { "L${it.startLine}-L${it.endLine}" })
+            logger.info(
+                "  folding ranges ({}): {}",
+                ranges.size,
+                ranges.map { "L${it.startLine}-L${it.endLine}" },
+            )
 
             // module + Outer + Inner + method = at least 4
             assertThat(ranges).hasSizeGreaterThanOrEqualTo(4)

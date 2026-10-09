@@ -8,7 +8,11 @@ internal class ConnectionLifetime(
     private val startProcess: () -> Unit,
     private val stopProcess: () -> Unit,
 ) {
-    private enum class State { NEW, STARTED, STOPPED }
+    private enum class State {
+        NEW,
+        STARTED,
+        STOPPED,
+    }
 
     private val state = AtomicReference(State.NEW)
 
@@ -16,7 +20,9 @@ internal class ConnectionLifetime(
         synchronized(state) {
             when (state.get()) {
                 State.STOPPED -> {
-                    throw CannotStartProcessException("XTC LSP connection was stopped before startup completed")
+                    throw CannotStartProcessException(
+                        "Ecstasy LSP connection was stopped before startup completed",
+                    )
                 }
 
                 State.STARTED -> {

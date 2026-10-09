@@ -6,9 +6,7 @@ import org.junit.jupiter.api.Nested
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 
-/**
- * Tests for `textDocument/codeLens` — inline Run actions on module declarations.
- */
+/** Tests for `textDocument/codeLens` — inline Run actions on module declarations. */
 @DisplayName("CodeLens")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CodeLensTest : TreeSitterTestBase() {

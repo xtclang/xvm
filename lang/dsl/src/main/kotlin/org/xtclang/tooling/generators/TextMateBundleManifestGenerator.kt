@@ -30,7 +30,8 @@ class TextMateBundleManifestGenerator(
 
     fun generate(): String {
         // Derive language ID from scopeName (e.g., "source.xtc" -> "xtc")
-        // This ensures consistency: language ID, grammar filename, and scope all use the same identifier
+        // This ensures consistency: language ID, grammar filename, and scope all use the same
+        // identifier
         val languageId = model.scopeName.substringAfterLast(".")
 
         val config =

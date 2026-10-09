@@ -9,8 +9,8 @@ import org.junit.jupiter.api.TestInstance
 /**
  * Linked editing range tests for [TreeSitterAdapter].
  *
- * Exercises same-file identifier linking: when the cursor is on an identifier,
- * all same-name occurrences are returned so editors can rename them simultaneously.
+ * Exercises same-file identifier linking: when the cursor is on an identifier, all same-name
+ * occurrences are returned so editors can rename them simultaneously.
  *
  * All tests are skipped (not failed) when the tree-sitter native library is unavailable.
  */

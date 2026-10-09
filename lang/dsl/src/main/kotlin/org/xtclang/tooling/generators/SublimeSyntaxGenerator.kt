@@ -12,8 +12,8 @@ import org.xtclang.tooling.model.OperatorCategory
  * - bat (command-line cat clone with syntax highlighting)
  * - Any tool using the syntect library
  *
- * This format is more powerful than TextMate grammars and supports
- * context-based parsing with push/pop/set operations.
+ * This format is more powerful than TextMate grammars and supports context-based parsing with
+ * push/pop/set operations.
  */
 class SublimeSyntaxGenerator(
     private val model: LanguageModel,
@@ -251,7 +251,8 @@ class SublimeSyntaxGenerator(
                 OperatorCategory.BITWISE to "keyword.operator.bitwise.xtc",
                 OperatorCategory.ARITHMETIC to "keyword.operator.arithmetic.xtc",
                 OperatorCategory.MEMBER_ACCESS to "keyword.operator.access.xtc",
-                OperatorCategory.OTHER to "keyword.operator.other.xtc", // includes range, elvis, etc.
+                OperatorCategory.OTHER to
+                    "keyword.operator.other.xtc", // includes range, elvis, etc.
             )
 
         for ((category, scope) in categoryToScope) {
