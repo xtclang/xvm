@@ -52,6 +52,7 @@ import org.xvm.asm.op.Label;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
+import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Source;
 
@@ -812,6 +813,11 @@ public abstract class AstNode
 
     /** Catch up children using the enclosing compilation attempt's collector. */
     protected boolean catchUpChildren(ErrorListener errs, InvocationBinding.Collector bindings) {
+        return catchUpChildren(errs, bindings, CursorBinding.Collector.NONE);
+    }
+
+    protected boolean catchUpChildren(ErrorListener errs, InvocationBinding.Collector bindings,
+                                       CursorBinding.Collector cursors) {
         // determine what stage we're trying to catch the children up to
         Stage stageTarget = getStage();
         if (!stageTarget.isTargetable()) {
@@ -851,7 +857,7 @@ public abstract class AstNode
         ErrorListener errsTemp = errs.branch(this);
         while (stageOldest.compareTo(stageTarget) < 0) {
             Stage    stageNext = stageOldest.nextTarget();
-            StageMgr mgrKids   = new StageMgr(listChildren, stageNext, errsTemp, bindings);
+            StageMgr mgrKids   = new StageMgr(listChildren, stageNext, errsTemp, bindings, cursors);
             for (int cTries = 0; !mgrKids.processComplete(); cTries++) {
                 if (errsTemp.isAbortDesired() || cTries > 20) {
                     mgrKids.logDeferredAsErrors(errsTemp);

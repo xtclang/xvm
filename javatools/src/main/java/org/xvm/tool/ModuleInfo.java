@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.TreeMap;
 
+import java.util.function.BiFunction;
+
 import java.util.stream.Stream;
 
 import org.xvm.asm.ErrorList;
@@ -586,7 +588,7 @@ public class ModuleInfo {
                     binaryVersion = struct.getModule().getVersion();
                     binaryContent = Content.Module;
                     return true;
-                } catch (Exception ignore) {}
+                } catch (Exception _) {}
             } else {
                 binaryStatus = Status.NotExists;
             }
@@ -708,7 +710,19 @@ public class ModuleInfo {
      *         location, or if serious errors occur loading the source tree
      */
     public Node getSourceTree(ErrorListener errs) {
+        return getSourceTree(errs, (source, listener) -> new Parser(source, listener).parseSource());
+    }
+
+    /**
+     * Assemble the source tree using an attempt-owned source parser. This supports explicit
+     * partial analysis while retaining the same source snapshot, resources and package assembly.
+     * The parser must report other syntax errors to its supplied listener; incomplete syntax
+     * must never be passed to ordinary compilation. Use a fresh ModuleInfo for each attempt.
+     */
+    public Node getSourceTree(ErrorListener errs,
+                              BiFunction<Source, ErrorListener, StatementBlock> parse) {
         Objects.requireNonNull(errs, "errs");
+        Objects.requireNonNull(parse, "parse");
         if (errs.isAbortDesired()) {
             return null;
         }
@@ -736,7 +750,7 @@ public class ModuleInfo {
             return null;
         }
 
-        sourceNode.parse(errs);
+        sourceNode.parse(errs, parse);
         sourceNode.logErrors(errs);
         if (errs.hasSeriousErrors() || errs.isAbortDesired()) {
             return null;
@@ -758,7 +772,7 @@ public class ModuleInfo {
     }
 
     /**
-     * Read the source trees retained by the last loading attempt, including available syntax
+     * Read the source trees retained by the last loading attempt, including recovered syntax
      * when {@link #getSourceTree(ErrorListener)} could not assemble the module. This does not load,
      * parse, register names or link trees. Synthetic package sources are excluded.
      *
@@ -876,6 +890,11 @@ public class ModuleInfo {
             if (!errs.isAbortDesired()) {
                 parse();
             }
+        }
+
+        /** Parse with an attempt-owned strategy; existing custom nodes retain their own parser. */
+        public void parse(ErrorListener errs, BiFunction<Source, ErrorListener, StatementBlock> parse) {
+            parse(errs);
         }
 
         /**
@@ -1094,6 +1113,11 @@ public class ModuleInfo {
 
         @Override
         public void parse(ErrorListener errs) {
+            parse(errs, (source, listener) -> new Parser(source, listener).parseSource());
+        }
+
+        @Override
+        public void parse(ErrorListener errs, BiFunction<Source, ErrorListener, StatementBlock> parse) {
             if (errs.isAbortDesired()) {
                 return;
             }
@@ -1102,14 +1126,14 @@ public class ModuleInfo {
                 assert m_parent != null;
                 m_nodeSrc = new FileNode(this, "package " + file().getName() + "{}");
             }
-            m_nodeSrc.parse(errs);
+            m_nodeSrc.parse(errs, parse);
 
             for (FileNode cmpFile : m_mapClzNodes.values()) {
-                cmpFile.parse(errs);
+                cmpFile.parse(errs, parse);
             }
 
             for (DirNode child : m_listPkgNodes) {
-                child.parse(errs);
+                child.parse(errs, parse);
             }
         }
 
@@ -1465,12 +1489,17 @@ public class ModuleInfo {
 
         @Override
         public void parse(ErrorListener errs) {
+            parse(errs, (source, listener) -> new Parser(source, listener).parseSource());
+        }
+
+        @Override
+        public void parse(ErrorListener errs, BiFunction<Source, ErrorListener, StatementBlock> parse) {
             if (errs.isAbortDesired()) {
                 return;
             }
             Source source = source();
             try {
-                m_stmtAST = new Parser(source, ErrorListener.cancellable(this, errs::isAbortDesired)).parseSource();
+                m_stmtAST = parse.apply(source, ErrorListener.cancellable(this, errs::isAbortDesired));
             } catch (CompilerException e) {
                 if (!hasSeriousErrors() && !errs.isAbortDesired()) {
                     log(Severity.FATAL, Parser.FATAL_ERROR, null, source,
@@ -1556,11 +1585,11 @@ public class ModuleInfo {
                     Source source = new Source(file);
                     Parser parser = new Parser(source, silent(DISCARD));
                     return parser.parseModuleNameIgnoreEverythingElse();
-                } catch (CompilerException | IOException ignore) {}
+                } catch (CompilerException | IOException _) {}
             } else if (isExplicitCompiledFile(name)) {
                 try {
                     return new FileStructure(file).getModuleId().getName();
-                } catch (IOException ignore) {}
+                } catch (IOException _) {}
             }
         }
 

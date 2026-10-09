@@ -56,6 +56,7 @@ import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.Context.CaptureContext;
+import org.xvm.compiler.ast.partial.PartialSyntax;
 
 import org.xvm.util.Severity;
 
@@ -293,11 +294,9 @@ public class NewExpression
         return super.calcFit(ctx, typeIn, typeOut);
     }
 
-    @Override
-    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
-        var bindings = ctx.getInvocationBindings();
-        var writtenArgs = bindings.isEnabled() ? List.copyOf(args) : List.<Expression>of();
-        bindings.begin(this);
+    /** Resolve the written construction type using the same rules for validation and cursor probes. */
+    Construction prepareConstruction(Context ctx, TypeConstant typeRequired, ErrorListener errs,
+                                     boolean incomplete) {
         ConstantPool pool       = pool();
         TypeConstant typeSuper  = null;   // the super class type of the anon inner class
         TypeConstant typeTarget = null;   // the type to look for a constructor at (could be private)
@@ -571,7 +570,7 @@ public class NewExpression
                         // we will emit the second constructor in leu of the first one
                         // using the default value for the element type as the second argument
                         int cArgs = args.size();
-                        if (cArgs == 1) {
+                        if (cArgs == 1 && !incomplete) {
                             // array[capacity] is a fixed size array and is allowed only for
                             // types with default values
                             TypeConstant typeElement = typeTarget.getParamType(0);
@@ -612,6 +611,32 @@ public class NewExpression
             }
         }
 
+        return new Construction(typeResult, typeTarget, typeSuper, plan);
+    }
+
+    /** Stack-owned preparation result; no new state is retained on a syntax node. */
+    record Construction(TypeConstant result, TypeConstant target, TypeConstant superType, Plan plan) {
+        boolean requiresNewable() {
+            return plan == Plan.Regular || plan == Plan.Child;
+        }
+    }
+
+    @Override
+    protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
+        var bindings = ctx.getInvocationBindings();
+        var writtenArgs = bindings.isEnabled() ? List.copyOf(args) : List.<Expression>of();
+        bindings.begin(this);
+        var construction = prepareConstruction(ctx, typeRequired, errs, false);
+        if (construction == null) {
+            return null;
+        }
+        ConstantPool pool       = pool();
+        TypeConstant typeResult = construction.result();
+        TypeConstant typeTarget = construction.target();
+        TypeConstant typeSuper  = construction.superType();
+        Plan         plan       = construction.plan();
+        boolean      fAnonymous = body != null;
+
         ErrorListener errsTemp = errs.branch(this);
         TypeInfo infoTarget = fAnonymous
                 ? typeTarget.ensureTypeInfo(errsTemp)
@@ -624,7 +649,7 @@ public class NewExpression
         }
 
         // for a regular or virtual child construction, the target type must be new-able
-        if ((plan == Plan.Regular || plan == Plan.Child) && !infoTarget.isNewable(false, errsTemp)) {
+        if (construction.requiresNewable() && !infoTarget.isNewable(false, errsTemp)) {
             String sTarget = infoTarget.getType().removeAccess().getValueString();
             infoTarget.reportNotNewable(sTarget, null, false, errsTemp);
             errsTemp.merge();
@@ -734,6 +759,22 @@ public class NewExpression
         }
 
         if (fAnonymous) {
+            if (ctx.getCursorBindings().isEnabled() && PartialSyntax.contains(body)) {
+                // A body cursor needs the actual source nodes and their enclosing-instance
+                // context. Capture analysis below validates disposable clones and then drops
+                // them; publishing those identities would lose the cursor or leak trial facts.
+                var capture = new AnonInnerClassContext(ctx);
+                m_ctxCapture = capture;
+                try {
+                    new StageMgr(anon, Stage.Emitted, errs, bindings, ctx.getCursorBindings()).fastForward(20);
+                } finally {
+                    capture.exit();
+                    m_ctxCapture = null;
+                }
+                // The cursor is never a valid value, and must not start capture rewriting or
+                // produce a constructor binding/emittable construction.
+                return null;
+            }
             // at this point, we need to create a temporary copy of the anonymous inner class for
             // the purpose of determining which local variables from this context will be "captured"
             // by the code in the anonymous inner class; to determine the captures, we need to go
@@ -1208,7 +1249,7 @@ public class NewExpression
 
         m_ctxCapture = new AnonInnerClassContext(ctx);
 
-        catchUpChildren(errs, ctx.getInvocationBindings());
+        catchUpChildren(errs, ctx.getInvocationBindings(), ctx.getCursorBindings());
 
         if (purpose != AnonPurpose.CaptureAnalysis) {
             // the context is ONLY retained to provide capture information

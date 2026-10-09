@@ -1,5 +1,7 @@
 package org.xvm.compiler;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.File;
 import java.io.IOException;
 
@@ -9,9 +11,12 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
@@ -21,6 +26,12 @@ import org.xvm.asm.Version;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.*;
+import org.xvm.compiler.ast.partial.IncompleteDeclarationStatement;
+import org.xvm.compiler.ast.partial.IncompleteExpression;
+import org.xvm.compiler.ast.partial.IncompleteLocalDeclaration;
+import org.xvm.compiler.ast.partial.IncompleteStatement;
+import org.xvm.compiler.ast.partial.IncompleteTypeCompositionStatement;
+import org.xvm.compiler.ast.partial.PartialSyntax;
 
 import org.xvm.tool.ResourceDir;
 
@@ -28,10 +39,9 @@ import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
-import static java.util.Objects.requireNonNull;
+import static org.xvm.asm.ErrorListener.in;
 
 import static org.xvm.asm.ErrorListener.Silence.DISCARD;
-import static org.xvm.asm.ErrorListener.in;
 import static org.xvm.asm.ErrorListener.silent;
 
 /**
@@ -47,7 +57,31 @@ public class Parser {
      * @param listener the error listener
      */
     public Parser(Source source, ErrorListener listener) {
-        this(source, listener, null);
+        this(source, listener, null, false, NO_CURSOR);
+    }
+
+    /**
+     * Create a parser that can retain a trailing incomplete expression statement for explicit
+     * partial analysis. Errors are still reported; this does not make the source compilable.
+     */
+    public static Parser forPartialAnalysis(Source source, ErrorListener listener) {
+        return new Parser(source, listener, null, true, NO_CURSOR);
+    }
+
+    /**
+     * Retain a supported incomplete statement at a cursor, without truncating the source.
+     * The cursor uses a position token obtained from {@link Source#getPosition()} for this text.
+     * Supports missing member/call suffixes, typed member prefixes and calls before an existing
+     * closing parenthesis at statement and final call-argument boundaries. Cursor-selected syntax
+     * need not be malformed; it is inspected as a prefix, without validating the selected operation.
+     * Missing call/group/index closers around that operation retain their enclosing syntax at a
+     * statement or outer-delimiter boundary; a cursor at EOF also retains unfinished blocks.
+     */
+    public static Parser forPartialAnalysis(Source source, long cursor, ErrorListener listener) {
+        if (cursor == NO_CURSOR) {
+            throw new IllegalArgumentException("A source cursor position is required");
+        }
+        return new Parser(source, listener, null, true, cursor);
     }
 
     /**
@@ -57,16 +91,18 @@ public class Parser {
      * @param atoken  the tokens to parse
      */
     protected Parser(Parser parent, Token[] atoken) {
-        this(parent.m_source, parent.f_errs.get(), parent.m_lexer.createLexer(atoken));
+        this(parent.m_source, parent.f_errs.get(), parent.m_lexer.createLexer(atoken), false,
+                NO_CURSOR);
     }
 
-    private Parser(Source source, ErrorListener errs, Lexer lexer) {
+    private Parser(Source source, ErrorListener errs, Lexer lexer, boolean fPartialAnalysis,
+                   long cursor) {
         if (source == null) {
             throw new IllegalArgumentException("Source required");
         }
 
-        m_source = source;
-        f_errs   = new Reporting(requireNonNull(errs, "errs"));
+        m_source          = source;
+        f_errs            = new Reporting(requireNonNull(errs, "errs"));
         // Lexical reports and cancellation follow the active speculative attempt.
         ErrorListener lexicalReports = new ErrorListener() {
             @Override
@@ -80,6 +116,9 @@ public class Parser {
             }
         };
         m_lexer = lexer == null ? new Lexer(source, lexicalReports) : lexer;
+
+        f_partialAnalysis = fPartialAnalysis;
+        f_cursor          = cursor;
 
         // prime the token stream
         next();
@@ -95,7 +134,10 @@ public class Parser {
      *     AliasStatements-opt TypeDeclaration
      * }</pre>
      *
-     * @return the top level type declaration
+     * <p>Recover at statement/declaration boundaries when possible. Recovered syntax is incomplete;
+     * callers must check their listener for errors before entering semantic compilation.
+     *
+     * @return the top level syntax, possibly omitting malformed statements or declarations
      *
      * @throws CompilerException if a parsing error occurs while parsing the
      *         source code that forces the parser to abandon its progress before
@@ -108,9 +150,13 @@ public class Parser {
             // during parsing
             m_fDone = true;
 
+            long lStart         = peek().getStartPosition();
             List<Statement> stmts = parseTypeCompositionComponents(null, new ArrayList<>(), true);
-            m_root = new StatementBlock(stmts, m_source, stmts.getFirst().getStartPosition(),
-                    stmts.getLast().getEndPosition());
+            if (stmts.isEmpty() && !f_errs.get().hasSeriousErrors()) {
+                log(Severity.ERROR, NO_TYPE_FOUND, lStart, m_source.getPosition());
+            }
+            m_root = new StatementBlock(stmts, m_source, lStart,
+                    stmts.isEmpty() ? m_source.getPosition() : stmts.getLast().getEndPosition());
 
             // there shouldn't be more in the file; (note that a zero-length token doesn't count,
             // since it is probably the synthetic closing '}')
@@ -370,14 +416,20 @@ public class Parser {
             name      = qualified.get(0);
         }
 
-        // optional type parameters
-        List<Parameter> typeParams = parseTypeParameterList(false);
-
-        // optional constructor definition
-        List<Parameter> constructorParams = parseParameterList(false);
-
-        // sequence of compositions
-        List<CompositionNode> compositions = parseCompositions();
+        Mark header = mark();
+        List<Parameter> typeParams = null;
+        List<Parameter> constructorParams;
+        List<CompositionNode> compositions;
+        try {
+            typeParams        = parseTypeParameterList(false, true);
+            constructorParams = parseParameterList(false);
+            compositions      = parseCompositions(true);
+        } catch (IncompleteHeader error) {
+            return retainTypeDeclaration(header, lStartPos, category, name, qualified,
+                    List.of(error.site), error.withFormals(typeParams));
+        } catch (CompilerException error) {
+            return retainTypeDeclaration(header, lStartPos, category, name, qualified, List.of(), error);
+        }
 
         // TypeCompositionBody
         StatementBlock body = null;
@@ -400,7 +452,7 @@ public class Parser {
      *
      * @return a list of compositions
      */
-    List<CompositionNode> parseCompositions() {
+    List<CompositionNode> parseCompositions(boolean header) {
         List<CompositionNode> compositions = new ArrayList<>();
         while (true) {
             // the keywords below require "match()" to extract them, because they are context
@@ -408,18 +460,19 @@ public class Parser {
             Token keyword;
             if ((keyword = match(Id.EXTENDS)) != null) {
                 do {
-                    TypeExpression   type = parseExtendedTypeExpression();
+                    TypeExpression   type = header ? parseDeclarationType(true) : parseExtendedTypeExpression();
                     List<Expression> args = parseArgumentList(false, false, false);
                     compositions.add(new CompositionNode.Extends(null, keyword, type, args,
                             prev().getEndPosition()));
                 } while (match(Id.COMMA) != null);
             } else if ((keyword = match(Id.IMPLEMENTS)) != null) {
                 do {
-                    compositions.add(new CompositionNode.Implements(null, keyword, parseExtendedTypeExpression()));
+                    compositions.add(new CompositionNode.Implements(null, keyword,
+                            header ? parseDeclarationType(true) : parseExtendedTypeExpression()));
                 } while (match(Id.COMMA) != null);
             } else if ((keyword = match(Id.DELEGATES)) != null) {
                 do {
-                    TypeExpression type = parseExtendedTypeExpression();
+                    TypeExpression type = header ? parseDeclarationType(true) : parseExtendedTypeExpression();
                     expect(Id.L_PAREN);
                     Expression expr = parseExpression();
                     Token tokEnd = expect(Id.R_PAREN);
@@ -435,7 +488,7 @@ public class Parser {
                     TypeExpression  type        = null;
                     List<Parameter> constraints = null;
                     if (match(Id.CONDITIONAL) == null) {
-                        type = parseTypeExpression();
+                        type = header ? parseDeclarationType() : parseTypeExpression();
                     } else {
                         do {
                             // parse the type parameter list e.g. "<Key extends Int, Value>",
@@ -469,7 +522,8 @@ public class Parser {
                     compositions.add(new CompositionNode.Incorporates(null, keyword, type, args, constraints));
                 } while (match(Id.COMMA) != null);
             } else if ((keyword = match(Id.INTO)) != null) {
-                compositions.add(new CompositionNode.Into(null, keyword, parseExtendedTypeExpression()));
+                compositions.add(new CompositionNode.Into(null, keyword,
+                        header ? parseDeclarationType(true) : parseExtendedTypeExpression()));
             } else { // not context-sensitive keywords
                 switch (peek().getId()) {
                 case IMPORT: {
@@ -601,59 +655,63 @@ public class Parser {
     List<Statement> parseTypeCompositionComponents(Expression exprCondition, List<Statement> stmts,
                                                    boolean fFileLevel) {
         boolean fFoundType = false;
-        while (match(Id.R_CURLY) == null) {
-            Statement stmt;
-            switch (peek().getId()) {
-            case IMPORT:
-                stmt = parseImportStatement(exprCondition);
-                break;
+        while (!atBlockEnd(fFileLevel)) {
+            Mark statementStart = mark();
+            try {
+                Statement stmt;
+                switch (peek().getId()) {
+                case IMPORT:
+                    stmt = parseImportStatement(exprCondition);
+                    break;
 
-            case TYPEDEF:
-                stmt = parseTypeDefStatement(exprCondition, null);
-                break;
+                case TYPEDEF:
+                    stmt = parseTypeDefStatement(exprCondition, null);
+                    break;
 
-            default: {
-                Token start = peek();
+                default: {
+                    Token start = peek();
 
-                stmt = parseTypeCompositionComponent(exprCondition, false);
-                fFoundType = true;
+                    stmt = parseTypeCompositionComponent(exprCondition, false);
+                    fFoundType = true;
 
-                if (fFileLevel) {
-                    // module cannot have any statements before it in the source
-                    if (stmt instanceof TypeCompositionStatement stmtType) {
-                        if (stmtType.getCategory().getId() == Id.MODULE && !stmts.isEmpty()) {
-                            if (stmts.stream().allMatch(ImportStatement.class::isInstance)) {
-                                // transfer the imports from outside the module body to inside
-                                // the module body
-                                stmtType.ensureBody().getStatements().addAll(0, stmts);
-                                stmts.clear();
-                            } else {
-                                log(Severity.ERROR, MODULE_NOT_ROOT, start.getStartPosition(),
-                                        start.getEndPosition());
+                    if (fFileLevel) {
+                        // module cannot have any statements before it in the source
+                        if (stmt instanceof TypeCompositionStatement stmtType) {
+                            if (stmtType.getCategory().getId() == Id.MODULE && !stmts.isEmpty()) {
+                                if (stmts.stream().allMatch(ImportStatement.class::isInstance)) {
+                                    // transfer the imports from outside the module body to inside
+                                    // the module body
+                                    stmtType.ensureBody().getStatements().addAll(0, stmts);
+                                    stmts.clear();
+                                } else {
+                                    log(Severity.ERROR, MODULE_NOT_ROOT, start.getStartPosition(),
+                                            start.getEndPosition());
+                                }
                             }
+                        } else {
+                            log(Severity.ERROR, NO_TYPE_FOUND, start.getStartPosition(),
+                                    start.getEndPosition());
                         }
-                    } else {
-                        log(Severity.ERROR, NO_TYPE_FOUND, start.getStartPosition(),
-                                start.getEndPosition());
+                    }
+
+                    break;
+                }
+                }
+
+                stmts.add(stmt);
+                if (stmt instanceof MethodDeclarationStatement method) {
+                    MethodDeclarationStatement stmtFinally = method.getConstructorFinally();
+                    if (stmtFinally != null) {
+                        stmts.add(stmtFinally);
                     }
                 }
 
-                break;
-            }
-            }
-
-            stmts.add(stmt);
-            if (stmt instanceof MethodDeclarationStatement) {
-                MethodDeclarationStatement stmtFinally =
-                        ((MethodDeclarationStatement) stmt).getConstructorFinally();
-                if (stmtFinally != null) {
-                    stmts.add(stmtFinally);
+                if (fFileLevel && fFoundType) {
+                    // at the file level, there is nothing after the outermost type's conclusion
+                    break;
                 }
-            }
-
-            if (fFileLevel && fFoundType) {
-                // at the file level, there is nothing after the outermost type's conclusion
-                break;
+            } catch (CompilerException e) {
+                recoverStatement(statementStart, e);
             }
         }
 
@@ -770,12 +828,19 @@ public class Parser {
         case CONDITIONAL:
         case VOID: {
             // it's definitely a method or a function
-            List<Parameter> typeVars    = peek(Id.COMP_LT) ? parseTypeParameterList(true) : null;
-            Token           conditional = match(Id.CONDITIONAL);
-            List<Parameter> returns     = parseReturnList();
-            Token           name        = expect(Id.IDENTIFIER);
-            return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
-                    modifiers, annotations, typeVars, conditional, returns, name);
+            Mark header = mark();
+            List<Parameter> typeVars = null;
+            try {
+                typeVars = peek(Id.COMP_LT) ? parseTypeParameterList(true, true) : null;
+                Token conditional = match(Id.CONDITIONAL);
+                List<Parameter> returns = parseDeclarationReturns();
+                Token name = expect(Id.IDENTIFIER);
+                return parseMethodDeclarationAfterName(lStartPos, exprCondition, doc,
+                        modifiers, annotations, typeVars, conditional, returns, name);
+            } catch (IncompleteHeader error) {
+                return retainDeclaration(header, lStartPos, null, IncompleteDeclarationStatement.Kind.METHOD,
+                        List.of(error.site), error.withFormals(typeVars));
+            }
         }
 
         case CONSTRUCT: {
@@ -800,6 +865,22 @@ public class Parser {
         }
 
         case L_PAREN: {
+            if (!fInMethod && f_cursor != NO_CURSOR) {
+                // Outside a method this is declaration syntax, not a tuple value. Probe the
+                // type grammar without letting a discarded interpretation publish diagnostics.
+                Mark header = mark();
+                var branch = f_errs.get().branch(null);
+                try (var ignored = reportingTo(branch)) {
+                    parseDeclarationReturns();
+                } catch (IncompleteHeader error) {
+                    branch.merge();
+                    return retainDeclaration(header, lStartPos, null, IncompleteDeclarationStatement.Kind.METHOD,
+                            List.of(error.site), error);
+                } catch (CompilerException ignored) {
+                    // The ordinary declaration grammar below owns non-cursor failures.
+                }
+                restore(header);
+            }
             // it's a property or a method, but the property type is parenthesized (odd!) or
             // the method return types (with optional names) are parenthesized (multi-return),
             // which means that to know it's a method, we have to find one of:
@@ -932,6 +1013,14 @@ public class Parser {
                     throw new CompilerException("var or val keyword outside of method");
                 }
 
+                var missingName = declarationNameSlot(new VariableTypeExpression(tokType));
+                if (missingName.isPresent() && peek(Id.ASN)) {
+                    current();
+                    Expression initializer = parseExpression();
+                    expect(Id.SEMICOLON);
+                    log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
+                    return new IncompleteLocalDeclaration(missingName.orElseThrow(), initializer, prev().getEndPosition());
+                }
                 Token tokName = matchNameOrAny();
                 if (tokName == null) {
                     // var and val are not reserved keywords; they are context sensitive types
@@ -939,8 +1028,10 @@ public class Parser {
                 } else {
                     VariableTypeExpression       typeDecl = new VariableTypeExpression(tokType);
                     VariableDeclarationStatement stmtDecl = new VariableDeclarationStatement(typeDecl, tokName, false);
-                    AssignmentStatement          stmtAsn  = new AssignmentStatement(stmtDecl, match(Id.ASN), parseExpression());
-                    expect(Id.SEMICOLON);
+                    Token                        op       = match(Id.ASN);
+                    Expression                   value    = parsePartialValue();
+                    AssignmentStatement          stmtAsn  = new AssignmentStatement(stmtDecl, op, value);
+                    finishValueStatement(value);
                     return stmtAsn;
                 }
             }
@@ -955,7 +1046,15 @@ public class Parser {
 
                 type = expr.toTypeExpression();
             } else {
-                type = parseTypeExpression();
+                Mark header = mark();
+                try {
+                    type = parseDeclarationType();
+                } catch (IncompleteHeader e) {
+                    Token name = matchNameOrAny();
+                    var kind = peek(Id.L_PAREN) ? IncompleteDeclarationStatement.Kind.METHOD
+                            : IncompleteDeclarationStatement.Kind.PROPERTY;
+                    return retainDeclaration(header, lStartPos, name, kind, List.of(e.site), e);
+                }
             }
 
             if (type instanceof BadTypeExpression) {
@@ -963,6 +1062,14 @@ public class Parser {
             }
 
             // it's a constant, property, or method
+            if (!fInMethod) {
+                var missingName = declarationNameSlot(type);
+                if (missingName.isPresent()) {
+                    log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
+                    return retainDeclaration(mark(), lStartPos, null, IncompleteDeclarationStatement.Kind.PROPERTY,
+                            List.of(missingName.orElseThrow()), new CompilerException("Missing declaration name"));
+                }
+            }
             Token name = expectNameOrAny();
             if (peek(Id.COMP_LT) || peek(Id.L_PAREN)) {
                 // '<' indicates redundant return type list
@@ -1013,15 +1120,19 @@ public class Parser {
         case COND_OR_ASN:
         case COND_NN_ASN:
         case COND_ELSE_ASN: {
-            AssignmentStatement stmt = new AssignmentStatement(expr, current(), parseExpression());
-            expect(Id.SEMICOLON);
+            Token               op    = current();
+            Expression          value = op.getId() == Id.ASN ? parsePartialValue() : parseExpression();
+            AssignmentStatement stmt  = new AssignmentStatement(expr, op, value);
+            finishValueStatement(value);
             return stmt;
         }
         }
 
         if (isMissingStatementSemicolon()) {
             long lPos = expr.getEndPosition();
-            log(Severity.ERROR, MISSING_SEMICOLON, lPos, lPos);
+            if (!containsCursorHole(expr)) {
+                log(Severity.ERROR, MISSING_SEMICOLON, lPos, lPos);
+            }
             return new ExpressionStatement(expr);
         }
 
@@ -1075,9 +1186,9 @@ public class Parser {
         Expression value = null;
         Token      op    = match(Id.ASN);
         if (op != null) {
-            value = parseExpression();
+            value = parsePartialValue();
         }
-        expect(Id.SEMICOLON);
+        finishValueStatement(value);
 
         // apply any annotations to the variable type; "@A @B @C T" is "@A of (@B of (@C of T))"
         if (annotations != null) {
@@ -1103,13 +1214,25 @@ public class Parser {
      *     StatementBlock
      * }</pre>
      *
-     * @return a MethodDeclarationStatement
+     * @return a method declaration, or retained incomplete header syntax after a parse error
      */
-    MethodDeclarationStatement parseMethodDeclarationAfterName(long lStartPos, Expression exprCondition,
+    Statement parseMethodDeclarationAfterName(long lStartPos, Expression exprCondition,
             Token doc, List<Token> modifiers, List<AnnotationExpression> annotations,
             List<Parameter> typeVars, Token conditional, List<Parameter> returns, Token name) {
-        List<TypeExpression> redundantReturns = parseTypeParameterTypeList(false, true);
-        List<Parameter>      params           = parseParameterList(true);
+        Mark header = mark();
+        List<TypeExpression> redundantReturns;
+        List<Parameter> params;
+        try {
+            redundantReturns = parseTypeParameterTypeList(false, true);
+            params = parseParameterList(true);
+        } catch (IncompleteHeader e) {
+            // This incomplete method has no registered type parameters or own scope yet.
+            return retainDeclaration(header, lStartPos, name, IncompleteDeclarationStatement.Kind.METHOD,
+                    List.of(e.site), e.withFormals(typeVars));
+        } catch (CompilerException e) {
+            return retainDeclaration(header, lStartPos, name, IncompleteDeclarationStatement.Kind.METHOD,
+                    List.of(), e);
+        }
         long                 lEndPos          = prev().getEndPosition();
         StatementBlock       body;
         switch (peek().getId()) {
@@ -1120,10 +1243,10 @@ public class Parser {
         case ASN:
             Token eq = expect(Id.ASN);
             Expression expr = parseExpression();
-            Token semi = expect(Id.SEMICOLON);
+            finishValueStatement(expr);
             ReturnStatement stmt = new ReturnStatement(eq, expr);
             body = new StatementBlock(Arrays.asList(stmt), stmt.getStartPosition(),
-                                                           semi.getEndPosition());
+                                                           prev().getEndPosition());
             break;
         default:
             body = parseStatementBlock();
@@ -1200,7 +1323,7 @@ public class Parser {
             // "=" Expression ";"
             value   = parseExpression();
             lEndPos = value.getEndPosition();
-            expect(Id.SEMICOLON);
+            finishValueStatement(value);
         } else if (body == null || fNeedsSemi) {
             expect(Id.SEMICOLON);
         }
@@ -1217,11 +1340,45 @@ public class Parser {
     StatementBlock parseStatementBlock() {
         Token tokStart = expect(Id.L_CURLY);
         List<Statement> stmts = new ArrayList<>();
-        while (match(Id.R_CURLY) == null) {
-            stmts.add(parseStatement());
+        retainEmptyCursor(stmts);
+        while (!atBlockEnd(false)) {
+            Mark statementStart = mark();
+            long lStart = peek().getStartPosition();
+            try {
+                stmts.add(parseStatement());
+                retainEmptyCursor(stmts);
+            } catch (IncompleteSyntax e) {
+                // Do not reinterpret a return, assignment, condition or nested call as a
+                // standalone expression. Only the intact statement prefix is supported.
+                if (e.statement.getStartPosition() == lStart) {
+                    stmts.add(e.statement);
+                    // The cursor boundary has already consumed the intact prefix. Keep the
+                    // enclosing brace and following declarations instead of scanning the open
+                    // call again as an unmatched parenthesis.
+                    if (f_cursor != NO_CURSOR) {
+                        match(Id.SEMICOLON);
+                        continue;
+                    }
+                }
+                recoverStatement(statementStart, e);
+            } catch (CompilerException e) {
+                recoverStatement(statementStart, e);
+            }
         }
 
         return new StatementBlock(stmts, tokStart.getStartPosition(), prev().getEndPosition());
+    }
+
+    /** A zero-width insertion anchor after an intact statement or opening brace. */
+    private void retainEmptyCursor(List<Statement> statements) {
+        if (f_cursor != NO_CURSOR && (prev().getId() == Id.L_CURLY
+                || prev().getId() == Id.R_CURLY || prev().getId() == Id.SEMICOLON)
+                && canRetainIncomplete()) {
+            log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
+            statements.add(new IncompleteStatement(
+                    new Token(f_cursor, f_cursor, Id.IDENTIFIER, ""), f_cursor, INCOMPLETE_EXPRESSION));
+            match(Id.SEMICOLON);
+        }
     }
 
     /**
@@ -1860,8 +2017,18 @@ public class Parser {
         // note: it is possible that the expression list is parenthesized, in which case it will be
         //       parsed as a single expression (a tuple literal), and the compiler will have to
         //       it out later
-        List<Expression> exprs = parseExpressionList();
-        expect(Id.SEMICOLON);
+        long start = peek().getStartPosition();
+        List<Expression> exprs;
+        try {
+            exprs = parseExpressionList();
+        } catch (IncompleteSyntax e) {
+            exprs = List.of(retainPartialValue(start, e));
+        }
+        if (exprs.size() == 1) {
+            finishValueStatement(exprs.getFirst());
+        } else {
+            expect(Id.SEMICOLON);
+        }
         return new ReturnStatement(keyword, exprs);
     }
 
@@ -3060,6 +3227,18 @@ public class Parser {
      * @return an expression
      */
     Expression parsePostfixExpression(boolean fExtended) {
+        try {
+            return parsePostfixValue(fExtended);
+        } catch (IncompleteSyntax e) {
+            if (f_cursor == NO_CURSOR) {
+                throw e;
+            }
+            return new IncompleteExpression(e.statement);
+        }
+    }
+
+    /** Retain a cursor hole as syntax so enclosing operators establish their real contexts. */
+    private Expression parsePostfixValue(boolean fExtended) {
         Expression expr = parsePrimaryExpression(fExtended);
         while (true) {
             switch (peek().getId()) {
@@ -3081,7 +3260,10 @@ public class Parser {
                 break;
 
             case DOT: {
-                expect(Id.DOT);
+                Token dot = expect(Id.DOT);
+                if (canRetainIncomplete()) {
+                    throw incomplete(expr, dot, List.of(), List.of());
+                }
                 switch (peek().getId()) {
                 case NEW: {
                     expr = parseNewExpression(expr);
@@ -3110,6 +3292,16 @@ public class Parser {
                         if (name == null) {
                             name = expect(Id.IDENTIFIER);
                         }
+                    }
+                    if (noDeRef == null && name.getId() == Id.IDENTIFIER
+                            && name.getStartPosition() < f_cursor && f_cursor <= name.getEndPosition()
+                            && canRetainIncompleteAt(name.getEndPosition(), true)) {
+                        var hole = incomplete(expr, dot, name);
+                        if (peek(Id.L_PAREN) || peek(Id.ASYNC_PAREN)) {
+                            expr = new IncompleteExpression(hole.statement);
+                            break;
+                        }
+                        throw hole;
                     }
                     long                 lEndPos = name.getEndPosition();
                     List<TypeExpression> params  = null;
@@ -3149,8 +3341,7 @@ public class Parser {
             case L_PAREN:
             case ASYNC_PAREN:
                 // ArgumentList
-                expr = new InvocationExpression(expr, peek(Id.ASYNC_PAREN),
-                        parseArgumentList(true, true, false), prev().getEndPosition());
+                expr = parseInvocation(expr);
                 break;
 
             case L_SQUARE: {
@@ -3171,7 +3362,8 @@ public class Parser {
                 } else if (match(Id.COND) == null) {
                     // "someArray[3]"
                     List<Expression> indexes = parseExpressionList();
-                    expr = new ArrayAccessExpression(expr, indexes, expect(Id.R_SQUARE));
+                    expr = new ArrayAccessExpression(expr, indexes,
+                            expectPartialClose(Id.R_SQUARE, indexes));
                 } else {
                     // "SomeClass[?,?]"
                     int cExplicitDims = 1;
@@ -3212,7 +3404,10 @@ public class Parser {
             // argument list for a "virtual new"; assume it's a virtual new, and we'll back
             // up if we were wrong
             Mark mark = mark();
-            args    = parseArgumentList(true, false, false);
+            args    = f_partialAnalysis
+                    ? parsePartialArguments(new NewExpression(left, keyword, null, List.of(),
+                            -1, null, keyword.getEndPosition()), false)
+                    : parseArgumentList(true, false, false);
             lEndPos = prev().getEndPosition();
 
             Token.Id idNext = peek().getId();
@@ -3233,7 +3428,19 @@ public class Parser {
             boolean fArray = type instanceof ArrayTypeExpression;
             if (fArray) {
                 if (peek(Id.L_SQUARE)) {
-                    args    = parseArgumentList(true, false, true);
+                    try {
+                        args = f_partialAnalysis
+                                ? parsePartialArguments(new NewExpression(left, keyword, type, List.of(),
+                                        ((ArrayTypeExpression) type).getDimensions(), null, lEndPos), false)
+                                : parseArgumentList(true, false, true);
+                    } catch (IncompleteSyntax failure) {
+                        // Finish the construction's suffix so a written supplier does not hide
+                        // the dimension cursor. This prefix query does not validate the supplier.
+                        if (prev().getId() == Id.R_SQUARE) {
+                            parseArgumentList(false, false, false);
+                        }
+                        throw failure;
+                    }
                     dims    = args.size();
                     lEndPos = prev().getEndPosition();
                 } else {
@@ -3241,7 +3448,10 @@ public class Parser {
                 }
 
                 // parenthesized arguments after the dims
-                List<Expression> argsTrailing = parseArgumentList(false, false, false);
+                List<Expression> argsTrailing = f_partialAnalysis && peek(Id.L_PAREN)
+                        ? parsePartialArguments(new NewExpression(left, keyword, type, args,
+                                dims, null, lEndPos), false)
+                        : parseArgumentList(false, false, false);
                 if (argsTrailing != null) {
                     if (!argsTrailing.isEmpty()) {
                         if (args.isEmpty()) {
@@ -3253,7 +3463,22 @@ public class Parser {
                     lEndPos = prev().getEndPosition();
                 }
             } else {
-                args    = parseArgumentList(true, false, false);
+                try {
+                    args = f_partialAnalysis
+                            ? parsePartialArguments(new NewExpression(left, keyword, type, List.of(),
+                                    -1, null, type.getEndPosition()), false)
+                            : parseArgumentList(true, false, false);
+                } catch (IncompleteSyntax failure) {
+                    if (left == null && peek(Id.L_CURLY)) {
+                        // Preserve the anonymous body as construction syntax. A cursor probe
+                        // must not mistake it for ordinary construction followed by a block.
+                        body = parseTypeCompositionBody(keyword);
+                        var site = failure.statement;
+                        site.replaceChild(site.getTarget(), new NewExpression(left, keyword, type,
+                                List.of(), -1, body, prev().getEndPosition()));
+                    }
+                    throw failure;
+                }
                 lEndPos = prev().getEndPosition();
             }
 
@@ -3306,6 +3531,11 @@ public class Parser {
      * @return an expression
      */
     Expression parsePrimaryExpression(boolean fExtended) {
+        if (f_cursor != NO_CURSOR && canRetainIncomplete()) {
+            log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
+            return new IncompleteExpression(new IncompleteStatement(
+                    new Token(f_cursor, f_cursor, Id.IDENTIFIER, ""), f_cursor, INCOMPLETE_EXPRESSION));
+        }
         switch (peek().getId()) {
         case ANY: {
             IgnoredNameExpression exprIgnore = new IgnoredNameExpression(current());
@@ -3436,6 +3666,14 @@ public class Parser {
                 }
 
                 left    = new NameExpression(left, nameNDR, name, null, lEndPos);
+                if (fNormal && nameNext.getStartPosition() < f_cursor && f_cursor <= nameNext.getEndPosition()
+                        && canRetainIncompleteAt(nameNext.getEndPosition(), true)) {
+                    var hole = incomplete(left, dot, nameNext);
+                    if (peek(Id.L_PAREN) || peek(Id.ASYNC_PAREN)) {
+                        return new IncompleteExpression(hole.statement);
+                    }
+                    throw hole;
+                }
                 nameNDR = null;                     // only gets applied once
                 name    = nameNext;
                 lEndPos = name.getEndPosition();
@@ -3452,6 +3690,12 @@ public class Parser {
                 }
 
                 return expr;
+            }
+
+            if (left == null && name.getStartPosition() < f_cursor && f_cursor <= name.getEndPosition()
+                    && canRetainIncompleteAt(name.getEndPosition())) {
+                log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
+                throw new IncompleteSyntax(new IncompleteStatement(name, f_cursor, INCOMPLETE_EXPRESSION));
             }
 
             // test for a non-auto-narrowing modifier ("!")
@@ -3551,7 +3795,10 @@ public class Parser {
                 // parsed to see if it's followed by a lambda operator
                 List<Expression> exprs = new ArrayList<>();
                 exprs.add(expr);
-                while (match(Id.R_PAREN, match(Id.COMMA) == null) == null) {
+                Token tupleClose;
+                while ((tupleClose = match(Id.COMMA) == null
+                        ? expectPartialClose(Id.R_PAREN, exprs)
+                        : matchPartialClose(Id.R_PAREN, exprs)) == null) {
                     exprs.add(parseExpression());
                 }
 
@@ -3561,7 +3808,7 @@ public class Parser {
                 }
 
                 // it's a Tuple literal
-                return new TupleExpression(null, exprs, tokLParen.getStartPosition(), prev().getEndPosition());
+                return new TupleExpression(null, exprs, tokLParen.getStartPosition(), tupleClose.getEndPosition());
 
             case R_PAREN:
                 // this is either a parenthesized expression or a single parameter for a
@@ -3593,9 +3840,8 @@ public class Parser {
             }
 
             default:
-                expect(Id.R_PAREN);
-                skipToNextStatement();
-                return expr;
+                return new ParenthesizedExpression(expr, tokLParen.getStartPosition(),
+                        expectPartialClose(Id.R_PAREN, List.of(expr)).getEndPosition());
             }
         }
 
@@ -3699,7 +3945,7 @@ public class Parser {
                     byte[] abData = null;
                     try {
                         abData = m_source.includeBinary(sFile);
-                    } catch (IOException ignore) {}
+                    } catch (IOException _) {}
                     if (abData == null) {
                         abData = new byte[0];
                         fErr   = true;
@@ -3710,7 +3956,7 @@ public class Parser {
                     try {
                         Source source = m_source.includeString(sFile);
                         sData = source == null ? null : source.toRawString();
-                    } catch (IOException ignore) {}
+                    } catch (IOException _) {}
                     if (sData == null) {
                         sData = "";
                         fErr  = true;
@@ -4079,12 +4325,13 @@ public class Parser {
                         if (peek().getId() == Id.ASN) {
                             List<Expression> keys   = new ArrayList<>();
                             List<Expression> values = new ArrayList<>();
-                            while (match(Id.R_SQUARE) == null) {
+                            Token close;
+                            while ((close = match(Id.R_SQUARE)) == null) {
                                 keys.add(keys.isEmpty() ? expr : parseExpression());
                                 expect(Id.ASN);
                                 values.add(parseExpression());
                                 if (match(Id.COMMA) == null) {
-                                    expect(Id.R_SQUARE);
+                                    close = expectPartialClose(Id.R_SQUARE, values);
                                     break;
                                 }
                             }
@@ -4093,12 +4340,12 @@ public class Parser {
                             Token          tokName  = new Token(ofMap, ofMap, Id.IDENTIFIER, "Map");
                             TypeExpression exprType = new NamedTypeExpression(null,
                                     Collections.singletonList(tokName), null, null, null, ofMap);
-                            return new MapExpression(exprType, keys, values, prev().getEndPosition());
+                            return new MapExpression(exprType, keys, values, close.getEndPosition());
                         }
                     }
 
-                    expect(Id.R_SQUARE);
-                    break;
+                    return new ListExpression(type, exprs, lStartPos,
+                            expectPartialClose(Id.R_SQUARE, exprs).getEndPosition());
                 }
             }
             return new ListExpression(type, exprs, lStartPos, prev().getEndPosition());
@@ -4127,8 +4374,8 @@ public class Parser {
                 expect(Id.ASN);
                 values.add(parseExpression());
                 if (match(Id.COMMA) == null) {
-                    expect(Id.R_SQUARE);
-                    break;
+                    return new MapExpression(type, keys, values,
+                            expectPartialClose(Id.R_SQUARE, values).getEndPosition());
                 }
             }
             return new MapExpression(type, keys, values, prev().getEndPosition());
@@ -4136,17 +4383,16 @@ public class Parser {
 
         case "Tuple": {
             expect(Id.L_PAREN);
-            List<Expression> exprs = null;
-            while (match(Id.R_PAREN) == null) {
-                if (exprs == null) {
-                    exprs = new ArrayList<>();
-                } else {
+            List<Expression> exprs = new ArrayList<>();
+            Token close;
+            while ((close = matchPartialClose(Id.R_PAREN, exprs)) == null) {
+                if (!exprs.isEmpty()) {
                     expect(Id.COMMA);
                 }
                 exprs.add(parseExpression());
             }
             return new TupleExpression(type, exprs, type.getStartPosition(),
-                    prev().getEndPosition());
+                    close.getEndPosition());
         }
 
         case "Path":
@@ -4231,11 +4477,16 @@ public class Parser {
      * @return a type expression
      */
     TypeExpression parseIntersectingTypeExpression(boolean fExtended) {
-        TypeExpression expr = parseUnionedTypeExpression(fExtended);
+        return parseIntersectingTypeExpression(fExtended, false);
+    }
+
+    /** Pass header recovery explicitly through the type grammar; other type contexts stay strict. */
+    private TypeExpression parseIntersectingTypeExpression(boolean fExtended, boolean fHeader) {
+        TypeExpression expr = parseUnionedTypeExpression(fExtended, fHeader);
         Token tokOp;
         do {
             if ((tokOp = match(Id.ADD)) != null || (tokOp = match(Id.SUB)) != null) {
-                expr = new BiTypeExpression(expr, tokOp, parseUnionedTypeExpression(fExtended));
+                expr = new BiTypeExpression(expr, tokOp, parseUnionedTypeExpression(fExtended, fHeader));
             }
         } while (tokOp != null);
         return expr;
@@ -4258,10 +4509,10 @@ public class Parser {
      *
      * @return a type expression
      */
-    TypeExpression parseUnionedTypeExpression(boolean fExtended) {
-        TypeExpression expr = parseNonBiTypeExpression(fExtended);
+    TypeExpression parseUnionedTypeExpression(boolean fExtended, boolean fHeader) {
+        TypeExpression expr = parseNonBiTypeExpression(fExtended, fHeader);
         while (peek(Id.BIT_OR)) {
-            expr = new BiTypeExpression(expr, expect(Id.BIT_OR), parseNonBiTypeExpression(fExtended));
+            expr = new BiTypeExpression(expr, expect(Id.BIT_OR), parseNonBiTypeExpression(fExtended, fHeader));
         }
         return expr;
     }
@@ -4321,9 +4572,9 @@ public class Parser {
      *
      * @return a type expression
      */
-    TypeExpression parseNonBiTypeExpression(boolean fExtended) {
+    TypeExpression parseNonBiTypeExpression(boolean fExtended, boolean fHeader) {
         try (var ignore = nest()) {
-            return parseNonBiTypeExpressionBody(fExtended);
+            return parseNonBiTypeExpressionBody(fExtended, fHeader);
         }
     }
 
@@ -4334,22 +4585,23 @@ public class Parser {
      *
      * @return a type expression
      */
-    private TypeExpression parseNonBiTypeExpressionBody(boolean fExtended) {
+    private TypeExpression parseNonBiTypeExpressionBody(boolean fExtended, boolean fHeader) {
+        retainEmptyTypeArgument(fHeader);
         TypeExpression type;
         Token tokAccess = null;
         switch (peek().getId()) {
         case L_PAREN:
             expect(Id.L_PAREN);
-            type = parseExtendedTypeExpression();
-            expect(Id.R_PAREN);
+            type = parseIntersectingTypeExpression(true, fHeader);
+            expectHeaderTypeClose(Id.R_PAREN, List.of(type), fHeader);
             break;
 
         case AT:
-            type = parseAnnotatedTypeExpression(fExtended);
+            type = parseAnnotatedTypeExpression(fExtended, fHeader);
             break;
 
         case FUNCTION:
-            type = parseFunctionTypeExpression();
+            type = parseFunctionTypeExpression(fHeader);
             break;
 
         case IMMUTABLE: {
@@ -4369,7 +4621,7 @@ public class Parser {
                 }
             }
 
-            type = new DecoratedTypeExpression(tokImmut, parseNonBiTypeExpression(fExtended));
+            type = new DecoratedTypeExpression(tokImmut, parseNonBiTypeExpression(fExtended, fHeader));
             break;
         }
 
@@ -4398,54 +4650,67 @@ public class Parser {
                 }
                 tokAccess = match(Id.STRUCT);
             }
-            type = parseNamedTypeExpression(tokAccess);
+            type = parseNamedTypeExpression(tokAccess, fHeader);
             break;
         }
 
         while (true) {
             switch (peek().getId()) {
-            case L_SQUARE:
-                // this could be either:
-                //  -> NonBiTypeExpression ArrayDims
-                //  -> NonBiTypeExpression ArrayIndexes
-                // in the case of the ArrayIndexes, we do NOT consume that portion of the
-                // expression; we use it to give us a dimension count, as if it were ArrayDims
+            case L_SQUARE: {
+                // Sizes belong to the surrounding construction, not to its type. Look ahead
+                // with a branch so a cursor hole is reported only when the sizes are reparsed
+                // with their owning NewExpression. No diagnostic escapes a discarded lookahead.
                 Mark mark = mark();
-
-                expect(Id.L_SQUARE);
-                int cDims    = 0;
-                int cIndexes = 0;
-                while (match(Id.R_SQUARE) == null) {
-                    if (cDims + cIndexes > 0) {
-                        expect(Id.COMMA);
-                    }
-
-                    Token dim = peek(); // just for error reporting
-                    if (match(Id.COND) == null) {
-                        parseExpression();
-                        if (cIndexes == 0 && cDims > 0) {
-                            // just log the first one that deviates
-                            log(Severity.ERROR, ALL_OR_NO_DIMS, dim.getStartPosition(), dim.getEndPosition());
+                var branch = f_errs.get().branch(null);
+                try (var ignored = reportingTo(branch)) {
+                    expect(Id.L_SQUARE);
+                    int cDims    = 0;
+                    int cIndexes = 0;
+                    while (true) {
+                        if (f_cursor != NO_CURSOR && canRetainIncomplete()) {
+                            int dimensions = cDims + cIndexes + 1 + (peek(Id.COMMA) ? 1 : 0);
+                            restore(mark);
+                            return new ArrayTypeExpression(type, dimensions, f_cursor);
                         }
-                        ++cIndexes;
-                    } else { // we ate the "?"
-                        if (cDims == 0 && cIndexes > 0) {
-                            // just log the first one that deviates
-                            log(Severity.ERROR, ALL_OR_NO_DIMS, dim.getStartPosition(), dim.getEndPosition());
+                        if (match(Id.R_SQUARE) != null) {
+                            break;
                         }
-                        ++cDims;
-                    }
-                }
-                long lEndPos = prev().getEndPosition();
-                type = new ArrayTypeExpression(type, cDims + cIndexes, lEndPos);
+                        if (cDims + cIndexes > 0) {
+                            expect(Id.COMMA);
+                        }
 
-                // if there were only indexes, then we need to leave them in place because the
-                // type expression does not consume them
-                if (cDims == 0 && cIndexes > 0) {
-                    restore(mark);
-                    return type;
+                        Token dim = peek();
+                        if (match(Id.COND) == null) {
+                            Expression index = f_partialAnalysis ? parsePartialValue() : parseExpression();
+                            ++cIndexes;
+                            if (f_cursor != NO_CURSOR && (containsCursorHole(index) || canRetainIncomplete())) {
+                                int dimensions = cDims + cIndexes + (peek(Id.COMMA) ? 1 : 0);
+                                long end = Math.max(f_cursor, prev().getEndPosition());
+                                restore(mark);
+                                return new ArrayTypeExpression(type, dimensions, end);
+                            }
+                            if (cIndexes == 1 && cDims > 0) {
+                                log(Severity.ERROR, ALL_OR_NO_DIMS, dim.getStartPosition(), dim.getEndPosition());
+                            }
+                        } else {
+                            if (cDims == 0 && cIndexes > 0) {
+                                log(Severity.ERROR, ALL_OR_NO_DIMS, dim.getStartPosition(), dim.getEndPosition());
+                            }
+                            ++cDims;
+                        }
+                    }
+                    type = new ArrayTypeExpression(type, cDims + cIndexes, prev().getEndPosition());
+                    if (cDims == 0 && cIndexes > 0) {
+                        restore(mark);
+                        return type;
+                    }
+                } catch (CompilerException error) {
+                    branch.merge();
+                    throw error;
                 }
+                branch.merge();
                 break;
+            }
 
             case COND:
                 if (!peek().hasLeadingWhitespace()) {
@@ -4476,9 +4741,9 @@ public class Parser {
      *
      * @return an AnnotatedTypeExpression
      */
-    AnnotatedTypeExpression parseAnnotatedTypeExpression(boolean fExtended) {
+    AnnotatedTypeExpression parseAnnotatedTypeExpression(boolean fExtended, boolean fHeader) {
         AnnotationExpression annotation = parseAnnotation(true);
-        TypeExpression type = parseNonBiTypeExpression(fExtended);
+        TypeExpression type = parseNonBiTypeExpression(fExtended, fHeader);
 
         return new AnnotatedTypeExpression(annotation, type);
     }
@@ -4498,19 +4763,23 @@ public class Parser {
      * @return a FunctionTypeExpression
      */
     FunctionTypeExpression parseFunctionTypeExpression() {
+        return parseFunctionTypeExpression(false);
+    }
+
+    private FunctionTypeExpression parseFunctionTypeExpression(boolean header) {
         Token function = expect(Id.FUNCTION);
 
         // return values
         Token           conditional = match(Id.CONDITIONAL);
-        List<Parameter> listReturn  = parseReturnList();
+        List<Parameter> listReturn  = parseReturnList(header);
 
         // see if the parameters precede the name
-        List<TypeExpression> listParam = parseParameterTypeList(false);
+        List<TypeExpression> listParam = parseParameterTypeList(false, header);
 
         if (listParam == null) {
             // name optionally comes before or after the parameters
             Token name = expect(Id.IDENTIFIER);
-            listParam = parseParameterTypeList(true);
+            listParam = parseParameterTypeList(true, header);
 
             // pretend the name is the next token (as if we didn't eat it already)
             putBack(name);
@@ -4541,6 +4810,10 @@ public class Parser {
      * @return a NamedTypeExpression
      */
     NamedTypeExpression parseNamedTypeExpression(Token tokAccess) {
+        return parseNamedTypeExpression(tokAccess, false);
+    }
+
+    private NamedTypeExpression parseNamedTypeExpression(Token tokAccess, boolean fHeader) {
         NamedTypeExpression expr = null;
         do {
             if (expr != null) {
@@ -4548,7 +4821,22 @@ public class Parser {
             }
 
             // QualifiedName
-            List<Token> names = parseQualifiedName();
+            List<Token> names = new ArrayList<>();
+            do {
+                boolean hole = fHeader && f_cursor != NO_CURSOR && canRetainTypeSlot();
+                Token name = hole ? new Token(f_cursor, f_cursor, Id.IDENTIFIER, "") : expect(Id.IDENTIFIER);
+                names.add(name);
+                // A cursor in a qualifier owns this token only; the remaining dotted suffix
+                // stays in source. A trailing dot owns a zero-width insertion slot.
+                if (fHeader && (hole || peek(Id.DOT) && name.getStartPosition() < f_cursor
+                        && f_cursor <= name.getEndPosition())) {
+                    var selected = expr == null
+                            ? new NamedTypeExpression(null, names, tokAccess, null, null, name.getEndPosition())
+                            : new NamedTypeExpression(expr, names, null, name.getEndPosition());
+                    log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
+                    throw new IncompleteHeader(IncompleteStatement.forDeclarationType(selected, f_cursor));
+                }
+            } while (match(Id.DOT) != null);
 
             if (tokAccess != null && expr != null) {
                 log(Severity.ERROR, NO_CHILD_ACCESS, tokAccess.getStartPosition(),
@@ -4566,7 +4854,7 @@ public class Parser {
             }
 
             // TypeParameterTypeList
-            List<TypeExpression> params = parseTypeParameterTypeList(false, true);
+            List<TypeExpression> params = parseTypeParameterTypeList(false, true, fHeader);
 
             if (expr == null) {
                 expr = new NamedTypeExpression(null, names, tokAccess, tokNarrow, params,
@@ -4784,6 +5072,10 @@ public class Parser {
      * @return a list of zero or more type parameters, or null if there were no angle brackets
      */
     List<Parameter> parseTypeParameterList(boolean required) {
+        return parseTypeParameterList(required, false);
+    }
+
+    private List<Parameter> parseTypeParameterList(boolean required, boolean header) {
         List<Parameter> typeParams = null;
         if (match(Id.COMP_LT, required) != null) {
             typeParams = new ArrayList<>();
@@ -4798,7 +5090,12 @@ public class Parser {
                 Token          param = expect(Id.IDENTIFIER);
                 TypeExpression type  = null;
                 if (match(Id.EXTENDS) != null) {
-                    type = parseExtendedTypeExpression();
+                    try {
+                        type = header ? parseDeclarationType(true) : parseExtendedTypeExpression();
+                    } catch (IncompleteHeader error) {
+                        throw error.withFormals(Stream.concat(typeParams.stream(),
+                                Stream.of(new Parameter(new BadTypeExpression((Expression) error.writtenType.clone()), param))).toList());
+                    }
                 }
                 typeParams.add(new Parameter(type, param));
             }
@@ -4828,13 +5125,19 @@ public class Parser {
      * @return a list of zero or more types, or null if there were no angle brackets
      */
     List<TypeExpression> parseTypeParameterTypeList(boolean required, boolean fAllowTypeSequence) {
+        return parseTypeParameterTypeList(required, fAllowTypeSequence, false);
+    }
+
+    private List<TypeExpression> parseTypeParameterTypeList(boolean required, boolean fAllowTypeSequence,
+                                                           boolean fHeader) {
         List<TypeExpression> types = null;
         if (match(Id.COMP_LT, required) != null) {
+            retainEmptyTypeArgument(fHeader);
             if (match(Id.COMP_GT) != null) {
                 types = Collections.emptyList();
             } else {
-                types = parseTypeExpressionList(fAllowTypeSequence);
-                expect(Id.COMP_GT);
+                types = parseTypeExpressionList(fAllowTypeSequence, fHeader);
+                expectHeaderTypeClose(Id.COMP_GT, types, fHeader);
             }
         }
         return types;
@@ -4852,21 +5155,46 @@ public class Parser {
      * @return a list of type expressions
      */
     List<TypeExpression> parseTypeExpressionList(boolean fAllowTypeSequence) {
+        return parseTypeExpressionList(fAllowTypeSequence, false);
+    }
+
+    private List<TypeExpression> parseTypeExpressionList(boolean fAllowTypeSequence, boolean fHeader) {
         List<TypeExpression> types = new ArrayList<>();
         while (true) {
             if (!types.isEmpty() && match(Id.COMMA) == null) {
                 return types;
             }
 
+            retainEmptyTypeArgument(fHeader);
+
             if (fAllowTypeSequence && peek(Id.COMP_LT)) {
                 Token tokStart = peek();
-                List<TypeExpression> listSeq = parseTypeParameterTypeList(true, false);
+                List<TypeExpression> listSeq = parseTypeParameterTypeList(true, false, fHeader);
                 Token tokEnd   = prev();
                 types.add(new TupleTypeExpression(listSeq, tokStart.getStartPosition(), tokEnd.getEndPosition()));
             } else {
-                types.add(parseExtendedTypeExpression());
+                types.add(parseIntersectingTypeExpression(true, fHeader));
             }
         }
+    }
+
+    /** An explicit empty generic slot has no invented type expression or generic owner. */
+    private void retainEmptyTypeArgument(boolean header) {
+        if (header && f_cursor != NO_CURSOR && canRetainTypeSlot()) {
+            throw incompleteHeader(new Token(f_cursor, f_cursor, Id.IDENTIFIER, ""));
+        }
+    }
+
+    /** Only explicit cursor probes can select an empty type slot at a grammar boundary. */
+    private boolean canRetainTypeSlot() {
+        return m_cSpeculating == 0 && !m_fAvoidRecovery && !f_errs.get().isAbortDesired()
+                && prev().getEndPosition() <= f_cursor
+                && f_cursor <= (eof() ? m_source.getPosition() : peek().getStartPosition())
+                && (switch (peek().getId()) {
+                    case COMP_GT, COMP_GTEQ, SHR, SHR_ASN, USHR, USHR_ASN, BIT_OR, ADD, SUB -> true;
+                    case IDENTIFIER -> f_cursor < peek().getStartPosition();
+                    default -> canRetainIncomplete();
+                });
     }
 
     /**
@@ -4940,19 +5268,224 @@ public class Parser {
         List<Parameter> params = null;
         if (match(Id.L_PAREN, required) != null) {
             params = new ArrayList<>();
+            if (f_cursor != NO_CURSOR && canRetainIncomplete()) {
+                throw incompleteHeader(new Token(f_cursor, f_cursor, Id.IDENTIFIER, ""));
+            }
             if (match(Id.R_PAREN) == null) {
-                do {
-                    TypeExpression type  = parseTypeExpression();
+                while (true) {
+                    TypeExpression type  = parseDeclarationType();
+                    var missingName = declarationNameSlot(type);
+                    if (missingName.isPresent()) {
+                        log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
+                        throw new IncompleteHeader(missingName.orElseThrow());
+                    }
                     Token          name  = expect(Id.IDENTIFIER);
                     Expression     value = null;
                     if (match(Id.ASN) != null) {
                         value = parseExpression();
                     }
                     params.add(new Parameter(type, name, value));
-                } while (match(Id.R_PAREN, (match(Id.COMMA) == null)) == null);
+                    Token comma = match(Id.COMMA);
+                    if (comma != null && f_cursor != NO_CURSOR && canRetainIncomplete()) {
+                        throw incompleteHeader(new Token(f_cursor, f_cursor, Id.IDENTIFIER, ""));
+                    }
+                    if ((comma == null ? expectPartialClose(Id.R_PAREN, params) : match(Id.R_PAREN)) != null) {
+                        break;
+                    }
+                }
             }
         }
         return params;
+    }
+
+    /** A header type prefix is queried in its enclosing declaration, never as a value. */
+    private TypeExpression parseDeclarationType() {
+        return parseDeclarationType(false);
+    }
+
+    /**
+     * Only a grammar position that requires a name may retain an empty name slot. In a method
+     * body, a bare expression followed by whitespace is not evidence of a variable declaration.
+     * Keep the complete written type as syntax; no parameter or property is registered.
+     */
+    private Optional<IncompleteStatement> declarationNameSlot(TypeExpression type) {
+        return f_cursor != NO_CURSOR && m_cSpeculating == 0 && !m_fAvoidRecovery
+                && !f_errs.get().isAbortDesired() && !(type instanceof BadTypeExpression)
+                && prev().getEndPosition() < f_cursor
+                && f_cursor <= (eof() ? m_source.getPosition() : peek().getStartPosition())
+                && m_source.toString(prev().getEndPosition(), f_cursor).isBlank()
+                && (eof() || peek(Id.ASN) || peek(Id.SEMICOLON) || peek(Id.R_CURLY)
+                        || peek(Id.R_PAREN) || peek(Id.COMMA))
+                ? Optional.of(IncompleteStatement.forDeclarationName(type, prev(), f_cursor))
+                : Optional.empty();
+    }
+
+    private TypeExpression parseDeclarationType(boolean extended) {
+        if (f_cursor != NO_CURSOR && canRetainIncomplete()) {
+            throw incompleteHeader(new Token(f_cursor, f_cursor, Id.IDENTIFIER, ""));
+        }
+        boolean header = f_cursor != NO_CURSOR && m_cSpeculating == 0 && !m_fAvoidRecovery
+                && !f_errs.get().isAbortDesired();
+        TypeExpression type = parseIntersectingTypeExpression(extended, header);
+        if (header) {
+            var prefix = declarationTypePrefix(type);
+            if (prefix.isPresent()) {
+                log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
+                throw new IncompleteHeader(IncompleteStatement.forDeclarationType(prefix.orElseThrow(), f_cursor), type, List.of());
+            }
+        }
+        return type;
+    }
+
+    /**
+     * Select a written type name, including a generic base whose arguments follow the cursor. The
+     * caller transfers this original node into the cursor site; ordinary adoption and cloning
+     * then own it. This is syntax selection, not validation of the enclosing type's constraints.
+     */
+    private Optional<NamedTypeExpression> declarationTypePrefix(TypeExpression type) {
+        if (type instanceof NamedTypeExpression named && named.getModule() == null
+                && named.getNameToken() != null && named.getNameToken().getStartPosition() < f_cursor
+                && f_cursor <= named.getNameToken().getEndPosition()) {
+            return Optional.of(named);
+        }
+        var types = type instanceof FunctionTypeExpression function
+                ? Stream.concat(function.getReturnValues().stream().map(Parameter::getType),
+                        function.getParamTypes().stream())
+                : StreamSupport.stream(type.children().spliterator(), false)
+                        .filter(TypeExpression.class::isInstance).map(TypeExpression.class::cast);
+        return types.flatMap(child -> declarationTypePrefix(child).stream()).findFirst();
+    }
+
+    /** Missing type closers are tolerated only around a selected header prefix, never in normal parsing. */
+    private void expectHeaderTypeClose(Id close, List<TypeExpression> types, boolean header) {
+        if (match(close) != null) {
+            return;
+        }
+        if (header && m_cSpeculating == 0 && !m_fAvoidRecovery && !f_errs.get().isAbortDesired()
+                && (atMissingClose() || peek(Id.IDENTIFIER) || peek(Id.COMP_GT))
+                && types.stream().anyMatch(type -> declarationTypePrefix(type).isPresent())) {
+            return;
+        }
+        expect(close);
+    }
+
+    private IncompleteHeader incompleteHeader(Token prefix) {
+        log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
+        return new IncompleteHeader(new IncompleteStatement(prefix, f_cursor, INCOMPLETE_EXPRESSION));
+    }
+
+    private static class IncompleteHeader extends CompilerException {
+        private IncompleteHeader(IncompleteStatement site) {
+            this(site, site.getTarget(), List.of());
+        }
+
+        private IncompleteHeader(IncompleteStatement site, Expression writtenType, List<Parameter> formals) {
+            super("Incomplete declaration header");
+            this.site = site;
+            this.formals = formals;
+            this.writtenType = writtenType;
+        }
+
+        private IncompleteHeader withFormals(List<Parameter> parameters) {
+            return parameters == null ? this : new IncompleteHeader(site, writtenType,
+                    Stream.concat(formals.stream(), parameters.stream()).distinct().toList());
+        }
+
+        private final IncompleteStatement site;
+        private final List<Parameter> formals;
+        private final Expression writtenType;
+    }
+
+    /** Keep a type's real body for structure, but never register an unfinished inheritance header. */
+    private TypeCompositionStatement retainTypeDeclaration(Mark header, long start, Token category,
+            Token name, List<Token> qualified, List<IncompleteStatement> sites, CompilerException error) {
+        if (m_cSpeculating != 0 || m_fAvoidRecovery || f_errs.get().isAbortDesired()) {
+            throw error;
+        }
+        restore(header);
+        while (!eof() && !peek(Id.R_CURLY)) {
+            if (f_errs.get().isAbortDesired()) {
+                throw error;
+            }
+            if (peek(Id.L_CURLY)) {
+                StatementBlock body = parseTypeCompositionBody(category);
+                return new IncompleteTypeCompositionStatement(m_source, category, name, qualified, body,
+                        start, body.getEndPosition(), sites,
+                        error instanceof IncompleteHeader incomplete ? incomplete.formals : List.of());
+            }
+            if (match(Id.SEMICOLON) != null) {
+                break;
+            }
+            current();
+        }
+        return new IncompleteTypeCompositionStatement(m_source, category, name, qualified, null,
+                start, retainedDeclarationEnd(sites), sites,
+                error instanceof IncompleteHeader incomplete ? incomplete.formals : List.of());
+    }
+
+    /**
+     * Retain only the known declaration name and source extent. A brace or semicolon bounds
+     * this recovery; the body is skipped as one unit so its names cannot leak into the owner.
+     * Unfinished parameter syntax never registers a partial method signature.
+     */
+    private IncompleteDeclarationStatement retainDeclaration(Mark header, long start, Token name,
+            IncompleteDeclarationStatement.Kind kind, List<IncompleteStatement> sites, CompilerException error) {
+        if (m_cSpeculating != 0 || m_fAvoidRecovery || f_errs.get().isAbortDesired()) {
+            throw error;
+        }
+        restore(header);
+        while (!eof() && !peek(Id.R_CURLY)) {
+            if (f_errs.get().isAbortDesired()) {
+                throw error;
+            }
+            if (peek(Id.L_CURLY)) {
+                current();
+                // Consume the body by brace depth so missing parameter delimiters cannot eat
+                // its siblings. current() also preserves the actual closing token's range.
+                int depth = 1;
+                while (depth > 0 && !eof()) {
+                    if (f_errs.get().isAbortDesired()) {
+                        throw error;
+                    }
+                    switch (current().getId()) {
+                    case L_CURLY -> ++depth;
+                    case R_CURLY -> --depth;
+                    default -> {}
+                    }
+                }
+                break;
+            }
+            if (match(Id.SEMICOLON) != null) {
+                break;
+            }
+            current();
+        }
+        return new IncompleteDeclarationStatement(kind, name, start, retainedDeclarationEnd(sites), sites,
+                error instanceof IncompleteHeader incomplete ? incomplete.formals : List.of());
+    }
+
+    /** An empty name slot at EOF includes the whitespace after its last written type token. */
+    private long retainedDeclarationEnd(List<IncompleteStatement> sites) {
+        return Math.max(prev().getEndPosition(), sites.stream().mapToLong(IncompleteStatement::getEndPosition)
+                .max().orElse(prev().getEndPosition()));
+    }
+
+    /** Declaration return slots select types without publishing an unfinished callable. */
+    private List<Parameter> parseDeclarationReturns() {
+        if (f_cursor == NO_CURSOR) {
+            return parseReturnList();
+        }
+        if (match(Id.VOID) != null) {
+            return List.of();
+        }
+        if (match(Id.L_PAREN) == null) {
+            return List.of(new Parameter(parseDeclarationType()));
+        }
+        List<Parameter> returns = new ArrayList<>();
+        do {
+            returns.add(new Parameter(parseDeclarationType(), matchNameOrAny()));
+        } while (match(Id.R_PAREN, match(Id.COMMA) == null) == null);
+        return returns;
     }
 
     /**
@@ -4967,12 +5500,16 @@ public class Parser {
      * @return
      */
     List<TypeExpression> parseParameterTypeList(boolean required) {
+        return parseParameterTypeList(required, false);
+    }
+
+    private List<TypeExpression> parseParameterTypeList(boolean required, boolean header) {
         List<TypeExpression> types = null;
         if (match(Id.L_PAREN, required) != null) {
             types = peek(Id.R_PAREN)
                     ? Collections.emptyList()
-                    : parseTypeExpressionList(false);
-            expect(Id.R_PAREN);
+                    : parseTypeExpressionList(false, header);
+            expectHeaderTypeClose(Id.R_PAREN, types, header);
         }
         return types;
     }
@@ -5043,60 +5580,279 @@ public class Parser {
         List<Expression> args = new ArrayList<>();
         if (match(idClose) == null) {
             do {
-                Token label = null;
-                if (!fArray) {
-                    // special case where the parameter names are being specified with the arguments
-                    if (peek(Id.IDENTIFIER)) {
-                        Token name = expect(Id.IDENTIFIER);
-                        if (match(Id.ASN) == null) {
-                            // oops, it wasn't a "name=value" argument
-                            putBack(name);
-                        } else {
-                            label = name;
-                        }
-                    }
-                }
-
-                Expression expr;
-                if (allowCurrying && !fArray) {
-                    switch (peek().getId()) {
-                    case ANY: {
-                        // one of two cases: an unbound argument, or a lambda whose one parameter is
-                        // ignored
-                        Token tokUnbound = expect(Id.ANY);
-                        if (peek(Id.LAMBDA)) {
-                            putBack(tokUnbound);
-                            expr = parseExpression();
-                        } else {
-                            expr = new NonBindingExpression(tokUnbound.getStartPosition(),
-                                    tokUnbound.getEndPosition(), null);
-                        }
-                        break;
-                    }
-
-                    case COMP_LT: {
-                        Token          tokOpen    = expect(Id.COMP_LT);
-                        TypeExpression type       = parseTypeExpression();
-                        Token          tokClose   = expect(Id.COMP_GT);
-                        Token          tokUnbound = expect(Id.ANY);
-                        expr = new NonBindingExpression(tokOpen.getStartPosition(),
-                                tokUnbound.getEndPosition(), type);
-                        break;
-                    }
-
-                    default:
-                        expr = parseExpression();
-                        break;
-                    }
-                } else {
-                    expr = parseExpression();
-                }
-
-                args.add(label == null ? expr : new LabeledExpression(label, expr));
+                args.add(parseArgument(allowCurrying, fArray));
             } while (match(idClose, (match(Id.COMMA) == null)) == null);
         }
 
         return args;
+    }
+
+    /** Parse one argument, shared by calls, constructors and annotation argument lists. */
+    private Expression parseArgument(boolean allowCurrying, boolean fArray) {
+        return parseArgument(allowCurrying, fArray, false);
+    }
+
+    private Expression parseArgument(boolean allowCurrying, boolean fArray, boolean partial) {
+        Token label = null;
+        if (!fArray) {
+            // special case where the parameter names are being specified with the arguments
+            if (peek(Id.IDENTIFIER)) {
+                Token name = expect(Id.IDENTIFIER);
+                if (match(Id.ASN) == null) {
+                    // oops, it wasn't a "name=value" argument
+                    putBack(name);
+                } else {
+                    label = name;
+                }
+            }
+        }
+
+        if (partial && canRetainIncomplete() && peek(Id.COMMA)) {
+            log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
+            Expression hole = new IncompleteExpression(new IncompleteStatement(
+                    new Token(f_cursor, f_cursor, Id.IDENTIFIER, ""), f_cursor, INCOMPLETE_EXPRESSION));
+            return label == null ? hole : new LabeledExpression(label, hole);
+        }
+        if (partial && label != null && canRetainIncomplete()) {
+            throw new IncompleteArgument(label);
+        }
+        Expression expr;
+        if (allowCurrying && !fArray) {
+            switch (peek().getId()) {
+            case ANY: {
+                // one of two cases: an unbound argument, or a lambda whose one parameter is
+                // ignored
+                Token tokUnbound = expect(Id.ANY);
+                if (peek(Id.LAMBDA)) {
+                    putBack(tokUnbound);
+                    expr = parseExpression();
+                } else {
+                    expr = new NonBindingExpression(tokUnbound.getStartPosition(),
+                            tokUnbound.getEndPosition(), null);
+                }
+                break;
+            }
+
+            case COMP_LT: {
+                Token          tokOpen    = expect(Id.COMP_LT);
+                TypeExpression type       = parseTypeExpression();
+                Token          tokClose   = expect(Id.COMP_GT);
+                Token          tokUnbound = expect(Id.ANY);
+                expr = new NonBindingExpression(tokOpen.getStartPosition(),
+                        tokUnbound.getEndPosition(), type);
+                break;
+            }
+
+            default:
+                expr = partial ? parsePartialValue() : parseExpression();
+                break;
+            }
+        } else {
+            expr = partial ? parsePartialValue() : parseExpression();
+        }
+
+        return label == null ? expr : new LabeledExpression(label, expr);
+    }
+
+    /** Retain the opening token and separators only for the explicit partial-analysis parser. */
+    private Expression parseInvocation(Expression callee) {
+        if (!f_partialAnalysis) {
+            return new InvocationExpression(callee, peek(Id.ASYNC_PAREN),
+                    parseArgumentList(true, true, false), prev().getEndPosition());
+        }
+
+        boolean          async = peek(Id.ASYNC_PAREN);
+        List<Expression> args  = parsePartialArguments(callee, true);
+        return new InvocationExpression(callee, async, args, prev().getEndPosition());
+    }
+
+    /** Shared cursor syntax for ordinary calls and constructor arguments. */
+    private List<Expression> parsePartialArguments(Expression callee, boolean allowBindings) {
+        boolean          array      = callee instanceof NewExpression && peek(Id.L_SQUARE);
+        Id               close      = array ? Id.R_SQUARE : Id.R_PAREN;
+        Token            open       = array || allowBindings && peek(Id.ASYNC_PAREN) ? current() : expect(Id.L_PAREN);
+        List<Expression> args       = new ArrayList<>();
+        List<Token>      separators = new ArrayList<>();
+        boolean          incomplete = containsCursorHole(callee);
+        if (canRetainIncomplete() && !peek(Id.COMMA)) {
+            match(close);
+            throw incomplete(callee, open, args, separators);
+        }
+        if (match(close) == null) {
+            while (true) {
+                Expression argument;
+                try {
+                    argument = parseArgument(allowBindings, array, f_cursor != NO_CURSOR);
+                } catch (IncompleteArgument e) {
+                    match(close);
+                    log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
+                    throw new IncompleteSyntax(IncompleteStatement.forNamedArgument(
+                            callee, open, args, separators, f_cursor, e.name));
+                }
+                Expression value = argument instanceof LabeledExpression labeled
+                        ? labeled.getUnderlyingExpression() : argument;
+                // A direct final argument prefix belongs to this call's fitting context. Keep
+                // its token rather than validating it as a value or retaining a second site.
+                // Compound/member expressions and slots before later arguments keep their sites.
+                if (value instanceof IncompleteExpression partial && partial.getSite().isNameCompletion()
+                        && canRetainIncomplete() && !peek(Id.COMMA)) {
+                    match(close);
+                    throw new IncompleteSyntax(IncompleteStatement.forArgumentPrefix(callee, open,
+                            args, separators, f_cursor,
+                            argument instanceof LabeledExpression labeled ? labeled.getNameToken() : null,
+                            partial.getSite().getMemberName().orElseThrow()));
+                }
+                args.add(argument);
+                if (containsCursorHole(value)) {
+                    incomplete = true;
+                }
+                Token comma = match(Id.COMMA);
+                if (comma != null) {
+                    separators.add(comma);
+                }
+                if (canRetainIncomplete()) {
+                    match(close);
+                    throw incomplete(callee, open, args, separators);
+                }
+                if (comma == null && incomplete && !peek(close) && atMissingClose()) {
+                    break;
+                }
+                if (match(close, comma == null) != null) {
+                    break;
+                }
+            }
+        }
+        if (incomplete) {
+            throw incomplete(callee, open, args, separators);
+        }
+        return args;
+    }
+
+    private boolean canRetainIncomplete() {
+        return canRetainIncompleteAt(f_cursor);
+    }
+
+    /** A mid-token value cursor uses the same recovery boundary after its complete written token. */
+    private boolean canRetainIncompleteAt(long cursor) {
+        return canRetainIncompleteAt(cursor, false);
+    }
+
+    /** A selected member name can precede a call whose arguments must still be parsed and owned. */
+    private boolean canRetainIncompleteAt(long cursor, boolean allowCall) {
+        if (!f_partialAnalysis || m_cSpeculating != 0 || m_fAvoidRecovery || f_errs.get().isAbortDesired()) {
+            return false;
+        }
+        if (cursor == NO_CURSOR) {
+            return eof();
+        }
+        return prev().getEndPosition() <= cursor
+                && cursor <= (eof() ? m_source.getPosition() : peek().getStartPosition())
+                && (eof() || peek(Id.R_CURLY) || peek(Id.SEMICOLON) || peek(Id.R_PAREN)
+                        || peek(Id.R_SQUARE) || peek(Id.COMMA) || peek(Id.COLON) || peek(Id.L_CURLY)
+                        || prev().getId() == Id.IDENTIFIER && switch (peek().getId()) {
+                            case ADD, SUB, MUL, DIV, MOD, DIVREM, SHL, SHR, USHR,
+                                 BIT_AND, BIT_OR, BIT_XOR, COND_AND, COND_OR, COND_XOR,
+                                 COMP_EQ, COMP_NEQ, COMP_LT, COMP_LTEQ, COMP_GT, COMP_GTEQ,
+                                 COMP_ORD, COND_ELSE -> true;
+                            case COND -> peek().hasLeadingWhitespace();
+                            default -> false;
+                        }
+                        || allowCall && (peek(Id.L_PAREN) || peek(Id.ASYNC_PAREN)));
+    }
+
+    /**
+     * Retain enclosing syntax around a cursor hole at a statement/outer-delimiter boundary.
+     * The existing incomplete-expression diagnostic covers the hole and its missing suffix;
+     * this zero-width end marker neither edits the source nor consumes an enclosing delimiter.
+     * Without that hole, ordinary parsing (including speculation and error budgets) still fails.
+     */
+    private Token expectPartialClose(Id close, List<? extends AstNode> expressions) {
+        Token token = matchPartialClose(close, expressions);
+        return token == null ? expect(close) : token;
+    }
+
+    private Token matchPartialClose(Id close, List<? extends AstNode> expressions) {
+        Token token = match(close);
+        if (token != null) {
+            return token;
+        }
+        if (atMissingClose() && expressions.stream().anyMatch(this::containsCursorHole)) {
+            long end = Math.max(f_cursor, prev().getEndPosition());
+            return new Token(end, end, close);
+        }
+        return null;
+    }
+
+    private boolean atMissingClose() {
+        return f_cursor != NO_CURSOR && m_cSpeculating == 0 && !m_fAvoidRecovery
+                && !f_errs.get().isAbortDesired()
+                && (eof() || peek(Id.SEMICOLON) || peek(Id.R_CURLY)
+                        || peek(Id.R_PAREN) || peek(Id.R_SQUARE) || peek(Id.L_CURLY));
+    }
+
+    /** Query syntax ownership rather than caching cursor state on ordinary AST nodes. */
+    private boolean containsCursorHole(AstNode node) {
+        return f_cursor != NO_CURSOR && PartialSyntax.containsAt(node, f_cursor);
+    }
+
+    private IncompleteSyntax incomplete(Expression target, Token operator,
+                                        List<Expression> arguments, List<Token> separators) {
+        long   position = f_cursor == NO_CURSOR ? m_source.getPosition() : f_cursor;
+        String code     = f_cursor == NO_CURSOR ? UNEXPECTED_EOF : INCOMPLETE_EXPRESSION;
+        log(Severity.ERROR, code, position, position);
+        return new IncompleteSyntax(
+                new IncompleteStatement(target, operator, arguments, separators, position, code));
+    }
+
+    private IncompleteSyntax incomplete(Expression receiver, Token dot, Token memberName) {
+        log(Severity.ERROR, INCOMPLETE_EXPRESSION, f_cursor, f_cursor);
+        return new IncompleteSyntax(new IncompleteStatement(
+                receiver, dot, memberName, f_cursor, INCOMPLETE_EXPRESSION));
+    }
+
+    /** Preserve the enclosing statement only when its whole value is the incomplete operation. */
+    private Expression parsePartialValue() {
+        long start = peek().getStartPosition();
+        try {
+            return parseExpression();
+        } catch (IncompleteSyntax e) {
+            return retainPartialValue(start, e);
+        }
+    }
+
+    private Expression retainPartialValue(long start, IncompleteSyntax error) {
+        if (f_cursor == NO_CURSOR || error.statement.getStartPosition() != start) {
+            throw error;
+        }
+        return new IncompleteExpression(error.statement);
+    }
+
+    private void finishValueStatement(Expression value) {
+        if (value instanceof IncompleteExpression || atMissingClose() && containsCursorHole(value)) {
+            match(Id.SEMICOLON);
+        } else {
+            expect(Id.SEMICOLON);
+        }
+    }
+
+    /** Unwind to the enclosing statement without pretending the unfinished expression has a value. */
+    private static class IncompleteSyntax extends CompilerException {
+        private IncompleteSyntax(IncompleteStatement statement) {
+            super("Incomplete expression");
+            this.statement = statement;
+        }
+
+        private final IncompleteStatement statement;
+    }
+
+    /** Unwind only to the owning call, retaining a written label without inventing a value. */
+    private static class IncompleteArgument extends CompilerException {
+        private IncompleteArgument(Token name) {
+            super("Incomplete named argument");
+            this.name = name;
+        }
+
+        private final Token name;
     }
 
     /**
@@ -5120,15 +5876,19 @@ public class Parser {
      * }</pre>
      */
     List<Parameter> parseReturnList() {
+        return parseReturnList(false);
+    }
+
+    private List<Parameter> parseReturnList(boolean header) {
         List<Parameter> listReturn;
         if (match(Id.VOID) != null) {
             listReturn = Collections.emptyList();
         } else if (match(Id.L_PAREN) == null) {
-            listReturn = Collections.singletonList(new Parameter(parseTypeExpression()));
+            listReturn = List.of(new Parameter(parseIntersectingTypeExpression(false, header)));
         } else {
             listReturn = new ArrayList<>();
             do {
-                listReturn.add(new Parameter(parseTypeExpression(), matchNameOrAny()));
+                listReturn.add(new Parameter(parseIntersectingTypeExpression(false, header), matchNameOrAny()));
             } while (match(Id.R_PAREN, (match(Id.COMMA) == null)) == null);
         }
         return listReturn;
@@ -5240,18 +6000,69 @@ public class Parser {
     }
 
     /**
+     * Finish a block without consuming the synthetic EOF token. Missing braces are errors, but
+     * completed declarations and statements remain useful to source tools. A speculative parse
+     * still fails immediately, and cancellation/error budgets always stop recovery.
+     */
+    private boolean atBlockEnd(boolean fFileLevel) {
+        if (f_errs.get().isAbortDesired()) {
+            throw new CompilerException("Parsing aborted");
+        }
+        if (eof()) {
+            // An explicit EOF cursor already reports its unfinished suffix, including containers.
+            // Other cursors and ordinary parsing must still diagnose missing block braces.
+            if (!fFileLevel && !f_errs.get().hasError(UNEXPECTED_EOF)
+                    && !(f_cursor == m_source.getPosition()
+                            && f_errs.get().hasError(INCOMPLETE_EXPRESSION))) {
+                log(Severity.ERROR, UNEXPECTED_EOF, m_source.getPosition(), m_source.getPosition());
+            }
+            // Retain an end marker for recovered containers without advancing past EOF.
+            m_tokenPrev = new Token(m_source.getPosition(), m_source.getPosition(), Id.R_CURLY);
+            return true;
+        }
+        return match(Id.R_CURLY) != null;
+    }
+
+    /**
+     * Drop one malformed statement and resume at a lexical statement boundary. Rewind to its
+     * beginning so delimiters consumed by the failed parse cannot change the enclosing scope.
+     * Always consume its first token before scanning, even if that token is a statement keyword.
+     */
+    private void recoverStatement(Mark start, CompilerException error) {
+        if (m_cSpeculating != 0 || m_fAvoidRecovery || f_errs.get().isAbortDesired()) {
+            throw error;
+        }
+        if (eof()) {
+            return;
+        }
+        restore(start);
+        Token token = current();
+        switch (token.getId()) {
+        case L_CURLY, L_PAREN, L_SQUARE:
+            skipEnclosed(token.getId());
+            break;
+        default:
+            skipToNextStatement();
+            break;
+        }
+    }
+
+    /**
      * Attempt to get out of whatever parsing mess we got ourselves into by
      * figuring out where the current statement ends, and starting anew from
      * there.
      */
     void skipToNextStatement() {
-        while (true) {
+        while (!eof()) {
             switch (peek().getId()) {
             case SEMICOLON:
                 next();
                 return;
 
             case L_CURLY:
+                skipEnclosed(current().getId());
+                return;
+
             case L_PAREN:
             case L_SQUARE:
                 skipEnclosed(current().getId());
@@ -5312,7 +6123,7 @@ public class Parser {
      * @param idOpen  the opening parenthesis / curlies / brackets
      */
     void skipEnclosed(Id idOpen) {
-        while (true) {
+        while (!eof()) {
             switch (peek().getId()) {
             case L_CURLY:
             case L_PAREN:
@@ -5467,7 +6278,6 @@ public class Parser {
         Token   putBack;
         Token   lastMatch;
         Token   doc;
-        boolean noRec;
     }
 
     protected Mark mark() {
@@ -5477,17 +6287,17 @@ public class Parser {
         mark.putBack   = m_tokenPutBack == null ? null : m_tokenPutBack.clone();
         mark.lastMatch = m_tokenPrev    == null ? null : m_tokenPrev   .clone();
         mark.doc       = m_doc;
-        mark.noRec     = m_fAvoidRecovery;
         return mark;
     }
 
     protected void restore(Mark mark) {
+        // A nesting-limit or listener abort ends this parse, including after speculative rewind.
+        // Token backtracking must not re-enable recovery from an exhausted parser budget.
         m_lexer.restore(mark.pos);
         m_token          = mark.token;
         m_tokenPutBack   = mark.putBack;
         m_tokenPrev      = mark.lastMatch;
         m_doc            = mark.doc;
-        m_fAvoidRecovery = mark.noRec;
     }
 
     /**
@@ -5653,19 +6463,19 @@ public class Parser {
     /**
      * Count one level of nested parsing, to be released when the returned handle is closed:
      *
-     * <p/><code><pre>
+     * <pre><code>
      * try (var ignore = nest()) {
      *     ...
      * }
-     * </pre></code>
+     * </code></pre>
      *
-     * The parser is a recursive descent, and a level of nesting in the source costs a dozen or so
+     * <p>The parser is a recursive descent, and a level of nesting in the source costs a dozen or so
      * Java frames. Without a limit, sufficiently nested source exhausts the thread's stack, and a
      * StackOverflowError is not something a caller can be asked to handle: it escapes the compiler
      * and reaches whatever embeds it. Counting the levels turns that into an ordinary error with a
      * source position.
      *
-     * The count is shared by every construct that nests, because they nest through each other -
+     * <p>The count is shared by every construct that nests, because they nest through each other -
      * a type inside an expression inside a statement - so one budget bounds the descent no matter
      * how the source alternates between them. It counts levels of parsing rather than levels of
      * source: one construct can pass more than one guard on its way down, so the limit is a bound
@@ -5677,6 +6487,7 @@ public class Parser {
      */
     private Nesting nest() {
         if (m_cNesting >= MAX_NESTING_DEPTH) {
+            m_fAvoidRecovery = true;
             Token token = peek();
             log(Severity.ERROR, NESTING_TOO_DEEP, token.getStartPosition(), token.getEndPosition(),
                     MAX_NESTING_DEPTH);
@@ -5944,6 +6755,10 @@ public class Parser {
      * Semicolon is missing.
      */
     public static final String MISSING_SEMICOLON = "PARSER-29";
+    /**
+     * An explicit partial-analysis cursor marks an unfinished expression.
+     */
+    public static final String INCOMPLETE_EXPRESSION = "PARSER-31";
 
     /**
      * Nesting is too deep.
@@ -5958,6 +6773,9 @@ public class Parser {
     public static final int MAX_NESTING_DEPTH = 256;
 
     // ----- data members --------------------------------------------------------------------------
+
+    /** Reserved value that cannot be produced by Source.getPosition(). */
+    private static final long NO_CURSOR = -1;
 
     /**
      * The Source to parse.
@@ -5975,6 +6793,9 @@ public class Parser {
     private final Nesting f_nesting = new Nesting();
 
     /**
+     * The ErrorListener to report errors to.
+     */
+    /**
      * Where this parser's diagnostics go: the listener it was handed, or - for as long as a
      * scope or an {@link Attempt} is open - somewhere else.
      */
@@ -5984,6 +6805,12 @@ public class Parser {
      * The lexical analyzer.
      */
     private final Lexer m_lexer;
+
+    /** Whether trailing incomplete expression statements may be retained for partial analysis. */
+    private final boolean f_partialAnalysis;
+
+    /** Explicit cursor, or NO_CURSOR for ordinary parsing and trailing-EOF partial analysis. */
+    private final long f_cursor;
 
     /**
      * The "put back" token.
@@ -6021,6 +6848,9 @@ public class Parser {
      */
     private boolean m_fAvoidRecovery;
 
+    /**
+     * Object supporting unpredictable amount of look-ahead.
+     */
     /**
      * How many speculative attempts are open. Recovery is for the real parse: inside an attempt a
      * syntax error is an answer, so there is nothing to recover from.
