@@ -1,25 +1,10 @@
 # Ecstasy Language Tooling
 
-Compiler-mode header completion now covers empty type operands, trailing dots, selected qualifier
-names and generic/multiple-return declarations. Shared X107/X108 exercise accepted edits in both
-editors; IntelliJ adds selected native workspace/refactoring checks. See the
-[active validation and extraction plan](../docs/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54).
-
-C27/L51 completes written type prefixes inside function parameters/returns and type-sequence
-arguments, with bounded missing-closer recovery and no invented header signatures. Shared X106 is
-implemented in both editors. IntelliJ now asserts X33/X35 navigation and the complete X101
-read-only checks; native execution receipts are tracked separately in the active validation plan.
-
-L50 adds compiler-proven property/accessor-family rename, explicit alias rename, simple member-file
-type moves and public-type auto-import repairs. See the
-[scope and proof boundaries](../docs/errs-integration-plan.md#broader-refactoring-checkpoint-l50).
-
-Live workspace/source navigation (L47–L49): unsaved headers and workspace-folder changes refresh the
-compiler graph; detached graph queries are reused, and healthy modules remain navigable beside a
-broken neighbor. Matching bundled XDK declarations open read-only source files. Complete reference
-and refactoring proofs still fail closed. This adds no AST state or compiler listener changes.
-See [scope, ownership and validation](../docs/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
-
+The compiler-backed LSP is the default server for the IntelliJ and VS Code integrations.
+It provides diagnostics, semantic highlighting, navigation, completion and compiler-checked
+refactorings, including analysis of incomplete source. Tree-sitter remains a selectable syntax-only
+adapter. See the [manual playbook](doc/manual-test-plan.md) for feature boundaries, test fixtures,
+native harness commands and client compatibility limits.
 
 Language tooling for the Ecstasy programming language, including LSP server, IDE plugins,
 and editor support.

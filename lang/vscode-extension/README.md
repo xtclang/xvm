@@ -1,15 +1,9 @@
 # Ecstasy (XTC) Language Support for VS Code
 
-L50 adds compiler-proven property/accessor-family rename, explicit alias rename, simple member-file
-type moves and public-type auto-import repairs. See the
-[scope and proof boundaries](../../docs/errs-integration-plan.md#broader-refactoring-checkpoint-l50).
-
-Live workspace/source navigation (L47–L49): unsaved headers and workspace-folder changes refresh the
-compiler graph; detached graph queries are reused, and healthy modules remain navigable beside a
-broken neighbor. Matching bundled XDK declarations open read-only virtual source views through LSP 3.18. Complete reference
-and refactoring proofs still fail closed. This adds no AST state or compiler listener changes.
-See [scope, ownership and validation](../../docs/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
-
+The bundled language server uses the compiler adapter by default. Tree-sitter remains a selectable
+syntax-only alternative. Compiler features include diagnostics, navigation, references, completion,
+theme-based semantic highlighting and guarded refactorings over configured source and library inputs.
+See the [manual playbook](../doc/manual-test-plan.md) for exact feature boundaries and native tests.
 
 Official Visual Studio Code extension for the **[Ecstasy programming language](https://xtclang.org)** (file extension `.x`, runtime XVM, compiler `xtc`).
 
@@ -335,7 +329,7 @@ vscode-extension/
 
 | Task | Command | What it does |
 |------|---------|--------------|
-| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs all 282 shared cases (X1–X277, CFG1–CFG3 and 7a.8–7a.9) in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
+| **Compiler playbook** | `./gradlew :lang:vscode-extension:testCompilerPlaybook -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler` | Runs all 284 shared cases (X1–X279, CFG1–CFG3 and 7a.8–7a.9) in an isolated VS Code workspace/profile, plus server and packaged-JAR tests. Writes per-case reports under `build/reports/compiler-playbook/`. |
 | **Headless integration test** | `./gradlew :lang:vscode-extension:testVscodeExtension -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Spawns a real VS Code instance via `@vscode/test-electron`, loads the extension from the build tree, opens `src/test/fixtures/hello.x`, and asserts the document's `languageId === "xtc"`. The primary regression guard for the file-association pipeline. |
 | **Interactive smoke test** | `./gradlew :lang:vscode-extension:runCode -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Launches VS Code in Extension Development Host mode with `src/test/fixtures/` open. Use this to verify highlighting, hover, completion, etc. by eye. |
 | **Compile only** | `./gradlew :lang:vscode-extension:npmCompile -PincludeBuildLang=true -PincludeBuildAttachLang=true` | Runs `tsc -p ./`; fastest feedback when editing TypeScript. |
@@ -360,11 +354,6 @@ Timeouts and failed fixture cleanup stop that IDE run; remaining selected cases 
 Expected refusal tests identify the actual refusal rather than accepting any failure. Resume
 remaining IDs in a fresh isolated window after diagnosis; completed edits are never replayed.
 
-Post-rebase acceptance on 1.140.0: the 34 smoke tests pass; `run-J054rk` completes the 267-case
-catalog with 266 passes and the existing X218/UP23 native Undo failure. Separate-instance and
-shared-process lifecycle checks also pass. X218 remains a failed assertion, not an accepted pass;
-see the [current receipt](../../docs/errs-integration-plan.md#modern-vs-code-baseline-and-complete-rebase-acceptance-2026-10-05).
-
 The compiler playbook uses the same launcher and display requirements. It reads fixtures from the
 [XdkAdapter playbook](../doc/manual-test-plan.md#automated-vs-code-run), fails if compiler mode is
 missing, and records remaining visual/manual checks explicitly. `latest-run.txt` points to its
@@ -377,24 +366,17 @@ host/protocol test dependencies. After assembly, `npm run test:playbook -- --cas
 same editor selection. Unknown/empty/duplicate IDs fail before launch. Reports identify focused
 coverage and mark excluded cases `not-selected`; they cannot be mistaken for a full playbook pass.
 
-All 146 cases read their titles, edits, anchors, variants, expectations and manual-check notes from
+All 284 cases read their titles, edits, anchors, variants, expectations and manual-check notes from
 [shared data](../test-fixtures/compiler-playbook/scenarios.json), also consumed by IntelliJ.
 A type-only JSON import checks those values during compilation; the data is not bundled into the
 production extension. The catalog is a declared compilation/test input. Reports include its
 SHA-256 and complete ID list. The [shared scenario notes](../doc/manual-test-plan.md#shared-editor-scenarios)
 explain native assertions and remaining IntelliJ coverage gaps.
 
-The latest protocol selection, `run-5eCFZV`, passes X136/X137/X140/X141: settings, restart,
-UTF-16 hover/rename ranges and runtime server tracing. The regular extension suite also passes all
-20 tests, including the 40-cycle compiler error/recovery workload. These selected cases do not
-constitute a full 146-case run. The [coverage map](../doc/manual-test-plan.md#protocol-and-lifecycle-coverage-map)
-lists backend regressions and remaining manual progress, refresh and lifecycle checks.
-
-The L55/L61/L62 checkpoint passes selected X4/X102/X103/X104. X4 checks the declaration
-provider; X103 moves a member file and its companion directory, then verifies the real Undo
+X4 checks the declaration provider; X103 moves a member file and its companion directory, then verifies the real Undo
 command restores both source and resources. A fixture watcher may cancel an unapplied rename
 query; only that query is retried, with the edit applied once. See the
-[batch receipts](../../docs/errs-integration-plan.md#teaching-workspace-declarations-and-resource-moves-l55l61l62).
+[acceptance reports](../doc/manual-test-plan.md#acceptance-reports).
 
 **Tests are not auto-attached to `:check`.** The test downloads ~210 MB on first run and requires either a display or `xvfb`; both make it a poor fit for unconditional CI runs. Wire it into your CI pipeline explicitly when you want it.
 
@@ -446,7 +428,6 @@ Server Output to the same chord in Keyboard Shortcuts, preserving the Hide actio
 See the [manual playbook](../doc/manual-test-plan.md#server-log-shortcut-acceptance) for acceptance
 steps and the distinction between server logs and protocol tracing.
 
-
 Use **Ecstasy: Open Language Service Settings** for the native Settings editor. The window-scoped
 `xtc.languageService.textSynchronization` selects `full` (default) or `incremental` text transport;
 this is separate from incremental compilation. `xtc.languageService.saveFormatting` selects
@@ -456,12 +437,9 @@ live. **Ecstasy: Show Effective Language Service Configuration** shows configure
 the running PID/adapter, negotiated features and compiler queue. Legacy formatting tab width and
 maximum line width are deprecated because they do not affect the implemented formatter.
 
-The follow-up catalog now contains 148 scenarios. New X142 verifies constant-initializer semantic
-navigation and rename/undo; X143 compares partial workspace-symbol batches with the ordinary
-response. X124/X131/X134/X142/X143 pass in both editors across selected runs and a focused
-IntelliJ X142 correction; this does not establish a full 148-case checkpoint. See the
-[follow-up receipt](../../docs/errs-integration-plan.md#follow-up-validation-receipt-2026-09-30) for
-run IDs, failed attempts and the remaining L80/L81 acceptance limits.
+X142 verifies constant-initializer navigation and rename/Undo. X143 compares partial
+workspace-symbol batches with the ordinary response. These checks complement the protocol
+and lifecycle cases; see the [manual playbook](../doc/manual-test-plan.md).
 
 For the L81 visible-control check, select X145 with `-PcompilerPlaybookCancelUi=true`.
 The test clicks the actual Cancel button through the isolated Electron renderer using
@@ -472,19 +450,13 @@ check two windows in one Electron process, independent compiler ownership and re
 restoration. Omit `--shared-process` for separate application instances. See the
 [manual playbook](../doc/manual-test-plan.md#native-project-lifetime-checks-l81) for the full checks.
 
-
 Compiler workspace synchronization now has shared X263–X265 cases for nested composite input
 aggregation, automatic Gradle refresh/export watching, and project/folder closure during import.
 Both clients preserve explicit settings and the last accepted inputs after failed refresh.
-X129/X260–X265 now have passing selected receipts in both editors: VS Code `run-40itia`;
-IntelliJ `run-12471400462423684800` plus corrected `run-11279722985432501847` (zero IDE
-errors in the correction). Headless/client checks pass: 112 IntelliJ units, 37 VS Code extension
-tests, three Gradle model tests and five backend build-model tests. Late daemon publication after
+Late daemon publication after
 cancellation is guarded by import identity; the configuration cache is reused across identities.
 Automatic exports require an initial imported report; VS Code uses public Gradle task events in
-trusted local workspaces. The catalog has 270 cases; this was a selected run, not a full rerun.
-See the [contract, failures and commit map](../../docs/errs-integration-plan.md#compiler-workspace-synchronization-batch-ui5ui6-2026-10-05).
-
+trusted local workspaces.
 
 ### Ordered libraries and attached sources
 
@@ -503,10 +475,7 @@ Edits to attachment files take effect on the next successful apply/reload.
 
 **Ecstasy: Configure Compiler Paths** also provides ordered resource-directory editing with
 native path selection. Shared X266–X268 cover library settings, attached-source navigation,
-restart persistence, invalid replacements and resource order. The catalog now has 273 cases;
-see the [batch receipt](../../docs/errs-integration-plan.md#ordered-libraries-and-attached-sources-batch-ui3ui4ui6-2026-10-06)
-for the selected validation and corrections.
-
+restart persistence, invalid replacements and resource order.
 
 ### Machine-local JVM tuning and log support
 
@@ -526,9 +495,8 @@ last recorded launch, including up to 64 KiB of launcher output. Its manifest id
 mode and truncation and lists included files; another project’s logs are never substituted. Shared
 X269–X272 cover settings, restart, live/offline export and recovery from an intentional failed JVM
 launch. Full editor exit/reopen has a separate two-process persistence test. Native OS save-dialog
-layout and rollover stress remain manual checks. New acceptance results are tracked in the
-[UI completion batch](../../docs/errs-integration-plan.md#ui1ui7-completion-batch-2026-10-06).
-See the [contract and receipt](../../docs/errs-integration-plan.md#machine-local-jvm-settings-and-log-support-ui5ui6-2026-10-06).
+layout and rollover stress remain manual checks. See the [acceptance report format](../doc/manual-test-plan.md#acceptance-reports) for
+how these checks are recorded.
 
 ### Test artifact retention
 
@@ -540,19 +508,12 @@ removes Git worktrees. Direct npm runs record completion too; the next Gradle ru
 or run `:lang:vscode-extension:pruneCompilerPlaybookReports` explicitly with both lang flags.
 The IDE download cache remains shared across runs and is not deleted by retention.
 
-
 The UI completion gate also runs `node scripts/run-vscode-tests.cjs --settings-persistence`
 after building the extension. Two complete editor launches share one disposable profile/workspace
 and verify persisted settings and user/workspace precedence. The native Settings UI groups
 Compiler, Language Service, Formatting, and Runtime and Logs. The effective status command
 reports saved origins, ignored scope overrides and connection changes awaiting restart.
 Untrusted and virtual workspaces are explicitly unsupported; remote hosts remain unvalidated.
-
-October 6 UI acceptance: compiler smoke passes 54 tests, Tree-sitter passes 53 common tests with
-the compiler-only workload skipped, and both adapters pass full editor exit/reopen persistence.
-Automatic server restart preserves unsaved text. The full 277-case catalog plus targeted corrections
-has 275 passes and retains X130/UP16 and X218/UP23 as failures, not successful acceptance. See the
-[UI completion receipt](../../docs/errs-integration-plan.md#ui1ui7-completion-batch-2026-10-06).
 
 ### Experimental color-value picker
 
