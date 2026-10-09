@@ -486,7 +486,7 @@ public class JitMethodDesc {
                 : null;
 
         if (isConstructor) {
-            return new JitCtorDesc(targetType, targetType.getCallableClassDesc(builder.typeSystem),
+            return new JitCtorDesc(targetType, builder.ensureClassDesc(targetType),
                     hasFinalizer, /*fAddType*/ false, /*fAddOuter*/ false,
                     stdReturns, stdParams, optReturns, optParams);
         } else {
