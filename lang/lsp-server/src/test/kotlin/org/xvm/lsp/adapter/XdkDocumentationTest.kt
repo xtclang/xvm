@@ -13,7 +13,7 @@ class XdkDocumentationTest {
         val text =
             """
             module Documentation {
-            	<T> T echo(T input, Int count = 1) = input;
+            ${'\t'}<T> T echo(T input, Int count = 1) = input;
             }
             """.trimIndent().replace("\n", newline)
         XdkAdapter().use { adapter ->

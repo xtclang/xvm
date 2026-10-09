@@ -1,7 +1,9 @@
 package org.xvm.asm;
 
+import java.io.File;
 import java.io.IOException;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -50,6 +52,24 @@ public interface ModuleRepository {
      * @return a set of qualified module names
      */
     Set<String> getModuleNames();
+
+    /**
+     * Obtain the file read failures retained by this repository's most recent accesses.
+     *
+     * <p>An unreadable candidate does not stop a search: other files or repositories may still
+     * supply the requested module. Hosts can inspect these failures when explaining an unsuccessful
+     * lookup. Their presence alone does not mean that a lookup or compilation failed, and a file's
+     * module identity may be unknown if its header could not be read.
+     *
+     * <p>This method does not initiate I/O. File repositories replace or clear retained failures
+     * when subsequent accesses retry the file or observe its removal. Implementations that do not
+     * retain file read failures return an empty map.
+     *
+     * @return an immutable snapshot mapping unreadable files to their original I/O exceptions
+     */
+    default Map<File, IOException> getReadFailures() {
+        return Map.of();
+    }
 
     /**
      * Determine the set of available versions of the specified module.
