@@ -28,6 +28,11 @@ public abstract class TypeExpression
     // ----- type specific functionality -----------------------------------------------------------
 
     @Override
+    public TypeExpression copyTree() {
+        return (TypeExpression) super.copyTree();
+    }
+
+    @Override
     public TypeExpression toTypeExpression() {
         return this;
     }
