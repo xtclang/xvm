@@ -22,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
  * Exercises listener ownership through the real lexer, without installed XDK modules.
  *
  * <p>These tests use API shapes shared by the old and new listener contracts so the same source can
- * demonstrate the failures on the pre-C1 compiler. Ignoring the old log return value is deliberate:
+ * demonstrate the failures on the previous compiler. Ignoring the old log return value is deliberate:
  * the lexer itself decides when to stop, and the assertions observe its externally visible result.
  */
 class ErrorListenerHostRegressionTest {
