@@ -31,8 +31,10 @@ public class ParenthesizedExpression
 
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs) {
-        TypeFit fitTuple = testTupleFit(ctx, typeRequired, fExhaustive, silent(PROBE));
-        TypeFit fitValue = super.testFit(ctx, typeRequired, fExhaustive, silent(PROBE));
+        ErrorListener probe = silent(PROBE);
+
+        TypeFit fitTuple = testTupleFit(ctx, typeRequired, fExhaustive, probe);
+        TypeFit fitValue = super.testFit(ctx, typeRequired, fExhaustive, probe);
         return fitValue.betterOf(fitTuple);
     }
 
