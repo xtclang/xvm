@@ -1,24 +1,52 @@
 package org.xvm.api;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.PrintWriter;
 
 import java.time.Instant;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import java.util.function.Function;
+
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.FileStructure;
 import org.xvm.asm.LinkedRepository;
 import org.xvm.asm.ModuleRepository;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.Version;
 
+import org.xvm.compiler.BuildRepository;
+import org.xvm.compiler.Compiler;
+import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.InstantRepository;
+import org.xvm.compiler.Parser;
+import org.xvm.compiler.Source;
 
+import org.xvm.compiler.Token.Id;
+
+import org.xvm.compiler.ast.Statement;
+import org.xvm.compiler.ast.StatementBlock;
+import org.xvm.compiler.ast.TypeCompositionStatement;
+
+import org.xvm.tool.Console;
+import org.xvm.tool.Launcher.LauncherException;
+import org.xvm.tool.LauncherOptions.CompilerOptions;
+import org.xvm.tool.ModuleInfo;
+import org.xvm.tool.ModuleInfo.Node;
+
+import static java.util.Objects.requireNonNull;
+
+import static org.xvm.asm.ErrorListener.NOWHERE;
+import static org.xvm.asm.ErrorListener.at;
 import static org.xvm.util.Severity.ERROR;
 
 /**
@@ -29,7 +57,8 @@ import static org.xvm.util.Severity.ERROR;
  * Ecstasy classes. Without configuration, EmbeddingSupport will attempt to locate the core Ecstasy
  * classes using the "XDK_HOME" OS property.
  *
- * <p>The methods on EmbeddingSupport itself can be assumed to be thread-safe and concurrent.
+ * <p>Hosts must serialize compilations that share this instance's configured repository. Configuration
+ * must complete before compilation or execution begins.
  *
  * <p>EmbeddingSupport is a singleton because running a module requires the interpreter, and the
  * interpreter keeps JVM-wide state. When the Connector creates its NativeContainer, the container
@@ -67,10 +96,88 @@ public class EmbeddingSupport {
 
     private static final Object LOCK = new Object();
 
+    private static final Console SILENT_CONSOLE = new Console() {
+        @Override
+        public String out(Object value) {
+            return String.valueOf(value);
+        }
+
+        @Override
+        public String err(Object value) {
+            return String.valueOf(value);
+        }
+    };
+
     private volatile boolean configured;
     private ModuleRepository cfgRepo;
     private String           cfgInjector;
     private Connector        connector;
+
+    /**
+     * Build a read-only repository over whichever of the given directories exist.
+     *
+     * @param dirs  the directories, in search order
+     *
+     * @return the repository, or null if none of the directories exist
+     */
+    private static ModuleRepository repoOver(File... dirs) {
+        List<ModuleRepository> list = Arrays.stream(dirs)
+                .filter(File::isDirectory)
+                .<ModuleRepository>map(dir -> new DirRepository(dir, true))
+                .toList();
+        return switch (list.size()) {
+            case 0  -> null;
+            case 1  -> list.getFirst();
+            default -> new LinkedRepository(list.toArray(ModuleRepository.NO_REPOS));
+        };
+    }
+
+    /**
+     * A snapshot of what the compiler is holding on to.
+     *
+     * <p>An embedding host that keeps a compiler alive across many compilations - a language server
+     * is the obvious one - needs some way to see whether it is accumulating. These are the cheap
+     * numbers: taking them costs a field read and a repository listing, so a host can log one per
+     * compilation without measuring itself instead of the compiler.
+     *
+     * @param modules        how many modules the configured repository offers
+     * @param constants      how many constants are interned in the current pool
+     * @param invalidations  how many times cached type information has been invalidated
+     * @param heapBytes      used heap, which is the JVM's figure and not the compiler's alone
+     */
+    public record Footprint(int modules, int constants, int invalidations, long heapBytes) {
+        @Override
+        public String toString() {
+            return "modules=" + modules + ", constants=" + constants
+                    + ", invalidations=" + invalidations
+                    + ", heap=" + (heapBytes / (1024 * 1024)) + "MB";
+        }
+    }
+
+    /**
+     * Take a {@link Footprint} without selecting a compilation's pool. This does not initialize
+     * the runtime; pool counts are zero. Use {@link #footprint(Compilation)} for compiler counts.
+     *
+     * @return the snapshot; the counts are zero where nothing has been configured or built yet
+     */
+    public Footprint footprint() {
+        return footprint(null);
+    }
+
+    /**
+     * Take a passive snapshot of a compilation's pool and the configured repository.
+     *
+     * @param compilation  the compilation to measure, or null for repository and heap counts only
+     *
+     * @return the snapshot; pool counts are zero if no file structure was built
+     */
+    public Footprint footprint(Compilation compilation) {
+        ConstantPool pool    = compilation == null ? null : compilation.pool();
+        Runtime      runtime = Runtime.getRuntime();
+        return new Footprint(cfgRepo == null ? 0 : cfgRepo.getModuleNames().size(), pool == null ? 0 : pool.size(),
+                pool == null ? 0 : pool.getInvalidationCount(),
+                runtime.totalMemory() - runtime.freeMemory());
+    }
 
     /**
      * @return true if configured
@@ -81,9 +188,15 @@ public class EmbeddingSupport {
             // attempt to auto-configure
             String home = System.getenv("XDK_HOME");
             if (home != null) {
-                File dir = new File(new File(home), "lib");
-                if (dir.isDirectory()) {
-                    configure(new DirRepository(dir, true), null);
+                // an XDK keeps its libraries in lib/ and the two modules the compiler bootstraps
+                // against - the turtle, mack.xtclang.org, and the native bridge - in javatools/.
+                // Configuring only lib/ produced a repository that could never compile anything:
+                // every compile failed in prelinkSystemLibraries with "Unable to load module:
+                // mack.xtclang.org", reported as an internal error with no location
+                File             dirHome = new File(home);
+                ModuleRepository repo    = repoOver(new File(dirHome, "lib"), new File(dirHome, "javatools"));
+                if (repo != null) {
+                    configure(repo, null);
                 }
             }
 
@@ -172,12 +285,31 @@ public class EmbeddingSupport {
     }
 
     /**
-     * @return the ConstantPool of the core Ecstasy libraries used by the runtime Connector instance
-     *         that is instantiated by EmbeddingSupport
+     * Obtain the constant pool of the runtime, starting one if it is not running yet.
+     *
+     * <p>This is not the pool a compilation used - that belongs to the {@link Compilation} it
+     * produced. Asking for this one boots an interpreter: a connector builds a NativeContainer,
+     * which loads a native template for every core module, so it needs the whole library and not
+     * just the part the compiler bootstraps against. The old name said "get" and read like an
+     * accessor.
+     *
+     * @return the runtime's constant pool
      */
-    public ConstantPool getConstantPool() {
+    public ConstantPool ensureRuntimePool() {
         verifyConfigured();
         return ensureConnector().getConstantPool();
+    }
+
+    /**
+     * Obtain the runtime's constant pool, starting the runtime if necessary.
+     *
+     * @return the runtime's constant pool
+     * @deprecated use {@link #ensureRuntimePool()} to make runtime initialization explicit;
+     *             use {@link Compilation#pool()} for a compilation's pool
+     */
+    @Deprecated
+    public ConstantPool getConstantPool() {
+        return ensureRuntimePool();
     }
 
     // ----- compiler support ----------------------------------------------------------------------
@@ -187,33 +319,313 @@ public class EmbeddingSupport {
      *
      * @param source  the source code for an entire module to compile
      * @param input   (optional) the module repository to read any required modules from
-     * @param errs    (optional) the ErrorListener to log any compiler messages to
+     * @param errs    the ErrorListener to log any compiler messages to
      *
      * @return the resulting ModuleStructure, or null if a compiler error occurred
      *
      * @see ModuleCompiler#compile(String, ModuleRepository, ErrorListener)
      */
-    public ModuleStructure compile(String source, ModuleRepository input, ErrorListener errs) {
-        verifyConfigured();
-        return new ModuleCompiler(cfgRepo).compile(source, input, errs);
+    public ModuleStructure compile(String source, ModuleRepository input, @NotNull ErrorListener errs) {
+        return compile(new Source(source), input, errs);
     }
 
     /**
-     * Compile a module that is in a file, against the configured core repository.
+     * Compile a module held in memory, as a named document.
      *
-     * @param file    the module source file
+     * <p>A diagnostic's identity includes the name of the source it came from, so a host holding
+     * several documents that are not on disk - an editor's unsaved buffers - has to be able to
+     * tell them apart. Without a name, two documents with a problem at the same offset produce
+     * the same identity and a listener that deduplicates discards the second. The name belongs to
+     * the document rather than to the act of compiling it, which is why this takes a
+     * {@link Source}: {@code new Source(text, uri)} says it once, where a second String parameter
+     * would sit next to the first and be silently swappable with it.
+     *
+     * @param source  the source to compile, carrying whatever name it was created with
+     * @param input   (optional) the module repository to read any required modules from
+     * @param errs    the ErrorListener to log any compiler messages to
+     *
+     * @return the resulting ModuleStructure, or null if a compiler error occurred
+     */
+    public ModuleStructure compile(Source source, ModuleRepository input, @NotNull ErrorListener errs) {
+        return compileModule(source, input, errs).module();
+    }
+
+    /**
+     * The outcome of one compilation, including progress retained after a source error.
+     *
+     * <p>The compiling worker owns the returned mutable compiler objects. A host must copy the
+     * facts it needs before sharing them with other threads; this record does not detach an AST.
+     * No field is a promise that a failed compilation is executable.
+     *
+     * @param module  the executable module on success, or null on failure or cancellation
+     * @param file    the file structure, or null if registration did not finish
+     * @param ast     the assembled source tree, or null if loading or parsing did not finish
+     */
+    public record Compilation(ModuleStructure module, FileStructure file, StatementBlock ast) {
+        /**
+         * Wrap a file structure for passive inspection without implying successful compilation.
+         *
+         * @param file  the structure to inspect
+         * @return a partial compilation
+         */
+        public static Compilation forFile(FileStructure file) {
+            return new Compilation(null, requireNonNull(file, "file"), null);
+        }
+
+        /** @return true if an executable module was produced */
+        public boolean succeeded() {
+            return module != null;
+        }
+
+        /** @return this attempt's pool, or null if no file structure was built */
+        public ConstantPool pool() {
+            return file == null ? null : file.getConstantPool();
+        }
+
+        /** @return the assembled source root, or null if loading or parsing failed */
+        public StatementBlock parsed() {
+            return ast;
+        }
+    }
+
+    /**
+     * Compile a module held in memory, and answer with everything the attempt produced.
+     *
+     * @param source  the source to compile, carrying whatever name it was created with
+     * @param input   (optional) the module repository to read any required modules from
+     * @param errs    the ErrorListener to log any compiler messages to
+     *
+     * @return the outcome; never null, though its parts may be
+     */
+    public Compilation compileModule(Source source, ModuleRepository input, @NotNull ErrorListener errs) {
+        requireNonNull(source, "source");
+        return compileModule(listener -> {
+            StatementBlock tree = new Parser(source, listener).parseSource();
+            return listener.hasSeriousErrors() ? null : tree;
+        }, input, errs);
+    }
+
+    /**
+     * Compile a module's source tree using the same discovery, resource association and parse-tree
+     * assembly as the CLI. The returned AST includes the member files with their original Sources.
+     * Hosts may subclass {@link ModuleInfo} and override its protected {@code readSource(File)}
+     * and {@code sourceEntries(File)} hooks to supply a consistent snapshot of unsaved text and
+     * source membership. The default provider discovers and reads files from disk.
+     *
+     * @param sources  a fresh ModuleInfo for this attempt; do not reuse a previously parsed tree
+     * @param input    the optional repository of compiled dependencies
+     * @param errs     the listener for this compilation
+     *
+     * @return the outcome, including the linked AST when source loading succeeded
+     */
+    public Compilation compileModule(ModuleInfo sources, ModuleRepository input, @NotNull ErrorListener errs) {
+        requireNonNull(sources, "sources");
+        return compileModule(listener -> {
+            Node root = sources.getSourceTree(listener);
+            return root == null ? null : (StatementBlock) root.ast();
+        }, input, errs);
+    }
+
+    private Compilation compileModule(Function<ErrorListener, StatementBlock> parse,
+                                      ModuleRepository input, ErrorListener errs) {
+        verifyConfigured();
+        requireNonNull(errs, "errs");
+        EmbeddingCompiler compiler = new EmbeddingCompiler(parse, input, cfgRepo, errs);
+        try {
+            if (!errs.isAbortDesired()) {
+                compiler.process();
+            }
+        } catch (LauncherException e) {
+            // Expected aborts already have diagnostics or a cancellation request.
+            if (!errs.hasSeriousErrors() && !errs.isAbortDesired()) {
+                errs.error(ERR_INTERNAL, NOWHERE, e, "Compilation failed");
+            }
+        } catch (RuntimeException | AssertionError e) {
+            // An earlier source error must not hide an unexpected compiler failure.
+            errs.error(ERR_INTERNAL, NOWHERE, e, "Compilation failed");
+        }
+        return compiler.result();
+    }
+
+    /**
+     * Compile a module that is in a file or directory, against the configured core repository.
+     *
+     * @param file    the location of the module source code on disk, either the module source file
+     *                or the directory containing a single .x file and nested contents thereof
      * @param input   (optional) the module repository to read any required modules from
      * @param output  (optional) the module repository to write any compiled modules to
-     * @param errs    (optional) the ErrorListener to log any compiler messages to
+     * @param errs    the ErrorListener to log any compiler messages to
      *
      * @return true if the compilation succeeded and the result was placed into the output
      *
      * @see ModuleCompiler#compile(File, ModuleRepository, ModuleRepository, ErrorListener)
      */
-    public boolean compile(File file, ModuleRepository input, ModuleRepository output,
-                           ErrorListener errs) {
+    public boolean compile(File file, ModuleRepository input, ModuleRepository output, @NotNull ErrorListener errs) {
         verifyConfigured();
-        return new ModuleCompiler(cfgRepo).compile(file, input, output, errs);
+        requireNonNull(errs, "errs");
+        ModuleStructure module;
+        try {
+            module = compileModule(new ModuleInfo(file, false), input, errs).module();
+        } catch (IllegalArgumentException e) {
+            errs.error(ERR_INTERNAL, NOWHERE, e, "Unable to locate module " + file);
+            return false;
+        }
+
+        if (module == null) {
+            assert errs.hasSeriousErrors() || errs.isAbortDesired();
+            return false;
+        }
+
+        if (output != null) {
+            try {
+                output.storeModule(module);
+            } catch (IOException e) {
+                errs.error(ERR_INTERNAL, at(module), e, "Unable to store module " + module.getName());
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Adapter that supplies the source and repositories to the standard compiler pipeline and
+     * captures its single compiled module instead of writing it to disk.
+     */
+    private static class EmbeddingCompiler
+            extends org.xvm.tool.Compiler {
+        private final Function<ErrorListener, StatementBlock> parse;
+
+        private final ModuleRepository     inRepo;
+        private final ModuleRepository     coreRepo;
+        private       ModuleStructure      module;
+        private       FileStructure        file;
+        private       StatementBlock       ast;
+
+        /**
+         * Everything this attempt produced.
+         *
+         * <p>Each part is present when the attempt got that far and null when it did not, which the
+         * fields already say: the module is only ever assigned on success, and the file structure
+         * and the AST only once they exist. So there is nothing for the caller to decide, and no
+         * success flag to pass in and get wrong.
+         *
+         * @return the outcome; never null, though its parts may be
+         */
+        Compilation result() {
+            return new Compilation(module, file, ast);
+        }
+
+        @Override
+        public boolean isAbortDesired() {
+            // Cancellation must also stop between phases; stopping only an individual compiler
+            // loop would let the following phase run against an unfinished predecessor.
+            return super.isAbortDesired() || m_errors.isAbortDesired();
+        }
+
+        protected EmbeddingCompiler(Function<ErrorListener, StatementBlock> parse,
+                                    ModuleRepository input, ModuleRepository core, ErrorListener errs) {
+            super(CompilerOptions.builder().build(), SILENT_CONSOLE, errs);
+
+            this.parse    = parse;
+            this.inRepo   = input;
+            this.coreRepo = core;
+        }
+
+        @Override
+        protected int process() {
+            ModuleRepository repoLib = ensureLibraryRepo();
+            checkErrors("repository setup");
+
+            prelinkSystemLibraries(repoLib);
+            checkErrors("system library linking");
+
+            StatementBlock block;
+            try {
+                // The launcher stops the next compilation stage on any error. Parsing can still
+                // recover within its own stage, subject to the host's budget and cancellation.
+                ErrorListener errs = ErrorListener.cancellable(
+                        ErrorListener.collecting(this::log), m_errors::isAbortDesired);
+                block = this.ast = parse.apply(errs);
+            } catch (CompilerException e) {
+                return 1;
+            }
+            if (checkErrors("source parsing") != 0) {
+                return 1;
+            }
+
+            if (block == null) {
+                error(ERR_MODULE_SOURCE, NOWHERE);
+                return 1;
+            }
+
+            if (block.getStatements().isEmpty()) {
+                block.log(this, ERROR, ERR_MODULE_SOURCE);
+                return checkErrors("source parsing");
+            }
+            Statement stmt = block.getStatements().getLast();
+            if (!(stmt instanceof TypeCompositionStatement stmtModule) ||
+                    stmtModule.getCategory().getId() != Id.MODULE) {
+                stmt.log(this, ERROR, ERR_MODULE_SOURCE);
+                return checkErrors("source parsing");
+            }
+
+            Compiler      compiler = new Compiler(stmtModule, this);
+            FileStructure struct   = compiler.generateInitialFileStructure();
+            this.file = struct;
+            if (struct == null || checkErrors("module creation") != 0) {
+                return 1;
+            }
+
+            try {
+                repoLib.storeModule(struct.getModule());
+            } catch (IOException e) {
+                log(ERROR, e, "I/O exception storing module: {}", struct.getModule().getName());
+                return 1;
+            }
+
+            int result = super.compile(List.of(compiler), repoLib);
+            if (result == 0 && !isAbortDesired()) {
+                this.module = struct.getModule();
+            }
+            return result;
+        }
+
+        @Override
+        protected int compile(List<Compiler> compilers, ModuleRepository repoLib) {
+            throw new IllegalStateException("This method must not be called");
+        }
+
+        @Override
+        protected void prelinkSystemLibraries(ModuleRepository repository) {
+            try {
+                super.prelinkSystemLibraries(repository);
+            } catch (LauncherException e) {
+                ModuleCompiler.reportRepositoryReadFailures(repository, m_errors);
+                throw e;
+            }
+        }
+
+        @Override
+        public void log(ErrorInfo error) {
+            if (Compiler.MODULE_MISSING.equals(error.getCode())) {
+                ModuleCompiler.reportRepositoryReadFailures(ensureLibraryRepo(), m_errors);
+            }
+            super.log(error);
+        }
+
+        @Override
+        protected ModuleRepository configureLibraryRepo(List<File> ignore) {
+            BuildRepository build = new BuildRepository();
+            return inRepo == null || inRepo == coreRepo
+                    ? new LinkedRepository(true, build, coreRepo)
+                    : new LinkedRepository(true, build, inRepo, coreRepo);
+        }
+
+        @Override
+        protected int emitModules(List<Node> allNodes, ModuleRepository ignore) {
+            throw new IllegalStateException("This method must not be called");
+        }
+
     }
 
     /**
@@ -271,7 +683,7 @@ public class EmbeddingSupport {
      *                    task-specific directory under "./.runner" that is deleted when the
      *                    returned Control is closed
      * @param injections  (optional) additional "String" and "String[]" injections
-     * @param errs        (optional) a means for the container to report uncaught exceptions and
+     * @param errs        a means for the container to report uncaught exceptions and
      *                    other errors
      *
      * @return a Control object for the running module
@@ -307,7 +719,7 @@ public class EmbeddingSupport {
      * @param customInjector  (optional) "module:class" name of a custom injector implementation to
      *                        use to provide injectable resources; when used, the "rootDir" value is
      *                        ignored
-     * @param errs            (optional) a means for the container to report uncaught exceptions and
+     * @param errs            a means for the container to report uncaught exceptions and
      *                        other errors
      *
      * @return a Control object for the running module, or null if it could not be started, in
@@ -321,18 +733,16 @@ public class EmbeddingSupport {
             File                      rootDir,
             Map<String, List<String>> injections,
             String                    customInjector,
-            ErrorListener             errs) {
+            @NotNull ErrorListener    errs) {
         verifyConfigured();
+        requireNonNull(errs, "errs");
 
         ModuleRepository repository = new LinkedRepository(input, cfgRepo);
         ModuleStructure module = version == null
                 ? repository.loadModule(moduleName)
                 : repository.loadModule(moduleName, version, true);
         if (module == null) {
-            if (errs != null) {
-                errs.log(ERROR, version == null ? ERR_NO_APP_MODULE : ERR_NO_APP_MODULE_VER,
-                        new Object[] {moduleName, version}, null);
-            }
+            errs.error(version == null ? ERR_NO_APP_MODULE : ERR_NO_APP_MODULE_VER, NOWHERE, moduleName, version);
             return null;
         }
 
@@ -352,10 +762,7 @@ public class EmbeddingSupport {
             // assertion in the structure code past this report and out to the host. Errors are
             // not caught wholesale: a VirtualMachineError says the JVM is in trouble, not that
             // this module failed to start, and handling one is not something to rely on
-            if (errs != null) {
-                errs.log(ERROR, ERR_CREATE_APP_CONTAINER,
-                        new Object[] {e, "Unable to start " + moduleName}, module);
-            }
+            errs.error(ERR_CREATE_APP_CONTAINER, at(module), e, "Unable to start " + moduleName);
             return null;
         }
     }
@@ -386,4 +793,6 @@ public class EmbeddingSupport {
      * "%2" - additional description (may be null)
      */
     public static final String ERR_INTERNAL             = "EMB-5";
+    /** Source does not declare a module. */
+    public static final String ERR_MODULE_SOURCE        = "EMB-6";
 }

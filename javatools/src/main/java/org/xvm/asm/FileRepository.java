@@ -63,6 +63,11 @@ public class FileRepository
     }
 
     @Override
+    public synchronized Map<File, IOException> getReadFailures() {
+        return readFailure == null ? Map.of() : Map.of(file, readFailure);
+    }
+
+    @Override
     public synchronized VersionTree<Boolean> getAvailableVersions(String sModule) {
         return validateCache() ? cachedVersionsByName.get(sModule) : null;
     }
@@ -227,31 +232,40 @@ public class FileRepository
      * Make sure that the cache is up to date.
      */
     private boolean validateCache() {
-        // assume cache is up-to-date if it has been checked recently; assumption is that activity
-        // comes in bursts; also assume cache is up-to-date if nothing appears to have changed
-        if (System.currentTimeMillis() < lastScan + 60/*ms*/
-                || timestamp == file.lastModified() && size == file.length()) {
+        // Successful reads keep the usual burst cache. Failed reads retain their cause and are
+        // retried after the burst, or immediately if the file metadata changes.
+        long now = System.currentTimeMillis();
+        boolean unchanged = timestamp == file.lastModified() && size == file.length();
+        boolean recent = now < lastScan + 60/*ms*/;
+        if (readFailure == null ? recent || unchanged : recent && unchanged) {
             return cacheOk;
         }
 
-        // cache is not up-to-date; clear whatever was cached before
-        timestamp              = file.lastModified();
-        size                   = file.length();
+        boolean retryFailedRead = readFailure != null;
         cachedVersionsByName   = Map.of();
         cachedFileStructure    = null;
         cachedModuleStructures = null;
         cacheOk                = false;
-        lastScan               = System.currentTimeMillis();
 
-        // load the cache if possible
         if (file.exists() && file.isFile() && file.canRead()) {
-            // read just the module contents of the FileStructure (not the entire FileStructure)
-            FileInfo info = readFileInfo();
+            FileInfo info;
+            if (retryFailedRead) {
+                // A successful header alone cannot clear an earlier payload failure.
+                cachedFileStructure = readFileStructure();
+                info = cachedFileStructure == null ? null : cachedFileStructure.buildFileInfo();
+            } else {
+                info = readFileInfo();
+            }
             if (info != null) {
                 cachedVersionsByName = info.modules();
                 cacheOk              = true;
             }
+        } else {
+            readFailure = null;
         }
+        timestamp = file.lastModified();
+        size      = file.length();
+        lastScan  = now;
         return cacheOk;
     }
 
@@ -279,37 +293,36 @@ public class FileRepository
         if (validateCache() && cachedFileStructure == null) {
             if ((cachedFileStructure = readFileStructure()) == null) {
                 cacheOk = false;
+                lastScan = System.currentTimeMillis();
             }
         }
         return cacheOk;
     }
 
     /**
-     * @return the FileInfo freshly read from the file system, or `null` on any failure
+     * @return the FileInfo freshly read from the file system, or null with a retained read failure
      */
     private FileInfo readFileInfo() {
         try {
-            return FileStructure.readFileInfo(file);
-        } catch (Exception e) {
-            if (!reportedFileStructureError) {
-                reportedFileStructureError = true;
-                System.out.println("Error loading FileInfo from file: " + file + "; " + e.getMessage());
-            }
+            FileInfo info = FileStructure.readFileInfo(file);
+            readFailure = null;
+            return info;
+        } catch (IOException e) {
+            readFailure = e;
             return null;
         }
     }
 
     /**
-     * @return the FileStructure freshly read from the file system, or `null` on any failure
+     * @return the FileStructure freshly read from the file system, or null with a retained read failure
      */
     private FileStructure readFileStructure() {
         try {
-            return new FileStructure(file);
-        } catch (Exception e) {
-            if (!reportedFileInfoError) {
-                reportedFileInfoError = true;
-                System.out.println("Error loading FileStructure from file: " + file + "; " + e.getMessage());
-            }
+            FileStructure structure = new FileStructure(file);
+            readFailure = null;
+            return structure;
+        } catch (IOException e) {
+            readFailure = e;
             return null;
         }
     }
@@ -357,8 +370,8 @@ public class FileRepository
     private long    lastScan;
     private boolean cacheOk;
 
-    private boolean reportedFileInfoError;
-    private boolean reportedFileStructureError;
+    /** The most recent unsuccessful read; cleared by a successful retry or removal. */
+    private IOException readFailure;
 
     /**
      * Cached file contents: module names and versions thereof.

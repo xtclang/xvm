@@ -2,42 +2,36 @@ package org.xvm.asm;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import org.xvm.asm.ErrorListener.Site;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 
-/**
- * {@link FileStructure#getErrorListener()} must not depend on an ambient "current pool" being bound
- * to the calling thread.
- *
- * <p>It consulted {@code ConstantPool.getCurrentPool()} - a thread-local - and dereferenced the
- * result unconditionally. That thread-local is simply {@code null} on any thread that has not had a
- * pool pushed onto it, which is every thread that drives the compiler or runtime from ordinary Java
- * code (an embedding host, a build tool, a test). The accessor is a DIAGNOSTIC accessor, so the
- * failure mode was a {@code NullPointerException} thrown from the very code meant to report
- * problems.</p>
- */
+import static org.xvm.util.Severity.WARNING;
+
+/** Structure diagnostics belong to the calling operation, independently of ambient pool state. */
 public class FileStructureErrorListenerTest {
     @Test
-    public void getErrorListenerWorksWithNoAmbientPoolBound() {
-        // a plain FileStructure with no explicit ErrorListener set; this test thread has never had a
-        // pool bound, so getCurrentPool() returns null
+    public void reportingUsesTheSuppliedListenerWithoutAnAmbientPool() {
         var file = new FileStructure("test");
-
-        ErrorListener errs = file.getErrorListener();
-
-        assertNotNull(errs, "a diagnostic accessor must never return null");
-        assertSame(ErrorListener.RUNTIME, errs,
-                "with no explicit listener and no ambient pool, the runtime listener is the answer");
+        var errors = new ErrorList();
+        try (var scope = ConstantPool.withPool(null)) {
+            file.log(errors, WARNING, "VERIFY-75", "x", "Atomic");
+        }
+        assertEquals(1, errors.getErrors().size());
+        assertSame(file, ((Site.At) errors.getErrors().getFirst().site()).xs());
     }
 
     @Test
-    public void getErrorListenerPrefersAnExplicitlySetListener() {
+    public void reusingAStructureDoesNotReuseThePreviousRequestsListener() {
         var file = new FileStructure("test");
-        var mine = new ErrorList(10);
-
-        file.setErrorListener(mine);
-
-        assertSame(mine, file.getErrorListener(),
-                "an explicitly supplied listener must win over any fallback");
+        var first = new ErrorList();
+        var second = new ErrorList();
+        file.log(first, WARNING, "VERIFY-75", "first", "Atomic");
+        file.log(second, WARNING, "VERIFY-75", "second", "Atomic");
+        assertEquals(1, first.getErrors().size());
+        assertEquals(1, second.getErrors().size());
+        assertEquals("first", first.getErrors().getFirst().getParams()[0]);
+        assertEquals("second", second.getErrors().getFirst().getParams()[0]);
     }
 }

@@ -70,10 +70,10 @@ import org.xvm.asm.op.Construct_1;
 import org.xvm.asm.op.Construct_N;
 import org.xvm.asm.op.JumpNType;
 import org.xvm.asm.op.L_Get;
-import org.xvm.asm.op.Label;
-import org.xvm.asm.op.SynInit;
 import org.xvm.asm.op.L_Set;
+import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Return_0;
+import org.xvm.asm.op.SynInit;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
@@ -85,8 +85,8 @@ import org.xvm.compiler.ast.CompositionNode.Annotates;
 import org.xvm.compiler.ast.CompositionNode.Default;
 import org.xvm.compiler.ast.CompositionNode.Delegates;
 import org.xvm.compiler.ast.CompositionNode.Extends;
-import org.xvm.compiler.ast.CompositionNode.Incorporates;
 import org.xvm.compiler.ast.CompositionNode.Import;
+import org.xvm.compiler.ast.CompositionNode.Incorporates;
 import org.xvm.compiler.ast.Context.Branch;
 import org.xvm.compiler.ast.StatementBlock.RootContext;
 
@@ -94,6 +94,10 @@ import org.xvm.util.Handy;
 import org.xvm.util.ListMap;
 import org.xvm.util.ListSet;
 import org.xvm.util.Severity;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.in;
+import static org.xvm.asm.ErrorListener.silent;
 
 import static org.xvm.compiler.Constants.ECSTASY_MODULE;
 import static org.xvm.compiler.Constants.X_PKG_IMPORT;
@@ -436,10 +440,8 @@ public class TypeCompositionStatement
                 // validate the module name
                 String sModule = getName();
                 if (!isValidQualifiedModule(sModule)) {
-                    errs.log(Severity.FATAL, Compiler.MODULE_BAD_NAME,
-                            new String[] {sModule}, source,
-                            qualified.get(0).getStartPosition(),
-                            qualified.get(qualified.size()-1).getEndPosition());
+                    errs.fatal(Compiler.MODULE_BAD_NAME, in(source, qualified.get(0).getStartPosition(),
+                            qualified.get(qualified.size()-1).getEndPosition()), sModule);
                     return;
                 }
 
@@ -1420,8 +1422,7 @@ public class TypeCompositionStatement
             lStart = listParams.get(0).getStartPosition();
             lEnd   = listParams.get(cParams - 1).getEndPosition();
         }
-        errs.log(Severity.ERROR, Compiler.SIGNATURE_AMBIGUOUS,
-            new String[] {sb.toString()}, getSource(), lStart, lEnd);
+        errs.error(Compiler.SIGNATURE_AMBIGUOUS, in(getSource(), lStart, lEnd), sb.toString());
     }
 
     /**
@@ -1494,12 +1495,9 @@ public class TypeCompositionStatement
                 lEndPos   = compositions.getFirst().getEndPosition();
             }
 
-            errs.log(Severity.FATAL, Constants.VE_CYCLICAL_CONTRIBUTION,
-                    new Object[] {
-                        contribCyclical.getComponent().getIdentityConstant().getValueString(),
-                        contribCyclical.getTypeConstant().getValueString()
-                    },
-                    getSource(), lStartPos, lEndPos);
+            errs.fatal(Constants.VE_CYCLICAL_CONTRIBUTION, in(getSource(), lStartPos, lEndPos),
+                    contribCyclical.getComponent().getIdentityConstant().getValueString(),
+                    contribCyclical.getTypeConstant().getValueString());
             return;
         }
 
@@ -2326,8 +2324,7 @@ public class TypeCompositionStatement
                 if (typeConstraint != null) {
                     if (typeConstraint.equals(pool.typeObject())) {
                         // report errors only at the "top" level
-                        mapConstraints = findImplicitConstraint(clzContrib, sName, mapConstraints,
-                                            fAllowInto, ErrorListener.BLACKHOLE);
+                        mapConstraints = findImplicitConstraint(clzContrib, sName, mapConstraints, fAllowInto, silent(PROBE));
                     } else {
                         if (mapConstraints == null) {
                             mapConstraints = new ListMap<>();

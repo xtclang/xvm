@@ -65,6 +65,8 @@ import org.xvm.compiler.ast.NewExpression.AnonInnerClassContext;
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.in;
+
 /**
  * A block statement specifies a series of statements.
  *
@@ -341,8 +343,7 @@ public class StatementBlock
                     astRoot = new StmtBlockAST(newStmts, true);
                 }
             } else {
-                errs.log(Severity.ERROR, Compiler.RETURN_REQUIRED, null, getSource(),
-                        getEndPosition(), getEndPosition());
+                errs.error(Compiler.RETURN_REQUIRED, in(getSource(), getEndPosition(), getEndPosition()));
             }
         } else {
             // it is possible that there is a dangling label at the end that is unreachable,
@@ -793,8 +794,8 @@ public class StatementBlock
                     ? exprLambda.isRequiredThis()
                     : !isFunction();
 
-            if (!fHasThis && errs != null) {
-                errs.log(Severity.ERROR, Compiler.NO_THIS, null, getSource(), lPos, lPos);
+            if (!fHasThis) {
+                errs.error(Compiler.NO_THIS, in(getSource(), lPos, lPos));
             }
             return fHasThis;
         }
@@ -1222,7 +1223,7 @@ public class StatementBlock
                 MethodConstant    idMethod   = method.getIdentityConstant();
                 Access            access     = idMethod.isTopLevel() ? Access.PROTECTED : Access.PRIVATE;
                 TypeConstant      typeCtx    = pool.ensureAccessTypeConstant(typeThis, access);
-                TypeInfo          infoType   = typeCtx.ensureTypeInfo();
+                TypeInfo          infoType   = typeCtx.ensureTypeInfo(errs);
                 MethodInfo        infoMethod = infoType.getMethodById(idMethod);
                 SignatureConstant sigSuper   = infoMethod == null ? null : infoMethod.getSuper(infoType);
 

@@ -94,7 +94,7 @@ public class TryStatement
     @Override
     public boolean hasLabelVar(String sName) {
         return "exception".equals(sName) &&
-                (m_ctxValidatingFinally != null || m_regFinallyException != null);
+                (m_validatingFinally != null || m_regFinallyException != null);
     }
 
     @Override
@@ -109,7 +109,7 @@ public class TryStatement
                     Id.IDENTIFIER, sRegName);
 
             m_regFinallyException = reg = ctx.createRegister(pool().typeException१(), sRegName);
-            m_ctxValidatingFinally.registerVar(tok, reg, m_errsValidatingFinally);
+            m_validatingFinally.ctx().registerVar(tok, reg, m_validatingFinally.errs());
         }
 
         return reg;
@@ -119,6 +119,18 @@ public class TryStatement
 
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs) {
+        ValidationScope previous = m_validatingFinally;
+        try {
+            return validateScoped(ctx, errs);
+        } finally {
+            m_validatingFinally = previous;
+        }
+    }
+
+    /**
+     * Validate with callback state restored by {@link #validateImpl} on every exit.
+     */
+    private Statement validateScoped(Context ctx, ErrorListener errs) {
         boolean fValid = true;
 
         if (resources == null) {
@@ -270,11 +282,9 @@ public class TryStatement
             // promote the information gathered by the finally block
             Context ctxFinally = ctxCatchAll.enter();
 
-            m_ctxValidatingFinally  = ctxFinally;
-            m_errsValidatingFinally = errs;
+            m_validatingFinally = new ValidationScope(ctxFinally, errs);
             StatementBlock catchallNew = (StatementBlock) catchall.validate(ctxFinally, errs);
-            m_ctxValidatingFinally  = null;
-            m_errsValidatingFinally = null;
+            m_validatingFinally = null;
 
             ctxFinally.promoteAssignments(ctxOrig);
 
@@ -556,9 +566,8 @@ public class TryStatement
     protected List<CatchStatement>      catches;
     protected StatementBlock            catchall;
 
-    private transient Context       m_ctxValidatingFinally;
-    private transient ErrorListener m_errsValidatingFinally;
-    private transient Register      m_regFinallyException;
+    private transient ValidationScope m_validatingFinally;
+    private transient Register        m_regFinallyException;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(TryStatement.class,
             "resources", "block", "catches", "catchall");
