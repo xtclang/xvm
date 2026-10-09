@@ -2747,8 +2747,7 @@ public abstract class TypeConstant
                 typeContrib = typeContrib.removeAccess();
                 typeContrib = pool.ensureAccessTypeConstant(typeContrib, Access.STRUCT);
 
-                TypeInfo infoContrib =
-                        typeContrib.ensureTypeInfoInternal(cascade(fIncomplete, errs));
+                TypeInfo infoContrib = typeContrib.ensureTypeInfoInternal(cascade(fIncomplete, errs));
                 if (isComplete(infoContrib)) {
                     for (Map.Entry<PropertyConstant, PropertyInfo> entry : infoContrib.getProperties().entrySet()) {
                         PropertyInfo prop = entry.getValue();
@@ -3555,16 +3554,14 @@ public abstract class TypeConstant
             case Into: {
                 // append to the call chain
                 TypeConstant typeContrib = contrib.getTypeConstant(); // already resolved
-                TypeInfo     infoContrib = typeContrib.adjustAccess(constId)
-                        .ensureTypeInfoInternal(cascade(fIncomplete, errs));
+                TypeInfo     infoContrib = typeContrib.adjustAccess(constId).ensureTypeInfoInternal(cascade(fIncomplete, errs));
 
                 if (!isComplete(infoContrib)) {
                     fIncomplete |= computeIncomplete(composition, typeContrib, infoContrib, setDepends);
                 }
                 if (infoContrib != null) {
                     infoContrib.contributeChains(listmapClassChain, listmapDefaultChain, listmapRootChain, composition);
-                    layerOnTypeParams(mapTypeParams, typeContrib, infoContrib.getTypeParams(),
-                            cascade(fIncomplete, errs));
+                    layerOnTypeParams(mapTypeParams, typeContrib, infoContrib.getTypeParams(), cascade(fIncomplete, errs));
                 }
                 break;
             }
@@ -3706,8 +3703,7 @@ public abstract class TypeConstant
                 int nBasePropRank = mapProps.size();
                 int nBaseMethRank = mapMethods.size();
 
-                if (!collectSelfTypeParameters(struct, mapTypeParams, mapContribProps,
-                        nBasePropRank, cascade(fIncomplete, errs))) {
+                if (!collectSelfTypeParameters(struct, mapTypeParams, mapContribProps, nBasePropRank, cascade(fIncomplete, errs))) {
                     fIncomplete = true;
                 }
 
@@ -3747,8 +3743,7 @@ public abstract class TypeConstant
                     }
                 }
             } else {
-                infoContrib = typeContrib.adjustAccess(constId)
-                        .ensureTypeInfoInternal(cascade(fIncomplete, errs));
+                infoContrib = typeContrib.adjustAccess(constId).ensureTypeInfoInternal(cascade(fIncomplete, errs));
                 if (!isComplete(infoContrib)) {
                     if (computeIncomplete(composition, typeContrib, infoContrib, setDepends)) {
                         fIncomplete = true;
@@ -3962,8 +3957,7 @@ public abstract class TypeConstant
                 fComplete = false;
             } else {
                 nestAndLayerOn(constId, idProp, mapProps, mapVirtProps, mapMethods, mapVirtMethods,
-                               typeAnno, infoAnno, ContribSource.Annotation,
-                               cascade(!fComplete, errs));
+                               typeAnno, infoAnno, ContribSource.Annotation, cascade(!fComplete, errs));
             }
         }
 
@@ -4018,13 +4012,11 @@ public abstract class TypeConstant
                                 idGet.getValueString() + " at " + this.getValueString());
                     }
                     infoGet = infoGet.layerOn(new MethodInfo(new MethodBody(idGet,
-                            idGet.getSignature(), Implementation.Implicit), nRank), false,
-                            cascade(!fComplete, errs));
+                            idGet.getSignature(), Implementation.Implicit), nRank), false, cascade(!fComplete, errs));
 
                     if (infoSet != null) {
                         infoSet = infoSet.layerOn(new MethodInfo(new MethodBody(idSet,
-                                idSet.getSignature(), Implementation.Implicit), nRank+1), false,
-                                cascade(!fComplete, errs));
+                                idSet.getSignature(), Implementation.Implicit), nRank+1), false, cascade(!fComplete, errs));
                     }
                 }
 
