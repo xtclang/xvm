@@ -1,7 +1,6 @@
 package org.xvm.lsp.adapter.mock
 
 import org.xvm.lsp.adapter.AbstractAdapter
-import org.xvm.lsp.adapter.Adapter
 import org.xvm.lsp.adapter.CodeAction
 import org.xvm.lsp.adapter.CodeAction.CodeActionKind
 import org.xvm.lsp.adapter.CompletionItem
@@ -28,13 +27,16 @@ import java.util.concurrent.ConcurrentHashMap
 private val modulePattern = Regex("""^\s*module\s+([\w.]+)\s*\{?""", RegexOption.MULTILINE)
 
 /** Pattern to recognize class declarations. */
-private val classPattern = Regex("""^\s*(?:public\s+|private\s+|protected\s+)?class\s+(\w+)""", RegexOption.MULTILINE)
+private val classPattern =
+    Regex("""^\s*(?:public\s+|private\s+|protected\s+)?class\s+(\w+)""", RegexOption.MULTILINE)
 
 /** Pattern to recognize interface declarations. */
-private val interfacePattern = Regex("""^\s*(?:public\s+|private\s+|protected\s+)?interface\s+(\w+)""", RegexOption.MULTILINE)
+private val interfacePattern =
+    Regex("""^\s*(?:public\s+|private\s+|protected\s+)?interface\s+(\w+)""", RegexOption.MULTILINE)
 
 /** Pattern to recognize service declarations. */
-private val servicePattern = Regex("""^\s*(?:public\s+|private\s+|protected\s+)?service\s+(\w+)""", RegexOption.MULTILINE)
+private val servicePattern =
+    Regex("""^\s*(?:public\s+|private\s+|protected\s+)?service\s+(\w+)""", RegexOption.MULTILINE)
 
 /** Pattern to recognize method declarations. */
 private val methodPattern =
@@ -62,8 +64,8 @@ private val identifierPattern = Regex("""\b(\w+)\b""")
 /**
  * Mock implementation of the XTC compiler adapter for testing.
  *
- * This simulates what a real adapter would do by parsing XTC-like syntax
- * and producing reasonable results without actually invoking the compiler.
+ * This simulates what a real adapter would do by parsing XTC-like syntax and producing reasonable
+ * results without actually invoking the compiler.
  *
  * This adapter implements all syntax-level LSP features using regex patterns:
  * - Document symbols and outline
@@ -88,8 +90,8 @@ private val identifierPattern = Regex("""\b(\w+)\b""")
  * - Semantic error reporting (only ERROR markers work)
  * - Smart completion based on types
  *
- * // TODO LSP: This is a MOCK - not connected to any real compiler!
- * // Replace with AdapterImpl that uses the parallel compiler.
+ * // TODO LSP: This is a MOCK - not connected to any real compiler! // Replace with AdapterImpl
+ * that uses the parallel compiler.
  */
 class MockAdapter : AbstractAdapter() {
     override val displayName: String = "Mock"
@@ -100,9 +102,7 @@ class MockAdapter : AbstractAdapter() {
     private val compiledDocuments = ConcurrentHashMap<String, CompilationResult>()
     private val documentContents = ConcurrentHashMap<String, String>()
 
-    /**
-     * Mock adapter is always healthy - no native code to verify.
-     */
+    /** Mock adapter is always healthy - no native code to verify. */
     override fun healthCheck(): Boolean {
         logger.info("healthCheck() -> true")
         return true
@@ -128,7 +128,12 @@ class MockAdapter : AbstractAdapter() {
 
                 // Check for basic syntax errors
                 if (content.contains("{") && !content.contains("}")) {
-                    add(Diagnostic.error(Location.ofLine(uri, lines.size - 1), "Unmatched opening brace"))
+                    add(
+                        Diagnostic.error(
+                            Location.ofLine(uri, lines.size - 1),
+                            "Unmatched opening brace",
+                        ),
+                    )
                 }
             }
 
@@ -150,9 +155,36 @@ class MockAdapter : AbstractAdapter() {
                 }
 
                 // Parse type declarations (classes, interfaces, services)
-                addAll(parseTypeDeclarations(classPattern, content, uri, SymbolKind.CLASS, "class", "Class"))
-                addAll(parseTypeDeclarations(interfacePattern, content, uri, SymbolKind.INTERFACE, "interface", "Interface"))
-                addAll(parseTypeDeclarations(servicePattern, content, uri, SymbolKind.SERVICE, "service", "Service"))
+                addAll(
+                    parseTypeDeclarations(
+                        classPattern,
+                        content,
+                        uri,
+                        SymbolKind.CLASS,
+                        "class",
+                        "Class",
+                    ),
+                )
+                addAll(
+                    parseTypeDeclarations(
+                        interfacePattern,
+                        content,
+                        uri,
+                        SymbolKind.INTERFACE,
+                        "interface",
+                        "Interface",
+                    ),
+                )
+                addAll(
+                    parseTypeDeclarations(
+                        servicePattern,
+                        content,
+                        uri,
+                        SymbolKind.SERVICE,
+                        "service",
+                        "Service",
+                    ),
+                )
 
                 // Parse methods
                 methodPattern.findAll(content).forEach { match ->
@@ -207,10 +239,11 @@ class MockAdapter : AbstractAdapter() {
         val fileName = uri.substringAfterLast('/')
         logger.info("findSymbolAt(uri={}, line={}, column={})", fileName, line, column)
         val result =
-            compiledDocuments[uri] ?: run {
-                logger.info("findSymbolAt -> null (no compiled document)")
-                return null
-            }
+            compiledDocuments[uri]
+                ?: run {
+                    logger.info("findSymbolAt -> null (no compiled document)")
+                    return null
+                }
         val symbol = result.symbols.find { it.location.contains(line, column) }
         logger.info("findSymbolAt -> {}", symbol?.name ?: "null")
         return symbol
@@ -255,7 +288,10 @@ class MockAdapter : AbstractAdapter() {
 
         // In the mock, just return the symbol's own location
         val location = findSymbolAt(uri, line, column)?.location
-        logger.info("findDefinition -> {}", location?.let { "${it.startLine}:${it.startColumn}" } ?: "null")
+        logger.info(
+            "findDefinition -> {}",
+            location?.let { "${it.startLine}:${it.startColumn}" } ?: "null",
+        )
         return location
     }
 
@@ -266,7 +302,13 @@ class MockAdapter : AbstractAdapter() {
         includeDeclaration: Boolean,
     ): List<Location> {
         val fileName = uri.substringAfterLast('/')
-        logger.info("findReferences(uri={}, line={}, column={}, includeDecl={})", fileName, line, column, includeDeclaration)
+        logger.info(
+            "findReferences(uri={}, line={}, column={}, includeDecl={})",
+            fileName,
+            line,
+            column,
+            includeDeclaration,
+        )
 
         // Mock implementation: just return the declaration
         return listOfNotNull(
@@ -330,7 +372,13 @@ class MockAdapter : AbstractAdapter() {
             // Find import blocks
             val importLines = lines.indices.filter { lines[it].trimStart().startsWith("import ") }
             if (importLines.size >= 2) {
-                add(FoldingRange(importLines.first(), importLines.last(), FoldingRange.FoldingKind.IMPORTS))
+                add(
+                    FoldingRange(
+                        importLines.first(),
+                        importLines.last(),
+                        FoldingRange.FoldingKind.IMPORTS,
+                    ),
+                )
             }
         }.also {
             logger.info("folding ranges -> {} found", it.size)
@@ -371,21 +419,19 @@ class MockAdapter : AbstractAdapter() {
         val word = getWordAt(content, line, column) ?: return null
 
         val edits =
-            content
-                .split("\n")
-                .flatMapIndexed { lineIdx, lineText ->
-                    findWholeWordOccurrences(lineText, word)
-                        .map { idx ->
-                            TextEdit(
-                                range =
-                                    Range(
-                                        start = Position(lineIdx, idx),
-                                        end = Position(lineIdx, idx + word.length),
-                                    ),
-                                newText = newName,
-                            )
-                        }.toList()
-                }
+            content.split("\n").flatMapIndexed { lineIdx, lineText ->
+                findWholeWordOccurrences(lineText, word)
+                    .map { idx ->
+                        TextEdit(
+                            range =
+                                Range(
+                                    start = Position(lineIdx, idx),
+                                    end = Position(lineIdx, idx + word.length),
+                                ),
+                            newText = newName,
+                        )
+                    }.toList()
+            }
 
         if (edits.isEmpty()) return null
         logger.info("rename '{}' -> '{}' ({} occurrences)", word, newName, edits.size)
@@ -497,8 +543,12 @@ class MockAdapter : AbstractAdapter() {
             lineText.indexOf(word, prev + word.length).takeIf { it >= 0 }
         }.filter { idx ->
             val before = if (idx > 0) lineText[idx - 1] else ' '
-            val after = if (idx + word.length < lineText.length) lineText[idx + word.length] else ' '
-            !before.isLetterOrDigit() && before != '_' && !after.isLetterOrDigit() && after != '_'
+            val after =
+                if (idx + word.length < lineText.length) lineText[idx + word.length] else ' '
+            !before.isLetterOrDigit() &&
+                before != '_' &&
+                !after.isLetterOrDigit() &&
+                after != '_'
         }
 
     private fun countLines(

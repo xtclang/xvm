@@ -8,7 +8,7 @@ It is no longer the canonical full adapter matrix; that information lives in:
 
 ## What tree-sitter provides well
 
-Tree-sitter is responsible for the syntax/structure layer used by the default LSP adapter:
+Tree-sitter is responsible for the syntax/structure layer used by the explicitly selected Tree-sitter LSP adapter:
 
 - fast incremental parsing
 - robust parsing of incomplete/invalid code

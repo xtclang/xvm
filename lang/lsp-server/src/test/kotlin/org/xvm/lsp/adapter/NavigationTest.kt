@@ -14,8 +14,8 @@ import java.util.stream.Stream
 /**
  * Navigation tests for [TreeSitterAdapter].
  *
- * Exercises definition lookup, references, document highlights, document links,
- * cross-file navigation, and workspace symbol search.
+ * Exercises definition lookup, references, document highlights, document links, cross-file
+ * navigation, and workspace symbol search.
  *
  * All tests are skipped (not failed) when the tree-sitter native library is unavailable.
  */
@@ -30,8 +30,8 @@ class NavigationTest : TreeSitterTestBase() {
     @DisplayName("findDefinition()")
     inner class DefinitionTests {
         /**
-         * Cursor on "Person" at line 1 should resolve to the class_declaration
-         * starting at that same line (same-file, name-based match).
+         * Cursor on "Person" at line 1 should resolve to the class_declaration starting at that
+         * same line (same-file, name-based match).
          */
         @Test
         @DisplayName("should find class definition")
@@ -63,9 +63,9 @@ class NavigationTest : TreeSitterTestBase() {
         }
 
         /**
-         * Cmd-click on a call to a doc-commented method must land on the
-         * method's identifier line, not on the doc-comment opener -- exercises
-         * the [XtcQueryEngine.findMethodDeclarations] path for call resolution.
+         * Cmd-click on a call to a doc-commented method must land on the method's identifier line,
+         * not on the doc-comment opener -- exercises the [XtcQueryEngine.findMethodDeclarations]
+         * path for call resolution.
          */
         @Test
         @DisplayName("should find doc-commented method definition on the name line")
@@ -121,7 +121,8 @@ class NavigationTest : TreeSitterTestBase() {
 
             ts.compile(uri, source)
             // cursor on 'add' in call at line 6, col 12
-            val definition = logged("shouldFindMethodDefinitionFromCallSite", ts.findDefinition(uri, 6, 12))
+            val definition =
+                logged("shouldFindMethodDefinitionFromCallSite", ts.findDefinition(uri, 6, 12))
 
             assertThat(definition).isNotNull
             assertThat(definition!!.startLine).isEqualTo(2)
@@ -146,7 +147,8 @@ class NavigationTest : TreeSitterTestBase() {
 
             ts.compile(uri, source)
             // cursor on `whitespace` in `whitespace(test)` -- line 6, column 15
-            val definition = logged("shouldResolveLocalBeforeClassMember", ts.findDefinition(uri, 6, 15))
+            val definition =
+                logged("shouldResolveLocalBeforeClassMember", ts.findDefinition(uri, 6, 15))
 
             assertThat(definition).isNotNull
             // The local on line 5 (the function-typed declaration), not the field on line 2
@@ -154,10 +156,10 @@ class NavigationTest : TreeSitterTestBase() {
         }
 
         /**
-         * Forward references are not legal Ecstasy: a local declared on a later line
-         * must NOT be returned as the resolution of an identifier above the
-         * declaration. The scope walk filters `variable_declaration`s by their end
-         * position relative to the cursor; this test guards that filter.
+         * Forward references are not legal Ecstasy: a local declared on a later line must NOT be
+         * returned as the resolution of an identifier above the declaration. The scope walk filters
+         * `variable_declaration`s by their end position relative to the cursor; this test guards
+         * that filter.
          */
         @Test
         @DisplayName("should not resolve to local declared after the cursor")
@@ -190,8 +192,8 @@ class NavigationTest : TreeSitterTestBase() {
         }
 
         /**
-         * A local in an inner block must shadow a same-named local in an outer block.
-         * Cmd-click on the inner reference must return the inner declaration.
+         * A local in an inner block must shadow a same-named local in an outer block. Cmd-click on
+         * the inner reference must return the inner declaration.
          */
         @Test
         @DisplayName("should prefer inner-block local over outer-block local")
@@ -221,12 +223,11 @@ class NavigationTest : TreeSitterTestBase() {
 
         /**
          * The scope walk short-circuits when it finds a match in an enclosing scope. If the
-         * referenced name does NOT exist in any enclosing scope, resolution must fall through
-         * to the same-file declarations and (if not found there) the workspace index.
+         * referenced name does NOT exist in any enclosing scope, resolution must fall through to
+         * the same-file declarations and (if not found there) the workspace index.
          *
-         * This is the same-file half of that fall-through. (The cross-file workspace path
-         * requires an indexed multi-file workspace, which the unit-test harness does not
-         * easily set up.)
+         * This is the same-file half of that fall-through. (The cross-file workspace path requires
+         * an indexed multi-file workspace, which the unit-test harness does not easily set up.)
          */
         @Test
         @DisplayName("should fall through to same-file declarations when name is not in scope")
@@ -258,8 +259,8 @@ class NavigationTest : TreeSitterTestBase() {
         }
 
         /**
-         * Method parameters must resolve to themselves, not to any same-named workspace
-         * symbol. This is the simpler half of the scope-walk fix.
+         * Method parameters must resolve to themselves, not to any same-named workspace symbol.
+         * This is the simpler half of the scope-walk fix.
          */
         @Test
         @DisplayName("should resolve to method parameter")
@@ -284,8 +285,8 @@ class NavigationTest : TreeSitterTestBase() {
         }
 
         /**
-         * When the cursor is on a class name used as a return type in a different
-         * class, go-to-definition should navigate to the class declaration.
+         * When the cursor is on a class name used as a return type in a different class,
+         * go-to-definition should navigate to the class declaration.
          */
         @Test
         @DisplayName("should find class definition from type usage")
@@ -307,7 +308,8 @@ class NavigationTest : TreeSitterTestBase() {
 
             ts.compile(uri, source)
             // cursor on 'Person' in return type at line 5, col 8
-            val definition = logged("shouldFindClassDefinitionFromTypeUsage", ts.findDefinition(uri, 5, 8))
+            val definition =
+                logged("shouldFindClassDefinitionFromTypeUsage", ts.findDefinition(uri, 5, 8))
 
             assertThat(definition).isNotNull
             assertThat(definition!!.startLine).isEqualTo(1)
@@ -315,11 +317,10 @@ class NavigationTest : TreeSitterTestBase() {
 
         /**
          * Issue #459: `structure.y` in reflect.x navigated to an unrelated `y` in
-         * doc/archive/examples because `y`, declared only as a shorthand constructor
-         * parameter of `const Point(Int x, Int y)`, was invisible to the same-file
-         * declaration lookup and fell through to the workspace-wide name grep.
-         * Shorthand constructor parameters declare properties, so the same-file
-         * lookup must find them.
+         * doc/archive/examples because `y`, declared only as a shorthand constructor parameter of
+         * `const Point(Int x, Int y)`, was invisible to the same-file declaration lookup and fell
+         * through to the workspace-wide name grep. Shorthand constructor parameters declare
+         * properties, so the same-file lookup must find them.
          */
         @Test
         @DisplayName("should resolve const shorthand property in same file")
@@ -337,7 +338,11 @@ class NavigationTest : TreeSitterTestBase() {
 
             ts.compile(uri, source)
             // cursor on `y` in `structure.y` -- line 3, col 18
-            val definition = logged("shouldResolveConstShorthandPropertyInSameFile", ts.findDefinition(uri, 3, 18))
+            val definition =
+                logged(
+                    "shouldResolveConstShorthandPropertyInSameFile",
+                    ts.findDefinition(uri, 3, 18),
+                )
 
             assertThat(definition).isNotNull
             assertThat(definition!!.uri).isEqualTo(uri)
@@ -346,9 +351,9 @@ class NavigationTest : TreeSitterTestBase() {
         }
 
         /**
-         * Issue #459: with the whole word selected, the editor reports the caret at
-         * the exclusive end of the identifier, where nodeAt() returns the following
-         * token. The definition lookup must tolerate that by retrying one column left.
+         * Issue #459: with the whole word selected, the editor reports the caret at the exclusive
+         * end of the identifier, where nodeAt() returns the following token. The definition lookup
+         * must tolerate that by retrying one column left.
          */
         @Test
         @DisplayName("should find definition when caret is at the end of the word")
@@ -374,8 +379,8 @@ class NavigationTest : TreeSitterTestBase() {
         }
 
         /**
-         * Issue #459: cmd-click on a typedef name found nothing. Same-file case:
-         * the scope walk must treat a typedef_declaration as a body member.
+         * Issue #459: cmd-click on a typedef name found nothing. Same-file case: the scope walk
+         * must treat a typedef_declaration as a body member.
          */
         @Test
         @DisplayName("should navigate to typedef declaration in same file")
@@ -393,7 +398,8 @@ class NavigationTest : TreeSitterTestBase() {
 
             ts.compile(uri, source)
             // cursor on `Name` usage -- line 3, col 8
-            val definition = logged("shouldNavigateToTypedefInSameFile", ts.findDefinition(uri, 3, 8))
+            val definition =
+                logged("shouldNavigateToTypedefInSameFile", ts.findDefinition(uri, 3, 8))
 
             assertThat(definition).isNotNull
             assertThat(definition!!.startLine).isEqualTo(1)
@@ -408,10 +414,9 @@ class NavigationTest : TreeSitterTestBase() {
     @DisplayName("findReferences()")
     inner class FindReferencesTests {
         /**
-         * `includeDeclaration = false` should drop exactly one location: the declaration
-         * itself. With both flag values exercised on the same source, the `false` result
-         * must contain every identifier-token from the `true` result minus the
-         * declaration site.
+         * `includeDeclaration = false` should drop exactly one location: the declaration itself.
+         * With both flag values exercised on the same source, the `false` result must contain every
+         * identifier-token from the `true` result minus the declaration site.
          */
         @Test
         @DisplayName("should exclude declaration when includeDeclaration is false")
@@ -451,8 +456,8 @@ class NavigationTest : TreeSitterTestBase() {
         }
 
         /**
-         * A method referenced in multiple call sites should produce locations
-         * for the declaration and each call.
+         * A method referenced in multiple call sites should produce locations for the declaration
+         * and each call.
          */
         @Test
         @DisplayName("should find method references across declaration and calls")
@@ -480,7 +485,11 @@ class NavigationTest : TreeSitterTestBase() {
                     "shouldFindMethodReferencesAcrossDeclarationAndCalls",
                     ts.findReferences(uri, 2, 12, includeDeclaration = true),
                 )
-            logger.info("  references ({}): {}", refs.size, refs.map { "L${it.startLine}:${it.startColumn}" })
+            logger.info(
+                "  references ({}): {}",
+                refs.size,
+                refs.map { "L${it.startLine}:${it.startColumn}" },
+            )
 
             // declaration + 2 call sites = at least 3
             assertThat(refs).hasSizeGreaterThanOrEqualTo(3)
@@ -495,9 +504,9 @@ class NavigationTest : TreeSitterTestBase() {
     @DisplayName("getDocumentHighlights()")
     inner class DocumentHighlightTests {
         /**
-         * "Person" appears as the class name, a return type, and in a `new` expression.
-         * The adapter finds all identifier nodes with the same text, so we expect at
-         * least 2 highlights (declaration + usages).
+         * "Person" appears as the class name, a return type, and in a `new` expression. The adapter
+         * finds all identifier nodes with the same text, so we expect at least 2 highlights
+         * (declaration + usages).
          */
         @Test
         @DisplayName("should highlight all occurrences of identifier")
@@ -531,8 +540,8 @@ class NavigationTest : TreeSitterTestBase() {
         }
 
         /**
-         * A method name used in both declaration and multiple call sites should
-         * produce highlights at all locations.
+         * A method name used in both declaration and multiple call sites should produce highlights
+         * at all locations.
          */
         @Test
         @DisplayName("should highlight method name at declaration and call sites")
@@ -555,8 +564,16 @@ class NavigationTest : TreeSitterTestBase() {
 
             ts.compile(uri, source)
             // cursor on 'add' at declaration, line 2, col 12
-            val highlights = logged("shouldHighlightMethodAtDeclarationAndCalls", ts.getDocumentHighlights(uri, 2, 12))
-            logger.info("  highlights ({}): {}", highlights.size, highlights.map { "L${it.range.start.line}:${it.range.start.column}" })
+            val highlights =
+                logged(
+                    "shouldHighlightMethodAtDeclarationAndCalls",
+                    ts.getDocumentHighlights(uri, 2, 12),
+                )
+            logger.info(
+                "  highlights ({}): {}",
+                highlights.size,
+                highlights.map { "L${it.range.start.line}:${it.range.start.column}" },
+            )
 
             // declaration + 2 call sites = at least 3
             assertThat(highlights).hasSizeGreaterThanOrEqualTo(3)
@@ -572,9 +589,9 @@ class NavigationTest : TreeSitterTestBase() {
     @TestInstance(TestInstance.Lifecycle.PER_CLASS)
     inner class DocumentLinkTests {
         /**
-         * One row per syntactic position the URL detector must recognise (line/block/doc
-         * comment, string literal, trailing-punctuation strip). Assertions are uniform; a
-         * new comment- or string-node type costs one extra row instead of a new method.
+         * One row per syntactic position the URL detector must recognise (line/block/doc comment,
+         * string literal, trailing-punctuation strip). Assertions are uniform; a new comment- or
+         * string-node type costs one extra row instead of a new method.
          */
         @Suppress("unused")
         fun singleUrlCases(): Stream<Arguments> =
@@ -662,7 +679,8 @@ class NavigationTest : TreeSitterTestBase() {
             assertThat(links[0].range.start.column).isEqualTo(expectedColumn)
             // The detected range must cover exactly the (post-strip) URL -- catches mistakes
             // like the trailing-punctuation case where the dot must NOT be in the range.
-            assertThat(links[0].range.end.column - links[0].range.start.column).isEqualTo(expectedTarget.length)
+            assertThat(links[0].range.end.column - links[0].range.start.column)
+                .isEqualTo(expectedTarget.length)
         }
 
         @Test
@@ -680,10 +698,12 @@ class NavigationTest : TreeSitterTestBase() {
 
             val links = ts.getDocumentLinks(uri, source)
 
-            assertThat(links).extracting<String>({ it.target }).containsExactlyInAnyOrder(
-                "https://a.test",
-                "https://b.test",
-            )
+            assertThat(links)
+                .extracting<String>({ it.target })
+                .containsExactlyInAnyOrder(
+                    "https://a.test",
+                    "https://b.test",
+                )
         }
 
         @Test
@@ -802,7 +822,8 @@ class NavigationTest : TreeSitterTestBase() {
             // Since initializeWorkspace scans files on disk and our test URIs are synthetic,
             // the index gets populated via compile() -> reindexFile() once the index is ready.
             // To test findWorkspaceSymbols, we trigger indexing manually by calling it:
-            // After compile, the indexReady flag is still false (no initializeWorkspace was called).
+            // After compile, the indexReady flag is still false (no initializeWorkspace was
+            // called).
             // We test via initializeWorkspace with a temp dir containing the same files.
             val results = ts.findWorkspaceSymbols("Person")
             // Without initializeWorkspace called, results may be empty (index not ready)

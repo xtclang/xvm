@@ -10,10 +10,9 @@ import javax.swing.Icon
 /**
  * Run configuration type for Ecstasy applications.
  *
- * `getId()` and `XtcConfigurationFactory.getId()` are internal identifiers
- * persisted in workspace.xml across sessions — they MUST remain stable
- * ("XtcRunConfiguration", "XtcConfigurationFactory") even though everything
- * user-facing now reads "Ecstasy".
+ * `getId()` and `XtcConfigurationFactory.getId()` are internal identifiers persisted in
+ * workspace.xml across sessions — they MUST remain stable ("XtcRunConfiguration",
+ * "XtcConfigurationFactory") even though everything user-facing now reads "Ecstasy".
  */
 class XtcRunConfigurationType : ConfigurationType {
     override fun getDisplayName() = "Ecstasy Application"
@@ -27,9 +26,7 @@ class XtcRunConfigurationType : ConfigurationType {
     override fun getConfigurationFactories(): Array<ConfigurationFactory> = arrayOf(XtcConfigurationFactory(this))
 }
 
-/**
- * Factory for creating Ecstasy run configurations.
- */
+/** Factory for creating Ecstasy run configurations. */
 class XtcConfigurationFactory(
     type: ConfigurationType,
 ) : ConfigurationFactory(type) {
