@@ -1,5 +1,9 @@
 package org.xvm.api;
 
+import org.jetbrains.annotations.NotNull;
+
+import static java.util.Objects.requireNonNull;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -7,13 +11,13 @@ import java.io.PrintWriter;
 import java.time.Instant;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
 import java.util.function.Function;
-
-import org.jetbrains.annotations.NotNull;
 
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.DirRepository;
@@ -28,11 +32,16 @@ import org.xvm.compiler.BuildRepository;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.CompilerException;
 import org.xvm.compiler.InstantRepository;
+import org.xvm.compiler.InitializerBinding;
+import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Source;
 
 import org.xvm.compiler.Token.Id;
-
+import org.xvm.compiler.ast.AstNode;
+import org.xvm.compiler.ast.InvocationExpression;
+import org.xvm.compiler.ast.NewExpression;
+import org.xvm.compiler.ast.PropertyDeclarationStatement;
 import org.xvm.compiler.ast.Statement;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
@@ -42,8 +51,6 @@ import org.xvm.tool.Launcher.LauncherException;
 import org.xvm.tool.LauncherOptions.CompilerOptions;
 import org.xvm.tool.ModuleInfo;
 import org.xvm.tool.ModuleInfo.Node;
-
-import static java.util.Objects.requireNonNull;
 
 import static org.xvm.asm.ErrorListener.NOWHERE;
 import static org.xvm.asm.ErrorListener.at;
@@ -351,38 +358,117 @@ public class EmbeddingSupport {
     }
 
     /**
-     * The outcome of one compilation, including progress retained after a source error.
+     * The outcome of compiling a source or module source tree.
      *
-     * <p>The compiling worker owns the returned mutable compiler objects. A host must copy the
-     * facts it needs before sharing them with other threads; this record does not detach an AST.
-     * No field is a promise that a failed compilation is executable.
+     * <p>A failed compilation used to answer with nothing but null, which threw away everything the
+     * attempt had built. That is most of what a host wants when it fails: the structures a
+     * verification error was raised against still exist, and the pool they were interned in is
+     * the only way to reach them - to ask a type what building its TypeInfo had to say, for
+     * instance.
      *
-     * @param module  the executable module on success, or null on failure or cancellation
-     * @param file    the file structure, or null if registration did not finish
-     * @param ast     the assembled source tree, or null if loading or parsing did not finish
+     * <p>Recovered source trees have not entered compiler passes. Traverse their children using
+     * each root's Source; child parent pointers may not yet be installed. Binding maps are
+     * immutable identity snapshots: keys and values compare by reference, not structural equality.
+     *
+     * @param module       the compiled module, or null if the compilation did not get that far
+     * @param file         the file structure that was built, or null if it did not get that far
+     * @param ast          the assembled source tree, or null if loading/parsing failed; linked
+     *                     member trees retain their original Sources and positions
+     * @param sourceTrees  available per-source syntax, including recovered trees on parse failure;
+     *                     these are structural facts, not a promise of semantic validity
+     * @param callBindings  immutable call facts keyed by surviving invocation identity; compiler
+     *                     objects remain worker-owned and must be copied before concurrent use
+     * @param functionBindings  validated function signatures with no selected runtime method;
+     *                          ownership is the same as for callBindings
+     * @param constructorBindings validated constructor and argument provenance; the same ownership
+     *                            rules apply, with no additional state on the construction AST
+     * @param initializerBindings successful constant-initializer facts anchored to surviving source
+     *                            properties; no speculative clone nodes or contexts are retained
      */
-    public record Compilation(ModuleStructure module, FileStructure file, StatementBlock ast) {
+    public record Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
+                              List<StatementBlock> sourceTrees,
+                              Map<InvocationExpression, InvocationBinding> callBindings,
+                              Map<InvocationExpression, InvocationBinding.FunctionCall> functionBindings,
+                              Map<NewExpression, InvocationBinding> constructorBindings,
+                              Map<PropertyDeclarationStatement, InitializerBinding> initializerBindings) {
+        public Compilation {
+            sourceTrees         = List.copyOf(sourceTrees);
+            callBindings        = identitySnapshot(callBindings);
+            functionBindings    = identitySnapshot(functionBindings);
+            constructorBindings = identitySnapshot(constructorBindings);
+            initializerBindings = identitySnapshot(initializerBindings);
+        }
+
+        /** Retain hosts that supply constructor bindings without folded initializer facts. */
+        public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
+                           List<StatementBlock> sourceTrees,
+                           Map<InvocationExpression, InvocationBinding> callBindings,
+                           Map<InvocationExpression, InvocationBinding.FunctionCall> functionBindings,
+                           Map<NewExpression, InvocationBinding> constructorBindings) {
+            this(module, file, ast, sourceTrees, callBindings, functionBindings, constructorBindings, Map.of());
+        }
+
+        /** Retain hosts that supply method and function bindings. */
+        public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
+                           List<StatementBlock> sourceTrees,
+                           Map<InvocationExpression, InvocationBinding> callBindings,
+                           Map<InvocationExpression, InvocationBinding.FunctionCall> functionBindings) {
+            this(module, file, ast, sourceTrees, callBindings, functionBindings, Map.of());
+        }
+
+        /** Retain hosts that supply only statically selected method calls. */
+        public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
+                           List<StatementBlock> sourceTrees,
+                           Map<InvocationExpression, InvocationBinding> callBindings) {
+            this(module, file, ast, sourceTrees, callBindings, Map.of());
+        }
+
+        /** Retain the construction API for hosts supplying structural source trees. */
+        public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
+                           List<StatementBlock> sourceTrees) {
+            this(module, file, ast, sourceTrees, Map.of());
+        }
+
+        /** Retain the original construction API for hosts supplying one assembled tree. */
+        public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast) {
+            this(module, file, ast, ast == null ? List.of() : List.of(ast));
+        }
+
         /**
-         * Wrap a file structure for passive inspection without implying successful compilation.
+         * Represent file structures without a successful module or retained source tree.
          *
-         * @param file  the structure to inspect
+         * @param file  the file structure produced so far
+         *
          * @return a partial compilation
          */
         public static Compilation forFile(FileStructure file) {
             return new Compilation(null, requireNonNull(file, "file"), null);
         }
 
-        /** @return true if an executable module was produced */
+        /**
+         * @return true iff a module came out of it
+         */
         public boolean succeeded() {
             return module != null;
         }
 
-        /** @return this attempt's pool, or null if no file structure was built */
+        /**
+         * @return the pool this compilation interned into, or null if there was no compilation
+         */
         public ConstantPool pool() {
             return file == null ? null : file.getConstantPool();
         }
 
-        /** @return the assembled source root, or null if loading or parsing failed */
+        /**
+         * Walk the assembled source after successful loading/parsing.
+         *
+         * <p>A host that wants to say where something is has to come through here: a
+         * {@link org.xvm.asm.Component} knows its name, its kind and its children, and nothing
+         * about the text it was written in. Only the AST carries positions.
+         *
+         * @return the assembled source root, or null after loading/parsing errors; use
+         *         {@link #sourceTrees()} for available structural syntax in that case
+         */
         public StatementBlock parsed() {
             return ast;
         }
@@ -401,7 +487,7 @@ public class EmbeddingSupport {
         requireNonNull(source, "source");
         return compileModule(listener -> {
             StatementBlock tree = new Parser(source, listener).parseSource();
-            return listener.hasSeriousErrors() ? null : tree;
+            return new ParsedSources(listener.hasSeriousErrors() ? null : tree, List.of(tree));
         }, input, errs);
     }
 
@@ -422,11 +508,22 @@ public class EmbeddingSupport {
         requireNonNull(sources, "sources");
         return compileModule(listener -> {
             Node root = sources.getSourceTree(listener);
-            return root == null ? null : (StatementBlock) root.ast();
+            return new ParsedSources(root == null ? null : (StatementBlock) root.ast(),
+                    sources.getParsedSources());
         }, input, errs);
     }
 
-    private Compilation compileModule(Function<ErrorListener, StatementBlock> parse,
+    /** An assembled tree is available only when parsing/loading succeeded. */
+    /** Preserve node identity, reject null entries and detach from the collector. */
+    private static <K, V> Map<K, V> identitySnapshot(Map<K, V> source) {
+        Map<K, V> copy = new IdentityHashMap<>();
+        source.forEach((key, value) -> copy.put(requireNonNull(key), requireNonNull(value)));
+        return Collections.unmodifiableMap(copy);
+    }
+
+    private record ParsedSources(StatementBlock root, List<StatementBlock> sources) {}
+
+    private Compilation compileModule(Function<ErrorListener, ParsedSources> parse,
                                       ModuleRepository input, ErrorListener errs) {
         verifyConfigured();
         requireNonNull(errs, "errs");
@@ -493,13 +590,15 @@ public class EmbeddingSupport {
      */
     private static class EmbeddingCompiler
             extends org.xvm.tool.Compiler {
-        private final Function<ErrorListener, StatementBlock> parse;
+        private final Function<ErrorListener, ParsedSources> parse;
+        private final InvocationBinding.Collector bindings = new InvocationBinding.Collector();
 
         private final ModuleRepository     inRepo;
         private final ModuleRepository     coreRepo;
         private       ModuleStructure      module;
         private       FileStructure        file;
         private       StatementBlock       ast;
+        private       List<StatementBlock> sourceTrees = List.of();
 
         /**
          * Everything this attempt produced.
@@ -512,7 +611,17 @@ public class EmbeddingSupport {
          * @return the outcome; never null, though its parts may be
          */
         Compilation result() {
-            return new Compilation(module, file, ast);
+            var facts = bindings.finishFacts(ast == null ? List.of() : List.of(ast));
+            return new Compilation(module, file, ast, sourceTrees, facts.methods(), facts.functions(),
+                    facts.constructors(), facts.initializers());
+        }
+
+        /**
+         * @return the file structure this compilation built, which exists whether or not the
+         *         compilation went on to succeed
+         */
+        FileStructure getFileStructure() {
+            return file;
         }
 
         @Override
@@ -522,7 +631,7 @@ public class EmbeddingSupport {
             return super.isAbortDesired() || m_errors.isAbortDesired();
         }
 
-        protected EmbeddingCompiler(Function<ErrorListener, StatementBlock> parse,
+        protected EmbeddingCompiler(Function<ErrorListener, ParsedSources> parse,
                                     ModuleRepository input, ModuleRepository core, ErrorListener errs) {
             super(CompilerOptions.builder().build(), SILENT_CONSOLE, errs);
 
@@ -545,7 +654,9 @@ public class EmbeddingSupport {
                 // recover within its own stage, subject to the host's budget and cancellation.
                 ErrorListener errs = ErrorListener.cancellable(
                         ErrorListener.collecting(this::log), m_errors::isAbortDesired);
-                block = this.ast = parse.apply(errs);
+                ParsedSources parsed = parse.apply(errs);
+                block = this.ast = parsed.root();
+                this.sourceTrees = parsed.sources();
             } catch (CompilerException e) {
                 return 1;
             }
@@ -569,7 +680,7 @@ public class EmbeddingSupport {
                 return checkErrors("source parsing");
             }
 
-            Compiler      compiler = new Compiler(stmtModule, this);
+            Compiler      compiler = new Compiler(stmtModule, this, bindings);
             FileStructure struct   = compiler.generateInitialFileStructure();
             this.file = struct;
             if (struct == null || checkErrors("module creation") != 0) {
@@ -626,6 +737,12 @@ public class EmbeddingSupport {
             throw new IllegalStateException("This method must not be called");
         }
 
+        /**
+         * @return the result of the compilation
+         */
+        protected ModuleStructure getModule() {
+            return module;
+        }
     }
 
     /**
@@ -672,7 +789,7 @@ public class EmbeddingSupport {
     /**
      * Create a runtime container and execute the provided module.
      *
-     * A limited set of injections are made available to the module, including the console, clock,
+     * <p>A limited set of injections are made available to the module, including the console, clock,
      * and other "safe" injectable types. The FileSystem is provided as detailed by the "rootDir"
      * parameter.
      *
@@ -701,7 +818,7 @@ public class EmbeddingSupport {
     /**
      * Create a runtime container and execute the specified module.
      *
-     * The "customerInjector" option allows the caller to indicate an Ecstasy Injector class that
+     * <p>The "customerInjector" option allows the caller to indicate an Ecstasy Injector class that
      * will be loaded into its own container, and provided with the full set of injectable resources
      * that Ecstasy supports, also including any provided String injections; in turn, that
      * implementation provides the injections that will be available to the specified module within
@@ -793,6 +910,8 @@ public class EmbeddingSupport {
      * "%2" - additional description (may be null)
      */
     public static final String ERR_INTERNAL             = "EMB-5";
-    /** Source does not declare a module. */
+    /**
+     * The source does not contain a module declaration.
+     */
     public static final String ERR_MODULE_SOURCE        = "EMB-6";
 }
