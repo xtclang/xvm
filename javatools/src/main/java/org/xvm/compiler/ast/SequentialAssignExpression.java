@@ -13,6 +13,9 @@ import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * The "++" or "--" that precedes or follows an assignable expression of type Sequential.
  */

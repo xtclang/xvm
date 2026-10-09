@@ -1,5 +1,6 @@
 package org.xvm.compiler.ast;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -18,6 +19,7 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
 import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
+import org.xvm.asm.Reporting;
 import org.xvm.asm.TypedefStructure;
 import org.xvm.asm.XvmStructure;
 
@@ -112,10 +114,22 @@ public class NameResolver
      *         {@link Result#RESOLVED} to indicate that the name has been successfully resolved
      */
     public Result resolve(ErrorListener errs) {
-        // store off the error list for use by call backs
-        // (note: there's no attempt to clean this up later)
-        m_errs = errs;
+        // Direct resolution uses the explicit listener parameter. ResolutionCollector callbacks
+        // have no such parameter, so lend them the same listener for this call and restore the
+        // previous destination on every exit (including nested calls and exceptions).
+        try (Reporting.Scope reporting = f_errs.to(errs)) {
+            return resolveStage(errs);
+        }
+    }
 
+    /**
+     * The stage machine behind {@link #resolve}, which runs with the caller's listener held.
+     *
+     * @param errs  the listener to report to
+     *
+     * @return the result of advancing the resolution as far as it can go
+     */
+    private Result resolveStage(ErrorListener errs) {
         switch (m_stage) {
         case CHECK_IMPORTS:
             // the first name could be an import, in which case that needs to be evaluated right
@@ -258,6 +272,7 @@ public class NameResolver
                 }
             }
             m_constantFirst = m_constant;
+            m_resolvedNames.add(m_constant);
 
             // first name has been resolved
             m_stage = Stage.RESOLVE_DOT_NAME;
@@ -269,7 +284,7 @@ public class NameResolver
             // at this point, we have a component (or other identity) to work from, so the next
             // name has to be relative to that component
             while (m_sName != null) {
-                XvmStructure structure = ensurePartiallyResolvedComponent();
+                XvmStructure structure = ensurePartiallyResolvedComponent(errs);
                 if (structure == null) {
                     return getResult();
                 }
@@ -310,6 +325,7 @@ public class NameResolver
 
                     case RESOLVED:
                         // the component resolved the name; advance to the next one
+                        m_resolvedNames.add(m_constant);
                         m_sName = m_iter.hasNext() ? m_iter.next() : null;
                         break;
 
@@ -350,17 +366,19 @@ public class NameResolver
     }
 
     /**
+     * @param errs  the listener supplied to the current resolution call
+     *
      * @return the component that is responsible for resolving the next name or null if an error
      *         has been reported
      */
-    private XvmStructure ensurePartiallyResolvedComponent() {
+    private XvmStructure ensurePartiallyResolvedComponent(ErrorListener errs) {
         Component component = m_component;
         if (m_typeMode == null) {
             if (component.getFormat().isDeadEnd()) {
                 // for methods (and multi-methods), it is not possible to further resolve the name,
                 // because methods are opaque from the outside, and multi-methods can only be
                 // resolved by analyzing signatures (not names)
-                m_node.log(m_errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, m_sName);
+                m_node.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, m_sName);
                 m_stage = Stage.ERROR;
                 return null;
             } else {
@@ -449,8 +467,7 @@ public class NameResolver
             }
 
             if (!type.isTypeOfType()) {
-                m_errs.log(Severity.ERROR, Compiler.NOT_CLASS_TYPE,
-                        new Object[] {id.getValueString()}, component);
+                errs.error(Compiler.NOT_CLASS_TYPE, ErrorListener.at(component), id.getValueString());
                 m_stage = Stage.ERROR;
                 return null;
             }
@@ -550,12 +567,20 @@ public class NameResolver
 
         case RESOLVED:
             // the component resolved the name; advance to the next one
+            m_resolvedNames.add(m_constant);
             m_sName = m_iter.hasNext() ? m_iter.next() : null;
             return Result.RESOLVED;
 
         default:
             throw new IllegalStateException();
         }
+    }
+
+    /**
+     * @return resolved name segments in source order, without resuming resolution
+     */
+    public List<Constant> getResolvedNames() {
+        return List.copyOf(m_resolvedNames);
     }
 
     /**
@@ -608,7 +633,7 @@ public class NameResolver
         // it is possible that the name "resolved to" an ambiguous component, which is an error
         IdentityConstant id = component.getIdentityConstant();
         if (component instanceof CompositeComponent composite && composite.isAmbiguous()) {
-            m_node.log(m_errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS, m_sName);
+            m_node.log(f_errs.get(), Severity.ERROR, Compiler.NAME_AMBIGUOUS, m_sName);
             m_stage = Stage.ERROR;
             return ResolutionResult.ERROR;
         }
@@ -620,7 +645,7 @@ public class NameResolver
                 // typedef is allowed in type mode, but not in formal type mode
                 if (m_typeMode == TypeMode.FORMAL_TYPE &&
                         !component.getParent().getIdentityConstant().equals(getPool().clzType())) {
-                    m_node.log(m_errs, Severity.ERROR, Compiler.TYPEDEF_UNEXPECTED,
+                    m_node.log(f_errs.get(), Severity.ERROR, Compiler.TYPEDEF_UNEXPECTED,
                             m_sName, id.getParentConstant().getValueString());
                     m_stage = Stage.ERROR;
                     return ResolutionResult.ERROR;
@@ -662,7 +687,7 @@ public class NameResolver
             }
 
             if (fNameMissing) {
-                m_node.log(m_errs, Severity.ERROR, Compiler.NAME_MISSING, component.getName(), m_constant);
+                m_node.log(f_errs.get(), Severity.ERROR, Compiler.NAME_MISSING, component.getName(), m_constant);
                 m_stage = Stage.ERROR;
                 return ResolutionResult.ERROR;
             }
@@ -678,7 +703,7 @@ public class NameResolver
                             ? module.getFingerprintOrigin()
                             : module;
                     if (component == null) {
-                        m_node.log(m_errs, Severity.ERROR, Compiler.MODULE_MISSING, module.getName());
+                        m_node.log(f_errs.get(), Severity.ERROR, Compiler.MODULE_MISSING, module.getName());
                         m_stage = Stage.ERROR;
                         return ResolutionResult.ERROR;
                     }
@@ -732,7 +757,7 @@ public class NameResolver
 
     @Override
     public ErrorListener getErrorListener() {
-        return m_errs;
+        return f_errs.get();
     }
 
     // ----- inner classes -------------------------------------------------------------------------
@@ -798,6 +823,9 @@ public class NameResolver
      */
     private Constant m_constantFirst;
 
+    /** Resolved prefixes in source order, retained even if a later segment cannot resolve. */
+    private final List<Constant> m_resolvedNames = new ArrayList<>();
+
     /**
      * The constant representing what the node has thus far resolved to.
      */
@@ -824,7 +852,8 @@ public class NameResolver
     private TypeMode m_typeMode;
 
     /**
-     * The ErrorListener to log errors to.
+     * Where the callbacks made during a resolution report. Empty outside {@link #resolve}, which
+     * holds the caller's listener here for the duration of the call.
      */
-    private ErrorListener m_errs;
+    private final Reporting f_errs = new Reporting(null);
 }

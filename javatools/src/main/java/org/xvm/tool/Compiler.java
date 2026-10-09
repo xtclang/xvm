@@ -28,6 +28,8 @@ import org.xvm.tool.ModuleInfo.Node;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.NOWHERE;
+
 import static org.xvm.compiler.Compiler.MODULE_MISSING;
 import static org.xvm.tool.ModuleInfo.isExplicitCompiledFile;
 import static org.xvm.util.Handy.parentOf;
@@ -113,12 +115,12 @@ public class Compiler extends Launcher<CompilerOptions> {
     /**
      * Compiler constructor for programmatic use.
      *
-     * @param options     pre-configured compiler options
-     * @param console     representation of the terminal within which this command is run, or null
-     * @param errListener optional ErrorListener to receive errors, or null for no delegation
+     * @param options  pre-configured compiler options
+     * @param console  representation of the terminal within which this command is run, or null
+     * @param errs     the ErrorListener to receive errors
      */
-    public Compiler(CompilerOptions options, Console console, ErrorListener errListener) {
-        super(options, console, errListener);
+    public Compiler(CompilerOptions options, Console console, ErrorListener errs) {
+        super(options, console, errs);
     }
 
     /**
@@ -297,14 +299,7 @@ public class Compiler extends Launcher<CompilerOptions> {
      * @return 0 for success, non-zero for failure
      */
     protected int compile(List<org.xvm.compiler.Compiler> compilers, ModuleRepository repoLib) {
-        linkModules(compilers, repoLib);
-        flushAndCheckErrors(compilers, "module linking");
-
-        resolveNames(compilers);
-        flushAndCheckErrors(compilers, "name resolution");
-
-        injectNativeTurtle(repoLib);
-        checkErrors("native turtle injection");
+        resolveDeclarations(compilers, repoLib);
 
         log(INFO, "Validating expressions");
         validateExpressions(compilers);
@@ -315,6 +310,25 @@ public class Compiler extends Launcher<CompilerOptions> {
         flushAndCheckErrors(compilers, "code generation");
 
         return hasSeriousErrors() ? 1 : 0;
+    }
+
+    /**
+     * Run the normal declaration phases without validating bodies or generating code.
+     * Embedding hosts may stop here, but must not treat the resulting structures as artifacts.
+     *
+     * @param compilers  the fresh module compilers
+     * @param repoLib    the linked library repository
+     */
+    protected void resolveDeclarations(List<org.xvm.compiler.Compiler> compilers,
+                                       ModuleRepository repoLib) {
+        linkModules(compilers, repoLib);
+        flushAndCheckErrors(compilers, "module linking");
+
+        resolveNames(compilers);
+        flushAndCheckErrors(compilers, "name resolution");
+
+        injectNativeTurtle(repoLib);
+        checkErrors("native turtle injection");
     }
 
     /**
@@ -426,8 +440,7 @@ public class Compiler extends Launcher<CompilerOptions> {
         for (var compiler : compilers) {
             ModuleConstant idMissing = compiler.linkModules(repo);
             if (idMissing != null) {
-                compiler.getErrorListener().log(FATAL, MODULE_MISSING,
-                        new String[]{idMissing.getName()}, null);
+                compiler.getErrorListener().fatal(MODULE_MISSING, NOWHERE, idMissing.getName());
                 return;
             }
         }
@@ -645,8 +658,9 @@ public class Compiler extends Launcher<CompilerOptions> {
     public boolean isAbortDesired() {
         // Check BOTH Console (tool errors) AND ErrorListener delegate (compiler errors)
         // Use Compiler's strictness-aware abort threshold
-        return isBadEnoughToAbort(m_sevWorst) ||
-                (m_errors != ErrorListener.BLACKHOLE && m_errors.isAbortDesired());
+        // no sentinel comparison: a silent listener answers false to isAbortDesired anyway, so
+        // the guard could never change the answer - and there is now more than one silent listener
+        return isBadEnoughToAbort(m_sevWorst) || m_errors.isAbortDesired();
     }
 
     // ----- accessors -----------------------------------------------------------------------------

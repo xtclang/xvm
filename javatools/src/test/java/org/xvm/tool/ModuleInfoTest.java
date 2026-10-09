@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import org.xvm.asm.ErrorList;
+import org.xvm.asm.ErrorListener;
 
 import java.io.File;
 import java.io.IOException;
@@ -28,6 +29,25 @@ class ModuleInfoTest {
 
     @TempDir
     Path tempDir;
+
+    @Test
+    void testHostSnapshotParsesBeforeItsDirectoryExists() {
+        var root = tempDir.resolve("not-created/Virtual.x").toFile();
+        var info = new ModuleInfo(root, "Virtual.example.org") {
+            @Override
+            protected char[] readSource(File file) {
+                assertEquals(root, file);
+                return "module Virtual.example.org {}".toCharArray();
+            }
+        };
+        assertEquals("Virtual.example.org", info.getQualifiedModuleName());
+        assertEquals("Virtual", info.getFileName());
+        var errors = new ErrorList();
+        assertNotNull(info.getSourceTree(errors));
+        assertFalse(errors.hasSeriousErrors(), errors.getErrors().toString());
+        assertFalse(root.getParentFile().exists(), "source proof must not create a destination");
+        assertThrows(IllegalArgumentException.class, () -> new ModuleInfo(root, false));
+    }
 
     // ----- Helper methods ------------------------------------------------------------------------
 
@@ -70,6 +90,31 @@ class ModuleInfoTest {
         var moduleDir = Files.createDirectories(tempDir.resolve(name));
         Files.writeString(moduleDir.resolve("Helper.x"), "class Helper {}");
         return sourceFile;
+    }
+
+    @Test
+    void testNodeOwnsOneDiagnosticBufferFromConstruction() throws IOException {
+        var file = createModuleSource("Diagnostics").toFile();
+        var info = new ModuleInfo(file, false);
+        var node = info.new FileNode(null, file);
+        var buffer = node.errs();
+        assertSame(buffer, node.errs());
+        assertFalse(node.hasSeriousErrors());
+        node.error("TEST", ErrorListener.NOWHERE);
+        assertTrue(node.hasSeriousErrors());
+        assertTrue(node.hasError("TEST"));
+        var diagnostic = buffer.getErrors().getFirst();
+        var caller = new ErrorList();
+        node.logErrors(caller);
+        assertEquals(1, caller.getErrors().size());
+        assertSame(diagnostic, caller.getErrors().getFirst());
+        assertTrue(buffer.getErrors().isEmpty(), "successful forwarding drains the buffer");
+        assertFalse(node.hasSeriousErrors());
+        var nextCaller = new ErrorList();
+        node.logErrors(nextCaller);
+        assertTrue(nextCaller.getErrors().isEmpty(), "drained diagnostics are not replayed");
+        node.fatal("FATAL", ErrorListener.NOWHERE);
+        assertTrue(node.isAbortDesired());
     }
 
     // ----- Basic construction tests --------------------------------------------------------------
@@ -601,7 +646,7 @@ class ModuleInfoTest {
     void testGetSourceTreeWithSingleFileModule() throws IOException {
         var sourceFile = createModuleSource("MyModule");
         var info = new ModuleInfo(sourceFile.toFile(), false);
-        var errs = new ErrorList(100);
+        var errs = new ErrorList();
         var node = info.getSourceTree(errs);
         assertNotNull(node);
         assertFalse(errs.hasSeriousErrors());
@@ -618,7 +663,7 @@ class ModuleInfoTest {
     void testGetSourceTreeWithMultiFileModule() throws IOException {
         var sourceFile = createModuleSourceTree("MyModule");
         var info = new ModuleInfo(sourceFile.toFile(), false);
-        var errs = new ErrorList(100);
+        var errs = new ErrorList();
         var node = info.getSourceTree(errs);
         assertNotNull(node);
         assertFalse(errs.hasSeriousErrors());
@@ -634,7 +679,7 @@ class ModuleInfoTest {
     void testGetSourceTreeCachesResult() throws IOException {
         var sourceFile = createModuleSource("MyModule");
         var info = new ModuleInfo(sourceFile.toFile(), false);
-        var errs = new ErrorList(100);
+        var errs = new ErrorList();
         var node1 = info.getSourceTree(errs);
         var node2 = info.getSourceTree(errs);
         assertSame(node1, node2);
@@ -647,7 +692,7 @@ class ModuleInfoTest {
     void testGetSourceTreeNodeMethods() throws IOException {
         var sourceFile = createModuleSource("MyModule");
         var info = new ModuleInfo(sourceFile.toFile(), false);
-        var errs = new ErrorList(100);
+        var errs = new ErrorList();
         var node = info.getSourceTree(errs);
         assertNotNull(node);
         assertEquals(0, node.depth());
@@ -670,7 +715,7 @@ class ModuleInfoTest {
         Files.writeString(utilsDir.resolve("Util.x"), "class Util {}");
 
         var info = new ModuleInfo(sourceFile.toFile(), false);
-        var errs = new ErrorList(100);
+        var errs = new ErrorList();
         var node = info.getSourceTree(errs);
         assertNotNull(node);
         assertFalse(errs.hasSeriousErrors());
@@ -686,7 +731,7 @@ class ModuleInfoTest {
         var sourceFile = tempDir.resolve("MyModule.x");
         Files.writeString(sourceFile, "module MyModule {");
         var info = new ModuleInfo(sourceFile.toFile(), false);
-        var errs = new ErrorList(100);
+        var errs = new ErrorList();
         var node = info.getSourceTree(errs);
         assertNull(node);
         assertTrue(errs.hasSeriousErrors());
@@ -699,7 +744,7 @@ class ModuleInfoTest {
     void testGetSourceTreeModuleNode() throws IOException {
         var sourceFile = createModuleSource("MyModule");
         var info = new ModuleInfo(sourceFile.toFile(), false);
-        var errs = new ErrorList(100);
+        var errs = new ErrorList();
         var node = info.getSourceTree(errs);
         assertNotNull(node);
         var moduleNode = node.module();
@@ -714,7 +759,7 @@ class ModuleInfoTest {
     void testGetSourceTreeDescriptiveName() throws IOException {
         var sourceFile = createModuleSource("MyModule");
         var info = new ModuleInfo(sourceFile.toFile(), false);
-        var errs = new ErrorList(100);
+        var errs = new ErrorList();
         var node = info.getSourceTree(errs);
         assertNotNull(node);
         assertTrue(node.descriptiveName().contains("MyModule"));
@@ -727,7 +772,7 @@ class ModuleInfoTest {
     void testGetSourceTreeResourceDir() throws IOException {
         var sourceFile = createModuleSource("MyModule");
         var info = new ModuleInfo(sourceFile.toFile(), false);
-        var errs = new ErrorList(100);
+        var errs = new ErrorList();
         var node = info.getSourceTree(errs);
         assertNotNull(node);
         assertNotNull(node.resourceDir());
@@ -746,7 +791,7 @@ class ModuleInfoTest {
         Files.writeString(moduleDir.resolve("MyClass.x"), "class MyClass {}");
         Files.writeString(subPkgDir.resolve("SubClass.x"), "class SubClass {}");
         var info = new ModuleInfo(sourceFile.toFile(), false);
-        var errs = new ErrorList(100);
+        var errs = new ErrorList();
         var node = info.getSourceTree(errs);
         assertNotNull(node);
         assertFalse(errs.hasSeriousErrors());
@@ -763,7 +808,7 @@ class ModuleInfoTest {
     void testFileNodeDepth() throws IOException {
         var sourceFile = createModuleSourceTree("MyModule");
         var info = new ModuleInfo(sourceFile.toFile(), false);
-        var errs = new ErrorList(100);
+        var errs = new ErrorList();
         var node = info.getSourceTree(errs);
 
         assertNotNull(node);
@@ -1073,7 +1118,7 @@ class ModuleInfoTest {
 
         var info = new ModuleInfo(sourceFile.toFile(), false,
                 List.of(resourceDir.toFile()), null);
-        var errs = new ErrorList(100);
+        var errs = new ErrorList();
 
         var node = info.getSourceTree(errs);
 
@@ -1261,7 +1306,7 @@ class ModuleInfoTest {
         Files.writeString(resDir.resolve("config.txt"), "config content");
 
         var info = new ModuleInfo(sourceFile.toFile(), true);
-        var errs = new ErrorList(100);
+        var errs = new ErrorList();
         var node = info.getSourceTree(errs);
 
         assertNotNull(node);
@@ -1285,7 +1330,7 @@ class ModuleInfoTest {
         Files.writeString(subDir.resolve("file.txt"), "content");
 
         var info = new ModuleInfo(sourceFile.toFile(), true);
-        var errs = new ErrorList(100);
+        var errs = new ErrorList();
         var node = info.getSourceTree(errs);
 
         assertNotNull(node);
@@ -1304,7 +1349,7 @@ class ModuleInfoTest {
         var sourceFile = createModuleSource("MyModule");
 
         var info = new ModuleInfo(sourceFile.toFile(), false);
-        var errs = new ErrorList(100);
+        var errs = new ErrorList();
         var node = info.getSourceTree(errs);
 
         assertNotNull(node);
@@ -1324,7 +1369,7 @@ class ModuleInfoTest {
         var sourceFile = createModuleSource("MyModule");
 
         var info = new ModuleInfo(sourceFile.toFile(), false);
-        var errs = new ErrorList(100);
+        var errs = new ErrorList();
         var node = info.getSourceTree(errs);
 
         assertNotNull(node);
@@ -1344,7 +1389,7 @@ class ModuleInfoTest {
         var sourceFile = createModuleSource("MyModule");
 
         var info = new ModuleInfo(sourceFile.toFile(), false);
-        var errs = new ErrorList(100);
+        var errs = new ErrorList();
         var node = info.getSourceTree(errs);
 
         assertNotNull(node);
@@ -1367,7 +1412,7 @@ class ModuleInfoTest {
         var sourceFile = createModuleSource("MyModule");
 
         var info = new ModuleInfo(sourceFile.toFile(), false);
-        var errs = new ErrorList(100);
+        var errs = new ErrorList();
         var node = info.getSourceTree(errs);
 
         assertNotNull(node);
@@ -1389,7 +1434,7 @@ class ModuleInfoTest {
         Files.writeString(moduleDir.resolve("Helper.x"), "class Helper {}");
 
         var info = new ModuleInfo(sourceFile.toFile(), false);
-        var errs = new ErrorList(100);
+        var errs = new ErrorList();
         var node = info.getSourceTree(errs);
 
         assertNotNull(node);
@@ -1411,7 +1456,7 @@ class ModuleInfoTest {
         var sourceFile = createModuleSource("MyModule");
 
         var info = new ModuleInfo(sourceFile.toFile(), false);
-        var errs = new ErrorList(100);
+        var errs = new ErrorList();
         var node = info.getSourceTree(errs);
 
         assertNotNull(node);
@@ -1428,7 +1473,7 @@ class ModuleInfoTest {
         var sourceFile = createModuleSourceTree("MyModule");
 
         var info = new ModuleInfo(sourceFile.toFile(), false);
-        var errs = new ErrorList(100);
+        var errs = new ErrorList();
         var node = info.getSourceTree(errs);
 
         assertNotNull(node);
@@ -1449,7 +1494,7 @@ class ModuleInfoTest {
         Files.writeString(sourceFile, "module BadModule { invalid syntax here");
 
         var info = new ModuleInfo(sourceFile.toFile(), false);
-        var errs = new ErrorList(100);
+        var errs = new ErrorList();
 
         var node = info.getSourceTree(errs);
 

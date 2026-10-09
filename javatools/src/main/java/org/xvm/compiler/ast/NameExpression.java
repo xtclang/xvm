@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
@@ -21,7 +22,6 @@ import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.MultiMethodStructure;
-import org.xvm.asm.Argument;
 import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
@@ -43,6 +43,9 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * A name expression specifies a name. This handles a simple name, a qualified name, a dot name
@@ -224,6 +227,11 @@ public class NameExpression
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
+    public NameExpression copyTree() {
+        return (NameExpression) super.copyTree();
+    }
+
+    @Override
     protected boolean usesSuper() {
         return "super".equals(name.getValueText()) || left != null && left.usesSuper();
     }
@@ -347,6 +355,27 @@ public class NameExpression
      */
     public String getName() {
         return name.getValueText();
+    }
+
+    /**
+     * What this name turned out to refer to.
+     *
+     * <p>The compiler decides this while it resolves the name, and the answer stays on the node
+     * afterwards; this only makes it readable from outside the compiler. It is what a host needs
+     * in order to answer "where is this declared", which cannot be answered from the text: two
+     * names spelled the same can refer to different things, and the same thing can be referred to
+     * by different names.
+     *
+     * <p>The result is a {@link Constant} - usually an
+     * {@link org.xvm.asm.constants.IdentityConstant} - when the name refers to something the
+     * module declares, and a {@link org.xvm.asm.Register} when it refers to a local variable,
+     * which has no identity beyond the method it lives in.
+     *
+     * @return what the name resolved to, or null if it was never resolved, which is the ordinary
+     *         case in source that does not compile
+     */
+    public Argument getResolvedTarget() {
+        return m_arg;
     }
 
     /**
@@ -491,7 +520,7 @@ public class NameExpression
     public TypeConstant getImplicitType(Context ctx) {
         return isValidated()
                 ? getType()
-                : getImplicitType(ctx, null, ErrorListener.BLACKHOLE);
+                : getImplicitType(ctx, null, silent(PROBE));
     }
 
     /**
@@ -519,10 +548,6 @@ public class NameExpression
             return TypeFit.Fit;
         }
 
-        if (errs == null) {
-            errs = ErrorListener.BLACKHOLE;
-        }
-
         return calcFit(ctx, getImplicitType(ctx, typeRequired, errs), typeRequired);
     }
 
@@ -537,7 +562,7 @@ public class NameExpression
             // outer type
             TypeConstant typeDesired = null;
             if (typeRequired != null && typeRequired.isTypeOfType() && isIdentityMode(ctx, true) &&
-                    testFit(ctx, pool.typeInner().getType(), false, null).isFit()) {
+                    testFit(ctx, pool.typeInner().getType(), false, silent(PROBE)).isFit()) {
                 typeDesired = pool.typeOuter().getType();
             }
 
@@ -755,7 +780,9 @@ public class NameExpression
                     }
                     // there is a read of the implicit "this" variable
                     else if (getParent() instanceof NameExpression) {
-                        if (!ctx.requireThis(getStartPosition(), null)) {
+                        // a question, not an assertion: the comment below says the outer
+                        // expression reports whatever follows from the answer
+                        if (!ctx.requireThis(getStartPosition(), silent(PROBE))) {
                             // we know that this expression represents a property but there is
                             // no "this"; we can only proceed with the identity mode here;
                             // it becomes the outer expression's job to report any errors that
@@ -1126,7 +1153,7 @@ public class NameExpression
                     }
 
                 if (m_mapTypeParams != null) {
-                    Register regFn = code.createRegister(argRaw.getType());
+                    Register regFn = code.createRegister(getType());
                     bindTypeParameters(ctx, code, argRaw, regFn);
                     return regFn;
                 }
@@ -1331,7 +1358,7 @@ public class NameExpression
                 argTarget = left.generateArgument(ctx, code, true, errs);
             }
 
-            Register regFn = code.createRegister(idMethod.getType());
+            Register regFn = code.createRegister(getType());
             if (m_mapTypeParams == null) {
                 code.add(new MBind(argTarget, idMethod, regFn));
             } else {
@@ -2016,7 +2043,7 @@ public class NameExpression
                     // process the "this.OuterName" construct
                     if (!typeLeft.isTypeOfType() && !fIdMode) {
                         Constant constTarget = new NameResolver(this, sName)
-                                .forceResolve(ErrorListener.BLACKHOLE);
+                                .forceResolve(silent(PROBE));
                         if (constTarget instanceof IdentityConstant && constTarget.isClass()) {
                             if (constTarget.equals(pool.clzOuter())) {
                                 // this.Outer
@@ -2669,6 +2696,13 @@ public class NameExpression
                     // resolve the function signature against all the types we know by now
                     typeFn          = typeFn.resolveGenerics(pool, mapTypeParams::get);
                     m_mapTypeParams = mapTypeParams;
+                    // These hidden parameters are bound by the generated FBind, not supplied by
+                    // callers of the resulting function.
+                    if (m_plan == Plan.None || m_plan == Plan.BindTarget) {
+                        for (int i = cTypeParams - 1; i >= 0; --i) {
+                            typeFn = pool.bindFunctionParam(typeFn, i);
+                        }
+                    }
                 }
 
                 if (m_plan == Plan.BindTarget && typeDesired.isFunction()) {
@@ -2748,7 +2782,7 @@ public class NameExpression
                 break CheckDynamic;
             }
 
-            Argument argLeft = exprLeft.resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
+            Argument argLeft = exprLeft.resolveRawArgument(ctx, false, silent(PROBE));
             if (!(argLeft instanceof Register regLeft)) {
                 break CheckDynamic;
             }
@@ -3021,7 +3055,7 @@ public class NameExpression
         if (typeNarrow != null) {
             assert isValidated();
 
-            Argument arg = resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
+            Argument arg = resolveRawArgument(ctx, false, silent(PROBE));
 
             if (left != null) {
                 if (arg instanceof FormalTypeChildConstant constFormal) {

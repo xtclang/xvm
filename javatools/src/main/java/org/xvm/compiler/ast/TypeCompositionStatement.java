@@ -64,6 +64,8 @@ import org.xvm.asm.op.Return_0;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
+import org.xvm.compiler.CursorBinding;
+import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
@@ -93,12 +95,25 @@ import static org.xvm.compiler.Lexer.isWhitespace;
 import static org.xvm.util.Handy.appendString;
 import static org.xvm.util.Handy.indentLines;
 
+import static org.xvm.asm.ErrorListener.in;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * A type declaration.
  */
 public class TypeCompositionStatement
         extends ComponentStatement {
     // ----- constructors --------------------------------------------------------------------------
+
+    /** Written syntax for recovery subclasses that deliberately register no component. */
+    protected TypeCompositionStatement(Source source, Token category, Token name, long start, long end) {
+        super(start, end);
+        this.source   = source;
+        this.category = category;
+        this.name     = name;
+    }
 
     public TypeCompositionStatement(
             Source                     source,
@@ -226,6 +241,13 @@ public class TypeCompositionStatement
 
     public Token getCategory() {
         return category;
+    }
+
+    /**
+     * @return the type's simple name token
+     */
+    public Token getNameToken() {
+        return name;
     }
 
     public String getName() {
@@ -423,10 +445,8 @@ public class TypeCompositionStatement
                 // validate the module name
                 String sModule = getName();
                 if (!isValidQualifiedModule(sModule)) {
-                    errs.log(Severity.FATAL, Compiler.MODULE_BAD_NAME,
-                            new String[] {sModule}, source,
-                            qualified.get(0).getStartPosition(),
-                            qualified.get(qualified.size()-1).getEndPosition());
+                    errs.fatal(Compiler.MODULE_BAD_NAME, in(source, qualified.getFirst().getStartPosition(),
+                            qualified.getLast().getEndPosition()), sModule);
                     return;
                 }
 
@@ -471,6 +491,17 @@ public class TypeCompositionStatement
 
         case CLASS, INTERFACE, SERVICE, CONST, ENUM, ENUM_VAL, ANNOTATION, MIXIN:
             if (container != null && container.isClassContainer()) {
+                // The assembler supports conditional siblings, so createClass() can accept two
+                // unconditional declarations too. Reject that source conflict before name
+                // resolution can mistake their CompositeComponent for a ClassStructure.
+                if (constCond == null && container.getCondition() == null &&
+                        container.getChild(sName) instanceof ClassStructure sibling &&
+                        sibling.getCondition() == null) {
+                    name.log(errs, getSource(), Severity.ERROR, Compiler.DUPLICATE_NAME, sName);
+                    mgr.deferChildren();
+                    return;
+                }
+
                 Format format = switch (category.getId()) {
                     case CLASS     -> Format.CLASS;
                     case INTERFACE -> Format.INTERFACE;
@@ -796,7 +827,8 @@ public class TypeCompositionStatement
                         TypeConstant   constType = exprType == null
                                 ? pool.typeObject()
                                 : exprType.ensureTypeConstant();
-                        component.addTypeParam(sParam, constType);
+                        param.setResolvedTarget(component.addTypeParam(sParam, constType)
+                                .getIdentityConstant());
                     } else {
                         log(errs, Severity.ERROR, Compiler.DUPLICATE_TYPE_PARAM, sName);
                     }
@@ -1315,7 +1347,9 @@ public class TypeCompositionStatement
         }
 
         // recursively register structures
-        mgr.processChildren();
+        if (!mgr.isChildrenDeferred()) {
+            mgr.processChildren();
+        }
 
         // if there are any constructor parameters, then that implies the existence both of
         // properties and of a constructor; we will handle the constructor creation later (the
@@ -1347,7 +1381,12 @@ public class TypeCompositionStatement
                     // "Registered" stage (it will create the property structure)
                     body.addStatement(prop);
                     new StageMgr(prop, Stage.Registered, errs).fastForward(1);
-                } else if (!(child instanceof PropertyStructure)) {
+                    if (prop.getComponent() != null) {
+                        param.setResolvedTarget(prop.getComponent().getIdentityConstant());
+                    }
+                } else if (child instanceof PropertyStructure prop) {
+                    param.setResolvedTarget(prop.getIdentityConstant());
+                } else {
                     // the parameter implies a property, but we found something else instead
                     param.log(errs, Severity.ERROR, Compiler.NAME_COLLISION, sParam);
                 }
@@ -1407,8 +1446,7 @@ public class TypeCompositionStatement
             lStart = listParams.get(0).getStartPosition();
             lEnd   = listParams.get(cParams - 1).getEndPosition();
         }
-        errs.log(Severity.ERROR, Compiler.SIGNATURE_AMBIGUOUS,
-            new String[] {sb.toString()}, getSource(), lStart, lEnd);
+        errs.error(Compiler.SIGNATURE_AMBIGUOUS, in(getSource(), lStart, lEnd), sb.toString());
     }
 
     /**
@@ -1481,12 +1519,9 @@ public class TypeCompositionStatement
                 lEndPos   = compositions.getFirst().getEndPosition();
             }
 
-            errs.log(Severity.FATAL, Constants.VE_CYCLICAL_CONTRIBUTION,
-                    new Object[] {
-                        contribCyclical.getComponent().getIdentityConstant().getValueString(),
-                        contribCyclical.getTypeConstant().getValueString()
-                    },
-                    getSource(), lStartPos, lEndPos);
+            errs.fatal(Constants.VE_CYCLICAL_CONTRIBUTION, in(getSource(), lStartPos, lEndPos),
+                    contribCyclical.getComponent().getIdentityConstant().getValueString(),
+                    contribCyclical.getTypeConstant().getValueString());
             return;
         }
 
@@ -1823,7 +1858,9 @@ public class TypeCompositionStatement
             }
         }
 
-        mgr.processChildren();
+        if (!mgr.isChildrenDeferred()) {
+            mgr.processChildren();
+        }
 
         Map<String, Component> mapChildren        = component.getChildByNameMap();
         MultiMethodStructure   constructors       = (MultiMethodStructure) mapChildren.get("construct");
@@ -2312,8 +2349,8 @@ public class TypeCompositionStatement
                 if (typeConstraint != null) {
                     if (typeConstraint.equals(pool.typeObject())) {
                         // report errors only at the "top" level
-                        mapConstraints = findImplicitConstraint(clzContrib, sName, mapConstraints,
-                                            fAllowInto, ErrorListener.BLACKHOLE);
+                        mapConstraints = findImplicitConstraint(clzContrib, sName, mapConstraints, fAllowInto,
+                                silent(PROBE));
                     } else {
                         if (mapConstraints == null) {
                             mapConstraints = new ListMap<>();
@@ -2365,7 +2402,7 @@ public class TypeCompositionStatement
                 break ValidateShorthand;
             }
 
-            RootContext ctxConstruct = createConstructorContext(constructor);
+            RootContext ctxConstruct = createConstructorContext(constructor, mgr.getInvocationBindings(), mgr.getCursorBindings());
             Context     ctx          = ctxConstruct.validatingContext();
 
             if (constructorParams != null && !constructorParams.isEmpty()) {
@@ -2495,12 +2532,13 @@ public class TypeCompositionStatement
     /**
      * A simple helper to create a new context for shorthand constructor processing.
      */
-    private RootContext createConstructorContext(MethodStructure constructor) {
+    private RootContext createConstructorContext(MethodStructure constructor,
+                                                 InvocationBinding.Collector bindings, CursorBinding.Collector cursors) {
         StatementBlock blockBody = body;
         if (body == null) {
             blockBody = adopt(new StatementBlock(Collections.emptyList()));
         }
-        return new RootContext(blockBody, constructor);
+        return new RootContext(blockBody, constructor, bindings, cursors);
     }
 
     /**

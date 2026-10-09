@@ -463,41 +463,13 @@ public abstract class XvmStructure
     /**
      * Log an error against this structure.
      *
-     * @param errs     the error list to log to, or null to use the runtime ErrorListener
+     * @param errs     the error listener to log to
      * @param sev      the severity of the error
      * @param sCode    the error code
      * @param aoParam  the parameters of the error
      */
-    public boolean log(ErrorListener errs, Severity sev, String sCode, Object ... aoParam) {
-        return ensureErrorListener(errs).log(sev, sCode, aoParam, this);
-    }
-
-    /**
-     * Make sure that an error listener is returned to use.
-     *
-     * @param  errs  an error listener, or null
-     *
-     * @return the error listener passed in, if it was not null, otherwise the previously specified
-     *         error listener, otherwise the runtime error listener
-     */
-    public ErrorListener ensureErrorListener(ErrorListener errs) {
-        return errs == null ? getErrorListener() : errs;
-    }
-
-    /**
-     * @return the error listener, if provided, otherwise the runtime error listener
-     */
-    public ErrorListener getErrorListener() {
-        return m_xsParent.getErrorListener();
-    }
-
-    /**
-     * Specify an error listener.
-     *
-     * @param errs  the error listener
-     */
-    public void setErrorListener(ErrorListener errs) {
-        m_xsParent.setErrorListener(errs);
+    public void log(ErrorListener errs, Severity sev, String sCode, Object ... aoParam) {
+        errs.log(sev, sCode, ErrorListener.at(this), aoParam);
     }
 
     // ----- debugging support ---------------------------------------------------------------------
