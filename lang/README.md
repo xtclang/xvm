@@ -36,7 +36,7 @@ you need to set two properties:
 ### Option 1: Command Line (Temporary)
 
 ```bash
-./gradlew build
+./gradlew build -PincludeBuildLang=true -PincludeBuildAttachLang=true
 ```
 
 ### Option 2: Environment Variables (Session/Shell)
