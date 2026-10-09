@@ -1,9 +1,12 @@
 package org.xvm.asm;
 
+import java.io.File;
 import java.io.IOException;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
@@ -83,11 +86,23 @@ public class LinkedRepository
     }
 
     @Override
+    public Map<File, IOException> getReadFailures() {
+        Map<File, IOException> failures = new HashMap<>();
+        for (ModuleRepository repo : repos) {
+            failures.putAll(repo.getReadFailures());
+        }
+        return Map.copyOf(failures);
+    }
+
+    @Override
     public VersionTree<Boolean> getAvailableVersions(String sModule) {
         VersionTree<Boolean> vers = new VersionTree<>();
         for (ModuleRepository repo : repos) {
-            for (Version ver : repo.getAvailableVersions(sModule)) {
-                vers.put(ver, true);
+            VersionTree<Boolean> available = repo.getAvailableVersions(sModule);
+            if (available != null) {
+                for (Version ver : available) {
+                    vers.put(ver, true);
+                }
             }
         }
         return vers;
