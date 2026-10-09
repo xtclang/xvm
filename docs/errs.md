@@ -2420,9 +2420,10 @@ independently reproduced compiler-adapter failures. The recorded module-output c
 ordinary build compatibility of the old proposal; it did not establish that the proposal was
 necessary.
 
-`currentOr`, `poolInUse` and their consumers are removed. The revised `ConstantPoolAmbientTest`
-and `MethodBodyAmbientPoolTest` exercise explicit scopes, cross-pool working context, restoration
-and executor isolation. The adapter retains scoped semantic extraction and detached snapshots;
+`currentOr`, `poolInUse` and their consumers are removed. Following the October 9 review response,
+I2 is documentation-only; the added `ConstantPoolAmbientTest` and `MethodBodyAmbientPoolTest`
+classes were removed from the PR and the integrated branch. The adapter retains scoped semantic
+extraction and detached snapshots;
 `CompilerPoolScopeTest` tests its entry and exit behavior with absent and unrelated caller pools.
 This does not change compiler concurrency or diagnostic-listener ownership.
 
