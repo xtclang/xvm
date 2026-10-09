@@ -81,7 +81,6 @@ public class Parser {
         };
         m_lexer = lexer == null ? new Lexer(source, lexicalReports) : lexer;
 
-
         // prime the token stream
         next();
     }

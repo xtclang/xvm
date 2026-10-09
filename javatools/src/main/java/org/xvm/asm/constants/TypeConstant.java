@@ -39,6 +39,7 @@ import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.ErrorListener.ErrorInfo;
 import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.ModuleStructure;
@@ -93,6 +94,7 @@ import static java.lang.constant.ConstantDescs.CD_int;
 import static org.xvm.asm.ErrorListener.Silence.CASCADE;
 import static org.xvm.asm.ErrorListener.Silence.PROBE;
 import static org.xvm.asm.ErrorListener.silent;
+import static org.xvm.asm.ErrorListener.tee;
 
 import static org.xvm.javajit.Builder.CD_Class;
 import static org.xvm.javajit.Builder.CD_Ctx;
@@ -1716,12 +1718,27 @@ public abstract class TypeConstant
     // ----- TypeInfo support ----------------------------------------------------------------------
 
     /**
-     * Obtain the information about this type, resolved from its recursive composition.
+     * Obtain the information about this type, resolved from its recursive composition, without
+     * reporting anything about the attempt.
+     *
+     * <p>A TypeConstant is an interned value shared by everything, so when it is asked to build a
+     * TypeInfo and given no listener it has no caller to ask. It used to walk up to its file
+     * structure and report to whatever that file was last told - an ambient lookup which, for the
+     * two thirds of these call sites that run after compilation is over, ended at a listener that
+     * prints to stdout. Measured across a full XDK build and test run, that listener never
+     * received anything, and during a compilation the file was parked on a silence anyway. So the
+     * silence is said here instead of arranged elsewhere.
+     *
+     * <p>This convenience read does not report diagnostics to a host. It is used by speculative and
+     * metadata queries, including provisional compositions. Diagnostics recorded by a completed
+     * build remain available for replay; a caller responsible for reporting a selected source use
+     * must pass its listener to {@link #ensureTypeInfo(ErrorListener)}. Silence here is not evidence
+     * that every diagnostic encountered is spurious.
      *
      * @return the flattened TypeInfo that represents the resolved type of this TypeConstant
      */
     public TypeInfo ensureTypeInfo() {
-        return ensureTypeInfo(getErrorListener());
+        return ensureTypeInfo(silent(CASCADE));
     }
 
     /**
@@ -1750,10 +1767,38 @@ public abstract class TypeConstant
 
         TypeInfo info = getTypeInfo();
         if (isComplete(info) && isUpToDate(info)) {
+            // the cached answer was built for whoever asked first. If that was a speculative
+            // probe, the probe produced the diagnostics and this caller - which may be the one
+            // that actually cared - would otherwise hear nothing. Replay them instead, so what a
+            // caller is told does not depend on the order callers happen to arrive in
+            replayDiagnostics(errs);
             return info;
         }
 
-        return ensureTypeInfo(info, errs);
+        // record what building it has to say, so a later caller can be told the same
+        ErrorList recorder = new ErrorList(ErrorList.UNLIMITED);
+        info = ensureTypeInfo(info, tee(errs, recorder));
+
+        // freeze it. An ErrorList is a listener, which is what the recording needed to be while
+        // it was being made and not what it should be once it is made: keeping one per
+        // TypeConstant for the life of the pool holds an error budget, a severity, a dedup set
+        // and a mutable list, to say something a List already says. Most builds report nothing -
+        // measured over an XDK build, all of them - and copyOf gives back the shared empty list
+        // for those, so saying "nothing" costs no allocation at all
+        m_diagnostics = List.copyOf(recorder.getErrors());
+        return info;
+    }
+
+    /**
+     * Report the diagnostics that were produced while this type's TypeInfo was built.
+     *
+     * <p>Deduplication in the receiving listener makes this idempotent: a caller that asks twice, or
+     * two callers sharing a listener, are told once.
+     *
+     * @param errs  the listener to replay them to
+     */
+    private void replayDiagnostics(ErrorListener errs) {
+        m_diagnostics.forEach(errs::log);
     }
 
     private synchronized TypeInfo ensureTypeInfo(TypeInfo info, ErrorListener errs) {
@@ -2018,6 +2063,16 @@ public abstract class TypeConstant
             }
         }
     }
+
+    /**
+     * The diagnostics produced while this type's TypeInfo was built, replayed to later callers
+     * that get the memoized result; see {@link #replayDiagnostics}.
+     *
+     * <p>Empty until the TypeInfo has been built, and empty afterwards when building it had nothing
+     * to say - which is the ordinary case. Never null: "not built yet" and "built quietly" are
+     * the same answer to everyone who reads this, so there is nothing for a third state to say.
+     */
+    private transient volatile List<ErrorInfo> m_diagnostics = List.of();
 
     /**
      * @return the invalidation count that this TypeConstant has already processed
@@ -5787,9 +5842,15 @@ public abstract class TypeConstant
             Constant[]      args = annotation.getParams();
             MethodStructure ctor = infoMixin.getClassStructure().findConstructor(args, typeTarget);
             if (ctor == null) {
-                log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
-                        annotation.getValueString(),
-                        typeTarget.getValueString());
+                // A type descriptor can omit annotation arguments supplied at runtime, or
+                // stripped while resolving a provisional type. It describes the composition,
+                // not a zero-argument constructor call. Actual annotation applications validate
+                // their arguments separately; only supplied constants can be checked here.
+                if (args.length > 0) {
+                    log(errs, Severity.ERROR, Compiler.ANNOTATION_NOT_APPLICABLE,
+                            annotation.getValueString(),
+                            typeTarget.getValueString());
+                }
             } else {
                 mapDefaults = new HashMap<>();
                 ctor.collectDefaultParams(args, mapDefaults);

@@ -1223,7 +1223,7 @@ public class StatementBlock
                 MethodConstant    idMethod   = method.getIdentityConstant();
                 Access            access     = idMethod.isTopLevel() ? Access.PROTECTED : Access.PRIVATE;
                 TypeConstant      typeCtx    = pool.ensureAccessTypeConstant(typeThis, access);
-                TypeInfo          infoType   = typeCtx.ensureTypeInfo();
+                TypeInfo          infoType   = typeCtx.ensureTypeInfo(errs);
                 MethodInfo        infoMethod = infoType.getMethodById(idMethod);
                 SignatureConstant sigSuper   = infoMethod == null ? null : infoMethod.getSuper(infoType);
 

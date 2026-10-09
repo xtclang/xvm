@@ -12,9 +12,6 @@ import org.xvm.compiler.ast.TypeCompositionStatement;
 
 import static java.util.Objects.requireNonNull;
 
-import static org.xvm.asm.ErrorListener.Silence.DISCARD;
-import static org.xvm.asm.ErrorListener.silent;
-
 /**
  * A module compiler for Ecstasy code.
  *
@@ -119,13 +116,12 @@ public class Compiler {
 
             StageMgr mgr = new StageMgr(m_stmtModule, Stage.Registered, m_errs);
             if (!mgr.processComplete()) {
-                if (m_errs.hasSeriousErrors()) {
+                if (m_errs.hasSeriousErrors() || m_errs.isAbortDesired()) {
                     return null;
                 }
                 throw new CompilerException("failed to create module");
             }
             m_structFile = m_stmtModule.getComponent().getFileStructure();
-            m_structFile.setErrorListener(silent(DISCARD));
             setStage(Stage.Registered);
         }
 
@@ -293,7 +289,6 @@ public class Compiler {
                     // "purge" the constant pool and do a final validation on the entire module structure
                     m_structFile.reregisterConstants(true);
                     m_structFile.validate(m_errs);
-                    m_structFile.setErrorListener(null);
                 }
             }
         }
