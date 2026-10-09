@@ -183,7 +183,7 @@ public class ParserTest {
         ErrorList errlist = new ErrorList(5);
         Parser    parser  = new Parser(new Source("name \"\\q\""), errlist);
 
-        try (Parser.SafeLookAhead attempt = parser.new SafeLookAhead()) {
+        try (Parser.Attempt attempt = parser.attempt()) {
             assertThrows(CompilerException.class, parser::next);
         }
 
