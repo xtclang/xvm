@@ -40,6 +40,18 @@ class EmbeddingRepositoryFailureTest {
     }
 
     @Test
+    void corruptRepositoryReachesTheModuleCompilerListener() throws IOException {
+        Path file = directory.resolve("broken.xtc");
+        Files.writeString(file, "not a compiled module");
+        var compiler = new ModuleCompiler(new FileRepository(file.toFile(), true));
+        var errors = new ErrorList();
+
+        assertNull(compiler.compile("module Test {}", null, errors));
+        assertTrue(errors.hasError("EMB-5"));
+        assertTrue(errors.getErrors().stream().anyMatch(error -> error.getMessage().contains("broken.xtc")));
+    }
+
+    @Test
     void corruptRepositoryReachesTheEmbeddingListener() throws IOException {
         Path file = directory.resolve("broken.xtc");
         Files.writeString(file, "not a compiled module");

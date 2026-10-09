@@ -6,10 +6,16 @@ import org.junit.jupiter.api.io.TempDir
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
+import org.xvm.asm.DirRepository
 import org.xvm.asm.ErrorList
 import org.xvm.asm.ErrorListener
+import org.xvm.asm.FileRepository
+import org.xvm.asm.FileStructure
+import org.xvm.asm.ModuleRepository
 import org.xvm.compiler.Source
 import org.xvm.tool.ModuleInfo
+import java.nio.ByteBuffer
+import java.nio.file.Files
 import java.nio.file.Path
 
 class EmbeddingDiagnosticsTest {
@@ -58,6 +64,40 @@ class EmbeddingDiagnosticsTest {
             assertThat(it.code).startsWith("PARSER-")
             assertThat((it.site() as ErrorListener.Site.In).source().fileName).isEqualTo(file.path)
         }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `an incompatible candidate does not poison fallback or ordinary source diagnostics`(singleFile: Boolean) {
+        CompilerTestSupport.configure()
+        val file = directory.resolve("Old.xtc").toFile()
+        FileStructure("Old").writeTo(file)
+        val bytes = file.readBytes()
+        ByteBuffer.wrap(bytes).putInt(2 * Int.SIZE_BYTES, FileStructure.getToolMinorVersion() - 1)
+        Files.write(file.toPath(), bytes)
+        val repository: ModuleRepository =
+            if (singleFile) FileRepository(file, true) else DirRepository(directory.toFile(), true)
+        val support = EmbeddingSupport.instance()
+
+        for (text in listOf("module Test {}", "module Test { void broken( { }")) {
+            val errors = ErrorList()
+            val result = support.compileModule(Source(text), repository, errors)
+            assertThat(result.succeeded()).isEqualTo(text == "module Test {}")
+            assertThat(repository.readFailures).containsKey(file)
+            assertThat(errors.errors.map { it.code }).doesNotContain("EMB-5")
+        }
+
+        val errors = ErrorList()
+        val result =
+            support.compileModule(
+                Source("module Missing { package lib import Unavailable; }"),
+                repository,
+                errors,
+            )
+        assertThat(result.succeeded()).isFalse()
+        assertThat(errors.errors.map { it.code }).contains("COMPILER-24", "EMB-5")
+        assertThat(errors.errors.filter { it.code == "EMB-5" }.map { it.message })
+            .anyMatch { it.contains(file.path) && it.contains("Unsupported .xtc version") }
     }
 
     @Test

@@ -397,8 +397,8 @@ accepting a missing listener at an active compilation boundary.
 A kept attempt merges buffered diagnostics, including warnings. A discarded attempt restores
 tokens and recovery state. Nested attempts observe their parent's abort request. Removing the
 old public nested parser class requires source migration and recompilation at the same release
-boundary. The lexer still reports to its original listener; module-name-only scans should
-construct the parser with an explicit discard listener when lexical diagnostics are unwanted.
+boundary. Lexical reports follow the active attempt too, so discarded lookahead cannot leak
+lexer errors. Module-name-only scans can supply an explicit discard listener when reports are unwanted.
 
 Loop and try/finally label variables retain their context/listener as one immutable
 `ValidationScope` value. Statements restore their previous value on normal, early and exceptional

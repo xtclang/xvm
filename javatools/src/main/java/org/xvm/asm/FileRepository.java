@@ -2,7 +2,6 @@ package org.xvm.asm;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -61,6 +60,11 @@ public class FileRepository
     @Override
     public synchronized Set<String> getModuleNames() {
         return validateCache() ? cachedVersionsByName.keySet() : Set.of();
+    }
+
+    @Override
+    public synchronized Map<File, IOException> getReadFailures() {
+        return readFailure == null ? Map.of() : Map.of(file, readFailure);
     }
 
     @Override
@@ -228,32 +232,40 @@ public class FileRepository
      * Make sure that the cache is up to date.
      */
     private boolean validateCache() {
-        // assume cache is up-to-date if it has been checked recently; assumption is that activity
-        // comes in bursts; also assume cache is up-to-date if nothing appears to have changed
-        if (System.currentTimeMillis() < lastScan + 60/*ms*/
-                || timestamp == file.lastModified() && size == file.length()) {
+        // Successful reads keep the usual burst cache. Failed reads retain their cause and are
+        // retried after the burst, or immediately if the file metadata changes.
+        long now = System.currentTimeMillis();
+        boolean unchanged = timestamp == file.lastModified() && size == file.length();
+        boolean recent = now < lastScan + 60/*ms*/;
+        if (readFailure == null ? recent || unchanged : recent && unchanged) {
             return cacheOk;
         }
 
-        // cache is not up-to-date; clear whatever was cached before
+        boolean retryFailedRead = readFailure != null;
         cachedVersionsByName   = Map.of();
         cachedFileStructure    = null;
         cachedModuleStructures = null;
         cacheOk                = false;
 
-        // load the cache if possible
         if (file.exists() && file.isFile() && file.canRead()) {
-            // read just the module contents of the FileStructure (not the entire FileStructure)
-            FileInfo info = readFileInfo();
+            FileInfo info;
+            if (retryFailedRead) {
+                // A successful header alone cannot clear an earlier payload failure.
+                cachedFileStructure = readFileStructure();
+                info = cachedFileStructure == null ? null : cachedFileStructure.buildFileInfo();
+            } else {
+                info = readFileInfo();
+            }
             if (info != null) {
                 cachedVersionsByName = info.modules();
                 cacheOk              = true;
             }
+        } else {
+            readFailure = null;
         }
-        // A failed read must not be cached as an absent module on the next request.
         timestamp = file.lastModified();
         size      = file.length();
-        lastScan  = System.currentTimeMillis();
+        lastScan  = now;
         return cacheOk;
     }
 
@@ -281,32 +293,37 @@ public class FileRepository
         if (validateCache() && cachedFileStructure == null) {
             if ((cachedFileStructure = readFileStructure()) == null) {
                 cacheOk = false;
+                lastScan = System.currentTimeMillis();
             }
         }
         return cacheOk;
     }
 
     /**
-     * @return the FileInfo freshly read from the file system
-     * @throws UncheckedIOException if the module header cannot be read
+     * @return the FileInfo freshly read from the file system, or null with a retained read failure
      */
     private FileInfo readFileInfo() {
         try {
-            return FileStructure.readFileInfo(file);
+            FileInfo info = FileStructure.readFileInfo(file);
+            readFailure = null;
+            return info;
         } catch (IOException e) {
-            throw new UncheckedIOException("Unable to read module header: " + file, e);
+            readFailure = e;
+            return null;
         }
     }
 
     /**
-     * @return the FileStructure freshly read from the file system
-     * @throws UncheckedIOException if the module cannot be read
+     * @return the FileStructure freshly read from the file system, or null with a retained read failure
      */
     private FileStructure readFileStructure() {
         try {
-            return new FileStructure(file);
+            FileStructure structure = new FileStructure(file);
+            readFailure = null;
+            return structure;
         } catch (IOException e) {
-            throw new UncheckedIOException("Unable to read module: " + file, e);
+            readFailure = e;
+            return null;
         }
     }
 
@@ -352,6 +369,9 @@ public class FileRepository
     private long    size;
     private long    lastScan;
     private boolean cacheOk;
+
+    /** The most recent unsuccessful read; cleared by a successful retry or removal. */
+    private IOException readFailure;
 
     /**
      * Cached file contents: module names and versions thereof.
