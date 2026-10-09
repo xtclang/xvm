@@ -12,6 +12,8 @@ import java.util.function.Supplier;
  * reference to the thread-local is not {@code static}, it will be advantageous to use a
  * {@link TransientThreadLocal} rather than a {@link ThreadLocal}.
  *
+ * <p>Null values are treated as absent and never retained.
+ *
  * @param <T> the value type
  */
 public class TransientThreadLocal<T>
@@ -41,7 +43,11 @@ public class TransientThreadLocal<T>
         T   value = (T) map.get(this);
 
         if (value == null) {
-            map.put(this, value = initialValue());
+            value = initialValue();
+            // a null value is treated as absent; don't store it
+            if (value != null) {
+                map.put(this, value);
+            }
         }
 
         return value;
@@ -49,7 +55,11 @@ public class TransientThreadLocal<T>
 
     @Override
     public void set(T value) {
-        TRANSIENT_MAP.get().put(this, value);
+        if (value == null) {
+            remove();
+        } else {
+            TRANSIENT_MAP.get().put(this, value);
+        }
     }
 
     @Override
