@@ -383,7 +383,7 @@ public abstract class XtcCompileTask extends XtcSourceTask implements XtcCompile
     }
 
     private Set<File> getSourceDirectoriesInternal() {
-        return sourceSetDirs.getFiles();
+        return Set.copyOf(sourceSetDirs.getFiles());
     }
 
     private String resolveOutputFilename(final String from) {
