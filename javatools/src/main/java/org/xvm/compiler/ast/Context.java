@@ -36,6 +36,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
@@ -67,6 +68,12 @@ public class Context {
     public InvocationBinding.Collector getInvocationBindings() {
         Context outer = getOuterContext();
         return outer == null ? InvocationBinding.Collector.NONE : outer.getInvocationBindings();
+    }
+
+    /** @return the explicit cursor attempt's collector, or the disabled collector */
+    public CursorBinding.Collector getCursorBindings() {
+        Context outer = getOuterContext();
+        return outer == null ? CursorBinding.Collector.NONE : outer.getCursorBindings();
     }
 
     /**

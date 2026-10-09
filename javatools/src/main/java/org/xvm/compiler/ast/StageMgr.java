@@ -18,6 +18,7 @@ import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.CompilerException;
+import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.InvocationBinding;
 
 import org.xvm.compiler.ast.AstNode.ChildIterator;
@@ -40,15 +41,14 @@ public class StageMgr {
         this(node, stageTarget, errs, InvocationBinding.Collector.NONE);
     }
 
-    /**
-     * Progress a node while preserving the compilation attempt's call-fact collector.
-     *
-     * @param node         the node whose subtree is processed
-     * @param stageTarget  the target compiler stage
-     * @param errs         the diagnostic listener and abort policy for this operation
-     * @param bindings     the attempt-owned call-fact collector, or its NONE instance to disable collection
-     */
-    public StageMgr(AstNode node, Stage stageTarget, @NotNull ErrorListener errs, InvocationBinding.Collector bindings) {
+    /** Progress a node while preserving the compilation attempt's call-fact collector. */
+    public StageMgr(AstNode node, Stage stageTarget, @NotNull ErrorListener errs,
+                    InvocationBinding.Collector bindings) {
+        this(node, stageTarget, errs, bindings, CursorBinding.Collector.NONE);
+    }
+
+    public StageMgr(AstNode node, Stage stageTarget, @NotNull ErrorListener errs,
+                    InvocationBinding.Collector bindings, CursorBinding.Collector cursors) {
         assert node != null;
         assert stageTarget != null && stageTarget.isTargetable();
 
@@ -56,6 +56,7 @@ public class StageMgr {
         m_target      = stageTarget;
         f_errs        = requireNonNull(errs, "errs");
         f_bindings    = requireNonNull(bindings, "bindings");
+        f_cursors     = requireNonNull(cursors, "cursors");
     }
 
     /**
@@ -70,15 +71,14 @@ public class StageMgr {
         this(list, stageTarget, errs, InvocationBinding.Collector.NONE);
     }
 
-    /**
-     * Progress child nodes using the same collector as their enclosing compilation.
-     *
-     * @param list         the nonempty list of nodes whose subtrees are processed
-     * @param stageTarget  the target compiler stage
-     * @param errs         the diagnostic listener and abort policy for this operation
-     * @param bindings     the attempt-owned call-fact collector, or its NONE instance to disable collection
-     */
-    public StageMgr(List<AstNode> list, Stage stageTarget, @NotNull ErrorListener errs, InvocationBinding.Collector bindings) {
+    /** Progress child nodes using the same collector as their enclosing compilation. */
+    public StageMgr(List<AstNode> list, Stage stageTarget, @NotNull ErrorListener errs,
+                    InvocationBinding.Collector bindings) {
+        this(list, stageTarget, errs, bindings, CursorBinding.Collector.NONE);
+    }
+
+    public StageMgr(List<AstNode> list, Stage stageTarget, @NotNull ErrorListener errs,
+                    InvocationBinding.Collector bindings, CursorBinding.Collector cursors) {
         assert list != null && !list.isEmpty();
         assert stageTarget != null && stageTarget.isTargetable();
 
@@ -86,6 +86,7 @@ public class StageMgr {
         m_target      = stageTarget;
         f_errs        = requireNonNull(errs, "errs");
         f_bindings    = requireNonNull(bindings, "bindings");
+        f_cursors     = requireNonNull(cursors, "cursors");
     }
 
     /**
@@ -192,6 +193,11 @@ public class StageMgr {
      */
     public ErrorListener getErrorListener() {
         return f_errs;
+    }
+
+    /** @return the collector owned by this compilation attempt */
+    public CursorBinding.Collector getCursorBindings() {
+        return f_cursors;
     }
 
     /**
@@ -483,6 +489,7 @@ public class StageMgr {
     private final ErrorListener f_errs;
 
     private final InvocationBinding.Collector f_bindings;
+    private final CursorBinding.Collector     f_cursors;
 
     /**
      * The current node being processed if processing is occurring.
