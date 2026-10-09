@@ -81,7 +81,7 @@ public interface ErrorListener {
      * @return the branched-out ErrorListener
      */
     default ErrorListener branch(AstNode node) {
-        return new ErrorList.BranchedErrorListener(this, 1, node);
+        return new ErrorList.BranchedErrorListener(this, 0, node);
     }
 
     /**

@@ -38,7 +38,7 @@ public class Parser {
      * @param listener the error listener
      */
     public Parser(Source source, ErrorListener listener) {
-        this(source, listener, new Lexer(source, listener));
+        this(source, listener, null);
     }
 
     /**
@@ -62,7 +62,16 @@ public class Parser {
 
         m_source        = source;
         m_errorListener = errs;
-        m_lexer         = lexer;
+
+        // we need to route lexical reports through the active lookahead attempt, if any
+        ErrorListener listenerWrapper = err -> {
+            if (m_lookAhead == null) {
+                return m_errorListener.log(err);
+            }
+            m_lookAhead.log(err);
+            return false;
+        };
+        m_lexer = lexer == null ? new Lexer(source, listenerWrapper) : lexer;
 
         // prime the token stream
         next();
@@ -5679,8 +5688,12 @@ public class Parser {
         }
 
         public void log(Severity severity, String sCode, Object[] aoParam, long lPosStart, long lPosEnd) {
-            if (severity.ordinal() >= Severity.ERROR.ordinal()) {
-                m_err = new ErrorList.ErrorInfo(severity, sCode, aoParam, m_source, lPosStart, lPosEnd);
+            log(new ErrorList.ErrorInfo(severity, sCode, aoParam, m_source, lPosStart, lPosEnd));
+        }
+
+        private void log(ErrorListener.ErrorInfo err) {
+            if (err.getSeverity().ordinal() >= Severity.ERROR.ordinal()) {
+                m_err          = err;
                 m_fKeepResults = false;
                 throw new CompilerException("err=" + m_err);
             }
