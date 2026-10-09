@@ -475,9 +475,11 @@ public abstract class Expression
         // the caller's listener, so whether a staging failure inside a probe was reported as a
         // real error depended on what that caller happened to pass. validateAsType(), below,
         // already had this right
+        ErrorListener probe = silent(PROBE);
+
         TypeExpression exprType = toTypeExpression();
-        return new StageMgr(exprType, Compiler.Stage.Validated, silent(PROBE)).fastForward(20)
-                ? exprType.testFit(ctx, typeRequired, fExhaustive, silent(PROBE))
+        return new StageMgr(exprType, Compiler.Stage.Validated, probe).fastForward(20)
+                ? exprType.testFit(ctx, typeRequired, fExhaustive, probe)
                 : TypeFit.NoFit;
     }
 

@@ -105,15 +105,17 @@ public class NotNullExpression
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs) {
         if (typeRequired != null) {
+            ErrorListener probe = silent(PROBE);
+
             if (typeRequired.isTypeOfType()) {
-                TypeFit fit = toTypeExpression().testFit(ctx, typeRequired, fExhaustive, silent(PROBE));
+                TypeFit fit = toTypeExpression().testFit(ctx, typeRequired, fExhaustive, probe);
                 if (fit.isFit()) {
                     return fit;
                 }
             }
 
             TypeFit fit = expr.testFitMulti(ctx, new TypeConstant[]{pool().typeBoolean(), typeRequired},
-                    fExhaustive, silent(PROBE));
+                    fExhaustive, probe);
             if (fit.isFit()) {
                 return fit;
             }
