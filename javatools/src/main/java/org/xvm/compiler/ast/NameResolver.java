@@ -113,12 +113,9 @@ public class NameResolver
      *         {@link Result#RESOLVED} to indicate that the name has been successfully resolved
      */
     public Result resolve(ErrorListener errs) {
-        // the callbacks this resolution makes - ResolutionCollector.getErrorListener() among them
-        // - have no listener of their own, so the caller's is held for the duration of the call
-        // and given back afterwards. It used to be assigned and left, as the comment here admitted,
-        // which meant the resolver went on holding a listener belonging to a request that had
-        // finished: a later callback reported to it, and a resolver reused for a second name
-        // silently replaced the first caller's.
+        // Direct resolution uses the explicit listener parameter. ResolutionCollector callbacks
+        // have no such parameter, so lend them the same listener for this call and restore the
+        // previous destination on every exit (including nested calls and exceptions).
         try (Reporting.Scope reporting = f_errs.to(errs)) {
             return resolveStage(errs);
         }
@@ -285,7 +282,7 @@ public class NameResolver
             // at this point, we have a component (or other identity) to work from, so the next
             // name has to be relative to that component
             while (m_sName != null) {
-                XvmStructure structure = ensurePartiallyResolvedComponent();
+                XvmStructure structure = ensurePartiallyResolvedComponent(errs);
                 if (structure == null) {
                     return getResult();
                 }
@@ -366,17 +363,19 @@ public class NameResolver
     }
 
     /**
+     * @param errs  the listener supplied to the current resolution call
+     *
      * @return the component that is responsible for resolving the next name or null if an error
      *         has been reported
      */
-    private XvmStructure ensurePartiallyResolvedComponent() {
+    private XvmStructure ensurePartiallyResolvedComponent(ErrorListener errs) {
         Component component = m_component;
         if (m_typeMode == null) {
             if (component.getFormat().isDeadEnd()) {
                 // for methods (and multi-methods), it is not possible to further resolve the name,
                 // because methods are opaque from the outside, and multi-methods can only be
                 // resolved by analyzing signatures (not names)
-                m_node.log(f_errs.get(), Severity.ERROR, Compiler.NAME_UNRESOLVABLE, m_sName);
+                m_node.log(errs, Severity.ERROR, Compiler.NAME_UNRESOLVABLE, m_sName);
                 m_stage = Stage.ERROR;
                 return null;
             } else {
@@ -465,7 +464,7 @@ public class NameResolver
             }
 
             if (!type.isTypeOfType()) {
-                f_errs.get().error(Compiler.NOT_CLASS_TYPE, ErrorListener.at(component), id.getValueString());
+                errs.error(Compiler.NOT_CLASS_TYPE, ErrorListener.at(component), id.getValueString());
                 m_stage = Stage.ERROR;
                 return null;
             }
