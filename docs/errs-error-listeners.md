@@ -29,7 +29,7 @@ and refactoring proofs still fail closed. This adds no AST state or compiler lis
 See [scope, ownership and validation](errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
 
 
-This document explains why the `lagergren/errs` branch changes reporting throughout the compiler,
+This document explains why the lsp mono-code branch changes reporting throughout the compiler,
 and which changes an LSP host actually needs. It describes the implementation as of 2026-09-26,
 including module sessions, cross-file navigation, type hierarchy, Java parser recovery and
 compiler-fitted argument completion.
@@ -60,6 +60,32 @@ There are three kinds of change in this branch:
 | Correctness fixes | Lost diagnostics, branch defaults, parser speculation, TypeInfo replay, repository failure propagation | Needed for reliable host reporting; useful to other compiler consumers too. |
 | Explicit contracts and API cleanup | Non-null listener boundaries, named silence, scoped destinations, `void log`, reporting helpers | Make the behavior consistent and reviewable. Some choices are breaking API changes; LSP itself does not inherently require a particular Java method spelling. |
 | Host integration | Named source, partial compilation results, cancellation, document versions and publication | Connect the compiler's reporting contract to an editor's lifecycle. |
+
+## Review the foundations separately from the complete adapter
+
+The [javatools migration guide](../javatools/README.md#why-this-is-a-prerequisite-for-the-compiler-backed-lsp)
+maps the listener contracts to focused tests and distinguishes required behavior from API design
+choices. [PR #680](https://github.com/xtclang/xvm/pull/680) introduces reporting/state composition.
+The explicit-listener migration moves callers to explicit destinations and suppression; the
+scoped-reporting branch adds temporary ownership and restoration. These foundations alone do not
+fix every delivery path: ambient structure/pool lookup, TypeInfo cache replay and later host
+integration have their own review boundaries. A passing listener unit test is not evidence that
+those later paths are done.
+
+These contracts have concrete consumers in the implemented adapter:
+
+* [XdkAdapter](../lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/XdkAdapter.kt),
+  `runCursorAnalysis`, gives each cursor request a collector and an abort predicate based on
+  whether that request is stale. The host can need to stop without emitting another error.
+* [SemanticModelBuilder](../lang/lsp-server/src/main/kotlin/org/xvm/lsp/adapter/xdk/SemanticModelBuilder.kt),
+  `receiverMembers`, forwards TypeInfo diagnostics to the request listener while tracking whether
+  this particular lookup failed. It refuses unusable results and preserves the caller's stop policy.
+
+Those call sites use the later `cancellable` wrapper, which is outside the reporting-contract and
+explicit-listener reviews. They show what the foundations support without making the compiler
+depend on LSP classes or a specific IDE.
+Renaming helpers or retaining an alias could still support the same contracts. Silently losing
+diagnostics, hiding an abort request, or treating failed lookup results as valid could not.
 
 ## The reporting contract
 
