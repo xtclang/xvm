@@ -25,13 +25,13 @@ public class ErrorList
     // ----- constructors --------------------------------------------------------------------------
 
     /**
-     * Construct a buffer that requests an abort on its {@link #DEFAULT_MAX_ERRORS}-th serious report.
+     * Construct a buffer that requests an abort on its {@link ErrorListener#DEFAULT_MAX_ERRORS}-th serious report.
      *
      * <p>Use {@link #ErrorList(int)} with {@link #FIRST_ERROR}, {@link #UNLIMITED}, or a caller-specific
      * positive budget when that policy is required.
      */
     public ErrorList() {
-        this(DEFAULT_MAX_ERRORS);
+        this(ErrorListener.DEFAULT_MAX_ERRORS);
     }
 
     /**
@@ -53,12 +53,6 @@ public class ErrorList
      * Request an abort after the first retained ERROR or FATAL.
      */
     public static final int FIRST_ERROR = 1;
-
-    /**
-     * The budget used by {@link #ErrorList()}. A caller that needs a different limit must pass it
-     * explicitly; the older {@link ErrorListener#DEFAULT_MAX_ERRORS} constant is a separate policy.
-     */
-    public static final int DEFAULT_MAX_ERRORS = 100;
 
     // ----- ErrorListener methods -----------------------------------------------------------------
 
