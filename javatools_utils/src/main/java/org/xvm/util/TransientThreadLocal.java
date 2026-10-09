@@ -12,6 +12,9 @@ import java.util.function.Supplier;
  * reference to the thread-local is not {@code static}, it will be advantageous to use a
  * {@link TransientThreadLocal} rather than a {@link ThreadLocal}.
  *
+ * <p>Null values are treated as absent: a null initial value is retried on the next {@link #get}, and
+ * {@code set(null)} removes the entry. Empty probes therefore do not retain a short-lived local.
+ *
  * @param <T> the value type
  */
 public class TransientThreadLocal<T>
@@ -41,7 +44,12 @@ public class TransientThreadLocal<T>
         T   value = (T) map.get(this);
 
         if (value == null) {
-            map.put(this, value = initialValue());
+            value = initialValue();
+            // Null is treated as absent. Registering it would retain this short-lived local in
+            // the thread's strongly keyed map even when the caller only checked for a value.
+            if (value != null) {
+                map.put(this, value);
+            }
         }
 
         return value;
@@ -49,7 +57,11 @@ public class TransientThreadLocal<T>
 
     @Override
     public void set(T value) {
-        TRANSIENT_MAP.get().put(this, value);
+        if (value == null) {
+            remove();
+        } else {
+            TRANSIENT_MAP.get().put(this, value);
+        }
     }
 
     @Override
