@@ -1,17 +1,9 @@
 # Ecstasy IntelliJ Plugin
 
-L50 adds compiler-proven property/accessor-family rename, explicit alias rename, simple member-file
-type moves and public-type auto-import repairs. See the
-[scope and proof boundaries](../../docs/errs-integration-plan.md#broader-refactoring-checkpoint-l50).
-
-Live workspace/source navigation (L47–L49): unsaved headers and workspace-folder changes refresh the
-compiler graph; detached graph queries are reused, and healthy modules remain navigable beside a
-broken neighbor. Matching bundled XDK declarations open read-only source files with artifact-backed declaration monikers. LSP4IJ virtual content/refresh support remains UP25. Complete reference
-and refactoring proofs still fail closed. This adds no AST state or compiler listener changes.
-See [scope, ownership and validation](../../docs/errs-integration-plan.md#live-workspace-and-source-navigation-checkpoint-l47l49).
-
-
-IntelliJ IDEA plugin for Ecstasy language support.
+The bundled language server uses the compiler adapter by default. Tree-sitter remains a selectable
+syntax-only alternative. Compiler features include diagnostics, navigation, references, completion,
+theme-based semantic highlighting and guarded refactorings over configured source and library inputs.
+See the [manual playbook](../doc/manual-test-plan.md) for exact feature boundaries and native tests.
 
 ## Features
 
@@ -131,131 +123,28 @@ The plugin invokes `xtc init` to scaffold the project, then imports it as a Grad
 
 ```bash
 ./gradlew :lang:intellij-plugin:testCompilerPlaybook \
-    -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true
 ```
 
-This opt-in task uses JetBrains Starter/Driver to launch the packaged plugin and LSP4IJ 0.21.0
-in IntelliJ IDEA 2026.2.3. Starter explicitly disables Ultimate features and enables license
-checks, suppresses the paid module and prevents automatic trials. The suite asserts after every
-case that Ultimate remains unloaded. The unified IDEA download
-uses JetBrains' `IdeaUltimate` artifact name, but the tested features require only the free
-Community feature set. No personal settings or license are copied into the test profile.
-See [JetBrains' unified distribution explanation](https://www.jetbrains.com/help/idea/intellij-idea-single-distribution.html).
+This opt-in task launches the packaged plugin with released LSP4IJ in an isolated IntelliJ profile.
+Ultimate features and automatic trials are disabled. The 284-case catalog is shared with VS Code;
+see the [manual playbook](../doc/manual-test-plan.md) and [testing reference](TESTING.md).
 
-The suite reads all 264 scenario definitions from [shared data](../test-fixtures/compiler-playbook/scenarios.json)
-and source fixtures from the [manual playbook](../doc/manual-test-plan.md#xdkadapter-playbook).
-The earlier protocol selection, `run-15914309414363009017`, passes START and X136/X137/X140/X141
-with zero IDE errors: settings, restart, UTF-16 hover/rename ranges and runtime server tracing.
-The [coverage map](../doc/manual-test-plan.md#protocol-and-lifecycle-coverage-map)
-separates automated editor cases, controlled backend races and pending manual checks. This is not
-a full-catalog checkpoint. The preceding settings selection passes X118/X132/X135–X139.
+The task also runs startup editing, focus recovery, settings persistence and project-lifecycle tests.
+Select a method with `--tests '*CompilerPlaybookTest.compilerPlaybook'`, or select feature cases with
+`-PintellijPlaybookCases=X145,X146,X147,X259`. Omit the case property for the full catalog.
+The large-file probe is separately enabled with `-PintellijLargeFileProbe=true`.
 
-The earlier watcher selection `run-17174738471798629344` passes START and 18 of 19 cases with zero
-IDE errors. Automatic external watch creation/repair and settings replacement pass without fixture
-VFS refresh; the selected lazy-action bridge passes import/member generation and Undo/Redo. X130's
-native batch Move/Undo/Redo now passes in `run-1746762976235942700`, including START and zero
-IDE errors. The manifest uses the platform `refactoring.moveHandler` extension point; file-only
-Move uses project-level Undo. This is not a full 140-case checkpoint.
-See the [current acceptance record](../../docs/errs-integration-plan.md#watcher-move-and-log-view-acceptance-follow-up-2026-09-30).
-The following receipts describe the preceding catalog.
-Startup and the preceding 113 scenarios have a complete passing checkpoint recorded below. The
-[current demo record](../../docs/errs-integration-plan.md#native-intellij-demo-continuation-2026-09-29)
-tracks the 128-case selection and its resumed/focused runs separately: all 128 cases have passing
-receipts. The final X60/X77/X78/X105/X122/X123 recheck passes in `run-5742519770640114134` with
-zero IDE errors after correcting repeated diagnostic pulls, source/resource invalidation and
-shared completion expectations. VS Code also passes all 128 cases in one run, `run-b59XBq`.
-The IntelliJ coverage is not one uninterrupted full-suite checkpoint. Coverage includes native
-Structure/folding/selection, diagnostics and Problems navigation/clearing, definitions/references/
-highlights, dependency overlays, completion lists and exact accepted edits, method/constructor
-Parameter Info, argument-value fitting and declaration recovery through X108. Native checks include the X34 multi-target chooser, X99/X100
-live discovery and partial hierarchy, X101 library edit guards, and X102–X105 refactoring/quick fixes.
-Native validation uses selected cases; see the execution receipts below. The disposable IDE
-profile disables sole-candidate auto-insertion and automatic completion popups so tests can inspect
-every requested completion list first. Autosave is disabled to preserve unsaved-overlay checks;
-shipped plugin defaults are unchanged.
+The status bar displays the current case and completed/remaining counts. The harness may restore
+desktop focus; avoid typing into its fixtures. Failed operations stop that run, and timed-out
+mutations are not replayed. Unexpected IDE errors fail acceptance. X254/X257 retain explicit partial
+coverage for the [client compatibility limits](../doc/manual-test-plan.md#client-compatibility-limits).
 
-`CompilerPlaybookTest.startupEditing` separately exercises five editor-edit phases during cold
-open/restart, including immediate repair, shortening and close/reopen. It does not wait for server
-readiness before editing. `run-1799467324333192176` passes with no IDE failures; its
-`startup-editing.json` records versions, PIDs and diagnostic/fold evidence. X103's reverse file
-rename exposed a real transport read-lock/VFS write-lock deadlock; the hook now uses immutable
-document text without an IDE read action. Both rename directions pass in `run-8812860837009261601`.
-Select only startup with `--tests '*CompilerPlaybookTest.startupEditing'`, or only feature cases
-with `--tests '*CompilerPlaybookTest.compilerPlaybook'` plus `-PintellijPlaybookCases=X103`.
-
-Each report's `server-trace/` directory contains child-server JSON lines with queue size and
-ordered jobs, javatools durations and LSP request-to-reply timings. See the
-[trace guide](../lsp-server/README.md#compiler-queue-and-api-timing). The normal startup information
-balloon uses an eight-second smart fadeout timer, paused during interaction; notification history
-is retained.
-
-Editor diagnostics are copied inside the disposable IDE by a small test-only probe. This avoids
-the driver's object descriptions evaluating cancelled lazy quick fixes when reading annotations.
-The probe reads installed severity/message/offset values; it does not issue substitute LSP queries.
-It is built from integration-test classes and is absent from the shipping plugin.
-
-Parameter Info checks inspect the native request result, every visible parameter row and the
-exact bold argument in enabled overloads. Inactive overloads are intentionally dimmed according
-to `activeSignature`; with no selected overload, every row remains enabled.
-Invalid calls must clear an earlier hint. X20 now requires the full signature label without an
-invented bold argument; an Ecstasy-specific Parameter Info handler preserves this label when
-LSP4IJ would display `<no parameters>`. X81/X82 inspect Property-kind metadata from the native
-completion request. X20/X81/X82 pass natively. Problems-row clicking and visual
-layout remain manual.
-
-Every report lists all 264 scenario IDs and distinguishes failed/unselected cases from passing
-ones. The [L60 checklist](../../docs/errs-integration-plan.md#intellij-parity-backlog-l60) keeps each
-new case open until it has a pass receipt and records client limitations found during validation.
-The new protocol checks use the installed language-client connection. Synthetic nonexistent-file
-and deleted-file diagnostics use its verbose trace: LSP4IJ cannot display these without a virtual
-file. X57 reproduced stale edit application in LSP4IJ 0.21.0 and now passes through Ecstasy's
-guarded native Rename handler. Its immutable request snapshot is checked inside the write command
-before applying edits; typing, file lifecycle changes and server restart retire the response.
-This does not guard other LSP4IJ workspace-edit entry points or null-version closed-file races.
-The missing-case subset has 50/50 passing receipts; X29 now passes with current signature metadata.
-The resumed 61-case batch passed every scenario assertion but failed the IDE-error gate on
-X41's unguarded PSI read. That harness call now uses a read action; X41/X108 pass together with
-no IDE errors. A subsequent full checkpoint was interrupted by desktop focus loss at X108.
-The complete 113-case checkpoint now passes in `run-6034631232732848040`, with zero IDE errors
-and zero JUnit failures/errors/skips. Gradle took 6 minutes 40 seconds. Earlier runs exposed the
-session timeout, focus handling and X30's missing document-readiness check after restart; those
-corrections are included. The harness allows 30 minutes overall, with bounded operation waits.
-See the [L60 execution record](../../docs/errs-integration-plan.md#intellij-parity-backlog-l60).
-
-X33–X35 and X99–X108 have passing native receipts
-across the checkpoint and focused X105 rerun. The receipts and the failures fixed during validation
-are recorded in the [active validation record](../../docs/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54).
-The full checkpoint above includes these assertions. Coverage metadata continues to record
-implemented assertions independently of runtime receipts. Separate startup and focus-recovery
-tests pass; startup acceptance also checks that the untouched information balloon disappears.
-
-The isolated IDE's title and status bar show completed/selected cases, the remaining count and
-the current case. Focus restoration is indicated there too. The harness restores focus through
-`AppIcon`, without Driver's title-bar mouse click. If a popup was interrupted, it reopens only
-the unapplied inspection and only while the document's modification stamp is unchanged. Accepted
-completion edits, quick fixes, renames and file moves are not replayed. Editing a fixture during
-recovery fails explicitly. Automatic activation can redirect your typing into the test IDE;
-an isolated desktop is preferable when working concurrently. Other native controls may still use
-the mouse. Failed checks close the disposable IDE during cleanup.
-
-Readiness checks poll every 100 ms instead of the Driver default of one second, with the same
-failure deadlines. Test-editor scrolling disables animation for the operation and avoids the
-Driver helper's fixed 200 ms sleep. Native UI assertions are unchanged. The dedicated
-`--tests '*CompilerPlaybookTest.focusRecovery'` check creates an unowned test window to interrupt
-completion and Parameter Info, and verifies that completed completion/rename edits cannot replay.
-
-The later L55/L61/L62 checkpoint passes START and X4/X102/X103/X104 with zero IDE errors.
-X4 adds an installed-client declaration request check beside native navigation. X103 verifies
-forward/reverse native rename of a member file and its nested companion directory. The
-[batch receipts](../../docs/errs-integration-plan.md#teaching-workspace-declarations-and-resource-moves-l55l61l62)
-distinguish these selected assertions from the earlier full playbook run.
-
-Live case results are appended to `build/reports/compiler-playbook/run-*/progress.jsonl`.
-The final report is `results.json` in the same directory; `ide-paths.txt` points to
-the isolated IDE's profile/log directory. Starter caches its IDE download below the same report
-root's `out/ide-tests/cache`. Ordinary unit tests do not launch an IDE. Starter/Driver follows the
-selected IDE build; Kodein, patched coroutines and the standalone launcher's Kotlin standard
-library are integration-test dependencies and are not bundled in the plugin.
+Results, live `progress.jsonl`, screenshots and server traces are written under
+`build/reports/compiler-playbook/run-*`. Inspect `results.json` and `ideFailures`, plus JUnit XML
+under `build/test-results/testCompilerPlaybook/`. `ide-paths.txt` identifies the disposable IDE logs.
+Tests use the signed native IDE distribution and JBR from the Starter cache; test-only probes are
+absent from the shipped plugin. Report cleanup retains five completed payloads by default.
 
 ### Compiler source-module configuration
 
@@ -782,7 +671,7 @@ The native file-tree Move action now requests compiler proof before moving selec
 or module containers. Shared X130 passes native batch Move and project Undo/Redo. Labels
 use Ecstasy; implementation names retain Xtc. Upstream compatibility bridges carry searchable
 `// TODO LSP4IJ:` comments with their removal conditions and stable UP identifiers in the
-[upstream issue register](../../docs/errs-upstream-issues.md).
+[client compatibility limits](../doc/manual-test-plan.md#client-compatibility-limits).
 
 Lazy action selection now uses a registered client command to resolve and apply the edit in a
 version-checked undo command; selected native X105/X122/X127 acceptance passes. X131 adds protocol assertions
@@ -801,7 +690,6 @@ The view retains its history while hidden. Change the shortcut in the editor's n
 See the [manual playbook](../doc/manual-test-plan.md#server-log-shortcut-acceptance) for acceptance
 steps and the distinction between server logs and protocol tracing.
 
-
 Language-service preferences are under **Settings → Languages & Frameworks → Ecstasy Language
 Service**; **Ecstasy Language Service Defaults** supplies application defaults. Project overrides
 share LSP4IJ storage and preserve compiler graph/Undo ownership. Changing the language adapter or
@@ -811,19 +699,14 @@ libraries and compiler queue names/count. Server save edits are unavailable in L
 native **Actions on Save → Reformat code**. Compiler mode wraps expressions/lists at safe token
 boundaries using the Code Style right margin; literal splitting and comment reflow are not supported.
 
-The September 30 follow-up expanded the catalog to 148 scenarios. X142 verifies constant-initializer semantic
-navigation and rename/undo; X143 compares partial workspace-symbol batches with the ordinary
-response. X124/X131/X134/X142/X143 pass in both editors across selected runs and a focused
-IntelliJ X142 correction; this does not establish a full 148-case checkpoint. See the
-[follow-up receipt](../../docs/errs-integration-plan.md#follow-up-validation-receipt-2026-09-30) for
-run IDs, failed attempts and the remaining L80/L81 acceptance limits.
+X142 verifies constant-initializer navigation and rename/Undo. X143 compares partial
+workspace-symbol batches with the ordinary response. These checks complement the protocol
+and lifecycle cases; see the [manual playbook](../doc/manual-test-plan.md).
 
-L81 selected acceptance passes X145/X146/X147/X259 plus startup with zero IDE errors. X259
-checks displayed consumer inlays while applying the real Language Service settings page,
+X145–X147 exercise cancellation, refresh and report ownership. X259 checks displayed consumer inlays while applying the real Language Service settings page,
 changing a dependency and restarting; the consumer text/version must remain unchanged.
 This complements the existing two-project lifetime check. See the
-[L81 receipt](../../docs/errs-integration-plan.md#l81-native-acceptance-closure-2026-10-05).
-
+[acceptance reports](../doc/manual-test-plan.md#acceptance-reports).
 
 ### Ordered libraries and attached sources
 
@@ -838,9 +721,8 @@ Attachments supply navigation-only snapshots; they do not add compiler source mo
 opens protected fallback files until LSP4IJ supports our virtual library editor (UP25). Use matching
 sources; available debug text is checked but is not a complete binary/source equivalence proof.
 Project settings survive server restart; invalid replacements retain accepted compiler inputs.
-Shared X266–X268 and their [batch receipt](../../docs/errs-integration-plan.md#ordered-libraries-and-attached-sources-batch-ui3ui4ui6-2026-10-06)
+Shared X266–X268 and their [acceptance reports](../doc/manual-test-plan.md#acceptance-reports)
 record automated coverage and the remaining acceptance boundaries.
-
 
 ### Machine-local JVM tuning and log support
 
@@ -860,10 +742,8 @@ last recorded launch, including up to 64 KiB of launcher output. Its manifest id
 mode and truncation and lists included files; another project’s logs are never substituted. Shared
 X269–X272 cover settings, restart, live/offline export and recovery from an intentional failed JVM
 launch. Full editor exit/reopen has a separate two-process persistence test. Native OS save-dialog
-layout and rollover stress remain manual checks. New acceptance results are tracked in the
-[UI completion batch](../../docs/errs-integration-plan.md#ui1ui7-completion-batch-2026-10-06).
-See the [contract and receipt](../../docs/errs-integration-plan.md#machine-local-jvm-settings-and-log-support-ui5ui6-2026-10-06).
-
+layout and rollover stress remain manual checks. See the [acceptance report format](../doc/manual-test-plan.md#acceptance-reports) for
+how these checks are recorded.
 
 The **Ecstasy Compiler** page separates **Source modules**, **Libraries and sources** and
 **Build import**. Import buttons stay with their help; the detailed paths/report are expandable.
@@ -872,11 +752,6 @@ collapsed details, and a bordered vertical page list. Build actions are stacked 
 width; the standalone window fits the selected page. Switching pages preserves unapplied edits.
 The Language Service page distinguishes saved machine runtime settings from the running server;
 stale replies cannot replace a newer report.
-
-The current UI acceptance includes all ten selected import/library/runtime/support cases with no
-IDE errors and complete-process persistence for compiler and Tree-sitter. See the
-[UI completion receipt](../../docs/errs-integration-plan.md#ui1ui7-completion-batch-2026-10-06)
-for the full catalog's combined coverage and remaining native host limitations.
 
 ### Experimental color-value picker
 
