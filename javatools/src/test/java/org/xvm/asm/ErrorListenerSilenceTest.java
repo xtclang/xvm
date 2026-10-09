@@ -64,9 +64,8 @@ public class ErrorListenerSilenceTest {
     }
 
     /**
-     * The reason is part of the listener rather than part of its name, so a host republishing
-     * diagnostics can tell a probe from a cascade - which is what lets it offer the one and not
-     * the other.
+     * The reason makes a suppression decision inspectable. It does not retain discarded messages
+     * or select a different compiler algorithm.
      */
     @Test
     public void testASilentListenerSaysWhyItIsSilent() {
@@ -80,8 +79,8 @@ public class ErrorListenerSilenceTest {
     }
 
     /**
-     * A silence derived from a listener keeps it, so a host that wants the consequences after all
-     * has somewhere to get them. A silence a caller reached for without having one cannot.
+     * A derived silence retains the original destination and its abort policy, not discarded
+     * messages. A standalone silence has no parent to preserve.
      */
     @Test
     public void testADerivedSilenceKeepsTheListenerItSilenced() {
