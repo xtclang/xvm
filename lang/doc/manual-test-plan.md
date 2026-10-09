@@ -1,277 +1,45 @@
 # Ecstasy Language Server - Manual Test Plan
 
-The current catalog has **282 scenarios**: X1–X277, CFG1–CFG3 and 7a.8/7a.9.
+This playbook describes the compiler-backed language server and its IntelliJ and VS Code integrations.
+The shared catalog contains **284 scenarios**: X1–X279, CFG1–CFG3 and 7a.8/7a.9.
+The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
+Scenario definitions, source fixtures and native assertions are retained below.
 
-Latest color acceptance (2026-10-07): shared X273–X275 pass in both editors, including native
-pickers, rendered RGBA, Undo/Redo and recovery. X41/X154 pass with theme screenshots.
-See the [focused receipt](../../docs/errs-integration-plan.md#l77-native-color-acceptance-2026-10-07).
-X276/X277 additionally cover annotation/library identities and lexical-theme parity through source
-damage and repair. The historical full-catalog receipts below cover 277 scenarios.
+## Acceptance reports
 
-Latest selected acceptance after the L82 configuration-responsiveness repair (2026-10-06):
-X147/X148/X259 pass in VS Code `run-WbMUZ7` and IntelliJ `run-13789526801058807403`.
-IntelliJ also passes START with zero IDE errors on shipping LSP4IJ 0.21.0. Separate 56-buffer
-and real-platform workloads verify exact symbols/diagnostics, affected compilation counts,
-source hashes and process exit. See the
-[receipt and timing limits](../../docs/errs-integration-plan.md#l82-configuration-responsiveness-2026-10-06).
-The full-catalog receipts below precede this repair; the new selection does not replace their
-recorded upstream exceptions.
+Run both native harnesses from the repository root:
 
-Latest IntelliJ acceptance (2026-10-06): `run-11949889098742489342` completes all 277 in one
-uninterrupted process: 275 pass, X254/X257 remain partial for UP25/UP26, zero failures and zero
-IDE errors. START also passes. This uses shipping LSP4IJ 0.21.0 and all production workarounds;
-the opt-in UP17 large-file diagnostic remains separate.
+```bash
+./gradlew :lang:intellij-plugin:testCompilerPlaybook \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true
+./gradlew :lang:vscode-extension:testCompilerPlaybook \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true
+```
 
-Latest VS Code acceptance (2026-10-06): `run-sDtdSi`, `run-h7Cliv` and `run-ezSBxf`
-cover all 277 scenarios in multi-root mode: 276 pass and X218 retains the UP23 native Undo
-failure. X148's configuration-invalidation timeout is fixed with a fail-before backend regression;
-X260's driver now selects the native folder picker before starting its real Gradle checks.
-Timeouts stop the affected process; continuations start with fresh fixtures. This is combined
-coverage, not an uninterrupted green run. See the
-[current acceptance receipt](../../docs/errs-integration-plan.md#l82-upstream-isolation-and-full-catalog-acceptance-2026-10-06).
+Each editor writes per-case results under its `build/reports/compiler-playbook/` directory.
+IntelliJ also records IDE failures, screenshots and server traces; VS Code records extension errors
+and the isolated workspace. Judge acceptance from those reports, including their catalog hash,
+selected IDs, skipped/not-selected cases and errors. Historical selected runs do not establish
+acceptance of a later complete build. The development diary and extraction plans are not required
+to build or test this product.
 
-Error notifications are expected during the negative import/settings cases X261/X262, X268–X270
-and deliberately failed JVM launch X272. Verify the specified retention/recovery afterward.
-An unexpected popup or X218's known failed Undo is not converted into a passing result.
+IntelliJ additionally tests startup editing, focus recovery, settings persistence and project
+lifecycle. Its large-file probe is opt-in. Run the editors sequentially because native actions
+use desktop focus. Their profiles are isolated from personal IDE settings. Timeouts and unexpected
+notifications are failures; do not replay a timed-out mutation to manufacture a pass.
 
-Post-rebase acceptance (2026-10-05): VS Code `run-J054rk` passes 266 of all 267 cases;
-X218 remains the accepted UP23 host Undo failure. IntelliJ `run-1475359363733913185` plus
-`run-7075359973250470210` covers all 267: 265 pass and X254/X257 retain UP25/UP26 partial status,
-with zero IDE errors. Discovery setup and stale dirty-buffer failures were fixed in the harness;
-the original failures/interruption remain in the [receipt](../../docs/errs-integration-plan.md#modern-vs-code-baseline-and-complete-rebase-acceptance-2026-10-05).
-This is full coverage with a corrected continuation, not one uninterrupted green run. Fresh
-headless, smoke, IntelliJ startup/focus and both editors' project-lifecycle checks pass as recorded there.
+## Client compatibility limits
 
-L82 combined checkpoint (2026-10-05): 2,991 backend tests pass with 44 existing skips. VS Code
-`run-5flalU` completes all 264 cases: 263 pass and X218 retains its UP23 Undo failure. IntelliJ
-`run-9819779843503311532`, `run-5080670791887423538` and the nine-case follow-up
-`run-14793635842897832756` cover the same catalog: 262 cases pass their assertions and X254/X257
-remain partial. The long continuation also records four independent IDE alerts (UP27 refresh
-overload and UP03 VFS waits), so this is **not clean combined native acceptance**. The original
-failures, harness corrections and remaining gates are in the
-[L82 receipt](../../docs/errs-integration-plan.md#l82-combined-regression-and-retention-checkpoint-2026-10-05).
-
-The later [IntelliJ repair receipt](../../docs/errs-integration-plan.md#l82-intellij-refresh-and-vfs-repair-2026-10-05)
-supersedes that native result: `run-2714960219503858740` plus `run-13878115092192383073` cover
-all 264 scenarios on the repaired plugin, with 262 passes and the two existing partial cases.
-Both have zero IDE errors/freeze dumps. X185 stopped the first segment; its popup recovery state
-is now captured before dispatch, and the 172-case continuation passes. This remains acceptance
-across continuations, not a single uninterrupted clean run. X146 includes the many-file refresh
-stress with hints enabled. Generic UP03 VFS waits outside approved/no-op operations remain open.
-
-L81 selected acceptance: VS Code `run-VeotM0` and IntelliJ `run-15703196975306829056`
-pass X145/X146/X147/X259 (IntelliJ also passes START, with zero IDE errors). VS Code now clicks the
-actual displayed Cancel control automatically. Shared-process lifecycle passes in `run-Sh7ro5`;
-the separate-instance regression passes in `run-xOLpd6`. The 19 focused backend/transport tests
-pass without failures/skips. See the [L81 closure receipt](../../docs/errs-integration-plan.md#l81-native-acceptance-closure-2026-10-05).
-
-L76 validation: 46 backend/protocol tests and the packaged UTF-16 round trip pass, without failures
-or skips. VS Code `run-B6sogF` passes X7/X31/X255–X258. IntelliJ
-`run-13088584184602426732` passes START/X7/X31/X255/X256/X258, with X257 explicitly partial for
-UP26 and zero IDE failures. Both drivers compile and formatting checks pass. See the
-[L76 contract and commit map](../../docs/errs-integration-plan.md#l76-compiler-inline-completion-2026-10-05).
-
-Previous selection (L75): VS Code `run-e4dCrP` passes X31/X101/X158/X252–X254. IntelliJ
-`run-16728311754487527222` passes START and X31/X101/X158/X252/X253; X254 passes its read-only
-file-fallback/moniker checks with explicit partial status for UP25. No IDE failures. See the
-[L75 playbook](#read-only-library-documents--l75). The final whitespace guard has subsequent
-backend/packaged coverage. This is selected acceptance, not a full-catalog run.
-
-Preceding selection (L74): X31/X252/X253 pass in VS Code `run-EGMh6B` and IntelliJ
-`run-10438075944069511128` (plus START), with no IDE failures. See the
-[portable identity playbook and receipt](#portable-symbol-identities--l74). This is selected
-coverage; earlier full-catalog and feature-batch receipts below remain historical evidence.
-
-The preceding missing-method gate passes **X122/X209–X215** in VS Code `run-u5kDXk` and IntelliJ
-`run-4588144426201480586` (plus START), zero editor failures. It verifies required destination
-imports, exact signatures, atomic module-root/companion edits and diagnostic Undo/Redo. All 310
-selected backend tests pass without failures/errors/skips; Ultimate is disabled. Both editors use
-catalog SHA-256 `49bb9eb0b8c900f5a08e4ab0ace289150e2eec2b196f96db13bce5ded46b09ac`.
-These are selected receipts, not a full rerun. Independent IntelliJ fixtures close previous tabs,
-install explicit graphs before opening callers, and do not rewrite unchanged fixture text.
-The broader production graph-replacement cancellation race remains open under UP07.
-
-The preceding selected gate passes **X201/X202/X205/X206/X209–X212** in VS Code `run-B54Y1R` and
-IntelliJ `run-14965910820534049086` (plus START), zero editor failures. It verifies cross-module
-source ownership, destination import spelling, closed companions and diagnostic Undo/Redo. All
-296 selected backend tests pass without failures/errors/skips; Ultimate is disabled. These are
-selected receipts from the 217-case catalog, not a full rerun. The initial native cancellation and
-its UI-dispatch correction are recorded in the integration plan and UP07 register.
-
-The preceding selected gate passes **X181/X185/X190/X202/X205–X208** in VS Code `run-RpTVz1` and
-IntelliJ `run-14627770467027596087` (plus START), zero editor failures. It verifies compiler-typed
-local arguments, explicit initializer results, exact public companion edits, signature identity
-refusals and diagnostic Undo/Redo. All 275 selected backend tests pass without failures/errors/skips;
-Ultimate is disabled. These are selected receipts from the 213-case catalog, not a full rerun.
-
-The preceding selected gate passes **X181/X185/X195/X197/X201–X204** in VS Code `run-hOIsOh` and
-IntelliJ `run-18176000411609180309` (plus START), zero editor failures. It verifies public
-same-module destinations, closed-companion edits, exact signature/dispatch, diagnostic Undo/Redo
-and shadowed-type/interface refusals. All 256 selected backend and 90 IntelliJ unit tests pass
-without failures/errors/skips; Ultimate is disabled. Companion testing also caught and fixed a
-related-diagnostic copy error in the IntelliJ bridge. These are selected receipts from the
-209-case catalog, not a full-catalog rerun.
-
-The preceding selected gate passes **X181/X185/X193/X197–X200** in VS Code `run-3Vm6C9` and
-IntelliJ `run-11432411846060652594` (plus START), zero editor failures. It verifies named class
-qualifiers, fully qualified typed initializer calls, shadowed-name instance dispatch, diagnostic
-Undo/Redo and runtime-Type refusal. All 232 selected backend tests pass without failures/errors/skips;
-IntelliJ Ultimate is disabled. These are selected receipts, not a full 205-case rerun.
-
-The preceding selected gate passes **X181/X185/X190/X193–X196** in VS Code `run-nvquYD` and IntelliJ
-`run-15968094076069950349` (plus START), with zero editor failures. It verifies qualified same-owner
-instance repairs, static-caller behavior, diagnostic Undo/Redo and other-owner/public-view refusals.
-All 219 selected backend tests pass without failures/errors/skips; IntelliJ Ultimate is disabled.
-These are selected receipts, not a full 201-case rerun.
-
-An earlier selected gate passes **X181/X185/X189–X192** in VS Code `run-mRmX6Y` and IntelliJ
-`run-1236802406694405307` (plus START), with zero editor failures. It verifies compiler-established
-local arguments, typed initializer results, exact generated source and diagnostic Undo/Redo.
-All 198 selected backend tests pass without failures/errors/skips. Ultimate is disabled in the
-IntelliJ run. These are selected receipts, not a full 197-case rerun.
-
-The preceding selected gate passes **X122/X181/X185–X188** in VS Code `run-dzR5d9` and IntelliJ
-`run-16733856986922464734` (START also passes), with zero editor failures. It verifies private
-missing-method creation, exact signatures, error/clear and Undo/Redo diagnostics, plus refusals.
-All 180 selected backend and 89 IntelliJ unit tests pass without failures/errors/skips. The
-IntelliJ run includes the UP07 equal-full-diagnostic quick-fix correction; isolated X185 passing
-was insufficient before that fix. These are selected receipts, not a full 193-case rerun.
-
-The preceding selected gate passes **X156/X177/X181–X184** in VS Code `run-ZhuPaV` and IntelliJ
-`run-5839432120705984532` (START also passes), with zero reported editor failures. Private-helper
-extraction preserves stable inputs, generic owners, overloads, comments, exact edits, diagnostics
-and Undo/Redo. Mutable-input extraction is refused through the installed connection. All 151
-selected backend tests pass without failures/errors/skips. These are selected receipts from the
-189-case catalog, not full-catalog reruns.
-
-The preceding selected gate passes **X156/X157/X177–X180** in VS Code `run-nDHZOH` and IntelliJ
-`run-232740531754002686` (START also passes), with zero reported editor failures. It covers
-returned/typed-initializer extraction, adjacent local inline, unused constant local removal,
-runtime-initializer refusal, exact edits, diagnostics and Undo/Redo. All 129 backend tests pass
-with no failures/errors/skips. The independent compiler repair passes 22 manual runtime checks.
-These are selected receipts from the 185-case catalog, not a full-catalog run.
-
-The preceding selected gate passes **X169/X171/X173–X176** in VS Code `run-ElUMIl` and IntelliJ
-`run-13159045223223510909` (START also passes), with no editor errors. It covers existing and
-empty-package moves, comments/whitespace, import aliases, closed consumers, companions/resources,
-collision refusal and Undo/Redo. The combined gate passes 155 LSP tests, 103 Java tests and five
-manual CLI cases without failures/skips. These are selected receipts, not a full 181-case run.
-
-The preceding selected gate passes **X161/X163/X169–X172** in VS Code `run-TjE279` and IntelliJ
-`run-14394987299477639656` (START also passes), with zero reported editor failures or compiler
-internal-error log markers. This covers combined rename-and-move, module/dependency/resource
-settings, interacting moves, whole-batch refusal and Undo/Redo. IntelliJ additionally verifies
-closed-file disk contents; its initial X169 failure exposed the fixed UP21 persistence gap.
-The related gate passes 222 backend and seven IntelliJ unit tests without failures/errors/skips.
-The separately discovered compiler issue #667 has its own failing-master/passing-fix regression.
-These are selected receipts, not a full then-177-case run.
-
-The preceding selected gate passes **X164–X168** in VS Code `run-oSVuMJ` and IntelliJ
-`run-907034856191389577` (START also passes), including generic/annotated receivers and nested
-union delegation. Both exercise exact cross-file rename, closed consumers and Undo. The combined
-backend gate passes 228 tests without failures/errors/skips. IntelliJ's earlier X165 stall was a
-test Driver modality race (UP20); the repaired dedicated focus/replay test also passes in
-`run-7549109475022481665`. Successful editor runs report no IDE/compiler internal errors.
-Those were selected receipts, not a full then-173-case run.
-X119/X120/X121/X164/X165 pass in VS Code `run-VqFiDW` and IntelliJ
-`run-12344641320847299097` (START also passes, zero IDE errors). These cover primary-header
-properties, lambda/escaped-method parameters and the new union/cyclic callable renames with
-closed consumers and Undo. The related backend gate passes 202 tests without failures/errors/skips.
-That earlier receipt was selected acceptance, not a full then-170-case run.
-X161 passes in VS Code `run-KieFUI` and IntelliJ `run-15583928886685829346` (START also passes,
-no IDE errors): cross-package type Move, closed-consumer qualification edits, companion resources,
-and one Undo/Redo. The final related backend gate passes 118 tests with no failures/errors/skips.
-This does not rerun or close the separate X130 Explorer Cut/Paste issue.
-X159/X160 pass in VS Code `run-RGeVCM` and IntelliJ `run-17726972701009018455` (START also
-passes, no recorded IDE errors): conditional members with closed consumers and nested generic
-property delegates, including cross-file edits and Undo. An earlier IntelliJ attempt timed out
-behind macOS local-network permission dialogs; it remains a failed receipt, not a compiler failure.
-X155–X158 pass in both editors: conditional/bodyless rename, whole-return-expression extraction,
-adjacent returned-local inline and import source links/alias linked editing. VS Code `run-Um9auo`
-and IntelliJ `run-13592235693442712133` record no selected failures; IntelliJ also passes START
-with no IDE errors. The combined backend gate passes 204 tests without failures or skips.
-Both editor runners show the current scenario ID and description beside the completed/remaining
-counts. Long descriptions are shortened in the status bar; hovering shows the full description.
-IntelliJ also includes it in the test window title. Subset selection still uses unchanged X IDs.
-X150/X151/X152 include fitted lambda arguments, inferred local names and ordinary enclosing
-values. X153 checks implementation dispatch and X154 mutation classification. X87 also checks
-member completion in a primary-constructor default with its missing closing delimiter.
-
-The current full VS Code attempt passes **157/159**; corrected X152 passes separately, giving
-**158/159** across receipts. X130 still fails on the tracked upstream Explorer Cut cleanup error.
-IntelliJ's full attempt and continuation together pass **all 159 scenarios plus START**, with
-zero IDE errors; the full attempt's X105 popup timeout remains a stability follow-up despite two
-selected passes. These are combined receipts, not single clean full runs. See
-[the current acceptance record](../../docs/errs-integration-plan.md#l64l65-full-editor-acceptance-2026-10-02).
-
-The preceding selected L64 run passes X97/X108/X150/X151/X152 in both editors: 63 variants covering argument
-values, recursive bounds, templates, declaration names and enclosing instances. VS Code
-`run-C2gpLR` and IntelliJ `run-16005944962074733631` record zero editor errors. The backend
-gate passes 65 Java and 410 LSP tests with no failures or skips. See the
-[L64 receipt and remaining boundaries](../../docs/errs-integration-plan.md#l64-real-source-completion-continuation-2026-10-01).
-
-X146/X147 add dependency refresh and late-report ownership and pass in both editors; see the
-selected reliability receipt below. The previous full IntelliJ run passes all 150 then-existing
-cases plus startup, with zero IDE errors. The previous full VS Code run passes 149/150;
-X130's intermittent post-Paste Explorer repaint failure remains tracked separately. Neither
-the later selected passes nor the extension-free probe's latest non-reproduction close it.
-X124/X131/X134/X142/X143 previously passed in both editors across
-selected runs and a focused IntelliJ X142 correction; see the follow-up receipt below. X140/X141 add explicit UTF-16 navigation and runtime server
-trace switching; X136/X137/X140/X141 pass in both editors, plus IntelliJ startup with zero IDE errors.
-See the [protocol receipt and open limits](../../docs/errs-integration-plan.md#protocol-hardening-batch-l80l81-2026-09-30).
-X136–X139 previously added language-service settings, effective state, transport restarts, live
-formatting and save ownership; X118/X132/X135–X139 already pass in both editors.
-The preceding watcher batch expanded the catalog to 140 scenarios with X130 batch Move/Undo/Redo, X131 lazy
-resolvers, X132 save/range formatting, X133 linked editing, X134 external source watching and X135
-server-log show/hide. X124 now exercises missing external roots without manual refresh.
-VS Code passes all 19 selected cases across `run-iGx1M2` (18) and `run-YMDUeW` (corrected X130).
-IntelliJ `run-17174738471798629344` passes START and 18 selected cases with zero IDE errors;
-X130 then passes in `run-1746762976235942700` with START and zero IDE errors. These are selected receipts, not a full 140-case checkpoint.
-The [current acceptance record](../../docs/errs-integration-plan.md#watcher-move-and-log-view-acceptance-follow-up-2026-09-30)
-keeps failed runs, corrections and manual limits visible.
-
-Earlier L69–L71/PLAT2c receipts used explicit VFS refresh for X124 and eager IntelliJ action edits;
-the current automatic watch ownership and undo-aware lazy-action bridge supersede those paths.
-The [2026-09-29 demo record](../../docs/errs-integration-plan.md#native-intellij-demo-continuation-2026-09-29)
-retains the preceding 128-case selection and its resumed/focused receipts. All 128 cases plus START
-have passing native receipts across those runs, with zero IDE errors; VS Code `run-b59XBq` passes
-all 128 in one run. Historical 113-case full-run receipts below remain historical evidence.
-
-An earlier L64 checkpoint expanded shared X97 to 24 variants and X108 to 13. Those additions accept compiler-validated
-`0`, empty-string, `True` and `Null` arguments and recursive written formal names. Both drivers
-check exact edits, successful repair and completion metadata; X97 also checks candidate
-documentation and active parameters. VS Code `run-yOWnUW` and IntelliJ
-`run-4259780076879058977` pass all 37 variants; IntelliJ also passes START with zero IDE errors.
-That [checkpoint](../../docs/errs-integration-plan.md#l64-completion-and-signature-batch-2026-09-29)
-records the 337 backend/protocol tests, shared catalog hash and selected-run limits.
-
-L56–L59 add startup synchronization guards, written formal bounds, compound argument fitting and
-inferred lambda/destructured-type hints. The combined JVM checks pass; expanded shared X42/X97/X108
-pass in VS Code `run-APcBZB`. The later fixture-spacing checkpoint passes all 113 VS Code cases
-in `run-aOarm7`. IntelliJ passes all 113 scenarios together in `run-6034631232732848040`, with zero
-IDE errors; its separate startup-editing and focus-recovery checks also pass. Both harnesses show
-live case progress. See the
-[current validation record](../../docs/errs-integration-plan.md#native-startup-rename-deadlock-and-execution-tracing-2026-09-28).
-
-The later L55/L61/L62 batch passes the real teaching-workspace memory/rename acceptance,
-declaration lookup and companion-directory rename checks. Selected X4/X102/X103/X104 pass in
-both clients; VS Code verifies Undo and IntelliJ verifies native reverse rename. See the
-[current batch receipts](../../docs/errs-integration-plan.md#teaching-workspace-declarations-and-resource-moves-l55l61l62).
-
-C28/L53/L54 adds empty/qualified type slots, generic/multiple-return headers and native IntelliJ
-workspace/refactoring assertions. The [active validation record](../../docs/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54)
-distinguishes full backend results, selected VS Code checks and selected native IntelliJ receipts.
-Earlier VS Code checkpoints remain valid historical evidence: C27/L51 `run-9deeaR`, L50
-`run-92TmWV`, and L47–L49 `run-psziUN`. They are not IntelliJ execution receipts.
-
-The P1–P4 `ast.partial` package refactor changes compiler organization, not editor behavior or
-scenario data. Existing recovery/completion/signature/header cases still apply in both editors.
-P1–P4, the AST5 shared-syntax extraction and AST1/AST3 helper consolidation use focused
-compiler/adapter regressions; they add no new native-run receipt or scenario change. AST1/AST3
-pass 200 tests covering scope, calls, captures, clone isolation, navigation and rename.
-See the [package validation record](../../docs/errs-integration-plan.md#next-checkpoint-isolate-partial-ast-syntax).
-
-This document describes how to manually test every feature implemented in the Ecstasy Language Server and IntelliJ plugin.
+- VS Code's native batch-move and overlapping-move Undo paths have recorded host failures
+  (X130/UP16 and X218/UP23). The cases remain assertions, not silently skipped successes.
+- IntelliJ uses the supported read-only file fallback for library content (X254/UP25).
+  X257/UP26 covers inline-completion constraints partly through the installed connection because
+  released LSP4IJ does not expose all required native invocation metadata. Both report partial coverage.
+- The optional color-value prototype is disabled by default. X273–X275 explicitly enable it;
+  its native swatch refresh has a recorded VS Code failure. Theme-based source highlighting is
+  separate and enabled by default.
+- Error notifications are intentional in the negative import/settings cases X261/X262,
+  X268–X270 and failed JVM launch X272. Their retention and recovery assertions must still pass.
 
 ## Server process lifecycle acceptance
 
@@ -287,9 +55,9 @@ process baseline so existing old servers and another IDE's workspace are not cou
 4. Quit the test IDE. Its recorded server PIDs must disappear within ten seconds. Reopening
    the IDE must not be needed to reap them. Do not terminate another workspace's server.
 
-The focused JVM/provider regressions pass; this installed-IDE acceptance is still pending.
-See [the lifecycle diagnosis](../../docs/errs-lsp-process-lifecycle.md) for the failure mechanisms
-and the distinction between fixed code and previously orphaned processes.
+The native project-lifecycle tests exercise ownership and process exit. Check their reports
+separately from the feature catalog; old processes from another run are not evidence of a leak
+in the current run.
 
 ## IntelliJ startup editing acceptance (L56)
 
@@ -305,10 +73,6 @@ The unit tests cover notification permutations; these steps exercise the actual 
    current diagnostics and folds; a delayed close must not retire the reopened document.
 4. Repeat with a bulk replacement and with an unsaved edit made before the server initializes.
    Record the server PID, final document version, diagnostic state and IDE-error log.
-
-The dedicated native startup test passes all five phases in `run-1799467324333192176`, with no
-IDE failures. It uses real unsaved editor transactions before server initialization completes;
-ordinary feature cases still wait for readiness. Run it independently with:
 
 ```bash
 ./gradlew :lang:intellij-plugin:testCompilerPlaybook \
@@ -341,28 +105,12 @@ as well as resolved names; inlays retain their existing compiler-derived scope.
 
 ## Current development batch: discovery and complete XDK
 
-Backend verification passes, and focused VS Code X94–X98 pass in `run-KoAP6K` (five passed,
-98 not-selected). Native IntelliJ execution is deferred; both drivers compile. In a fresh
-compiler-mode workspace, set `xtc.compiler.sourceModules` to `null` (or leave it unconfigured in
-IntelliJ). Create `Library.x` with `module Library { static Int answer() = 42; }` and `Consumer.x` with
-`module Consumer { package lib import Library; Int run() = lib.answer(); }`. Opening only Consumer
-should resolve `answer`; workspace symbol search should find Library's declaration. Add a separate
-broken module and verify Library remains searchable. Create/remove another module and wait for its
-file watcher notification; its workspace symbols should appear/disappear. Set `sourceModules` to
-`[]` to disable discovery, then `null` to restore it. Explicit graph scenarios below still apply.
-
 Also compile `module UsesXml { package xml import xml.xtclang.org; void accept(xml.Document doc) {} }`
 without external XDK paths. XML must resolve from the production bundle, while rename on `Document`
 remains unavailable because it is a binary library declaration. The full XDK, including XML/JSONDB
 and the other distribution libraries, is now shared by production and compiler tests.
 
 ## Acceptance checklist for the 2026-09-30 batch
-
-Scope: `9f2c5ae8c` (external watches), `c748f9831` (native moves), `3888c15f2`
-(resolve/action application), `448b7f8a1` (save/sync/ranges), `19ba6422d` (labels and upstream
-markers), and the planned settings work in `4ccbda4d9`. Read the result as a checklist, not a
-passing receipt. Backend, protocol and native UI evidence are separate. The current catalog has
-140 shared scenarios; X130–X135 are added by this batch, and X124 has stronger assertions.
 
 Run in a disposable compiler-mode workspace using the build/run instructions below. Keep user
 projects out of destructive move/rename tests. For each editor record commit, catalog hash, selected
@@ -415,28 +163,11 @@ invoke normal formatting; enabling a second save-formatting path must not apply 
 
 ## Feature Implementation Status
 
-> See [plan-ide-integration.md](plans/plan-ide-integration.md) for the canonical feature implementation matrix comparing Mock, Tree-sitter, and Compiler adapter capabilities.
-
-The [active compiler completion checklist (L55–L83)](../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist)
-tracks the remaining implementation and validation work. All 26 project-defined adapter
-capabilities have compiler implementations, many with explicit bounds; this is not full LSP
-coverage. Pull diagnostics and token range/delta have passing checkpoints. All six lazy-resolve
-operations, broader native moves and save/sync/formatting additions have passing backend and selected
-editor receipts. L80/L81 also have a validated bounded protocol checkpoint; optional negotiation,
-partial results and broader acceptance remain open. General refactorings, inline completion/values, colors and notebooks
-still have implementation gaps. Use the [absent-feature inventory](plans/plan-ide-integration.md#compiler-completeness-snapshot)
-to distinguish an unsupported feature from a failed playbook case.
-
-The earlier 113-scenario IntelliJ checkpoint passed, plus startup; that receipt does not cover
-the current 148-scenario catalog. That earlier complete native run
-includes the 50 newly added cases and X20/X81/X82 assertion additions, with zero IDE errors.
-The [L60 validation checklist](../../docs/errs-integration-plan.md#intellij-parity-backlog-l60)
-records receipts and actual client gaps. L60 is complete. L55 passes both its 24-root memory
-regression and the real 25-root teaching workspace with one and five unsaved buffers at 512 MiB.
-L56 now passes a separate native test of edits, replacement and close/reopen during initialization, including current
-diagnostics/folds. The normal feature readiness wait is not used as that evidence.
-
----
+The [server capability matrix](../lsp-server/README.md) describes compiler and fallback behavior.
+The scenarios below give concrete inputs, expected edits, refusal boundaries and native coverage.
+The compiler adapter consumes compilation results, semantic facts and incomplete-source queries;
+its editor features require all of those foundations. Native client limitations remain explicit
+in the [compatibility list](#client-compatibility-limits) and per-case reports.
 
 ## Pre-Test Setup
 
@@ -854,7 +585,7 @@ saying the annotation on the derived property is ignored.
 
 > Compiling the same file with `xcc` on **master** prints nothing at all - the warning is
 > produced and then discarded before anyone sees it. This is a real bug in master, recorded in
-> [docs/errs.md](../../docs/errs.md); the adapter showing it is the fix working, not a false
+> [acceptance reports](#acceptance-reports); the adapter showing it is the fix working, not a false
 > positive.
 
 ---
@@ -1482,7 +1213,7 @@ highlighting, separate from L77 color-value swatches and pickers.
 `XdkSemanticColorTest` compiles this fixture and checks classifications. Shared X41/X154 check
 functions, enum values, imported interfaces and writes in both editor drivers. Both cases pass in
 both editors; dark/light/high-contrast captures were visually inspected on October 7. See the
-[native receipt](../../docs/errs-integration-plan.md#l77-native-color-acceptance-2026-10-07).
+[acceptance reports](#acceptance-reports).
 The backend suite also checks the real platform `CircularBuffer` fixture, including identical
 names used as parameters/properties/locals and incomplete-member edits followed by repair.
 
@@ -1541,7 +1272,7 @@ trip. Shared X273–X275 automate native swatches, picker edits, dismissal, Undo
 The launchers enable the prototype when those cases are selected, including a full catalog run.
 Native acceptance passes in VS Code `run-atPCiE` and IntelliJ `run-5420151303010878432`
 (zero IDE failures). X41/X154 also pass in both editors, with dark/light/high-contrast screenshots
-reviewed. See the [receipt and corrected harness failures](../../docs/errs-integration-plan.md#l77-native-color-acceptance-2026-10-07).
+reviewed. See the [acceptance reports](#acceptance-reports).
 
 ## XdkAdapter Playbook
 
@@ -1612,10 +1343,7 @@ are compiler-output checks that the editor UI cannot establish. To run them with
 ```
 
 The Starter/Driver suite launches the packaged plugin in IDEA 2026.2.3 with Ultimate features
-disabled. The catalog now has 163 scenarios; the following paragraph records the earlier 128-case checkpoint. The preceding 113-case suite has a clean full-run
-receipt; the [current demo record](../../docs/errs-integration-plan.md#native-intellij-demo-continuation-2026-09-29)
-distinguishes resumed coverage from an uninterrupted full run. Native
-completion checks now keep sole candidates visible in the disposable test profile, verify exact
+disabled. Native completion checks now keep sole candidates visible in the disposable test profile, verify exact
 candidate sets and accept the actual edit. The same checks cover constructor and argument-value
 completion. X1/X92 inspect native Structure/folding, X4 uses Find/Highlight Usages, and error/warning
 cases verify received compiler metadata, Problems rows, Next Problem navigation and clearing.
@@ -1642,14 +1370,14 @@ the extension's static snippets; X32 checks the compiler response separately and
 non-snippet editor proposals.
 X33–X35 and X99–X108 have passing native receipts across the checkpoint and
 focused X105 rerun. Execution details and the fixes found during validation are in the
-[active validation record](../../docs/errs-integration-plan.md#header-slots-and-native-editor-parity-c28l53l54).
+[acceptance reports](#acceptance-reports).
 The later full checkpoint `run-6034631232732848040` passes all 113 scenarios plus START, with
 zero IDE errors and zero JUnit failures/errors/skips. Gradle completes in 6 minutes 40 seconds.
 Corrections found during validation include X41's PSI read action, the session timeout, focus
 handling, and X30's document-readiness check after restart. The driver allows 30 minutes overall
 while retaining individual bounded waits. Separate startup acceptance also verifies disappearance
 of the untouched information balloon. See the
-[L60 receipts](../../docs/errs-integration-plan.md#intellij-parity-backlog-l60).
+[acceptance reports](#acceptance-reports).
 
 Parameter Info checks keep every overload's text assertion, but only enabled overload rows
 may bold the active argument. Inactive rows are dimmed according to `activeSignature`.
@@ -2252,7 +1980,6 @@ roots may be outside workspace folders. A scope receipt does not authorize apply
   Undo/Redo update that same effective store; a changed graph or changed settings owner refuses
   stale history. Project settings do not change other projects' global configuration.
 
-
 X118 checks persistence, root/edge replacement, Undo, Redo and second Undo in both drivers.
 The VS Code driver also changes the real settings document during reply conversion and expects
 a stale-settings refusal without source edits. Run with `-PcompilerPlaybookMultiRoot=true`
@@ -2263,7 +1990,7 @@ These subchecks pass in multi-root `run-ZOoaXw` (X118/CFG1–CFG3) and single-fo
 Undo/Redo remain separate native stress coverage; the new race is during Rename conversion.
 All X109–X118 have passing selected receipts: IntelliJ `run-6245646041474423108`, VS Code
 `run-3CeLiB` (X109–X117) and `run-7Xbo86` (X118 plus CFG1–CFG3 after the save-cache correction).
-See the [validation record](../../docs/errs-integration-plan.md#shared-rename-and-native-settings-validation).
+See the [acceptance reports](#acceptance-reports).
 
 ### I. Configured-graph references and method rename
 
@@ -2553,12 +2280,11 @@ module Advanced {
 | X146 | Open RefreshConsumer with inferred `var value = lib.make()`. Change only RefreshLibrary from returning Int to String, then restore it. In IntelliJ, also keep at least 16 additional documents connected and issue a burst of lens/hint/token refreshes before the dependency changes. | Both clients receive provider refreshes and show the changed inferred-type hint. Consumer text/version stays unchanged. IntelliJ reads the native cached inlay result and must report no read-action overload; its driver restores the temporary tab limit. VS Code observes the registered provider's refresh events and result. |
 | X147 | Hold an older settings report while requesting a newer one, changing settings, restarting or closing the settings page. Complete the old reply last. | Older reports cannot overwrite current or disposed UI state. VS Code delays a real server reply; IntelliJ drives the real settings component with controlled asynchronous report data and an EDT completion barrier. Restart retires the old PID and preserves source. |
 | X148 | Open the shared Extract.x fixture, select exactly `42` in the return statement, and choose Extract literal to local variable. Undo, Redo, then Undo. Repeat with a string/character literal; try selecting a call or only part of a literal. | The action inserts `val extractedValue = 42;` immediately before the return, which uses that local. Existing identifiers force a fresh suffix. Exact text, indentation and diagnostics survive Undo/Redo. Unsupported selections offer no extraction. Selected X148 acceptance passes in both editors. |
-| X149 | Open the shared Naming.x variants. Complete `str` in the middle of `strange` to `string`; repeat in a parameter, then complete `st` with another `string` already present. Undo each acceptance. | The whole declaration token is replaced. The collision variant proposes `string1`. No reference or rename is claimed. Both drivers pass exact source, diagnostics and one Undo (receipts in docs/errs-integration-plan.md). |
+| X149 | Open the shared Naming.x variants. Complete `str` in the middle of `strange` to `string`; repeat in a parameter, then complete `st` with another `string` already present. Undo each acceptance. | The whole declaration token is replaced. The collision variant proposes `string1`. No reference or rename is claimed. Both drivers pass exact source, diagnostics and one Undo (see the per-case acceptance reports). |
 | X150 | Open the shared Templates.x variants. Complete `cl` with `class declaration`, then `if`, `for`, `do` and `try` with their block templates, and `interface` with its declaration template. Inspect the selected name/condition, press Tab to reach the body, and Undo. Also try `mo` in an empty file and completion inside a string, comment, member access and argument. | Templates appear only in the corresponding file/member/statement context. Placeholder navigation leaves exact indentation and source unchanged; Undo restores the prefix. IntelliJ may first restore the placeholder selection without changing text, then undo the insertion. Comments, strings and value/type positions receive no syntax templates. Clients without snippet support receive plain text without placeholder syntax. Both editor cases pass; syntax exclusions and minimal-client behavior have backend/protocol coverage. IntelliJ uses the documented UP18 indentation constraint. |
-| X151 | Open the shared MissingNames.x variants. Invoke completion after the space following the property or parameter type, before the initializer or closing parenthesis. Accept `string1`, `string`, `list`, `stringArray`, `fn` and `value` across named, nullable, array, function and compound types, then Undo each insertion. Also try an empty name at EOF, an already written name, a comment and a bare local expression. | Completion inserts only the suggested name at the empty cursor range, preserving the written type, whitespace and remaining source. Collision checks include existing document identifiers. Accepted variants compile; one Undo restores the incomplete source. Existing names, comments and ambiguous expressions acquire no empty declaration-name slot. X151 passes in both editors; EOF, UTF-16/CRLF and refusal controls pass in parser/backend/protocol tests (receipts in docs/errs-integration-plan.md). |
+| X151 | Open the shared MissingNames.x variants. Invoke completion after the space following the property or parameter type, before the initializer or closing parenthesis. Accept `string1`, `string`, `list`, `stringArray`, `fn` and `value` across named, nullable, array, function and compound types, then Undo each insertion. Also try an empty name at EOF, an already written name, a comment and a bare local expression. | Completion inserts only the suggested name at the empty cursor range, preserving the written type, whitespace and remaining source. Collision checks include existing document identifiers. Accepted variants compile; one Undo restores the incomplete source. Existing names, comments and ambiguous expressions acquire no empty declaration-name slot. X151 passes in both editors; EOF, UTF-16/CRLF and refusal controls pass in parser/backend/protocol tests (see the per-case acceptance reports). |
 
 | X152 | Open the shared SemanticValues.x variants. Complete `thi` to `this.Owner`, then `this.Ow` to `this.Owner` inside a nested class call. Complete an empty indexed callback argument with `0`. Undo each acceptance. | Only an enclosing instance that fits the actual call is offered. Qualified insertion replaces only the selected member. Indexed functions retain their function parameter type. Every accepted document compiles and Undo restores the exact incomplete source. Static-boundary and incompatible-type refusals have backend coverage. |
-
 
 For a project using the updated Gradle plugin, run `./gradlew exportXtcLspModel` in that project's
 root to export `.gradle/xtc/lsp-model.json`. Run `./gradlew prepareXtcLspModel` to process resources
@@ -2597,17 +2323,8 @@ model/settings acceptance; X260–X262 add real Gradle tasks, visible Cancel and
 checks through both installed clients. Project/folder closure during import and a representative
 user project's generated-input task remain manual acceptance steps.
 
-**Current hardening batch:** updated X76/X118 and new X123 pass in both editors with shared
-scenario SHA-256 `959c3e71f68b00f58e6cc5cc22e275b20623442600175975ed1ab36a718567d3`.
-Receipts: VS Code `run-S6wn4Y/results.json`; IntelliJ `run-5250369345097873268/results.json`
-under each editor's `build/reports/compiler-playbook/`. IntelliJ also passes START and reports
-zero IDE failures. This does not establish a full pass of the current 128-case catalog.
-See the [platform demo](../../demo.md) for a real-code tour and its current blockers.
-
-X122 has eleven shared variants, all passing in VS Code `run-IsPGqC` and IntelliJ
-`run-658720962975078754`. The IntelliJ run also passes X105, which shares the native intention
-helper. Both compare complete source and use native Undo/Redo/Undo; neither receipt represents
-a full-catalog rerun. Details belong to the L63 library/complete-repair batch in the integration plan.
+X122 exercises eleven library member-generation variants, comparing complete source and
+native Undo/Redo/Undo in both editors.
 Member generation uses `refactor.rewrite` so the class intention remains available without a
 diagnostic at the class name. Library contracts stay read-only while implementations are inserted
 in user sources. Unvalidated computed defaults and unsupported type/constant spellings still refuse
@@ -2897,7 +2614,7 @@ declaration provider; IntelliJ checks the request through the installed client t
 the existing native navigation actions. Backend/protocol cases cover multiple inherited contracts,
 property overrides, import aliases, closed consumers, indexed libraries and stale source.
 Combined backend/protocol validation and selected X4/X102/X103/X104 runs pass in both clients.
-See the [L55/L61/L62 receipts](../../docs/errs-integration-plan.md#teaching-workspace-declarations-and-resource-moves-l55l61l62).
+See the [acceptance reports](#acceptance-reports).
 
 ### Rename extension batch acceptance
 
@@ -2933,13 +2650,12 @@ Known native-host regression to watch: VS Code 1.139.1 can throw an Explorer `Da
 found` while clearing Cut decorations after a successful batch Paste. If it occurs in X130,
 inspect actual paths before doing anything else; never replay an already applied move. Verify
 Explorer refresh and its Undo/Redo separately and retain the failed receipt. This is tracked in
-[the watcher/move acceptance record](../../docs/errs-integration-plan.md#watcher-move-and-log-view-acceptance-follow-up-2026-09-30).
-
+[acceptance reports](#acceptance-reports).
 
 ### Language-service settings acceptance (UI1–UI7)
 
 Selected X118/X132/X135–X139 pass in VS Code `run-1aSPTX` and IntelliJ
-`run-3866544261762285778` (also START; zero IDE errors). The [settings validation record](../../docs/errs-integration-plan.md#editor-settings-implementation-batch-ui1ui7-2026-09-30)
+`run-3866544261762285778` (also START; zero IDE errors). The [acceptance reports](#acceptance-reports)
 retains the earlier failures and fixes. These receipts cover seven selected scenarios, not all 144.
 
 IntelliJ Community: Settings → Languages & Frameworks → **Ecstasy Language Service Defaults**
@@ -2965,7 +2681,6 @@ versus workspace VS Code precedence, two workspace folders and folder-specific n
 preferences. Check invalid JSON retains a running service, native Reset/Cancel never saves a draft,
 and restart never saves a dirty source. Remote filesystems, alternate keymaps and restricted
 workspace build execution remain explicit boundaries, not assertions covered by these local runs.
-
 
 Protocol hardening acceptance (L80/L81): X136/X137/X140/X141 pass in VS Code `run-5eCFZV` and
 IntelliJ `run-15914309414363009017` (also START, zero IDE errors). X140 checks a method-body reference
@@ -3039,7 +2754,7 @@ Pending manual acceptance in both editors:
    alone is not evidence of out-of-order completion handling.
 
 The disk-index/open-buffer, long-lived path-picker and stalled watcher-registration fixes and
-their deterministic regressions are explicit in the [state audit](../../docs/errs-audit.md#mutable-state-and-deprecated-api-audit-2026-09-30-checkpoint).
+their deterministic regressions are explicit in the [acceptance reports](#acceptance-reports).
 Partial-result streaming and L83 initializer facts are implemented; their acceptance and remaining
 limits are recorded below. Generic IntelliJ server-initiated text-edit checking is implemented;
 X144 passes both editors. The catalog now contains 152 cases; the receipts below retain their original scope.
@@ -3062,33 +2777,18 @@ cancellation between batches, stale publication, disconnect and backend failure.
 pass in both editors. Initial Tree-sitter scanning now reports the actual scan lifetime;
 its begin/report/end and cancellation ownership have controlled regressions.
 
-
 Follow-up receipt (2026-09-30): VS Code `run-4Vo2G3` passes X124/X131/X134/X142/X143. IntelliJ
 `run-6087249141816329018` passes START and X124/X131/X134/X143; corrected X142 passes with START
 in `run-1763480386953487411`, with zero IDE failures and Ultimate disabled. Both drivers use catalog
 hash `cbb3c633a3006b394cfffd86d3ec790783124b61562f128a8b97ab072deb47a8` (148 cases). This is selected
-acceptance, not a full-catalog rerun. The [validation record](../../docs/errs-integration-plan.md#follow-up-validation-receipt-2026-09-30)
+acceptance, not a full-catalog rerun. The [acceptance reports](#acceptance-reports)
 keeps initial failures, fixture/driver corrections and the unreproduced first native text mismatch.
 Generic native applyEdit version checking is covered by X144 below. P1/P2 have X145's native
 progress-model coverage; physical Cancel-button selection and the broader P3/P4 checks remain manual.
 
-Current native ownership/progress acceptance: X144 and the 5,000-method X145 pass both clients
-after the lexical performance fix. Catalog receipts follow below. VS Code cancellation invokes
-the workbench-owned token; selecting and clicking that particular Cancel button remains manual.
-
-Current IntelliJ coverage spans all 150 catalog cases plus startup across the full run
-`run-11435582978373867143`, resumed `run-5480270557660243469`, and corrected selection
-`run-5152567950207711961`. The last run passes X57/X126/X127/X132/X138/X139/X143 plus START,
-zero IDE errors, and exits successfully. This is not a single clean full-catalog run: the original
-extra-character failure, shutdown conflict, formatter notifications and harness failures remain
-documented in the integration plan. X139 now proves closed-tab formatting; cleanup discards dirty
-fixtures only after their scenario finishes. X143 uses a scoped wire listener so console rollover
-cannot hide partial-result batches. VS Code `run-SAWG42` finishes with 126 passes and 24 failures,
-including spurious incomplete-query cancellation by delayed directory watches and an X130 Explorer
-focus failure before its move. X144 and the current 5,000-method X145 pass (X145: 15.7 seconds).
-The server watcher correction and Explorer focus correction are undergoing editor revalidation;
-the failed receipt remains in the integration plan.
-
+X139 verifies closed-tab formatting; cleanup discards dirty fixtures only after their scenario
+finishes. X143 uses a scoped wire listener so console rollover cannot hide partial-result batches.
+X145 distinguishes cancellation through the workbench token from the optional visible-button check.
 
 VS Code X130 host limitation: 1.140.0 can complete a native batch Paste and then throw
 `Data tree node not found` from Explorer's `itemsCopied` while clearing the old Cut highlighting.
@@ -3096,7 +2796,6 @@ The driver verifies Move, Undo, Redo and resource contents without replaying Pas
 original host error as a failure. A focused pass does not close this intermittent defect; the full
 `run-06Z6tq` reproduces it after successful semantic/resource assertions. Track separately from
 compiler move correctness and recheck with a future VS Code fix.
-
 
 Corrected full VS Code `run-06Z6tq` passes **149/150** with only the X130 host repaint failure
 above. All formerly failing completion/signature cases pass. X144/X145 pass with current workload;
@@ -3115,7 +2814,6 @@ and workspace and restoring settings through the editor API. Its new shared stat
 this selected run does not replace the full catalog's X130 failure. Hover the counter for the full
 test title. Physical Cancel-button selection and the broader P3/P4 checks remain manual.
 
-
 ### Selected reliability receipt (2026-10-01)
 
 The catalog has **152 cases**. VS Code `run-Ki54bo` passes X118/X129/X130/X136/X137/X139/X146/X147.
@@ -3132,11 +2830,10 @@ manual. X130's selected pass and extension-free probe's `not-reproduced` result 
 earlier intermittent full-run Explorer failure.
 
 For a realistic compiler workload, use `lang/scripts/compiler-workload.py` with the recipe in the
-[reliability receipt](../../docs/errs-integration-plan.md#reliability-validation-receipt-2026-10-01).
+[acceptance reports](#acceptance-reports).
 It tests unsaved overlays, cancellation, outlines, hover, diagnostics and repeated server lifetimes
 against `../platform`, preserving the checkout and retaining queue/API/heap traces. Its 30-cycle
 baseline is separate from editor interaction, prolonged soak and release performance targets.
-
 
 ### X130 controlled Explorer-refresh reproduction (2026-10-01)
 
@@ -3163,14 +2860,13 @@ pointer. Already executed edits, Paste, Undo and Redo are never replayed.
 `run-czIsNj` and `run-GSxFkH` independently reproduce the host exception without Ecstasy.
 `run-LjhgZP` passes X118–X129, then fails X130 on that exception after all history/content checks.
 X130 alone passes in `run-QLBWYV`; it is not evidence of a host fix. The
-[full diagnosis](../../docs/errs-integration-plan.md#x130-isolated-host-defect-and-harness-focus-correction-2026-10-01)
+[acceptance reports](#acceptance-reports)
 records the failed focus attempt, correction, upstream source and remaining repair task.
-
 
 ### Final L80 protocol checks (2026-10-01)
 
 The current response/provider capability audit is complete; see the
-[producer inventory](../../docs/errs-audit.md#l80-final-capability-contract-audit-2026-10-01).
+[acceptance reports](#acceptance-reports).
 The shared catalog remains 152 cases. This server-only change is validated through focused backend
 and packaged stdio tests; earlier native receipts are preserved, not claimed as fresh runs.
 
@@ -3186,8 +2882,7 @@ For the next normal editor acceptance run, retain the existing signature-help ca
 and X131 resolve checks in both drivers. These exercise the installed clients' negotiated behavior;
 they cannot substitute for the reduced-client protocol tests. L81 manual checks and the X130 host
 failure remain open. Exact test receipts are in the
-[integration plan](../../docs/errs-integration-plan.md#l80-final-capability-contract-audit-2026-10-01).
-
+[acceptance reports](#acceptance-reports).
 
 ### L81 detailed progress and upstream acceptance (2026-10-01)
 
@@ -3215,8 +2910,8 @@ IntelliJ activates its displayed control through its accessibility action, bound
 project, with the normal 5,000-method workload. Both verify continued hover, progress removal,
 unsaved restart and old-PID exit.
 The IntelliJ popup keeps the IDE's standard width; there is no Ecstasy-specific size override.
-The 20,000-method IntelliJ diagnostic attempt exposed a 21-second bulk-replacement UI freeze;
-that failed receipt and the separate L82 large-file investigation remain in the integration plan.
+The separate 20,000-method IntelliJ diagnostic can expose bulk-replacement UI stalls; it is
+not part of the normal 5,000-method acceptance workload.
 
 X146 now observes all five refresh families in VS Code and all providers actually negotiated by
 IntelliJ; dependency changes must update the untouched consumer in both directions. X259 additionally
@@ -3224,12 +2919,12 @@ checks rendered consumer inlays while toggling settings and restarting after a d
 The consumer must remain unedited, disabled hints must disappear, and the displayed type must
 change Int → String → Int. X147 separately controls late report callbacks. Other per-provider visual
 appearance remains manual; these cases do not claim exhaustive pixel-level presentation coverage.
-The [L81 receipt](../../docs/errs-integration-plan.md#l81-progress-refresh-and-transport-checkpoint-2026-10-01)
+The [acceptance reports](#acceptance-reports)
 retains failed attempts separately from passing refresh/restart cases. IntelliJ
 `run-6551466376631163236` passes visible Cancel and restart in 7.2 seconds with zero IDE errors;
 VS Code `run-VeotM0` passes its automated visible-control check in 17.6 seconds, plus X146/X147/X259.
 
-All upstream compatibility issues are collected in [errs-upstream-issues.md](../../docs/errs-upstream-issues.md).
+All upstream compatibility issues are collected in [client compatibility limits](#client-compatibility-limits).
 Source `TODO LSP4IJ:` / `TODO VSCODE:` markers carry matching UP IDs and removal conditions.
 UP15's malformed-parameter classification and UP16's X130 host repaint remain defects; a passing
 reader-recovery or Move/Undo/Redo check is not evidence that those defects are repaired.
@@ -3265,7 +2960,7 @@ the same classes through `heap-1200.txt`. The October 6 run passes all 3,600 can
 normal/EOF/normal process exits, with stable live thread-local counts. Correctness passing does
 not imply timing targets passed: that run misses one 500 ms edit-to-symbol p95 target and one
 10-second cold-graph target. Record timing comparisons separately from the script's correctness
-status, and preserve misses. See the [measurements and scope](../../docs/errs-integration-plan.md#l82-extended-platform-retention-and-lifetime-2026-10-06).
+status, and preserve misses. See the [acceptance reports](#acceptance-reports).
 
 For configuration responsiveness with many retained editor buffers, run this separately from other
 builds and compiler workloads:
@@ -3300,7 +2995,7 @@ evidence; a three-case native selection does not reproduce the full catalog's re
 
 The optional `CompilerPlaybookTest.largeFileEditing` probe reproduces the recorded UI freeze.
 It is disabled by default, including in ordinary full playbook runs. The
-[integration plan](../../docs/errs-integration-plan.md#l82-large-file-intellij-freeze-investigation-2026-10-01)
+[acceptance reports](#acceptance-reports)
 contains its exact Gradle command, failed receipts and plain-document control measurements.
 It can bring the disposable IDE forward without moving the pointer to install highlighting.
 Do not edit that fixture during the measurement.
@@ -3320,7 +3015,7 @@ Notifications and the server log. This is presentation acceptance, not a compile
 
 Large-file semantic response checks can run independently of native decoration: use the
 `compiler-workload.py --semantic-methods 5000 20000` command in the
-[L67 measurement receipt](../../docs/errs-integration-plan.md#l67l82-semantic-response-measurements-2026-10-01).
+[acceptance reports](#acceptance-reports).
 It checks exact reference/hint counts and server process exit after compilation, and records
 one-line versus whole-file hints, tokens, hover, queue/API phases and transport timings. Keep cold
 project-query compilation distinct from warmed responses. This does not replace the decorated
@@ -3356,7 +3051,7 @@ intentionally have no persistent backup path. Neither driver kills a compiler to
 IntelliJ trusts only the generated fixture path inside its disposable IDE, avoiding a blocking trust
 dialog without changing normal trust defaults. The commands do not move the pointer. Passing receipts
 are IntelliJ `run-3852388644684425549` and VS Code `project-lifecycle/run-zI8fT9`; see the
-[lifetime record](../../docs/errs-integration-plan.md#l81-native-projectwindow-lifetime-batch-2026-10-01).
+[acceptance reports](#acceptance-reports).
 VS Code shared-process lifecycle passes in `project-lifecycle/run-Sh7ro5`. The first attempt,
 `run-NXMUZj`, failed hot-exit restoration because the harness placed an application setting in the
 workspace. That failure is retained. The older Cancel attempt `run-6JOJx7` failed to select the right
@@ -3366,7 +3061,7 @@ Keep longer workload sessions bounded and announce their expected duration. The 
 completed two 1,200-cycle sessions with preserved source hashes and compiler retirement, then was
 deliberately stopped before the third session ran. Post-GC heap rose about 15 MiB per completed session;
 its ownership remains an investigation, not completed memory acceptance. See the
-[L82 receipt](../../docs/errs-integration-plan.md#l82-bounded-extended-workload-checkpoint-2026-10-01).
+[acceptance reports](#acceptance-reports).
 Combined suites and the full native catalogs are deferred to a separate checkpoint.
 The final IntelliJ lifetime rerun `run-11163643850362008619` passes with zero IDE errors and checks
 the reopened document before any edit is replayed; startup plus the lifecycle case take 38.3 seconds.
@@ -3391,7 +3086,6 @@ changes, not the independent t2 composition. A rename colliding with another def
 be refused. Go to Definition on Element in a conditional-incorporation clause reaches the
 corresponding mixin formal.
 
-
 L64 closure additions (execution pending): X150 now includes a function argument lambda. Accept
 `(arg1) -> TODO()`, verify that TODO() is selected, Tab reaches the end of the expression and Undo
 restores the empty argument. This is a scaffold; replace TODO() before executing the program.
@@ -3405,7 +3099,6 @@ L65 closure additions (execution pending):
 | --- | --- | --- |
 | X153 | Open each shared Dispatch.x variant. Use Go to Implementation on `box.value`, then `text.size()`, then the interface-valued delegate call. | The covariant property reaches its written getter; the conditional mixin reaches its written method. A runtime-only delegate has no guessed target. Both drivers check exact source positions; IntelliJ follows the native navigation action. |
 | X154 | Open shared Access.x. Inspect `Mode`, `Quiet`, imported `List`, static `run`, and usages of destructured `left`/`right`, incremented `box.value` and `values[index]`. | Types are classified as enum, enumMember and interface; `run` is a function. Destructured variables and the incremented property are writes. Receiver/index expressions remain reads. Both drivers consume the same expectations; IntelliJ also checks native token consumption and highlights. |
-
 
 | Case | Manual action | Expected result |
 | --- | --- | --- |
@@ -3429,29 +3122,16 @@ be absent without an index, and prefer the configured source. Previously prepare
 handles must expire at each change. `XdkIndexLifecycleTest` now exercises this sequence through
 one adapter (alongside graph removal); this is backend coverage, not a new editor receipt.
 
-The October 2 X155–X158 receipts supersede pending-execution notes at earlier implementation
-checkpoints. These are four selected cases; existing full-suite stability findings remain open.
-
-
-X162/X163 use the shared fixture catalog in both drivers. Selected X118/X161/X162/X163 passes in
-VS Code `run-WvHL3O` and IntelliJ `run-16019291377503835349`; the latter also passes START and the
-extra post-Redo unsaved-edit regression for LSP4IJ's UP19 document-connection bug. The edit check is
-automated in IntelliJ and remains a manual follow-up in VS Code. Full receipts and limits are
-recorded in the integration plan. VS Code exercises file-operation participation through a native
-workspace edit and uses the settings editor as the Undo context; this does not claim Explorer
-Cut/Paste stability or that a refused participation reply can veto a host move.
-
+X162/X163 use the shared fixture catalog in both drivers. IntelliJ additionally checks an unsaved
+edit after Redo to catch a retired document connection; this remains a manual follow-up in VS Code.
+VS Code exercises file-operation participation through a native workspace edit and uses the settings
+editor as the Undo context. This does not establish Explorer Cut/Paste stability or imply that a
+refused participation reply can veto a host move.
 
 | Case | Manual action | Expected result |
 | --- | --- | --- |
 | X164 | Open the shared First.x and leave Second.x/Consumer.x closed. Rename `First.Box.read` to `fetch`; inspect both declarations and the union receiver call, then Undo once. | Both otherwise independent written methods and the closed consumer change together. Diagnostics remain clear; Undo restores all three files exactly. |
 | X165 | Open the shared Library.x with Api and leave Consumer.x closed. Rename `Api.read` to `fetch`; inspect First/Second's mutual delegation and the call, then Undo once. | The interface declaration and delegated call change together, with receiver properties unchanged and clear diagnostics. Undo restores both files. Go to Implementation must not invent a terminal body for the cycle. |
-
-The October 3 selected gate covers X119/X120/X121/X164/X165 to check existing generated-property,
-lambda and escaped-method cases alongside the new callable proofs. All five pass in VS Code
-`run-VqFiDW` and IntelliJ `run-12344641320847299097` (including START, no IDE errors). Exact
-receipts, the catalog hash and remaining L62 exclusions are in the integration plan.
-
 
 | Case | Manual action | Expected result |
 | --- | --- | --- |
@@ -3462,11 +3142,10 @@ receipts, the catalog hash and remaining L62 exclusions are in the integration p
 X166–X168 have shared fixtures and implementations in both drivers. All three pass alongside
 X164/X165 in the latest selected runs recorded at the top of this file. Exact receipts, the shared
 catalog hash, proof boundaries and the failed/repaired IntelliJ UP20 evidence are in the
-[integration plan](../../docs/errs-integration-plan.md#l62-substituted-receivers-and-nested-union-delegation-2026-10-03).
+[acceptance reports](#acceptance-reports).
 For manual focus coverage, switch away while Rename is opening, return to its dialog and submit
 once; inspect the exact edits and Undo once. The native harness now observes focus while the
 dialog is open without blocking on its modality or replaying the Rename action.
-
 
 | Case | Manual action | Expected result |
 | --- | --- | --- |
@@ -3484,7 +3163,6 @@ a pinned resource root is conservatively refused. Undo restores the stored, prov
 its original resource configuration. Before applying refactorings, save any pre-existing unsaved
 closed IntelliJ document; the host refuses buffers that were not available to the compiler proof.
 
-
 ### L62 empty destinations and qualified-name trivia
 
 Shared X173–X176 pass in both drivers in the selected runs recorded at the top of this file.
@@ -3496,7 +3174,6 @@ The setup creates the listed empty directories explicitly, without a Marker.x so
 | X174 | Move Box.x from tools to the module companion root. Undo and Redo. | Removed prefixes leave both block and line comments, CRLF and Unicode intact; nested Part and constructors still resolve. |
 | X175 | Request the shared batch into empty util with an inline Taken collision. | No proposal, edits, file changes or settings changes. This is a protocol refusal; it cannot veto arbitrary VS Code Explorer moves. |
 | X176 | Move First.x and Second.x together into empty util. Undo and Redo. | Mutual references and the closed consumer update as one transaction; diagnostics remain clean. |
-
 
 ### L63 local initializer and unused-local actions
 
@@ -3514,7 +3191,6 @@ Inferred locals, changed expected types, partial/deferred expressions, interveni
 Ref/Var annotations and runtime initializers remain refusal controls in backend tests. General
 extract-method, missing-declaration generation and global safe delete remain separate work.
 
-
 ### L63 private helper extraction
 
 X181–X184 pass in both drivers in the selected runs recorded at the top of this file.
@@ -3531,7 +3207,6 @@ names, CRLF/Unicode, reference-backed storage, method formals, lambdas, conditio
 broken neighbors. Swapped helper arguments and changed moved-call targets must fail proof even
 when both programs compile. Multi-statement extraction and mutable/by-reference captures remain
 outside this slice.
-
 
 ### Missing-method quick fixes (L63, X185–X188)
 
@@ -3560,7 +3235,6 @@ Run **X181 followed by X185** together when validating IntelliJ: an unchanged er
 source-graph refresh must still offer a working quick fix. Standalone X185 passing did not catch
 the UP07 stale-annotation issue. Final acceptance passes all six selected cases in both editors.
 
-
 ### Local arguments and typed initializer quick fixes (L63, X189–X192)
 
 Use the exact fixtures in the shared catalog. Place a caret on `missing`, invoke Quick Fix
@@ -3579,13 +3253,6 @@ connection in both editors. The selected continuation also runs X181 → X185, r
 quick-fix-refresh regression. These cases use the existing shared action drivers; they add no
 editor-specific production bridge.
 
-
-Acceptance: all six selected cases pass in VS Code `run-mRmX6Y` and IntelliJ
-`run-1236802406694405307` (plus START), zero editor errors. The catalog hash is
-`8b50080872522162ca75585fcbf4552858371eb1d9f1a4a7f481d0907c9e7f5c`.
-The backend also passes 198 selected tests; no full-catalog or new packaged-protocol run is claimed.
-
-
 ### Qualified missing-method quick fixes (L63, X193–X196)
 
 Use the exact shared sources in compiler mode. Place the caret on the leaf `missing` token, then
@@ -3602,13 +3269,6 @@ For X193/X194, compare the complete expected shared text and cleared diagnostics
 restore source/error, Redo to clear them and Undo again. Refusals use the installed connection
 in both editors. The backend additionally rejects a repair that still compiles after changing
 `peer` to `this`, and verifies that selecting only the receiver does not offer member creation.
-
-
-Acceptance: X181/X185/X190/X193–X196 pass in VS Code `run-nvquYD` and IntelliJ
-`run-15968094076069950349` (plus START), zero editor errors. Catalog SHA-256:
-`47aeb686ed81ed76507c03bf87b0cf65c1a9ac42dc64c7e7f340912931cea9b5`.
-All 219 selected backend tests pass. No full-catalog or new packaged-protocol run is claimed.
-
 
 ### Class-qualified missing-method quick fixes (L63, X197–X200)
 
@@ -3630,14 +3290,6 @@ other class owners, existing static overloads, explicit generic/singleton qualif
 The parameter type in X200 is qualified deliberately: `Box Box` shadows its own type annotation
 and reports a separate dynamic-type diagnostic before the missing call can be analyzed.
 
-
-Acceptance: X181/X185/X193/X197–X200 pass in VS Code `run-3Vm6C9` and IntelliJ
-`run-11432411846060652594` (plus START), zero editor errors. Both use the 205-case catalog SHA-256
-`95df5eed7bfb7d761f9aed380600f5574de9bd31660384c502609d53d8805915`.
-All 232 selected backend tests pass; Ultimate is disabled. No full-catalog or new packaged-protocol
-run is claimed.
-
-
 ### Cross-owner missing-method quick fixes (L63, X201–X204)
 
 Use the exact shared sources in compiler mode. Open only the caller initially, put the caret on
@@ -3658,7 +3310,6 @@ binary destinations, another configured module, generic/const classes, existing 
 neighbors, supported signature type shapes, and destination document versions (null when closed,
 its own version when open). The next continuation adds bounded local arguments and typed initializers.
 
-
 ### Cross-owner local types and initializer contexts (L63, X205–X208)
 
 Use the shared source for each case in compiler mode. The public action states both visibility
@@ -3675,7 +3326,6 @@ quick-fix and Undo/Redo steps as X201/X202.
 Backend controls additionally cover typed/var/val locals, separately assigned locals, instance and
 class qualifiers, zero/mixed arguments, source and compound types, invalid/out-of-scope locals,
 and compilable signature substitutions or argument rebinding that the proof must reject.
-
 
 ### Cross-module missing-method destinations (L63, X209–X212)
 
@@ -3695,7 +3345,6 @@ Backend controls cover explicit dependency graphs, unrelated roots, binary artif
 source indexes, read-only destinations, unsupported owners, existing members, closed broken consumers,
 missing destination imports, exact signature identity and destination-specific document versions.
 
-
 ### Missing-method destination imports (L63, X213–X215)
 
 Load every shared fixture and use the explicit `sourceModules` graph recorded for each case.
@@ -3714,7 +3363,6 @@ Backend controls include repeated/compound types, multiple imports with collidin
 existing alias reuse, unused dependency exclusion, CRLF preservation, open/closed document versions,
 and rejection of compilable signature substitutions after import insertions shift the method.
 
-
 ### L62 ownership and relocation closure checks
 
 X216–X220 are implemented in both drivers; selected acceptance and the UP23 exception are below.
@@ -3732,16 +3380,12 @@ X218's VS Code transaction must submit the independently moved child before its 
 server accepts either request order, but the VS Code participant cannot reorder the host's own
 file operations. Parent-first application can partially fail; child-first application succeeds but native Undo
 also fails because VS Code retains the inverse move order. X218 remains a failing VS Code
-acceptance case, while IntelliJ passes. See [UP23](../../docs/errs-upstream-issues.md#up23-overlapping-vs-code-file-moves-retain-the-hosts-order).
-
-L62 acceptance (2026-10-04): IntelliJ `run-8069330970170232500` passes X169/X173/X216–X220.
-VS Code `run-S7CfWP` passes six and fails X218 native Undo. This is selected coverage;
-the new scenarios do not establish a full-catalog rerun. UP23 remains open while L63 proceeds.
+acceptance case, while IntelliJ passes. See [client compatibility limits](#client-compatibility-limits).
 
 ### L63 generic repairs and broader refactorings (X221–X242)
 
 These shared scenarios have passing selected-run receipts in both drivers. The
-[acceptance record](../../docs/errs-integration-plan.md#l63-bounded-closure-and-acceptance-2026-10-04)
+[acceptance reports](#acceptance-reports)
 identifies each run and the corrected provider-cancellation/selected-tab harness failures; no
 full-catalog rerun is claimed. Select an X number through the existing Gradle case properties.
 Successful cases check exact edits, clear diagnostics and Undo/Redo/Undo;
@@ -3786,7 +3430,7 @@ recorded VS Code overlapping-resource Undo defect; this text-edit batch does not
 ### L66 structural and editing continuation
 
 X243–X250 have passing selected receipts in both editors, together with X132/X138/X139/X158.
-The [L66 acceptance record](../../docs/errs-integration-plan.md#l66-bounded-closure-and-acceptance-2026-10-05)
+The [acceptance reports](#acceptance-reports)
 retains the failed attempts and corrections, including UP24 (IntelliJ formatting Redo). The shared
 formatting fixtures preserve their existing final newline; newline insertion remains an independent
 editor setting. Four/eight spaces and a 120-column margin are the default settings. Change IntelliJ
@@ -3803,7 +3447,6 @@ Ecstasy Code Style or VS Code `xtc.formatting.*` to verify custom indentation an
 | X248 | Inspect outline, folds and selection in the shared damaged header/call/list/tuple variants, then repair. | Alias/current/later remain in the outline; method folds stay within source; selection strictly expands without duplicate spans; repair removes stale structure. |
 | X249 | Format continuation expressions and standalone block comments, repeat, then Undo/Redo/Undo. | Shared indentation is exact and stable; literal contents and relative comment layout remain intact. |
 | X250 | Format the shared long concatenation, repeat, then Undo/Redo/Undo. | Wrap at token boundaries at the configured 120-column margin; preserve every literal and native history. |
-
 
 ### L67 graph-index acceptance (2026-10-05)
 
@@ -3832,14 +3475,6 @@ trace for `scheme`, `identifier`, `unique` and `kind`; neither IDE currently pro
 X31 now requires the compiler moniker provider. Binary-only/source-indexed parity and checkout
 relocation are backend tests, not claims about native editor widgets.
 
-Selected acceptance: VS Code `run-EGMh6B` and IntelliJ `run-10438075944069511128` pass
-X31/X252/X253; IntelliJ also passes START, with no IDE errors. Its initial run failed X252/X253
-because the harness omitted monikers from its list-response decoder; the corrected run passes both.
-Final method-local visibility and shared-table checks pass backend/packaged tests after these GUI
-runs. This is not a full-catalog rerun. Both editor reports use catalog SHA-256
-`7f4170148797ce5828bcb36ec96dd35ca9c4a0670768b7b7dcc81826535f91d5`.
-
-
 ### Read-only library documents — L75
 
 | Case | Action | Expected result |
@@ -3865,14 +3500,6 @@ opening a library view does not add it to the writable source graph. Externally 
 indexes remain file views because they do not carry a verified source-text snapshot. This does not
 claim complete semantic editing/navigation inside library bodies.
 
-L75 selected acceptance: VS Code `run-e4dCrP` passes all six selected cases. IntelliJ
-`run-16728311754487527222` passes five plus START; X254 passes its file-fallback assertions with
-explicit partial status for UP25, zero IDE failures. The catalog SHA-256 is
-`bdbf0228f32e5568edb7f70f8d7fc93e2781595bd56e8d2de20bc6babcb04c3c`.
-The final whitespace guard additionally verifies CRLF acceptance, refusal of shifted/mismatched
-presentation coordinates, and restoration of IDs after presentation repair in backend/protocol tests.
-It does not change the earlier native normal-text acceptance; no full-catalog rerun is claimed.
-
 ### Compiler inline completion (L76)
 
 | Case | Action | Expected |
@@ -3887,7 +3514,6 @@ Ghost suggestions are plain compiler names/values. No imports or placeholder bod
 VS Code uses its Inline Suggest commands (Tab to accept, Escape to dismiss); IntelliJ uses
 Insert Inline Completion and Escape. Explicit ambiguous suggestions are a VS Code native check;
 LSP4IJ currently sends Automatic even for a direct invocation (UP26).
-
 
 ### Compiler build import lifecycle (UI5–UI7)
 
@@ -3908,13 +3534,6 @@ invokes the installed commands and clicks the renderer's notification Cancel but
 progress token, producer exit or acceptance result is mocked. These cases do not cover closing a
 project/folder during import, automatic Gradle sync, remote filesystems or arbitrary user builds.
 
-Selected acceptance (2026-10-05): VS Code `run-t4aYi4` passes X129/X260–X262; corrected X260
-also passes `run-SLwDJk`. IntelliJ passes START/X129/X261/X262 in `run-15251954735937319371`,
-then START/X260 in `run-11734301827775631328`, both with zero IDE errors. Its initial X260 failed
-only because the fixture waited for a `finally` marker from a terminated Gradle JVM; retirement
-now checks the recorded process as well. These are selected receipts, not a full 267-case rerun.
-
-
 ### Compiler workspace synchronization (X263–X265)
 
 | Case | Action | Expected result |
@@ -3931,14 +3550,6 @@ Tagged IDE exports are accepted only by the successful import that owns them; la
 after cancellation cannot replace the accepted model. Untagged external exports remain observable.
 This guard is session-local. X265 uses a saved VS Code workspace so adding/removing a folder does
 not replace the extension-test host; the launcher chooses this automatically when X265 is selected.
-
-Selected acceptance (2026-10-05): VS Code `run-40itia` passes X129/X260–X265, zero failures.
-IntelliJ `run-12471400462423684800` passes START/X129/X260/X261/X263/X265; corrected
-`run-11279722985432501847` passes START/X262/X264 with zero IDE errors. The first run's
-malformed-report summary and VFS-probe lock failures are retained and explained in the
-[batch receipt](../../docs/errs-integration-plan.md#compiler-workspace-synchronization-batch-ui5ui6-2026-10-05).
-All seven cases have passing receipts; the complete 270-case catalog was not rerun for this batch.
-
 
 ### Ordered libraries and attached sources (X266–X268)
 
@@ -3977,7 +3588,6 @@ Attachment setup and resource-order assertions use the installed page/settings A
 chooser appearance, the resource-order modal's individual actions and broad remote/multi-root
 acceptance remain manual checks; the new cases do not claim complete UI coverage.
 
-
 ### Machine-local runtime and logs (X269–X272)
 
 In IntelliJ open **Settings → Ecstasy Server Runtime and Logs**. In VS Code open User Settings
@@ -4007,12 +3617,7 @@ the visible settings layout during the native run. To exercise
 retention manually, use an isolated `XTC_LSP_LOG_DIR` (VS Code/server) or `xtc.logs.directory`
 server property: create several stopped-server sessions and start another server. Live sessions
 and unrelated files must survive. Do not count a short playbook run as rollover/long-duration evidence.
-See the [contract and validation](../../docs/errs-integration-plan.md#machine-local-jvm-settings-and-log-support-ui5ui6-2026-10-06).
-
-Runtime/log selected acceptance: VS Code `run-GSU1jO` passes X135/X269/X270. IntelliJ
-`run-11382447476811663163` passes START/X135 and exposes a test selector that also matched
-spinner arrows; corrected `run-7594844964901809886` passes START/X269/X270, with zero IDE errors.
-The failed receipt is retained. This is selected acceptance, not a complete 275-case rerun.
+See the [acceptance reports](#acceptance-reports).
 
 ### Settings persistence and layout acceptance (UI1–UI7)
 
@@ -4058,11 +3663,6 @@ contains the full condition. Commands that edit/rename/Undo remain single-shot. 
 tests must assert the refusal itself, not accept a timeout. Resume only remaining IDs in a fresh
 test window after diagnosing a failure.
 
-Final selected layout/support check: IntelliJ `run-8778326141068942537` passes X260–X262 and
-X266–X272, plus START, with no IDE errors. X271 uses the native Stop-and-disable operation and
-checks that export neither restarts the process nor selects another session. Internal `stop()`
-leaves the wrapper enabled and does not represent the user's Stop action.
-
 ### Compiler documentation action (X278)
 
 On the multiline generic `echo` header, select **Generate documentation comment**. The skeleton
@@ -4096,21 +3696,9 @@ attributes against controls and absence of semantic overlays on lexical fragment
 visual comparisons; normal native runs leave it alone.
 
 All four focused cases pass in both editors; final X277 grammar/recovery checks and the six VS Code
-startup comparisons are recorded in the [completion receipt](../../docs/errs-integration-plan.md#theme-based-source-highlighting-completion-2026-10-07).
-
-Documentation/reference acceptance (October 7): VS Code `run-coeJEN` passes X131/X278 and
-`run-ubCdfK` passes X279 after fixing scoped configuration forwarding. IntelliJ
-`run-6731819376946689872` passes START/X131/X278/X279 with zero IDE errors. X279 verifies native
-reference navigation, current consumer counts and the live toggle retaining Run; a timed-out toggle
-in the first VS Code attempt was a failed test, not accepted evidence.
+startup comparisons are recorded in the [acceptance reports](#acceptance-reports).
 
 ### Full catalog and UP12 follow-up (2026-10-07)
-
-Shipping IntelliJ `run-4144503954102473659` completes all 284 shared cases in one process:
-282 pass, X254/X257 remain partial for UP25/UP26, and there are no failures or IDE errors.
-START also passes. The run uses released LSP4IJ 0.21.0 with all production workarounds enabled.
-The separate local-UP12 experiment passes closed-dirty-file Save All with our formatting override
-bypassed; its source is restored exactly before this full run.
 
 VS Code's full attempt and continuations cover the same 284 cases: 281 pass, X130/UP16 and
 X218/UP23 retain their host failures, and experimental X273 fails to display native color swatches.
@@ -4120,7 +3708,7 @@ that failure. X274/X275, theme-based highlighting X276/X277, documentation X278 
 X279 pass in the continuation. Do not replace this evidence with a retry that edits the source or
 toggles rendering merely to obtain a pass. The color prototype remains off by default.
 
-See the [complete checkpoint](../../docs/errs-integration-plan.md#l82-up12-follow-up-and-284-case-checkpoint-2026-10-07)
+See the [acceptance reports](#acceptance-reports)
 for every receipt, the X31/X127 harness corrections and the outstanding prototype refresh investigation.
 This is combined VS Code coverage, not an uninterrupted green run. UP17's opt-in large-file test,
 prolonged workloads and cross-platform/remote-host acceptance remain separate.

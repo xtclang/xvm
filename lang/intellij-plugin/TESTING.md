@@ -26,96 +26,36 @@ E2E framework, log harvesting, and how each approach maps to the plugin's extens
 
 ## Current State
 
-The `errs` branch has headless unit/manifest tests under `src/test/kotlin` and the native
-Starter+Driver compiler playbook under `src/integrationTest/kotlin`. The current headless run
-contains 122 tests. It covers compiler configuration/build models, root
-watch ownership, source graphs, lifecycle/process cleanup, edit/move guards, startup and diagnostic
-messages, capabilities, manifest wiring and bundled resources.
-The eight new compiler-import tests cover accepted-report ownership, cancellation/failure,
-delayed watcher completion, overlapping imports and project-owned progress disposal. The progress
-owner tests use application-free indicators; shared X260 separately exercises the visible native
-Cancel button. X261/X262 cover failed/invalid Gradle output and retry. See the
-[shared import receipt](../../docs/errs-integration-plan.md#shared-compiler-import-acceptance-and-remaining-ui-work-2026-10-05).
+Headless unit and manifest tests live under `src/test/kotlin`; the native Starter/Driver harness
+lives under `src/integrationTest/kotlin`. They cover project configuration/import ownership,
+watchers, source graphs, lifecycle, edit guards, startup, diagnostics and packaged resources.
 
-The native suite uses the shared 282-scenario catalog (X1–X277, CFG1–CFG3, 7a.8/7a.9).
-It launches an isolated Community-capable IntelliJ environment with Ultimate disabled. Selected
-runs preserve explicit `partial` statuses where LSP4IJ cannot exercise a native feature; neither
-passing protocol assertions nor an unselected scenario count as full UI acceptance. The
-[manual playbook](../doc/manual-test-plan.md) and
-[integration receipt](../../docs/errs-integration-plan.md) are authoritative for current results
-and upstream limitations.
-
-Post-rebase acceptance covers the complete catalog across `run-1475359363733913185` and
-`run-7075359973250470210`: 265 passes, X254/X257 partial for UP25/UP26, zero IDE errors. The
-continuation repairs fixture graph ordering and stale closed dirty buffers; it does not replace
-native actions with direct edits. Startup, focus recovery and project lifecycle also pass.
-The opt-in UP17 large-file diagnostic is excluded. Original failures and exact counts remain in
-the [receipt](../../docs/errs-integration-plan.md#modern-vs-code-baseline-and-complete-rebase-acceptance-2026-10-05).
-
-October 6 settings acceptance covers all 277 shared cases across the full attempt, continuation
-and targeted corrections: 275 pass; X254/X257 remain partial for UP25/UP26. The final ten-case
-layout/support rerun has no IDE errors. Full-exit settings persistence also passes with compiler
-and Tree-sitter. These are combined receipts, not a single uninterrupted green run; see the
-[UI completion record](../../docs/errs-integration-plan.md#ui1ui7-completion-batch-2026-10-06).
-
-The final October 6 L82 run, `run-11949889098742489342`, completes all 277 shared scenarios in
-one uninterrupted process: 275 pass, X254/X257 remain partial for UP25/UP26, zero failures and
-zero IDE errors. START also passes. This uses IntelliJ 2026.2.3 with Ultimate disabled and
-shipping LSP4IJ 0.21.0; all production bridges are restored. The earlier navigation-chooser and
-report-page probe failures are fixed without replaying mutations or extending timeouts. See the
-[L82 acceptance record](../../docs/errs-integration-plan.md#l82-upstream-isolation-and-full-catalog-acceptance-2026-10-06).
-
-The later L82 configuration-responsiveness implementation passes START/X147/X148/X259 in
-`run-13789526801058807403`, with zero IDE errors on the same shipping dependency and Community
-feature set. VS Code passes the matching selection. The 56-buffer and real-platform measurements
-are separate packaged-server workloads; see the
-[configuration receipt](../../docs/errs-integration-plan.md#l82-configuration-responsiveness-2026-10-06).
-This selected rerun does not replace the earlier full-catalog receipt or its native limitations.
-
-From the composite root:
+The native suite uses the shared **284-scenario catalog**. It launches a disposable IntelliJ
+profile with Ultimate disabled and released LSP4IJ. Startup editing, focus recovery, settings
+persistence and project lifecycle are separate tests in the same task. The large-file diagnostic
+is opt-in. See the [manual playbook](../doc/manual-test-plan.md) for fixtures and
+[client compatibility limits](../doc/manual-test-plan.md#client-compatibility-limits).
 
 ```bash
 ./gradlew :lang:intellij-plugin:test \
-  -PincludeBuildLang=true -PincludeBuildAttachLang=true --no-build-cache
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true --no-build-cache
 ./gradlew :lang:intellij-plugin:testCompilerPlaybook \
-  --tests '*CompilerPlaybookTest.compilerPlaybook' \
-  -Plsp.adapter=compiler -PincludeBuildLang=true -PincludeBuildAttachLang=true --no-build-cache
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true --no-build-cache
 ```
 
-Use `-PintellijPlaybookCases=X145,X146,X147,X259` for exact scenario selection. Omit it for the
-full implemented catalog. The status bar shows completed/remaining counts and the current case's
-short description. The driver can restore focus without moving the mouse; avoid typing into the
-fixture while it runs. All waits are bounded and completed edits are not replayed after focus loss.
-Timeouts, cancellations and failed fixture cleanup stop that IDE run; remaining cases are recorded
-as not run. A completed assertion may be collected only after successful cleanup. Expected protocol
-refusals must identify the actual refusal and cannot treat a timeout as success. Resume the remaining
-IDs in a fresh disposable IDE after diagnosing the failure; do not replay a timed-out mutation.
+Use `--tests '*CompilerPlaybookTest.compilerPlaybook'` to select only feature tests, and
+`-PintellijPlaybookCases=X145,X146,X147,X259` for a bounded selection. Omit the case property for
+the full implemented catalog. Run native editors sequentially: the driver can restore desktop
+focus, and fixture modifications during a test fail explicitly. Completed mutations are not replayed.
 
-Unit results are in `build/test-results/test/*.xml`. Native per-case results, IDE failures,
-server traces and screenshots are under `build/reports/compiler-playbook/run-*`. A green Gradle
-summary alone is insufficient: inspect skipped counts, per-case statuses and `ideFailures`.
-`--rerun-tasks --no-build-cache` forces a complete re-execution when required.
+JUnit XML is under `build/test-results/`; per-case results, IDE errors, traces and screenshots are
+under `build/reports/compiler-playbook/run-*`. Read the actual case statuses and `ideFailures`;
+a green task summary is insufficient. Partial and unselected cases do not count as full native
+acceptance. Test history from older builds does not substitute for running the current artifact.
 
-The compiler is now the default build adapter; `-Plsp.adapter=compiler` remains an explicit override.
-The native driver reuses its cached signed IntelliJ distribution and JBR when the product and
-version match. No installer download or extraction is needed for an existing installation. macOS
-native acceptance retains a signed `.app`: Gradle's reshaped compiler-classpath distribution cannot
-be launched through the signed native executable. Config, plugins and indices remain isolated per run.
-
-After native runs, `pruneCompilerPlaybookReports` keeps the five newest completed runs' workspaces,
-logs, screenshots and reports. Older runs retain compact results/progress files; their bulky
-payloads are removed. Disposable sandbox indices, plugin copies, config and temp data are removed
-after confirmed shutdown even for recent runs. Set `-PplaybookRetainedRuns=N` to change the count,
-or create `.keep-artifacts` in a `run-*` directory to preserve its payloads. Unfinished runs are
-left for investigation. The task is also safe to invoke separately; it never follows payload
-symlinks or deletes Git worktrees. Compact receipts are intentionally retained without a count limit.
-
-
-The sections below provide testing approaches and examples; consult `build.gradle.kts` and the
-version catalog for the active dependencies and task wiring, rather than copying older examples
-as current build configuration.
-
----
+The compiler is the default adapter. Native tests reuse the cached signed IntelliJ distribution
+and JBR, with isolated configuration, plugins and indices. Report cleanup retains five completed
+payloads; `-PplaybookRetainedRuns=N` changes that count, and a `.keep-artifacts` marker preserves a run.
 
 ## Testing Approaches Overview
 
@@ -801,27 +741,11 @@ same. Omit the property to return to the released dependency. Using the built di
 the Gradle plugin's temporary ZIP metadata extraction invalidating configuration-cache reuse.
 No local path or snapshot is committed as a default, and no plugin is published by this task.
 
-The October 6 local nine-repair build passes the 15-case settings/formatting/move/quick-fix/refresh
-selection, startup editing and two-project disposal, with zero IDE errors. These runs keep the
-release bridges enabled; the [upstream register](../../docs/errs-upstream-issues.md#local-plugin-acceptance-2026-10-06)
-distinguishes integration compatibility from the per-bridge removal gates.
-
-The subsequent [individual isolation receipt](../../docs/errs-upstream-issues.md#individual-bridge-isolation-2026-10-06)
-tests UP01/UP07/UP08/UP13/UP19/UP27 with only that bridge disabled, then restores the original
-source. Those selections pass. At that checkpoint, UP12's absent-editor fix fails closed-dirty-file save because
-the upstream formatting path does not reconnect that buffer; retain the production override.
-Each local experiment retains its patch, source/plugin hashes and native JSON under
-`build/reports/upstream-isolation-2026-10-06/`. A passing bypass experiment does not authorize
-removal on the Marketplace default, which lacks these local repairs.
-
-The [October 7 UP12 follow-up](../../docs/errs-upstream-issues.md#up12-closed-buffer-follow-up-2026-10-07)
-at local upstream `15bb34bd` also reconnects the current closed buffer and rejects stale replies.
-With our formatting override bypassed, `run-17693623788789126287` passes START/X31/X127/X138/X139
-and records no IDE errors. The source is restored exactly afterward. Standalone formatting's
-UP24 Redo behavior and closed-buffer connection retention remain separate requirements; keep the
-production override on released 0.21.0. Restored-shipping `run-4144503954102473659` then completes
-all 284 shared cases: 282 pass, X254/X257 retain UP25/UP26 partial status, no failures or IDE errors.
-START also passes. This ordinary catalog does not include the opt-in UP17 large-file diagnostic.
+The release build retains the Ecstasy compatibility bridges for LSP4IJ 0.21.0.
+An experiment against a locally repaired dependency does not justify removing them from the
+published plugin. Validate each bridge independently, then repeat native acceptance with the
+released dependency. Standalone formatting Undo/Redo and reconnection of closed dirty buffers
+are separate requirements. See the [client limits](../doc/manual-test-plan.md#client-compatibility-limits).
 
 Readiness polling accepts a successful observation once, using a monotonic deadline. Pinned
 Driver `waitFor` rechecks success and can falsely report a timeout during connection replacement
@@ -936,7 +860,6 @@ All testing and development tasks for the IntelliJ plugin, runnable from the pro
 - [Integration Tests: API Interaction (Mar 2025)](https://blog.jetbrains.com/platform/2025/03/integration-tests-for-plugin-developers-api-interaction/)
 - [IntelliJ Platform SDK — IDE Development Instance](https://plugins.jetbrains.com/docs/intellij/ide-development-instance.html)
 
-
 ### L82 refresh and VFS regression selection
 
 X146 additionally keeps 16 extra documents connected and schedules 64 lens, hint and semantic-token
@@ -944,28 +867,18 @@ refreshes each while a write action delays their read passes. The test temporari
 IDE tab limit and restores it afterward. The untouched consumer must still show Int, then String,
 then Int hints. X259 covers hint settings and connection retirement during restart. Hints stay enabled.
 
-For the UP03/UP27 repair, the focused selection is X103/X118/X130/X146/X161/X162/X163/X169/
-X173/X174/X175/X176/X216/X217/X218/X259. `run-11532602109763278599` passes all 16 plus START,
-with zero IDE errors. The 172-case continuation `run-13878115092192383073` subsequently passes
-with zero IDE errors/freeze dumps (two known partial cases). Together with the first segment it
-covers all 264 scenarios, but a corrected X185 popup-harness failure means this is not one
-uninterrupted clean run. Keep the full-suite IDE-error gate; do not suppress upstream alerts. `PreflightedRenamesTest` also tests the production launcher with an unset
-optional class loader, preventing the startup regression seen in `run-2406379153883211212`.
-See the [repair receipt and extraction map](../../docs/errs-integration-plan.md#l82-intellij-refresh-and-vfs-repair-2026-10-05).
-
+The refresh and move selection is X103/X118/X130/X146/X161/X162/X163/X169/
+X173/X174/X175/X176/X216/X217/X218/X259. Keep the full-suite IDE-error gate;
+do not suppress upstream alerts. `PreflightedRenamesTest` also tests the production launcher
+with an unset optional class loader.
 
 Compiler workspace synchronization now has shared X263–X265 cases for nested composite input
 aggregation, automatic Gradle refresh/export watching, and project/folder closure during import.
 Both clients preserve explicit settings and the last accepted inputs after failed refresh.
-X129/X260–X265 now have passing selected receipts in both editors: VS Code `run-40itia`;
-IntelliJ `run-12471400462423684800` plus corrected `run-11279722985432501847` (zero IDE
-errors in the correction). Headless/client checks pass: 112 IntelliJ units, 37 VS Code extension
-tests, three Gradle model tests and five backend build-model tests. Late daemon publication after
+Late daemon publication after
 cancellation is guarded by import identity; the configuration cache is reused across identities.
 Automatic exports require an initial imported report; VS Code uses public Gradle task events in
-trusted local workspaces. The catalog has 270 cases; this was a selected run, not a full rerun.
-See the [contract, failures and commit map](../../docs/errs-integration-plan.md#compiler-workspace-synchronization-batch-ui5ui6-2026-10-05).
-
+trusted local workspaces.
 
 Ordered library settings add X266–X268. The driver operates the installed Compiler settings
 components, checks cancel/reset/apply and ordering, opens the compiler-selected read-only source
@@ -974,9 +887,8 @@ The shared `prepareLibraryPlaybook` task produces two versions of a binary and m
 neither editor bundles test binaries in source control. Use
 `-PintellijPlaybookCases=X266,X267,X268` for this selection. The new URI round-trip regression
 keeps case-sensitive module names in the virtual URI path because hosts normalize URI authorities.
-See the [batch receipt](../../docs/errs-integration-plan.md#ordered-libraries-and-attached-sources-batch-ui3ui4ui6-2026-10-06)
+See the [acceptance reports](../doc/manual-test-plan.md#acceptance-reports)
 for native results; a successful fallback-file check does not close UP25's virtual-editor gap.
-
 
 ### Machine-local JVM tuning and log support
 
@@ -996,15 +908,8 @@ last recorded launch, including up to 64 KiB of launcher output. Its manifest id
 mode and truncation and lists included files; another project’s logs are never substituted. Shared
 X269–X272 cover settings, restart, live/offline export and recovery from an intentional failed JVM
 launch. Full editor exit/reopen has a separate two-process persistence test. Native OS save-dialog
-layout and rollover stress remain manual checks. New acceptance results are tracked in the
-[UI completion batch](../../docs/errs-integration-plan.md#ui1ui7-completion-batch-2026-10-06).
-See the [contract and receipt](../../docs/errs-integration-plan.md#machine-local-jvm-settings-and-log-support-ui5ui6-2026-10-06).
-
-Runtime/log selected acceptance: VS Code `run-GSU1jO` passes X135/X269/X270. IntelliJ
-`run-11382447476811663163` passes START/X135 and exposes a test selector that also matched
-spinner arrows; corrected `run-7594844964901809886` passes START/X269/X270, with zero IDE errors.
-The failed receipt is retained. This is selected acceptance, not a complete 275-case rerun.
-
+layout and rollover stress remain manual checks. See the [acceptance report format](../doc/manual-test-plan.md#acceptance-reports) for
+how these checks are recorded.
 
 The UI completion gate includes `--tests '*CompilerPlaybookTest.settingsPersistence'` on
 `testCompilerPlaybook`, with the usual compiler adapter and both lang inclusion flags. It starts
@@ -1018,9 +923,4 @@ absence of broad semantic overlays and exact damage/repair recovery. It explicit
 TextMate token types, rejecting a plain-text lexical fallback. Select either by its stable
 X ID. Normal runs retain the current color scheme. Selected X41/X154/X276/X277 and the final X277
 regression run pass with zero IDE failures; see the
-[receipt](../../docs/errs-integration-plan.md#theme-based-source-highlighting-completion-2026-10-07).
-
-October 7 documentation/reference selection: `run-6731819376946689872` passes START/X131/X278/X279
-with zero IDE errors. X278 activates the native intention and Undo/Redo. X279 inspects rendered
-Code Vision entries, invokes the installed entry's click handler without moving the mouse, selects
-an unopened consumer through Show Usages, then checks edit refresh and the live reference setting.
+[acceptance reports](../doc/manual-test-plan.md#acceptance-reports).
