@@ -81,9 +81,10 @@ public class VariableDeclarationStatement
 
     /**
      * @return the Register for this VariableDeclarationStatement, if any has been created by this
-     *         point in the compilation process
+     *         point in the compilation process. Narrowed uses can be matched to this declaration
+     *         using {@link Register#getOriginalRegister()} and object identity.
      */
-    Register getRegister() {
+    public Register getRegister() {
         return m_reg;
     }
 
