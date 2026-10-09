@@ -323,7 +323,7 @@ public class Annotation
         if (getAnnotationType().getExplicitClassFormat() != Component.Format.ANNOTATION) {
             log(errs, Severity.ERROR, VE_CLASS_NOT_ANNOTATION,
                     getAnnotationClass().getValueString());
-            fHalt |= ensureErrorListener(errs).isAbortDesired();
+            fHalt |= errs.isAbortDesired();
         }
 
         return fHalt;
