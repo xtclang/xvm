@@ -628,12 +628,14 @@ public class RelOpExpression
             return null;
         }
 
+        ErrorListener probe = silent(PROBE);
+
         String sMethod = getDefaultMethodName();
         String sOp     = operator.getId().TEXT;
-        if (expr1.testFit(ctx, typeRequired, false, silent(PROBE)).isFit()) {
+        if (expr1.testFit(ctx, typeRequired, false, probe).isFit()) {
             Set<MethodConstant> setOps = typeRequired.ensureTypeInfo().findOpMethods(sMethod, sOp, 1);
             for (MethodConstant idMethod : setOps) {
-                if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, silent(PROBE)).isFit()) {
+                if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, probe).isFit()) {
                     TypeConstant typeReturn = idMethod.getRawReturns()[0];
                     if (typeReturn.containsAutoNarrowing(false)) {
                         typeReturn = typeReturn.resolveAutoNarrowing(pool(), true, typeRequired, null);
@@ -649,10 +651,10 @@ public class RelOpExpression
 
         if (typeRequired.isParamsSpecified()) {
             for (TypeConstant typeParam : typeRequired.getParamTypesArray()) {
-                if (expr1.testFit(ctx, typeParam, false, silent(PROBE)).isFit()) {
+                if (expr1.testFit(ctx, typeParam, false, probe).isFit()) {
                     Set<MethodConstant> setOps = typeParam.ensureTypeInfo().findOpMethods(sMethod, sOp, 1);
                     for (MethodConstant idMethod : setOps) {
-                        if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, silent(PROBE)).isFit()) {
+                        if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, probe).isFit()) {
                             TypeConstant typeReturn = idMethod.getRawReturns()[0];
                             if (typeReturn.containsAutoNarrowing(false)) {
                                 typeReturn = typeReturn.resolveAutoNarrowing(pool(), false,
@@ -692,6 +694,8 @@ public class RelOpExpression
         Set<MethodConstant> setOps = typeLeft.ensureTypeInfo().findOpMethods(
                 getDefaultMethodName(), operator.getId().TEXT, 1);
         if (!setOps.isEmpty()) {
+            ErrorListener probe = silent(PROBE);
+
             TypeConstant typeBest = null;
             TypeFit      fitBest  = TypeFit.NoFit;
             for (MethodConstant idMethod : setOps) {
@@ -706,9 +710,9 @@ public class RelOpExpression
                 }
 
                 TypeConstant typeParam = idMethod.getRawParams()[0];
-                TypeFit      fit       = expr2.testFit(ctx, typeParam, /*fExhaustive*/ false, silent(PROBE));
+                TypeFit      fit       = expr2.testFit(ctx, typeParam, /*fExhaustive*/ false, probe);
                 if (!fit.isFit()) {
-                    fit = expr2.testFitExhaustive(ctx, typeParam, silent(PROBE));
+                    fit = expr2.testFitExhaustive(ctx, typeParam, probe);
                 }
 
                 if (fit.betterThan(fitBest)) {
