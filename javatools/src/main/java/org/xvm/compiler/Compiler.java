@@ -127,7 +127,7 @@ public class Compiler {
 
             StageMgr mgr = new StageMgr(m_stmtModule, Stage.Registered, f_errs, f_bindings, f_cursors);
             if (!mgr.processComplete()) {
-                if (f_errs.hasSeriousErrors()) {
+                if (f_errs.hasSeriousErrors() || f_errs.isAbortDesired()) {
                     return null;
                 }
                 throw new CompilerException("failed to create module");
