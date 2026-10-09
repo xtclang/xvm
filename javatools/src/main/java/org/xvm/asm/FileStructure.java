@@ -205,7 +205,6 @@ public class FileStructure
 
         m_kind    = that.m_kind;
         m_fLinked = that.m_fLinked;
-        m_errs    = that.m_errs;
         resetModified();
     }
 
@@ -1452,29 +1451,6 @@ public class FileStructure
         return true;
     }
 
-    @Override
-    public ErrorListener getErrorListener() {
-        ErrorListener errs = m_errs;
-        if (errs == null) {
-            // getCurrentPool() is an AMBIENT thread-local: it is null on any thread that has not had
-            // a pool pushed onto it, which is every thread driving the compiler or runtime from
-            // ordinary Java code. Dereferencing it unconditionally turned this diagnostic accessor
-            // into an NPE source. Ownership belongs in a parameter, not a thread-local - see the PR
-            // discussion - but the null guard is the minimal, behaviour-preserving fix.
-            ConstantPool poolCurrent = ConstantPool.getCurrentPool();
-            if (poolCurrent != null && poolCurrent != m_pool) {
-                errs = poolCurrent.getErrorListener();
-            }
-        }
-        return errs == null ? ErrorListener.RUNTIME : errs;
-    }
-
-    @Override
-    public void setErrorListener(ErrorListener errs) {
-        // this is not considered a "mutation" of the FileStructure
-        m_errs = errs;
-    }
-
     // ----- Object methods ------------------------------------------------------------------------
 
     @Override
@@ -1649,10 +1625,4 @@ public class FileStructure
      */
     private transient AssemblerContext m_ctx;
 
-    /**
-     * Holds an ErrorListener explicitly provided to this FileStructure. An absence of an
-     * ErrorListener implies that either the ErrorListener from the ConstantPool associated with
-     * the current thread should be used, or failing that, the runtime ErrorListener should be used.
-     */
-    private transient ErrorListener m_errs;
 }

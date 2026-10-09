@@ -6,11 +6,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Argument;
 
 import org.xvm.asm.ast.ExprAST;
 import org.xvm.asm.ast.InvokeExprAST;
@@ -27,10 +27,10 @@ import org.xvm.asm.op.GP_Add;
 import org.xvm.asm.op.GP_And;
 import org.xvm.asm.op.GP_Div;
 import org.xvm.asm.op.GP_DivRem;
-import org.xvm.asm.op.GP_IRangeI;
+import org.xvm.asm.op.GP_ERangeE;
 import org.xvm.asm.op.GP_ERangeI;
 import org.xvm.asm.op.GP_IRangeE;
-import org.xvm.asm.op.GP_ERangeE;
+import org.xvm.asm.op.GP_IRangeI;
 import org.xvm.asm.op.GP_Mod;
 import org.xvm.asm.op.GP_Mul;
 import org.xvm.asm.op.GP_Or;
@@ -46,6 +46,9 @@ import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.util.Severity;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * Relational operator expression (with @Op support) for something that follows the pattern
@@ -297,7 +300,7 @@ public class RelOpExpression
         // this logic must conform to the rules used by validate()
 
         if (typeRequired != null && typeRequired.isTypeOfType()) {
-            TypeFit fit = testFitAsType(ctx, typeRequired, fExhaustive, errs);
+            TypeFit fit = testFitAsType(ctx, typeRequired, fExhaustive);
             if (fit.isFit()) {
                 return fit;
             }
@@ -625,12 +628,14 @@ public class RelOpExpression
             return null;
         }
 
+        ErrorListener probe = silent(PROBE);
+
         String sMethod = getDefaultMethodName();
         String sOp     = operator.getId().TEXT;
-        if (expr1.testFit(ctx, typeRequired, false, null).isFit()) {
+        if (expr1.testFit(ctx, typeRequired, false, probe).isFit()) {
             Set<MethodConstant> setOps = typeRequired.ensureTypeInfo().findOpMethods(sMethod, sOp, 1);
             for (MethodConstant idMethod : setOps) {
-                if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, null).isFit()) {
+                if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, probe).isFit()) {
                     TypeConstant typeReturn = idMethod.getRawReturns()[0];
                     if (typeReturn.containsAutoNarrowing(false)) {
                         typeReturn = typeReturn.resolveAutoNarrowing(pool(), true, typeRequired, null);
@@ -646,10 +651,10 @@ public class RelOpExpression
 
         if (typeRequired.isParamsSpecified()) {
             for (TypeConstant typeParam : typeRequired.getParamTypesArray()) {
-                if (expr1.testFit(ctx, typeParam, false, null).isFit()) {
+                if (expr1.testFit(ctx, typeParam, false, probe).isFit()) {
                     Set<MethodConstant> setOps = typeParam.ensureTypeInfo().findOpMethods(sMethod, sOp, 1);
                     for (MethodConstant idMethod : setOps) {
-                        if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, null).isFit()) {
+                        if (expr2.testFit(ctx, idMethod.getRawParams()[0], false, probe).isFit()) {
                             TypeConstant typeReturn = idMethod.getRawReturns()[0];
                             if (typeReturn.containsAutoNarrowing(false)) {
                                 typeReturn = typeReturn.resolveAutoNarrowing(pool(), false,
@@ -689,6 +694,8 @@ public class RelOpExpression
         Set<MethodConstant> setOps = typeLeft.ensureTypeInfo().findOpMethods(
                 getDefaultMethodName(), operator.getId().TEXT, 1);
         if (!setOps.isEmpty()) {
+            ErrorListener probe = silent(PROBE);
+
             TypeConstant typeBest = null;
             TypeFit      fitBest  = TypeFit.NoFit;
             for (MethodConstant idMethod : setOps) {
@@ -703,9 +710,9 @@ public class RelOpExpression
                 }
 
                 TypeConstant typeParam = idMethod.getRawParams()[0];
-                TypeFit      fit       = expr2.testFit(ctx, typeParam, /*fExhaustive*/ false, null);
+                TypeFit      fit       = expr2.testFit(ctx, typeParam, /*fExhaustive*/ false, probe);
                 if (!fit.isFit()) {
-                    fit = expr2.testFitExhaustive(ctx, typeParam, null);
+                    fit = expr2.testFitExhaustive(ctx, typeParam, probe);
                 }
 
                 if (fit.betterThan(fitBest)) {

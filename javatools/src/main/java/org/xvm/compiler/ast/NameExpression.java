@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.xvm.asm.Annotation;
+import org.xvm.asm.Argument;
 import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Component;
 import org.xvm.asm.Constant;
@@ -22,12 +23,12 @@ import org.xvm.asm.GenericTypeResolver;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.MultiMethodStructure;
-import org.xvm.asm.Argument;
 import org.xvm.asm.PackageStructure;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.TypedefStructure;
 
+import org.xvm.asm.ast.BindFunctionAST;
 import org.xvm.asm.ast.BindMethodAST;
 import org.xvm.asm.ast.ConstantExprAST;
 import org.xvm.asm.ast.ExprAST;
@@ -52,6 +53,9 @@ import org.xvm.runtime.Utils;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * A name expression specifies a name. This handles a simple name, a qualified name, a dot name
@@ -233,6 +237,11 @@ public class NameExpression
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
+    public NameExpression copyTree() {
+        return (NameExpression) super.copyTree();
+    }
+
+    @Override
     protected boolean usesSuper() {
         return "super".equals(name.getValueText()) || left != null && left.usesSuper();
     }
@@ -356,6 +365,27 @@ public class NameExpression
      */
     public String getName() {
         return name.getValueText();
+    }
+
+    /**
+     * What this name turned out to refer to.
+     *
+     * <p>The compiler decides this while it resolves the name, and the answer stays on the node
+     * afterwards; this only makes it readable from outside the compiler. It is what a host needs
+     * in order to answer "where is this declared", which cannot be answered from the text: two
+     * names spelled the same can refer to different things, and the same thing can be referred to
+     * by different names.
+     *
+     * <p>The result is a {@link Constant} - usually an
+     * {@link org.xvm.asm.constants.IdentityConstant} - when the name refers to something the
+     * module declares, and a {@link org.xvm.asm.Register} when it refers to a local variable,
+     * which has no identity beyond the method it lives in.
+     *
+     * @return what the name resolved to, or null if it was never resolved, which is the ordinary
+     *         case in source that does not compile
+     */
+    public Argument getResolvedTarget() {
+        return m_arg;
     }
 
     /**
@@ -500,7 +530,7 @@ public class NameExpression
     public TypeConstant getImplicitType(Context ctx) {
         return isValidated()
                 ? getType()
-                : getImplicitType(ctx, null, ErrorListener.BLACKHOLE);
+                : getImplicitType(ctx, null, silent(PROBE));
     }
 
     /**
@@ -528,10 +558,6 @@ public class NameExpression
             return TypeFit.Fit;
         }
 
-        if (errs == null) {
-            errs = ErrorListener.BLACKHOLE;
-        }
-
         return calcFit(ctx, getImplicitType(ctx, typeRequired, errs), typeRequired);
     }
 
@@ -546,7 +572,7 @@ public class NameExpression
             // outer type
             TypeConstant typeDesired = null;
             if (typeRequired != null && typeRequired.isTypeOfType() && isIdentityMode(ctx, true) &&
-                    testFit(ctx, pool.typeInner().getType(), false, null).isFit()) {
+                    testFit(ctx, pool.typeInner().getType(), false, silent(PROBE)).isFit()) {
                 typeDesired = pool.typeOuter().getType();
             }
 
@@ -764,7 +790,9 @@ public class NameExpression
                     }
                     // there is a read of the implicit "this" variable
                     else if (getParent() instanceof NameExpression) {
-                        if (!ctx.requireThis(getStartPosition(), null)) {
+                        // a question, not an assertion: the comment below says the outer
+                        // expression reports whatever follows from the answer
+                        if (!ctx.requireThis(getStartPosition(), silent(PROBE))) {
                             // we know that this expression represents a property but there is
                             // no "this"; we can only proceed with the identity mode here;
                             // it becomes the outer expression's job to report any errors that
@@ -1122,7 +1150,9 @@ public class NameExpression
                 } else {
                     Register regFn = code.createRegister(pool().typeFunction());
                     code.add(new MBind(argTarget, idMethod, regFn));
-                    bindTypeParameters(ctx, code, regFn, argLVal);
+                    m_astResult = bindTypeParameters(ctx, code, regFn, argLVal,
+                            new BindMethodAST(astTarget, idMethod, idMethod.getSignature().asFunctionType()));
+                    return;
                 }
                 m_astResult = new BindMethodAST(astTarget, idMethod, getType());
                 return;
@@ -1175,10 +1205,8 @@ public class NameExpression
                     }
 
                 if (m_mapTypeParams != null) {
-                    Register regFn = code.createRegister(argRaw.getType());
-                    bindTypeParameters(ctx, code, argRaw, regFn);
-                    System.err.println("TODO: AST for " + this);
-                    // TODO GG: m_astResult =
+                    Register regFn = code.createRegister(getType());
+                    m_astResult = bindTypeParameters(ctx, code, argRaw, regFn, toExprAst(argRaw));
                     return regFn;
                 }
                 m_astResult = toExprAst(argRaw);
@@ -1412,13 +1440,15 @@ public class NameExpression
                 astTarget = left.getExprAST(ctx);
             }
 
-            Register regFn = code.createRegister(idMethod.getType());
+            Register regFn = code.createRegister(getType());
             if (m_mapTypeParams == null) {
                 code.add(new MBind(argTarget, idMethod, regFn));
             } else {
                 Register regFn0 = code.createRegister(pool().typeFunction());
                 code.add(new MBind(argTarget, idMethod, regFn0));
-                bindTypeParameters(ctx, code, regFn0, regFn);
+                m_astResult = bindTypeParameters(ctx, code, regFn0, regFn,
+                        new BindMethodAST(astTarget, idMethod, idMethod.getSignature().asFunctionType()));
+                return regFn;
             }
             m_astResult = new BindMethodAST(astTarget, idMethod, getType());
             return regFn;
@@ -1663,12 +1693,14 @@ public class NameExpression
         }
     }
 
-    private void bindTypeParameters(Context ctx, Code code, Argument argFnOrig, Argument argFnResult) {
+    private ExprAST bindTypeParameters(Context ctx, Code code, Argument argFnOrig,
+                                       Argument argFnResult, ExprAST astFunction) {
         List<Map.Entry<FormalConstant, TypeConstant>> list = m_mapTypeParams.asList();
 
         int        cParams  = list.size();
         int[]      anBindIx = new int[cParams];
         Argument[] aArgBind = new Argument[cParams];
+        ExprAST[]  aAstBind = new ExprAST[cParams];
 
         for (int i = 0; i < cParams; i++) {
             Map.Entry<FormalConstant, TypeConstant> entry = list.get(i);
@@ -1682,18 +1714,23 @@ public class NameExpression
 
                 // first type goes on stack
                 Register regType = code.createRegister(pool().typeType());
-                code.add(new L_Get(infoThis.findProperty(constFormal.getName()).getIdentity(), regType));
+                PropertyConstant idProperty = infoThis.findProperty(constFormal.getName()).getIdentity();
+                code.add(new L_Get(idProperty, regType));
 
                 aArgBind[i] = regType;
+                aAstBind[i] = new PropertyExprAST(ctx.getThisRegisterAST(), idProperty);
             } else if (type.isTypeParameter()) {
                 int iReg = ((TypeParameterConstant) constFormal).getRegister();
                 aArgBind[i] = ctx.getParameter(iReg);
+                aAstBind[i] = toExprAst(aArgBind[i]);
             } else {
                 // the type itself is the value
                 aArgBind[i] = type;
+                aAstBind[i] = new ConstantExprAST(type);
             }
         }
         code.add(new FBind(argFnOrig, anBindIx, aArgBind, argFnResult));
+        return new BindFunctionAST(astFunction, anBindIx, aAstBind, getType());
     }
 
     @Override
@@ -1736,7 +1773,7 @@ public class NameExpression
                         regTarget = code.createRegister(clz.getFormalType());
                         code.add(new MoveThis(cSteps, regTarget));
 
-                        astTarget = new OuterExprAST(ctx.getThisRegisterAST(), cSteps, getType());
+                        astTarget = new OuterExprAST(ctx.getThisRegisterAST(), cSteps, regTarget.getType());
                         break;
                     }
 
@@ -2139,7 +2176,7 @@ public class NameExpression
                     // process the "this.OuterName" construct
                     if (!typeLeft.isTypeOfType() && !fIdMode) {
                         Constant constTarget = new NameResolver(this, sName)
-                                .forceResolve(ErrorListener.BLACKHOLE);
+                                .forceResolve(silent(PROBE));
                         if (constTarget instanceof IdentityConstant && constTarget.isClass()) {
                             if (constTarget.equals(pool.clzOuter())) {
                                 // this.Outer
@@ -2792,6 +2829,13 @@ public class NameExpression
                     // resolve the function signature against all the types we know by now
                     typeFn          = typeFn.resolveGenerics(pool, mapTypeParams::get);
                     m_mapTypeParams = mapTypeParams;
+                    // These hidden parameters are bound by the generated FBind, not supplied by
+                    // callers of the resulting function.
+                    if (m_plan == Plan.None || m_plan == Plan.BindTarget) {
+                        for (int i = cTypeParams - 1; i >= 0; --i) {
+                            typeFn = pool.bindFunctionParam(typeFn, i);
+                        }
+                    }
                 }
 
                 if (m_plan == Plan.BindTarget && typeDesired.isFunction()) {
@@ -2871,7 +2915,7 @@ public class NameExpression
                 break CheckDynamic;
             }
 
-            Argument argLeft = exprLeft.resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
+            Argument argLeft = exprLeft.resolveRawArgument(ctx, false, silent(PROBE));
             if (!(argLeft instanceof Register regLeft)) {
                 break CheckDynamic;
             }
@@ -3138,7 +3182,29 @@ public class NameExpression
      */
     protected MethodConstant findAtomicInPlaceAssignMethod(
                 Context ctx, String sMethod, String sOp, TypeConstant typeArg) {
+        int                 cArgs      = typeArg == null ? 0 : 1;
+        TypeConstant        typeVar    = getAtomicRefType(ctx);
+        Set<MethodConstant> setMethods = typeVar.ensureTypeInfo().findOpMethods(sMethod, sOp, cArgs);
+        return switch (setMethods.size()) {
+            case 0  -> null;
+            case 1  -> setMethods.iterator().next();
+            default -> RelOpExpression.chooseBestMethod(setMethods, typeArg);
+        };
+    }
+
+    /**
+     * Obtain the atomic reference type using the resolved property owner, so operator lookup and
+     * the binary-AST target retain the same concrete type.
+     *
+     * @param ctx  the current compilation context
+     *
+     * @return the atomic reference type for this property access
+     */
+    protected TypeConstant getAtomicRefType(Context ctx) {
         TypeConstant typeTarget = switch (calculatePropertyAccess(true)) {
+            case SingletonParent -> m_idSingletonParent.getType();
+            case Outer -> m_targetInfo.getTargetType().ensureAccess(Access.PRIVATE);
+
             // "p += k" -> "&p.addAssign(k)"
             case This -> ctx.getThisType().ensureAccess(Access.PRIVATE);
 
@@ -3146,20 +3212,8 @@ public class NameExpression
             // "f().p += k"  -> "f().&p.addAssign(k)"
             // "a[0].p += k" -> "a[0].&p.addAssign(k)"
             case Left -> getLeftExpression().getType();
-
-            default ->
-                throw new IllegalStateException();
         };
-
-        int                 cArgs      = typeArg == null ? 0 : 1;
-        PropertyConstant    idProp     = (PropertyConstant) m_arg;
-        TypeConstant        typeVar    = idProp.getRefType(typeTarget);
-        Set<MethodConstant> setMethods = typeVar.ensureTypeInfo().findOpMethods(sMethod, sOp, cArgs);
-        return switch (setMethods.size()) {
-            case 0  -> null;
-            case 1  -> setMethods.iterator().next();
-            default -> RelOpExpression.chooseBestMethod(setMethods, typeArg);
-        };
+        return ((PropertyConstant) m_arg).getRefType(typeTarget);
     }
 
     /**
@@ -3176,7 +3230,7 @@ public class NameExpression
         if (typeNarrow != null) {
             assert isValidated();
 
-            Argument arg = resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
+            Argument arg = resolveRawArgument(ctx, false, silent(PROBE));
 
             if (left != null) {
                 if (arg instanceof FormalTypeChildConstant constFormal) {

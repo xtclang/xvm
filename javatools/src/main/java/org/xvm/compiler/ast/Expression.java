@@ -37,6 +37,9 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.checkElementsNonNull;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * Base class for all Ecstasy expressions.
  *
@@ -94,6 +97,11 @@ import static org.xvm.util.Handy.checkElementsNonNull;
 public abstract class Expression
         extends AstNode {
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public Expression copyTree() {
+        return (Expression) super.copyTree();
+    }
 
     @Override
     protected boolean usesSuper() {
@@ -304,10 +312,9 @@ public abstract class Expression
      */
     protected TypeFit testFitMultiExhaustive(Context ctx, TypeConstant[] atypeRequired,
                                              ErrorListener errs) {
-        Expression exprTemp = (Expression) clone();
+        Expression exprTemp = copyTree();
         Context    ctxTemp  = ctx.enter();
-        Expression exprNew  = exprTemp.validateMulti(ctxTemp, atypeRequired,
-                                        errs == null ? ErrorListener.BLACKHOLE : errs);
+        Expression exprNew  = exprTemp.validateMulti(ctxTemp, atypeRequired, errs);
         exprTemp.discard(true);
         ctxTemp.discard();
 
@@ -463,11 +470,16 @@ public abstract class Expression
      *
      * @see #testFit(Context, TypeConstant, boolean, ErrorListener)
      */
-    protected TypeFit testFitAsType(Context ctx, TypeConstant typeRequired, boolean fExhaustive,
-                                    ErrorListener errs) {
+    protected TypeFit testFitAsType(Context ctx, TypeConstant typeRequired, boolean fExhaustive) {
+        // a fit test reports nothing: its answer is the return value. Staging used to be handed
+        // the caller's listener, so whether a staging failure inside a probe was reported as a
+        // real error depended on what that caller happened to pass. validateAsType(), below,
+        // already had this right
+        ErrorListener probe = silent(PROBE);
+
         TypeExpression exprType = toTypeExpression();
-        return new StageMgr(exprType, Compiler.Stage.Validated, errs).fastForward(20)
-                ? exprType.testFit(ctx, typeRequired, fExhaustive, ErrorListener.BLACKHOLE)
+        return new StageMgr(exprType, Compiler.Stage.Validated, probe).fastForward(20)
+                ? exprType.testFit(ctx, typeRequired, fExhaustive, probe)
                 : TypeFit.NoFit;
     }
 
@@ -479,7 +491,7 @@ public abstract class Expression
     protected Expression validateAsType(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
         TypeExpression exprType = toTypeExpression();
 
-        if (new StageMgr(exprType, Compiler.Stage.Validated, ErrorListener.BLACKHOLE).fastForward(20)) {
+        if (new StageMgr(exprType, Compiler.Stage.Validated, silent(PROBE)).fastForward(20)) {
             ErrorListener errsTemp = errs.branch(this);
             Expression    exprNew  = exprType.validate(ctx, typeRequired, errsTemp);
             if (exprNew != null) {
@@ -502,8 +514,8 @@ public abstract class Expression
      *                      has already been applied; {@link TypeFit#isPacking()} indicates that a
      *                      tuple packing has already been applied; {@link TypeFit#isUnpacking()}
      *                      indicates that a tuple un-packing has already been applied
-     * @param constVal      a constant value, iff this expression is constant (optional)
-     * @param errs          the error list to log any errors to
+     * @param constVal  a constant value, iff this expression is constant (optional)
+     * @param errs      the error list to log any errors to
      *
      * @return an expression to use (which may or may not be "this"), or null to indicate that the
      *         compilation should halt as soon as is practical
@@ -1940,7 +1952,7 @@ public abstract class Expression
             TypeConstant typeElse = atypeElse[i];
 
             ConstantPool pool       = pool();
-            TypeConstant typeCommon = Op.selectCommonType(typeThen, typeElse, ErrorListener.BLACKHOLE);
+            TypeConstant typeCommon = Op.selectCommonType(typeThen, typeElse, silent(PROBE));
             atypeCommon[i] = typeCommon == null && typeThen != null && typeElse != null
                     ? typeThen.isOnlyNullable() ? pool.ensureNullableTypeConstant(typeElse)
                     : typeElse.isOnlyNullable() ? pool.ensureNullableTypeConstant(typeThen)
@@ -2297,8 +2309,8 @@ public abstract class Expression
          * @param fLocalPropOk  if no L-value is provided, then this is used to indicate whether the
          *                      resulting argument can be a property constant indicating a local
          *                      property value
-         * @param code          the code object to which the assembly is added
-         * @param errs          the error listener to log to
+         * @param code  the code object to which the assembly is added
+         * @param errs  the error listener to log to
          *
          * @return an argument, if an Assignable was not provided
          */

@@ -21,6 +21,9 @@ import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * The "++" or "--" that precedes or follows an assignable expression of type Sequential.
  */
@@ -163,7 +166,7 @@ public class SequentialAssignExpression
         if (expr instanceof NameExpression exprName &&
                 exprName.getMeaning() == NameExpression.Meaning.Property) {
             PropertyConstant idProp = (PropertyConstant)
-                    exprName.resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
+                    exprName.resolveRawArgument(ctx, false, silent(PROBE));
             PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
             if (prop != null && prop.isAtomic()) {
                 String sMethod, sOp;
@@ -178,8 +181,8 @@ public class SequentialAssignExpression
                 MethodConstant idOp = exprName.findAtomicInPlaceAssignMethod(ctx, sMethod, sOp, null);
                 if (idOp != null) {
                     ExprAST astVar = new UnaryOpExprAST(
-                            expr.getExprAST(ctx), Operator.Var, idProp.getRefType(null));
-                    return new InvokeExprAST(idOp, TypeConstant.NO_TYPES, astVar, ExprAST.NO_EXPRS, false);
+                            expr.getExprAST(ctx), Operator.Var, exprName.getAtomicRefType(ctx));
+                    return new InvokeExprAST(idOp, getTypes(), astVar, ExprAST.NO_EXPRS, false);
                 }
             }
         }

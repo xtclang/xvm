@@ -45,6 +45,9 @@ import org.xvm.compiler.ast.Expression.TypeFit;
 
 import org.xvm.util.Severity;
 
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * An assignment statement specifies an l-value, an assignment operator, and an r-value.
  *
@@ -397,6 +400,8 @@ public class AssignmentStatement
             return null;
         }
 
+        ErrorListener probe = silent(PROBE);
+
         // regardless of whether the LValue is a statement or expression, all L-Values must be able
         // to provide an expression as a representative form
         Expression exprLeft = nodeLeft.getLValueExpression();
@@ -418,12 +423,12 @@ public class AssignmentStatement
                 // contributions
                 Context ctxInfer = ctxRValue.enterInferring(atypeLeft[0]);
 
-                TypeFit fit = rvalue.testFitMulti(ctxInfer, atypeTest, false, null);
+                TypeFit fit = rvalue.testFitMulti(ctxInfer, atypeTest, false, probe);
 
                 if (!fit.isFit() && cLeft > 1) {
                     Expression exprUnpack = new UnpackExpression(rvalue, null);
 
-                    fit = exprUnpack.testFitMulti(ctxInfer, atypeTest, false, null);
+                    fit = exprUnpack.testFitMulti(ctxInfer, atypeTest, false, probe);
                     if (fit.isFit()) {
                         rvalue = exprUnpack;
                     }
@@ -467,7 +472,7 @@ public class AssignmentStatement
                 if (exprLeft instanceof NameExpression exprName && exprName.isDynamicVar()) {
                     // test for a future assignment first
                     TypeConstant typeFuture = pool.ensureFuture(typeLeft);
-                    if (rvalue.testFit(ctxRValue, typeFuture, false, null).isFit()) {
+                    if (rvalue.testFit(ctxRValue, typeFuture, false, probe).isFit()) {
                         typeLeft = typeFuture;
                     }
                 }
@@ -852,11 +857,12 @@ public class AssignmentStatement
                         // atomic property
                         PropertyConstant  idProp = LVal.getProperty();
                         PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
-                        if (prop != null && prop.isAtomic()) {
+                        if (prop != null && prop.isAtomic() && lvalueExpr instanceof NameExpression exprName) {
                             MethodConstant idOp = findAtomicInPlaceAssignMethod(ctx, LVal.getType());
                             if (idOp != null) {
                                 ExprAST astVar = new UnaryOpExprAST(
-                                        astLValue, UnaryOpExprAST.Operator.Var, idProp.getRefType(null));
+                                        astLValue, UnaryOpExprAST.Operator.Var,
+                                        exprName.getAtomicRefType(ctx));
                                 astAssign = new InvokeExprAST(idOp, TypeConstant.NO_TYPES, astVar,
                                         new ExprAST[] {astRValue}, false);
                                 break;

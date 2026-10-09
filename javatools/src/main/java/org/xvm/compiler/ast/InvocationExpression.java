@@ -7,6 +7,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import java.util.stream.Collectors;
 
@@ -57,6 +58,7 @@ import org.xvm.asm.constants.TypeInfo.MethodKind;
 import org.xvm.asm.op.*;
 
 import org.xvm.compiler.Compiler;
+import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
@@ -64,6 +66,9 @@ import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 
 import org.xvm.util.Severity;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
 
 /**
  * Invocation expression represents calling a method or function. An oversimplification of the
@@ -275,6 +280,28 @@ public class InvocationExpression
         return lEndPos;
     }
 
+    /**
+     * @return the expression supplying the method or function to invoke, excluding call arguments
+     */
+    public Expression getInvokedExpression() {
+        return expr;
+    }
+
+    /**
+     * Which method this call turned out to be a call to.
+     *
+     * <p>The name in a call does not resolve to anything on its own - `print` means nothing without
+     * knowing what it is being called on, and what the arguments are - so the answer is decided
+     * here, while the invocation is validated, and kept here. This only makes it readable from
+     * outside the compiler, which is what a host needs to answer "where is this method declared".
+     *
+     * @return the method this resolved to, or null if it never resolved to one, which covers a
+     *         call through a function reference as well as source that does not compile
+     */
+    public MethodConstant getResolvedMethod() {
+        return m_method == null ? null : m_method.getIdentityConstant();
+    }
+
     @Override
     protected void updateLineNumber(Code code) {
         if (expr instanceof NameExpression exprName) {
@@ -305,7 +332,7 @@ public class InvocationExpression
 
     @Override
     public TypeConstant[] getImplicitTypes(Context ctx) {
-        return resolveReturnTypes(ctx, null, false, ErrorListener.BLACKHOLE);
+        return resolveReturnTypes(ctx, null, false, silent(PROBE));
     }
 
     @Override
@@ -315,8 +342,7 @@ public class InvocationExpression
             return TypeFit.Fit;
         }
 
-        TypeConstant[] atype = resolveReturnTypes(ctx, atypeRequired, fExhaustive,
-                                    errs == null ? ErrorListener.BLACKHOLE : errs);
+        TypeConstant[] atype = resolveReturnTypes(ctx, atypeRequired, fExhaustive, errs);
 
         return calcFitMulti(ctx, atype, atypeRequired);
     }
@@ -407,8 +433,7 @@ public class InvocationExpression
                     TypeConstant[] atype = m_fCall || cReturns == 0 || atypeReturn == null
                             ? atypeReturn
                             : pool.extractFunctionReturns(atypeReturn[0]);
-                    resolver = makeTypeParameterResolver(ctx, method, false, typeLeft, atype,
-                                    ErrorListener.BLACKHOLE);
+                    resolver = makeTypeParameterResolver(ctx, method, false, typeLeft, atype, silent(PROBE));
                 }
 
                 if (m_fCall) {
@@ -602,6 +627,11 @@ public class InvocationExpression
 
     @Override
     protected Expression validateMulti(Context ctx, TypeConstant[] atypeRequired, ErrorListener errs) {
+        InvocationBinding.Collector bindings = ctx.getInvocationBindings();
+        List<Expression> writtenArgs = bindings.isEnabled() ? List.copyOf(args) : List.of();
+        Optional<InvocationBinding> sourceBinding = Optional.empty();
+        Optional<InvocationBinding.FunctionCall> functionBinding = Optional.empty();
+        bindings.begin(this);
         // the reason for tracking success (fValid) is that we want to get as many things
         // validated as possible, but if some expressions didn't validate, we can't predictably find
         // the desired method or function (e.g. without a left expression providing validated type
@@ -806,6 +836,8 @@ public class InvocationExpression
                             : m_targetInfo.getTargetType();
                 }
 
+                Optional<List<InvocationBinding.Argument>> sourceArgs = bindings.isEnabled() && fCall && !m_fBjarne
+                        ? InvocationBinding.arguments(writtenArgs, listArgs) : Optional.empty();
                 TypeConstant[] atypeArgs = validateExpressions(ctx, listArgs, atypeParams, errs);
                 if (atypeArgs == null) {
                     return null;
@@ -873,6 +905,10 @@ public class InvocationExpression
                     if (!mapTypeParams.isEmpty()) {
                         sigMethod = sigMethod.resolveGenericTypes(pool, mapTypeParams::get);
                     }
+                    if (sourceArgs.isPresent()) {
+                        sourceBinding = Optional.of(new InvocationBinding(method.getIdentityConstant(),
+                                sigMethod, sourceArgs.get()));
+                    }
                     atypeResult = sigMethod.getRawReturns();
 
                     if (fCondReturn) {
@@ -891,7 +927,7 @@ public class InvocationExpression
                         if (atypeReturn.length == 0) {
                             atypeResult = atypeReturn;
                         } else if (calculateReturnFit(sigMethod, fCall, atypeReturn, ctx.getThisType(),
-                                ErrorListener.BLACKHOLE).isPacking()) {
+                                silent(PROBE)).isPacking()) {
                             atypeResult = new TypeConstant[]{pool.ensureTupleType(atypeResult)};
                             m_fPack     = true;
                         }
@@ -1012,6 +1048,24 @@ public class InvocationExpression
                 }
 
                 atypeResult = validateFunction(ctx, typeFn, cTypeParams, cDefaults, atypeRequired, errs);
+                if (bindings.isEnabled() && fCall && !(argMethod instanceof Register register && register.isSuper())) {
+                    TypeConstant functionType = typeFn;
+                    functionBinding = InvocationBinding.arguments(writtenArgs, writtenArgs)
+                            .map(arguments -> new InvocationBinding.FunctionCall(functionType, arguments));
+                }
+                if (bindings.isEnabled() && fCall && argMethod instanceof Register register &&
+                        register.isSuper()) {
+                    TypeInfo info = ctx.getThisType().ensureAccess(Access.PRIVATE).ensureTypeInfo(errs);
+                    MethodInfo method = info.getMethodById(ctx.getMethod().getIdentityConstant());
+                    if (method != null) {
+                        TypeConstant functionType = typeFn;
+                        sourceBinding = method.getSuperMethod(info).flatMap(target ->
+                                InvocationBinding.arguments(writtenArgs, writtenArgs).map(arguments ->
+                                        new InvocationBinding(target, pool.ensureSignatureConstant(
+                                                target.getName(), pool.extractFunctionParams(functionType),
+                                                pool.extractFunctionReturns(functionType)), arguments)));
+                    }
+                }
             }
         } else { // the expr is NOT a NameExpression
             // it has to either be a function or convertible to a function
@@ -1034,6 +1088,10 @@ public class InvocationExpression
                 }
 
                 atypeResult = validateFunction(ctx, typeFn, 0, 0, atypeRequired, errs);
+                if (bindings.isEnabled() && fCall) {
+                    functionBinding = InvocationBinding.arguments(writtenArgs, writtenArgs)
+                            .map(arguments -> new InvocationBinding.FunctionCall(typeFn, arguments));
+                }
             }
         }
 
@@ -1064,7 +1122,12 @@ public class InvocationExpression
                 }
             }
         }
-        return finishValidations(ctx, atypeRequired, atypeResult, TypeFit.Fit, null, errs);
+        Expression result = finishValidations(ctx, atypeRequired, atypeResult, TypeFit.Fit, null, errs);
+        if (result != null) {
+            sourceBinding.ifPresent(binding -> bindings.record(this, binding));
+            functionBinding.ifPresent(binding -> bindings.record(this, binding));
+        }
+        return result;
     }
 
     @Override
@@ -1905,6 +1968,8 @@ public class InvocationExpression
             }
         }
 
+        ErrorListener probe = silent(PROBE);
+
         // if the name does not have a left expression, then walk up the AST parent node chain
         // looking for a registered name, i.e. a local variable of that name, stopping once the
         // containing method/function (but <b>not</b> a lambda, since it has a permeable barrier to
@@ -1916,7 +1981,7 @@ public class InvocationExpression
         boolean        fSingleton = false;
         Expression     exprLeft   = exprName.left;
         if (exprLeft == null) {
-            Argument arg = ctx.resolveName(tokName, ErrorListener.BLACKHOLE);
+            Argument arg = ctx.resolveName(tokName, probe);
 
             if (arg == null) {
                 typeLeft = ctx.getThisType();
@@ -1925,8 +1990,7 @@ public class InvocationExpression
                     // try to use the type info
                     TypeInfo infoLeft = getTypeInfo(ctx, typeLeft, errs);
 
-                    arg = findCallable(ctx, typeLeft, infoLeft, sName, MethodKind.Any,
-                                true, atypeReturn, ErrorListener.BLACKHOLE);
+                    arg = findCallable(ctx, typeLeft, infoLeft, sName, MethodKind.Any, true, atypeReturn, probe);
                     if (arg instanceof MethodConstant idMethod) {
                         MethodStructure method = getMethod(ctx, typeLeft, infoLeft, idMethod);
                         if (method == null) {
@@ -1951,12 +2015,11 @@ public class InvocationExpression
                     log(errs, Severity.ERROR, Compiler.NO_SUPER);
                 } else {
                     TypeConstant typeTarget = ctx.getThisType();
-                    TypeInfo     infoTarget = getTypeInfo(ctx, null, ErrorListener.BLACKHOLE);
+                    TypeInfo     infoTarget = getTypeInfo(ctx, null, probe);
 
                     // check if the method would be callable from outside the constructor
-                    if (ctx.isConstructor() &&
-                            findCallable(ctx, typeTarget, infoTarget, sName, MethodKind.Any,
-                                true, atypeReturn, ErrorListener.BLACKHOLE) != null) {
+                    if (ctx.isConstructor() && findCallable(ctx, typeTarget, infoTarget, sName, MethodKind.Any,
+                                true, atypeReturn, probe) != null) {
                         log(errs, Severity.ERROR, Compiler.INVALID_CALL_FROM_CONSTRUCT, sName);
                     } else {
                         log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sName,
@@ -2010,7 +2073,7 @@ public class InvocationExpression
                             TypeInfo       infoSuper   = typeSuper.ensureTypeInfo(errs);
                             MethodConstant idConstruct = (MethodConstant) findCallable(ctx, typeSuper,
                                     infoSuper, "construct", MethodKind.Constructor,
-                                    false, atypeReturn, ErrorListener.BLACKHOLE);
+                                    false, atypeReturn, probe);
                             if (idConstruct == null) {
                                 log(errs, Severity.ERROR, Compiler.IMPLICIT_SUPER_CONSTRUCTOR_MISSING,
                                     ctx.getThisType().getValueString(), typeSuper.getValueString());
@@ -2070,7 +2133,7 @@ public class InvocationExpression
                         // search
                         if (kind == MethodKind.Function &&
                                 findMethod(ctx, typeTarget, infoTarget, sName, args, MethodKind.Method,
-                                    !fNoCall, id.isNested(), atypeReturn, ErrorListener.BLACKHOLE) != null) {
+                                    !fNoCall, id.isNested(), atypeReturn, probe) != null) {
                             if (target.getStepsOut() > 0) {
                                 exprName.log(errs, Severity.ERROR, Compiler.NO_OUTER_METHOD,
                                     target.getTargetType().removeAccess().getValueString(), sName);
@@ -2281,9 +2344,8 @@ public class InvocationExpression
                 Argument      arg      = findCallable(ctx, infoLeft.getType(), infoLeft, sName,
                         kind, false, atypeReturn, errsTemp);
 
-                if (arg == null && kind == MethodKind.Function &&
-                        findCallable(ctx, infoLeft.getType(), infoLeft, sName,
-                            MethodKind.Any, false, atypeReturn, ErrorListener.BLACKHOLE) != null) {
+                if (arg == null && kind == MethodKind.Function && findCallable(ctx, infoLeft.getType(), infoLeft, sName,
+                            MethodKind.Any, false, atypeReturn, probe) != null) {
                     exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_METHOD,
                             sName, infoLeft.getType().getValueString());
                     return null;
@@ -2527,7 +2589,7 @@ public class InvocationExpression
             method = (MethodStructure) idMethod.getComponent();
             if (method == null) {
                 TypeConstant type = m_targetInfo.getTargetType();
-                TypeInfo     info = getTypeInfo(ctx, type, ErrorListener.BLACKHOLE);
+                TypeInfo     info = getTypeInfo(ctx, type, silent(PROBE));
 
                 method = getMethod(ctx, type, info, idMethod);
             }
@@ -2560,7 +2622,7 @@ public class InvocationExpression
         PropertyStructure prop = (PropertyStructure) idProp.getComponent();
         if (prop == null) {
             TypeConstant type = m_targetInfo.getTargetType();
-            TypeInfo     info = getTypeInfo(ctx, type, ErrorListener.BLACKHOLE);
+            TypeInfo     info = getTypeInfo(ctx, type, silent(PROBE));
 
             prop = info.findProperty(idProp).getHead().getStructure();
         }
@@ -2760,7 +2822,7 @@ public class InvocationExpression
             TypeFit fit = calculateReturnFit(atypeFnRet, expr.toString(), m_fCall,
                                 atypeReturn, ctx.getThisType(), errs);
             m_fPack = fit.isPacking();
-            fValid  = fit.isFit();
+            fValid &= fit.isFit();
         }
 
         if (fValid) {

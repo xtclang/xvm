@@ -66,6 +66,11 @@ import org.xvm.util.Severity;
 
 import static org.xvm.util.Handy.indentLines;
 
+import static org.xvm.asm.ErrorListener.in;
+
+import static org.xvm.asm.ErrorListener.Silence.PROBE;
+import static org.xvm.asm.ErrorListener.silent;
+
 /**
  * Lambda expression is an inlined function. This version uses parameters that are assumed to be
  * names only.
@@ -116,6 +121,25 @@ public class LambdaExpression
      */
     public MethodStructure getLambda() {
         return m_lambda;
+    }
+
+    /** The written arrow token, for source-position consumers. */
+    public Token getOperator() {
+        return operator;
+    }
+
+    /**
+     * @return the source bindings retained by this lambda's compilation context, or null before
+     *         its generated method has been validated
+     */
+    public LambdaBindings getSourceBindings() {
+        return m_ctxLambda == null || !m_ctxLambda.f_bindings.isFor(m_lambda)
+                ? null : m_ctxLambda.f_bindings;
+    }
+
+    /** Record a generated parameter through the context that owns its source associations. */
+    void bindSourceParameter(int index, Register register) {
+        m_ctxLambda.f_bindings.bind(this, m_ctxLambda, index, register);
     }
 
     /**
@@ -285,8 +309,8 @@ public class LambdaExpression
         //   passed to the lambda (via FBIND)
         // - so now, at this point, we have the signature, we have the method structure, and we just
         //   have to emit the code corresponding to the lambda
-        if (catchUpChildren(errs)) {
-            if (!body.compileMethod(method.createCode(), errs)) {
+        if (catchUpChildren(errs, mgr.getInvocationBindings(), mgr.getCursorBindings())) {
+            if (!body.compileMethod(method.createCode(), errs, mgr.getInvocationBindings(), mgr.getCursorBindings())) {
                 mgr.deferChildren();
             }
         }
@@ -296,7 +320,9 @@ public class LambdaExpression
 
     @Override
     public TypeConstant getImplicitType(Context ctx) {
-        if (!ensurePrepared(ErrorListener.BLACKHOLE)) {
+        ErrorListener probe = silent(PROBE);
+
+        if (!ensurePrepared(probe)) {
             return null;
         }
 
@@ -320,12 +346,12 @@ public class LambdaExpression
         String[]       asParams    = cParams == 0 ? NO_NAMES : new String[cParams];
         TypeConstant[] atypeParams = cParams == 0 ? TypeConstant.NO_TYPES : new TypeConstant[cParams];
 
-        if (!collectParamNamesAndTypes(null, atypeParams, asParams, ErrorListener.BLACKHOLE)) {
+        if (!collectParamNamesAndTypes(null, atypeParams, asParams, probe)) {
             return null;
         }
 
         TypeConstant[] atypeReturns =
-                extractReturnTypes(ctx, atypeParams, asParams, null, false, ErrorListener.BLACKHOLE);
+                extractReturnTypes(ctx, atypeParams, asParams, null, false, probe);
         return atypeReturns == null
                 ? null
                 : pool().buildFunctionType(buildParamTypes(), atypeReturns);
@@ -333,10 +359,6 @@ public class LambdaExpression
 
     @Override
     public TypeFit testFit(Context ctx, TypeConstant typeRequired, boolean fExhaustive, ErrorListener errs) {
-        if (errs == null) {
-            errs = ErrorListener.BLACKHOLE;
-        }
-
         if (!ensurePrepared(errs)) {
             return TypeFit.NoFit;
         }
@@ -475,9 +497,8 @@ public class LambdaExpression
         int     cParams     = getParamCount();
 
         if (cReqParams != -1 && cParams != cReqParams) {
-            errs.log(Severity.ERROR, Compiler.ARGUMENT_WRONG_COUNT,
-                    new Object[]{cReqParams, cParams},
-                    getSource(), getStartPosition(), operator.getStartPosition());
+            errs.error(Compiler.ARGUMENT_WRONG_COUNT, in(getSource(), getStartPosition(), operator.getStartPosition()),
+                    cReqParams, cParams);
             fValid = false;
         }
 
@@ -597,9 +618,8 @@ public class LambdaExpression
 
         if (hasOnlyParamNames()) {
             if (atypeReqParams == null) {
-                errs.log(Severity.ERROR, Compiler.PARAMETER_TYPES_REQUIRED, null,
-                        getSource(), paramNames.get(0).getStartPosition(),
-                        paramNames.get(cParams-1).getEndPosition());
+                errs.error(Compiler.PARAMETER_TYPES_REQUIRED, in(getSource(), paramNames.getFirst().getStartPosition(),
+                        paramNames.getLast().getEndPosition()));
                 fValid = false;
             }
 
@@ -852,9 +872,9 @@ public class LambdaExpression
     }
 
     @Override
-    public AstNode clone() {
+    public LambdaExpression copyTree() {
         // the reference to the lambda's method structure should not be a part of the cloned state
-        LambdaExpression that = (LambdaExpression) super.clone();
+        LambdaExpression that = (LambdaExpression) super.copyTree();
         that.m_lambda = null;
         return that;
     }
@@ -1447,6 +1467,8 @@ public class LambdaExpression
                 }
             }
         }
+
+        private final LambdaBindings f_bindings = new LambdaBindings();
 
         private final TypeConstant[] f_atypeParams;
         private final String[]       f_asParams;

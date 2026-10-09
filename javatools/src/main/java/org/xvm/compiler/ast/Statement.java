@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
@@ -21,6 +22,11 @@ import org.xvm.asm.op.Label;
 public abstract class Statement
         extends AstNode {
     // ----- accessors -----------------------------------------------------------------------------
+
+    @Override
+    public Statement copyTree() {
+        return (Statement) super.copyTree();
+    }
 
     @Override
     protected boolean usesSuper() {
@@ -126,15 +132,25 @@ public abstract class Statement
      * @return the resulting statement (typically this) or null if the compilation cannot proceed
      */
     protected final Statement validate(Context ctx, ErrorListener errs) {
+        return validate(ctx, errs, () -> validateImpl(ctx, errs));
+    }
+
+    /** Preserve the statement validation scope while supplying an explicit value-context hint. */
+    protected final Statement validate(Context ctx, ErrorListener errs, Supplier<Statement> validation) {
         if (errs.isAbortDesired()) {
             return null;
         }
 
         // before validating the nested code, associate this statement with the context so that any
         // "break" or "continue" can find the context to apply assignment data to
+        Context   ctxPrevious = m_ctx;
+        Statement stmt;
         m_ctx = ctx;
-        Statement stmt = validateImpl(ctx, errs);
-        m_ctx = null;
+        try {
+            stmt = validation.get();
+        } finally {
+            m_ctx = ctxPrevious;
+        }
 
         if (m_listBreaks != null) {
             for (Iterator<Break> iter = m_listBreaks.iterator(); iter.hasNext(); ) {

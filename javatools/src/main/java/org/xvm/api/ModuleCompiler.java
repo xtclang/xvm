@@ -6,6 +6,8 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 
+import org.jetbrains.annotations.NotNull;
+
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
@@ -31,6 +33,9 @@ import org.xvm.tool.LauncherOptions.CompilerOptions;
 
 import static org.xvm.api.EmbeddingSupport.ERR_INTERNAL;
 
+import static org.xvm.asm.ErrorListener.NOWHERE;
+import static org.xvm.asm.ErrorListener.at;
+
 import static org.xvm.util.Handy.readFileChars;
 
 import static org.xvm.util.Severity.ERROR;
@@ -41,7 +46,9 @@ import static org.xvm.util.Severity.ERROR;
  * <p>Unlike {@link EmbeddingSupport}, a ModuleCompiler is an ordinary object that needs no
  * configuration: compiling does not start the runtime, so it does not depend on the runtime's
  * JVM-wide state (see {@link EmbeddingSupport}), and any number of ModuleCompiler instances, each
- * with its own core repository, can exist in one JVM. Each call to compile is independent.
+ * with its own core repository, can exist in one JVM. Each call to compile has its own attempt.
+ * Hosts must serialize calls that share repositories; separate instances do not isolate mutable
+ * compiler state held by a repository.
  *
  * <p>The compile methods report the same errors as the command-line compiler: every error found in
  * a compiler stage, with the compilation stopping at the end of the first stage that found any.
@@ -75,11 +82,12 @@ public final class ModuleCompiler {
      *
      * @param source  the source code for an entire module to compile
      * @param input   (optional) the module repository to read any required modules from
-     * @param errs    (optional) the ErrorListener to log any compiler messages to
+     * @param errs    the ErrorListener to log any compiler messages to
      *
      * @return the resulting ModuleStructure, or null if a compiler error occurred
      */
-    public ModuleStructure compile(String source, ModuleRepository input, ErrorListener errs) {
+    public ModuleStructure compile(String source, ModuleRepository input, @NotNull ErrorListener errs) {
+        Objects.requireNonNull(errs, "errs");
         try {
             EmbeddingCompiler compiler = new EmbeddingCompiler(source, input, coreRepo, errs);
             return compiler.process() == 0
@@ -89,18 +97,15 @@ public final class ModuleCompiler {
             // the compiler stops at the end of a stage that logged errors; those errors are already
             // in "errs", so this is an ordinary failed compile, as it is for the command-line
             // compiler. A tool-level failure is logged only to the silent console, so report it
-            if (errs != null && !errs.hasSeriousErrors()) {
-                errs.log(ERROR, ERR_INTERNAL, new Object[] {e, "Compilation failed"}, null);
+            if (!errs.hasSeriousErrors()) {
+                errs.error(ERR_INTERNAL, NOWHERE, e, "Compilation failed");
             }
             return null;
         } catch (RuntimeException | AssertionError e) {
             // as in EmbeddingSupport.run(): the compiler runs over caller-supplied source, so a
             // failure in it is reported here rather than thrown at the caller, who was promised a
             // null instead
-            if (errs != null) {
-                errs.log(ERROR, ERR_INTERNAL,
-                        new Object[] {e, "Compilation failed"}, null);
-            }
+            errs.error(ERR_INTERNAL, NOWHERE, e, "Compilation failed");
             return null;
         }
     }
@@ -111,25 +116,23 @@ public final class ModuleCompiler {
      * @param file    the module source file
      * @param input   (optional) the module repository to read any required modules from
      * @param output  (optional) the module repository to write any compiled modules to
-     * @param errs    (optional) the ErrorListener to log any compiler messages to
+     * @param errs    the ErrorListener to log any compiler messages to
      *
      * @return true if the compilation succeeded and the result was placed into the output
      */
     public boolean compile(File file, ModuleRepository input, ModuleRepository output,
-                           ErrorListener errs) {
+                           @NotNull ErrorListener errs) {
+        Objects.requireNonNull(errs, "errs");
         ModuleStructure module;
         try {
             module = compile(new String(readFileChars(file)), input, errs);
         } catch (IOException e) {
-            if (errs != null) {
-                errs.log(ERROR, ERR_INTERNAL,
-                        new Object[] {e, "Unable to read module " + file}, null);
-            }
+            errs.error(ERR_INTERNAL, NOWHERE, e, "Unable to read module " + file);
             return false;
         }
 
         if (module == null) {
-            assert errs == null || errs.hasSeriousErrors();
+            assert errs.hasSeriousErrors();
             return false;
         }
 
@@ -137,14 +140,20 @@ public final class ModuleCompiler {
             try {
                 output.storeModule(module);
             } catch (IOException e) {
-                if (errs != null) {
-                    errs.log(ERROR, ERR_INTERNAL,
-                            new Object[] {e, "Unable to store module " + module.getName()}, module);
-                }
+                errs.error(ERR_INTERNAL, at(module), e, "Unable to store module " + module.getName());
                 return false;
             }
         }
         return true;
+    }
+
+    /**
+     * Forward retained read issues only after the compiler has established a dependency failure.
+     * Successful fallback and speculative repository misses must not become source errors.
+     */
+    static void reportRepositoryReadFailures(ModuleRepository repository, ErrorListener errs) {
+        repository.getReadFailures().forEach((file, cause) -> errs.error(ERR_INTERNAL, NOWHERE,
+                cause, "Dependency search skipped unreadable file " + file));
     }
 
     /**
@@ -230,6 +239,24 @@ public final class ModuleCompiler {
             errsModule.logTo(this);
             errsModule.clear();
             return checkErrors(context);
+        }
+
+        @Override
+        protected void prelinkSystemLibraries(ModuleRepository repository) {
+            try {
+                super.prelinkSystemLibraries(repository);
+            } catch (LauncherException e) {
+                reportRepositoryReadFailures(repository, m_errors);
+                throw e;
+            }
+        }
+
+        @Override
+        public void log(ErrorInfo error) {
+            if (Compiler.MODULE_MISSING.equals(error.getCode())) {
+                reportRepositoryReadFailures(ensureLibraryRepo(), m_errors);
+            }
+            super.log(error);
         }
 
         /**
