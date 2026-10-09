@@ -1090,9 +1090,8 @@ public interface ErrorListener {
     ErrorListener RUNTIME = new RuntimeErrorListener();
 
     /**
-     * Legacy compiler/tool error-budget constant. This is distinct from
-     * {@link ErrorList#DEFAULT_MAX_ERRORS}, which configures the no-argument {@link ErrorList}
-     * constructor. Prefer an explicit budget when a caller requires a particular limit.
+     * Default serious-error budget for compilation, shared by tools and {@link ErrorList#ErrorList()}.
+     * Pass an explicit budget to {@link ErrorList#ErrorList(int)} when a different policy is needed.
      */
     int DEFAULT_MAX_ERRORS = 512;
 
