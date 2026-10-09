@@ -7,7 +7,6 @@ import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
@@ -79,6 +78,17 @@ public class DirRepository
     public synchronized Set<String> getModuleNames() {
         ensureCache();
         return Collections.unmodifiableSet(modulesByName.keySet());
+    }
+
+    @Override
+    public synchronized Map<File, IOException> getReadFailures() {
+        Map<File, IOException> failures = new HashMap<>();
+        for (ModuleInfo info : modulesByFile.values()) {
+            if (info.readFailure != null) {
+                failures.put(info.file, info.readFailure);
+            }
+        }
+        return Map.copyOf(failures);
     }
 
     @Override
@@ -156,7 +166,7 @@ public class DirRepository
     }
 
     private void rebuildCache(File[] files) {
-        // Do not treat a partially rebuilt cache as current after a module read fails.
+        // An unexpected failure must not leave a partially rebuilt cache marked current.
         lastScan = 0;
         Map<File, ModuleInfo> oldModulesByFile = modulesByFile;
         boolean               fWriteCache      = false;
@@ -177,7 +187,8 @@ public class DirRepository
         fWriteCache |= files.length != oldModulesByFile.size();
         for (File file : files) {
             ModuleInfo info = oldModulesByFile.get(file);
-            if (info == null || info.timestamp != file.lastModified() || info.size != file.length()) {
+            if (info == null || info.hasReadFailure()
+                    || info.timestamp != file.lastModified() || info.size != file.length()) {
                 // build a new one to cache
                 info = createModuleInfo(file);
                 fWriteCache = true;
@@ -344,8 +355,11 @@ public class DirRepository
      * @return true if the cache is still good, or false if it needs to be rebuilt
      */
     private boolean isCacheValid() {
-        // only scan once a second (at the most)
-        if (System.currentTimeMillis() < lastScan + 1000) {
+        // Failed candidates are retried once per second, or immediately when metadata changes.
+        // Retaining their cause avoids treating the intervening cached result as unexplained absence.
+        boolean recent = System.currentTimeMillis() < lastScan + 1000;
+        boolean failed = modulesByFile.values().stream().anyMatch(ModuleInfo::hasReadFailure);
+        if (recent && !failed) {
             return true;
         }
 
@@ -361,7 +375,7 @@ public class DirRepository
             }
         }
 
-        return true;
+        return !failed || recent;
     }
 
     // ----- inner class: ModuleInfo ---------------------------------------------------------------
@@ -396,10 +410,17 @@ public class DirRepository
         ModuleStructure tryLoad() {
             try {
                 FileStructure struct = new FileStructure(file);
+                readFailure = null;
                 return struct.getModule();
             } catch (IOException e) {
-                throw new UncheckedIOException("Unable to read module: " + file, e);
+                readFailure = e;
+                return null;
             }
+        }
+
+        boolean hasReadFailure() {
+            // A failed entry read from the disk cache must be retried to recover its cause.
+            return err || readFailure != null;
         }
 
         ModuleStructure ensureModule() {
@@ -426,6 +447,9 @@ public class DirRepository
          * reload it as necessary.
          */
         private transient ModuleStructure module;
+
+        /** The original cause, retained separately from available modules. */
+        private IOException readFailure;
     }
 
     // ----- constants -----------------------------------------------------------------------------
@@ -435,8 +459,7 @@ public class DirRepository
             file.exists() && file.isFile() && file.canRead() && file.length() > 0;
 
     private static final int    CACHE_MAGIC           = 0xEC57CA11;
-    // Version 1 could permanently remember corrupt modules as silently unavailable.
-    private static final int    CACHE_VERSION         = 2;
+    private static final int    CACHE_VERSION         = 1;
     private static final int    MIN_CACHE_HEADER_SIZE = Integer.BYTES * 3 + Short.BYTES;
     private static final int    MIN_CACHE_ENTRY_SIZE  = Long.BYTES * 2 + Short.BYTES + Byte.BYTES;
     private static final String CACHE_DIRECTORY       = "xvm-dir-repository";
