@@ -19,8 +19,9 @@ class TemplateScannerTest {
             val tokens = scanner.tokenize(source)
 
             assertThat(tokens)
-                .describedAs("Source: '$source' (length=${source.length}), chars: ${source.map { it.code }}")
-                .hasSize(2)
+                .describedAs(
+                    "Source: '$source' (length=${source.length}), chars: ${source.map { it.code }}",
+                ).hasSize(2)
             assertThat(tokens[0].type).isEqualTo(TemplateTokenType.TEMPLATE_START)
             assertThat(tokens[1].type).isEqualTo(TemplateTokenType.TEMPLATE_END)
         }
@@ -273,7 +274,8 @@ class TemplateScannerTest {
         @Test
         @DisplayName("should handle regular strings between templates")
         fun regularStringsBetween() {
-            val source = """val x = "not a template"; val y = ${'$'}"template {v}"; val z = "also not";"""
+            val source =
+                """val x = "not a template"; val y = ${'$'}"template {v}"; val z = "also not";"""
             val tokens = scanner.tokenize(source)
 
             // Should only find one template
@@ -291,9 +293,7 @@ class TemplateScannerTest {
             val source = "\$|Hello World"
             val tokens = scanner.tokenize(source)
 
-            assertThat(tokens)
-                .describedAs("Tokens for multiline template: $tokens")
-                .hasSize(3)
+            assertThat(tokens).describedAs("Tokens for multiline template: $tokens").hasSize(3)
             assertThat(tokens[0].type).isEqualTo(TemplateTokenType.TEMPLATE_MULTILINE_START)
             assertThat(tokens[1].type).isEqualTo(TemplateTokenType.TEMPLATE_CONTENT)
             assertThat(tokens[1].value).isEqualTo("Hello World")

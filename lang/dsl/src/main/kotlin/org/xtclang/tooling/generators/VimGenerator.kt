@@ -51,9 +51,9 @@ class VimGenerator(
 
             // Exception handling keywords from model
             val exceptionKeywords =
-                model
-                    .keywordsByCategory(KeywordCategory.EXCEPTION)
-                    .filter { !it.contains(":") } // Skip assert:* variants for keyword matching
+                model.keywordsByCategory(KeywordCategory.EXCEPTION).filter {
+                    !it.contains(":")
+                } // Skip assert:* variants for keyword matching
             if (exceptionKeywords.isNotEmpty()) {
                 appendLine("\" Keywords - Exception handling")
                 appendLine("syn keyword xtcException ${exceptionKeywords.joinToString(" ")}")
@@ -86,9 +86,9 @@ class VimGenerator(
 
             // Other keywords from model
             val otherKeywords =
-                model
-                    .keywordsByCategory(KeywordCategory.OTHER)
-                    .filter { !it.contains(":") } // Skip this:* variants
+                model.keywordsByCategory(KeywordCategory.OTHER).filter {
+                    !it.contains(":")
+                } // Skip this:* variants
             if (otherKeywords.isNotEmpty()) {
                 appendLine("\" Keywords - Other")
                 appendLine("syn keyword ecstasyKeyword ${otherKeywords.joinToString(" ")}")
@@ -129,7 +129,9 @@ class VimGenerator(
             // Strings
             appendLine("\" Strings")
             appendLine("syn region xtcString start='\"' skip='\\\\.' end='\"' contains=xtcEscape")
-            appendLine("syn region xtcTemplateString start='\\$\"' skip='\\\\.' end='\"' contains=xtcEscape,xtcTemplateExpr")
+            appendLine(
+                "syn region xtcTemplateString start='\\$\"' skip='\\\\.' end='\"' contains=xtcEscape,xtcTemplateExpr",
+            )
             appendLine("syn match xtcCharacter \"'[^'\\\\]'\"")
             appendLine("syn match xtcCharacter \"'\\\\[nrtbf\\\\\\\"']'\"")
             appendLine("syn match xtcCharacter \"'\\\\u[0-9a-fA-F]\\{4}'\"")
@@ -143,7 +145,9 @@ class VimGenerator(
 
             // Template expressions
             appendLine("\" Template expressions")
-            appendLine("syn region xtcTemplateExpr matchgroup=xtcTemplateBrace start='{' end='}' contained contains=TOP")
+            appendLine(
+                "syn region xtcTemplateExpr matchgroup=xtcTemplateBrace start='{' end='}' contained contains=TOP",
+            )
             appendLine()
 
             // Comments
@@ -175,7 +179,9 @@ class VimGenerator(
 
             // Function calls
             appendLine("\" Function calls")
-            appendLine("syn match xtcFunctionCall '\\<[a-z_][A-Za-z0-9_]*\\s*(' contains=xtcFunctionName")
+            appendLine(
+                "syn match xtcFunctionCall '\\<[a-z_][A-Za-z0-9_]*\\s*(' contains=xtcFunctionName",
+            )
             appendLine("syn match xtcFunctionName '\\<[a-z_][A-Za-z0-9_]*' contained")
             appendLine()
 
@@ -260,9 +266,7 @@ class VimGenerator(
 
         // Range operators from model
         val rangeOps =
-            model.operators
-                .filter { it.symbol.contains("..") }
-                .map { escapeVimPattern(it.symbol) }
+            model.operators.filter { it.symbol.contains("..") }.map { escapeVimPattern(it.symbol) }
         if (rangeOps.isNotEmpty()) {
             appendLine("syn match xtcOperator '${rangeOps.joinToString("\\|")}'")
         }

@@ -12,14 +12,14 @@ import java.nio.file.Path
 import java.util.concurrent.TimeUnit.SECONDS
 
 class ConnectionProcessTest {
-    @TempDir
-    lateinit var directory: Path
+    @TempDir lateinit var directory: Path
 
     @Test
     fun `cancelled startup never creates a child in the upstream provider`() {
         withProvider { provider, lifetime ->
             lifetime.stop()
-            assertThatThrownBy { lifetime.start() }.isInstanceOf(CannotStartProcessException::class.java)
+            assertThatThrownBy { lifetime.start() }
+                .isInstanceOf(CannotStartProcessException::class.java)
             assertThat(provider.pid).isNull()
         }
     }
@@ -35,7 +35,8 @@ class ConnectionProcessTest {
             lifetime.stop()
             process.onExit().get(10, SECONDS)
             assertThat(process.isAlive).isFalse()
-            assertThatThrownBy { lifetime.start() }.isInstanceOf(CannotStartProcessException::class.java)
+            assertThatThrownBy { lifetime.start() }
+                .isInstanceOf(CannotStartProcessException::class.java)
         }
     }
 
@@ -46,16 +47,17 @@ class ConnectionProcessTest {
                 "class Probe { public static void main(String[] args) throws Exception { System.in.read(); } }",
             )
         val provider =
-            object : OSProcessStreamConnectionProvider(
-                GeneralCommandLine(
-                    ProcessHandle
-                        .current()
-                        .info()
-                        .command()
-                        .orElseThrow(),
-                    source.toString(),
-                ),
-            ) {
+            object :
+                OSProcessStreamConnectionProvider(
+                    GeneralCommandLine(
+                        ProcessHandle
+                            .current()
+                            .info()
+                            .command()
+                            .orElseThrow(),
+                        source.toString(),
+                    ),
+                ) {
                 fun child(): Process? = processHandler?.process
             }
         try {

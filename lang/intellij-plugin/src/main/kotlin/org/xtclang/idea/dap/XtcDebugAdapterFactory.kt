@@ -20,14 +20,13 @@ import org.xtclang.idea.PluginPaths
 import java.io.File
 
 /**
- * Factory for creating XTC Debug Adapter (DAP) descriptors.
+ * Factory for creating Ecstasy Debug Adapter (DAP) descriptors.
  *
- * Registered via the `com.redhat.devtools.lsp4ij.debugAdapterServer` extension point.
- * LSP4IJ uses this factory to create DAP sessions when users launch debug configurations
- * for `.x` files.
+ * Registered via the `com.redhat.devtools.lsp4ij.debugAdapterServer` extension point. LSP4IJ uses
+ * this factory to create DAP sessions when users launch debug configurations for `.x` files.
  *
- * The DAP server runs out-of-process (same as the LSP server) using IntelliJ's JBR,
- * for classloader isolation and crash safety.
+ * The DAP server runs out-of-process (same as the LSP server) using IntelliJ's JBR, for classloader
+ * isolation and crash safety.
  */
 class XtcDebugAdapterFactory : DebugAdapterDescriptorFactory() {
     private val logger = logger<XtcDebugAdapterFactory>()
@@ -36,7 +35,7 @@ class XtcDebugAdapterFactory : DebugAdapterDescriptorFactory() {
         options: RunConfigurationOptions,
         environment: ExecutionEnvironment,
     ): DebugAdapterDescriptor {
-        logger.info("Creating XTC DAP descriptor")
+        logger.info("Creating Ecstasy DAP descriptor")
         return XtcDebugAdapterDescriptor(options, environment, serverDefinition)
     }
 
@@ -47,26 +46,27 @@ class XtcDebugAdapterFactory : DebugAdapterDescriptorFactory() {
 }
 
 /**
- * Descriptor that launches the XTC DAP server as an out-of-process Java application.
+ * Descriptor that launches the Ecstasy DAP server as an out-of-process Java application.
  *
- * The DAP server communicates over stdio (JSON-RPC), matching the architecture of the
- * LSP server. Uses IntelliJ's JBR java binary to spawn the server process.
+ * The DAP server communicates over stdio (JSON-RPC), matching the architecture of the LSP server.
+ * Uses IntelliJ's JBR java binary to spawn the server process.
  *
  * ## LSP vs DAP process lifecycle
  *
  * The LSP and DAP servers use different LSP4IJ base classes with different process models:
  *
  * - **LSP** ([org.xtclang.idea.lsp.XtcLspConnectionProvider]): Extends
- *   `OSProcessStreamConnectionProvider`. Uses [com.redhat.devtools.lsp4ij.server.JavaProcessCommandBuilder]
- *   to build the command line -- LSP4IJ owns the process lifecycle, calling `start()`/`stop()` as needed.
- *   LSP4IJ may auto-start the server concurrently when multiple `.x` files are opened, causing
- *   duplicate processes (see TODO in `XtcLspConnectionProvider` re: LSP4IJ issue #888). This
- *   requires an `AtomicBoolean` guard to suppress duplicate "server started" notifications.
+ *   `OSProcessStreamConnectionProvider`. Uses
+ *   [com.redhat.devtools.lsp4ij.server.JavaProcessCommandBuilder] to build the command line --
+ *   LSP4IJ owns the process lifecycle, calling `start()`/`stop()` as needed. LSP4IJ may auto-start
+ *   the server concurrently when multiple `.x` files are opened, causing duplicate processes (see
+ *   TODO in `XtcLspConnectionProvider` re: LSP4IJ issue #888). This requires an `AtomicBoolean`
+ *   guard to suppress duplicate "server started" notifications.
  *
- * - **DAP** (this class): Extends `DebugAdapterDescriptor`. We override [startServer] and return
- *   an `OSProcessHandler` -- we create and own the process directly. DAP sessions are always
- *   user-initiated (one `startServer()` call per "Debug" action), so there is no concurrent
- *   spawn race condition and no `AtomicBoolean` guard is needed.
+ * - **DAP** (this class): Extends `DebugAdapterDescriptor`. We override [startServer] and return an
+ *   `OSProcessHandler` -- we create and own the process directly. DAP sessions are always
+ *   user-initiated (one `startServer()` call per "Debug" action), so there is no concurrent spawn
+ *   race condition and no `AtomicBoolean` guard is needed.
  */
 class XtcDebugAdapterDescriptor(
     options: RunConfigurationOptions,
@@ -98,7 +98,7 @@ class XtcDebugAdapterDescriptor(
                 serverJar.toString(),
             )
 
-        logger.info("Starting XTC DAP server: ${commandLine.commandLineString}")
+        logger.info("Starting Ecstasy DAP server: ${commandLine.commandLineString}")
         return OSProcessHandler(commandLine)
     }
 
@@ -115,7 +115,7 @@ class XtcDebugAdapterDescriptor(
 
     override fun getDebugMode(): DebugMode = DebugMode.LAUNCH
 
-    override fun getServerReadyConfig(debugMode: DebugMode): ServerReadyConfig = ServerReadyConfig("XTC Debug Adapter")
+    override fun getServerReadyConfig(debugMode: DebugMode): ServerReadyConfig = ServerReadyConfig("Ecstasy Debug Adapter")
 
     override fun getFileType(): FileType? = FileTypeManager.getInstance().getFileTypeByExtension("x")
 

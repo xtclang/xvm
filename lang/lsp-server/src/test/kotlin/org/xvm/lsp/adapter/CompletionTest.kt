@@ -9,8 +9,8 @@ import org.junit.jupiter.api.TestInstance
 /**
  * Completion tests for [TreeSitterAdapter].
  *
- * Exercises keyword completions, built-in type completions, and context-aware
- * completions derived from document symbols after compilation.
+ * Exercises keyword completions, built-in type completions, and context-aware completions derived
+ * from document symbols after compilation.
  */
 @DisplayName("TreeSitterAdapter - Completions")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -23,8 +23,8 @@ class CompletionTest : TreeSitterTestBase() {
     @DisplayName("getCompletions()")
     inner class CompletionTests {
         /**
-         * Even without any compiled document, the adapter should offer XTC keywords
-         * (`class`, `interface`, `module`) from [XtcLanguageConstants].
+         * Even without any compiled document, the adapter should offer XTC keywords (`class`,
+         * `interface`, `module`) from [XtcLanguageConstants].
          */
         @Test
         @DisplayName("should return keywords")
@@ -53,8 +53,8 @@ class CompletionTest : TreeSitterTestBase() {
         }
 
         /**
-         * After compiling, the adapter re-queries declarations from the parse tree
-         * and includes them as completion items. "Person" should appear.
+         * After compiling, the adapter re-queries declarations from the parse tree and includes
+         * them as completion items. "Person" should appear.
          */
         @Test
         @DisplayName("should include document symbols after compile")
@@ -75,8 +75,8 @@ class CompletionTest : TreeSitterTestBase() {
         }
 
         /**
-         * After compiling a class with multiple methods, completions should include
-         * those method names alongside keywords and built-in types.
+         * After compiling a class with multiple methods, completions should include those method
+         * names alongside keywords and built-in types.
          */
         @Test
         @DisplayName("should include method names from compiled source")
@@ -118,8 +118,8 @@ class CompletionTest : TreeSitterTestBase() {
     @DisplayName("completions at call sites -- tree-sitter-specific")
     inner class CompletionsAtCallSiteTests {
         /**
-         * Completions inside a class body should include all sibling method names
-         * and the class name itself, since the adapter adds all document symbols.
+         * Completions inside a class body should include all sibling method names and the class
+         * name itself, since the adapter adds all document symbols.
          */
         @Test
         @DisplayName("should include sibling methods in completions")
@@ -143,7 +143,8 @@ class CompletionTest : TreeSitterTestBase() {
                 """.trimIndent()
 
             ts.compile(uri, source)
-            val completions = logged("shouldIncludeSiblingMethodsInCompletions", ts.getCompletions(uri, 9, 12))
+            val completions =
+                logged("shouldIncludeSiblingMethodsInCompletions", ts.getCompletions(uri, 9, 12))
             logger.info("  completion labels: {}", completions.map { it.label })
 
             assertThat(completions).anyMatch { it.label == "add" }
@@ -153,8 +154,8 @@ class CompletionTest : TreeSitterTestBase() {
         }
 
         /**
-         * After compiling source with multiple classes, completions should include
-         * all class names and method names from the entire file.
+         * After compiling source with multiple classes, completions should include all class names
+         * and method names from the entire file.
          */
         @Test
         @DisplayName("should include symbols from multiple classes")
@@ -177,7 +178,8 @@ class CompletionTest : TreeSitterTestBase() {
                 """.trimIndent()
 
             ts.compile(uri, source)
-            val completions = logged("shouldIncludeSymbolsFromMultipleClasses", ts.getCompletions(uri, 0, 0))
+            val completions =
+                logged("shouldIncludeSymbolsFromMultipleClasses", ts.getCompletions(uri, 0, 0))
             logger.info("  completion labels: {}", completions.map { it.label })
 
             assertThat(completions).anyMatch { it.label == "Parser" }
@@ -187,7 +189,9 @@ class CompletionTest : TreeSitterTestBase() {
         }
 
         @Test
-        @DisplayName("should include module-level @Inject property when completing inside a function body")
+        @DisplayName(
+            "should include module-level @Inject property when completing inside a function body",
+        )
         fun shouldIncludeModuleLevelInjectPropertyInBodyCompletions() {
             val uri = freshUri()
             val source =
@@ -216,8 +220,8 @@ class CompletionTest : TreeSitterTestBase() {
 
         /**
          * Function-local variables declared above the cursor must appear in BODY-context
-         * completions. This complements the @Inject test above and exercises the AST
-         * scope-walk path (variable_declaration found in the enclosing block).
+         * completions. This complements the @Inject test above and exercises the AST scope-walk
+         * path (variable_declaration found in the enclosing block).
          */
         @Test
         @DisplayName("should include function-local variable in body completions")
@@ -244,9 +248,7 @@ class CompletionTest : TreeSitterTestBase() {
             assertThat(completions).anyMatch { it.label == "greeting" }
         }
 
-        /**
-         * Method parameters must appear in BODY-context completions inside the method body.
-         */
+        /** Method parameters must appear in BODY-context completions inside the method body. */
         @Test
         @DisplayName("should include method parameters in body completions")
         fun shouldIncludeMethodParametersInBodyCompletions() {
@@ -306,8 +308,8 @@ class CompletionTest : TreeSitterTestBase() {
 
         /**
          * Function-local variables and parameters should rank ahead of generic keywords like
-         * `return` in the response. The user typed an identifier prefix; the closest-scope
-         * names are the most likely target.
+         * `return` in the response. The user typed an identifier prefix; the closest-scope names
+         * are the most likely target.
          */
         @Test
         @DisplayName("should rank function-local variable ahead of body keywords")
@@ -336,17 +338,16 @@ class CompletionTest : TreeSitterTestBase() {
 
         /**
          * Slightly complex example: a method that mixes
-         *   - a function-local variable (`localVar`)
-         *   - method parameters (`a`, `b`)
-         *   - sibling class members (`classProperty`, `helper`)
-         *   - module-level declarations (`moduleProperty`, `Calculator`)
-         *   - built-in types (`Int`, `String`)
-         *   - body keywords (`return`)
+         * - a function-local variable (`localVar`)
+         * - method parameters (`a`, `b`)
+         * - sibling class members (`classProperty`, `helper`)
+         * - module-level declarations (`moduleProperty`, `Calculator`)
+         * - built-in types (`Int`, `String`)
+         * - body keywords (`return`)
          *
-         * The response order should reflect relevance: anything reachable through the AST
-         * scope walk (local, parameters, class members, module-level) is more relevant than
-         * built-in types or keywords. Within the scope-walked items, inner scopes outrank
-         * outer scopes.
+         * The response order should reflect relevance: anything reachable through the AST scope
+         * walk (local, parameters, class members, module-level) is more relevant than built-in
+         * types or keywords. Within the scope-walked items, inner scopes outrank outer scopes.
          */
         @Test
         @DisplayName("should order completions by scope distance with mixed kinds")
@@ -381,18 +382,19 @@ class CompletionTest : TreeSitterTestBase() {
             val labels = completions.map { it.label }
 
             // Every name is reachable.
-            assertThat(labels).contains(
-                "localVar",
-                "a",
-                "b",
-                "classProperty",
-                "helper",
-                "moduleProperty",
-                "Calculator",
-                "Int",
-                "String",
-                "return",
-            )
+            assertThat(labels)
+                .contains(
+                    "localVar",
+                    "a",
+                    "b",
+                    "classProperty",
+                    "helper",
+                    "moduleProperty",
+                    "Calculator",
+                    "Int",
+                    "String",
+                    "return",
+                )
 
             // Scope-walked items rank ahead of built-in types and keywords.
             assertThat(labels.indexOf("localVar")).isLessThan(labels.indexOf("Int"))
@@ -432,7 +434,8 @@ class CompletionTest : TreeSitterTestBase() {
                 """.trimIndent()
 
             ts.compile(uri, source)
-            val completions = logged("shouldIncludeBodyContextSuggestions", ts.getCompletions(uri, 7, 8))
+            val completions =
+                logged("shouldIncludeBodyContextSuggestions", ts.getCompletions(uri, 7, 8))
             logger.info("  completion labels: {}", completions.take(20).map { it.label })
 
             assertThat(completions).anyMatch { it.label == "add" }

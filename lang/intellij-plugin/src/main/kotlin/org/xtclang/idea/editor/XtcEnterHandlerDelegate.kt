@@ -15,10 +15,10 @@ import com.intellij.psi.PsiDocumentManager
 import com.intellij.psi.PsiFile
 
 /**
- * Repairs IntelliJ's local brace-split behavior for `.x` files when Enter is pressed
- * after a declaration ending in `{`. LSP on-type formatting does not reliably receive
- * the first Enter in this path, so we normalize the editor-local result here using the
- * current IntelliJ code style settings.
+ * Repairs IntelliJ's local brace-split behavior for `.x` files when Enter is pressed after a
+ * declaration ending in `{`. LSP on-type formatting does not reliably receive the first Enter in
+ * this path, so we normalize the editor-local result here using the current IntelliJ code style
+ * settings.
  */
 class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
     private val logger = logger<XtcEnterHandlerDelegate>()
@@ -211,11 +211,21 @@ class XtcEnterHandlerDelegate : EnterHandlerDelegateAdapter() {
                 val fix =
                     when {
                         isCompactEmptyBlockSplit(document, currentLine) -> {
-                            rewriteEmptyBlock(document, currentLine - 1, currentLine, currentLine + 1)
+                            rewriteEmptyBlock(
+                                document,
+                                currentLine - 1,
+                                currentLine,
+                                currentLine + 1,
+                            )
                         }
 
                         isClosingBraceCaretAfterBadSplit(document, currentLine) -> {
-                            rewriteEmptyBlock(document, currentLine - 2, currentLine - 1, currentLine)
+                            rewriteEmptyBlock(
+                                document,
+                                currentLine - 2,
+                                currentLine - 1,
+                                currentLine,
+                            )
                         }
 
                         else -> {

@@ -3,8 +3,8 @@ package org.xvm.lsp.treesitter
 /**
  * Standard LSP semantic token legend: token types and modifiers.
  *
- * These lists are sent to the client during initialization so it knows how to interpret
- * the integer indices in the token data array.
+ * These lists are sent to the client during initialization so it knows how to interpret the integer
+ * indices in the token data array.
  */
 object SemanticTokenLegend {
     val tokenTypes: List<String> =
@@ -57,8 +57,8 @@ object SemanticTokenLegend {
 /**
  * Walks an XTC tree-sitter AST and produces LSP semantic token data.
  *
- * A fresh instance should be created per request (accumulates mutable state).
- * Thread-safe since each `supplyAsync` gets its own instance.
+ * A fresh instance should be created per request (accumulates mutable state). Thread-safe since
+ * each `supplyAsync` gets its own instance.
  */
 class SemanticTokenEncoder {
     private val declarationKeywords =
@@ -139,7 +139,11 @@ class SemanticTokenEncoder {
             node.childByFieldName("name")
                 ?: node.children.firstOrNull { it.type == "identifier" }
                 ?: return
-        emitToken(name, "enumMember", SemanticTokenLegend.modifierBitmask("declaration", "readonly"))
+        emitToken(
+            name,
+            "enumMember",
+            SemanticTokenLegend.modifierBitmask("declaration", "readonly"),
+        )
         markClassified(name)
     }
 
@@ -153,7 +157,8 @@ class SemanticTokenEncoder {
 
         node.childByFieldName("name")?.let { id ->
             val deprecated = "deprecated".takeIf { hasDeprecatedAnnotation(node) }
-            val mods = buildModifiers(node, *listOfNotNull("declaration", deprecated).toTypedArray())
+            val mods =
+                buildModifiers(node, *listOfNotNull("declaration", deprecated).toTypedArray())
             emitToken(id, "method", mods)
         }
 
@@ -193,7 +198,8 @@ class SemanticTokenEncoder {
 
         node.childByFieldName("name")?.let { id ->
             val deprecated = "deprecated".takeIf { hasDeprecatedAnnotation(node) }
-            val mods = buildModifiers(node, *listOfNotNull("declaration", deprecated).toTypedArray())
+            val mods =
+                buildModifiers(node, *listOfNotNull("declaration", deprecated).toTypedArray())
             emitToken(id, "property", mods)
         }
     }
@@ -267,9 +273,11 @@ class SemanticTokenEncoder {
     }
 
     private fun emitDeclarationKeyword(node: XtcNode) {
-        node.children.firstOrNull { it.text in declarationKeywords }?.let { keyword ->
-            emitToken(keyword, "keyword", 0)
-        }
+        node.children
+            .firstOrNull { it.text in declarationKeywords }
+            ?.let { keyword ->
+                emitToken(keyword, "keyword", 0)
+            }
     }
 
     private fun emitModifierTokens(node: XtcNode) {
@@ -283,9 +291,15 @@ class SemanticTokenEncoder {
                     emitToken(child, "modifier", 0)
                 }
 
-                child.text == "override" || child.text == "final" || child.text == "native" ||
-                    child.text == "lazy" || child.text == "atomic" || child.text == "inject" ||
-                    child.text == "delegate" || child.text == "readonly" || child.text == "immutable" -> {
+                child.text == "override" ||
+                    child.text == "final" ||
+                    child.text == "native" ||
+                    child.text == "lazy" ||
+                    child.text == "atomic" ||
+                    child.text == "inject" ||
+                    child.text == "delegate" ||
+                    child.text == "readonly" ||
+                    child.text == "immutable" -> {
                     emitToken(child, "modifier", 0)
                 }
             }
@@ -297,7 +311,11 @@ class SemanticTokenEncoder {
         for (child in typeParams.children) {
             if (child.type == "type_parameter") {
                 child.childByFieldName("name")?.let { id ->
-                    emitToken(id, "typeParameter", SemanticTokenLegend.modifierBitmask("declaration"))
+                    emitToken(
+                        id,
+                        "typeParameter",
+                        SemanticTokenLegend.modifierBitmask("declaration"),
+                    )
                     markClassified(id)
                 }
                 child.childByFieldName("constraint")?.let { constraint ->
@@ -343,8 +361,7 @@ class SemanticTokenEncoder {
 
     private fun hasDeprecatedAnnotation(node: XtcNode): Boolean =
         node.children.any { child ->
-            child.type == "annotation" &&
-                child.childByFieldName("name")?.text == "Deprecated"
+            child.type == "annotation" && child.childByFieldName("name")?.text == "Deprecated"
         }
 
     private fun buildModifiers(
@@ -402,27 +419,27 @@ class SemanticTokenEncoder {
         var prevLine = 0
         var prevColumn = 0
 
-        for (token in sortedTokens) {
-            val deltaLine = token.line - prevLine
-            val deltaStart = if (deltaLine == 0) token.column - prevColumn else token.column
+        for ((line, column, length, tokenType, tokenModifiers) in sortedTokens) {
+            val deltaLine = line - prevLine
+            val deltaStart = if (deltaLine == 0) column - prevColumn else column
 
             result.add(deltaLine)
             result.add(deltaStart)
-            result.add(token.length)
-            result.add(token.tokenType)
-            result.add(token.tokenModifiers)
+            result.add(length)
+            result.add(tokenType)
+            result.add(tokenModifiers)
 
-            prevLine = token.line
-            prevColumn = token.column
+            prevLine = line
+            prevColumn = column
         }
 
         return result
     }
 
     /**
-     * Unique key for deduplication. Combines line, column, AND node type to avoid
-     * collisions when a parent and child node share the same start position
-     * (e.g., `type_name` wrapping an `identifier` at the same column).
+     * Unique key for deduplication. Combines line, column, AND node type to avoid collisions when a
+     * parent and child node share the same start position (e.g., `type_name` wrapping an
+     * `identifier` at the same column).
      */
     private fun nodeKey(node: XtcNode): Long {
         val typeHash = node.type.hashCode().toLong() and 0xFFFFL

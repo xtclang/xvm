@@ -10,7 +10,7 @@
         "url": "https://github.com/xtclang/xvm"
     },
     "engines": {
-        "vscode": "^1.101.0"
+        "vscode": "^1.140.0"
     },
     "categories": [
         "Programming Languages",
@@ -71,6 +71,22 @@
         ],
         "commands": [
             {
+                "command": "xtc.configureCompilerPaths",
+                "title": "Ecstasy: Configure Compiler Paths"
+            },
+            {
+                "command": "xtc.showCompilerPaths",
+                "title": "Ecstasy: Show Effective Compiler Paths"
+            },
+            {
+                "command": "xtc.refreshCompilerBuild",
+                "title": "Ecstasy: Refresh Gradle Compiler Model"
+            },
+            {
+                "command": "xtc.prepareCompilerInputs",
+                "title": "Ecstasy: Prepare Generated Compiler Resources"
+            },
+            {
                 "command": "xtc.createProject",
                 "title": "Ecstasy: Create New Project"
             },
@@ -83,8 +99,50 @@
                 "title": "Ecstasy: Restart Language Server"
             },
             {
+                "command": "xtc.selectLanguageAdapter",
+                "title": "Ecstasy: Switch Language Adapter"
+            },
+            {
                 "command": "xtc.showServerOutput",
                 "title": "Ecstasy: Show Language Server Output"
+            },
+            {
+                "command": "xtc.hideServerOutput",
+                "title": "Ecstasy: Hide Language Server Output"
+            },
+            {
+                "command": "xtc.openLanguageSettings",
+                "title": "Ecstasy: Open Language Service Settings"
+            },
+            {
+                "command": "xtc.showLanguageServiceStatus",
+                "title": "Ecstasy: Show Effective Language Service Configuration"
+            },
+            {
+                "command": "xtc.configureCompilerLibraries",
+                "title": "Configure Libraries and Sources",
+                "category": "Ecstasy"
+            },
+            {
+                "command": "xtc.exportServerLogs",
+                "title": "Export Server Logs",
+                "category": "Ecstasy"
+            }
+        ],
+        "keybindings": [
+            {
+                "command": "xtc.selectLanguageAdapter",
+                "key": "ctrl+alt+x a",
+                "when": "editorLangId == xtc"
+            },
+            {
+                "command": "xtc.showServerOutput",
+                "key": "ctrl+alt+x l"
+            },
+            {
+                "command": "xtc.hideServerOutput",
+                "key": "ctrl+alt+x l",
+                "when": "view.workbench.panel.output.visible && activeOutputChannel =~ /xtclang\\.xtc-language\\.Ecstasy Language Server(?:\\.\\d+)?\\.log$/"
             }
         ],
         "taskDefinitions": [
@@ -119,66 +177,293 @@
                 }
             }
         ],
-        "configuration": {
-            "title": "Ecstasy",
-            "properties": {
-                "xtc.java.home": {
-                    "type": "string",
-                    "default": "",
-                    "description": "Path to Java 25+ installation (overrides JAVA_HOME). Leave empty to use JAVA_HOME or 'java' in PATH.",
-                    "scope": "machine-overridable"
-                },
-                "xtc.trace.server": {
-                    "type": "string",
-                    "enum": [
-                        "off",
-                        "messages",
-                        "verbose"
-                    ],
-                    "default": "off",
-                    "description": "Trace communication between VS Code and the XTC Language Server (for debugging)"
-                },
-                "xtc.inlayHints.enabled": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "Enable inlay hints from the XTC Language Server"
-                },
-                "xtc.formatting.indentSize": {
-                    "type": "integer",
-                    "default": 4,
-                    "description": "Number of spaces per indentation level"
-                },
-                "xtc.formatting.continuationIndentSize": {
-                    "type": "integer",
-                    "default": 8,
-                    "description": "Number of spaces for continuation lines"
-                },
-                "xtc.formatting.tabSize": {
-                    "type": "integer",
-                    "default": 4,
-                    "description": "Tab width in spaces"
-                },
-                "xtc.formatting.insertSpaces": {
-                    "type": "boolean",
-                    "default": true,
-                    "description": "Use spaces instead of tabs"
-                },
-                "xtc.formatting.maxLineWidth": {
-                    "type": "integer",
-                    "default": 120,
-                    "description": "Maximum line width (right margin)"
-                },
-                "xtc.sourceRoots": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
+        "configuration": [
+            {
+                "title": "Ecstasy: Compiler",
+                "order": 0,
+                "properties": {
+                    "xtc.compiler.sourceModules": {
+                        "type": [
+                            "array",
+                            "null"
+                        ],
+                        "default": null,
+                        "scope": "window",
+                        "description": "Compiler source graph: null discovers workspace modules; [] disables discovery; an array supplies explicit roots and edges. Changes apply without restarting. Relative URIs require a single workspace folder.",
+                        "items": {
+                            "type": "object",
+                            "required": [
+                                "name",
+                                "uri"
+                            ],
+                            "additionalProperties": false,
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "description": "Declared Ecstasy module name."
+                                },
+                                "uri": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "description": "Module .x root: a file URI or URI relative to the workspace folder."
+                                },
+                                "dependencies": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    },
+                                    "uniqueItems": true,
+                                    "default": [],
+                                    "description": "Names of source modules this module imports."
+                                },
+                                "resourceRoots": {
+                                    "type": [
+                                        "array",
+                                        "null"
+                                    ],
+                                    "items": {
+                                        "type": "string",
+                                        "minLength": 1
+                                    },
+                                    "uniqueItems": true,
+                                    "default": null,
+                                    "description": "Ordered resource root file URIs or workspace-relative paths. Omitted/null uses compiler layout deduction; [] disables resources. Explicit roots replace the defaults. Gradle model imports use evaluated processed resources unless an explicit graph overrides them."
+                                }
+                            }
+                        }
                     },
-                    "default": [],
-                    "description": "Extra source root directories the XTC Language Server indexes (e.g. XDK standard-library sources). Accepts absolute paths to directories that contain .x source files outside the open workspace.",
-                    "scope": "machine-overridable"
+                    "xtc.sourceRoots": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "default": [],
+                        "description": "Extra source root directories the Ecstasy Language Server indexes (e.g. XDK standard-library sources). Accepts absolute paths to directories that contain .x source files outside the open workspace. Window-wide; folder overrides are not used. Changes restart the server and restore open buffers. Compiler dependencies and read-only navigation sources belong in xtc.compiler.libraries.",
+                        "scope": "machine-overridable"
+                    },
+                    "xtc.compiler.libraries": {
+                        "type": "object",
+                        "scope": "window",
+                        "default": {
+                            "modulePath": null,
+                            "sourceAttachments": []
+                        },
+                        "additionalProperties": false,
+                        "description": "Ordered external compiler libraries and matching read-only source attachments. Workspace-owned; use absolute file URIs in multi-root workspaces. Apply without restarting. Bundled XDK is always included.",
+                        "properties": {
+                            "modulePath": {
+                                "type": [
+                                    "array",
+                                    "null"
+                                ],
+                                "default": null,
+                                "items": {
+                                    "type": "string"
+                                },
+                                "description": "Null inherits Gradle binary inputs; [] removes external libraries. Entries are directories or .xtc files; first module wins. Relative paths require one workspace folder."
+                            },
+                            "sourceAttachments": {
+                                "type": "array",
+                                "default": [],
+                                "items": {
+                                    "type": "object",
+                                    "required": [
+                                        "module",
+                                        "roots"
+                                    ],
+                                    "additionalProperties": false,
+                                    "properties": {
+                                        "module": {
+                                            "type": "string",
+                                            "description": "Exact external binary module name."
+                                        },
+                                        "roots": {
+                                            "type": "array",
+                                            "minItems": 1,
+                                            "items": {
+                                                "type": "string"
+                                            },
+                                            "description": "Ordered matching source directories, used only for read-only navigation."
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            {
+                "title": "Ecstasy: Language Service",
+                "order": 1,
+                "properties": {
+                    "xtc.languageService.adapter": {
+                        "type": "string",
+                        "enum": ["default", "compiler", "treesitter"],
+                        "enumItemLabels": ["Bundled default", "Ecstasy Compiler", "Tree-sitter"],
+                        "enumDescriptions": [
+                            "Use the adapter chosen by this server build (normally Compiler).",
+                            "Compiler diagnostics, type resolution and semantic features.",
+                            "Syntax-based analysis without compiler type checking."
+                        ],
+                        "default": "default",
+                        "scope": "window",
+                        "description": "Language server adapter. Changes restart the server and restore open buffers. Also available through Ecstasy: Switch Language Adapter."
+                    },
+                    "xtc.trace.server": {
+                        "type": "string",
+                        "enum": [
+                            "off",
+                            "messages",
+                            "verbose"
+                        ],
+                        "default": "off",
+                        "description": "Trace communication between VS Code and the Ecstasy Language Server (for debugging)",
+                        "scope": "window"
+                    },
+                    "xtc.codeLens.references": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Show compiler reference counts for declarations in the configured source graph. Applies immediately; Run lenses are independent. Native editor.codeLens controls also apply.",
+                        "scope": "resource"
+                    },
+                    "xtc.inlayHints.enabled": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Show Ecstasy inlay hints. Applies immediately; the native editor.inlayHints.enabled preference also applies.",
+                        "scope": "resource"
+                    },
+                    "xtc.languageService.textSynchronization": {
+                        "type": "string",
+                        "enum": [
+                            "full",
+                            "incremental"
+                        ],
+                        "enumDescriptions": [
+                            "Send the full document after changes (default).",
+                            "Send changed text ranges. This does not enable incremental compilation."
+                        ],
+                        "default": "full",
+                        "scope": "window",
+                        "description": "Text transport to the language server. Changing this automatically restarts the server and resynchronizes all open buffers. It does not enable incremental compilation."
+                    },
+                    "xtc.languageService.saveFormatting": {
+                        "type": "string",
+                        "enum": [
+                            "editor",
+                            "server"
+                        ],
+                        "enumDescriptions": [
+                            "Use the native editor.formatOnSave preference.",
+                            "Request server save edits when native format-on-save is disabled."
+                        ],
+                        "default": "editor",
+                        "scope": "window",
+                        "description": "Owner of save formatting. Native format-on-save takes precedence to prevent duplicate edits. Changing this automatically restarts the server and resynchronizes open buffers."
+                    }
+                }
+            },
+            {
+                "title": "Ecstasy: Formatting",
+                "order": 2,
+                "properties": {
+                    "xtc.formatting.indentSize": {
+                        "type": "integer",
+                        "default": 4,
+                        "description": "Number of spaces per indentation level",
+                        "scope": "window",
+                        "minimum": 1,
+                        "maximum": 32
+                    },
+                    "xtc.formatting.continuationIndentSize": {
+                        "type": "integer",
+                        "default": 8,
+                        "description": "Number of spaces for continuation lines",
+                        "scope": "window",
+                        "minimum": 1,
+                        "maximum": 32
+                    },
+                    "xtc.formatting.tabSize": {
+                        "type": "integer",
+                        "default": 4,
+                        "description": "Tab width in spaces",
+                        "scope": "window",
+                        "minimum": 1,
+                        "maximum": 32,
+                        "deprecationMessage": "This legacy value does not affect the formatter. Use editor.tabSize for visual tab width."
+                    },
+                    "xtc.formatting.insertSpaces": {
+                        "type": "boolean",
+                        "default": true,
+                        "description": "Use spaces instead of tabs",
+                        "scope": "window"
+                    },
+                    "xtc.formatting.maxLineWidth": {
+                        "type": "integer",
+                        "default": 120,
+                        "description": "Compiler adapter target width for expression and list wrapping at safe token boundaries; literals and comments are not split.",
+                        "scope": "window",
+                        "minimum": 1,
+                        "maximum": 1000
+                    }
+                }
+            },
+            {
+                "title": "Ecstasy: Runtime and Logs",
+                "order": 3,
+                "properties": {
+                    "xtc.java.home": {
+                        "type": "string",
+                        "default": "",
+                        "description": "Java 25+ installation for this language-server connection. Leave empty for JDK discovery or a cached/downloaded runtime. Invalid explicit paths are rejected. Changing this restarts the server and restores open buffers; folder overrides are not used.",
+                        "scope": "machine-overridable"
+                    },
+                    "xtc.java.vmOptions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "default": [],
+                        "scope": "machine",
+                        "description": "Advanced LSP JVM options, one argument per item. Supports -Xms/-Xmx/-Xss sizes (K/M/G), MaxMetaspaceSize, ReservedCodeCacheSize, ActiveProcessorCount and G1/Serial/Parallel/Z collectors. Restart Language Server to apply. Workspace overrides are ignored."
+                    },
+                    "xtc.server.logs": {
+                        "type": "object",
+                        "scope": "machine",
+                        "default": {
+                            "historyDays": 7,
+                            "maxFileMb": 10,
+                            "totalSizeMb": 50,
+                            "retainedSessions": 5
+                        },
+                        "additionalProperties": false,
+                        "properties": {
+                            "historyDays": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 90
+                            },
+                            "maxFileMb": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 100
+                            },
+                            "totalSizeMb": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 1000
+                            },
+                            "retainedSessions": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "maximum": 20
+                            }
+                        },
+                        "description": "Machine-local server log retention. Restart to apply. Caps apply separately to server and timing archives; current files are additional. Closed sessions are pruned on server start; active processes are protected. Archive cap must be at least the per-file cap."
+                    }
                 }
             }
-        },
+        ],
         "configurationDefaults": {
             "files.associations": {
                 "*.x": "xtc"
@@ -252,27 +537,34 @@
         "watch": "node scripts/bundle.cjs out/extension.js --watch",
         "package": "vsce package",
         "lint": "eslint src/",
-        "test:vscode": "node ./scripts/run-vscode-tests.cjs"
+        "test:vscode": "node ./scripts/run-vscode-tests.cjs",
+        "test:playbook": "node ./scripts/run-vscode-tests.cjs --playbook"
     },
     "dependencies": {
         "jdk-utils": "^0.7.0",
-        "vscode-languageclient": "^10.1.2"
+        "jsonc-parser": "^3.3.1",
+        "vscode-languageclient": "^10.1.2",
+        "yazl": "^3.3.1"
     },
     "devDependencies": {
         "@eslint/js": "^10.0.1",
         "@types/glob": "^8.1.0",
         "@types/mocha": "^10.0.10",
-        "@types/node": "~22.15.35",
-        "@types/vscode": "1.101.0",
+        "@types/node": "^24.0.0",
+        "@types/vscode": "1.140.0",
+        "@types/yauzl": "^3.4.0",
+        "@types/yazl": "^3.3.1",
         "@vscode/test-electron": "^3.1.0",
         "@vscode/vsce": "^4.0.0",
         "esbuild": "^0.28.2",
         "eslint": "^10.11.0",
         "glob": "^13.0.6",
         "mocha": "^12.0.2",
+        "playwright-core": "^1.63.0",
         "sharp": "^0.35.5",
         "typescript": "^6.0.3",
-        "typescript-eslint": "^8.71.0"
+        "typescript-eslint": "^8.71.0",
+        "yauzl": "^3.4.0"
     },
     "overrides": {
         "diff": "^8.0.3",
@@ -282,5 +574,18 @@
     "allowScripts": {
         "esbuild": true,
         "@vscode/vsce-sign": true
-    }
+    },
+    "capabilities": {
+        "untrustedWorkspaces": {
+            "supported": false,
+            "description": "Ecstasy launches Java and can import Gradle builds. Trust the workspace to enable the extension."
+        },
+        "virtualWorkspaces": {
+            "supported": false,
+            "description": "The compiler and Gradle import require files available to the extension host filesystem."
+        }
+    },
+    "extensionKind": [
+        "workspace"
+    ]
 }

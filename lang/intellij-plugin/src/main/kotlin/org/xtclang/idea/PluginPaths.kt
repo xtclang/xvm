@@ -9,26 +9,28 @@ import java.nio.file.Path
 /**
  * Shared utility for resolving files bundled with the XTC plugin.
  *
- * Server JARs (LSP, DAP) are placed in the plugin's `bin/` directory -- NOT `lib/`.
- * If placed in `lib/`, IntelliJ loads their bundled lsp4j classes which conflict
- * with LSP4IJ's lsp4j. The `bin/` directory is not on IntelliJ's classloader path.
+ * Server JARs (LSP, DAP) are placed in the plugin's `bin/` directory -- NOT `lib/`. If placed in
+ * `lib/`, IntelliJ loads their bundled lsp4j classes which conflict with LSP4IJ's lsp4j. The `bin/`
+ * directory is not on IntelliJ's classloader path.
  */
 object PluginPaths {
-    /** Plugin ID, must match `<id>` in `META-INF/plugin.xml`. The single source
-     *  of truth for the string — every other call site that needs it should
-     *  reference `PluginPaths.PLUGIN_ID` rather than duplicate the literal. */
+    /**
+     * Plugin ID, must match `<id>` in `META-INF/plugin.xml`. The single source of truth for the
+     * string — every other call site that needs it should reference `PluginPaths.PLUGIN_ID` rather
+     * than duplicate the literal.
+     */
     const val PLUGIN_ID = "org.xtclang.idea"
     private val logger = logger<PluginPaths>()
 
     /**
      * This plugin's own [PluginDescriptor], or `null` if it cannot be determined.
      *
-     * Resolved from our own classes' classloader, which the IntelliJ Platform loads
-     * via a [PluginAwareClassLoader] that carries the owning plugin's descriptor. This
-     * is the supported, public way for a plugin to obtain its own descriptor (path,
-     * version, id). It deliberately avoids `PluginManager.findEnabledPlugin(PluginId)`
-     * and `PluginManagerCore.getPlugin(PluginId)`, both of which are marked
-     * `@ApiStatus.Internal` as of 2026.2 and flagged by the Plugin Verifier.
+     * Resolved from our own classes' classloader, which the IntelliJ Platform loads via a
+     * [PluginAwareClassLoader] that carries the owning plugin's descriptor. This is the supported,
+     * public way for a plugin to obtain its own descriptor (path, version, id). It deliberately
+     * avoids `PluginManager.findEnabledPlugin(PluginId)` and
+     * `PluginManagerCore.getPlugin(PluginId)`, both of which are marked `@ApiStatus.Internal` as of
+     * 2026.2 and flagged by the Plugin Verifier.
      */
     fun selfDescriptor(): PluginDescriptor? = (PluginPaths::class.java.classLoader as? PluginAwareClassLoader)?.pluginDescriptor
 
@@ -48,9 +50,13 @@ object PluginPaths {
         selfDescriptor()?.pluginPath?.let { pluginPath ->
             val candidate = pluginPath.resolve("bin/$jarName")
             searchedPaths.add(candidate)
-            resolveInBin(pluginPath, jarName)?.let { return it }
+            resolveInBin(pluginPath, jarName)?.let {
+                return it
+            }
             logger.warn("$jarName not at expected location: $candidate")
-            logger.warn("Plugin directory contents: ${pluginPath.toFile().listFiles()?.map { it.name }}")
+            logger.warn(
+                "Plugin directory contents: ${pluginPath.toFile().listFiles()?.map { it.name }}",
+            )
         }
 
         // Fallback: find via classloader (our class is in lib/, JAR is in bin/)
@@ -58,7 +64,9 @@ object PluginPaths {
             val pluginDir = Path.of(classUrl.toURI()).parent.parent
             val candidate = pluginDir.resolve("bin/$jarName")
             searchedPaths.add(candidate)
-            resolveInBin(pluginDir, jarName)?.let { return it }
+            resolveInBin(pluginDir, jarName)?.let {
+                return it
+            }
             logger.warn("$jarName not found via classloader either: $candidate")
         }
 
@@ -66,15 +74,17 @@ object PluginPaths {
             buildString {
                 appendLine("$jarName not found. Searched locations:")
                 searchedPaths.forEach { appendLine("  - $it") }
-                appendLine("JARs must be in bin/ (NOT lib/) to avoid classloader conflicts with LSP4IJ.")
+                appendLine(
+                    "JARs must be in bin/ (NOT lib/) to avoid classloader conflicts with LSP4IJ.",
+                )
                 append("This is a plugin packaging issue. Please report it.")
             },
         )
     }
 
     /**
-     * Resolve a JAR in a plugin directory's `bin/` subdirectory.
-     * Returns the path if the file exists, null otherwise.
+     * Resolve a JAR in a plugin directory's `bin/` subdirectory. Returns the path if the file
+     * exists, null otherwise.
      */
     internal fun resolveInBin(
         pluginDir: Path,

@@ -1,8 +1,6 @@
 package org.xvm.lsp.model
 
-/**
- * Immutable diagnostic (error, warning, hint).
- */
+/** Immutable diagnostic (error, warning, hint). */
 data class Diagnostic(
     val location: Location,
     val severity: Severity,
@@ -24,16 +22,16 @@ data class Diagnostic(
         fun error(
             location: Location,
             message: String,
-        ): Diagnostic = Diagnostic(location, Severity.ERROR, message, null, "xtc")
+        ): Diagnostic = Diagnostic(location, Severity.ERROR, message, source = "xtc")
 
         fun warning(
             location: Location,
             message: String,
-        ): Diagnostic = Diagnostic(location, Severity.WARNING, message, null, "xtc")
+        ): Diagnostic = Diagnostic(location, Severity.WARNING, message, source = "xtc")
 
         fun info(
             location: Location,
             message: String,
-        ): Diagnostic = Diagnostic(location, Severity.INFORMATION, message, null, "xtc")
+        ): Diagnostic = Diagnostic(location, Severity.INFORMATION, message, source = "xtc")
     }
 }

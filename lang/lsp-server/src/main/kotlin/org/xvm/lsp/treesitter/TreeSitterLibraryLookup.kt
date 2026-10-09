@@ -10,8 +10,8 @@ import java.nio.file.StandardCopyOption
 /**
  * Custom NativeLibraryLookup implementation that loads libtree-sitter from JAR resources.
  *
- * jtreesitter requires the tree-sitter runtime library (libtree-sitter) but doesn't bundle it.
- * This implementation extracts the library from JAR resources to a temp file and loads it.
+ * jtreesitter requires the tree-sitter runtime library (libtree-sitter) but doesn't bundle it. This
+ * implementation extracts the library from JAR resources to a temp file and loads it.
  *
  * The library is bundled at: /native/<platform>/libtree-sitter.<ext>
  */

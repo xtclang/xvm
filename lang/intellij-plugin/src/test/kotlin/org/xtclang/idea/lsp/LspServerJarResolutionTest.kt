@@ -12,24 +12,22 @@ import java.nio.file.Path
 /**
  * Tests for JAR resolution logic used by both the LSP and DAP servers.
  *
- * The XTC plugin bundles server JARs in `bin/` (NOT `lib/`) to avoid classloader
- * conflicts with LSP4IJ's own lsp4j classes. These tests verify that the resolution
- * logic correctly finds JARs in the expected location and rejects incorrect layouts.
+ * The XTC plugin bundles server JARs in `bin/` (NOT `lib/`) to avoid classloader conflicts with
+ * LSP4IJ's own lsp4j classes. These tests verify that the resolution logic correctly finds JARs in
+ * the expected location and rejects incorrect layouts.
  *
  * ## Deployment scenarios covered
- *
- * | Scenario                  | Layout                                   |
- * |---------------------------|------------------------------------------|
- * | Plugin sandbox (runIde)   | `plugins/intellij-plugin/bin/<jar>`       |
- * | ZIP install (from disk)   | `intellij-plugin/bin/<jar>`               |
- * | Marketplace install       | `intellij-plugin/bin/<jar>`               |
+ * | Scenario                | Layout                              |
+ * |-------------------------|-------------------------------------|
+ * | Plugin sandbox (runIde) | `plugins/intellij-plugin/bin/<jar>` |
+ * | ZIP install (from disk) | `intellij-plugin/bin/<jar>`         |
+ * | Marketplace install     | `intellij-plugin/bin/<jar>`         |
  *
  * All three scenarios use the same directory structure, so `resolveInBin` covers them all.
  */
 @DisplayName("Server JAR Resolution")
 class LspServerJarResolutionTest {
-    @TempDir
-    lateinit var pluginDir: Path
+    @TempDir lateinit var pluginDir: Path
 
     // ========================================================================
     // LSP Server JAR Resolution (via XtcLspConnectionProvider)

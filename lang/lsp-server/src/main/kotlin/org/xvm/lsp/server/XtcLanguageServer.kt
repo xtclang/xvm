@@ -1,98 +1,60 @@
 package org.xvm.lsp.server
 
-import org.eclipse.lsp4j.CallHierarchyIncomingCall
-import org.eclipse.lsp4j.CallHierarchyIncomingCallsParams
-import org.eclipse.lsp4j.CallHierarchyItem
-import org.eclipse.lsp4j.CallHierarchyOutgoingCall
-import org.eclipse.lsp4j.CallHierarchyOutgoingCallsParams
-import org.eclipse.lsp4j.CallHierarchyPrepareParams
-import org.eclipse.lsp4j.CodeAction
-import org.eclipse.lsp4j.CodeActionParams
-import org.eclipse.lsp4j.CodeLens
+import org.eclipse.lsp4j.ApplyWorkspaceEditParams
+import org.eclipse.lsp4j.ApplyWorkspaceEditResponse
+import org.eclipse.lsp4j.CodeActionOptions
 import org.eclipse.lsp4j.CodeLensOptions
-import org.eclipse.lsp4j.CodeLensParams
-import org.eclipse.lsp4j.Command
-import org.eclipse.lsp4j.CompletionItem
-import org.eclipse.lsp4j.CompletionItemKind
-import org.eclipse.lsp4j.CompletionList
 import org.eclipse.lsp4j.CompletionOptions
-import org.eclipse.lsp4j.CompletionParams
 import org.eclipse.lsp4j.ConfigurationItem
 import org.eclipse.lsp4j.ConfigurationParams
-import org.eclipse.lsp4j.DeclarationParams
-import org.eclipse.lsp4j.DefinitionParams
-import org.eclipse.lsp4j.DidChangeConfigurationParams
-import org.eclipse.lsp4j.DidChangeTextDocumentParams
-import org.eclipse.lsp4j.DidChangeWatchedFilesParams
+import org.eclipse.lsp4j.DiagnosticRegistrationOptions
 import org.eclipse.lsp4j.DidChangeWatchedFilesRegistrationOptions
-import org.eclipse.lsp4j.DidCloseTextDocumentParams
-import org.eclipse.lsp4j.DidOpenTextDocumentParams
-import org.eclipse.lsp4j.DidSaveTextDocumentParams
-import org.eclipse.lsp4j.DocumentFormattingParams
-import org.eclipse.lsp4j.DocumentHighlight
-import org.eclipse.lsp4j.DocumentHighlightParams
-import org.eclipse.lsp4j.DocumentLink
 import org.eclipse.lsp4j.DocumentLinkOptions
-import org.eclipse.lsp4j.DocumentLinkParams
 import org.eclipse.lsp4j.DocumentOnTypeFormattingOptions
-import org.eclipse.lsp4j.DocumentOnTypeFormattingParams
-import org.eclipse.lsp4j.DocumentRangeFormattingParams
-import org.eclipse.lsp4j.DocumentSymbol
-import org.eclipse.lsp4j.DocumentSymbolParams
+import org.eclipse.lsp4j.DocumentRangeFormattingOptions
+import org.eclipse.lsp4j.ExecuteCommandOptions
+import org.eclipse.lsp4j.ExecuteCommandParams
+import org.eclipse.lsp4j.FileOperationFilter
+import org.eclipse.lsp4j.FileOperationOptions
+import org.eclipse.lsp4j.FileOperationPattern
+import org.eclipse.lsp4j.FileOperationsServerCapabilities
+import org.eclipse.lsp4j.FileOperationsWorkspaceCapabilities
 import org.eclipse.lsp4j.FileSystemWatcher
-import org.eclipse.lsp4j.FoldingRange
-import org.eclipse.lsp4j.FoldingRangeRequestParams
-import org.eclipse.lsp4j.Hover
-import org.eclipse.lsp4j.HoverParams
-import org.eclipse.lsp4j.ImplementationParams
 import org.eclipse.lsp4j.InitializeParams
 import org.eclipse.lsp4j.InitializeResult
 import org.eclipse.lsp4j.InitializedParams
-import org.eclipse.lsp4j.InlayHint
-import org.eclipse.lsp4j.InlayHintParams
-import org.eclipse.lsp4j.LinkedEditingRangeParams
-import org.eclipse.lsp4j.LinkedEditingRanges
-import org.eclipse.lsp4j.Location
-import org.eclipse.lsp4j.LocationLink
-import org.eclipse.lsp4j.MarkupContent
-import org.eclipse.lsp4j.MarkupKind
-import org.eclipse.lsp4j.ParameterInformation
-import org.eclipse.lsp4j.Position
-import org.eclipse.lsp4j.PrepareRenameDefaultBehavior
-import org.eclipse.lsp4j.PrepareRenameParams
-import org.eclipse.lsp4j.PrepareRenameResult
+import org.eclipse.lsp4j.InlayHintRegistrationOptions
+import org.eclipse.lsp4j.MessageParams
+import org.eclipse.lsp4j.MessageType
 import org.eclipse.lsp4j.PublishDiagnosticsParams
-import org.eclipse.lsp4j.Range
-import org.eclipse.lsp4j.ReferenceParams
+import org.eclipse.lsp4j.ReferenceOptions
 import org.eclipse.lsp4j.Registration
 import org.eclipse.lsp4j.RegistrationParams
+import org.eclipse.lsp4j.RenameFilesParams
 import org.eclipse.lsp4j.RenameOptions
 import org.eclipse.lsp4j.RenameParams
-import org.eclipse.lsp4j.SelectionRange
-import org.eclipse.lsp4j.SelectionRangeParams
-import org.eclipse.lsp4j.SemanticTokens
 import org.eclipse.lsp4j.SemanticTokensLegend
-import org.eclipse.lsp4j.SemanticTokensParams
+import org.eclipse.lsp4j.SemanticTokensServerFull
 import org.eclipse.lsp4j.SemanticTokensWithRegistrationOptions
 import org.eclipse.lsp4j.ServerCapabilities
-import org.eclipse.lsp4j.SignatureHelp
+import org.eclipse.lsp4j.SetTraceParams
 import org.eclipse.lsp4j.SignatureHelpOptions
-import org.eclipse.lsp4j.SignatureHelpParams
-import org.eclipse.lsp4j.SignatureInformation
 import org.eclipse.lsp4j.SymbolInformation
-import org.eclipse.lsp4j.TextDocumentSyncKind
-import org.eclipse.lsp4j.TextEdit
-import org.eclipse.lsp4j.TypeDefinitionParams
-import org.eclipse.lsp4j.TypeHierarchyItem
-import org.eclipse.lsp4j.TypeHierarchyPrepareParams
-import org.eclipse.lsp4j.TypeHierarchySubtypesParams
-import org.eclipse.lsp4j.TypeHierarchySupertypesParams
 import org.eclipse.lsp4j.WatchKind
+import org.eclipse.lsp4j.WorkDoneProgressCancelParams
+import org.eclipse.lsp4j.WorkDoneProgressParams
+import org.eclipse.lsp4j.WorkspaceDiagnosticParams
+import org.eclipse.lsp4j.WorkspaceDiagnosticReport
 import org.eclipse.lsp4j.WorkspaceEdit
+import org.eclipse.lsp4j.WorkspaceFoldersOptions
+import org.eclipse.lsp4j.WorkspaceServerCapabilities
 import org.eclipse.lsp4j.WorkspaceSymbol
+import org.eclipse.lsp4j.WorkspaceSymbolOptions
 import org.eclipse.lsp4j.WorkspaceSymbolParams
+import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.jsonrpc.messages.Either
-import org.eclipse.lsp4j.jsonrpc.messages.Either3
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseError
+import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
 import org.eclipse.lsp4j.jsonrpc.services.JsonRequest
 import org.eclipse.lsp4j.services.LanguageClient
 import org.eclipse.lsp4j.services.LanguageClientAware
@@ -101,20 +63,29 @@ import org.eclipse.lsp4j.services.TextDocumentService
 import org.eclipse.lsp4j.services.WorkspaceService
 import org.slf4j.LoggerFactory
 import org.xvm.lsp.adapter.Adapter
+import org.xvm.lsp.adapter.AdapterCapability
 import org.xvm.lsp.adapter.FormattingConfig
+import org.xvm.lsp.adapter.xdk.XdkAdapter
+import org.xvm.lsp.adapter.xdk.XdkBuildModel
+import org.xvm.lsp.adapter.xdk.XdkDependency
+import org.xvm.lsp.adapter.xdk.XdkLibraries
+import org.xvm.lsp.adapter.xdk.XdkSourceModule
+import org.xvm.lsp.adapter.xdk.XdkSources
 import org.xvm.lsp.model.Diagnostic
-import org.xvm.lsp.model.SymbolInfo
-import org.xvm.lsp.model.fmt
-import org.xvm.lsp.model.fromLsp
 import org.xvm.lsp.model.toLsp
-import org.xvm.lsp.model.toRange
 import org.xvm.lsp.treesitter.SemanticTokenLegend
+import org.xvm.lsp.util.ExecutionTrace
+import org.xvm.lsp.util.ProgressLabels
+import org.xvm.lsp.util.ServerLogs
+import java.io.IOException
+import java.lang.management.ManagementFactory
 import java.net.URI
 import java.nio.file.Path
 import java.util.Properties
 import java.util.concurrent.CompletableFuture
-import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.measureTimedValue
 
 /**
@@ -122,19 +93,20 @@ import kotlin.time.measureTimedValue
  *
  * ## Implementation Status
  *
- * All LSP methods are wired up to call the adapter and log their invocations.
- * The actual implementation depends on the adapter:
+ * All LSP methods are wired up to call the adapter and log their invocations. The actual
+ * implementation depends on the adapter:
  *
  * - **MockAdapter**: Basic regex-based parsing, most features log "not implemented"
- * - **TreeSitterAdapter**: Syntax-aware features (hover, completion, definition, references, symbols, folding, highlights)
- * - **XdkAdapter**: (future) Full semantic features via XDK compiler
+ * - **TreeSitterAdapter**: Syntax-aware features (hover, completion, definition, references,
+ *   symbols, folding, highlights)
+ * - **XdkAdapter**: Compiler diagnostics and semantic features via the embedding API
  *
  * ## Backend Selection
  *
  * Select backend at build time: `./gradlew :lang:lsp-server:build -Plsp.adapter=treesitter`
  *
  * @see org.xvm.lsp.adapter.Adapter
- * @see org.xvm.lsp.adapter.TreeSitterAdapter
+ * @see org.xvm.lsp.adapter.treesitter.TreeSitterAdapter
  */
 @Suppress("LoggingSimilarMessage")
 class XtcLanguageServer(
@@ -143,15 +115,214 @@ class XtcLanguageServer(
 ) : LanguageServer,
     LanguageClientAware,
     AutoCloseable {
-    private var client: LanguageClient? = null
+    private val connectedClient = AtomicReference<LanguageClient?>()
+    private val client: LanguageClient?
+        get() = connectedClient.get()
 
-    @Suppress("unused")
-    private var initialized = false
+    private val refresh = ClientRefresh { client }
+    internal val readOnlyDocuments = ReadOnlyDocuments(adapter) { client }
+    internal val clientTrace = ClientTrace { client }
+    internal val partialResults = PartialResults(client = { client })
+
+    override fun setTrace(params: SetTraceParams): Unit = clientTrace.configure(params.value)
+
+    private data class EditCapabilities(
+        val versioned: Boolean = false,
+        val renameFiles: Boolean = false,
+        val fileWatchers: Boolean = false,
+        val relativeWatchPatterns: Boolean = false,
+        val resourceWatchers: Boolean = false,
+    )
+
+    private val clientPresentation = AtomicReference(ClientPresentation())
+    internal val presentation: ClientPresentation
+        get() = clientPresentation.get()
+
+    private val editCapabilities = AtomicReference(EditCapabilities())
+    private val resourceFileWatchers = ResourceFileWatchers()
+    private val progress = ConnectionProgress(client = { client })
+    private val supportsProgress = AtomicBoolean()
+    private val clientReady = CompletableFuture<Void>()
+    private val indexing = CompletableFuture<Unit>()
+
+    internal fun <T> observeQuery(
+        method: String,
+        params: WorkDoneProgressParams?,
+        result: CompletableFuture<T>,
+        uri: String = "",
+    ): CompletableFuture<T> {
+        val title =
+            when (method) {
+                "textDocument/references" -> "Finding references"
+
+                "textDocument/rename",
+                "xtc/rename",
+                "xtc/renameFiles",
+                "workspace/willRenameFiles",
+                -> "Checking rename"
+
+                "textDocument/codeAction" -> "Checking code actions"
+
+                "workspace/diagnostic" -> "Checking workspace"
+
+                else -> null
+            }
+        return if (title != null || params?.workDoneToken != null) {
+            val folders = compilerSettings.get().folders
+            val subject =
+                if (uri.isNotBlank()) {
+                    ProgressLabels.source(uri, folders)
+                } else {
+                    "Workspace: " + folders.take(2).joinToString(", ") { ProgressLabels.source(it) }.ifEmpty { "configured source graph" } +
+                        if (folders.size > 2) " (+${folders.size - 2} more)" else ""
+                }
+            progress.track(title ?: method, params?.workDoneToken, result) {
+                val activity = (adapter as? XdkAdapter)?.compilerProgressDescription()
+                "$subject · ${activity?.let { "Compiler: $it" } ?: "Checking current source state"}"
+            }
+        } else {
+            result
+        }
+    }
+
+    override fun cancelProgress(params: WorkDoneProgressCancelParams): Unit = progress.cancel(params.token)
+
+    internal val supportsVersionedEdits: Boolean
+        get() = editCapabilities.get().versioned
+
+    internal val supportsFileRenames: Boolean
+        get() = editCapabilities.get().renameFiles
+
+    private data class DiagnosticCapabilities(
+        val pull: Boolean = false,
+        val related: Boolean = false,
+        val refresh: Boolean = false,
+    )
+
+    private val diagnosticCapabilities = AtomicReference(DiagnosticCapabilities())
+    internal val usesPullDiagnostics: Boolean
+        get() = diagnosticCapabilities.get().pull
+
+    internal val supportsRelatedDiagnostics: Boolean
+        get() = diagnosticCapabilities.get().related
+
+    internal fun refreshDiagnostics() = refresh.request(ClientRefresh.Feature.DIAGNOSTICS)
+
+    internal fun workspaceDiagnostics(params: WorkspaceDiagnosticParams): CompletableFuture<WorkspaceDiagnosticReport> =
+        textDocumentService.workspaceDiagnostics(params)
 
     private val textDocumentService = XtcTextDocumentService(this, adapter)
     private val workspaceService = XtcWorkspaceService(this, adapter)
-    private val closed = AtomicBoolean()
     private val shutdownRequested = AtomicBoolean()
+
+    /**
+     * One immutable context per configuration request; late replies cannot replace newer settings.
+     */
+    private data class CompilerSettings(
+        val folders: List<String> = emptyList(),
+        val canRequest: Boolean = false,
+        val revision: Long = 0,
+        val closed: Boolean = false,
+    )
+
+    private data class ResolveCapabilities(
+        val completionDocumentation: Boolean = false,
+        val actionEdit: Boolean = false,
+        val lensCommand: Boolean = false,
+        val linkTarget: Boolean = false,
+        val hintTooltip: Boolean = false,
+        val symbolRange: Boolean = false,
+    )
+
+    private val documentSynchronization = AtomicReference(DocumentSynchronization())
+    internal val synchronization: DocumentSynchronization
+        get() = documentSynchronization.get()
+
+    private val resolveCapabilities = AtomicReference(ResolveCapabilities())
+    internal val resolvesCompletionDocumentation: Boolean
+        get() = resolveCapabilities.get().completionDocumentation
+
+    internal val resolvesCodeActionEdit: Boolean
+        get() = resolveCapabilities.get().actionEdit
+
+    internal val resolvesCodeLensCommand: Boolean
+        get() = resolveCapabilities.get().lensCommand
+
+    internal val resolvesDocumentLinkTarget: Boolean
+        get() = resolveCapabilities.get().linkTarget
+
+    internal val resolvesInlayHintTooltip: Boolean
+        get() = resolveCapabilities.get().hintTooltip
+
+    internal val resolvesWorkspaceSymbolRange: Boolean
+        get() = resolveCapabilities.get().symbolRange
+
+    internal fun applyEdit(params: ApplyWorkspaceEditParams): CompletableFuture<ApplyWorkspaceEditResponse> {
+        val current =
+            client?.takeUnless { compilerSettings.get().closed }
+                ?: return CompletableFuture.failedFuture(
+                    IllegalStateException("Language client disconnected"),
+                )
+        return current.applyEdit(params)
+    }
+
+    internal fun executeCodeAction(params: ExecuteCommandParams): CompletableFuture<Any> = textDocumentService.executeCodeAction(params)
+
+    internal fun workspaceSymbols(
+        params: WorkspaceSymbolParams,
+    ): CompletableFuture<Either<List<SymbolInformation>, List<WorkspaceSymbol>>> = textDocumentService.workspaceSymbols(params)
+
+    internal fun resolveWorkspaceSymbol(symbol: WorkspaceSymbol): CompletableFuture<WorkspaceSymbol> =
+        textDocumentService.resolveWorkspaceSymbol(symbol)
+
+    private data class TokenCapabilities(
+        val range: Boolean = false,
+        val delta: Boolean = false,
+        val refresh: Boolean = false,
+    )
+
+    private val tokenCapabilities = AtomicReference(TokenCapabilities())
+
+    internal fun requireSemanticTokenRequest(delta: Boolean) {
+        val options = tokenCapabilities.get()
+        if (!(if (delta) options.delta else options.range)) {
+            throw ResponseErrorException(
+                ResponseError(
+                    ResponseErrorCode.MethodNotFound,
+                    "Semantic token operation was not negotiated",
+                    null,
+                ),
+            )
+        }
+    }
+
+    internal fun refreshSemanticFeatures() =
+        refresh.request(
+            ClientRefresh.Feature.TOKENS,
+            ClientRefresh.Feature.INLAYS,
+            ClientRefresh.Feature.LENSES,
+            ClientRefresh.Feature.FOLDING,
+        )
+
+    private val fileOperationCapabilities =
+        AtomicReference<FileOperationsWorkspaceCapabilities?>(null)
+
+    internal fun willRenameFiles(params: RenameFilesParams): CompletableFuture<WorkspaceEdit?> =
+        if (fileOperationCapabilities.get()?.willRename == true) {
+            textDocumentService.renameFiles(params)
+        } else {
+            CompletableFuture.failedFuture(
+                ResponseErrorException(
+                    ResponseError(
+                        ResponseErrorCode.MethodNotFound,
+                        "File rename participation was not negotiated",
+                        null,
+                    ),
+                ),
+            )
+        }
+
+    private val compilerSettings = AtomicReference(CompilerSettings())
 
     companion object {
         private val logger = LoggerFactory.getLogger(XtcLanguageServer::class.java)
@@ -160,7 +331,9 @@ class XtcLanguageServer(
 
         private fun loadBuildInfo(): Properties =
             Properties().apply {
-                XtcLanguageServer::class.java.getResourceAsStream("/lsp-version.properties")?.use { load(it) }
+                XtcLanguageServer::class.java.getResourceAsStream("/lsp-version.properties")?.use {
+                    load(it)
+                }
             }
     }
 
@@ -175,23 +348,45 @@ class XtcLanguageServer(
         ).toBoolean()
 
     /**
-     * Editor-provided formatting configuration, received via `workspace/configuration`.
-     * This is populated after initialization by [requestFormattingConfig] and updated
-     * when the client sends `workspace/didChangeConfiguration`.
+     * Editor-provided formatting configuration, received via `workspace/configuration`. This is
+     * populated after initialization by [requestFormattingConfig] and updated when the client sends
+     * `workspace/didChangeConfiguration`.
      *
      * @see FormattingConfig.resolve
      */
-    @Volatile
-    var editorFormattingConfig: FormattingConfig? = null
-        private set
+    private val formattingState = EditorFormattingState()
+    val editorFormattingConfig: FormattingConfig?
+        get() = formattingState.config
+
+    fun refreshPresentation(): Unit = refresh.request(ClientRefresh.Feature.INLAYS, ClientRefresh.Feature.LENSES)
+
+    /** Read the document's setting without retaining a second mutable configuration cache. */
+    internal fun referenceCodeLens(uri: String): CompletableFuture<Boolean> {
+        val connection = client
+        if (!presentation.workspaceConfiguration || connection == null) return CompletableFuture.completedFuture(true)
+        val item =
+            ConfigurationItem().apply {
+                section = "xtc.codeLens"
+                scopeUri = uri
+            }
+        return CompletableFuture
+            .supplyAsync { connection.configuration(ConfigurationParams(listOf(item))) }
+            .thenCompose { it }
+            .orTimeout(10, SECONDS)
+            .thenApply { CodeLensSettings.references(it?.firstOrNull()) }
+            .exceptionally { failure ->
+                logger.warn("Reference CodeLens setting unavailable: {}", failure.message)
+                false
+            }
+    }
 
     /**
      * Helper to handle LSP requests with consistent logging and async execution.
      *
-     * @param method    The name of the LSP method (e.g., "textDocument/hover")
+     * @param method The name of the LSP method (e.g., "textDocument/hover")
      * @param logParams A string describing the input parameters for logging
      * @param logResult A function that returns a string describing the result for logging
-     * @param block     The actual implementation to execute
+     * @param block The actual implementation to execute
      */
     fun <R> supplyAsync(
         method: String,
@@ -200,26 +395,182 @@ class XtcLanguageServer(
         block: () -> R,
     ): CompletableFuture<R> {
         logger.info("{}: {}", method, logParams)
+        val trace = ExecutionTrace.current()
         return CompletableFuture.supplyAsync {
-            val (result, elapsed) = measureTimedValue { block() }
+            val (result, elapsed) = measureTimedValue { ExecutionTrace.within(trace, block) }
             logger.info("{}: {} in {}", method, logResult(result), elapsed)
             result
         }
     }
 
     override fun connect(client: LanguageClient) {
-        this.client = client
+        connectedClient.set(client)
         logger.info("connect: connected to language client")
     }
 
     override fun initialize(params: InitializeParams): CompletableFuture<InitializeResult> {
+        supportsProgress.set(params.capabilities?.window?.workDoneProgress == true)
+        clientPresentation.set(ClientPresentation.read(params))
+        clientTrace.configure(params.trace)
         logServerBanner()
         logWorkspaceFolders(params)
         logClientCapabilities(params)
 
+        if (adapter is XdkAdapter) {
+            val folders = ClientPresentation.workspaceUris(params)
+            val settings =
+                CompilerSettings(folders, params.capabilities?.workspace?.configuration == true)
+            synchronized(compilerSettings) {
+                compilerSettings.set(settings)
+                try {
+                    val raw = CompilerConfiguration.initial(params.initializationOptions)
+                    val model = CompilerConfiguration.buildModel(raw)
+                    if (applyLibraryConfiguration(raw, folders, model)) {
+                        // All source and binary inputs were validated and installed together.
+                    } else if (model != null) {
+                        textDocumentService.refreshDependencies {
+                            adapter.replaceBuildInputs(model.resolve())
+                        }
+                    } else {
+                        CompilerConfiguration
+                            .modules(raw, folders)
+                            ?.let(::replaceCompilerSourceModules)
+                    }
+                } catch (e: IllegalArgumentException) {
+                    return CompletableFuture.failedFuture(
+                        ResponseErrorException(
+                            ResponseError(
+                                ResponseErrorCode.InvalidParams,
+                                "Invalid ${CompilerConfiguration.SECTION}: ${e.message}",
+                                null,
+                            ),
+                        ),
+                    )
+                }
+            }
+        }
+
+        val pull = adapter is XdkAdapter && params.capabilities?.textDocument?.diagnostic != null
+        diagnosticCapabilities.set(
+            DiagnosticCapabilities(
+                pull,
+                pull &&
+                    params.capabilities
+                        ?.textDocument
+                        ?.diagnostic
+                        ?.relatedDocumentSupport == true,
+                pull && params.capabilities
+                    ?.workspace
+                    ?.diagnostics
+                    ?.refreshSupport == true,
+            ),
+        )
+        val workspaceEdits = params.capabilities?.workspace?.workspaceEdit
+        editCapabilities.set(
+            EditCapabilities(
+                workspaceEdits?.documentChanges == true,
+                workspaceEdits?.resourceOperations?.contains("rename") == true,
+                params.capabilities
+                    ?.workspace
+                    ?.didChangeWatchedFiles
+                    ?.dynamicRegistration == true,
+                params.capabilities
+                    ?.workspace
+                    ?.didChangeWatchedFiles
+                    ?.relativePatternSupport ==
+                    true,
+            ),
+        )
+
+        try {
+            documentSynchronization.set(DocumentSynchronization.read(params))
+        } catch (e: IllegalArgumentException) {
+            return CompletableFuture.failedFuture(
+                ResponseErrorException(
+                    ResponseError(ResponseErrorCode.InvalidParams, e.message, null),
+                ),
+            )
+        }
+        val textCapabilities = params.capabilities?.textDocument
+        resolveCapabilities.set(
+            ResolveCapabilities(
+                textCapabilities
+                    ?.completion
+                    ?.completionItem
+                    ?.resolveSupport
+                    ?.properties
+                    ?.contains("documentation") == true,
+                presentation.actionLiterals &&
+                    textCapabilities?.codeAction?.dataSupport == true &&
+                    textCapabilities.codeAction.resolveSupport
+                        ?.properties
+                        ?.contains("edit") ==
+                    true,
+                textCapabilities?.codeLens?.let {
+                    it.resolveSupport?.properties?.contains("command") != false
+                } == true,
+                textCapabilities?.documentLink != null,
+                textCapabilities
+                    ?.inlayHint
+                    ?.resolveSupport
+                    ?.properties
+                    ?.contains("tooltip") ==
+                    true,
+                params.capabilities
+                    ?.workspace
+                    ?.symbol
+                    ?.resolveSupport
+                    ?.properties
+                    ?.contains("location.range") == true,
+            ),
+        )
+        fileOperationCapabilities.set(params.capabilities?.workspace?.fileOperations)
+        val tokenRequests =
+            params.capabilities
+                ?.textDocument
+                ?.semanticTokens
+                ?.requests
+        val tokens =
+            semanticTokensEnabled && AdapterCapability.SEMANTIC_TOKENS in adapter.capabilities
+        tokenCapabilities.set(
+            TokenCapabilities(
+                tokens && tokenRequests?.range?.let { it.isRight || it.left == true } == true,
+                tokens && tokenRequests?.full?.right?.delta == true,
+                tokens && params.capabilities
+                    ?.workspace
+                    ?.semanticTokens
+                    ?.refreshSupport == true,
+            ),
+        )
+
+        readOnlyDocuments.configure(params.capabilities?.workspace?.textDocumentContent != null)
         val capabilities = buildServerCapabilities()
 
-        initialized = true
+        val workspace = params.capabilities?.workspace
+        refresh.configure(
+            buildSet {
+                if (diagnosticCapabilities.get().refresh) add(ClientRefresh.Feature.DIAGNOSTICS)
+                if (tokenCapabilities.get().refresh) add(ClientRefresh.Feature.TOKENS)
+                if (
+                    workspace?.inlayHint?.refreshSupport == true &&
+                    AdapterCapability.INLAY_HINT in adapter.capabilities
+                ) {
+                    add(ClientRefresh.Feature.INLAYS)
+                }
+                if (
+                    workspace?.codeLens?.refreshSupport == true &&
+                    AdapterCapability.CODE_LENS in adapter.capabilities
+                ) {
+                    add(ClientRefresh.Feature.LENSES)
+                }
+                if (
+                    workspace?.foldingRange?.refreshSupport == true &&
+                    AdapterCapability.FOLDING_RANGE in adapter.capabilities
+                ) {
+                    add(ClientRefresh.Feature.FOLDING)
+                }
+            },
+        )
         logger.info("initialize: Ecstasy Language Server initialized")
 
         // Health check before workspace indexing
@@ -229,13 +580,12 @@ class XtcLanguageServer(
         } else {
             // Extract workspace folder paths and initialize workspace index
             val workspaceFolders =
-                params.workspaceFolders
-                    ?.mapNotNull { folder ->
-                        runCatching { Path.of(URI(folder.uri)).toString() }
-                            .onFailure { logger.warn("initialize: invalid workspace folder URI: {}", folder.uri) }
-                            .getOrNull()
-                    }
-                    ?: emptyList()
+                ClientPresentation.workspaceUris(params).mapNotNull { uri ->
+                    runCatching { Path.of(URI(uri)).toString() }
+                        .onFailure {
+                            logger.warn("initialize: invalid workspace folder URI: {}", uri)
+                        }.getOrNull()
+                }
 
             // Extra source roots (XDK source trees, etc.) from init options, sysprop, or env.
             // Lets the indexer find modules whose sources live outside the user's open project.
@@ -243,13 +593,36 @@ class XtcLanguageServer(
             val folders = (workspaceFolders + extraRoots).distinct()
 
             if (folders.isNotEmpty()) {
-                adapter.initializeWorkspace(folders) { message, percent ->
-                    logger.info("initialize: workspace indexing: {} ({}%)", message, percent)
+                if (params.workDoneToken != null) {
+                    progress.track("Indexing workspace", params.workDoneToken, indexing)
+                } else {
+                    clientReady.thenRun {
+                        progress.track("Indexing workspace", null, indexing)
+                    }
+                }
+                try {
+                    val scan =
+                        adapter.initializeWorkspaceAsync(folders) { message, percent ->
+                            logger.info(
+                                "initialize: workspace indexing: {} ({}%)",
+                                message,
+                                percent,
+                            )
+                            progress.report(indexing, message, percent)
+                        }
+                    indexing.whenComplete { _, failure -> if (failure != null) scan.cancel(false) }
+                    scan.whenComplete { _, failure ->
+                        if (failure == null) {
+                            indexing.complete(Unit)
+                        } else {
+                            indexing.completeExceptionally(failure)
+                        }
+                    }
+                } catch (failure: Throwable) {
+                    indexing.completeExceptionally(failure)
+                    throw failure
                 }
             }
-
-            // Register file watcher for *.x files (dynamic registration)
-            registerFileWatcher()
         }
 
         return CompletableFuture.completedFuture(InitializeResult(capabilities))
@@ -258,74 +631,173 @@ class XtcLanguageServer(
     /**
      * LSP: initialized notification.
      *
-     * Called after the client sends the `initialized` notification, signaling that the
-     * handshake is complete and the server can send requests to the client.
-     * We use this to pull formatting configuration from the client via `workspace/configuration`.
+     * Called after the client sends the `initialized` notification, signaling that the handshake is
+     * complete and the server can send requests to the client. We use this to pull formatting
+     * configuration from the client via `workspace/configuration`.
      */
     override fun initialized(params: InitializedParams?) {
+        progress.initialized(supportsProgress.get())
+        clientReady.complete(null)
+        refresh.initialized()
+        readOnlyDocuments.initialized()
         logger.info("initialized: handshake complete, requesting editor configuration")
+        if (
+            editCapabilities
+                .getAndUpdate {
+                    it.copy(
+                        fileWatchers = false,
+                        resourceWatchers = it.resourceWatchers || it.fileWatchers,
+                    )
+                }.fileWatchers
+        ) {
+            registerFileWatcher()
+            updateResourceWatchers()
+        }
         requestFormattingConfig()
+        requestCompilerConfig()
+    }
+
+    /** Apply explicit notification settings, or pull them from configuration-capable clients. */
+    fun changeCompilerConfig(raw: Any?) {
+        if (adapter !is XdkAdapter) return
+        val value =
+            try {
+                if (CompilerConfiguration.presentationOnly(raw)) return
+                CompilerConfiguration.changed(raw)
+            } catch (e: IllegalArgumentException) {
+                nextCompilerSettings()
+                reportCompilerConfigError(e)
+                return
+            }
+        val settings = nextCompilerSettings()
+        if (value == null) requestCompilerConfig(settings) else applyCompilerConfig(value, settings)
+    }
+
+    private fun nextCompilerSettings(): CompilerSettings =
+        synchronized(compilerSettings) {
+            compilerSettings.updateAndGet { it.copy(revision = it.revision + 1) }
+        }
+
+    private fun requestCompilerConfig(settings: CompilerSettings = nextCompilerSettings()) {
+        if (adapter !is XdkAdapter) return
+        val currentClient = client ?: return
+        if (settings.closed || !settings.canRequest) return
+        currentClient
+            .configuration(
+                ConfigurationParams(
+                    listOf(ConfigurationItem().apply { section = CompilerConfiguration.SECTION }),
+                ),
+            ).thenAccept { values -> applyCompilerConfig(values?.firstOrNull(), settings) }
+            .exceptionally { failure ->
+                logger.warn(
+                    "workspace/configuration: compiler settings request failed: {}",
+                    failure.message,
+                )
+                null
+            }
+    }
+
+    private fun applyCompilerConfig(
+        raw: Any?,
+        settings: CompilerSettings,
+    ) {
+        synchronized(compilerSettings) {
+            if (settings.closed || compilerSettings.get() !== settings) return
+            try {
+                val model = CompilerConfiguration.buildModel(raw)
+                if (applyLibraryConfiguration(raw, settings.folders, model)) {
+                    updateResourceWatchers()
+                } else if (model != null) {
+                    val inputs = model.resolve()
+                    textDocumentService.refreshDependencies {
+                        (adapter as XdkAdapter).replaceBuildInputs(inputs)
+                    }
+                    updateResourceWatchers()
+                } else if (CompilerConfiguration.automatic(raw)) {
+                    textDocumentService.refreshDependencies {
+                        (adapter as XdkAdapter).discoverSourceModules()
+                    }
+                    updateResourceWatchers()
+                } else {
+                    CompilerConfiguration
+                        .modules(raw, settings.folders)
+                        ?.let(::replaceCompilerSourceModules)
+                }
+            } catch (e: IllegalArgumentException) {
+                reportCompilerConfigError(e)
+            }
+        }
+    }
+
+    private fun applyLibraryConfiguration(
+        raw: Any?,
+        folders: List<String>,
+        model: XdkBuildModel?,
+    ): Boolean {
+        val libraries = CompilerLibraries.read(raw, folders) ?: return false
+        val compiler = adapter as XdkAdapter
+        val explicit = CompilerConfiguration.modules(raw, folders)
+        val evaluated =
+            model?.resolve()
+                ?: if (libraries.modulePath == null) CompilerConfiguration.buildModel(raw, includeExplicit = true)?.resolve() else null
+        val inputs =
+            XdkBuildModel.Inputs(
+                explicit ?: if (model !=
+                    null
+                ) {
+                    evaluated!!.modules
+                } else {
+                    compiler.sourceModuleInputs()
+                },
+                evaluated?.binaries.orEmpty(),
+            )
+        val replacement = inputs.copy(binaries = libraries.resolve(inputs.binaries))
+        val automatic = model == null && explicit == null && CompilerConfiguration.automatic(raw)
+        textDocumentService.refreshDependencies {
+            compiler.replaceBuildInputs(replacement, automatic) + if (automatic) compiler.discoverSourceModules() else emptySet()
+        }
+        return true
+    }
+
+    private fun reportCompilerConfigError(failure: IllegalArgumentException) {
+        val message =
+            "Invalid ${CompilerConfiguration.SECTION}; previous source configuration retained: ${failure.message}"
+        logger.warn(message)
+        client?.showMessage(MessageParams(MessageType.Error, message))
     }
 
     /**
      * Request formatting configuration from the client via `workspace/configuration`.
      *
-     * Sends a request for section `"xtc.formatting"`. The client (e.g., [XtcLanguageClient]
-     * in IntelliJ) responds with IntelliJ Code Style settings. The response is parsed into
-     * an [FormattingConfig] and stored as [editorFormattingConfig].
+     * Sends a request for section `"xtc.formatting"`. The client (e.g., `XtcLanguageClient` in
+     * IntelliJ) responds with IntelliJ Code Style settings. The response is parsed into an
+     * [FormattingConfig] and stored as [editorFormattingConfig].
      */
     fun requestFormattingConfig() {
+        if (!presentation.workspaceConfiguration || compilerSettings.get().closed) return
         val c = client ?: return
+        val revision = formattingState.request()
         val item = ConfigurationItem().apply { section = "xtc.formatting" }
-        logger.info("workspace/configuration: requesting section='{}'", item.section)
         c
             .configuration(ConfigurationParams(listOf(item)))
             .thenAccept { results ->
-                logger.info("workspace/configuration: raw response={}", results)
-                val config = results?.firstOrNull()
-                val formattingConfig = parseFormattingConfig(config)
-                if (formattingConfig != null) {
-                    editorFormattingConfig = formattingConfig
-                    adapter.editorFormattingConfig = formattingConfig
+                if (
+                    formattingState.accept(revision, results?.firstOrNull()) {
+                        adapter.editorFormattingConfig = it
+                    }
+                ) {
                     logger.info(
-                        "workspace/configuration: effective formatting config from client -> {} (fallback if absent would be request LSP FormattingOptions, then defaults)",
-                        formattingConfig,
-                    )
-                } else {
-                    logger.info(
-                        "workspace/configuration: no usable formatting config from client (type={}); effective config will come from per-request LSP FormattingOptions or XTC defaults",
-                        config?.javaClass?.name ?: "null",
+                        "workspace/configuration: effective formatting config={}",
+                        editorFormattingConfig,
                     )
                 }
-            }.exceptionally { ex ->
-                logger.warn("initialized: failed to get formatting config: {}", ex.message)
+            }.exceptionally { failure ->
+                logger.warn(
+                    "Invalid or unavailable formatting configuration; previous values retained: {}",
+                    failure.message,
+                )
                 null
             }
-    }
-
-    private fun parseFormattingConfig(raw: Any?): FormattingConfig? {
-        if (!LspJsonOptions.isObject(raw)) return null
-
-        val indentSize = LspJsonOptions.int(raw, "indentSize") ?: 4
-        val continuationIndentSize = LspJsonOptions.int(raw, "continuationIndentSize") ?: 8
-        val insertSpaces = LspJsonOptions.boolean(raw, "insertSpaces") ?: true
-        val maxLineWidth = LspJsonOptions.int(raw, "maxLineWidth") ?: 120
-        val tabSize = LspJsonOptions.int(raw, "tabSize")
-        logger.info(
-            "workspace/configuration: parsed config type={} indentSize={} continuationIndentSize={} tabSize={} insertSpaces={} maxLineWidth={}",
-            raw?.javaClass?.name,
-            indentSize,
-            continuationIndentSize,
-            tabSize,
-            insertSpaces,
-            maxLineWidth,
-        )
-        return FormattingConfig(
-            indentSize = indentSize,
-            continuationIndentSize = continuationIndentSize,
-            insertSpaces = insertSpaces,
-            maxLineWidth = maxLineWidth,
-        )
     }
 
     private fun logServerBanner() {
@@ -347,95 +819,42 @@ class XtcLanguageServer(
     }
 
     /**
-     * Log which LSP capabilities the client advertises.
-     *
-     * NOTE: The chained ?. calls look verbose but are necessary -- LSP4J is a Java library
-     * where all these capability fields are nullable. This is idiomatic for Java interop.
-     *
-     * ## LSP Capabilities Reference
-     *
-     * Each capability is annotated with:
-     * - What it does for the end user
-     * - What adapter level is needed to implement it properly:
-     *   - **mock**: regex-based, no parse tree needed
-     *   - **treesitter**: requires syntax tree (structural parsing)
-     *   - **compiler**: requires XTC compiler integration (type resolution, semantic analysis)
-     *
-     * ### Currently implemented (server advertises these):
-     *
-     * | Capability         | Description                                            | Adapter    |
-     * |--------------------|--------------------------------------------------------|------------|
-     * | hover              | Tooltip with type/doc info on mouse-over               | treesitter |
-     * | completion         | Code completion suggestions (., :, < triggers)         | treesitter |
-     * | definition         | Go-to-definition (jump to where a symbol is declared)  | treesitter |
-     * | references         | Find all references to a symbol in the current file    | treesitter |
-     * | documentSymbol     | Outline view / breadcrumbs (classes, methods, fields)  | treesitter |
-     * | formatting         | Whole-document code formatting                         | treesitter |
-     * | rangeFormatting    | Format a selected range of code                        | treesitter |
-     * | rename             | Rename a symbol across the file                        | treesitter |
-     * | codeAction         | Quick fixes and refactorings (lightbulb menu)          | treesitter |
-     * | documentHighlight  | Highlight other occurrences of symbol under cursor      | treesitter |
-     * | selectionRange     | Smart expand/shrink selection based on syntax           | treesitter |
-     * | foldingRange       | Code folding regions (classes, methods, blocks)        | treesitter |
-     * | inlayHint          | Inline hints (parameter names, inferred types)         | treesitter |
-     *
-     * ### Not yet implemented:
-     *
-     * | Capability         | Description                                            | Adapter needed  |
-     * |--------------------|--------------------------------------------------------|-----------------|
-     * | signatureHelp      | Parameter hints while typing a method call             | treesitter      |
-     * | documentLink       | Clickable links in code (import paths, URLs)           | treesitter      |
-     * | declaration        | Go-to-declaration (vs definition, for interfaces)      | compiler        |
-     * | typeDefinition     | Jump to the type definition of a variable              | compiler (types)|
-     * | implementation     | Find implementations of an interface/abstract method   | compiler (types)|
-     * | codeLens           | Inline actionable info above functions (run, #refs)    | compiler        |
-     * | colorProvider      | Color swatches in editor for color literals             | mock            |
-     * | onTypeFormatting   | Auto-format as you type (e.g., indent after {)         | treesitter      |
-     * | typeHierarchy      | Show super/subtypes of a class (hierarchy tree)        | compiler (full) |
-     * | callHierarchy      | Show callers/callees of a function (call tree)         | compiler (full) |
-     * | semanticTokens     | Token-level semantic highlighting (types vs vars)      | treesitter      |
-     * | moniker            | Cross-project symbol identity for indexing              | compiler (full) |
-     * | linkedEditingRange | Edit matching tags/names simultaneously                 | treesitter      |
-     * | inlineValue        | Show variable values inline during debugging            | compiler (full) |
-     * | diagnostic         | Pull-based diagnostics (vs push via publishDiagnostics)| compiler        |
-     * | workspaceSymbol    | Search symbols across all files in workspace            | compiler (sym)  |
+     * Log client feature declarations, independently of the selected adapter. Provider availability
+     * is defined by [AdapterCapability] and [buildServerCapabilities]; detailed implementation
+     * limits live in lang/doc/plans/plan-ide-integration.md.
      */
     private fun logClientCapabilities(params: InitializeParams) {
         val td = params.capabilities?.textDocument
         val supportedFeatures =
             listOfNotNull(
-                // Implemented (server advertises these)
-                td?.hover?.let { "hover" }, // treesitter: tooltip info
-                td?.completion?.let { "completion" }, // treesitter: code completions
-                td?.definition?.let { "definition" }, // treesitter: go-to-definition
-                td?.references?.let { "references" }, // treesitter: find references
-                td?.documentSymbol?.let { "documentSymbol" }, // treesitter: outline/breadcrumbs
-                td?.formatting?.let { "formatting" }, // treesitter: format document
-                td?.rename?.let { "rename" }, // treesitter: rename symbol
-                td?.codeAction?.let { "codeAction" }, // treesitter: quick fixes
-                td?.semanticTokens?.let { "semanticTokens" }, // compiler(sym): semantic highlighting
-                td?.documentHighlight?.let { "documentHighlight" }, // treesitter: highlight occurrences
-                td?.selectionRange?.let { "selectionRange" }, // treesitter: smart selection
-                td?.foldingRange?.let { "foldingRange" }, // treesitter: code folding
-                td?.signatureHelp?.let { "signatureHelp" }, // treesitter: parameter hints
-                td?.inlayHint?.let { "inlayHint" }, // treesitter: inline hints
-                td?.documentLink?.let { "documentLink" }, // treesitter: clickable links
-                td?.onTypeFormatting?.let { "onTypeFormatting" }, // treesitter: auto-indent
-                // Not yet implemented (uncomment as we add support)
-                // td?.synchronization?.let { "synchronization" }, // built-in: doc sync events
-                // td?.rangeFormatting?.let { "rangeFormatting" }, // treesitter: format selection
-                // td?.declaration?.let { "declaration" }, // compiler: go-to-declaration
-                // td?.typeDefinition?.let { "typeDefinition" }, // compiler(types): jump to type
-                // td?.implementation?.let { "implementation" }, // compiler(types): find impls
-                td?.codeLens?.let { "codeLens" }, // treesitter: run/compile actions on modules
-                // td?.colorProvider?.let { "colorProvider" }, // mock: color swatches
-                // td?.publishDiagnostics?.let { "publishDiagnostics" }, // compiler: error reporting
-                // td?.typeHierarchy?.let { "typeHierarchy" }, // compiler(full): type tree
-                // td?.callHierarchy?.let { "callHierarchy" }, // compiler(full): call tree
-                // td?.moniker?.let { "moniker" }, // compiler(full): cross-project IDs
-                td?.linkedEditingRange?.let { "linkedEditingRange" }, // treesitter: linked edits
-                // td?.inlineValue?.let { "inlineValue" }, // compiler(full): debug values
-                // td?.diagnostic?.let { "diagnostic" }, // compiler: pull diagnostics
+                td?.hover?.let { "hover" },
+                td?.completion?.let { "completion" },
+                td?.definition?.let { "definition" },
+                td?.declaration?.let { "declaration" },
+                td?.typeDefinition?.let { "typeDefinition" },
+                td?.implementation?.let { "implementation" },
+                td?.moniker?.let { "moniker" },
+                td?.references?.let { "references" },
+                td?.documentSymbol?.let { "documentSymbol" },
+                td?.formatting?.let { "formatting" },
+                td?.rangeFormatting?.let { "rangeFormatting" },
+                td?.onTypeFormatting?.let { "onTypeFormatting" },
+                td?.rename?.let { "rename" },
+                td?.codeAction?.let { "codeAction" },
+                td?.semanticTokens?.let { "semanticTokens" },
+                td?.documentHighlight?.let { "documentHighlight" },
+                td?.selectionRange?.let { "selectionRange" },
+                td?.foldingRange?.let { "foldingRange" },
+                td?.signatureHelp?.let { "signatureHelp" },
+                td?.inlayHint?.let { "inlayHint" },
+                td?.documentLink?.let { "documentLink" },
+                td?.codeLens?.let { "codeLens" },
+                td?.typeHierarchy?.let { "typeHierarchy" },
+                td?.callHierarchy?.let { "callHierarchy" },
+                td?.linkedEditingRange?.let { "linkedEditingRange" },
+                td?.synchronization?.let { "synchronization" },
+                td?.publishDiagnostics?.let { "publishDiagnostics" },
+                td?.diagnostic?.let { "diagnostic" },
             )
         if (supportedFeatures.isNotEmpty()) {
             logger.info("initialize: client capabilities: {}", supportedFeatures.joinToString(", "))
@@ -445,25 +864,39 @@ class XtcLanguageServer(
     /**
      * Build the server capabilities that we advertise to the client.
      *
-     * Each capability here corresponds to an LSP method that the server handles.
-     * See [logClientCapabilities] for a full reference table of all LSP capabilities,
-     * what they do, and what adapter level is required.
+     * Each provider corresponds to a method handled by the selected adapter. Optional response
+     * fields are negotiated separately through [ClientPresentation] and the resolve options.
      */
     private fun buildServerCapabilities(): ServerCapabilities =
         ServerCapabilities().apply {
-            // Text document sync - Full means the client sends the entire document on each change.
-            // Incremental sync (sending only deltas) is more efficient but requires diffing logic.
-            textDocumentSync = Either.forLeft(TextDocumentSyncKind.Full)
+            positionEncoding = "utf-16"
+            if (adapter is XdkAdapter) experimental = mapOf("xtcRenameProposal" to 1, "xtcFileMoveProposal" to 1)
+            if (usesPullDiagnostics) {
+                diagnosticProvider =
+                    DiagnosticRegistrationOptions(true, true).apply {
+                        identifier = "xtc"
+                        workDoneProgress = true
+                    }
+            }
+            textDocumentSync = Either.forRight(synchronization.capabilities())
 
             // --- Core navigation (treesitter) ---
             hoverProvider = Either.forLeft(true)
             completionProvider =
                 CompletionOptions().apply {
                     triggerCharacters = listOf(".", ":", "<")
-                    resolveProvider = false
+                    resolveProvider = resolvesCompletionDocumentation
                 }
+            if (presentation.inlineCompletion && AdapterCapability.INLINE_COMPLETION in adapter.capabilities) {
+                inlineCompletionProvider = Either.forLeft(true)
+            }
             definitionProvider = Either.forLeft(true)
-            referencesProvider = Either.forLeft(true)
+            referencesProvider =
+                if (adapter is XdkAdapter) {
+                    Either.forRight(ReferenceOptions().apply { workDoneProgress = true })
+                } else {
+                    Either.forLeft(true)
+                }
             documentSymbolProvider = Either.forLeft(true)
 
             // --- Structural features (treesitter) ---
@@ -472,32 +905,69 @@ class XtcLanguageServer(
             foldingRangeProvider = Either.forLeft(true)
 
             // --- Editing features (treesitter) ---
-            renameProvider = Either.forRight(RenameOptions().apply { prepareProvider = true })
-            codeActionProvider = Either.forLeft(true)
+            renameProvider =
+                Either.forRight(
+                    RenameOptions().apply {
+                        prepareProvider = true
+                        workDoneProgress = true
+                    },
+                )
+            codeActionProvider =
+                if (!presentation.codeActions) {
+                    Either.forLeft(false)
+                } else if (resolvesCodeActionEdit) {
+                    Either.forRight(CodeActionOptions().apply { resolveProvider = true })
+                } else {
+                    Either.forLeft(true)
+                }
+            if (
+                !presentation.actionLiterals &&
+                presentation.applyEdit &&
+                AdapterCapability.CODE_ACTION in adapter.capabilities
+            ) {
+                executeCommandProvider =
+                    ExecuteCommandOptions(listOf(ClientPresentation.APPLY_CODE_ACTION))
+            }
             documentFormattingProvider = Either.forLeft(true)
-            documentRangeFormattingProvider = Either.forLeft(true)
+            documentRangeFormattingProvider =
+                Either.forRight(DocumentRangeFormattingOptions().apply { rangesSupport = true })
             documentOnTypeFormattingProvider =
                 DocumentOnTypeFormattingOptions("\n").apply {
                     moreTriggerCharacter = listOf("}", ";", ")")
                 }
-            // inlayHintProvider = Either.forLeft(true) // not implemented in TreeSitterAdapter yet
+            if (AdapterCapability.INLAY_HINT in adapter.capabilities) {
+                inlayHintProvider =
+                    if (resolvesInlayHintTooltip) {
+                        Either.forRight(
+                            InlayHintRegistrationOptions().apply { resolveProvider = true },
+                        )
+                    } else {
+                        Either.forLeft(true)
+                    }
+            }
 
             // documentLinkProvider: URLs in comments / string literals.
             // See TreeSitterAdapter.getDocumentLinks for the matcher.
-            documentLinkProvider = DocumentLinkOptions()
+            documentLinkProvider = DocumentLinkOptions(resolvesDocumentLinkTarget)
 
-            signatureHelpProvider = SignatureHelpOptions(listOf("(", ","))
+            signatureHelpProvider =
+                SignatureHelpOptions(
+                    if (adapter is XdkAdapter) listOf("(", ",", "[") else listOf("(", ","),
+                )
 
-            // Semantic tokens: enabled by default. Disable with -Plsp.semanticTokens=false if needed.
-            if (semanticTokensEnabled) {
+            // Semantic tokens: enabled by default. Disable with -Plsp.semanticTokens=false if
+            // needed.
+            if (
+                semanticTokensEnabled && AdapterCapability.SEMANTIC_TOKENS in adapter.capabilities
+            ) {
                 logger.info(
                     "semantic tokens ENABLED via {} ({} types, {} modifiers)",
-                    System
-                        .getProperty(SEMANTIC_TOKENS_SYSTEM_PROPERTY)
-                        ?.let { "system property $SEMANTIC_TOKENS_SYSTEM_PROPERTY=$it" }
-                        ?: System
-                            .getenv(SEMANTIC_TOKENS_ENV)
-                            ?.let { "environment $SEMANTIC_TOKENS_ENV=$it" }
+                    System.getProperty(SEMANTIC_TOKENS_SYSTEM_PROPERTY)?.let {
+                        "system property $SEMANTIC_TOKENS_SYSTEM_PROPERTY=$it"
+                    }
+                        ?: System.getenv(SEMANTIC_TOKENS_ENV)?.let {
+                            "environment $SEMANTIC_TOKENS_ENV=$it"
+                        }
                         ?: "build property lsp.semanticTokens=${buildInfo.getProperty("lsp.semanticTokens", "true")}",
                     SemanticTokenLegend.tokenTypes.size,
                     SemanticTokenLegend.tokenModifiers.size,
@@ -509,36 +979,149 @@ class XtcLanguageServer(
                                 SemanticTokenLegend.tokenTypes,
                                 SemanticTokenLegend.tokenModifiers,
                             )
-                        full = Either.forLeft(true)
+                        full =
+                            if (tokenCapabilities.get().delta) {
+                                Either.forRight(SemanticTokensServerFull(true))
+                            } else {
+                                Either.forLeft(true)
+                            }
+                        if (tokenCapabilities.get().range) range = Either.forLeft(true)
                     }
             } else {
                 logger.warn(
                     "semantic tokens DISABLED via {}",
-                    System
-                        .getProperty(SEMANTIC_TOKENS_SYSTEM_PROPERTY)
-                        ?.let { "system property $SEMANTIC_TOKENS_SYSTEM_PROPERTY=$it" }
-                        ?: System
-                            .getenv(SEMANTIC_TOKENS_ENV)
-                            ?.let { "environment $SEMANTIC_TOKENS_ENV=$it" }
+                    System.getProperty(SEMANTIC_TOKENS_SYSTEM_PROPERTY)?.let {
+                        "system property $SEMANTIC_TOKENS_SYSTEM_PROPERTY=$it"
+                    }
+                        ?: System.getenv(SEMANTIC_TOKENS_ENV)?.let {
+                            "environment $SEMANTIC_TOKENS_ENV=$it"
+                        }
                         ?: "build property lsp.semanticTokens=${buildInfo.getProperty("lsp.semanticTokens", "true")}",
                 )
             }
 
             // --- Workspace features ---
-            workspaceSymbolProvider = Either.forLeft(true)
+            workspaceSymbolProvider =
+                if (resolvesWorkspaceSymbolRange) {
+                    Either.forRight(WorkspaceSymbolOptions(true))
+                } else {
+                    Either.forLeft(true)
+                }
+            if (adapter is XdkAdapter) {
+                workspace =
+                    WorkspaceServerCapabilities().apply {
+                        fileOperations =
+                            FileOperationsServerCapabilities().apply {
+                                val filters =
+                                    FileOperationOptions(
+                                        listOf(
+                                            FileOperationFilter(
+                                                FileOperationPattern("**/*.x"),
+                                                "file",
+                                            ),
+                                            FileOperationFilter(
+                                                FileOperationPattern("**").apply {
+                                                    matches = "folder"
+                                                },
+                                                "file",
+                                            ),
+                                        ),
+                                    )
+                                val client = fileOperationCapabilities.get()
+                                if (client?.willRename == true && supportsVersionedEdits) {
+                                    willRename = filters
+                                }
+                                if (client?.willCreate == true) willCreate = filters
+                                if (client?.willDelete == true) willDelete = filters
+                                if (client?.didRename == true) didRename = filters
+                                if (client?.didCreate == true) didCreate = filters
+                                if (client?.didDelete == true) didDelete = filters
+                            }
+                        textDocumentContent = readOnlyDocuments.options()
+                        workspaceFolders =
+                            WorkspaceFoldersOptions().apply {
+                                supported = true
+                                changeNotifications = Either.forRight(true)
+                            }
+                    }
+            }
 
             // Code lenses: Run action on module declarations (TreeSitterAdapter)
-            codeLensProvider = CodeLensOptions(false)
+            codeLensProvider = CodeLensOptions(resolvesCodeLensCommand)
 
-            // Linked editing: rename-on-type for same-name identifiers (same-file, TreeSitterAdapter)
+            // Linked editing: rename-on-type for same-name identifiers (same-file,
+            // TreeSitterAdapter)
             linkedEditingRangeProvider = Either.forLeft(true)
 
-            // Not yet advertised (enable when implemented)
-            // declarationProvider = Either.forLeft(true) // compiler: go-to-declaration
-            // typeDefinitionProvider = Either.forLeft(true) // compiler(types): jump to type
-            // implementationProvider = Either.forLeft(true) // compiler(types): find implementations
-            // typeHierarchyProvider = Either.forLeft(true) // compiler(full): type tree
-            // callHierarchyProvider = Either.forLeft(true) // compiler(full): call tree
+            // Advertise only operations implemented by the selected backend.
+            if (AdapterCapability.HOVER !in adapter.capabilities) hoverProvider = null
+            if (AdapterCapability.COMPLETION !in adapter.capabilities) completionProvider = null
+            if (AdapterCapability.DEFINITION !in adapter.capabilities) definitionProvider = null
+            if (AdapterCapability.REFERENCES !in adapter.capabilities) referencesProvider = null
+            if (AdapterCapability.DOCUMENT_SYMBOL !in adapter.capabilities) {
+                documentSymbolProvider = null
+            }
+            if (AdapterCapability.DOCUMENT_HIGHLIGHT !in adapter.capabilities) {
+                documentHighlightProvider = null
+            }
+            if (AdapterCapability.SELECTION_RANGE !in adapter.capabilities) {
+                selectionRangeProvider = null
+            }
+            if (AdapterCapability.FOLDING_RANGE !in adapter.capabilities) {
+                foldingRangeProvider = null
+            }
+            if (
+                AdapterCapability.RENAME !in adapter.capabilities ||
+                (adapter is XdkAdapter && !supportsVersionedEdits)
+            ) {
+                renameProvider = null
+            }
+            if (AdapterCapability.CODE_ACTION !in adapter.capabilities) codeActionProvider = null
+            if (AdapterCapability.FORMATTING !in adapter.capabilities) {
+                documentFormattingProvider = null
+            }
+            if (AdapterCapability.RANGE_FORMATTING !in adapter.capabilities) {
+                documentRangeFormattingProvider = null
+            }
+            if (AdapterCapability.ON_TYPE_FORMATTING !in adapter.capabilities) {
+                documentOnTypeFormattingProvider = null
+            }
+            if (AdapterCapability.DOCUMENT_LINK !in adapter.capabilities) {
+                documentLinkProvider = null
+            }
+            if (AdapterCapability.SIGNATURE_HELP !in adapter.capabilities) {
+                signatureHelpProvider = null
+            }
+            if (AdapterCapability.WORKSPACE_SYMBOL !in adapter.capabilities) {
+                workspaceSymbolProvider = null
+            }
+            if (AdapterCapability.CODE_LENS !in adapter.capabilities) codeLensProvider = null
+            if (AdapterCapability.LINKED_EDITING !in adapter.capabilities) {
+                linkedEditingRangeProvider = null
+            }
+
+            // Compiler semantic navigation.
+            if (AdapterCapability.DOCUMENT_COLOR in adapter.capabilities) {
+                colorProvider = Either.forLeft(true)
+            }
+            if (AdapterCapability.TYPE_DEFINITION in adapter.capabilities) {
+                typeDefinitionProvider = Either.forLeft(true)
+            }
+            if (AdapterCapability.DECLARATION in adapter.capabilities) {
+                declarationProvider = Either.forLeft(true)
+            }
+            if (AdapterCapability.IMPLEMENTATION in adapter.capabilities) {
+                implementationProvider = Either.forLeft(true)
+            }
+            if (AdapterCapability.MONIKER in adapter.capabilities) {
+                monikerProvider = Either.forLeft(true)
+            }
+            if (AdapterCapability.TYPE_HIERARCHY in adapter.capabilities) {
+                typeHierarchyProvider = Either.forLeft(true)
+            }
+            if (AdapterCapability.CALL_HIERARCHY in adapter.capabilities) {
+                callHierarchyProvider = Either.forLeft(true)
+            }
         }
 
     override fun shutdown(): CompletableFuture<Any> {
@@ -548,11 +1131,25 @@ class XtcLanguageServer(
         return CompletableFuture.completedFuture(null)
     }
 
-    /** Release resources once, whether shutdown is explicit or the transport disconnects. */
+    /** Release resources on both a protocol shutdown and an abrupt transport disconnect. */
     override fun close() {
-        if (closed.compareAndSet(false, true)) {
-            initialized = false
-            adapter.close()
+        val alreadyClosed =
+            synchronized(compilerSettings) {
+                compilerSettings.getAndUpdate { it.copy(closed = true) }.closed
+            }
+        if (alreadyClosed) return
+        clientReady.cancel(false)
+        indexing.cancel(false)
+        formattingState.close()
+        resourceFileWatchers.close()
+        refresh.close()
+        readOnlyDocuments.close()
+        clientTrace.close()
+        progress.close()
+        partialResults.close()
+        editCapabilities.set(EditCapabilities())
+        adapter.use {
+            textDocumentService.close()
         }
     }
 
@@ -570,7 +1167,7 @@ class XtcLanguageServer(
     override fun getWorkspaceService(): WorkspaceService = workspaceService
 
     // =========================================================================
-    // Custom XTC LSP Methods
+    // Custom Ecstasy LSP Methods
     // =========================================================================
     //
     // LSP allows servers to define custom methods beyond the standard protocol.
@@ -593,6 +1190,26 @@ class XtcLanguageServer(
     //
     // =========================================================================
 
+    /** Effective immutable inputs for host configuration views and explicit override creation. */
+    @JsonRequest("xtc/compilerSourceModules")
+    fun compilerSourceModules(): CompletableFuture<List<SourceModuleConfiguration>> =
+        supplyAsync(
+            "xtc/compilerSourceModules",
+            "effective inputs",
+        ) {
+            (adapter as? XdkAdapter)
+                ?.effectiveSourceModules()
+                ?.map(::SourceModuleConfiguration)
+                .orEmpty()
+        }
+
+    /** Hosts opting into this extension own persistence and undo of explicit graph replacements. */
+    @JsonRequest("xtc/rename")
+    fun renameProposal(params: RenameParams): CompletableFuture<RenameProposal?> = textDocumentService.renameProposal(params)
+
+    @JsonRequest("xtc/renameFiles")
+    fun renameFilesProposal(params: RenameFilesParams): CompletableFuture<RenameProposal?> = textDocumentService.renameFilesProposal(params)
+
     /**
      * Custom health check method that clients can call to verify the server is working.
      *
@@ -605,10 +1222,57 @@ class XtcLanguageServer(
      *
      * Usage from client: Send JSON-RPC request with method "xtc/health check"
      *
-     * NOTE: Called at runtime via JSON-RPC by LSP clients (e.g., IntelliJ plugin, VS Code extension)
-     * sending a request with method "xtc/health check". LSP4J dispatches via reflection.
+     * NOTE: Called at runtime via JSON-RPC by LSP clients (e.g., IntelliJ plugin, VS Code
+     * extension) sending a request with method "xtc/health check". LSP4J dispatches via reflection.
      */
     @Suppress("unused")
+    @JsonRequest("xtc/languageServiceStatus")
+    fun languageServiceStatus(): CompletableFuture<Map<String, Any?>> =
+        CompletableFuture.completedFuture(
+            mapOf(
+                "adapter" to adapter.displayName,
+                "version" to version,
+                "pid" to ProcessHandle.current().pid(),
+                "runtime" to System.getProperty("java.runtime.version"),
+                "jvmOptions" to ManagementFactory.getRuntimeMXBean().inputArguments.filter { it.startsWith("-X") },
+                "logs" to ServerLogs.status(),
+                "textSynchronization" to if (synchronization.incremental) "incremental" else "full",
+                "serverSaveFormatting" to
+                    (synchronization.formatOnSave && synchronization.waitUntil),
+                "saveHookSupported" to synchronization.waitUntil,
+                "formatting" to editorFormattingConfig,
+                "semanticTokens" to
+                    (
+                        semanticTokensEnabled &&
+                            AdapterCapability.SEMANTIC_TOKENS in adapter.capabilities
+                    ),
+                "capabilities" to buildServerCapabilities(),
+                "bundledXdk" to
+                    if (adapter is XdkAdapter) {
+                        mapOf("readOnly" to true, "modules" to XdkLibraries.packagedResources)
+                    } else {
+                        null
+                    },
+                "compilerLibraries" to (adapter as? XdkAdapter)?.libraryConfiguration(),
+                "compilerQueue" to (adapter as? XdkAdapter)?.compilerQueueSnapshot(),
+                "heap" to
+                    ManagementFactory.getMemoryMXBean().heapMemoryUsage.let {
+                        mapOf(
+                            "usedBytes" to it.used,
+                            "committedBytes" to it.committed,
+                            "maxBytes" to it.max,
+                        )
+                    },
+            ),
+        )
+
+    @Suppress("unused") // JSON-RPC entry point invoked by both editor plugins through LSP4J.
+    @JsonRequest("xtc/exportLogs")
+    fun exportLogs(): CompletableFuture<Map<String, String>> =
+        supplyAsync("xtc/exportLogs", "bounded server log archive") {
+            ServerLogs.export(languageServiceStatus().join())
+        }
+
     @JsonRequest("xtc/healthCheck")
     fun healthCheck(): CompletableFuture<Map<String, Any>> =
         supplyAsync(
@@ -622,14 +1286,15 @@ class XtcLanguageServer(
                 "version" to version,
                 "adapter" to adapter.displayName,
                 "buildTime" to buildTime,
-                "message" to if (healthy) "Ecstasy Language Server is healthy" else "Health check failed",
+                "message" to
+                    if (healthy) "Ecstasy Language Server is healthy" else "Health check failed",
             )
         }
 
     /**
-     * Register a file watcher for `**&#47;*.x` files via dynamic capability registration.
-     * This enables the client to notify us when XTC files are created, changed, or deleted
-     * on disk (outside of the editor), which we use to keep the workspace index up to date.
+     * Register source file watchers (and workspace resource changes in compiler mode). This enables
+     * the client to notify us when XTC files are created, changed, or deleted on disk (outside
+     * the editor), which we use to keep the workspace index up to date.
      */
     private fun registerFileWatcher() {
         val currentClient = client ?: return
@@ -637,7 +1302,7 @@ class XtcLanguageServer(
             DidChangeWatchedFilesRegistrationOptions(
                 listOf(
                     FileSystemWatcher(
-                        Either.forLeft("**/*.x"),
+                        Either.forLeft(if (adapter is XdkAdapter) "**/*" else "**/*.x"),
                         WatchKind.Create + WatchKind.Change + WatchKind.Delete,
                     ),
                 ),
@@ -648,20 +1313,114 @@ class XtcLanguageServer(
                 "workspace/didChangeWatchedFiles",
                 watcherOptions,
             )
-        currentClient.registerCapability(RegistrationParams(listOf(registration)))
-        logger.info("initialize: registered file watcher for **/*.x")
+        currentClient.registerCapability(RegistrationParams(listOf(registration))).whenComplete {
+            _,
+            failure,
+            ->
+            if (failure == null) {
+                logger.info("initialized: registered file watcher for **/*.x")
+            } else {
+                logger.warn("initialized: client rejected file watcher registration", failure)
+            }
+        }
     }
 
     // =========================================================================
     // Helper Methods
     // =========================================================================
 
+    fun changeCompilerWorkspaceFolders(
+        added: List<String>,
+        removed: List<String>,
+    ) {
+        val compiler = adapter as? XdkAdapter ?: return
+        synchronized(compilerSettings) {
+            compilerSettings.updateAndGet { settings ->
+                settings.copy(
+                    folders = (settings.folders.filterNot { it in removed } + added).distinct(),
+                    revision = settings.revision + 1,
+                )
+            }
+        }
+        try {
+            textDocumentService.refreshDependencies {
+                compiler.changeWorkspaceFolders(added, removed)
+            }
+            updateResourceWatchers()
+        } catch (failure: IllegalArgumentException) {
+            reportCompilerConfigError(failure)
+        } catch (failure: IOException) {
+            logger.warn("Workspace discovery failed; keeping previous graph: {}", failure.message)
+        }
+    }
+
+    fun refreshCompilerDiscovery() {
+        val compiler = adapter as? XdkAdapter ?: return
+        try {
+            textDocumentService.refreshDependencies { compiler.refreshDiscoveredSources() }
+            updateResourceWatchers()
+        } catch (failure: IllegalArgumentException) {
+            reportCompilerConfigError(failure)
+        } catch (failure: IOException) {
+            logger.warn("Source discovery failed; keeping previous graph: {}", failure.message)
+        }
+    }
+
+    private fun updateResourceWatchers() {
+        val compiler = adapter as? XdkAdapter ?: return
+        val currentClient = client ?: return
+        if (!editCapabilities.get().resourceWatchers) return
+        val folders = compilerSettings.get().folders.mapNotNull { XdkSources.file(it)?.toPath() }
+        val external =
+            compiler
+                .inputWatchRoots()
+                .filter { root ->
+                    folders.none { root.toPath().startsWith(it) }
+                }.mapTo(linkedSetOf()) { it.toURI().toString() }
+        resourceFileWatchers.update(
+            currentClient,
+            external,
+            editCapabilities.get().relativeWatchPatterns,
+        )
+    }
+
+    fun refreshForFile(uri: String): Unit = textDocumentService.refreshForFile(uri)
+
+    /** Host API; project discovery/configuration is separate from installing matching artifacts. */
+    fun replaceCompilerDependencies(dependencies: List<XdkDependency>) {
+        val compiler = adapter as? XdkAdapter ?: error("Compiler dependencies require XdkAdapter")
+        textDocumentService.refreshDependencies { compiler.replaceDependencies(dependencies) }
+    }
+
+    /**
+     * Host-supplied source roots/edges enable automatic dependency builds on editor/file events.
+     */
+    fun replaceCompilerSourceModules(modules: List<XdkSourceModule>) {
+        val compiler = adapter as? XdkAdapter ?: error("Compiler source modules require XdkAdapter")
+        textDocumentService.refreshDependencies { compiler.replaceSourceModules(modules) }
+        updateResourceWatchers()
+    }
+
     fun publishDiagnostics(
         uri: String,
         diagnostics: List<Diagnostic>,
+        version: Int? = null,
     ) {
+        if (usesPullDiagnostics) return
         val currentClient = client ?: return
-        val lspDiagnostics = diagnostics.map { it.toLsp() }
-        currentClient.publishDiagnostics(PublishDiagnosticsParams(uri, lspDiagnostics))
+        val options = presentation
+        val lspDiagnostics =
+            diagnostics.map {
+                it.toLsp(uri).apply {
+                    if (!options.diagnosticRelatedInformation) relatedInformation = null
+                }
+            }
+        currentClient.publishDiagnostics(
+            PublishDiagnosticsParams(
+                uri,
+                lspDiagnostics,
+                version.takeIf { options.diagnosticVersions },
+            ),
+        )
     }
 }

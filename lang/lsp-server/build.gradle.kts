@@ -1,4 +1,3 @@
-import org.gradle.process.CommandLineArgumentProvider
 import java.time.Instant
 
 plugins {
@@ -46,19 +45,19 @@ plugins {
 // =============================================================================
 // The LSP server can use different parsing backends:
 //
-//   treesitter  - Tree-sitter parsing (DEFAULT, syntax-level intelligence, needs native lib)
+//   treesitter  - Tree-sitter parsing (syntax-level intelligence, needs native lib)
+//   compiler    - The XTC compiler with bundled XDK libraries (DEFAULT, diagnostics and semantics)
 //   mock        - Regex-based parsing (no native dependencies, for testing/fallback)
 //
 // Set via Gradle property: -Plsp.adapter=mock (to override default)
 // Or in gradle.properties:  lsp.adapter=mock
 //
-// Default is 'treesitter' which provides syntax-aware features (native library bundled).
-// Use 'mock' for basic regex-based functionality if tree-sitter has issues.
+// Default is 'compiler'. -Dxtc.lsp.adapter overrides it at server startup without rebuilding.
 // =============================================================================
 // Resolve via xdkProperties which reads from the composite root's gradle.properties
 // (project.findProperty() only sees the included build's own gradle.properties, which doesn't exist)
-val lspAdapter: String = xdkProperties.stringValue("lsp.adapter", "treesitter")
-val lspSemanticTokens: String = xdkProperties.stringValue("lsp.semanticTokens", "false")
+val lspAdapter: String = xdkProperties.stringValue("lsp.adapter", "compiler")
+val lspSemanticTokens: String = xdkProperties.stringValue("lsp.semanticTokens", "true")
 
 // Log level: -Plog=DEBUG or XTC_LOG_LEVEL=DEBUG (default: INFO)
 // xdkProperties checks: env LOG -> gradle prop -> system prop -> composite root gradle.properties
@@ -124,9 +123,9 @@ repositories {
 // Consume the tree-sitter native libraries for all supported platforms.
 // This library is built on-demand using Zig cross-compilation.
 
-// Test consumers resolve the compiled modules from the composite, without a distribution archive.
-val compilerTestModules =
-    configurations.create("compilerTestModules") {
+// Consume the compiled XDK modules through the same variants as other composite consumers.
+val compilerModules =
+    configurations.create("compilerModules") {
         isCanBeConsumed = false
         isCanBeResolved = true
         attributes {
@@ -135,13 +134,17 @@ val compilerTestModules =
         }
     }
 
-abstract class CompilerTestModulesArguments : CommandLineArgumentProvider {
-    @get:InputFiles
-    @get:PathSensitive(PathSensitivity.RELATIVE)
-    abstract val modules: ConfigurableFileCollection
-
-    override fun asArguments(): Iterable<String> = listOf("-Dxtc.test.modules=${modules.asPath}")
-}
+// Source archives are consumed as resources; no distribution installation or extraction task.
+val compilerSources =
+    configurations.create("compilerSources") {
+        isCanBeConsumed = false
+        isCanBeResolved = true
+        isTransitive = false
+        attributes {
+            attribute(Category.CATEGORY_ATTRIBUTE, objects.named(Category.LIBRARY))
+            attribute(LibraryElements.LIBRARY_ELEMENTS_ATTRIBUTE, objects.named("xtc-sources"))
+        }
+    }
 
 val treeSitterNativeLib =
     configurations.create("treeSitterNativeLib") {
@@ -154,11 +157,14 @@ val treeSitterNativeLib =
     }
 
 dependencies {
-    testImplementation(libs.javatools)
-    compilerTestModules(libs.xdk.ecstasy)
-    compilerTestModules(libs.javatools.bridge)
+    compilerModules(libs.bundles.xdk.libraries)
+    compilerSources(libs.bundles.xdk.libraries)
     // Native library from tree-sitter project
     treeSitterNativeLib(project(path = ":tree-sitter", configuration = "nativeLibraryElements"))
+
+    // The XTC compiler, for the XdkAdapter: real diagnostics rather than a syntax approximation.
+    // Substituted from the included build when lang is built inside the composite.
+    implementation(libs.javatools)
 
     // LSP4J - Eclipse LSP implementation for Java
     // Bundled in fat JAR for out-of-process execution (not provided by IntelliJ)
@@ -203,10 +209,35 @@ val copyNativeLibToResources =
         into(layout.buildDirectory.dir("generated/resources/native-libraries"))
     }
 
+val compilerModuleFiles = compilerModules.asFileTree.matching { include("**/*.xtc") }
+val compilerModuleIndex =
+    tasks.register<WriteProperties>("compilerModuleIndex") {
+        destinationFile.set(layout.buildDirectory.file("generated/compiler/modules.properties"))
+        inputs.files(compilerModuleFiles).withPathSensitivity(PathSensitivity.NONE)
+        property("modules", compilerModuleFiles.elements.map { files -> files.map { it.asFile.name }.sorted().joinToString(",") })
+    }
+
+val compilerSourceIndex =
+    tasks.register<WriteProperties>("compilerSourceIndex") {
+        destinationFile.set(layout.buildDirectory.file("generated/compiler/sources.properties"))
+        inputs.files(compilerSources).withPathSensitivity(PathSensitivity.NONE)
+        property("archives", compilerSources.elements.map { files -> files.map { it.asFile.name }.sorted().joinToString(",") })
+    }
+
 // Add native library resources to source sets
 sourceSets.main {
     resources.srcDir(copyNativeLibToResources)
 }
+
+// Ensure native library is copied before processResources
+val processResources =
+    tasks.named<ProcessResources>("processResources") {
+        dependsOn(copyNativeLibToResources)
+        from(compilerModuleFiles) { into("org/xvm/lsp/xdk") }
+        from(compilerModuleIndex) { into("org/xvm/lsp/xdk") }
+        from(compilerSourceIndex) { into("org/xvm/lsp/xdk") }
+        from(compilerSources) { into("org/xvm/lsp/xdk/sources") }
+    }
 
 tasks.withType<JavaCompile>().configureEach {
     options.compilerArgs.add("-Xlint:deprecation")
@@ -214,13 +245,26 @@ tasks.withType<JavaCompile>().configureEach {
 
 val classes = tasks.named("classes")
 
-tasks.test {
-    jvmArgumentProviders.add(
-        objects.newInstance<CompilerTestModulesArguments>().apply {
-            modules.from(compilerTestModules)
-        },
+tasks.withType<Test>().configureEach {
+    systemProperty(
+        "xtc.logs.directory",
+        layout.buildDirectory
+            .dir("reports/server-logs")
+            .get()
+            .asFile.absolutePath,
     )
-    useJUnitPlatform()
+    // Keep traces in the same process-owned directory so closed-session retention covers both logs.
+}
+
+tasks.test {
+    systemProperty(
+        "xtc.lsp.retentionCycles",
+        providers.gradleProperty("lsp.retentionCycles").orElse("120").get(),
+    )
+    // Prefer the real logger over javatools' shaded no-op provider, without setting a provider
+    // property on Gradle's separate bootstrap classloader (which cannot see test dependencies).
+    classpath = configurations.testRuntimeClasspath.get().filter { it.name.startsWith("logback-classic-") } + classpath
+    useJUnitPlatform { excludeTags("compiler-stdio") }
     testLogging {
         events("failed")
     }
@@ -239,6 +283,12 @@ tasks.test {
         dir = dir.parentFile
     }
     systemProperty("xtc.composite.root", dir.absolutePath)
+    inputs.files(
+        rootProject.layout.projectDirectory.file("doc/manual-test-plan.md"),
+        rootProject.layout.projectDirectory.file("test-fixtures/compiler-playbook/scenarios.json"),
+        rootProject.layout.projectDirectory.file("test-fixtures/semantic-highlighting/SemanticColors.x"),
+        rootProject.layout.projectDirectory.file("test-fixtures/color-values/ColorPrototype.x"),
+    )
 }
 
 tasks.jar {
@@ -270,7 +320,18 @@ val fatJar =
             configurations.runtimeClasspath
                 .get()
                 .filter { it.name.endsWith("jar") }
-                .map { zipTree(it) }
+                .map { jar ->
+                    zipTree(jar).matching {
+                        // javatools is itself a shaded jar and bundles slf4j-nop. Merged in with
+                        // duplicatesStrategy = EXCLUDE, whose first entry wins, its NOP provider
+                        // shadowed logback's and the server logged nothing at all - no compile
+                        // times, no diagnostics counts, no errors. Keep the NOP binding out.
+                        exclude("org/slf4j/nop/**")
+                        if (jar.name.startsWith("javatools")) {
+                            exclude("META-INF/services/org.slf4j.spi.SLF4JServiceProvider")
+                        }
+                    }
+                }
         })
 
         // Exclude signature files from dependencies (they become invalid in fat JAR)
@@ -287,6 +348,31 @@ tasks.test {
     inputs.file(serverJar).withPropertyName("serverJar").withPathSensitivity(PathSensitivity.NONE)
     dependsOn(fatJar)
     systemProperty("xtc.lsp.jar", serverJar.get().asFile.absolutePath)
+}
+
+// Exercise the distributed artifact through the production launcher, separately from unit tests.
+val compilerStdioTest =
+    tasks.register<Test>("compilerStdioTest") {
+        group = "verification"
+        description = "Test the packaged compiler LSP over stdio (requires -Plsp.adapter=compiler)"
+        testClassesDirs =
+            sourceSets.test
+                .get()
+                .output.classesDirs
+        classpath = sourceSets.test.get().runtimeClasspath
+        useJUnitPlatform { includeTags("compiler-stdio") }
+
+        val serverJar = fatJar.flatMap { it.archiveFile }
+        inputs.file(serverJar).withPropertyName("serverJar").withPathSensitivity(PathSensitivity.NONE)
+        dependsOn(fatJar)
+        systemProperty("xtc.lsp.jar", serverJar.get().asFile.absolutePath)
+        testLogging { events("failed") }
+    }
+
+tasks.check {
+    if (lspAdapter in listOf("compiler", "xtc", "full")) {
+        dependsOn(compilerStdioTest)
+    }
 }
 
 // =============================================================================
@@ -331,3 +417,26 @@ val assemble =
     tasks.named("assemble") {
         dependsOn(fatJar)
     }
+
+// Shared native-editor fixtures are built through the same embedded compiler as the server.
+tasks.register<JavaExec>("prepareLibraryPlaybook") {
+    group = "verification"
+    description = "Build binary libraries and matching sources for both editor playbooks"
+    classpath = sourceSets.test.get().runtimeClasspath
+    // javatools shades a no-op provider. This standalone JVM can select Logback directly;
+    // do not put this property on Gradle's test-worker/bootstrap classloader.
+    systemProperty("slf4j.provider", "ch.qos.logback.classic.spi.LogbackServiceProvider")
+    systemProperty(
+        "xtc.logs.directory",
+        layout.buildDirectory
+            .dir("reports/library-playbook/server-logs")
+            .get()
+            .asFile.absolutePath,
+    )
+    mainClass.set("org.xvm.lsp.adapter.PrepareLibraryPlaybook")
+    val scenarios = rootProject.layout.projectDirectory.file("test-fixtures/compiler-playbook/scenarios.json")
+    val output = layout.buildDirectory.dir("generated/compiler-playbook/libraries")
+    inputs.file(scenarios)
+    outputs.dir(output)
+    args(scenarios.asFile.absolutePath, output.get().asFile.absolutePath)
+}
