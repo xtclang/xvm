@@ -7,19 +7,28 @@
 // TextMate remains as the fast-paint fallback during server startup.
 
 import * as fs from 'node:fs';
+import * as os from 'node:os';
 import * as path from 'node:path';
 import * as vscode from 'vscode';
 
 import { createStatusBar, updateStatusBar } from './status-bar';
-import { startLanguageClient, restartLanguageClient, stopLanguageClient, applyTraceConfig } from './lsp-client';
+import { startLanguageClient, restartLanguageClient, stopLanguageClient, applyTraceConfig, updateCompilerConfiguration, updateEditorConfiguration, getClient, connectionSettingsChanged } from './lsp-client';
+import { selectLanguageAdapter } from './adapter-selection';
 import { XtcTaskProvider } from './task-provider';
 import { XtcDebugAdapterDescriptorFactory, XtcDebugConfigurationProvider } from './debug-adapter';
 import { registerCommands } from './commands';
+import { registerCompilerPaths } from './compiler-paths';
+import { readServiceSettings } from './editor-settings';
+import { compilerSettingsLocation } from './rename-proposal';
+import { runtimeJvmOptions, runtimeLogArguments } from './runtime-settings';
+import { configuredSettings, configurationProperties } from './settings-report';
+import { supportLogs } from './support-logs';
+import { serviceFailure } from './service-notifications';
 
 function ensureXtcLanguageAssociation(document: vscode.TextDocument): void {
     if (document.fileName.endsWith('.x') && document.languageId !== 'xtc') {
         vscode.languages.setTextDocumentLanguage(document, 'xtc').then(
-            () => console.log(`Set language to XTC for ${document.fileName}`),
+            () => console.log(`Set language to Ecstasy for ${document.fileName}`),
             err => console.error(`Failed to set language for ${document.fileName}:`, err)
         );
     }
@@ -54,7 +63,7 @@ async function fixFilesAssociation(context: vscode.ExtensionContext): Promise<vo
 }
 
 export function activate(context: vscode.ExtensionContext): void {
-    console.log('XTC Language Support is now active');
+    console.log('Ecstasy Language Support is now active');
 
     // Handle unhandled promise rejections from VS Code's git integration trying to stat .x.git files
     const rejectionHandler = (reason: unknown) => {
@@ -92,7 +101,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.workspace.textDocuments.forEach(ensureXtcLanguageAssociation);
 
     // Create output channel for LSP server
-    const outputChannel = vscode.window.createOutputChannel('XTC Language Server', { log: true });
+    const outputChannel = vscode.window.createOutputChannel('Ecstasy Language Server', { log: true });
 
     // Register all providers and UI components
     const statusBar = createStatusBar();
@@ -105,39 +114,96 @@ export function activate(context: vscode.ExtensionContext): void {
     );
 
     registerCommands(context, outputChannel);
+    registerCompilerPaths(context);
 
     // Setup LSP server
     const serverJar = context.asAbsolutePath(path.join('server', 'lsp-server.jar'));
     const serverExists = fs.existsSync(serverJar);
 
     // Register LSP-related commands
-    context.subscriptions.push(
+    const effectiveOutput = vscode.window.createOutputChannel('Ecstasy Effective Configuration');
+    // Owned by this UI command on the extension event loop, never by compiler callbacks.
+    let effectiveRevision = 0;
+    context.subscriptions.push(effectiveOutput,
+        { dispose: () => { effectiveRevision++; } },
+        vscode.workspace.onDidChangeConfiguration(() => { effectiveRevision++; }),
+        vscode.commands.registerCommand('xtc.showLanguageServiceStatus', async () => {
+            const revision = ++effectiveRevision;
+            const resource = vscode.window.activeTextEditor?.document.uri;
+            const settings = vscode.workspace.getConfiguration('xtc', resource);
+            const configured = configuredSettings(configurationProperties(context.extension.packageJSON.contributes.configuration), resource);
+            const running = getClient();
+            const effective = running?.isRunning()
+                ? await running.sendRequest('xtc/languageServiceStatus').catch(error => ({ status: 'unavailable', reason: String(error) }))
+                : { status: 'not running; open an Ecstasy file or check the server log' };
+            if (revision !== effectiveRevision || running !== getClient()) return undefined;
+            const restartRequired = (() => {
+                try { return running?.isRunning() ? connectionSettingsChanged() : false; }
+                catch (error) { return { invalidSavedSettings: String(error) }; }
+            })();
+            const report = { configured, effective, restartRequired, activeDocument: resource?.toString(), nativeFormatOnSave: vscode.workspace.getConfiguration('editor', { uri: resource, languageId: 'xtc' }).get('formatOnSave', false), sourceRoots: settings.get('sourceRoots', []), compilerPaths: 'Ecstasy: Show Effective Compiler Paths', log: 'Ecstasy: Show Language Server Output' };
+            effectiveOutput.clear();
+            effectiveOutput.appendLine(JSON.stringify(report, null, 2));
+            effectiveOutput.show(true);
+            return report;
+        }),
+        vscode.commands.registerCommand('xtc.exportServerLogs', async (target?: vscode.Uri) => {
+            const connection = getClient();
+            const destination = target ?? await vscode.window.showSaveDialog({ title: 'Export Ecstasy Server Logs (includes local paths and logged diagnostics)', filters: { 'ZIP archives': ['zip'] }, defaultUri: vscode.Uri.file(path.join(os.homedir(), 'ecstasy-server-logs.zip')) });
+            if (!destination) return;
+            const archive = connection?.isRunning()
+                ? Buffer.from((await connection.sendRequest<{ base64: string }>('xtc/exportLogs')).base64, 'base64')
+                : await supportLogs(context).export();
+            await vscode.workspace.fs.writeFile(destination, archive);
+            outputChannel.info(`Exported Ecstasy server logs to ${destination.fsPath}`);
+        }),
         vscode.commands.registerCommand('xtc.restartServer', async () => {
             if (serverExists) {
                 await restartLanguageClient(context, serverJar, outputChannel);
             } else {
-                vscode.window.showWarningMessage('XTC Language Server JAR not found. Build the extension first.');
+                vscode.window.showWarningMessage('Ecstasy Language Server JAR not found. Build the extension first.');
             }
         }),
+        vscode.commands.registerCommand('xtc.selectLanguageAdapter', selectLanguageAdapter),
 
+        vscode.workspace.onDidChangeTextDocument(event => {
+            if (event.document.uri.toString() === compilerSettingsLocation()?.uri.toString()) {
+                void updateCompilerConfiguration().catch(error => outputChannel.error(`Compiler settings edit rejected: ${error}`));
+            }
+        }),
         vscode.workspace.onDidChangeConfiguration(event => {
+            if (event.affectsConfiguration('xtc.java.vmOptions') || event.affectsConfiguration('xtc.server.logs')) {
+                try {
+                    runtimeJvmOptions();
+                    runtimeLogArguments();
+                    void vscode.window.showInformationMessage('Ecstasy runtime/log settings saved. Restart the language server to apply them.', 'Restart now', 'Open Settings')
+                        .then(choice => choice === 'Restart now' ? vscode.commands.executeCommand('xtc.restartServer')
+                            : choice === 'Open Settings' ? vscode.commands.executeCommand('workbench.action.openSettings', 'xtc.java.vmOptions') : undefined);
+                } catch (error) { serviceFailure(`Invalid Ecstasy runtime/log settings; running server retained: ${error}`); }
+            }
             if (event.affectsConfiguration('xtc.trace.server')) {
                 void applyTraceConfig();
             }
+            if (event.affectsConfiguration('xtc.compiler.sourceModules') || event.affectsConfiguration('xtc.compiler.libraries')) {
+                void updateCompilerConfiguration().catch(error => outputChannel.error(`Compiler configuration update failed: ${error}`));
+            }
+            if (event.affectsConfiguration('xtc.formatting') || event.affectsConfiguration('xtc.inlayHints.enabled') || event.affectsConfiguration('xtc.codeLens.references')) {
+                void updateEditorConfiguration().catch(error => outputChannel.error(`Editor configuration update failed: ${error}`));
+            }
             const needsRestart = serverExists && (
-                event.affectsConfiguration('xtc.java.home') ||
-                event.affectsConfiguration('xtc.sourceRoots')
+                event.affectsConfiguration('xtc.java.home') || event.affectsConfiguration('xtc.sourceRoots') ||
+                event.affectsConfiguration('xtc.languageService')
             );
             if (needsRestart) {
-                const changed = event.affectsConfiguration('xtc.java.home') ? 'Java path' : 'Source roots';
-                vscode.window.showInformationMessage(
-                    `${changed} changed. Restart the language server?`,
-                    'Restart', 'Later'
-                ).then(choice => {
-                    if (choice === 'Restart') {
-                        void restartLanguageClient(context, serverJar, outputChannel);
-                    }
-                });
+                try {
+                    readServiceSettings();
+                    if (!connectionSettingsChanged()) return;
+                    outputChannel.info('Connection settings changed; restarting Ecstasy and resynchronizing open buffers.');
+                    void restartLanguageClient(context, serverJar, outputChannel).catch(error => outputChannel.error(`Ecstasy restart failed: ${error}`));
+                } catch (error) {
+                    outputChannel.error(`Invalid Ecstasy settings; previous connection retained: ${error}`);
+                    serviceFailure(`Invalid Ecstasy settings; previous connection retained: ${error}`);
+                }
             }
         })
     );
@@ -145,13 +211,13 @@ export function activate(context: vscode.ExtensionContext): void {
     // Start language server or show build instructions
     if (serverExists) {
         updateStatusBar('starting');
-        startLanguageClient(context, serverJar, outputChannel);
+        void startLanguageClient(context, serverJar, outputChannel).catch(error => outputChannel.error(`Ecstasy startup failed: ${error}`));
     } else {
         const buildCmd = './gradlew :lang:vscode-extension:assemble -PincludeBuildLang=true -PincludeBuildAttachLang=true';
-        console.log('XTC Language Server JAR not found at:', serverJar);
+        console.log('Ecstasy Language Server JAR not found at:', serverJar);
         console.log(`Build with: ${buildCmd}`);
         void vscode.window.showErrorMessage(
-            'XTC Language Server JAR not found. Build lang:vscode-extension to enable LSP features.',
+            'Ecstasy Language Server JAR not found. Build lang:vscode-extension to enable LSP features.',
             'Show Build Command'
         ).then(choice => {
             if (choice === 'Show Build Command') {

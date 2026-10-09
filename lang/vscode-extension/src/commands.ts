@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import type { Location, Position } from 'vscode-languageclient/node';
 
 import { createXtcRunTask, XtcTaskDefinition, XtcTaskProvider } from './task-provider';
 
@@ -16,6 +17,15 @@ function validateProjectName(value: string): string | null {
 
 export function registerCommands(context: vscode.ExtensionContext, outputChannel: vscode.OutputChannel): void {
     context.subscriptions.push(
+        vscode.commands.registerCommand('xtc.openLanguageSettings', () =>
+            vscode.commands.executeCommand('workbench.action.openSettings', '@ext:xtclang.xtc-language')),
+        vscode.commands.registerCommand('xtc.showReferences', (uri: string, at: Position, locations: Location[]) => {
+            const targets = locations.map(({ uri, range }) => new vscode.Location(
+                vscode.Uri.parse(uri), new vscode.Range(
+                    range.start.line, range.start.character, range.end.line, range.end.character)));
+            return vscode.commands.executeCommand('editor.action.showReferences',
+                vscode.Uri.parse(uri), new vscode.Position(at.line, at.character), targets);
+        }),
         vscode.commands.registerCommand('xtc.runModule', async (_uri: string, moduleName: string) => {
             if (!moduleName) {
                 const input = await vscode.window.showInputBox({
@@ -39,6 +49,10 @@ export function registerCommands(context: vscode.ExtensionContext, outputChannel
 
         vscode.commands.registerCommand('xtc.showServerOutput', () => {
             outputChannel.show();
+        }),
+
+        vscode.commands.registerCommand('xtc.hideServerOutput', () => {
+            outputChannel.hide();
         }),
 
         vscode.commands.registerCommand('xtc.createProject', async () => {
@@ -73,7 +87,7 @@ export function registerCommands(context: vscode.ExtensionContext, outputChannel
             }
 
             const parentPath = folderUri[0].fsPath;
-            const terminal = vscode.window.createTerminal('XTC');
+            const terminal = vscode.window.createTerminal('Ecstasy');
             terminal.show();
             terminal.sendText(`xtc init "${projectName}" --type ${projectType.toLowerCase()} --dir "${parentPath}"`);
 

@@ -741,6 +741,18 @@ jobs:
                   echo "🎉 ALL LANG VALIDATION COMPLETE"
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
+            - name: Verify the packaged compiler LSP over stdio
+              if: |
+                  success() && matrix.os == 'ubuntu-latest' &&
+                  steps.publish-flags.outputs.validate-core == 'true'
+              shell: bash
+              env:
+                  GRADLE_OPTS: ${{ steps.versions.outputs.gradle-jvm-opts }}
+              run: |
+                  ./gradlew ${{ steps.versions.outputs.gradle-options }} \
+                    -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler \
+                    :lang:lsp-server:compilerStdioTest
+
             - name: Require compiler-consumer test results
               if: |
                   success() && matrix.os == 'ubuntu-latest' &&
@@ -750,10 +762,26 @@ jobs:
                   python3 - <<'PYTEST'
                   from pathlib import Path
                   from xml.etree import ElementTree
-                  result = ElementTree.parse(Path("lang/lsp-server/build/test-results/test/TEST-org.xvm.lsp.adapter.CompilerConsumerTest.xml")).getroot()
-                  counts = {key: int(result.attrib[key]) for key in ("tests", "failures", "errors", "skipped")}
-                  assert counts["tests"] > 0 and all(counts[key] == 0 for key in ("failures", "errors", "skipped")), counts
-                  print("adapter.CompilerConsumerTest", counts)
+                  results = Path("lang/lsp-server/build/test-results/test")
+                  suites = [
+                      "adapter.CompilerConsumerTest",
+                      "adapter.XdkAdapterTest", "adapter.XdkNavigationTest", "adapter.XdkDiagnosticTest",
+                      "adapter.XdkAdapterLifecycleTest", "adapter.SemanticModelTest", "adapter.CompilerProjectTest",
+                      "adapter.TypeInfoDiagnosticsTest", "adapter.TypeInfoFinalCompositionTest", "adapter.EmbeddingDiagnosticsTest",
+                      "adapter.XdkModuleSessionTest", "adapter.XdkRecoveryTest", "adapter.XdkPartialAnalysisTest",
+                      "adapter.CompilerCallSiteTest",
+                      "server.XdkModuleServerTest",
+                      "server.XdkLanguageServerTest", "server.AdapterBackendTest",
+                  ]
+                  for suite in suites:
+                      result = ElementTree.parse(results / f"TEST-org.xvm.lsp.{suite}.xml").getroot()
+                      counts = {key: int(result.attrib[key]) for key in ("tests", "failures", "errors", "skipped")}
+                      assert counts["tests"] > 0 and all(counts[key] == 0 for key in ("failures", "errors", "skipped")), (suite, counts)
+                      print(suite, counts)
+                  stdio = ElementTree.parse("lang/lsp-server/build/test-results/compilerStdioTest/TEST-org.xvm.lsp.server.XdkStdioTest.xml").getroot()
+                  counts = {key: int(stdio.attrib[key]) for key in ("tests", "failures", "errors", "skipped")}
+                  assert counts["tests"] > 0 and all(counts[key] == 0 for key in ("failures", "errors", "skipped")), ("server.XdkStdioTest", counts)
+                  print("server.XdkStdioTest", counts)
                   PYTEST
 
             # The checks that lang validation ran passed; later runs of this pull request on the
