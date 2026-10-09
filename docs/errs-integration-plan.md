@@ -5900,22 +5900,24 @@ Gene's boundary contract is correct. Hosts inspecting compiler objects must bind
 working pool with `ConstantPool.withPool(pool)` on the executing thread and restore it afterward.
 The owning pool of an individual constant is not a replacement for that operation-wide context.
 
-The revised I2 withdraws `currentOr`, `poolInUse` and all eighteen fallback sites. Its remaining
-changes document and test the existing contract: nested and exceptional restoration, executor
-isolation, cross-pool constant operations and scoped MethodBody inspection. Production behavior
-and existing APIs remain unchanged. Do not re-extract the superseded fallback commits
+The revised I2 withdraws `currentOr`, `poolInUse` and all eighteen fallback sites. Following the
+October 9 review response, its only remaining change is Javadoc for the existing pool-scope
+contract in `ConstantPool.java`. The two added Java scope-test classes were removed from I2
+and the integrated branch; the actual adapter boundary tests remain with their consumer.
+Production behavior and existing APIs remain unchanged. Do not re-extract the superseded fallback commits
 `cae4f9452` and `610873fb6` from the historical source map.
 
 The LSP's semantic extraction boundaries already establish scopes and export detached facts for
 request-thread queries. Keep those boundaries, and validate the current adapter with the fallback
 implementation removed. `CompilerPoolScopeTest` additionally checks successful and failed
 compilation, snapshot/artifact extraction and partial member queries with both unbound and
-unrelated bound caller pools. The I2 tests document a contract; I2 is no longer a production
+unrelated bound caller pools. I2 documents the existing contract and is no longer a production
 behavior prerequisite for the adapter.
 
 The fallback-free adapter run executed 1,785 tests with no failures or errors; two pre-existing
 Tree-sitter navigation placeholders remained disabled. All six new LSP boundary cases and all
-six revised Java pool-scope cases passed without skips. These checks used the current adapter
+six Java pool-scope cases passed without skips before those Java tests were removed from the
+final documentation-only scope. These checks used the current adapter
 implementation with the I2 production changes removed, and the packaged server bytecode was
 checked to contain neither fallback helper. The packaged compiler-server protocol suite also
 passed all 82 cases without failures, errors or skips. Root and LSP Spotless checks passed.
