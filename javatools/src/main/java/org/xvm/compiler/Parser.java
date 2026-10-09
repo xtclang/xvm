@@ -103,7 +103,20 @@ public class Parser {
 
         m_source          = source;
         f_errs            = new Reporting(requireNonNull(errs, "errs"));
-        m_lexer           = lexer == null ? new Lexer(source, f_errs) : lexer;
+        // Lexical reports and cancellation follow the active speculative attempt.
+        ErrorListener lexicalReports = new ErrorListener() {
+            @Override
+            public void log(ErrorInfo error) {
+                f_errs.get().log(error);
+            }
+
+            @Override
+            public boolean isAbortDesired() {
+                return f_errs.get().isAbortDesired();
+            }
+        };
+        m_lexer = lexer == null ? new Lexer(source, lexicalReports) : lexer;
+
         f_partialAnalysis = fPartialAnalysis;
         f_cursor          = cursor;
 

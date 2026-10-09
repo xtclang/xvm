@@ -1,17 +1,27 @@
 package org.xvm.compiler.ast;
 
-import java.lang.reflect.Field;
 import java.util.List;
 
-import org.junit.jupiter.api.Test;
+import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorList;
 import org.xvm.asm.ErrorListener;
+import org.xvm.asm.FileStructure;
+import org.xvm.asm.Register;
+
+import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -20,37 +30,52 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** Callback context and listener state must not survive a failed validation. */
 class ValidationScopeTest {
-    @Test
-    void loopScopesReleaseTheirListenersAfterExceptionalExit() throws Exception {
-        var condition = new AssignmentStatement(null, token(Id.COLON), null);
-        List.of(
-                new ForStatement(token(Id.FOR), List.of(), List.of(), List.of(), block()),
-                new ForEachStatement(token(Id.FOR), condition, block()),
-                new WhileStatement(token(Id.WHILE), List.of(), block())).forEach(statement -> {
-            var field = scopeField(statement, "m_labelVars");
-            var failure = new IllegalStateException("nested validation failed");
-            var context = new Context(null, false) {
-                @Override
-                public Context enter() { return this; }
-                @Override
-                public Context enterIf() { return fail(); }
-                @Override
-                public Context enterLoop() { return fail(); }
+    @ParameterizedTest
+    @MethodSource("loopStatements")
+    void loopCallbacksReturnToTheOuterContextAndListenerAfterNestedFailure(Statement statement) {
+        var pool = new FileStructure("Test").getConstantPool();
+        var label = new LabeledStatement(new Token(0, 1, Id.IDENTIFIER, "loop"), statement) {
+            @Override
+            protected ConstantPool pool() { return pool; }
+        };
+        label.adopt(statement);
+        var outerErrors = new ErrorList();
+        var innerErrors = new ErrorList();
+        var innerFailure = new IllegalStateException("nested validation failed");
+        var outerFailure = new IllegalStateException("outer validation failed");
+        var innerContext = new LoopContext() {
+            @Override
+            void validateBody() {
+                assertSame(this, statement.ensureValidationContext());
+                throw innerFailure;
+            }
+        };
+        var outerContext = new LoopContext() {
+            @Override
+            void validateBody() {
+                assertSame(this, statement.ensureValidationContext());
+                assertSame(innerFailure, assertThrows(IllegalStateException.class,
+                        () -> statement.validate(innerContext, innerErrors)));
+                assertSame(this, statement.ensureValidationContext());
 
-                private Context fail() {
-                    assertNotNull(readScope(field, statement), "failure must occur with an active scope");
-                    throw failure;
-                }
-            };
-            assertSame(failure, assertThrows(IllegalStateException.class,
-                    () -> statement.validate(context, new ErrorList())));
-            assertNull(readScope(field, statement), statement.getClass().getSimpleName());
-            assertThrows(IllegalStateException.class, statement::ensureValidationContext);
-        });
+                // Lazy label creation must register and report against this outer validation,
+                // not the failed nested call. Neither callback state nor its field names are
+                // inspected: the context records the registration and the listener the report.
+                assertNotNull(label.getLabelVar(this, "count"));
+                assertEquals(1, registrations);
+                assertEquals(0, innerContext.registrations);
+                assertEquals(1, outerErrors.getErrors().size());
+                assertTrue(innerErrors.getErrors().isEmpty());
+                throw outerFailure;
+            }
+        };
+        assertSame(outerFailure, assertThrows(IllegalStateException.class,
+                () -> statement.validate(outerContext, outerErrors)));
+        assertThrows(IllegalStateException.class, statement::ensureValidationContext);
     }
 
     @Test
-    void finallyScopeAndStatementContextAreRestoredAfterFailure() throws Exception {
+    void finallyScopeAndStatementContextAreRestoredAfterFailure() {
         var failure = new IllegalStateException("finally failed");
         var body = new StatementBlock(List.of()) {
             @Override
@@ -60,7 +85,8 @@ class ValidationScopeTest {
             @Override
             protected Statement validateImpl(Context ctx, ErrorListener errs) {
                 var owner = (TryStatement) getParent();
-                assertNotNull(readScope(scopeField(owner, "m_validatingFinally"), owner));
+                assertTrue(owner.hasLabelVar("exception"));
+                assertSame(ctx, ensureValidationContext());
                 throw failure;
             }
         };
@@ -69,7 +95,7 @@ class ValidationScopeTest {
         statement.adopt(catchall);
         assertSame(failure, assertThrows(IllegalStateException.class,
                 () -> statement.validate(new Context(null, false), new ErrorList())));
-        assertNull(readScope(scopeField(statement, "m_validatingFinally"), statement));
+        assertFalse(statement.hasLabelVar("exception"));
         assertThrows(IllegalStateException.class, statement::ensureValidationContext);
         assertThrows(IllegalStateException.class, catchall::ensureValidationContext);
     }
@@ -82,7 +108,6 @@ class ValidationScopeTest {
         var errors = new ErrorList();
         assertNull(statement.validate(new Context(null, false), errors));
         assertTrue(errors.hasSeriousErrors(), "the empty infinite loop is rejected");
-        assertNull(readScope(scopeField(statement, "m_labelVars"), statement));
         assertThrows(IllegalStateException.class, statement::ensureValidationContext);
     }
 
@@ -92,25 +117,40 @@ class ValidationScopeTest {
         assertThrows(NullPointerException.class, () -> new ValidationScope(new Context(null, false), null));
     }
 
+    private static Stream<Statement> loopStatements() {
+        var condition = new AssignmentStatement(null, token(Id.COLON), null);
+        return Stream.of(
+                new ForStatement(token(Id.FOR), List.of(), List.of(), List.of(), block()),
+                new ForEachStatement(token(Id.FOR), condition, block()),
+                new WhileStatement(token(Id.WHILE), List.of(), block()));
+    }
+
     private static StatementBlock block() { return new StatementBlock(List.of()); }
     private static Token token(Id id) { return new Token(0, 1, id); }
 
-    // Inspect ownership without adding public diagnostic-state accessors to AST nodes.
-    private static Field scopeField(Statement statement, String name) {
-        try {
-            var field = statement.getClass().getDeclaredField(name);
-            field.setAccessible(true);
-            return field;
-        } catch (ReflectiveOperationException e) {
-            throw new AssertionError(e);
-        }
-    }
+    /** Inject a failure at a loop callback, and observe lazy-variable registration. */
+    private abstract static class LoopContext extends Context {
+        LoopContext() { super(null, false); }
 
-    private static ValidationScope readScope(Field field, Statement statement) {
-        try {
-            return (ValidationScope) field.get(statement);
-        } catch (IllegalAccessException e) {
-            throw new AssertionError(e);
+        @Override
+        public Context enter() { return this; }
+        @Override
+        public Context enterIf() { validateBody(); return this; }
+        @Override
+        public Context enterLoop() { validateBody(); return this; }
+        @Override
+        public Register createRegister(TypeConstant type, String name) {
+            return new Register(type, name, 0);
         }
+        @Override
+        public void registerVar(Token name, Register register, ErrorListener errs) {
+            registrations++;
+            errs.error("TEST", ErrorListener.NOWHERE);
+            errs.merge();
+        }
+
+        abstract void validateBody();
+
+        int registrations;
     }
 }
