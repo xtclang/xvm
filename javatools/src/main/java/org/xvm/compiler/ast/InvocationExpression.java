@@ -1906,6 +1906,8 @@ public class InvocationExpression
             }
         }
 
+        ErrorListener probe = silent(PROBE);
+
         // if the name does not have a left expression, then walk up the AST parent node chain
         // looking for a registered name, i.e. a local variable of that name, stopping once the
         // containing method/function (but <b>not</b> a lambda, since it has a permeable barrier to
@@ -1917,7 +1919,7 @@ public class InvocationExpression
         boolean        fSingleton = false;
         Expression     exprLeft   = exprName.left;
         if (exprLeft == null) {
-            Argument arg = ctx.resolveName(tokName, silent(PROBE));
+            Argument arg = ctx.resolveName(tokName, probe);
 
             if (arg == null) {
                 typeLeft = ctx.getThisType();
@@ -1926,7 +1928,7 @@ public class InvocationExpression
                     // try to use the type info
                     TypeInfo infoLeft = getTypeInfo(ctx, typeLeft, errs);
 
-                    arg = findCallable(ctx, typeLeft, infoLeft, sName, MethodKind.Any, true, atypeReturn, silent(PROBE));
+                    arg = findCallable(ctx, typeLeft, infoLeft, sName, MethodKind.Any, true, atypeReturn, probe);
                     if (arg instanceof MethodConstant idMethod) {
                         MethodStructure method = getMethod(ctx, typeLeft, infoLeft, idMethod);
                         if (method == null) {
@@ -1951,11 +1953,11 @@ public class InvocationExpression
                     log(errs, Severity.ERROR, Compiler.NO_SUPER);
                 } else {
                     TypeConstant typeTarget = ctx.getThisType();
-                    TypeInfo     infoTarget = getTypeInfo(ctx, null, silent(PROBE));
+                    TypeInfo     infoTarget = getTypeInfo(ctx, null, probe);
 
                     // check if the method would be callable from outside the constructor
                     if (ctx.isConstructor() && findCallable(ctx, typeTarget, infoTarget, sName, MethodKind.Any,
-                                true, atypeReturn, silent(PROBE)) != null) {
+                                true, atypeReturn, probe) != null) {
                         log(errs, Severity.ERROR, Compiler.INVALID_CALL_FROM_CONSTRUCT, sName);
                     } else {
                         log(errs, Severity.ERROR, Compiler.MISSING_METHOD, sName,
@@ -2009,7 +2011,7 @@ public class InvocationExpression
                             TypeInfo       infoSuper   = typeSuper.ensureTypeInfo(errs);
                             MethodConstant idConstruct = (MethodConstant) findCallable(ctx, typeSuper,
                                     infoSuper, "construct", MethodKind.Constructor,
-                                    false, atypeReturn, silent(PROBE));
+                                    false, atypeReturn, probe);
                             if (idConstruct == null) {
                                 log(errs, Severity.ERROR, Compiler.IMPLICIT_SUPER_CONSTRUCTOR_MISSING,
                                     ctx.getThisType().getValueString(), typeSuper.getValueString());
@@ -2069,7 +2071,7 @@ public class InvocationExpression
                         // search
                         if (kind == MethodKind.Function &&
                                 findMethod(ctx, typeTarget, infoTarget, sName, args, MethodKind.Method,
-                                    !fNoCall, id.isNested(), atypeReturn, silent(PROBE)) != null) {
+                                    !fNoCall, id.isNested(), atypeReturn, probe) != null) {
                             if (target.getStepsOut() > 0) {
                                 exprName.log(errs, Severity.ERROR, Compiler.NO_OUTER_METHOD,
                                     target.getTargetType().removeAccess().getValueString(), sName);
@@ -2281,7 +2283,7 @@ public class InvocationExpression
                         kind, false, atypeReturn, errsTemp);
 
                 if (arg == null && kind == MethodKind.Function && findCallable(ctx, infoLeft.getType(), infoLeft, sName,
-                            MethodKind.Any, false, atypeReturn, silent(PROBE)) != null) {
+                            MethodKind.Any, false, atypeReturn, probe) != null) {
                     exprName.log(errs, Severity.ERROR, Compiler.NO_THIS_METHOD,
                             sName, infoLeft.getType().getValueString());
                     return null;

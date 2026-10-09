@@ -400,6 +400,8 @@ public class AssignmentStatement
             return null;
         }
 
+        ErrorListener probe = silent(PROBE);
+
         // regardless of whether the LValue is a statement or expression, all L-Values must be able
         // to provide an expression as a representative form
         Expression exprLeft = nodeLeft.getLValueExpression();
@@ -421,12 +423,12 @@ public class AssignmentStatement
                 // contributions
                 Context ctxInfer = ctxRValue.enterInferring(atypeLeft[0]);
 
-                TypeFit fit = rvalue.testFitMulti(ctxInfer, atypeTest, false, silent(PROBE));
+                TypeFit fit = rvalue.testFitMulti(ctxInfer, atypeTest, false, probe);
 
                 if (!fit.isFit() && cLeft > 1) {
                     Expression exprUnpack = new UnpackExpression(rvalue, null);
 
-                    fit = exprUnpack.testFitMulti(ctxInfer, atypeTest, false, silent(PROBE));
+                    fit = exprUnpack.testFitMulti(ctxInfer, atypeTest, false, probe);
                     if (fit.isFit()) {
                         rvalue = exprUnpack;
                     }
@@ -470,7 +472,7 @@ public class AssignmentStatement
                 if (exprLeft instanceof NameExpression exprName && exprName.isDynamicVar()) {
                     // test for a future assignment first
                     TypeConstant typeFuture = pool.ensureFuture(typeLeft);
-                    if (rvalue.testFit(ctxRValue, typeFuture, false, silent(PROBE)).isFit()) {
+                    if (rvalue.testFit(ctxRValue, typeFuture, false, probe).isFit()) {
                         typeLeft = typeFuture;
                     }
                 }
