@@ -12,6 +12,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import java.util.function.Consumer;
 
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
 import org.xvm.compiler.Source;
 
 import org.xvm.compiler.ast.AstNode;
@@ -58,6 +61,10 @@ import static org.xvm.util.Handy.quotedString;
  * <p>Listeners belong to an operation. Hosts must serialize callbacks and compiler access;
  * these factories do not make compilation or listener state thread-safe. Reporting callbacks
  * may throw, and the forwarding helpers do not catch or translate those exceptions.
+ *
+ * <p>Factory and constructor parameters annotated {@link NotNull} are required collaborators,
+ * not optional reporting destinations. Null arguments are rejected when the listener is created.
+ * {@link Nullable} marks intentional absence, such as a standalone silence's parent.
  */
 @FunctionalInterface
 public interface ErrorListener {
@@ -214,13 +221,12 @@ public interface ErrorListener {
      * a count budget. If the consumer throws, its exception propagates and the recorded state remains.
      * Create a new listener for each independent operation; there is no reset operation.
      *
-     * @param consumer  the non-null destination for each diagnostic, invoked synchronously
+     * @param consumer  the destination for each diagnostic, invoked synchronously
      *
      * @return a new listener that retains severity and code state while forwarding reports
-     *
-     * @throws NullPointerException if {@code consumer} is null
      */
-    static ErrorListener collecting(Consumer<ErrorInfo> consumer) {
+    @NotNull
+    static ErrorListener collecting(@NotNull Consumer<ErrorInfo> consumer) {
         requireNonNull(consumer, "consumer");
         return new ErrorListener() {
             @Override
@@ -271,14 +277,13 @@ public interface ErrorListener {
      * interface's default buffering {@link #branch(AstNode)} behavior rather than independently
      * branching each destination.
      *
-     * @param first   the non-null first destination
-     * @param second  the non-null second destination
+     * @param first   the first destination
+     * @param second  the second destination
      *
      * @return a listener combining delivery and the two destinations' current state
-     *
-     * @throws NullPointerException if either destination is null
      */
-    static ErrorListener tee(ErrorListener first, ErrorListener second) {
+    @NotNull
+    static ErrorListener tee(@NotNull ErrorListener first, @NotNull ErrorListener second) {
         requireNonNull(first, "first");
         requireNonNull(second, "second");
         return new ErrorListener() {
@@ -406,7 +411,7 @@ public interface ErrorListener {
      * Publish a branch's retained diagnostics to its parent and return the parent.
      *
      * <p>The default implementation is a no-op returning this listener, for a sink that has no parent.
-     * An {@link ErrorList.BranchedErrorListener} forwards its retained reports without clearing them;
+     * A {@link ErrorList.BranchedErrorListener} forwards its retained reports without clearing them;
      * merging it again replays them again. A parent {@link ErrorList} can deduplicate that replay,
      * but an arbitrary callback need not. Merge each accepted branch once.
      *
@@ -458,13 +463,12 @@ public interface ErrorListener {
      * is silent. All reasons behave identically. If the caller already has an operation listener,
      * prefer {@link #silence(Silence)} to preserve that listener's abort or cancellation request.
      *
-     * @param why  the non-null reason for discarding reports
+     * @param why  the reason for discarding reports
      *
      * @return the shared stateless sink for the requested reason
-     *
-     * @throws NullPointerException if {@code why} is null
      */
-    static ErrorListener silent(Silence why) {
+    @NotNull
+    static ErrorListener silent(@NotNull Silence why) {
         return switch (why) {
             case PROBE   -> SILENT_PROBE;
             case CASCADE -> SILENT_CASCADE;
@@ -483,11 +487,12 @@ public interface ErrorListener {
      * <p>Silencing an existing {@link SilentErrorListener} returns the same instance and keeps its
      * original reason, even when a different reason is requested.
      *
-     * @param why  the non-null reason for discarding reports
+     * @param why  the reason for discarding reports
      *
      * @return a wrapper retaining this listener's abort policy, or the existing silent wrapper
      */
-    default ErrorListener silence(Silence why) {
+    @NotNull
+    default ErrorListener silence(@NotNull Silence why) {
         return new SilentErrorListener(this, why);
     }
 
@@ -499,6 +504,7 @@ public interface ErrorListener {
      *
      * @return the suppression reason, or null when no named reason is exposed
      */
+    @Nullable
     default Silence silenceReason() {
         return null;
     }
@@ -570,14 +576,21 @@ public interface ErrorListener {
     class SilentErrorListener
             implements ErrorListener {
         /**
+         * Construct a standalone discard listener with no parent abort policy.
+         *
+         * @param why  the reason for discarding reports
+         */
+        public SilentErrorListener(@NotNull Silence why) {
+            this(null, why);
+        }
+
+        /**
          * Construct a discard listener with an optional parent abort policy.
          *
          * @param errs  the parent whose abort query is retained, or null for no parent policy
-         * @param why   the non-null reason for discarding reports
-         *
-         * @throws NullPointerException if {@code why} is null
+         * @param why   the reason for discarding reports
          */
-        public SilentErrorListener(ErrorListener errs, Silence why) {
+        public SilentErrorListener(@Nullable ErrorListener errs, @NotNull Silence why) {
             f_errs = errs;
             f_why  = requireNonNull(why, "why");
         }
@@ -590,6 +603,7 @@ public interface ErrorListener {
          *
          * @return the parent listener, or null for a standalone discard sink
          */
+        @Nullable
         public ErrorListener suppressed() {
             return f_errs;
         }
@@ -616,12 +630,15 @@ public interface ErrorListener {
         }
 
         @Override
+        @NotNull
         public Silence silenceReason() {
             return f_why;
         }
 
         @Override
-        public ErrorListener silence(Silence why) {
+        @NotNull
+        public ErrorListener silence(@NotNull Silence why) {
+            requireNonNull(why, "why");
             // already silent for a stated reason; a second reason would only add a layer
             return this;
         }
@@ -631,7 +648,9 @@ public interface ErrorListener {
             return f_errs == null ? "(" + f_why + ")" : "(" + f_why + " of " + f_errs + ")";
         }
 
+        @Nullable
         private final ErrorListener f_errs;
+        @NotNull
         private final Silence       f_why;
     }
 
@@ -939,16 +958,16 @@ public interface ErrorListener {
     /**
      * Shared standalone sink for speculative probes; prefer {@link #silent(Silence)} at call sites.
      */
-    ErrorListener SILENT_PROBE   = new SilentErrorListener(null, Silence.PROBE);
+    ErrorListener SILENT_PROBE   = new SilentErrorListener(Silence.PROBE);
     /**
      * Shared standalone sink for cascade suppression. Use {@link #silence(Silence)} on an operation
      * listener when its abort policy must be preserved.
      */
-    ErrorListener SILENT_CASCADE = new SilentErrorListener(null, Silence.CASCADE);
+    ErrorListener SILENT_CASCADE = new SilentErrorListener(Silence.CASCADE);
     /**
      * Shared standalone sink for an explicitly unwanted diagnostic destination.
      */
-    ErrorListener SILENT_DISCARD = new SilentErrorListener(null, Silence.DISCARD);
+    ErrorListener SILENT_DISCARD = new SilentErrorListener(Silence.DISCARD);
 
     /**
      * Shared console fallback. Its abort flag is sticky across uses; it is not a fresh per-operation
