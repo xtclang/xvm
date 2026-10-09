@@ -358,29 +358,31 @@ class LauncherErrorHandlingTest {
         final var opts = new CompilerOptions.Builder()
                 .addInputFile(new File("test.x"))
                 .build();
-        var compiler = new TestCompiler(opts, console, silent(DISCARD));
+        final var discard = silent(DISCARD);
+
+        var compiler = new TestCompiler(opts, console, discard);
 
         // Test abort behavior: ERROR and worse should trigger abort (via Launcher.isAbortDesired())
         compiler.testLog(Severity.NONE, "None message");
         assertFalse(compiler.isAbortDesired());
 
         console.clear();
-        compiler = new TestCompiler(opts, console, silent(DISCARD));
+        compiler = new TestCompiler(opts, console, discard);
         compiler.testLog(INFO, "Info message");
         assertFalse(compiler.isAbortDesired());
 
         console.clear();
-        compiler = new TestCompiler(opts, console, silent(DISCARD));
+        compiler = new TestCompiler(opts, console, discard);
         compiler.testLog(WARNING, "Warning message");
         assertFalse(compiler.isAbortDesired());
 
         console.clear();
-        compiler = new TestCompiler(opts, console, silent(DISCARD));
+        compiler = new TestCompiler(opts, console, discard);
         compiler.testLog(ERROR, "Error message");
         assertTrue(compiler.isAbortDesired());
 
         console.clear();
-        final TestCompiler fatalCompiler = new TestCompiler(opts, console, silent(DISCARD));
+        final TestCompiler fatalCompiler = new TestCompiler(opts, console, discard);
         // FATAL now throws LauncherException immediately
         assertThrows(LauncherException.class, () -> fatalCompiler.testLog(FATAL, "Fatal message"));
     }
