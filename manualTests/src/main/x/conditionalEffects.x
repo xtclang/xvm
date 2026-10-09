@@ -74,8 +74,6 @@ module TestConditionalEffects {
                 assert result == operand;
                 checked();
             }
-            @Inject Console console;
-            console.print("Conditional constant-result side effects: 22 checks passed");
         }
     }
 }

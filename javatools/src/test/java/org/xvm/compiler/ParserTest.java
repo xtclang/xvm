@@ -11,6 +11,7 @@ import org.xvm.compiler.ast.Statement;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Test of the Ecstasy parser
@@ -175,6 +176,21 @@ public class ParserTest {
         assertThrows(CompilerException.class, parser::parseSource);
 
         assertEquals(Parser.NESTING_TOO_DEEP, errlist.getErrors().get(0).getCode());
+    }
+
+    @Test
+    public void testDiscardedLookAheadDoesNotReportLexicalError() {
+        ErrorList errlist = new ErrorList(5);
+        Parser    parser  = new Parser(new Source("name \"\\q\""), errlist);
+
+        try (Parser.Attempt attempt = parser.attempt()) {
+            assertThrows(CompilerException.class, parser::next);
+        }
+
+        assertTrue(errlist.getErrors().isEmpty());
+
+        parser.next();
+        assertEquals(Lexer.STRING_BAD_ESC, errlist.getErrors().get(0).getCode());
     }
 
     static void parse(String value) {

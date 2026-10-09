@@ -1010,7 +1010,7 @@ public class EmbeddingSupport {
             }
 
             int result = super.compile(List.of(compiler), repoLib);
-            if (result == 0) {
+            if (result == 0 && !isAbortDesired()) {
                 this.module = struct.getModule();
             }
             return result;
@@ -1019,6 +1019,24 @@ public class EmbeddingSupport {
         @Override
         protected int compile(List<Compiler> compilers, ModuleRepository repoLib) {
             throw new IllegalStateException("This method must not be called");
+        }
+
+        @Override
+        protected void prelinkSystemLibraries(ModuleRepository repository) {
+            try {
+                super.prelinkSystemLibraries(repository);
+            } catch (LauncherException e) {
+                ModuleCompiler.reportRepositoryReadFailures(repository, f_errs);
+                throw e;
+            }
+        }
+
+        @Override
+        public void log(ErrorInfo error) {
+            if (Compiler.MODULE_MISSING.equals(error.getCode())) {
+                ModuleCompiler.reportRepositoryReadFailures(ensureLibraryRepo(), f_errs);
+            }
+            super.log(error);
         }
 
         @Override

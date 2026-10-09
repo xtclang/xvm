@@ -3192,7 +3192,14 @@ public class NameExpression
         };
     }
 
-    /** Use the same resolved property owner for atomic method lookup and its binary-AST target. */
+    /**
+     * Obtain the atomic reference type using the resolved property owner, so operator lookup and
+     * the binary-AST target retain the same concrete type.
+     *
+     * @param ctx  the current compilation context
+     *
+     * @return the atomic reference type for this property access
+     */
     protected TypeConstant getAtomicRefType(Context ctx) {
         TypeConstant typeTarget = switch (calculatePropertyAccess(true)) {
             case SingletonParent -> m_idSingletonParent.getType();

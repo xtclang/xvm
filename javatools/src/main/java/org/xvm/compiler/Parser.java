@@ -57,7 +57,7 @@ public class Parser {
      * @param listener the error listener
      */
     public Parser(Source source, ErrorListener listener) {
-        this(source, listener, new Lexer(source, listener), false, NO_CURSOR);
+        this(source, listener, null, false, NO_CURSOR);
     }
 
     /**
@@ -65,7 +65,7 @@ public class Parser {
      * partial analysis. Errors are still reported; this does not make the source compilable.
      */
     public static Parser forPartialAnalysis(Source source, ErrorListener listener) {
-        return new Parser(source, listener, new Lexer(source, listener), true, NO_CURSOR);
+        return new Parser(source, listener, null, true, NO_CURSOR);
     }
 
     /**
@@ -81,7 +81,7 @@ public class Parser {
         if (cursor == NO_CURSOR) {
             throw new IllegalArgumentException("A source cursor position is required");
         }
-        return new Parser(source, listener, new Lexer(source, listener), true, cursor);
+        return new Parser(source, listener, null, true, cursor);
     }
 
     /**
@@ -103,7 +103,20 @@ public class Parser {
 
         m_source          = source;
         f_errs            = new Reporting(requireNonNull(errs, "errs"));
-        m_lexer           = lexer;
+        // Lexical reports and cancellation follow the active speculative attempt.
+        ErrorListener lexicalReports = new ErrorListener() {
+            @Override
+            public void log(ErrorInfo error) {
+                f_errs.get().log(error);
+            }
+
+            @Override
+            public boolean isAbortDesired() {
+                return f_errs.get().isAbortDesired();
+            }
+        };
+        m_lexer = lexer == null ? new Lexer(source, lexicalReports) : lexer;
+
         f_partialAnalysis = fPartialAnalysis;
         f_cursor          = cursor;
 
