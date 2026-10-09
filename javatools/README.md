@@ -272,6 +272,13 @@ no diagnostic caused that stop request. Neither retains discarded messages; use 
 diagnostics might later be needed. `suppressed()` exposes a derived silence's parent, not a buffer
 of hidden diagnostics. Re-silencing an existing silence returns the same instance and reason.
 
+For a separately constructed standalone sink, `new SilentErrorListener(reason)` needs no
+explicit null parent. The two-argument constructor retains an optional parent for callers that
+need its stop policy. Required factory arguments and results use `@NotNull`; intentional absence
+uses `@Nullable`, including `suppressed()` on a standalone sink. Public construction boundaries
+still reject invalid null arguments immediately; annotations also expose the contract to IDEs
+and Kotlin callers.
+
 The names make intent searchable and reviewable. `BLACKHOLE` did not distinguish those purposes,
 and substituting it for an active listener also removed access to that listener's stop policy.
 Removing the old constant and class makes missed migrations visible to the Java compiler. A
