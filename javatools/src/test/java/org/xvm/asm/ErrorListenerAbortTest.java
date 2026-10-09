@@ -35,6 +35,22 @@ public class ErrorListenerAbortTest {
         assertEquals(2, errs.getErrors().size());
     }
 
+    /**
+     * The convenience constructor must use the same default budget as compiler and tool callers.
+     */
+    @Test
+    public void testDefaultBudgetMatchesCompilerPolicy() {
+        ErrorList errs = new ErrorList();
+        for (int i = 1; i < ErrorListener.DEFAULT_MAX_ERRORS; ++i) {
+            errs.error(CODE, ErrorListener.NOWHERE, i, "error");
+            assertFalse(errs.isAbortDesired(), "default budget exhausted at report " + i);
+        }
+
+        errs.error(CODE, ErrorListener.NOWHERE, ErrorListener.DEFAULT_MAX_ERRORS, "error");
+        assertEquals(ErrorListener.DEFAULT_MAX_ERRORS, errs.getErrors().size());
+        assertTrue(errs.isAbortDesired(), "the shared default budget is now spent");
+    }
+
     @Test
     public void testUnlimitedNeverAbortsOnCount() {
         Source    source = new Source(SOURCE);

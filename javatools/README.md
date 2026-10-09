@@ -203,9 +203,9 @@ fallback sink's severity-driven exception policy, not Java exception handling in
 
 [ErrorList](src/main/java/org/xvm/asm/ErrorList.java) retains the first report for each diagnostic
 UID in insertion order. ERROR/FATAL reports spend its count budget; warnings do not. Its
-no-argument constructor uses `ErrorList.DEFAULT_MAX_ERRORS` (100), `FIRST_ERROR` selects one,
-and `UNLIMITED` disables the count limit. A retained FATAL requests an abort with any budget.
-The older `ErrorListener.DEFAULT_MAX_ERRORS` constant is a separate compiler/tool policy.
+no-argument constructor uses the shared `ErrorListener.DEFAULT_MAX_ERRORS` (512), `FIRST_ERROR`
+selects one, and `UNLIMITED` disables the count limit. A retained FATAL requests an abort with
+any budget. Pass an explicit limit to `ErrorList(int)` when an operation needs a different policy.
 
 When a host wants every report delivered to a callback, use:
 
