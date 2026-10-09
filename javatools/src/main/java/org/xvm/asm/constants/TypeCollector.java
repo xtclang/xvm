@@ -7,6 +7,7 @@ import java.util.Objects;
 
 import org.xvm.asm.Component.Format;
 import org.xvm.asm.ConstantPool;
+import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Op;
 
 import static org.xvm.asm.ErrorListener.Silence.PROBE;
@@ -169,19 +170,21 @@ public class TypeCollector {
             return null;
         }
 
+        ErrorListener probe = silent(PROBE);
+
         TypeConstant typeCommon = inferFrom(listTypes.toArray(new TypeConstant[cTypes]), f_pool);
 
         if (typeRequired != null && typeRequired.containsFormalType(true)) {
             typeCommon = typeRequired.resolvePending(f_pool, typeCommon);
         }
-        typeCommon = Op.selectCommonType(typeCommon, typeRequired, silent(PROBE));
+        typeCommon = Op.selectCommonType(typeCommon, typeRequired, probe);
 
         if (typeRequired != null &&
                 (typeCommon == null || !typeCommon.isAssignableTo(typeRequired))) {
             // approach above didn't quite work; try to match with individual types one-by-one
-            TypeConstant typeAlt = Op.selectCommonType(typeRequired, listTypes.get(0), silent(PROBE));
+            TypeConstant typeAlt = Op.selectCommonType(typeRequired, listTypes.get(0), probe);
             for (int i = 1; i < cTypes; i++) {
-                typeAlt = Op.selectCommonType(typeAlt, listTypes.get(i), silent(PROBE));
+                typeAlt = Op.selectCommonType(typeAlt, listTypes.get(i), probe);
             }
 
             if (typeAlt != null) {
