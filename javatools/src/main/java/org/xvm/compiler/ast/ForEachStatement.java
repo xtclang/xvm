@@ -371,6 +371,8 @@ public class ForEachStatement
                 ctx = ctx.enterInferring(typeLVal);
             }
 
+            ErrorListener probe = silent(PROBE);
+
             TypeConstant[] atypeLVals = null;
             for (int i = Plan.ITERATOR.ordinal(); i <= Plan.ITERABLE.ordinal(); ++i) {
                 plan     = Plan.valueOf(i);
@@ -382,7 +384,7 @@ public class ForEachStatement
                     case ITERABLE -> pool.typeIterable();
                 };
 
-                if (exprRVal.testFit(ctx, typeRVal, false, silent(PROBE)).isFit()) {
+                if (exprRVal.testFit(ctx, typeRVal, false, probe).isFit()) {
                     atypeLVals = fValid ? exprLVal.getTypes() : null;
                     break;
                 }
@@ -410,7 +412,7 @@ public class ForEachStatement
                     typeRValExact = pool.ensureParameterizedTypeConstant(typeRVal, atypeLVals);
                 }
 
-                if (exprRVal.testFit(ctx, typeRValExact, false, silent(PROBE)).isFit()) {
+                if (exprRVal.testFit(ctx, typeRValExact, false, probe).isFit()) {
                     typeRVal = typeRValExact;
                 } else {
                     // the specific container type didn't fit; proceed with the basic type,
