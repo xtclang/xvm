@@ -3433,7 +3433,13 @@ public class ConstantPool
     }
 
     /**
-     * @return a ContextPool associated with the current thread
+     * Return the working pool associated with the current thread.
+     *
+     * <p>Hosts entering compiler operations that depend on this context must establish a
+     * {@link #withPool} scope. A constant's owning pool is not necessarily the working pool:
+     * cross-pool operations may intentionally resolve or register constants in another pool.
+     *
+     * @return the working pool, or null if none is associated with this thread
      */
     public static ConstantPool getCurrentPool() {
         return s_tloPool.get()[0];
@@ -3451,6 +3457,10 @@ public class ConstantPool
     /**
      * Temporarily update the current ConstantPool, restoring it when the returned AutoCloseable
      * is closed.
+     *
+     * <p>Use try-with-resources at the operation boundary, including when inspecting compiler
+     * results after compilation. Open and close the scope on the same thread. Work dispatched to
+     * another thread must establish its own scope; the context is not inherited.
      *
      * @param pool the new pool
      *
