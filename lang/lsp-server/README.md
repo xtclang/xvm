@@ -1,14 +1,9 @@
 # Ecstasy LSP Server
 
-Compiler mode provides compiler diagnostics and semantic editor features across configured source
-and binary dependencies. The compiler is the default shipped adapter. Tree-sitter remains an explicit syntax-only alternative. The
-[completion checklist](../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist)
-records bounded implementations, deliberate refusals and the remaining runtime/release work.
-The [L82 checkpoint](../../docs/errs-integration-plan.md#l82-combined-regression-and-retention-checkpoint-2026-10-05)
-tracks the combined tests, real-project retention fixes and current editor acceptance separately.
-The subsequent [IntelliJ client repairs](../../docs/errs-integration-plan.md#l82-intellij-refresh-and-vfs-repair-2026-10-05)
-cover the complete native catalog across continuations without IDE errors/freeze dumps; known
-partial features and generic upstream VFS waits remain explicit. They add no server/embedding API.
+Compiler mode provides diagnostics and semantic editor features across configured source and binary
+dependencies. It is the default shipped adapter. Tree-sitter remains an explicit syntax-only
+alternative. The [manual playbook](../doc/manual-test-plan.md) describes supported operations,
+deliberate refusals, native test commands and client compatibility limits.
 
 Language Server Protocol (LSP) implementation for the Ecstasy programming language.
 
@@ -128,7 +123,7 @@ plus push/pull diagnostics and document/workspace synchronization. Several imple
 bounded; the interface does not cover every LSP feature. Debug inline values, notebooks and broader
 refactorings remain incomplete. Color values have an opt-in, fixture-only constructor prototype;
 a public Ecstasy color-library contract remains deferred. See the [explicit absent-feature inventory](../doc/plans/plan-ide-integration.md#compiler-completeness-snapshot)
-and [active L55–L83 completion checklist](../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist).
+and [acceptance reports](../doc/manual-test-plan.md#acceptance-reports).
 Capability coverage, semantic completeness and native test coverage are tracked separately.
 Compiler code actions include expression/local extraction, private helper extraction for contiguous
 call statements and nested expressions, adjacent single-evaluation local inline, wider constant-local
@@ -152,10 +147,7 @@ Type spelling reuses resolved module imports and the compiler's implicit Ecstasy
 this does not restrict the module path to the core library. Recursive typedef identities support
 diagnostics and rename; member generation refuses aliases whose destination spelling/import route
 is not proven, without suppressing unrelated actions. Both source and binary dependency types
-have extraction regression coverage. Shared X221–X242 pass selected acceptance in both editor
-drivers; the combined backend/protocol gate passes 498 tests without skips. The
-[bounded closure and receipts](../../docs/errs-integration-plan.md#l63-bounded-closure-and-acceptance-2026-10-04)
-record supported/refused forms and harness corrections. This was not a full-catalog rerun.
+have extraction regression coverage. Shared X221–X242 exercise these operations in both editor drivers.
 Explicit declaration lookup returns local/import-alias declarations or the inherited written
 contracts of an overriding method/property, including multiple source targets. Definition and
 implementation retain their separate meanings. Indexed library sources remain read-only.
@@ -223,22 +215,14 @@ Unresolved public type imports are offered only when the proposed import repairs
 without changing known bindings. Automatic discovery can add source edges; explicit graphs must
 already declare them. Binary contracts, annotation/delegation dispatch and unresolved graphs remain
 outside rename scope.
-The combined compiler/LSP/stdio suites and focused VS Code X94–X98 pass;
-[validation and limits](../../docs/errs-integration-plan.md#five-area-functionality-batch) are recorded separately from native IntelliJ execution.
-The later C28/L53/L54 checkpoint adds header recovery and native lifecycle fixes. L55 now fixes
-proof retention in a 24-root/512 MiB regression; the actual 25-root teaching workspace also
-passes at 512 MiB with one and five unsaved buffers, stable diagnostics and released compiler
-objects. Native startup editing now passes the five-phase L56 check, including restart,
-replacement and close/reopen. The X103 reverse-rename deadlock in the startup transport hook is fixed. The active checklist records those limits and the
-current native inventory: all 113 shared cases pass together in `run-6034631232732848040`, with
-zero IDE errors and zero JUnit failures/errors/skips. This includes the 50 formerly missing cases,
-X57's guarded symbol rename and X93–X98. Separate startup and focus-recovery tests also pass.
-Both editor harnesses show completed/remaining counts and the current case; these test displays
-do not add LSP work-done progress support.
+Retention regressions exercise multiple module roots under a 512 MiB server heap and verify that
+compiler objects are released after analysis. Native startup, focus-recovery and project lifecycle
+tests cover restart, replacement and close/reopen. Both editor harnesses display completed and
+remaining cases; negotiated LSP work-done progress is tested separately.
 
 The standalone server closes resources and exits when its stdio client disconnects, including
 without a shutdown/exit handshake. Lifecycle regressions cover Tree-sitter, compiler and mock;
-see the [orphan-process diagnosis](../../docs/errs-lsp-process-lifecycle.md).
+see the [server process lifecycle checks](../doc/manual-test-plan.md#server-process-lifecycle-acceptance).
 
 The compiler backend needs no external XDK installation or `XDK_HOME`. It compiles a module root
 and its member tree together, including unsaved member files and packages. Non-file URIs remain
@@ -344,16 +328,15 @@ formals retain their written constraints for bound-labelled completion and hover
 sibling constraints and virtual child types reached through those bounds. Unresolved/cyclic bounds
 hide outer names without producing candidates. They do not register fabricated components; see
 [shared X91–X98 and X106–X108](../doc/manual-test-plan.md#xdkadapter-playbook) and the
-[C22/L37 extraction plan](../../docs/errs-integration-plan.md#parameterized-and-compound-declaration-types).
+[acceptance reports](../doc/manual-test-plan.md#acceptance-reports).
 
 Class/interface headers now retain their written name and body for structure when a bounded header
 fails. Explicit queries complete visible types in `extends`, `implements`, `delegates`, ordinary
 `incorporates` and `into`, including qualified/generic leaf names. Empty composition slots also
 work. The retained type has no compiler component or inheritance facts; its body never registers
 against the enclosing type. Suggestions prove visibility, while normal compilation checks legal
-inheritance and constraints. Shared X95 exercises both editor consumers; native acceptance receipts
-are in the integration plan. Shared X96 adds eight generic/formal and whole-token acceptance variants.
-See [C24/L41](../../docs/errs-integration-plan.md#generic-type-completion-batch) and [C23/L39](../../docs/errs-integration-plan.md#class-and-interface-composition-headers).
+inheritance and constraints. Shared X95 exercises both editor consumers; X96 adds eight
+generic/formal and whole-token acceptance variants.
 
 Static call hierarchy groups selected source call sites by method/lambda, including unopened source
 modules. It does not expand virtual dispatch, function values, constructors or binary-only sources.
@@ -370,9 +353,8 @@ Rename covers locals, lambda and method/constructor parameter slots, source meth
 families, primary-header properties, types, static members and aliases. Configured graphs also
 support bounded mixin/delegation/annotation routes, qualified module/package moves and cross-module
 ownership changes. Every proposal recompiles the affected graph and compares bindings and dispatch;
-binary contracts and unsupported runtime/generated routes remain read-only or refused. The
-[L62 closure](../../docs/errs-integration-plan.md#full-compiler-lsp-completion-checklist) specifies the
-exact boundaries. Versioned edits, current source/resource snapshots and complete graph proof are
+binary contracts and unsupported runtime/generated routes remain read-only or refused.
+Versioned edits, current source/resource snapshots and complete graph proof are
 mandatory. An explicit graph declares the proof boundary; omitted consumers remain unknown.
 Completed function-valued calls expose signature types without invented runtime targets or parameter
 names. Explicit cursor analysis also retains binary/conditional expressions and following call
@@ -394,7 +376,7 @@ inspect implementation chains through the cancellable host listener. The no-argu
 TypeInfo on the serialized compiler worker; request threads query copied facts.
 `Compilation.sourceTrees()` supplies structural
 views even when parsing errors prevent an assembled `parsed()` tree. See the
-[branch hardening and integration plan](../../docs/errs-integration-plan.md) for verification and
+[acceptance reports](../doc/manual-test-plan.md#acceptance-reports) for verification and
 remaining limits.
 
 ### Editor source-module configuration
@@ -421,13 +403,13 @@ No Gradle process is started by analysis or edits.
 
 Each module may supply ordered `resourceRoots` using the same URI rules. Explicit roots replace
 conventions; an empty array disables resource lookup, and omitted/null uses compiler layout
-deduction (including conventional `src/main/resources`). Custom Gradle source sets currently
-require explicit configuration; evaluated build-model import is planned. IntelliJ exposes these
+deduction (including conventional `src/main/resources`). The evaluated Gradle model
+can supply custom source sets and processed resource roots. IntelliJ exposes these
 paths in **Languages & Frameworks > Ecstasy Compiler**, and VS Code uses the workspace schema.
 Resource contents and root changes invalidate the owning module and its consumers, including
 closed-file diagnostic pulls. Resource watchers cover external roots when the client supports
-dynamic registration. See the [paths/build-model plan](../../docs/errs-integration-plan.md#resource-configuration-and-build-model-integration-plat2--l67)
-for ownership, generated directories and the planned paths/origins controls.
+dynamic registration. The [manual playbook](../doc/manual-test-plan.md#xdkadapter-playbook)
+covers model import, generated directories and paths/origins controls.
 
 Other LSP clients can send the same `{ "sourceModules": [...] }` object in
 `initializationOptions.xtcCompiler`, answer `workspace/configuration` for `xtc.compiler`, or send
@@ -447,11 +429,11 @@ call `XdkAdapter.replaceDependencies(dependencies)` and reschedule the returned 
 Each compiler attempt deserializes fresh structures. Symbol keys identify a constant only within
 the exact artifact/source-index revision; they are not permanent identities across library rebuilds.
 
-This is a Kotlin host API, with no editor setting or JSON-RPC configuration endpoint yet. A persistent
-workspace reference database remains open. Bundled XDK sources use the matching `xtc-sources` Gradle
+This is the Kotlin host API. Editor clients also configure ordered libraries and attached sources
+through their Compiler settings. There is no persistent workspace reference database. Bundled XDK sources use the matching `xtc-sources` Gradle
 variant and existing compiler source/debug metadata. Library files open as read-only source views;
 they do not become editable compiler sessions. Missing or ambiguous metadata supplies no target. See the
-[dependency API verification](../../docs/errs-integration-plan.md#versioned-dependencysource-host-api-2026-09-23)
+[acceptance reports](../doc/manual-test-plan.md#acceptance-reports)
 for ownership, cancellation and replacement guarantees.
 
 ### Automatic recompilation of configured source modules
@@ -690,8 +672,7 @@ expression/list token boundaries using `maxLineWidth`, and standalone block-comm
 Code and literal token spellings are verified after formatting. Literal/template contents and
 relative comment layout are preserved; comments are not reflowed and literals are not split.
 Range formatting is confined to selected lines. On-type formatting adjusts indentation without
-wrapping lines. A lexical error refuses formatting. Shared X249/X250 cover exact output and history;
-the L66 batch acceptance record is maintained in the integration plan.
+wrapping lines. A lexical error refuses formatting. Shared X249/X250 cover exact output and history.
 
 ### On-Type Formatting (Auto-Indent)
 
@@ -818,7 +799,7 @@ in slow operation reports:
 - [Formatting Plan](../doc/plans/formatting-plan.md) - On-type formatting design, configuration architecture, industry survey
 
 
-The L80/L81 protocol checkpoint explicitly uses UTF-16 positions and adapts hover, outline, symbol
+The server uses UTF-16 positions and adapts hover, outline, symbol
 kinds and push diagnostic metadata to client capabilities. Long compiler queries support negotiated
 work-done progress and request-owned cancellation. Refresh requests are coalesced for negotiated
 diagnostics, semantic tokens, inlays, lenses and folding. `$/setTrace` accepts `off`, `messages` and
@@ -827,10 +808,9 @@ buffers. Client-supplied partial-result tokens now stream bounded batches for re
 symbols/diagnostics, outlines, navigation and hierarchy relations. Ordinary requests retain full
 responses. Initial Tree-sitter scanning reports its actual future lifetime and progress.
 
-L83 now copies successful constant-initializer facts before temporary-method disposal, preserving
+The compiler adapter copies successful constant-initializer facts before temporary-method disposal, preserving
 navigation and rename provenance without retaining clone ASTs. Shared X142/X143 exercise initializer
-semantics and partial symbols and pass in both editors. X140/X141 retain their earlier
-passing UTF-16/runtime-trace receipts. See the manual playbook for dated execution evidence.
+semantics and partial symbols. X140/X141 exercise UTF-16 positions and runtime trace settings.
 Completion kinds and code-action forms/preferred metadata follow negotiation; legacy action clients
 use one-use, revision-checked commands only if they support `workspace.applyEdit`.
 
@@ -842,7 +822,7 @@ index. Build timestamps, absolute checkout paths and optional source attachments
 identity; code/signature/resource changes do. Private and method-local components are local. Register locals,
 lambdas, unresolved bindings and unsuccessful compilations supply no IDs. Identical normalized
 artifacts intentionally match across projects; module-name spelling alone never establishes a match.
-See [L74's contract and acceptance](../../docs/errs-integration-plan.md#l74-artifact-identities-2026-10-05).
+See [acceptance reports](../doc/manual-test-plan.md#acceptance-reports).
 
 Matching bundled library declarations now answer moniker requests directly, including declarations
 not previously referenced by a consumer. Ambiguous source spans still return no identity.
@@ -856,10 +836,6 @@ External host source indexes remain host-owned file locations: they supply decla
 not verified source text, and are not silently promoted to virtual library snapshots.
 Selected X31/X252/X253 pass in both editors; full-catalog/release acceptance remains separate.
 
-L75 passes 58 distinct backend/protocol cases and the packaged content round trip. X31/X101/X158/
-X252–X254 pass in VS Code; IntelliJ passes five plus START and X254's file-fallback checks, with
-X254 explicitly partial for UP25 and no IDE errors. See the [L75 receipt](../../docs/errs-integration-plan.md#l75-read-only-library-content-2026-10-05).
-
 ## Compiler inline completion
 
 Compiler mode negotiates `textDocument/inlineCompletion` separately from popup completion.
@@ -872,8 +848,5 @@ versions retire pending suggestions. No new embedding/AST API or generative serv
 Both editor clients have native providers. IntelliJ's direct invocation currently sends Automatic
 and omits popup selection (UP26); shared X255–X258 distinguish native from protocol coverage.
 
-L76 validation: 46 backend/protocol tests and the packaged UTF-16 round trip pass, without failures
-or skips. VS Code `run-B6sogF` passes X7/X31/X255–X258. IntelliJ
-`run-13088584184602426732` passes START/X7/X31/X255/X256/X258, with X257 explicitly partial for
-UP26 and zero IDE failures. Both drivers compile and formatting checks pass. See the
-[L76 contract and commit map](../../docs/errs-integration-plan.md#l76-compiler-inline-completion-2026-10-05).
+See the [acceptance report format](../doc/manual-test-plan.md#acceptance-reports) for how native
+and protocol coverage are recorded.
