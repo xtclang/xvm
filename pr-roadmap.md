@@ -1,479 +1,87 @@
 # Compiler foundations and LSP PR roadmap
 
-Updated **2026-10-09** after checking GitHub. Master is `da07a0be8`, including Gene's
-[#684](https://github.com/xtclang/xvm/pull/684).
+Updated **2026-10-09**. The agreed strategy is to review complete compiler/build capabilities first, then the complete LSP and editor product. There are **four existing open PRs** and **five prepared review branches with GitHub comparison links**. No PRs have been opened for those five branches; they are available for inspection before submission.
 
-**The remaining work is now prepared as five review branches pushed to GitHub for comparison, with no new PRs.**
-Two can be reviewed directly against master: the Gradle model export and a separately discovered
-Boolean side-effect correction. The compiler APIs form a stack: semantic facts (scope 2), then
-one complete partial-analysis branch (scopes 3–5), followed by the LSP/editor product (scope 7).
-Scope 6 is the independent Gradle branch. Scope 1 is already published as
-[#687](https://github.com/xtclang/xvm/pull/687).
+Recovery, cursor queries, incomplete-call/constructor fitting and declaration/header analysis are **one combined partial-analysis PR**. The LSP server, IntelliJ plugin and VS Code extension are **one product PR** after their foundations. The Gradle exporter and Boolean operand-effects correction are independent changes that can land against master.
 
-The LSP needs these compiler APIs **in addition to #685**. That PR supplies the host compilation
-lifecycle: diagnostics, cancellation, source snapshots and outcomes. Scope 2 supplies resolved
-source/symbol/call facts; scopes 3–5 supply usable compiler answers while source is incomplete.
-The product adapter calls those APIs for completion, navigation, signatures and editing features.
-Calling only the first embedding PR would not provide the full implemented LSP.
+The LSP needs more than the initial embedding API: #685 provides the host compilation lifecycle; semantic facts provide source identities and resolved compiler decisions; partial analysis provides compiler answers for code being edited. The implemented adapter calls all three layers.
 
-All current integration changes, including uncommitted work, were preserved in local snapshot
-`errs/review-source-20261009` at `c9d16c50d` before extraction. The main checkout was not reset or
-switched. These are review preparations, not claims that native editor acceptance has been rerun.
-The exact branches, bases, sizes and file inventories are recorded below.
+## Current review branches and merge order
 
-## Published work and immediate landing order
+These are the five proposed PRs. Counts are incremental against each recorded comparison base, excluding inherited work. Each title links to its description, prerequisites, file summary, validation evidence and complete clickable file inventory below.
 
-| PR | Live state | Treatment |
+| Proposed PR | Files | Must merge first | GitHub comparison |
+| --- | ---: | --- | --- |
+| [Compilation-owned syntax and semantic facts](#semantic-facts) | **36** | #685 and #687; #683 through #685. | [View diff](https://github.com/xtclang/xvm/compare/errs/compiler-review-base-20261009...errs/compiler-semantic-facts-20261009) |
+| [Incomplete-source, cursor and declaration analysis](#partial-analysis) | **40** | Semantic facts, inheriting #683/#685/#687. | [View diff](https://github.com/xtclang/xvm/compare/errs/compiler-semantic-facts-20261009...errs/compiler-partial-analysis-20261009) |
+| [Gradle compiler inputs for tooling](#gradle-model) | **8** | **None — independent against master.** | [View diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...errs/gradle-project-model-20261009) |
+| [Boolean operand-effects correction](#boolean-effects) | **2** | **None — independent against master.** | [View diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...errs/compiler-conditional-effects-20261009) |
+| [Compiler-backed LSP and editor integrations](#lsp-product) | **648** | Semantic facts, partial analysis, Gradle model and #686; inherits #683/#685/#687. Preserve or reconcile the Boolean fix included in its tested base. | [View diff](https://github.com/xtclang/xvm/compare/errs/lsp-review-base-20261009...errs/lsp-editors-20261009) |
+
+**Compiler merge sequence:** #683 → #685; #685 + #687 → semantic facts → partial analysis → LSP/editor product.
+
+**Independent work:** #686, #687, the Gradle exporter and the Boolean correction can progress against master without waiting for the embedding stack. The product waits for the applicable foundations above. The Boolean correction is part of its prepared compiler baseline, not an API prerequisite.
+
+**Next compiler PR to submit, when authorized:** compilation-owned syntax and semantic facts. The two independent prepared branches can be submitted alongside it. Later stacked comparisons can be reviewed now; their final bases must be reconciled against the actual merged prerequisites before landing. No submission is authorized by this document itself.
+
+## Existing open PRs
+
+GitHub state checked on 2026-10-09: all four are open and target `master`. These PRs already exist; they are not additional proposed branches to create.
+
+| Existing PR | Purpose | Prerequisites and current revision |
 | --- | --- | --- |
-| [#677 — Diagnostic spans and named source buffers](https://github.com/xtclang/xvm/pull/677) | Merged | Existing foundation. Preserve subsequent master cleanup; do not replay its historical branch. |
-| [#678 — Explicit compiler pool scope documentation](https://github.com/xtclang/xvm/pull/678) | Merged, **documentation only** | The withdrawn owner-pool fallback implementation stays excluded. Explicit pool ownership remains the contract. |
-| [#679 — Compiler-consumer CI](https://github.com/xtclang/xvm/pull/679) | Merged | Reuse this harness for independent compiler API tests. |
-| [#680](https://github.com/xtclang/xvm/pull/680), [#681](https://github.com/xtclang/xvm/pull/681), [#682](https://github.com/xtclang/xvm/pull/682) | Closed, unmerged | Superseded by #685. Their discussions and branches remain history, not pending submissions. |
-| [#683 — Repository read failures and retry behavior](https://github.com/xtclang/xvm/pull/683) | Open | Independent fix. Preserve tolerant platform lookup while exposing retained failure details to hosts. Land before #685. |
-| [#684 — Diagnostic handling fixes](https://github.com/xtclang/xvm/pull/684) | **Merged** | Preserve all three fixes: parent abort propagation, no unsolicited one-error branch budget, and lexical diagnostics following speculative parser scopes. |
-| [#685 — Compiler embedding and diagnostic ownership contracts](https://github.com/xtclang/xvm/pull/685) | Open, ready for review | Combined foundation. Rebased onto master including #684 and pushed as `c1a98a677`; refresh again against #683 when it lands. |
-| [#686 — Empty transient-thread-local retention](https://github.com/xtclang/xvm/pull/686) | Open, review requested again | Independent two-file utility fix, including direct compiler-consumer tests. Commit `81f032cc0` removes the standalone transient-local test as requested; the later consumer-test relevance question remains open. Can land alongside #683/#685. |
-| [#687 — Preserve compiler types through fitting and code generation](https://github.com/xtclang/xvm/pull/687) | Open, ready for review | Submission 1 below. Six files against master, independent of #683/#685. Published as `f29cf28c0`. |
+| [#683 — Repository read failures and retry behavior](https://github.com/xtclang/xvm/pull/683) | Keep mixed-version/platform lookup tolerant while retaining I/O failure details for an embedding host to inspect after a required dependency fails. | **None.** `errs/repository-read-failures-20261009` at `902460194`. Land before #685. |
+| [#685 — Compiler embedding and diagnostic ownership](https://github.com/xtclang/xvm/pull/685) | One complete host-compilation lifecycle: explicit listeners, suppression and reporting scopes, speculative attempts, restoration, diagnostic replay, cancellation, source snapshots, outcomes and partial progress. | **#683.** `errs/embedding-api-combined-20261009` at `c1a98a677`, already rebased over merged #684. Reconcile against #683 when it lands. |
+| [#686 — Empty transient-thread-local retention](https://github.com/xtclang/xvm/pull/686) | Prevent empty thread-local probes from retaining short-lived compiler state in long-lived workers. | **None.** `errs/transient-locals-20261009` at `81f032cc0`. Two files; standalone transient-local test removed as requested, compiler-consumer coverage retained. |
+| [#687 — Compiler types through fitting and code generation](https://github.com/xtclang/xvm/pull/687) | Preserve bound generic callable types, argument-fit failures and concrete atomic result/receiver types in emitted and serialized code. | **None.** `errs/compiler-type-correctness-20261009` at `f29cf28c0`. Six files; semantic facts builds on these corrected compiler decisions. |
 
-The immediate sequence is **finish #683 review → land #683 → refresh and land #685**.
-#684 has already landed. #686 can proceed independently.
+**Merged/superseded history:** #677 and #679 are merged foundations. #678 merged as documentation only; its withdrawn owner-pool fallback must not return. #684 is merged and its diagnostic fixes must remain. #680–#682 were closed and superseded by #685; do not reopen them or split the combined embedding lifecycle back into those historical pieces.
 
-The requested #685 rebase is complete and pushed as `c1a98a677`. Master's #684 commit is
-an ancestor, the duplicate cherry-pick was dropped, and all remaining patches and the final source
-tree are unchanged. The rerun passed **467 Java tests and 459 language-server tests**, with
-42 and 3 existing skips respectively; the three #684 behaviors passed without skips.
-XDK distribution and formatting checks passed. The current master diff is **111 files
-(+5,447/−880)** while #683 remains unmerged. The old published head is preserved in local backup
-branch `backup/embedding-685-before-master-rebase-20261009`.
+## Reading the comparisons
 
-#685 contains the listener contract, explicit destinations and named suppression, scoped reporting,
-parser attempts, validation-state restoration, compilation outcomes and ordinary partial progress,
-explicit structure diagnostics and cached TypeInfo replay, cancellation, and host source snapshots.
-These are one complete host-compilation lifecycle; do not split them back into new PRs.
+The recorded master baseline is `da07a0be8`, which includes #684. The compiler comparison base `errs/compiler-review-base-20261009` combines #685 and #687 and inherits #683. The product comparison base `errs/lsp-review-base-20261009` combines the partial-analysis stack, Gradle exporter, #686 and the Boolean correction. **These two base refs are comparison aids, not PRs to submit.**
 
-The prepared embedding-only patch is **105 files (+5,072/−844)** against its recorded prerequisite
-base. That is a preparation measurement, not a claim about the live master diff after rebasing.
-See the [preparation report and exact inventory](build/reviews/embedding-combined-20261009/review.md).
-The report's publication-time master/PR status statements are historical; this roadmap gives the
-updated submission plan.
+All five review branches and both comparison bases are published. The Boolean branch has a later two-line console-output removal in its local worktree, already committed to the integration branch; its GitHub comparison still shows the earlier fixture. Its section calls out that difference explicitly.
 
-### #683: platform tolerance and host diagnostics must coexist
+The extraction source was preserved at `errs/review-source-20261009` (`c9d16c50d`). Subsequent integration synchronization is committed and pushed as `374d9c16e` on `lagergren/errs`, including the new compiler-consumer tests and roadmap. Nothing was removed from the integration implementation merely to simplify a review branch. Remaining differences requiring a disposition are listed at the end.
 
-Gene correctly identified a regression in the first version: throwing on an incompatible
-`.xtc` candidate prevented scanning a mixed-version directory or trying a later repository.
-The revised PR at `902460194` instead preserves two separate responsibilities:
+Local review artifacts: [branch refs and exact inventories](build/reviews/remaining-branches-20261009/branches.json), [focused validation receipts](build/reviews/remaining-branches-20261009/validation.json). These local build artifacts and absolute worktree file links are intended for the local checkout; the GitHub comparison links work remotely.
 
-- **Lookup:** skip unreadable/incompatible candidates, continue searching, and return a usable
-  module or ordinary absence. An obsolete binary alongside a valid dependency is not a failure
-  of the successful lookup.
-- **Inspection:** `ModuleRepository.getReadFailures()` exposes an immutable map of file paths
-  and original I/O causes. Reading the snapshot performs no I/O; implementations without retained
-  failures inherit an empty map.
-- **Host policy:** #685 consumes retained issues after required-dependency resolution fails.
-  Successful fallback and ordinary source errors must not acquire spurious repository errors.
-  A skipped file is supporting evidence, not proof that it contains the missing module.
-- **Recovery:** subsequent access retries failed candidates, including repairs with unchanged
-  size/timestamp; successful retry or observed removal clears the retained issue.
+<a id="semantic-facts"></a>
 
-The runtime bridge in
-[xCoreRepository](javatools/src/main/java/org/xvm/runtime/template/_native/mgmt/xCoreRepository.java)
-uses `loadModule` and translates absence into the language's conditional result. It need not
-adopt a throwing lookup API or inspect the new snapshot. The failure-inspection API is additive;
-retry/cache behavior and removal of stdout reporting are explicit behavior changes to review.
-
-Recorded regression coverage: **12 repository cases passed with zero skips**, including mixed
-formats, directory and single-file fallback, versioned lookup, retained causes, replacement and
-removal. This proves those cases, not every possible platform workload. Keep these controls when
-refreshing #683 and #685.
-
-## Order of future submissions
-
-Numbers below identify **roadmap scopes**, not GitHub PR numbers. Scopes 3–5 now form one proposed PR.
-
-| Scope | Proposed PR | Complete capability delivered | Dependencies |
-| ---: | --- | --- | --- |
-| 1 | **Preserve compiler types through argument fitting and code generation** | Ordinary programs keep correct generic, atomic-result and receiver types; invalid arguments remain invalid. | Current master. The extraction uses its existing compiler-consumer harness and does not depend on #683/#685 or the new LSP adapter. |
-| 2 | **Expose compilation-owned syntax and resolved semantic facts** | A host can traverse/copy syntax and inspect source bindings, selected calls and initializer facts from one compilation. | #685 and the relevant corrections in 1. |
-| 3–5 | **Recover incomplete source and expose cursor, call and declaration analysis** | A host retains useful syntax and queries real scope, fitted call/constructor candidates and declaration/type facts while editing. These share one complete parser/result API. | Semantic facts (2), plus #685 reporting, snapshots and cancellation. |
-| 6 | **Export the Gradle compiler project model and library inputs** | A consumer obtains actual source sets, project dependencies, ordered libraries and processed resources through the plugin. | Existing plugin/XDK machinery. Independent of 1–5; may be submitted in parallel. |
-| 7 | **Deliver the compiler-backed LSP and both editor integrations** | Ship the adapter, server features, IntelliJ/VS Code UX and acceptance harness together. | #685, #686 and 1–6, reconciled against their actual merged revisions. |
-
-The compiler review path is **#685/#687 → 2 → combined 3–5 → 7**.
-Scope **6** and the extra Boolean-effects correction can proceed independently against master.
-Scopes 3–5 remain separate explanations below, but belong to **one branch and one proposed PR**,
-as agreed: recovery, cursor fitting and declaration analysis share parser modes and result APIs.
-
-### Prepared branches correlated with this roadmap
-
-All counts are **incremental against the recorded review base**, excluding inherited changes.
-The two `*-review-base-*` refs are published comparison bases, not extra proposed PRs.
-
-| Roadmap scope | Branch | Review base / dependency | Files | Added / removed | Full patch | GitHub comparison |
-| --- | --- | --- | ---: | ---: | --- | --- |
-| 2 | `errs/compiler-semantic-facts-20261009` | #685 + #687 | 36 | +1,931 / −163 | [semantic-facts.patch](build/reviews/remaining-branches-20261009/semantic-facts.patch) | [View diff](https://github.com/xtclang/xvm/compare/errs/compiler-review-base-20261009...errs/compiler-semantic-facts-20261009) |
-| 3–5 combined | `errs/compiler-partial-analysis-20261009` | Semantic facts (2) | 40 | +5,652 / −316 | [partial-analysis.patch](build/reviews/remaining-branches-20261009/partial-analysis.patch) | [View diff](https://github.com/xtclang/xvm/compare/errs/compiler-semantic-facts-20261009...errs/compiler-partial-analysis-20261009) |
-| 6 | `errs/gradle-project-model-20261009` | Master only — independent | 8 | +533 / −1 | [gradle-model.patch](build/reviews/remaining-branches-20261009/gradle-model.patch) | [View diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...errs/gradle-project-model-20261009) |
-| Additional independent correction | `errs/compiler-conditional-effects-20261009` | Master only — independent | 2 | +95 / −1 | [conditional-effects.patch](build/reviews/remaining-branches-20261009/conditional-effects.patch) | [View diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...errs/compiler-conditional-effects-20261009) |
-| 7 | `errs/lsp-editors-20261009` | Partial analysis + Gradle model + #686 + Boolean-effects correction; inherits #683/#685/#687 | 648 | +110,180 / −5,375 | [lsp-editors.patch](build/reviews/remaining-branches-20261009/lsp-editors.patch) | [View diff](https://github.com/xtclang/xvm/compare/errs/lsp-review-base-20261009...errs/lsp-editors-20261009) |
-
-The compiler review base combines #685 (`c1a98a677`) and #687 (`f29cf28c0`), including #683
-and master's #684 through their ancestry. The LSP review base combines the finished partial-analysis
-stack, the Gradle model branch, #686 (`81f032cc0`) and the Boolean-effects correction.
-The product diff therefore exposes its actual server/editor changes, rather than counting its
-compiler prerequisites again. All five review branches and both comparison bases are now pushed and verified on GitHub.
-The links above show the intended incremental comparisons; no PRs were created.
-
-**Additional independent correction:** `CondOpExpression` must evaluate a runtime left operand
-even when `&& False` or `|| True` makes the final result constant. The two-file branch contains
-the compiler fix and a runtime fixture checking evaluation exactly once in value and branch
-contexts. It was found while checking the unassigned remainder; it is not part of #687's
-already-published type-fitting/emission scope.
-
-## 1. Preserve compiler types through argument fitting and code generation
-
-**Published as [#687](https://github.com/xtclang/xvm/pull/687):** branch
-`errs/compiler-type-correctness-20261009`, based directly on
-master `da07a0be8`, in `/private/tmp/xvm-compiler-correctness-20261009`. This extraction is
-independent of #683/#685 and leaves their API migrations out. Commit `f29cf28c0` is pushed; the PR
-is ready for review by ggleyzer, cpurdy and thegridman.
-
-**Exact diff: 6 files, +365/−29 lines.** Production accounts for +57/−29 across four files;
-the two new direct-consumer test files add 308 lines. The compiler changes were extracted from
-the existing implementation; the tests use master's current embedding API.
-
-Review the [complete six-file patch](build/reviews/compiler-correctness-20261009/compiler-correctness.patch)
-and [recorded test counts](build/reviews/compiler-correctness-20261009/validation.json).
-The adjacent `test-results` directory preserves the baseline, fixed and integration JUnit XMLs.
-
-| File | Extracted change |
-| --- | --- |
-| [NameExpression.java](/private/tmp/xvm-compiler-correctness-20261009/javatools/src/main/java/org/xvm/compiler/ast/NameExpression.java) | Bind hidden generic type arguments in both the callable type and binary AST; retain concrete function register types; resolve atomic reference owners consistently for explicit, current, singleton and enclosing receivers; correct the enclosing-instance AST's owner type. |
-| [InvocationExpression.java](/private/tmp/xvm-compiler-correctness-20261009/javatools/src/main/java/org/xvm/compiler/ast/InvocationExpression.java) | Combine argument and return fitting validity instead of overwriting an earlier argument failure. |
-| [SequentialAssignExpression.java](/private/tmp/xvm-compiler-correctness-20261009/javatools/src/main/java/org/xvm/compiler/ast/SequentialAssignExpression.java) | Preserve the validated result type and concrete atomic reference type in prefix/postfix binary ASTs. |
-| [AssignmentStatement.java](/private/tmp/xvm-compiler-correctness-20261009/javatools/src/main/java/org/xvm/compiler/ast/AssignmentStatement.java) | Use the resolved atomic reference type for compound assignment AST targets. |
-| [CompilerFunctionTypingTest.kt](/private/tmp/xvm-compiler-correctness-20261009/lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/CompilerFunctionTypingTest.kt) | 12 cases: four bound generic function forms and serialization, complete-call controls, and direct fitting-contract checks for matching returns with valid/missing/excess/wrong-type arguments. |
-| [CompilerAtomicEmissionTest.kt](/private/tmp/xvm-compiler-correctness-20261009/lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/CompilerAtomicEmissionTest.kt) | 18 cases: typed serialized prefix/postfix results, enclosing owners, generic receivers, compound assignments and invalid-operation controls. |
-
-The source-level failure controls alone cannot expose the argument-fitting defect: existing
-diagnostics already reject the complete invalid program. The direct test additionally verifies
-the protected fitting method's documented type-or-absence result, using actual compiler types
-and literal fitting, without reflection or private field access.
-
-**Focused evidence:** unchanged master fails 22 of these 30 cases; the extracted fixes pass all
-30. The same 30 cases pass in the LSP mono-code branch. The fixes have been restored after the
-baseline comparison, and the new tests are mirrored in the integration checkout.
-
-**Full validation:** the forced Java and language-server suite run has zero failures or errors:
-386 Java tests passed with 42 skipped; 462 language-server tests passed with 3 skipped. All 30
-new cases ran without skips. XDK distribution assembly, root and language-server formatting
-checks, and `git diff --check` passed. These checks validate compilation and serialized compiler
-output; the new regressions do not execute programs in the runtime.
-
-Switch audit controls and cached-warning replay remain in their existing scopes; neither is a
-production change in this extraction.
-
-
-**Purpose:** make the ordinary compiler's decisions and emitted representation agree before
-publishing those decisions as host facts. These are compiler correctness changes, independently
-useful to complete programs.
-
-**Changes included:**
-
-- Preserve the bound type of a generic function in `NameExpression` emission.
-- Retain argument-fit failure in `InvocationExpression.testFunction`; a matching return type
-  must not turn an invalid call into a successful fit.
-- Preserve atomic sequential/compound result types and correct enclosing/singleton receiver
-  handling during emission.
-- Include the corresponding complete-source positive/negative and serialized binary-AST tests.
-
-Primary code:
-[NameExpression](javatools/src/main/java/org/xvm/compiler/ast/NameExpression.java),
-[InvocationExpression](javatools/src/main/java/org/xvm/compiler/ast/InvocationExpression.java),
-[SequentialAssignExpression](javatools/src/main/java/org/xvm/compiler/ast/SequentialAssignExpression.java)
-and the relevant assignment/emission paths. Reuse the behavioral cases in
-[CompilerEmissionAuditTest](lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/CompilerEmissionAuditTest.kt).
-
-**Acceptance:** assert the emitted/serialized types as well as successful compilation; invalid
-calls and operations still fail. Rebuild the XDK and run direct compiler-consumer cases.
-Do not label unchanged switch behavior as a production fix merely because an audit test covers it.
-Compare duplicate-type fixes with master before carrying either code or duplicate tests forward.
-
-## 2. Expose compilation-owned syntax and resolved semantic facts
-
-**Purpose:** provide a complete inspection result for ordinary source. The host should consume
-compiler decisions and source associations instead of reconstructing resolution from text.
-
-**Changes included:**
-
-- Typed `copyTree` APIs, registered child traversal, fresh child ownership and source metadata.
-  Keep compile-time return types; this is not a wholesale rewrite of legacy `clone`.
-- Passive name, parameter, declaration, import and composition associations, including narrowed
-  types, captured variables, lambda/anonymous bindings and contextual member provenance.
-- Selected method/function/constructor bindings, instantiated signatures and written argument
-  labels, collected for the current compilation and returned through immutable collections.
-- Initializer facts captured before folding or temporary validation nodes erase useful source
-  references. Failed bindings and discarded trial clones must not become published facts.
-- Direct host examples and tests showing traversal, declaration identity, selected calls,
-  captures and initializer references from a single compilation result.
-
-Primary code:
-[AstNode](javatools/src/main/java/org/xvm/compiler/ast/AstNode.java),
-[EmbeddingSupport](javatools/src/main/java/org/xvm/api/EmbeddingSupport.java),
-[InvocationBinding](javatools/src/main/java/org/xvm/compiler/InvocationBinding.java),
-[InitializerBinding](javatools/src/main/java/org/xvm/compiler/InitializerBinding.java),
-[LambdaBindings](javatools/src/main/java/org/xvm/compiler/ast/LambdaBindings.java),
-[AnonymousClassBindings](javatools/src/main/java/org/xvm/compiler/ast/AnonymousClassBindings.java),
-compiler collectors/stages, and passive AST/structure accessors.
-
-**Acceptance:** demonstrate source identity across nested compilations, shadowing, narrowing,
-named/default/generic calls, folded initializers and failed-call controls. Copy/traversal tests
-check parentage, independent child trees and typed callers. Results retain compiler ownership;
-immutable containers do not make mutable compiler objects safe for concurrent LSP requests.
-No retained validation context, global declaration registry, or new public context cache.
-
-This combines the previous AST and binding fragments into a usable source-inspection capability.
-The declaration-provenance audit did not justify a separate ownership redesign or another PR.
-
-## 3. Recover source structure and inspect the cursor's lexical scope
-
-**Purpose:** let a host inspect an actively edited document while preserving the distinction
-between recovered syntax and a valid compiled program.
-
-**Changes included:**
-
-- Ordinary parser recovery and per-source trees exposed by `ModuleInfo` and compilation results.
-  Parse errors still prevent ordinary semantic compilation/emission.
-- Explicit incomplete-analysis entry points and cursor positions, with appropriate partial nodes
-  in `ast.partial`, `PartialAnalysis`, and shared read-only `PartialSyntax` selection.
-- Preserve cursor/source identity through unsaved module members, nested/grouped expressions,
-  value/return contexts and bounded missing-delimiter recovery.
-- Capture actual receiver types, readable visible names, shadowing, flow narrowing, imports and
-  scope type names while the compiler context is alive.
-
-Primary code:
-[Parser](javatools/src/main/java/org/xvm/compiler/Parser.java),
-[ModuleInfo](javatools/src/main/java/org/xvm/tool/ModuleInfo.java),
-[EmbeddingSupport](javatools/src/main/java/org/xvm/api/EmbeddingSupport.java),
-[partial syntax nodes](javatools/src/main/java/org/xvm/compiler/ast/partial),
-[CursorBinding](javatools/src/main/java/org/xvm/compiler/CursorBinding.java),
-[CursorScope](javatools/src/main/java/org/xvm/compiler/ast/CursorScope.java)
-and [PartialQueries](javatools/src/main/java/org/xvm/compiler/ast/PartialQueries.java).
-
-**Acceptance:** a direct host can locate the source site and inspect its real scope/receiver
-without an IDE or emitted incomplete operation. Cover UTF-16 positions, subsequent declarations,
-independent copies, unsupported syntax, unrelated source errors, budgets and cancellation.
-Valid ordinary compilation remains a control. This is a usable scope-query capability;
-callable fitting is the next complete capability, not a stub advertised by this PR.
-
-## 4. Fit incomplete calls and constructors using compiler rules
-
-**Purpose:** answer which calls and argument values fit the code being written, using the
-compiler's actual inference and overload rules.
-
-**Changes included:**
-
-- Method/function candidates, instantiated parameter/return facts, named/default arguments,
-  generic inference and conversions through ordinary argument fitting.
-- Compiler-validated proposals for locals, properties, constants, literals, enclosing values
-  and templates; preserve independent record facts when adding proposal results.
-- Ordinary, generic and anonymous constructor candidates, required-type inference, access
-  control, own/super constructors and relevant array-dimension cursors.
-- Candidate copying and the narrow fitting observer, with the completed helper extraction
-  included directly rather than its intermediate development versions.
-
-Primary code:
-[PartialCallResolver](javatools/src/main/java/org/xvm/compiler/ast/PartialCallResolver.java),
-[PartialConstructionResolver](javatools/src/main/java/org/xvm/compiler/ast/PartialConstructionResolver.java),
-[PartialArgument](javatools/src/main/java/org/xvm/compiler/ast/PartialArgument.java),
-`CursorBinding`, `InvocationExpression`, `NewExpression` and `ProposedLiteralToken`.
-
-**Acceptance:** show successful and rejected candidates/proposals through the direct host API,
-including generic/named/default calls and anonymous constructors. A candidate is not a selected
-overload. Trial copies must not leak diagnostics, mutate retained source or emit synthetic
-forwarding constructors just to answer a query. No parallel imitation of the fitting algorithm.
-
-## 5. Analyze declarations and written types independently of method bodies
-
-**Purpose:** make source structure and type/header queries available when method bodies are
-unfinished, without inventing declarations that the compiler never registered.
-
-**Changes included:**
-
-- Unfinished declaration/type-composition/local syntax and written-name/header recovery.
-- Qualified, generic, compound and formal type queries; bounds, compositions and missing operands.
-- `EmbeddingSupport.analyzeDeclarations`, `DeclarationAnalysis` and bounded phase progression
-  for real registered declarations without requiring valid bodies.
-- Source ownership and module snapshot support across both the recovered header and declaration
-  result, with useful diagnostics when bootstrap, repository or declaration processing fails.
-
-Primary code: `EmbeddingSupport`, `Parser`, `ModuleInfo`, declaration/type AST classes,
-`IncompleteDeclarationStatement`, `IncompleteLocalDeclaration`,
-`IncompleteTypeCompositionStatement`, `PartialSyntax` and the header/type query helpers.
-
-**Acceptance:** compare well-formed declarations with ordinary compilation; invalid bodies do
-not erase valid declarations, while invalid declarations do not gain fabricated identities.
-Exercise formal bounds, type arguments, source membership, failure paths and cancellation.
-Introduce the complete declaration workflow together, including its direct consumer tests.
-
-## 6. Export the Gradle compiler project model and library inputs
-
-**Purpose:** give compiler hosts the same project inputs that Gradle actually builds, including
-generated/processed resources and dependency ordering. This is a build-plugin capability with
-an independently testable consumer.
-
-**Changes included:**
-
-- [XtcLspModelIntegration](plugin/src/main/java/org/xtclang/plugin/XtcLspModelIntegration.java),
-  [XtcLspModelTask](plugin/src/main/java/org/xtclang/plugin/tasks/XtcLspModelTask.java),
-  [XtcLspSourceSetTask](plugin/src/main/java/org/xtclang/plugin/tasks/XtcLspSourceSetTask.java)
-  and plugin registration.
-- [compiler-model.init.gradle](lang/gradle/compiler-model.init.gradle) and the functional fixture
-  used by [XtcLspModelTest](plugin/src/test/java/org/xtclang/plugin/XtcLspModelTest.java).
-- Source sets, project edges, ordered module paths and processed resource destinations.
-- The source archive variants and import script required by real consumers. Shared maintained
-  XDK bundle/distribution wiring is in the LSP product branch, which actually consumes that bundle;
-  the independent exporter does not need it.
-
-**Acceptance:** a real consumer exports the model and prepares the required inputs, with
-configuration-cache storage and reuse demonstrated. Metadata export and resource preparation
-remain distinct. No IDE session state, server startup or unrelated dependency upgrades.
-This PR may be submitted while compiler foundations are under review.
-
-## 7. Deliver the compiler-backed LSP and both editor integrations
-
-**Purpose:** make the landed compiler and build capabilities usable from IntelliJ and VS Code
-in one complete product review. This is deliberately the largest PR.
-
-**Changes included:**
-
-- Compiler adapter, detached semantic models, source/dependency graph and invalidation, serialized
-  compiler work, request cancellation, diagnostics, process lifecycle and responsiveness.
-- Navigation, references/hierarchies, completion/signatures, rename/refactorings, formatting,
-  theme-based semantic highlighting, inlay hints, CodeLens and supported protocol handlers.
-- Both editors' adapter selector/restart, settings, project import, library/source configuration,
-  themes, logs and support exports.
-- Packaged transport and native editor acceptance, shared scenarios, bounded waits, expected
-  failure assertions, CI and report/log retention. Put `PruneTestReportsTask` and IDE-run support
-  with these real consumers, rather than in a detached infrastructure PR.
-- Required server/editor build configuration and user documentation.
-
-**Acceptance:** run the actual packaged server and both supported editor paths. Unexpected
-timeouts, hanging dialogs and unexpected server-failure popups fail the relevant scenario;
-intentional negative cases must assert their expected outcomes. Keep known host limitations
-explicit. Ordinary installation must use released LSP4J/LSP4IJ; custom forks are optional
-upstream-validation tools, not requirements.
-
-Reconcile the residual diff against the actual merged foundations before opening this PR.
-No unreviewed general compiler API or Gradle plugin behavior should be hidden in the remainder.
-Call out necessary integration adjustments; extract newly discovered general compiler defects
-before the product PR when they need independent review.
-
-## Review and validation rules for the sequence
-
-- Each PR includes its API contract, production behavior, direct consumer, regression tests and
-  relevant documentation. Logical commits should tour that capability; historical checkpoint
-  commits are not automatic review boundaries.
-- Extract from current master and accepted prerequisite revisions. Preserve merged fixes,
-  Gradle updates and deliberate review cleanup. Do not restore obsolete pool fallback behavior.
-- Keep shared classes coherent: move the necessary implementation and tests together. Do not
-  publish unimplemented query branches or temporary public APIs merely to satisfy the ordering.
-  If extraction reveals an inseparable dependency, adjust the capability boundary before
-  publishing and record the reason.
-- Measure exact changed files and line counts after extraction. Link a runnable consumer example
-  and explain the ownership/failure contract; broad file count alone does not show a broken design.
-- Force relevant tests with `--rerun-tasks --no-build-cache`, inspect XML failures and skips, and
-  build XDK inputs before tests that require them. Test Gradle configuration-cache reuse. Compare
-  emitted output where equivalence is expected and identify intentional compiler corrections.
-- Mirror accepted fixes into the LSP mono-code branch and verify its real adapter consumers.
-  Passing an isolated Java API suite alone does not prove adapter compatibility.
-- Keep the agreed **0.5.0 Java API migration boundary** explicit. Ordinary CLI behavior and Java
-  source/binary compatibility are different claims; removed APIs and changed result shapes require
-  migration/recompilation.
-- Request **ggleyzer, cpurdy and thegridman** on every new PR. Preserve required reviews, builds
-  and conversation resolution. A stacked parent must be protected explicitly; it does not inherit
-  master's protection. Keep CI working on the actual target branch.
-- Current validation receipts apply to their recorded revisions, not future extracted PRs.
-  #685's preparation passed 467 Java and 459 language-server tests, with 42 and 3 existing skips;
-  #686's standalone transient-local test was removed in `81f032cc0`. The remaining utility
-  suite passed 118 cases with 2 skips; the two retained compiler-consumer cases previously
-  passed in both checkouts without skips. #687's exact baseline and full-suite evidence
-  is recorded in submission 1 above. Each material rebase needs appropriate verification.
-
-## Where every old scope item went
-
-This mapping preserves coverage without retaining the contradictory old publication ledger.
-
-| Previous inventory | Current destination |
-| --- | --- |
-| Listener contract plus 1–2 and 5–8 | Published #685 |
-| 3: repository failures | Published #683 |
-| 4: transient thread-local retention | Published #686 |
-| 9–11: ordinary fitting/emission corrections | Published #687 |
-| 12–14 and 24: source/call/initializer facts and typed AST copying | Future submission 2 |
-| 15–18: recovery, partial entry points, cursor preservation and scope | Combined partial-analysis branch, scope 3 |
-| 19–21: incomplete-call fitting, proposals and constructors | Combined partial-analysis branch, scope 4 |
-| 22–23: declaration/type recovery and declaration-only analysis | Combined partial-analysis branch, scope 5 |
-| 25–26: Gradle model and maintained XDK inputs | Gradle-model branch (6); shared maintained XDK bundle wiring is in product scope 7 |
-| 27: IDE artifact retention and failure logs | Future submission 7 with the consuming harness |
-| Remaining LSP, IntelliJ and VS Code implementation | Future submission 7 |
-
-## Deferred or excluded work
-
-Runtime execution/DAP, notebooks and a public color library remain separate deferred scopes.
-Theme-based source highlighting belongs in the final LSP PR. Microsoft Marketplace authentication
-and automatic publication remain postponed; they are not compiler prerequisites. IntelliJ
-Platform and VS Code upstream changes remain deferred, with supported workarounds and explicit
-limitations in the integration.
-
-Unrelated catch-variable conversions, broad documentation cleanup, runtime/JIT edits and test
-cosmetics are not compiler foundations. Reconcile such residual changes individually rather than
-sweeping them into a product PR. Historical reports, patch files, local plans and PR scripts are
-review aids; select final product documentation deliberately.
-
-**Next new submission: compilation-owned syntax and resolved semantic facts (2).** Compiler
-fitting/emission correctness is published as #687. The requested #685 rebase is complete, with
-#684's fixes verified. Continue the existing #683/#685/#686/#687 reviews alongside preparation;
-do not open duplicate replacements.
-
-## Exact review branch inventories
-
-Machine-readable refs and inventories: [branches.json](build/reviews/remaining-branches-20261009/branches.json).
-Focused test receipts: [validation.json](build/reviews/remaining-branches-20261009/validation.json).
-The linked files below open the actual review worktree versions, not the larger integration versions.
-
-### 2: Compilation-owned syntax and resolved semantic facts
+## Compilation-owned syntax and semantic facts
 
 Branch `errs/compiler-semantic-facts-20261009` at `4a3d998dd`; base `errs/compiler-review-base-20261009` at `3af705576`.
 
-[Open this scope in GitHub’s compare view](https://github.com/xtclang/xvm/compare/errs/compiler-review-base-20261009...errs/compiler-semantic-facts-20261009). No PR has been opened.
+[Open this branch in GitHub’s compare view](https://github.com/xtclang/xvm/compare/errs/compiler-review-base-20261009...errs/compiler-semantic-facts-20261009). [Full local patch](build/reviews/remaining-branches-20261009/semantic-facts.patch). No PR has been opened.
 
-#### Proposed PR description
+### Proposed PR description
 
 **Title: [LSP] Expose compilation-owned syntax and resolved semantic facts**
 
-##### Why?
+#### Why?
 
 - Embedding a compiler is not sufficient for an editor if the host receives diagnostics and output modules but cannot inspect the source-level decisions that produced them. Navigation, references, signature help and safe refactoring need declaration identities, resolved types and selected calls.
 - Recovering these facts from source text would duplicate compiler rules and lose important distinctions: overload selection, generic substitutions, named argument order, captured variables and initializers that have already been folded.
 - Hosts need an explicit ownership and traversal contract for syntax. Retaining arbitrary internal nodes or copying them through scattered casts makes analysis fragile as the compiler evolves.
 
-##### How?
+#### How?
 
 - Extend compilation results with source trees and binding snapshots collected during the compiler's existing resolution and validation stages. Expose facts the compiler actually established rather than asking the host to reconstruct them.
 - Record selected method, function and constructor calls with their substituted signatures and source arguments. Preserve initializer provenance, declaration associations, lambda captures and anonymous-class bindings.
 - Add typed `copyTree()` APIs, consistent child traversal and source metadata handling. Snapshot maps preserve node identity and cannot be structurally mutated by consumers.
 
-##### Implications
+#### Implications
 
 **Must merge first:** [#685 — compiler embedding and diagnostic ownership](https://github.com/xtclang/xvm/pull/685) and [#687 — compiler type correctness](https://github.com/xtclang/xvm/pull/687). The former supplies compilation results, reporting, snapshots and cancellation; the latter corrects types used by the exposed binding facts. [#683 — repository read failures](https://github.com/xtclang/xvm/pull/683) is an inherited prerequisite through the prepared embedding branch. No partial-analysis, Gradle model or editor implementation PR must land before this one.
 
 This is the ordinary-compilation foundation for compiler-backed editor features. It does not yet recover incomplete source or implement an LSP server. Immutable result collections do not make their compiler objects thread-safe: syntax and constants remain owned by their compilation, and a host must respect compiler/pool ownership when extracting a detached model. Public embedding result changes belong to the planned 0.5.0 API boundary; this description does not claim binary compatibility for earlier embedding consumers.
 
-##### Changes
+#### Changes
 
 `EmbeddingSupport` exposes the collected results; `InvocationBinding` and `InitializerBinding` define the call and initializer facts. AST declarations and expressions publish their resolved associations, while the traversal/copy contract makes those trees usable by a host. Tests cover node identity, source provenance, traversal, copying and calls observed through the actual embedding API.
 
-#### Files changed
+### Files changed
 
 | Area | Files | What changes |
 | --- | ---: | --- |
@@ -483,6 +91,10 @@ This is the ordinary-compilation foundation for compiler-backed editor features.
 | **Total** | **36** | Exact file paths follow below. |
 
 **36 files; +1,931/−163.** 20 focused tests passed with no skips; compilation and formatting passed. The later public register accessor is also compiled by the actual LSP consumer.
+
+### Review and acceptance focus
+
+The review should establish that source identities survive nested compilation, shadowing and narrowing; named/default/generic call facts reflect the compiler's selection; and failed calls or discarded trial copies do not publish successful bindings. Copies must own their children and preserve source metadata. No retained validation context, global declaration registry or new public context cache is part of this contract.
 
 <details>
 <summary>Exact changed files</summary>
@@ -528,40 +140,42 @@ This is the ordinary-compilation foundation for compiler-backed editor features.
 
 </details>
 
-### 3–5 combined: Recovery, cursor fitting and declaration analysis
+<a id="partial-analysis"></a>
+
+## Incomplete-source, cursor and declaration analysis
 
 Branch `errs/compiler-partial-analysis-20261009` at `777a0bd4b`; base `errs/compiler-semantic-facts-20261009` at `4a3d998dd`.
 
-[Open this scope in GitHub’s compare view](https://github.com/xtclang/xvm/compare/errs/compiler-semantic-facts-20261009...errs/compiler-partial-analysis-20261009). No PR has been opened.
+[Open this branch in GitHub’s compare view](https://github.com/xtclang/xvm/compare/errs/compiler-semantic-facts-20261009...errs/compiler-partial-analysis-20261009). [Full local patch](build/reviews/remaining-branches-20261009/partial-analysis.patch). No PR has been opened.
 
-#### Proposed PR description
+### Proposed PR description
 
 **Title: [LSP] Analyze incomplete source, cursor scopes and declarations through the compiler API**
 
-##### Why?
+#### Why?
 
 - Source in an editor is routinely incomplete: the user has just typed a receiver and a dot, started a call, or changed a declaration header. Abandoning analysis at the first syntax error leaves completion and signature help unavailable exactly when they are needed.
 - Useful suggestions require the real lexical scope, narrowed types, receiver and overload-fitting rules. A syntax-only approximation cannot reliably reproduce those compiler decisions.
 - A broken method body should not prevent a host from inspecting recoverable declarations elsewhere. Equally, recovering information for an editor must not turn invalid source into a successful executable compilation.
 
-##### How?
+#### How?
 
 - Add explicit incomplete-source and declaration-analysis entry points to `EmbeddingSupport`, including cursor-aware analysis of source/module trees.
 - Preserve recoverable structure with bounded parser recovery and dedicated partial AST nodes. Expose cursor scope, readable locals, shadowing, narrowing, receiver types and declaration facts.
 - Fit incomplete calls and constructions with compiler rules, including named/default arguments and generic types. Return candidates and proposals as partial information, distinct from a call successfully selected during normal compilation.
 - Keep recovery, cursor queries and declaration/header analysis together because they share parser modes, tree ownership and result contracts. This makes the public feature usable as one complete addition.
 
-##### Implications
+#### Implications
 
-**Must merge first:** the proposed **“Expose compilation-owned syntax and resolved semantic facts”** PR immediately above. Its transitive prerequisites are [#685](https://github.com/xtclang/xvm/pull/685), [#687](https://github.com/xtclang/xvm/pull/687), and the repository work in [#683](https://github.com/xtclang/xvm/pull/683). This branch relies on that ownership/binding contract and on the embedding foundation's reporting, snapshots and cancellation. It has no prerequisite on the Gradle exporter or either editor integration.
+**Must merge first:** the proposed [compilation-owned syntax and semantic-facts PR](#semantic-facts). Its transitive prerequisites are [#685](https://github.com/xtclang/xvm/pull/685), [#687](https://github.com/xtclang/xvm/pull/687), and the repository work in [#683](https://github.com/xtclang/xvm/pull/683). This branch relies on that ownership/binding contract and on the embedding foundation's reporting, snapshots and cancellation. It has no prerequisite on the Gradle exporter or either editor integration.
 
 Normal compilation still rejects invalid input; partial results are analysis results, not executable artifacts. Cancellation and failed analysis must not manufacture a valid semantic graph. The later LSP adapter directly consumes these APIs, so merging only the initial embedding foundation would leave its incomplete-source features without their compiler implementation.
 
-##### Changes
+#### Changes
 
 `Parser` and the partial AST classes retain recoverable syntax. `CursorBinding`/`CursorScope` describe the cursor context; `PartialQueries`, `PartialCallResolver` and `PartialConstructionResolver` answer semantic queries. The tool/compiler stages add declaration-only analysis. Regression tests exercise recovery boundaries, copying, scopes, candidate fitting and public API results.
 
-#### Files changed
+### Files changed
 
 | Area | Files | What changes |
 | --- | ---: | --- |
@@ -572,6 +186,10 @@ Normal compilation still rejects invalid input; partial results are analysis res
 | **Total** | **40** | Incremental over semantic facts; inherited files are not counted again. |
 
 **40 files; +5,652/−316.** 157 Java tests and 8 direct compiler API tests passed, with no skips. These cover parser recovery, partial syntax, scope, incomplete calls/construction, cancellation and declaration-only analysis.
+
+### Review and acceptance focus
+
+The combined API must cover UTF-16 cursor positions, unsaved module members, bounded delimiter recovery and declarations after a damaged expression. Call/constructor proposals must use ordinary compiler fitting without leaking trial diagnostics, mutating retained source, or emitting synthetic operations merely to answer a query. Declaration analysis must preserve real registered identities and reject invalid declarations. Ordinary valid compilation, failure paths, budgets and cancellation remain controls.
 
 <details>
 <summary>Exact changed files</summary>
@@ -621,39 +239,41 @@ Normal compilation still rejects invalid input; partial results are analysis res
 
 </details>
 
-### 6: Gradle compiler project model and source/library inputs
+<a id="gradle-model"></a>
+
+## Gradle compiler inputs for tooling
 
 Branch `errs/gradle-project-model-20261009` at `7a19d684c`; base `da07a0be8525962391f7e46215e4a8f277bd0b14` at `da07a0be8`.
 
-[Open this scope in GitHub’s compare view](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...errs/gradle-project-model-20261009). No PR has been opened.
+[Open this branch in GitHub’s compare view](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...errs/gradle-project-model-20261009). [Full local patch](build/reviews/remaining-branches-20261009/gradle-model.patch). No PR has been opened.
 
-#### Proposed PR description
+### Proposed PR description
 
 **Title: [LSP] Export evaluated Gradle compiler inputs for tooling**
 
-##### Why?
+#### Why?
 
 - An editor must analyze the same sources, libraries and resources as the build. Scanning folders or interpreting build scripts independently loses evaluated source sets, project dependencies, module-path ordering and resource processing.
 - IntelliJ and VS Code need a common import contract, including multi-project and composite builds. Keeping that contract in the Gradle plugin lets Gradle remain the authority for compiler inputs.
 - Reading metadata should not silently trigger resource preparation or a full compilation. Tooling needs to request preparation explicitly when it needs generated/processed inputs.
 
-##### How?
+#### How?
 
 - Add per-source-set reports and `exportXtcLspModel`, producing an evaluated JSON model of source ownership, project dependencies, module paths and resource locations.
 - Provide `prepareXtcLspModel` for resource preparation, and a shared init script that aggregates models across included builds, including workspace roots without the Ecstasy plugin.
 - Publish source archive variants for source attachment. Replace aggregate model files atomically so removed projects do not remain as stale entries, and reject missing or conflicting composite reports.
 
-##### Implications
+#### Implications
 
 **Must merge first: none.** This branch is independent and based directly on master `da07a0be8`. It uses existing Gradle/plugin/XDK machinery and does not require any pending embedding, compiler correctness, partial-analysis or LSP PR.
 
 The export is useful to any tooling consumer; it does not start an LSP server or change compiler language semantics. The later editor product consumes the model and supplies its UI/import lifecycle. XDK library-bundle distribution wiring remains in that later product change. Task inputs and outputs are declared for Gradle, and functional tests demonstrate configuration-cache storage and reuse.
 
-##### Changes
+#### Changes
 
 `XtcLspModelIntegration` wires the tasks from the existing project delegate. `XtcLspSourceSetTask` writes individual input reports and `XtcLspModelTask` combines them. The init script performs workspace/composite aggregation. Functional tests use real consumer builds rather than checking source-code spelling.
 
-#### Files changed
+### Files changed
 
 | Area | Files | What changes |
 | --- | ---: | --- |
@@ -664,6 +284,10 @@ The export is useful to any tooling consumer; it does not start an LSP server or
 | **Total** | **8** | Seven files in `plugin/`, one in `lang/`; no `javatools` changes. |
 
 **8 files; +533/−1.** All 3 functional tests passed, including configuration-cache reuse inside real consumer builds; formatting passed.
+
+### Review and acceptance focus
+
+Review the exported model against a real multi-project/composite consumer, including project ownership, dependency ordering, resource transformations, source attachment, removed projects and failed imports. Metadata export and resource preparation are distinct operations. Configuration-cache reuse is part of the contract.
 
 <details>
 <summary>Exact changed files</summary>
@@ -681,38 +305,40 @@ The export is useful to any tooling consumer; it does not start an LSP server or
 
 </details>
 
-### Additional independent correction: Preserve effects of Boolean operands with constant results
+<a id="boolean-effects"></a>
+
+## Boolean operand-effects correction
 
 Branch `errs/compiler-conditional-effects-20261009` at `4ad9f29f9`; base `da07a0be8525962391f7e46215e4a8f277bd0b14` at `da07a0be8`.
 
-[Open this scope in GitHub’s compare view](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...errs/compiler-conditional-effects-20261009). No PR has been opened.
+[Open this branch in GitHub’s compare view](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...errs/compiler-conditional-effects-20261009). [Full local patch](build/reviews/remaining-branches-20261009/conditional-effects.patch). No PR has been opened.
 
-#### Proposed PR description
+### Proposed PR description
 
 **Title: Preserve Boolean operand effects when the final result is constant**
 
-##### Why?
+#### Why?
 
 - An expression such as `probe() && False` has a constant result, but evaluating `probe()` still matters. Discarding that evaluation can remove state changes or other observable behavior from an otherwise ordinary program.
 - Both value-producing code and conditional branches must preserve evaluation exactly once. A fix confined to one emission path would leave the same expression behaving differently depending on where it appears.
 
-##### How?
+#### How?
 
 - Preserve left-operand evaluation in the affected `CondOpExpression` value and conditional-jump generation paths while still producing the known Boolean result.
 - Correct the assignment classification to inspect the right operand instead of inspecting the left operand twice.
 - Add a runtime fixture that checks call counts and results for both runtime operand values, across assignment, branches, negated branches and argument evaluation, with other short-circuit forms as controls.
 
-##### Implications
+#### Implications
 
 **Must merge first: none.** This is a standalone compiler correctness fix based directly on master `da07a0be8`. It does not depend on #687, the embedding APIs, Gradle tooling or the LSP. It benefits ordinary compiled programs and introduces no runtime API.
 
 The prepared LSP comparison base includes this correction so that it uses the corrected compiler. That is a tested-baseline choice, not a new API dependency of the language server.
 
-##### Changes
+#### Changes
 
 The production change is confined to `CondOpExpression.java`. `conditionalEffects.x` supplies 22 assertion-based runtime checks. The fixture needs no injected console or success-message logging; failures are expressed by assertions.
 
-#### Files changed
+### Files changed
 
 | Area | Files | What changes |
 | --- | ---: | --- |
@@ -724,6 +350,10 @@ The production change is confined to `CondOpExpression.java`. `conditionalEffect
 
 **2 files; +95/−1.** The TestConditionalEffects runtime fixture passed all 22 checks. Formatting passed.
 
+### Review and acceptance focus
+
+The runtime fixture verifies exactly-once left-operand evaluation for both Boolean operand values. It covers values, branch conditions, negated branches and call arguments, with the other short-circuit forms as controls. A constant result must not erase the operand's observable effects.
+
 <details>
 <summary>Exact changed files</summary>
 
@@ -734,42 +364,44 @@ The production change is confined to `CondOpExpression.java`. `conditionalEffect
 
 </details>
 
-### 7: Compiler-backed LSP and IntelliJ/VS Code integrations
+<a id="lsp-product"></a>
+
+## Compiler-backed LSP and editor integrations
 
 Branch `errs/lsp-editors-20261009` at `2dc91cf70`; base `errs/lsp-review-base-20261009` at `3f8aad03e`.
 
-[Open this scope in GitHub’s compare view](https://github.com/xtclang/xvm/compare/errs/lsp-review-base-20261009...errs/lsp-editors-20261009). No PR has been opened.
+[Open this branch in GitHub’s compare view](https://github.com/xtclang/xvm/compare/errs/lsp-review-base-20261009...errs/lsp-editors-20261009). [Full local patch](build/reviews/remaining-branches-20261009/lsp-editors.patch). No PR has been opened.
 
-#### Proposed PR description
+### Proposed PR description
 
 **Title: [LSP] Deliver compiler-backed language tooling for IntelliJ and VS Code**
 
-##### Why?
+#### Why?
 
 - The compiler foundation becomes useful to users when editors consume its source identities, resolved types, call bindings and incomplete-source queries. A parser fallback alone cannot provide equivalent semantic accuracy for navigation, overloads or refactoring.
 - An interactive compiler host must also manage cancellation, stale documents, dependency changes and compiler ownership. Connecting request handlers directly to mutable compiler state would leave correctness and responsiveness problems outside the API's guarantees.
 - The server and both clients need to ship as a coherent product: project import, settings, adapter switching, source attachments and diagnostics must agree across the protocol boundary.
 
-##### How?
+#### How?
 
 - Add the compiler adapter and detached semantic models, with serialized compiler access, cancellation, source/dependency tracking and invalidation. Use the compiler adapter by default while retaining the selectable Tree-sitter fallback.
 - Build editor features on compiler facts: navigation and references, hierarchies, completion/signature help, rename and refactoring, formatting, theme-based semantic highlighting, inlay hints and CodeLens.
 - Integrate IntelliJ and VS Code with the evaluated Gradle model, library sources, adapter selection/restart, configuration and support logs.
 - Add shared scenarios, packaged-server tests, native editor acceptance harnesses, timeout handling and retained CI reports so the implementation can be exercised through real clients.
 
-##### Implications
+#### Implications
 
-**Must merge first:** the proposed **semantic-facts** PR, then the combined **partial-analysis** PR; the independent **Gradle compiler model** PR; and [#686 — transient thread-local lifecycle correction](https://github.com/xtclang/xvm/pull/686). Their inherited compiler/repository prerequisites are [#683](https://github.com/xtclang/xvm/pull/683), [#685](https://github.com/xtclang/xvm/pull/685) and [#687](https://github.com/xtclang/xvm/pull/687). Semantic facts and partial analysis supply APIs called directly by the adapter; the Gradle model supplies real project inputs; #686 addresses lifecycle behavior in the long-lived host.
+**Must merge first:** the proposed [semantic-facts PR](#semantic-facts), then the [partial-analysis PR](#partial-analysis); the independent [Gradle compiler-model PR](#gradle-model); and [#686 — transient thread-local lifecycle correction](https://github.com/xtclang/xvm/pull/686). Their inherited compiler/repository prerequisites are [#683](https://github.com/xtclang/xvm/pull/683), [#685](https://github.com/xtclang/xvm/pull/685) and [#687](https://github.com/xtclang/xvm/pull/687). Semantic facts and partial analysis supply APIs called directly by the adapter; the Gradle model supplies real project inputs; #686 addresses lifecycle behavior in the long-lived host.
 
-The prepared base also contains the independent **Boolean operand-effects correction**. Land or explicitly reconcile that correction before updating this product branch so its tested compiler baseline is preserved; it does not add an API needed to compile the LSP. The two published comparison-base refs are bookkeeping for review, not additional PRs to merge.
+The prepared base also contains the independent [Boolean operand-effects correction](#boolean-effects). Land or explicitly reconcile that correction before updating this product branch so its tested compiler baseline is preserved; it does not add an API needed to compile the LSP. The two published comparison-base refs are bookkeeping for review, not additional PRs to merge.
 
 This branch intentionally delivers the complete server/editor product after the separately reviewable compiler foundations. It uses released LSP4J/LSP4IJ dependencies and does not require private forks. Public color-library design, notebooks, runtime/DAP work and Microsoft Marketplace authentication/publication setup remain deferred. It does not absorb every unassigned compiler cleanup listed later in this roadmap.
 
-##### Changes
+#### Changes
 
 The largest areas are `lang/lsp-server`, `lang/intellij-plugin` and `lang/vscode-extension`. Supporting changes update grammar/highlighting generation, shared fixtures, build/test integration and XDK library packaging. Focused consumer tests prove that the extracted product compiles against the extracted compiler APIs; the full native-editor acceptance run and complete product suite remain required before claiming release acceptance.
 
-#### Files changed
+### Files changed
 
 | Area | Files | What changes |
 | --- | ---: | --- |
@@ -783,6 +415,10 @@ The largest areas are `lang/lsp-server`, `lang/intellij-plugin` and `lang/vscode
 | **Total** | **648** | Incremental product changes; compiler/Gradle prerequisites are excluded from this comparison. |
 
 **648 files; +110,180/−5,375.** 123 focused adapter and direct-API tests passed with no skips. The server, IntelliJ plugin and their test sources compile; VS Code TypeScript compilation passes. Root/server/IntelliJ formatting checks pass. Full native editor acceptance and the complete product suite have not been rerun for this extracted branch.
+
+### Review and acceptance focus
+
+Before release acceptance, run the packaged server and both native editor paths. Unexpected timeouts, hanging dialogs and server-failure popups must fail the scenario; intentional negative cases must assert their expected outcome. Keep known client/platform limitations explicit. Reconcile the product against the actual merged compiler and Gradle revisions, and keep any newly discovered general compiler defect visible as a separate review decision.
 
 <details>
 <summary>Exact changed files</summary>
@@ -1440,7 +1076,22 @@ The largest areas are `lang/lsp-server`, `lang/intellij-plugin` and `lang/vscode
 
 </details>
 
-### Differences deliberately not swept into the product branch
+## Validation and release requirements
+
+- Keep each capability's implementation, public contract, direct consumer tests and relevant documentation together. A passing isolated Java suite does not establish LSP adapter compatibility.
+- Preserve the agreed **0.5.0 Java API migration boundary**. Ordinary CLI behavior and Java source/binary compatibility are different claims; removed APIs and changed result shapes require migration and recompilation.
+- Reconcile stacked branches against the actual merged prerequisites, preserving accepted cleanup, compiler fixes and current Gradle versions. Do not replay an obsolete owner-pool fallback or restore a downgraded wrapper.
+- Rerun relevant tests after material changes/rebases, inspect JUnit XML failures and skips, and build the XDK inputs first. Gradle changes must preserve configuration-cache support. Full native-editor acceptance remains outstanding for the extracted product branch.
+- Mirror accepted branch fixes into the integration branch. Its latest synchronization passed **695 compiler/utility tests and 270 LSP compiler/embedding consumer tests**; 44 existing disabled/platform/opt-in Java skips remained, and none of the changed regressions or focused LSP tests were skipped. The Boolean runtime fixture, XDK build and root/server formatting checks also passed. This is integration evidence, not a substitute for each branch's recorded validation.
+- When PR submission is authorized, request **ggleyzer, cpurdy and thegridman**. Preserve required reviews, CI and conversation resolution. A stacked parent does not inherit master's review protection automatically.
+
+## Deferred work
+
+Runtime execution/DAP, notebooks and a public color library remain deferred. Theme-based source highlighting is included in the LSP/editor product. Microsoft Marketplace authentication and automatic publication are postponed and do not block the compiler foundations. IntelliJ Platform and VS Code upstream changes remain deferred; released client dependencies, supported workarounds and explicit limitations are the shipping plan.
+
+Unrelated runtime/JIT edits, broad modernization, documentation sweeps and historical review scripts are not implicitly included in the five prepared branches. The reconciliation inventory below preserves their visibility and identifies compiler follow-ups that still need a decision.
+
+## Remaining work outside the five prepared branches
 
 The integration snapshot and prepared stack still differ in the files below. This is a
 **reconciliation inventory**, not an additional PR or a patch to apply wholesale. It includes
@@ -1585,5 +1236,110 @@ not forward changes proposed for publication.
 | [plugin/src/main/java/org/xtclang/plugin/runtime/impl/IsolatedDirectExecutor.java](/private/tmp/xvm-review-source-20261009/plugin/src/main/java/org/xtclang/plugin/runtime/impl/IsolatedDirectExecutor.java) | 3 / 5 |
 | [plugin/src/main/java/org/xtclang/plugin/tasks/XtcCompileTask.java](/private/tmp/xvm-review-source-20261009/plugin/src/main/java/org/xtclang/plugin/tasks/XtcCompileTask.java) | 6 / 6 |
 | [pr-roadmap.md](/private/tmp/xvm-review-source-20261009/pr-roadmap.md) | 404 / 0 |
+
+</details>
+
+## Recorded evidence for existing PRs
+
+These details explain already-open PRs and their recorded tests. They are not another submission plan.
+
+<details>
+<summary>#683: tolerant platform lookup and host diagnostics</summary>
+
+Gene correctly identified a regression in the first version: throwing on an incompatible
+`.xtc` candidate prevented scanning a mixed-version directory or trying a later repository.
+The revised PR at `902460194` instead preserves two separate responsibilities:
+
+- **Lookup:** skip unreadable/incompatible candidates, continue searching, and return a usable
+  module or ordinary absence. An obsolete binary alongside a valid dependency is not a failure
+  of the successful lookup.
+- **Inspection:** `ModuleRepository.getReadFailures()` exposes an immutable map of file paths
+  and original I/O causes. Reading the snapshot performs no I/O; implementations without retained
+  failures inherit an empty map.
+- **Host policy:** #685 consumes retained issues after required-dependency resolution fails.
+  Successful fallback and ordinary source errors must not acquire spurious repository errors.
+  A skipped file is supporting evidence, not proof that it contains the missing module.
+- **Recovery:** subsequent access retries failed candidates, including repairs with unchanged
+  size/timestamp; successful retry or observed removal clears the retained issue.
+
+The runtime bridge in
+[xCoreRepository](javatools/src/main/java/org/xvm/runtime/template/_native/mgmt/xCoreRepository.java)
+uses `loadModule` and translates absence into the language's conditional result. It need not
+adopt a throwing lookup API or inspect the new snapshot. The failure-inspection API is additive;
+retry/cache behavior and removal of stdout reporting are explicit behavior changes to review.
+
+Recorded regression coverage: **12 repository cases passed with zero skips**, including mixed
+formats, directory and single-file fallback, versioned lookup, retained causes, replacement and
+removal. This proves those cases, not every possible platform workload. Keep these controls when
+refreshing #683 and #685.
+
+</details>
+
+<details>
+<summary>#685: embedding foundation and recorded rebase validation</summary>
+
+The requested #685 rebase is complete and pushed as`c1a98a677`. Master's #684 commit is
+an ancestor, the duplicate cherry-pick was dropped, and all remaining patches and the final source
+tree are unchanged. The rerun passed **467 Java tests and 459 language-server tests**, with
+42 and 3 existing skips respectively; the three #684 behaviors passed without skips.
+XDK distribution and formatting checks passed. The current master diff is **111 files
+(+5,447/−880)** while #683 remains unmerged. The old published head is preserved in local backup
+branch `backup/embedding-685-before-master-rebase-20261009`.
+
+#685 contains the listener contract, explicit destinations and named suppression, scoped reporting,
+parser attempts, validation-state restoration, compilation outcomes and ordinary partial progress,
+explicit structure diagnostics and cached TypeInfo replay, cancellation, and host source snapshots.
+These are one complete host-compilation lifecycle; do not split them back into new PRs.
+
+The prepared embedding-only patch is **105 files (+5,072/−844)** against its recorded prerequisite
+base. That is a preparation measurement, not a claim about the live master diff after rebasing.
+See the [preparation report and exact inventory](build/reviews/embedding-combined-20261009/review.md).
+The report's publication-time master/PR status statements are historical; this roadmap gives the
+updated submission plan.
+
+</details>
+
+<details>
+<summary>#687: exact six-file scope and compiler regression evidence</summary>
+
+**Published as [#687](https://github.com/xtclang/xvm/pull/687):** branch
+`errs/compiler-type-correctness-20261009`, based directly on
+master `da07a0be8`, in `/private/tmp/xvm-compiler-correctness-20261009`. This extraction is
+independent of #683/#685 and leaves their API migrations out. Commit `f29cf28c0` is pushed; the PR
+is ready for review by ggleyzer, cpurdy and thegridman.
+
+**Exact diff: 6 files, +365/−29 lines.** Production accounts for +57/−29 across four files;
+the two new direct-consumer test files add 308 lines. The compiler changes were extracted from
+the existing implementation; the tests use master's current embedding API.
+
+Review the [complete six-file patch](build/reviews/compiler-correctness-20261009/compiler-correctness.patch)
+and [recorded test counts](build/reviews/compiler-correctness-20261009/validation.json).
+The adjacent `test-results` directory preserves the baseline, fixed and integration JUnit XMLs.
+
+| File | Extracted change |
+| --- | --- |
+| [NameExpression.java](/private/tmp/xvm-compiler-correctness-20261009/javatools/src/main/java/org/xvm/compiler/ast/NameExpression.java) | Bind hidden generic type arguments in both the callable type and binary AST; retain concrete function register types; resolve atomic reference owners consistently for explicit, current, singleton and enclosing receivers; correct the enclosing-instance AST's owner type. |
+| [InvocationExpression.java](/private/tmp/xvm-compiler-correctness-20261009/javatools/src/main/java/org/xvm/compiler/ast/InvocationExpression.java) | Combine argument and return fitting validity instead of overwriting an earlier argument failure. |
+| [SequentialAssignExpression.java](/private/tmp/xvm-compiler-correctness-20261009/javatools/src/main/java/org/xvm/compiler/ast/SequentialAssignExpression.java) | Preserve the validated result type and concrete atomic reference type in prefix/postfix binary ASTs. |
+| [AssignmentStatement.java](/private/tmp/xvm-compiler-correctness-20261009/javatools/src/main/java/org/xvm/compiler/ast/AssignmentStatement.java) | Use the resolved atomic reference type for compound assignment AST targets. |
+| [CompilerFunctionTypingTest.kt](/private/tmp/xvm-compiler-correctness-20261009/lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/CompilerFunctionTypingTest.kt) | 12 cases: four bound generic function forms and serialization, complete-call controls, and direct fitting-contract checks for matching returns with valid/missing/excess/wrong-type arguments. |
+| [CompilerAtomicEmissionTest.kt](/private/tmp/xvm-compiler-correctness-20261009/lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/CompilerAtomicEmissionTest.kt) | 18 cases: typed serialized prefix/postfix results, enclosing owners, generic receivers, compound assignments and invalid-operation controls. |
+
+The source-level failure controls alone cannot expose the argument-fitting defect: existing
+diagnostics already reject the complete invalid program. The direct test additionally verifies
+the protected fitting method's documented type-or-absence result, using actual compiler types
+and literal fitting, without reflection or private field access.
+
+**Focused evidence:** unchanged master fails 22 of these 30 cases; the extracted fixes pass all
+30. The same 30 cases pass in the LSP mono-code branch. The fixes have been restored after the
+baseline comparison, and the new tests are mirrored in the integration checkout.
+
+**Full validation:** the forced Java and language-server suite run has zero failures or errors:
+386 Java tests passed with 42 skipped; 462 language-server tests passed with 3 skipped. All 30
+new cases ran without skips. XDK distribution assembly, root and language-server formatting
+checks, and `git diff --check` passed. These checks validate compilation and serialized compiler
+output; the new regressions do not execute programs in the runtime.
+
+Switch audit controls and cached-warning replay are not production changes in this PR.
 
 </details>
