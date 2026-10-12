@@ -1,15 +1,19 @@
-package org.xvm.compiler.ast;
+package org.xvm.compiler.ast.partial;
 
 import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
-import org.xvm.compiler.ast.partial.IncompleteExpression;
-import org.xvm.compiler.ast.partial.IncompleteStatement;
-import org.xvm.compiler.ast.partial.PartialSyntax;
+import org.xvm.compiler.ast.Expression;
+import org.xvm.compiler.ast.LabeledExpression;
+import org.xvm.compiler.ast.NonBindingExpression;
+import org.xvm.compiler.ast.PartialAst;
 import org.xvm.compiler.ast.partial.PartialSyntax.ArgumentCursor;
 
-/** Trial argument construction; lexical parenting stays inside the ordinary compiler package. */
+/**
+ * Builds disposable argument lists for incomplete-call candidate fitting. The ordinary compiler
+ * bridge supplies lexical parentage without installing proposals into the retained source tree.
+ */
 final class PartialArgument {
     private PartialArgument() {}
 
@@ -28,8 +32,7 @@ final class PartialArgument {
     }
 
     private static List<Expression> replace(IncompleteStatement call, int index, Expression value) {
-        value.setParent(call);
-        value.introduceParentage();
+        PartialAst.parentTree(value, call);
         var arguments = call.getArguments();
         return IntStream.range(0, arguments.size())
                 .mapToObj(i -> i == index ? value : arguments.get(i)).toList();

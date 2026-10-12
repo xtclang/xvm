@@ -126,6 +126,8 @@ public class NewExpression
      * Written anonymous body before an anonymous class owns it. It is deliberately not a compiler
      * child yet: registering/validating it requires the construction's inferred type and context.
      * Syntax readers may inspect this borrowed node; they must not adopt or validate it themselves.
+     *
+     * @return the retained anonymous source body, or empty when none remains unregistered
      */
     public Optional<StatementBlock> getUnregisteredBody() {
         return anon == null ? Optional.ofNullable(body) : Optional.empty();

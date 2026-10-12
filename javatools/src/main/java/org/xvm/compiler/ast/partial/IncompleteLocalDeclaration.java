@@ -14,12 +14,24 @@ import static org.xvm.asm.ErrorListener.in;
 
 /** A missing local name and its written initializer; no register or inferred type is invented. */
 public final class IncompleteLocalDeclaration extends Statement {
+    /**
+     * Retain an unfinished local declaration and its written initializer as syntax.
+     *
+     * @param cursor       the retained incomplete declaration-name site
+     * @param initializer  the written initializer expression, or null if absent
+     * @param end          the declaration's exclusive source end
+     */
     public IncompleteLocalDeclaration(IncompleteStatement cursor, Expression initializer, long end) {
         this.cursor = cursor;
         this.initializer = initializer;
         this.end = end;
     }
 
+    /**
+     * Obtain the retained initializer without validating the unfinished declaration.
+     *
+     * @return the written initializer, or null when absent
+     */
     public Expression getInitializer() {
         return initializer;
     }

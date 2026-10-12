@@ -13,7 +13,6 @@ import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.Context;
 import org.xvm.compiler.ast.Parameter;
-import org.xvm.compiler.ast.PartialQueries;
 import org.xvm.compiler.ast.StageMgr;
 import org.xvm.compiler.ast.Statement;
 import org.xvm.compiler.ast.StatementBlock;
@@ -29,10 +28,33 @@ import static org.xvm.asm.ErrorListener.in;
  */
 public final class IncompleteTypeCompositionStatement extends TypeCompositionStatement {
 
+    /**
+     * Retain a written type header and its query sites without making the declaration emittable.
+     *
+     * @param source    the source that owns the retained declaration
+     * @param category  the declaration's written category token
+     * @param name      the written declaration name token, or null if absent
+     * @param start     the declaration's inclusive source start
+     * @param end       the declaration's exclusive source end
+     * @param cursors   the incomplete type or name query sites retained in the header
+     */
     public IncompleteTypeCompositionStatement(Source source, Token category, Token name, long start, long end, List<IncompleteStatement> cursors) {
         this(source, category, name, null, null, start, end, cursors, List.of());
     }
 
+    /**
+     * Retain a written type header and its query sites without making the declaration emittable.
+     *
+     * @param source     the source that owns the retained declaration
+     * @param category   the declaration's written category token
+     * @param name       the written declaration name token, or null if absent
+     * @param qualified  the written qualified name tokens, or null for an unqualified declaration
+     * @param body       the retained source body, or null if absent
+     * @param start      the declaration's inclusive source start
+     * @param end        the declaration's exclusive source end
+     * @param cursors    the incomplete type or name query sites retained in the header
+     * @param formals    written formal names and constraints, without invented declaration identities
+     */
     public IncompleteTypeCompositionStatement(Source source, Token category, Token name, List<Token> qualified, StatementBlock body, long start, long end, List<IncompleteStatement> cursors, List<Parameter> formals) {
         super(source, category, name, start, end);
         this.cursors = List.copyOf(cursors);
@@ -41,6 +63,17 @@ public final class IncompleteTypeCompositionStatement extends TypeCompositionSta
         this.body = body;
     }
 
+    /**
+     * Retain a written type header and its query sites without making the declaration emittable.
+     *
+     * @param source    the source that owns the retained declaration
+     * @param category  the declaration's written category token
+     * @param name      the written declaration name token, or null if absent
+     * @param body      the retained source body, or null if absent
+     * @param start     the declaration's inclusive source start
+     * @param end       the declaration's exclusive source end
+     * @param cursors   the incomplete type or name query sites retained in the header
+     */
     public IncompleteTypeCompositionStatement(Source source, Token category, Token name, StatementBlock body, long start, long end, List<IncompleteStatement> cursors) {
         this(source, category, name, start, end, cursors);
         this.body = body;

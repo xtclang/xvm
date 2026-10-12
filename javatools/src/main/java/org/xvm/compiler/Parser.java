@@ -63,6 +63,11 @@ public class Parser {
     /**
      * Create a parser that can retain a trailing incomplete expression statement for explicit
      * partial analysis. Errors are still reported; this does not make the source compilable.
+     *
+     * @param source    the source snapshot to parse
+     * @param listener  the diagnostic listener and abort policy for this parse
+     *
+     * @return a parser that retains only the explicitly supported incomplete syntax boundaries
      */
     public static Parser forPartialAnalysis(Source source, ErrorListener listener) {
         return new Parser(source, listener, null, true, NO_CURSOR);
@@ -76,6 +81,12 @@ public class Parser {
      * need not be malformed; it is inspected as a prefix, without validating the selected operation.
      * Missing call/group/index closers around that operation retain their enclosing syntax at a
      * statement or outer-delimiter boundary; a cursor at EOF also retains unfinished blocks.
+     *
+     * @param source    the source snapshot to parse
+     * @param cursor    the selected position in the owning Source snapshot
+     * @param listener  the diagnostic listener and abort policy for this parse
+     *
+     * @return a parser that retains only the explicitly supported incomplete syntax boundaries
      */
     public static Parser forPartialAnalysis(Source source, long cursor, ErrorListener listener) {
         if (cursor == NO_CURSOR) {
@@ -5373,6 +5384,7 @@ public class Parser {
         return new IncompleteHeader(new IncompleteStatement(prefix, f_cursor, INCOMPLETE_EXPRESSION));
     }
 
+    /** Unwinds header parsing while carrying the incomplete site, written type and formal parameters. */
     private static class IncompleteHeader extends CompilerException {
         private IncompleteHeader(IncompleteStatement site) {
             this(site, site.getTarget(), List.of());
@@ -6526,6 +6538,8 @@ public class Parser {
      * a kept attempt is the real parse and nothing re-reads those tokens. An attempt is a
      * {@link ErrorListener#branch} instead, so keeping it merges what it had to say and dropping
      * it drops the lot, which is the behaviour the rest of the compiler already gets.
+     *
+     * @return a scope that restores tokens and discards diagnostics unless the attempt is kept
      */
     public Attempt attempt() {
         return new Attempt();
@@ -6536,6 +6550,7 @@ public class Parser {
      */
     public class Attempt
             implements AutoCloseable, ErrorListener {
+        /** Save the token position and install a diagnostic branch until this attempt is closed. */
         public Attempt() {
             // read the destination before moving it: the branch buffers into whatever this parser
             // was reporting to when the attempt began

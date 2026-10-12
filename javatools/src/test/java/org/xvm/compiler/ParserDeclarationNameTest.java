@@ -168,5 +168,6 @@ public class ParserDeclarationNameTest {
                 .filter(site -> site.getDeclarationType().isPresent());
     }
 
+    /** Retains the recovered tree, cursor and diagnostics together for declaration-name assertions. */
     private record Parsed(StatementBlock tree, Source source, long cursor, ErrorList errors) {}
 }

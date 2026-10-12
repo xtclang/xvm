@@ -7,8 +7,9 @@ compiler, IR, runtime, etc.
 This project uses the library produced by the "javatools_utils" project,
 and the `implicit.x` resource file from the "ecstasy" project.
 
-Long term, this project will be used to help support IDE
-plug-ins for common Java-based IDEs, such as IntelliJ IDEA.
+The compiler also supports the compiler-backed language server. Start with
+[Compiler architecture for language tooling](#compiler-architecture-for-language-tooling) for the
+design rationale, API boundaries and compiler changes required by editor consumers.
 
 (Note: The test portion of this project may have dependencies
 on test frameworks.) 
@@ -30,6 +31,95 @@ Status: Suitable for use
   `org.xvm.compiler.ast.AstNode` objects
 * AST nodes are multi-pass compiled (with optional re-queuing)
   via `org.xvm.compiler.ast.StageManager`
+
+## Compiler architecture for language tooling
+
+The language server needs the compiler's answers while a user is editing: which declaration a
+name binds to, which overload an argument fits, what type an expression has, and which diagnostics
+belong to the current document revision. Running the command-line compiler and parsing its output
+cannot supply those answers. Successful compilation also discards or rewrites some of the source
+information that navigation needs; an unfinished buffer may never reach emission at all.
+
+This section and the detailed diagnostic guide below explain the design rationale and changes to
+`javatools` that make this possible. The compiler remains independent of LSP, IntelliJ and VS Code.
+It exposes compilation results and source facts; the adapter in `lang/lsp-server` converts those
+facts into immutable editor models, applies document-version checks and implements the protocol.
+
+| Compiler mechanism | Why an editor needs it | Code and contract |
+| --- | --- | --- |
+| Owned diagnostics and explicit stopping | Associate every report with an attempt, retain speculative failures appropriately, and cancel obsolete work without manufacturing source errors. | `ErrorListener`, `ErrorList`, `Reporting`; [diagnostic design](#compiler-diagnostics-and-error-listeners). |
+| Snapshot inputs and compilation outcomes | Compile unsaved module/member files together and distinguish successful output from ordinary partial progress after a failure. | `EmbeddingSupport` and the `ModuleInfo` source hooks; [host snapshots and outcomes](#compile-a-host-snapshot-and-inspect-its-outcome). |
+| Selected semantic facts | Navigate exact overloads and argument slots without reproducing compiler resolution in the editor. Preserve references lost to constant folding. | `InvocationBinding`, `InitializerBinding` and `EmbeddingSupport.Compilation`. |
+| Declaration and incomplete-source analysis | Answer bounded scope, type and argument queries while the buffer is unfinished, without presenting invalid source as executable code. | `EmbeddingSupport.analyzeDeclarations`, `analyzeIncomplete`, `CursorBinding` and `compiler.ast.partial`. |
+| Source-tree copying | Probe proposed syntax on an independently parented tree without changing the source tree being inspected. | `AstNode.copyTree` and its covariant specializations. |
+| Repository failure observations | Explain a required dependency that cannot be read while preserving repositories' existing best-effort search behavior. | `ModuleRepository`, `DirRepository`, `FileRepository` and the embedding dependency search. |
+| Scoped compiler state and cache reporting | Release operation-owned listeners and temporary state, and replay cached diagnostics to the current attempt. | `Reporting`, `TransientThreadLocal` and `TypeInfo` diagnostic replay. |
+
+### Preserve selected semantic facts
+
+`InvocationBinding` records selected methods, function signatures, constructors and argument-to-
+parameter mappings at the point where the compiler establishes them. The maps use AST identity;
+they do not guess a target by spelling or make a dynamic function call look like a statically
+selected method. `InitializerBinding` preserves validated source facts before a constant
+initializer's temporary method is discarded. Without that step, a name can compile correctly but
+disappear from references, rename and highlighting after constant folding.
+
+These facts belong to a compilation attempt. An immutable map does not make the contained AST,
+type constants or constant pool safe to share across workers. The language adapter copies the
+facts it needs into detached models before releasing the attempt. Keeping this boundary explicit
+is essential for a long-running editor that repeatedly replaces analyses of unsaved text.
+
+### Analyze declarations and unfinished source explicitly
+
+`analyzeDeclarations` resolves declaration structure without promising a fully validated or
+emitted module. `analyzeIncomplete` retains supported incomplete syntax and reports cursor facts
+from its real lexical context. Its cursor overloads support a broader set of editing positions
+than the deliberately narrow trailing-expression overload; their Javadoc defines each boundary.
+Unsupported damage remains a diagnostic rather than a guessed semantic result.
+
+Incomplete nodes and their analysis helpers live in `org.xvm.compiler.ast.partial`:
+`PartialQueries` coordinates inspection, `PartialCallResolver` and `PartialConstructionResolver`
+fit candidates, `PartialArgument` builds disposable argument proposals, and `CursorScope` captures
+visible names and resolves unfinished type headers. These helpers are package private.
+
+Java subpackages do not share package access. One internal bridge, `ast.PartialAst`, lets these
+helpers reuse ordinary parenting, validation, argument fitting, construction preparation and
+scope lookup. Existing AST members retain their protected or package-private visibility. The
+bridge delegates compiler operations; the partial package decides which incomplete syntax and
+candidate facts to retain. It neither introduces another type checker nor exposes compiler
+contexts as a host API. Embedding hosts continue to consume `EmbeddingSupport` results.
+
+Candidate fitting uses ordinary compiler rules on trial syntax. A possible completion is not a
+selected invocation, and partial analysis never supplies an executable module. This distinction
+lets signature help and completion use authentic compiler information without weakening the
+normal validation or emission contract.
+
+### Copy source trees and preserve ordinary compiler behavior
+
+The old pervasive `clone()` calls obscure an important distinction: `Object.clone()` starts with
+a shallow field copy, while AST overrides selectively copy children and repair ownership. The
+name alone does not tell a caller which bindings, transient state or parents remain shared, and
+adding a field can silently change what a clone retains. A clone of a validated node is therefore
+not equivalent to freshly parsed syntax. This is especially confusing for speculative editor
+queries, which need to know exactly what a trial may mutate without affecting the original.
+
+`copyTree()` names the source-tree copy contract and gives expression/statement callers covariant
+return types. Its contract covers child ownership, source metadata and the existing stage-aware
+copy behavior; it is not a general deep copy of an entire compiler or constant pool. Specialized
+incomplete nodes copy and adopt their children explicitly. The existing `clone()` entry point
+continues to use the same copying machinery so the two APIs cannot drift independently.
+
+The compiler's callable typing and fitting corrections serve both ordinary compilation and
+cursor probes. Boolean operand corrections preserve evaluation and side effects even when the
+result is constant. These are compiler correctness rules, not alternate semantics enabled by an
+LSP flag. The separate removal of the abandoned binary AST does not remove the source AST used
+by tooling; legacy `.xtc` slots are still read or skipped as required for format compatibility.
+
+Repository observation is similarly additive to search behavior: an unreadable candidate can
+still be skipped while another repository supplies the module. A host receives a useful cause
+when a required dependency ultimately cannot be found. The diagnostic guide below explains the
+intentional Java API migrations, the behavior retained for ordinary CLI use and the regression
+evidence; it does not claim universal source or binary compatibility for old Java embedding code.
 
 ## Compiler diagnostics and error listeners
 
@@ -366,12 +456,11 @@ Check failures and skips in `javatools/build/test-results/test/TEST-*.xml`; a gr
 not establish that optional tests executed. The real compiler-consumer integration test additionally
 exercises the standard build path with compiled modules supplied by its Gradle dependencies.
 
-### Combined embedding review scope
+### Embedding API boundaries
 
-This combined change includes the listener contract and explicit-listener migration, scoped
-parser/validation reporting, compilation outcomes, cached TypeInfo diagnostic replay, cancellation
-and host-supplied module source snapshots. The shared behavior can be reviewed with its actual
-host consumer tests rather than inferred across separate API migrations.
+The embedding API combines the listener contract, scoped parser/validation reporting, compilation
+outcomes, cached TypeInfo diagnostic replay, cancellation and host-supplied source snapshots.
+Consumer tests exercise these mechanisms together through the public entry points.
 
 The independent [repository read-failure fix](https://github.com/xtclang/xvm/pull/683) supplies
 retained I/O causes; this API forwards them only after a required dependency search fails.
@@ -379,9 +468,10 @@ retained I/O causes; this API forwards them only after a required dependency sea
 default-budget and lexical-rollback behavior preserved here. Empty transient-local retention is
 an independent utility fix. None of these APIs depends on an LSP implementation or editor.
 
-Selected-call facts, declaration-only analysis, incomplete-source recovery, cursor completion,
-AST copying and the production language server remain later review boundaries. The result here
-exposes ordinary compilation progress, not recovered syntax or executable output from invalid code.
+The ordinary compilation result exposes partial progress without treating invalid code as
+executable output. Selected-call facts and the separate declaration/incomplete-analysis APIs
+extend that model as described in the [architecture overview](#compiler-architecture-for-language-tooling).
+The language server remains a consumer outside `javatools`.
 
 ### Scoped parser and validation reporting
 
