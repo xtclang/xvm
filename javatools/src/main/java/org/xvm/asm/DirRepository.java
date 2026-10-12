@@ -397,9 +397,9 @@ public class DirRepository
 
         private ModuleInfo(File file, BiConsumer<File, IOException> onReadFailure) {
             this.onReadFailure = onReadFailure;
-            this.file      = file;
-            this.timestamp = file.lastModified();
-            this.size      = file.length();
+            this.file          = file;
+            this.timestamp     = file.lastModified();
+            this.size          = file.length();
 
             ModuleStructure module = tryLoad();
             if (module == null) {
@@ -416,12 +416,12 @@ public class DirRepository
         private ModuleInfo(File file, String name, long timestamp, long size, boolean err,
                            BiConsumer<File, IOException> onReadFailure) {
             this.onReadFailure = onReadFailure;
-            this.file      = file;
-            this.name      = name;
-            this.versions  = null;
-            this.timestamp = timestamp;
-            this.size      = size;
-            this.err       = err;
+            this.file          = file;
+            this.name          = name;
+            this.versions      = null;
+            this.timestamp     = timestamp;
+            this.size          = size;
+            this.err           = err;
         }
 
         ModuleStructure tryLoad() {
