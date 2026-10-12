@@ -679,7 +679,6 @@ public class AssignmentStatement
                 rvalue.generateAssignments(ctx, code, lValues, errs);
                 fCompletes &= rvalue.isCompletable();
             }
-
             break;
         }
 
@@ -749,7 +748,6 @@ public class AssignmentStatement
                     fCompletes &= rvalue.isCompletable();
                 }
             }
-
             break;
         }
 

@@ -994,7 +994,6 @@ public class Frame
                 default:
                     throw new IllegalStateException();
                 }
-
                 break;
             }
 

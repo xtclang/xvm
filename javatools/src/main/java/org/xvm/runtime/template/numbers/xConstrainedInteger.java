@@ -356,7 +356,6 @@ public abstract class xConstrainedInteger
                 }
                 return frame.assignValue(iReturn, xChar.makeHandle(lValue));
             }
-
             break;
         }
         }

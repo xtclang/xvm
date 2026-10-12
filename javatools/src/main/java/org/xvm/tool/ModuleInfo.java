@@ -279,7 +279,6 @@ public class ModuleInfo {
                                     + resolvedBinary + " is illegal because parent file "
                                     + fileParent + " is not a directory");
                         }
-
                         break;
                     }
 
