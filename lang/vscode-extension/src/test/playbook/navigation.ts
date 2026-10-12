@@ -20,7 +20,7 @@ export function navigationCases(): void {
         assert.ok(selections[0].parent.range.contains(selections[0].range));
     });
 
-    playbook('X2', async (workspace, data) => {
+    playbook('X2', async workspace => {
         const scenario = shared.diagnostics;
         const document = await workspace.open(scenario.file);
         for (const expected of scenario.errors) {
