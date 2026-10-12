@@ -618,7 +618,6 @@ public class Parser {
                                 start.getEndPosition());
                     }
                 }
-
                 break;
             }
             }

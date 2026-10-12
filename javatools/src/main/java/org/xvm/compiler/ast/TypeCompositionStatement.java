@@ -1527,7 +1527,6 @@ public class TypeCompositionStatement
                 } else {
                     // TODO CP this used to be an error, but we need to allow all pure types
                 }
-
                 break;
             }
         }
