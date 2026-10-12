@@ -13,13 +13,6 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.BinaryAST;
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.RegAllocAST;
-import org.xvm.asm.ast.StmtBlockAST;
-import org.xvm.asm.ast.TryCatchStmtAST;
-
-import org.xvm.asm.ast.TryFinallyStmtAST;
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.StringConstant;
@@ -213,7 +206,7 @@ public class TryStatement
                 CatchStatement catchNew = (CatchStatement) catchOld.validate(ctxCatch, errs);
 
                 fReachable |= ctxCatch.isReachable();
-                ctxNext     = ctxCatch.exit();
+                ctxNext = ctxCatch.exit();
 
                 if (catchNew == null) {
                     fValid = false;
@@ -299,12 +292,6 @@ public class TryStatement
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
         boolean      fCompletes = fReachable;
         ConstantPool pool       = pool();
-        AstHolder    holder     = ctx.getHolder();
-
-        ExprAST[]   aAstResources = null;
-        BinaryAST[] aAstCatches   = null; // "catch(T e) {...}" StmtBlocks
-        BinaryAST   astCatchAll   = null;
-        BinaryAST   astBlock;
 
         // using() or try()-with-resources
         FinallyStart[] aFinallyStart = null;
@@ -315,11 +302,9 @@ public class TryStatement
 
             int c = resources.size();
             aFinallyStart = new FinallyStart[c];
-            aAstResources = new ExprAST[c];
             for (int i = 0; i < c; ++i) {
                 Statement stmt = resources.get(i);
                 fCompletes = stmt.completes(ctx, fCompletes, code, errs);
-                aAstResources[i] = (ExprAST) holder.getAst(stmt);
 
                 FinallyStart opFinally = new FinallyStart(code.createRegister(pool.typeException१()));
                 aFinallyStart[i] = opFinally;
@@ -343,16 +328,13 @@ public class TryStatement
         }
 
         // try..catch
-        RegAllocAST[] aAllocCatch = null;
         if (catches != null) {
             int          cCatches    = catches.size();
             CatchStart[] aCatchStart = new CatchStart[cCatches];
 
-            aAllocCatch = new RegAllocAST[cCatches];
             for (int i = 0; i < cCatches; ++i) {
                 CatchStatement stmt = catches.get(i);
                 aCatchStart[i] = stmt.ensureCatchStart();
-                aAllocCatch[i] = stmt.getCatchRegister().getRegAllocAST();
             }
 
             // single "try" for all of the catches
@@ -363,22 +345,15 @@ public class TryStatement
         block.suppressScope();
         boolean fBlockCompletes = block.completes(ctx, fCompletes, code, errs);
 
-        astBlock = holder.getAst(block);
-
         // the "catch" blocks
         boolean fAnyCatchCompletes = false;
         if (catches != null) {
             code.add(new GuardEnd(labelCatchEnd));
 
-            int c = catches.size();
-            aAstCatches = new BinaryAST[c];
-            for (int i = 0; i < c; ++i) {
+            for (int i = 0, c = catches.size(); i < c; ++i) {
                 CatchStatement stmtCatch = catches.get(i);
                 stmtCatch.setCatchLabel(labelCatchEnd);
                 fAnyCatchCompletes |= stmtCatch.completes(ctx, fCompletes, code, errs);
-
-                aAstCatches[i] = new StmtBlockAST(
-                        new BinaryAST[] {aAllocCatch[i], holder.getAst(stmtCatch)}, true);
             }
         }
 
@@ -391,8 +366,6 @@ public class TryStatement
             code.add(labelCatchEnd); // the normal flow is to jump to the "FinallyStart" op
             code.add(opFinallyBlock);
             boolean fFinallyCompletes = catchall.completes(ctx, fCompletes, code, errs);
-
-            astCatchAll = holder.getAst(catchall);
 
             fTryCompletes &= fFinallyCompletes;
 
@@ -432,10 +405,10 @@ public class TryStatement
                 CatchStart     opCatch   = new CatchStart(regCatch, constName);
                 code.add(new GuardStart(new CatchStart[] {opCatch}));
 
-                Argument argResource      = resources.get(i).getLValueExpression()
+                Argument argResource = resources.get(i).getLValueExpression()
                                                 .generateArgument(ctx, code, false, errs);
-                Label    labelSkipClose   = new Label("skip_close");
-                Label    labelFallThrough = new Label(getCodeContainerCounter());
+                Label labelSkipClose   = new Label("skip_close");
+                Label labelFallThrough = new Label(getCodeContainerCounter());
                 if (!argResource.getType().isA(typeCloseable)) {
                     code.add(new JumpNType(argResource, typeCloseable, labelSkipClose));
                 }
@@ -460,11 +433,6 @@ public class TryStatement
             code.add(new Exit());
         }
 
-        holder.setAst(this, astCatchAll == null
-                ? new TryCatchStmtAST(aAstResources, astBlock, aAstCatches)
-                : new TryFinallyStmtAST(aAstResources, astBlock, aAstCatches,
-                        m_regFinallyException == null ? null : m_regFinallyException.getRegAllocAST(),
-                        astCatchAll));
         return fTryCompletes;
     }
 

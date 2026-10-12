@@ -12,9 +12,6 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
 
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.InvokeExprAST;
-
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -1010,14 +1007,6 @@ public class RelOpExpression
             generateAssignment(ctx, code, new Assignable(), errs);
             break;
         }
-    }
-
-    @Override
-    public ExprAST getExprAST(Context ctx) {
-        ExprAST ast1 = expr1.getExprAST(ctx);
-        ExprAST ast2 = expr2.getExprAST(ctx);
-
-        return new InvokeExprAST(m_idOp, getTypes(), ast1, new ExprAST[] {ast2}, false);
     }
 
     // ----- helpers -------------------------------------------------------------------------------

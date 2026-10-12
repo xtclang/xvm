@@ -38,19 +38,6 @@ import org.xvm.asm.Register;
 import org.xvm.asm.Version;
 import org.xvm.asm.VersionTree;
 
-import org.xvm.asm.ast.AssignAST;
-import org.xvm.asm.ast.BinaryAST;
-import org.xvm.asm.ast.CallExprAST;
-import org.xvm.asm.ast.CondOpExprAST;
-import org.xvm.asm.ast.ConstantExprAST;
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.IfStmtAST;
-import org.xvm.asm.ast.InitAST;
-import org.xvm.asm.ast.IsExprAST;
-import org.xvm.asm.ast.PropertyExprAST;
-import org.xvm.asm.ast.RegisterAST;
-import org.xvm.asm.ast.StmtBlockAST;
-
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.IdentityConstant;
@@ -213,7 +200,7 @@ public class TypeCompositionStatement
         this.qualified = Arrays.stream(Handy.parseDelimitedString(module.getName(), '.'))
                 .map(s -> new Token(0, 0, Id.IDENTIFIER, s))
                 .collect(Collectors.toCollection(ArrayList::new));
-        this.typeArgs  = new ArrayList<>(List.of(type));
+        this.typeArgs = new ArrayList<>(List.of(type));
 
         introduceParentage();
         setComponent(module);
@@ -872,11 +859,11 @@ public class TypeCompositionStatement
         // 3. verify that no more than one "extends", "import*", or "into" clause is used (subject
         //    to the exception defined by rule #8 above)
         // 4. verify that a package with an import does not have a body
-        boolean      fAlreadyExtends   = false;
-        boolean      fAlreadyImports   = false;
-        boolean      fAlreadyIntos     = false;
-        TypeConstant typeDefaultInto   = null;
-        TypeConstant typeDefaultImpl   = null;
+        boolean      fAlreadyExtends  = false;
+        boolean      fAlreadyImports  = false;
+        boolean      fAlreadyIntos    = false;
+        TypeConstant typeDefaultInto  = null;
+        TypeConstant typeDefaultImpl  = null;
         TypeConstant typeDefaultSuper = null;
 
         // virtual child super is analyzed/resolved by resolveNames()
@@ -1805,7 +1792,7 @@ public class TypeCompositionStatement
                 // scan for an @Override annotation
                 boolean fHasOverride = false;
                 if (annotations != null) {
-                    ClassConstant clzOverride  = pool().clzOverride();
+                    ClassConstant clzOverride = pool().clzOverride();
                     for (AnnotationExpression annotation : annotations) {
                         if (Handy.equals(clzOverride, annotation.toTypeExpression().ensureTypeConstant()
                                 .getSingleUnderlyingClass(false))) {
@@ -2103,7 +2090,7 @@ public class TypeCompositionStatement
         if (clzSuper != null && listParams != null) {
             TypeConstant typeSuper = pool.ensureAccessTypeConstant(
                                         clzSuper.getFormalType(), Access.PROTECTED);
-            TypeInfo     infoSuper = typeSuper.ensureTypeInfo(errs);
+            TypeInfo infoSuper = typeSuper.ensureTypeInfo(errs);
 
             Map<String, Component> mapChildren = component.getChildByNameMap();
             boolean                fInvalidate = false;
@@ -2389,11 +2376,11 @@ public class TypeCompositionStatement
                 }
             }
 
-            ConstantPool           pool          = pool();
-            List<Contribution>     listContribs  = null;
-            List<TypeConstant>     listTypes     = null;
-            List<MethodConstant>   listIds       = null;
-            List<List<Expression>> listArgLists  = null;
+            ConstantPool           pool         = pool();
+            List<Contribution>     listContribs = null;
+            List<TypeConstant>     listTypes    = null;
+            List<MethodConstant>   listIds      = null;
+            List<List<Expression>> listArgLists = null;
 
             for (Map.Entry<Contribution, List<Expression>> entry : m_mapContribArgs.entrySet()) {
                 Contribution contrib = entry.getKey();
@@ -2646,8 +2633,8 @@ public class TypeCompositionStatement
                 }
             }
 
-            boolean        fValid      = true;
-            TypeConstant[] atypeArgs   = idSuper.getRawParams();
+            boolean        fValid    = true;
+            TypeConstant[] atypeArgs = idSuper.getRawParams();
             for (int i = 0, c = listSuperArgs.size(); i < c; i++) {
                 Expression exprOld = listSuperArgs.get(i);
                 if (exprOld.isValidated()) {
@@ -2726,11 +2713,10 @@ public class TypeCompositionStatement
         // the constructor has two responsibilities:
         // 1) set each property based on the parameter name and value passed in as an arg
         // 2) call the super constructors (for extended class and incorporated mixins)
-        ConstantPool         pool      = pool();
-        ClassStructure       component = (ClassStructure) getComponent();
-        Code                 code      = constructor.ensureCode();
-        Context              ctxEmit   = ctxConstruct.emittingContext(code);
-        ArrayList<BinaryAST> listAsts  = new ArrayList<>();
+        ConstantPool   pool      = pool();
+        ClassStructure component = (ClassStructure) getComponent();
+        Code           code      = constructor.ensureCode();
+        Context        ctxEmit   = ctxConstruct.emittingContext(code);
 
         if (args == null) {
             // parameters that don't exist on the super and mixins must be properties on "this"
@@ -2751,7 +2737,7 @@ public class TypeCompositionStatement
 
                 if (!fSuper) {
                     // there must be a property by the same name on "this:struct"
-                    TypeInfo infoThis  = pool.ensureAccessTypeConstant(
+                    TypeInfo infoThis = pool.ensureAccessTypeConstant(
                             component.getFormalType(), Access.STRUCT).ensureTypeInfo(errs);
                     PropertyInfo propThis = infoThis.findProperty(sParam);
                     if (propThis == null || !propThis.isVar()) {
@@ -2764,10 +2750,6 @@ public class TypeCompositionStatement
                             PropertyConstant idProp = propThis.getIdentity();
                             Argument         arg    = ctxEmit.getVar(sParam);
                             code.add(new L_Set(idProp, arg));
-
-                            ExprAST regThis = ctxConstruct.getThisRegisterAST();
-                            listAsts.add(new AssignAST(new PropertyExprAST(regThis, idProp),
-                                            AssignAST.Operator.Asn, toExprAst(arg)));
                         } else {
                             constructorParams.get(iParam).log(errs, Severity.ERROR,
                                     Compiler.IMPLICIT_PROP_WRONG_TYPE, sParam,
@@ -2782,8 +2764,6 @@ public class TypeCompositionStatement
             if (constructor.isAnonymousClassWrapperConstructor()) {
                 // call the default initializer
                 code.add(new SynInit());
-
-                listAsts.add(InitAST.INSTANCE);
             }
         } else {
             for (int iSuper = 0, cSupers = listContribs.size(); iSuper < cSupers; iSuper++) {
@@ -2803,15 +2783,12 @@ public class TypeCompositionStatement
                 Argument[]       aSuperArgs    = new Argument[cSuperArgs];
                 int              cArgs         = listSuperArgs == null ? 0 : listSuperArgs.size();
 
-                Label    labelSkipSuper = null;
-                ExprAST  astCond        = null;
+                Label labelSkipSuper = null;
                 if (contrib.getComposition() == Composition.Extends) {
                     if (constructor.isAnonymousClassWrapperConstructor() &&
                             !constructSuper.isAnonymousClassWrapperConstructor()) {
                         // call the default initializer
                         code.add(new SynInit());
-
-                        listAsts.add(InitAST.INSTANCE);
                     }
                 } else { // Composition.Incorporates
                     Map<StringConstant, TypeConstant> mapConstraints = contrib.getTypeParams();
@@ -2830,33 +2807,19 @@ public class TypeCompositionStatement
                             Register regActualType = code.createRegister(typeConstraint);
                             code.add(new L_Get(idFormal, regActualType));
                             code.add(new JumpNType(regActualType, typeConstraint, labelSkipSuper));
-
-                            ExprAST astFormal = new PropertyExprAST(
-                                                    ctxConstruct.getThisRegisterAST(), idFormal);
-                            ExprAST astIs     = new IsExprAST(astFormal,
-                                                    new ConstantExprAST(typeConstraint), null);
-                            astCond = astCond == null
-                                ? astIs
-                                : new CondOpExprAST(astCond, CondOpExprAST.Operator.CondAnd, astIs);
                         }
-
                     }
                 }
 
                 // generate the super constructor arguments (filling in the default values)
-                ExprAST[] aAstArgs = new ExprAST[cSuperArgs];
                 for (int i = 0; i < cSuperArgs; i++) {
                     if (i < cArgs) {
                         Expression exprArg = listSuperArgs.get(i);
                         aSuperArgs[i] = exprArg.generateArgument(ctxEmit, code, true, errs);
-
-                        aAstArgs[i] = exprArg.getExprAST(ctxEmit);
                     } else {
                         org.xvm.asm.Parameter param = constructSuper.getParam(i);
                         assert param.hasDefaultValue();
                         aSuperArgs[i] = Register.DEFAULT;
-
-                        aAstArgs[i] = RegisterAST.defaultReg(param.getType());
                     }
                 }
 
@@ -2877,19 +2840,10 @@ public class TypeCompositionStatement
                 if (labelSkipSuper != null) {
                     code.add(labelSkipSuper);
                 }
-
-                CallExprAST astCallSuper = new CallExprAST(
-                        new ConstantExprAST(idSuper), TypeConstant.NO_TYPES, aAstArgs, false);
-                listAsts.add(astCond == null
-                    ? astCallSuper
-                    : new IfStmtAST(astCond, astCallSuper, null));
             }
         }
 
         code.add(new Return_0());
-
-        constructor.setAst(new StmtBlockAST(listAsts.toArray(BinaryAST.NO_ASTS), false),
-                                ctxConstruct.collectParameters());
     }
 
     /**

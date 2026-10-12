@@ -226,7 +226,6 @@ module TestMisc {
         }
     }
 
-    // Requires nested inner Point class, which is missing the BAST constructor
     void testSwitchNatural() {
         console.print("\n** testSwitchNatural()");
 

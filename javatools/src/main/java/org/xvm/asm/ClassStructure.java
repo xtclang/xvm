@@ -16,13 +16,6 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
-import org.xvm.asm.ast.BinaryAST;
-import org.xvm.asm.ast.ConstantExprAST;
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.InvokeExprAST;
-import org.xvm.asm.ast.RegisterAST;
-import org.xvm.asm.ast.ReturnStmtAST;
-
 import org.xvm.asm.constants.*;
 import org.xvm.asm.constants.IdentityConstant.NestedIdentity;
 import org.xvm.asm.constants.TypeConstant.Relation;
@@ -1373,7 +1366,7 @@ public class ClassStructure
                             TypeConstant     typeSuper;
                             if (compSuper == null) {
                                 ConstantPool pool = getConstantPool();
-                                clzSuper  = (ClassStructure) o;
+                                clzSuper = (ClassStructure) o;
                                 assert clzSuper.isVirtualChild();
                                 typeSuper = pool.ensureVirtualChildTypeConstant(
                                         ((ClassStructure) component).getFormalType(), idThis.getName());
@@ -2942,9 +2935,9 @@ public class ClassStructure
             ConstantPool pool     = getConstantPool();
             TypeConstant typeProp = prop.getType();
 
-            boolean      fGet;
-            Parameter[]  aParams;
-            Parameter[]  aReturns;
+            boolean     fGet;
+            Parameter[] aParams;
+            Parameter[] aReturns;
             if ("get".equals(sigAccessor.getName())) {
                 fGet     = true;
                 aParams  = Parameter.NO_PARAMS;
@@ -3002,9 +2995,9 @@ public class ClassStructure
             PropertyInfo infoDelegate = infoPrivate.findProperty(sDelegate);
             TypeConstant typeDelegate = infoDelegate.getType();
 
-            Annotation[] aAnnos       = new Annotation[] {pool.ensureAnnotation(pool.clzOverride())};
-            Parameter[]  aParams      = method.getParamArray().clone();
-            Parameter[]  aReturns     = method.getReturnArray().clone();
+            Annotation[] aAnnos   = new Annotation[] {pool.ensureAnnotation(pool.clzOverride())};
+            Parameter[]  aParams  = method.getParamArray().clone();
+            Parameter[]  aReturns = method.getReturnArray().clone();
 
             methodDelegate = createMethod(false, method.getAccess(), aAnnos,
                     aReturns, method.getName(), aParams, true, false);
@@ -3279,15 +3272,6 @@ public class ClassStructure
                     code.add(new Invoke_11(regString, idAppendTo, regAppender, regResult));
                     code.add(new Return_1(regResult));
 
-                    RegisterAST[] aAstReg = new RegisterAST[] {(RegisterAST) regAppender.getRegisterAST()};
-                    ExprAST astToString = new InvokeExprAST(
-                            idToString, new TypeConstant[]{regString.getType()},
-                            regThis.getRegisterAST(), ExprAST.NO_EXPRS, false);
-                    ExprAST astAppend = new InvokeExprAST(
-                            idAppendTo, new TypeConstant[] {typeAppender},
-                            astToString, aAstReg, false);
-
-                    methAppendTo.setAst(new ReturnStmtAST(astAppend), aAstReg);
                     methAppendTo.forceAssembly(pool);
                 }
 
@@ -3307,8 +3291,6 @@ public class ClassStructure
                         // return 0;
                         code.add(new Return_1(pool.val0()));
 
-                        methEstimate.setAst(
-                                new ReturnStmtAST(new ConstantExprAST(pool.val0())), BinaryAST.NO_REGS);
                         methEstimate.forceAssembly(pool);
                     }
                 }
@@ -3476,8 +3458,8 @@ public class ClassStructure
             StringConstant constOldKey = entry.getKey();
             StringConstant constNewKey = pool.register(constOldKey);
 
-            TypeConstant   constOldVal = entry.getValue();
-            TypeConstant   constNewVal = pool.register(constOldVal);
+            TypeConstant constOldVal = entry.getValue();
+            TypeConstant constNewVal = pool.register(constOldVal);
 
             if (mapNew != mapOld || constOldKey != constNewKey) {
                 if (mapNew == mapOld) {

@@ -1,7 +1,9 @@
 import XdkDistribution.Companion.DISTRIBUTION_TASK_GROUP
 import com.diffplug.gradle.spotless.SpotlessCheck
+import com.diffplug.spotless.FormatterFunc
 import com.diffplug.spotless.LineEnding
 import org.gradle.api.publish.plugins.PublishingPlugin.PUBLISH_TASK_GROUP
+import java.io.Serializable
 
 /*
  * Main build file for the XVM project, producing the XDK.
@@ -16,6 +18,16 @@ plugins {
 // Repository code standards. Spotless attaches spotlessCheck to check.
 // Add future language-specific standards here as they are adopted.
 spotless {
+    format("javaLayout") {
+        // Gradual adoption: avoid reformatting unrelated legacy Java files.
+        target(providers.fileContents(layout.projectDirectory.file("gradle/java-layout-files.txt")).asText.map { text ->
+            text.lineSequence().map(String::trim).filter { it.isNotEmpty() && !it.startsWith('#') }.toList()
+        })
+        lineEndings = LineEnding.PRESERVE
+        custom("localPaddingAndControlSpacing", object : FormatterFunc, Serializable {
+            override fun apply(input: String): String = JavaWhitespace.format(input)
+        })
+    }
     format("javaAndXtc") {
         // Cover the complete source tree, even when optional composite builds are disabled.
         // New files are checked before staging; generated output and local worktrees are excluded.
@@ -35,6 +47,12 @@ spotless {
         replaceRegex("consecutiveBlankLines", "(?m)^(?:\\h*\\n){2,}", "\n")
         endWithNewline()
     }
+}
+
+// Both formats cover the enrolled Java files. Apply layout first so the shared whitespace step
+// reads its output instead of racing to overwrite the same source files.
+tasks.matching { it.name == "spotlessJavaAndXtc" }.configureEach {
+    mustRunAfter("spotlessJavaLayoutApply")
 }
 
 // Local check/build repairs formatting first; CI only verifies committed source.

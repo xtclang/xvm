@@ -23,15 +23,6 @@ import org.xvm.asm.MultiMethodStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.Assignment;
 
-import org.xvm.asm.ast.BindFunctionAST;
-import org.xvm.asm.ast.BindMethodAST;
-import org.xvm.asm.ast.ConstantExprAST;
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.OuterExprAST;
-import org.xvm.asm.ast.PropertyExprAST;
-import org.xvm.asm.ast.UnaryOpExprAST;
-import org.xvm.asm.ast.UnaryOpExprAST.Operator;
-
 import org.xvm.asm.constants.DynamicFormalConstant;
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -785,9 +776,7 @@ public class LambdaExpression
         if (m_lambda.isFunction() && aargBind.length == 0) {
             // if no binding is required (either MBIND or FBIND) then the resulting argument is the
             // identity of the lambda function itself
-            MethodConstant idLambda = m_lambda.getIdentityConstant();
-            m_astLambda = new ConstantExprAST(idLambda);
-            return idLambda;
+            return m_lambda.getIdentityConstant();
         }
 
         return super.generateArgument(ctx, code, fLocalPropOk, errs);
@@ -811,7 +800,6 @@ public class LambdaExpression
 
         MethodConstant idLambda = m_lambda.getIdentityConstant();
 
-        m_astLambda = new ConstantExprAST(idLambda);
         if (fBindTarget | fBindParams) {
             if (LVal.isLocalArgument()) {
                 Argument argResult = LVal.getLocalArgument();
@@ -820,17 +808,10 @@ public class LambdaExpression
                     Register regTemp = code.createRegister(idLambda.getSignature().asFunctionType());
                     code.add(new MBind(regThis, idLambda, regTemp));
                     code.add(new FBind(regTemp, anBind, aBindArgs, argResult));
-
-                    m_astLambda = new BindMethodAST(regThis.getRegisterAST(), idLambda, regTemp.getType());
-                    m_astLambda = new BindFunctionAST(m_astLambda, anBind, m_aAstBind, getType());
                 } else if (fBindTarget) {
                     code.add(new MBind(ctx.getThisRegister(), idLambda, argResult));
-
-                    m_astLambda = new BindMethodAST(ctx.getThisRegisterAST(), idLambda, getType());
                 } else { // if (fBindParams)
                     code.add(new FBind(idLambda, anBind, aBindArgs, argResult));
-
-                    m_astLambda = new BindFunctionAST(m_astLambda, anBind, m_aAstBind, getType());
                 }
             } else {
                 super.generateAssignment(ctx, code, LVal, errs);
@@ -857,15 +838,6 @@ public class LambdaExpression
         LambdaExpression that = (LambdaExpression) super.clone();
         that.m_lambda = null;
         return that;
-    }
-
-    @Override
-    public ExprAST getExprAST(Context ctx) {
-        return m_astLambda == null
-                ? isConstant()
-                    ? new ConstantExprAST(toConstant())
-                    : super.getExprAST(ctx)
-                : m_astLambda;
     }
 
     @Override
@@ -967,7 +939,7 @@ public class LambdaExpression
      * @param code  the code block being compiled into
      * @param errs  the error list to log any errors to
      *
-     * @return an array of arguments to pass to FBIND; also compute {@link #m_aAstBind}
+     * @return an array of arguments to pass to FBIND
      */
     protected Argument[] calculateBindings(Context ctx, Code code, ErrorListener errs) {
         MethodStructure lambda    = m_lambda;
@@ -999,7 +971,6 @@ public class LambdaExpression
 
             int        cBindArgs       = cTypeParams + cCaptures;
             Argument[] aBindArgs       = NO_RVALUES;
-            ExprAST[]  aAstBind        = null;
             boolean[]  afImplicitDeref = null;
 
             // MBIND is indicated by the method structure *NOT* being static
@@ -1015,7 +986,6 @@ public class LambdaExpression
                 int                   iParam         = 0;
 
                 aBindArgs = new Argument[cBindArgs];
-                aAstBind  = new ExprAST[cBindArgs];
 
                 Map<FormalConstant, TypeConstant> mapRedefine = new HashMap<>();
                 for (Entry<String, Argument> entry : mapFormal.entrySet()) {
@@ -1039,14 +1009,8 @@ public class LambdaExpression
                             Register regTarget = code.createRegister(infoGeneric.getTargetType());
                             code.add(new MoveThis(cSteps, regTarget));
                             code.add(new P_Get(idGeneric, regTarget, regFormal));
-
-                            aAstBind[iParam] = new PropertyExprAST(
-                                new OuterExprAST(ctx.getThisRegisterAST(), cSteps, regTarget.getType()),
-                                idGeneric);
                         } else {
                             code.add(new L_Get(idGeneric, regFormal));
-
-                            aAstBind[iParam] = new PropertyExprAST(ctx.getThisRegisterAST(), idGeneric);
                         }
                     } else {
                         // the source is a register (type parameter); drop any inferences
@@ -1058,8 +1022,6 @@ public class LambdaExpression
                         mapRedefine.put((TypeParameterConstant) typeParam.getDefiningConstant(), typeReg);
 
                         typeFormal = typeParam.resolveConstraints().getType();
-
-                        aAstBind[iParam] = regFormal.getRegisterAST();
                     }
 
                     asAllParams   [iParam] = sCapture;
@@ -1100,9 +1062,6 @@ public class LambdaExpression
                         code.add(new MoveVar(regVal, regVar));
                         regCapture     = regVar;
                         fImplicitDeref = true;
-
-                        aAstBind[iParam] = new UnaryOpExprAST(
-                                regVal.getRegisterAST(), Operator.Var, typeCapture);
                     } else if (fVar && !typeVar.isA(pool.clzInject().getType()) ||
                             !regCapture.isEffectivelyFinal() && fAllowRefCapture) {
                         // we have a read-only non-injected capture; if it's a Var already, use that
@@ -1116,11 +1075,6 @@ public class LambdaExpression
                         code.add(new MoveRef(regVal, regVar));
                         regCapture     = regVar;
                         fImplicitDeref = true;
-
-                        aAstBind[iParam] = new UnaryOpExprAST(
-                                regVal.getRegisterAST(), Operator.Ref, typeCapture);
-                    } else {
-                        aAstBind[iParam] = regCapture.getRegisterAST();
                     }
                     asAllParams   [iParam] = sCapture;
                     atypeAllParams[iParam] = typeCapture;
@@ -1155,7 +1109,6 @@ public class LambdaExpression
                 }
             }
             m_aBindArgs = aBindArgs;
-            m_aAstBind  = aAstBind;
 
             // store the resulting signature for the lambda
             configureLambda(atypeParams, asParams, cTypeParams, afImplicitDeref, atypeReturns, fCondReturn);
@@ -1514,14 +1467,6 @@ public class LambdaExpression
      * A cached array of bound arguments. Private to calculateBindings().
      */
     private transient Argument[] m_aBindArgs = NO_RVALUES;
-    /**
-     * The ExprAST node for the lambda.
-     */
-    private transient ExprAST m_astLambda;
-    /**
-     * An array of ExprAST bindings computed by {@link #calculateBindings}.
-     */
-    private transient ExprAST[] m_aAstBind;
 
     private static final Field[] CHILD_FIELDS =
             fieldsForNames(LambdaExpression.class, "params", "paramNames", "body");

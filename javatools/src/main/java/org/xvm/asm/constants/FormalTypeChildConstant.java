@@ -8,11 +8,6 @@ import java.util.Collections;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.PropertyExprAST;
-
-import org.xvm.compiler.ast.Context;
-
 /**
  * Represent a formal child of a generic property, type parameter or formal child constant.
  */
@@ -135,11 +130,6 @@ public class FormalTypeChildConstant
         return typeParent == null
                 ? null
                 : typeParent.resolveGenericType(getName());
-    }
-
-    @Override
-    public ExprAST toExprAst(Context ctx) {
-        return new PropertyExprAST(getParentConstant().toExprAst(ctx), getNameConstant());
     }
 
     // ----- IdentityConstant methods --------------------------------------------------------------

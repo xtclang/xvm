@@ -72,9 +72,8 @@ public class EvalCompiler {
         MultiMethodStructure mms    = clz.ensureMultiMethodStructure("->");
         MethodStructure      lambda = mms.createLambda(TypeConstant.NO_TYPES, Utils.NO_NAMES);
 
-        TypeConstant[] atypeRets    = new TypeConstant[] {pool.typeObject()};
-        Parameter[]    aparamRets   = new Parameter[] {
-                new Parameter(pool, typeReturn, null, null, true, 0, false)};
+        TypeConstant[] atypeRets  = {pool.typeObject()};
+        Parameter[]    aparamRets = {new Parameter(pool, typeReturn, null, null, true, 0, false)};
 
         lambda.configureLambda(Parameter.NO_PARAMS, 0, aparamRets);
         lambda.setStatic(method.isFunction());
@@ -129,8 +128,6 @@ public class EvalCompiler {
             lambda.getIdentityConstant().setSignature(
                     pool.ensureSignatureConstant("->", atypeParams, atypeRets));
 
-            // the lambda signature may have changed; re-generate the "bast" parameters
-            lambda.setAst(lambda.getAst(), astMethod.f_ctx.collectParameters());
             lambda.forceAssembly(pool);
 
             m_aiArg = astMethod.getArguments();

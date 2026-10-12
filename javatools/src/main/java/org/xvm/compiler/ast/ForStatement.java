@@ -16,12 +16,6 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.BinaryAST;
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.ForStmtAST;
-import org.xvm.asm.ast.RegAllocAST;
-import org.xvm.asm.ast.StmtBlockAST;
-
 import org.xvm.asm.constants.StringConstant;
 
 import org.xvm.asm.op.Enter;
@@ -57,9 +51,9 @@ public class ForStatement
             List<Statement> update,
             StatementBlock  block) {
         super(keyword, conds);
-        this.init    = init   == null ? Collections.emptyList() : init;
-        this.update  = update == null ? Collections.emptyList() : update;
-        this.block   = block;
+        this.init   = init   == null ? Collections.emptyList() : init;
+        this.update = update == null ? Collections.emptyList() : update;
+        this.block  = block;
     }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -133,12 +127,12 @@ public class ForStatement
         int     count;
         String  desc;
         if (fInit) {
-            count  = init.size();
-            desc   = "init";
+            count = init.size();
+            desc  = "init";
         } else {
-            index  = findUpdate(nodeChild);
-            count  = update.size();
-            desc   = "update";
+            index = findUpdate(nodeChild);
+            count = update.size();
+            desc  = "update";
             assert index >= 0;
         }
 
@@ -513,43 +507,28 @@ public class ForStatement
 
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
-        boolean   fCompletes = fReachable;
-        Register  regFirst   = m_regFirst;
-        Register  regCount   = m_regCount;
-        AstHolder holder     = ctx.getHolder();
+        boolean  fCompletes = fReachable;
+        Register regFirst   = m_regFirst;
+        Register regCount   = m_regCount;
 
         code.add(new Enter());
 
-        RegAllocAST[] aAllocSpecial = null;
         if (regFirst != null) {
             StringConstant name = pool().ensureStringConstant(((LabeledStatement) getParent()).getName() + ".first");
             code.add(new Var_IN(m_regFirst, name, pool().valTrue()));
-
-            aAllocSpecial    = new RegAllocAST[regCount == null ? 1 : 2];
-            aAllocSpecial[0] = regFirst.getRegAllocAST();
         }
 
         if (regCount != null) {
             StringConstant name = pool().ensureStringConstant(((LabeledStatement) getParent()).getName() + ".count");
             code.add(new Var_IN(m_regCount, name, pool().val0()));
-
-            RegAllocAST astCount = regCount.getRegAllocAST();
-            if (aAllocSpecial == null) {
-                aAllocSpecial = new RegAllocAST[] {astCount};
-            } else {
-                aAllocSpecial[1] = astCount;
-            }
         }
 
         List<Statement> listInit   = init;
         int             cInit      = listInit.size();
         Label[]         aInitLabel = m_alabelInitGround;
-        BinaryAST[]     aAstInit   = new BinaryAST[cInit];
         for (int i = 0; i < cInit; ++i) {
             Statement stmt = listInit.get(i);
             fCompletes = stmt.completes(ctx, fCompletes, code, errs);
-
-            aAstInit[i] = holder.getAst(stmt);
 
             Label labelGround = aInitLabel == null ? null : aInitLabel[i];
             if (labelGround != null) {
@@ -579,21 +558,13 @@ public class ForStatement
             }
         }
 
-        boolean   fBlockReachable = fCompletes;
-        ExprAST[] aCondAST        = null;
+        boolean fBlockReachable = fCompletes;
 
         if (fAlwaysFalse) {
             code.add(new Jump(getEndLabel()));
             fBlockReachable = false;
-
-            // degenerate case: we don't need to generate neither the "condition" nor "update" AST
-            holder.setAst(this, new StmtBlockAST(aAstInit, false));
-        } else if (fAlwaysTrue) {
-            aCondAST = BinaryAST.NO_EXPRS;
-        } else {
-            int cConds = getConditionCount();
-            aCondAST = new ExprAST[cConds];
-            for (int i = 0; i < cConds; ++i) {
+        } else if (!fAlwaysTrue) {
+            for (int i = 0, c = getConditionCount(); i < c; ++i) {
                 AstNode cond = getCondition(i);
                 if (cond instanceof AssignmentStatement stmtCond) {
                     boolean fNegated = stmtCond.isNegated();
@@ -609,14 +580,10 @@ public class ForStatement
                         code.add(new Jump(getEndLabel()));
                         code.add(labelNeg);
                     }
-
-                    aCondAST[i] = (ExprAST) holder.getAst(stmtCond);
                 } else {
                     Expression exprCond = (Expression) cond;
                     exprCond.generateConditionalJump(ctx, code, getEndLabel(), false, errs);
                     fBlockReachable &= exprCond.isCompletable();
-
-                    aCondAST[i] = exprCond.getExprAST(ctx);
                 }
             }
         }
@@ -629,8 +596,6 @@ public class ForStatement
 
         fCompletes &= block.completes(ctx, fBlockReachable, code, errs) || !fAlwaysTrue;
 
-        BinaryAST astBody = fAlwaysFalse ? null : holder.getAst(block);
-
         if (hasContinueLabel()) {
             code.add(getContinueLabel());
         }
@@ -638,14 +603,9 @@ public class ForStatement
         List<Statement> listUpdate   = update;
         int             cUpdate      = listUpdate.size();
         Label[]         aUpdateLabel = m_alabelUpdateGround;
-        BinaryAST[]     aAstUpdate   = new BinaryAST[cUpdate];
         for (int i = 0; i < cUpdate; ++i) {
             Statement stmt = listUpdate.get(i);
             fCompletes &= stmt.completes(ctx, fBlockReachable, code, errs) || !fAlwaysTrue;
-
-            if (!fAlwaysFalse) {
-                aAstUpdate[i] = holder.getAst(stmt);
-            }
 
             Label labelGround = aUpdateLabel == null ? null : aUpdateLabel[i];
             if (labelGround != null) {
@@ -669,14 +629,6 @@ public class ForStatement
         code.add(new LoopEnd());
         code.add(new Exit());
 
-        if (!fAlwaysFalse) {
-            holder.setAst(this,
-                    new ForStmtAST(aAllocSpecial,
-                                   BinaryAST.makeMultiStatement(aAstInit),
-                                   BinaryAST.makeCondition(aCondAST),
-                                   BinaryAST.makeMultiStatement(aAstUpdate),
-                                   astBody));
-        }
         return !fAlwaysTrue && fCompletes;
     }
 

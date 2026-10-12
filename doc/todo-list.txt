@@ -63,8 +63,7 @@
         val ref = &value; ref.set("b");
     and "&ref.type.toString()" produces "Test.value"
 
-- GG: BAST generation for "map[x] = y" is completely broken; additionally if a class has
-      only a setter @Op("[]="), but no getter (@Op"[]") the compiler barfs
+- GG: a class with only a setter @Op("[]="), but no getter (@Op"[]") does not compile
 
     class Test() {
         void test() {

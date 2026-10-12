@@ -31,9 +31,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.ConstantExprAST;
-import org.xvm.asm.ast.ExprAST;
-
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -164,7 +161,7 @@ public abstract class AstNode
      *         null
      */
     public AstNode findChild(AstNode node) {
-        AstNode child  = node;
+        AstNode child = node;
         do {
             AstNode parent = child.getParent();
             if (parent == this) {
@@ -1422,7 +1419,7 @@ public abstract class AstNode
             Map<MethodConstant, MethodStructure> mapMethods, ErrorListener errs) {
         assert !setMethods.isEmpty();
 
-        MethodConstant idBest  = null;
+        MethodConstant idBest = null;
         for (MethodConstant idMethod : setMethods) {
             if (idBest == null) {
                 idBest = idMethod;
@@ -1472,7 +1469,7 @@ public abstract class AstNode
                     // (though we could also get the target's info, find the corresponding
                     //  TypeInfo and choose a more accommodating MethodInfo)
                     if (fNewBetter) {
-                        idBest  = idMethod;
+                        idBest = idMethod;
                     }
                 } else {
                     // note: theoretically there could still be one better than either of these two,
@@ -1526,9 +1523,9 @@ public abstract class AstNode
     protected TypeFit calculateReturnFit(TypeConstant[] atypeMethodReturn, String sName,
                                          boolean fCall, TypeConstant[] atypeReturn,
                                          TypeConstant typeCtx, ErrorListener errs) {
-        int      cMethodReturns = atypeMethodReturn.length;
-        int      cReturns       = atypeReturn.length;
-        TypeFit  fit            = TypeFit.Fit;
+        int     cMethodReturns = atypeMethodReturn.length;
+        int     cReturns       = atypeReturn.length;
+        TypeFit fit            = TypeFit.Fit;
 
         if (cMethodReturns < cReturns) {
             // we allow such an "asymmetrical" call in just one case:
@@ -1612,42 +1609,6 @@ public abstract class AstNode
             }
         }
         return true;
-    }
-
-    /**
-     * Convert the specified type parameter to a {@link ExprAST binary expression AST}.
-     *
-     * @param ctx  the current Context
-     * @param arg  the argument representing a formal type parameter
-     */
-    protected static ExprAST toTypeParameterAst(Context ctx, Argument arg) {
-        if (arg instanceof TypeConstant type) {
-            assert type.isTypeOfType();
-
-            TypeConstant typeData = type.getParamType(0);
-            if (typeData.isFormalType()) {
-                FormalConstant constFormal = (FormalConstant) typeData.getDefiningConstant();
-                ExprAST        ast         = constFormal.toExprAst(ctx);
-                if (ast != null) {
-                    return ast;
-                }
-            }
-        }
-        return toExprAst(arg);
-    }
-
-    /**
-     * Convert the specified argument to a {@link ExprAST binary expression AST}.
-     */
-    protected static ExprAST toExprAst(Argument arg) {
-        if (arg instanceof Register reg) {
-            return reg.getRegisterAST();
-        }
-        if (arg instanceof Constant constant) {
-            return new ConstantExprAST(constant);
-        }
-
-        throw new UnsupportedOperationException(arg.toString());
     }
 
     /**

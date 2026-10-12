@@ -11,8 +11,6 @@ import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.ast.BinaryAST;
-
 import org.xvm.asm.op.Label;
 
 /**
@@ -227,39 +225,6 @@ public abstract class Statement
      */
     public record Break(AstNode node, Map<String, Assignment> mapAssign,
                          Map<String, Argument> mapNarrow, Label label) {}
-
-    /**
-     * Holder for BinaryAST objects as they percolate up the emit() call tree.
-     * TODO get rid of this concept and add a getAST as per Expression tree
-     */
-    public static class AstHolder {
-        BinaryAST getAst(Statement stmt) {
-            assert stmt != null;
-
-            if (stmt instanceof LabeledStatement stmtLbl) {
-                return getAst(stmtLbl.stmt);
-            }
-
-            if (stmt instanceof ImportStatement || stmt instanceof ComponentStatement) {
-                return null;
-            }
-
-            BinaryAST ast = this.ast;
-            this.ast = null;
-            return ast != null && stmt == this.stmt
-                ? ast
-                : BinaryAST.POISON;
-        }
-
-        void setAst(Statement stmt, BinaryAST ast) {
-            assert stmt != null && ast != null;
-            this.stmt = stmt;
-            this.ast  = ast;
-        }
-
-        private Statement stmt;
-        private BinaryAST ast;
-    }
 
     // ----- fields --------------------------------------------------------------------------------
 

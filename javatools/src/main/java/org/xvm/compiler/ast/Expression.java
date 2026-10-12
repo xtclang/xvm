@@ -18,8 +18,6 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.ExprAST;
-
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
@@ -1050,20 +1048,6 @@ public abstract class Expression
         return m_oType instanceof TypeConstant[] aTypes
                 ? aTypes
                 : new TypeConstant[] {getType()};
-    }
-
-    /**
-     * Obtain a {@link ExprAST binary expression} that represents this AST node and can
-     * be used to serialize the AST.
-     *
-     * <p>This method must not be called until after the expression has been validated.
-     *
-     * @return an "AST node" from the expression branch of the BinaryAST hierarchy of classes
-     */
-    public ExprAST getExprAST(Context ctx) {
-        assert isValidated();
-        throw new UnsupportedOperationException(
-                "BAST for Expression: " + this.getClass().getSimpleName());
     }
 
     /**

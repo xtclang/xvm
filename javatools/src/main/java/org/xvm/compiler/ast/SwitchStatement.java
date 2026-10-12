@@ -11,14 +11,9 @@ import java.util.Map.Entry;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Assignment;
-import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
-
-import org.xvm.asm.ast.BinaryAST;
-import org.xvm.asm.ast.StmtBlockAST;
-import org.xvm.asm.ast.SwitchAST;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -42,7 +37,7 @@ public class SwitchStatement
 
     public SwitchStatement(Token keyword, List<AstNode> conds, StatementBlock block) {
         super(keyword, conds);
-        this.block   = block;
+        this.block = block;
     }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -120,10 +115,10 @@ public class SwitchStatement
 
         fValid &= mgr.validateCondition(ctxSwitch, conds, nArity, errs);
 
-        int              cStmts    = listStmts.size();
-        boolean          fInCase   = false;
-        CaseBlockContext ctxBlock  = null;
-        CaseGroup        group     = null;
+        int              cStmts   = listStmts.size();
+        boolean          fInCase  = false;
+        CaseBlockContext ctxBlock = null;
+        CaseGroup        group    = null;
         for (int i = 0; i < cStmts; ++i) {
             Statement stmt = listStmts.get(i);
             if (stmt instanceof CaseStatement stmtCase) {
@@ -269,28 +264,20 @@ public class SwitchStatement
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
         CaseManager<CaseGroup> mgr = m_casemgr;
 
-        int             cCases     = mgr.getCaseCount();
-        Constant[]      aconstCase = new Constant[cCases];  // case values (null == default)
-        List<BinaryAST> listBodies = new ArrayList<>(cCases);
-
         // check for the extremely rare possibility that the switch condition is a constant, and we
         // can tell which branch to use (discarding the rest of the possible case branches)
         if (mgr.isSwitchConstant()) {
             // skip the condition and just spit out the reachable code inside the case group(s)
             CaseGroup groupStart = mgr.getCookie(mgr.getSwitchConstantLabel());
-            for (int iGroup = groupStart.iGroup, cGroups = m_listGroups.size(), iCase = -1;
+            for (int iGroup = groupStart.iGroup, cGroups = m_listGroups.size();
                     iGroup < cGroups; ++iGroup) {
-                iCase = emitCaseGroup(ctx, fReachable, code, iGroup, aconstCase, listBodies, iCase, errs);
+                emitCaseGroup(ctx, fReachable, code, iGroup, errs);
                 if (m_listGroups.get(iGroup).labelContinueTo == null) {
                     // if there was no "continue", then we're done
                     break;
                 }
             }
 
-            if (!errs.hasSeriousErrors()) {
-                ctx.getHolder().setAst(this,
-                        new StmtBlockAST(listBodies.toArray(BinaryAST.NO_ASTS), true));
-            }
             // switch never completes normally
             return false;
         }
@@ -305,8 +292,8 @@ public class SwitchStatement
             mgr.generateJumpTable(ctx, code, errs);
         }
 
-        for (int iGroup = 0, cGroups = m_listGroups.size(), iCase = -1; iGroup < cGroups; ++iGroup) {
-            iCase = emitCaseGroup(ctx, fReachable, code, iGroup, aconstCase, listBodies, iCase, errs);
+        for (int iGroup = 0, cGroups = m_listGroups.size(); iGroup < cGroups; ++iGroup) {
+            emitCaseGroup(ctx, fReachable, code, iGroup, errs);
         }
 
         if (mgr.hasDeclarations()) {
@@ -319,15 +306,10 @@ public class SwitchStatement
             code.add(m_labelContinue);
         }
 
-        ctx.getHolder().setAst(this, new SwitchAST(mgr.getConditionBAST(), mgr.getConditionIsA(),
-                aconstCase, listBodies.toArray(BinaryAST.NO_ASTS)));
-
         return mgr.isCompletable();
     }
 
-    private int emitCaseGroup(Context ctx, boolean fReachable, Code code, int iGroup,
-                              Constant[] aconstCase, List<BinaryAST> listBodies, int iCase,
-                              ErrorListener errs) {
+    private void emitCaseGroup(Context ctx, boolean fReachable, Code code, int iGroup, ErrorListener errs) {
         boolean   fCompletes = fReachable;
         CaseGroup group      = m_listGroups.get(iGroup);
 
@@ -341,22 +323,14 @@ public class SwitchStatement
 
         List<Statement> listStmts  = block.stmts;
         int             iFirstCase = group.iFirstCase;
-        int             iFirstStmt = group.iFirstStmt;
 
         // the label assigned to the case group
         code.add(((CaseStatement) listStmts.get(iFirstCase)).getLabel());
-
-        for (int iStmt = iFirstCase; iStmt < iFirstStmt; ++iStmt) {
-            CaseStatement stmtCase = (CaseStatement) listStmts.get(iStmt);
-
-            iCase = stmtCase.collectConstants(iCase, aconstCase);
-        }
 
         if (group.fScope) {
             code.add(new Enter());
         }
 
-        List<BinaryAST> listAst = new ArrayList<>();
         for (int iStmt = group.iFirstStmt, cStmts = listStmts.size(); iStmt < cStmts; ++iStmt) {
             Statement stmt = listStmts.get(iStmt);
 
@@ -378,21 +352,11 @@ public class SwitchStatement
             }
 
             fCompletes = stmt.completes(ctx, fCompletes, code, errs);
-            if (!(stmt instanceof ComponentStatement)) {
-                BinaryAST ast = ctx.getHolder().getAst(stmt);
-                if (ast != null) {
-                    listAst.add(ast);
-                }
-            }
         }
 
         if (group.fScope) {
             code.add(new Exit());
         }
-
-        listBodies.add(new StmtBlockAST(listAst.toArray(BinaryAST.NO_ASTS), true));
-
-        return iCase;
     }
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -622,7 +586,7 @@ public class SwitchStatement
         /**
          * What group number is this? Zero-based.
          */
-        int iGroup     = -1;
+        int iGroup = -1;
         /**
          * What is the index of the first case statement of this group? Index into "block".
          */
@@ -638,7 +602,7 @@ public class SwitchStatement
         /**
          * Does this group ever "continue"? If so, this is the label that it continues to.
          */
-        Label   labelContinueTo;
+        Label labelContinueTo;
     }
 
     // ----- fields --------------------------------------------------------------------------------

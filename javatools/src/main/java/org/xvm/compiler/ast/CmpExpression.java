@@ -10,16 +10,6 @@ import org.xvm.asm.Op;
 import org.xvm.asm.OpTest;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.BiExprAST;
-import org.xvm.asm.ast.CallExprAST;
-import org.xvm.asm.ast.CondOpExprAST;
-import org.xvm.asm.ast.ConstantExprAST;
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.NotNullExprAST;
-import org.xvm.asm.ast.OrderedExprAST;
-import org.xvm.asm.ast.OrderedExprAST.Operator;
-import org.xvm.asm.ast.UnaryOpExprAST;
-
 import org.xvm.asm.constants.CastTypeConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -192,7 +182,7 @@ public class CmpExpression
 
         TypeConstant typeRequest = chooseCommonType(pool, fEqual, type1, type1Orig, false,
                                                                   type2, type2Orig, false, false);
-        Expression   expr1New    = expr1.validate(ctx, typeRequest, errs);
+        Expression expr1New = expr1.validate(ctx, typeRequest, errs);
         if (expr1New == null) {
             fValid = false;
         } else {
@@ -529,7 +519,7 @@ public class CmpExpression
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs) {
         if (LVal.isLocalArgument()) {
             // evaluate the sub-expressions
-            Argument arg1      = expr1.ensurePointInTime(code,
+            Argument arg1 = expr1.ensurePointInTime(code,
                                  expr1.generateArgument(ctx, code, true, errs), expr2);
             Argument arg2      = expr2.generateArgument(ctx, code, true, errs);
             Argument argResult = LVal.getLocalArgument();
@@ -566,9 +556,9 @@ public class CmpExpression
             Context ctx, Code code, Label label, boolean fWhenTrue, ErrorListener errs) {
         if (!isConstant() && producesBoolean()) {
             // evaluate the sub-expressions
-            Argument   arg1 = expr1.ensurePointInTime(code,
+            Argument arg1 = expr1.ensurePointInTime(code,
                               expr1.generateArgument(ctx, code, true, errs), expr2);
-            Argument   arg2 = expr2.generateArgument(ctx, code, true, errs);
+            Argument arg2 = expr2.generateArgument(ctx, code, true, errs);
             // generate the op that combines the two sub-expressions
             code.add(switch (operator.getId()) {
                 case COMP_EQ ->
@@ -614,92 +604,6 @@ public class CmpExpression
         }
 
         super.generateConditionalJump(ctx, code, label, fWhenTrue, errs);
-    }
-
-    @Override
-    public ExprAST getExprAST(Context ctx) {
-        if (false) {
-            // retaining the code for the "old" approach just in case
-            BiExprAST.Operator op = switch (operator.getId()) {
-                case COMP_EQ   -> BiExprAST.Operator.CompEq;
-                case COMP_NEQ  -> BiExprAST.Operator.CompNeq;
-                case COMP_LT   -> BiExprAST.Operator.CompLt;
-                case COMP_GT   -> BiExprAST.Operator.CompGt;
-                case COMP_LTEQ -> BiExprAST.Operator.CompLtEq;
-                case COMP_GTEQ -> BiExprAST.Operator.CompGtEq;
-                case COMP_ORD  -> BiExprAST.Operator.CompOrd;
-                default -> throw new UnsupportedOperationException(operator.getValueText());
-            };
-            return new CondOpExprAST(expr1.getExprAST(ctx), op, expr2.getExprAST(ctx));
-        }
-
-        ConstantPool pool = pool();
-        ExprAST      ast1 = expr1.getExprAST(ctx);
-        ExprAST      ast2 = expr2.getExprAST(ctx);
-
-        if (m_fArg1Null || m_fArg2Null) {
-            boolean fNot = false;
-            switch (operator.getId()) {
-            case COMP_EQ:
-                break;
-            case COMP_NEQ:
-                fNot = true;
-                break;
-            default:
-                throw new UnsupportedOperationException(operator.getValueText());
-            }
-
-            // we only have NotNullExprAst, so "x == Null" produces "!(x != Null)"
-            ExprAST exprAST = new NotNullExprAST(m_fArg1Null ? ast2 : ast1, pool.typeBoolean());
-            if (!fNot) {
-                exprAST = new UnaryOpExprAST(exprAST, UnaryOpExprAST.Operator.Not, pool.typeBoolean());
-            }
-            return exprAST;
-        }
-
-        ExprAST[] aAstArgs = new ExprAST[] {
-                toTypeParameterAst(ctx, m_typeCommon.getType()), ast1, ast2};
-
-        ExprAST  exprCmp = new ConstantExprAST(m_idCmp);
-        boolean  fNot    = false;
-        Operator opCmp   = null;
-
-        switch (operator.getId()) {
-        case COMP_ORD:
-            return new CallExprAST(exprCmp, pool.typeOrdered(), aAstArgs);
-
-        case COMP_EQ:
-            break;
-        case COMP_NEQ:
-            fNot = true;
-            break;
-
-        case COMP_LT:
-            opCmp = Operator.Less;
-            break;
-        case COMP_GT:
-            opCmp = Operator.Greater;
-            break;
-        case COMP_LTEQ:
-            opCmp = Operator.Greater;
-            fNot  = true;
-            break;
-        case COMP_GTEQ:
-            opCmp = Operator.Less;
-            fNot  = true;
-            break;
-        default:
-            throw new UnsupportedOperationException(operator.getValueText());
-        }
-
-        ExprAST exprAst = opCmp == null
-                ? new CallExprAST(exprCmp, pool.typeBoolean(), aAstArgs)
-                : new OrderedExprAST(
-                        new CallExprAST(exprCmp, pool.typeOrdered(), aAstArgs), opCmp);
-        if (fNot) {
-            exprAst = new UnaryOpExprAST(exprAst, UnaryOpExprAST.Operator.Not, pool.typeBoolean());
-        }
-        return exprAst;
     }
 
     // ----- fields --------------------------------------------------------------------------------

@@ -3,9 +3,6 @@ package org.xvm.compiler.ast;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 
-import org.xvm.asm.ast.ConstantExprAST;
-import org.xvm.asm.ast.ExprAST;
-
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
@@ -223,12 +220,6 @@ public abstract class TypeExpression
             exprType.resetTypeConstant();
         }
         return expr;
-    }
-
-    @Override
-    public ExprAST getExprAST(Context ctx) {
-        TypeConstant type = getType();
-        return new ConstantExprAST(type);
     }
 
     /**

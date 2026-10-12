@@ -14,10 +14,6 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.OpCondJump;
 import org.xvm.asm.OpTest;
 
-import org.xvm.asm.ast.BiExprAST.Operator;
-import org.xvm.asm.ast.CmpChainExprAST;
-import org.xvm.asm.ast.ExprAST;
-
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.SignatureConstant;
@@ -214,10 +210,10 @@ public class CmpChainExpression
         // expression that everything else can be compared to
         Constant constVal = null;
         if (fValid) {
-            Constant constPrev  = null;
-            boolean  fEquality  = operators[0].getId() == Id.COMP_EQ;
-            Constant FALSE      = pool.valFalse();
-            boolean  fAllConst  = true;
+            Constant constPrev = null;
+            boolean  fEquality = operators[0].getId() == Id.COMP_EQ;
+            Constant FALSE     = pool.valFalse();
+            boolean  fAllConst = true;
 
             for (int i = 0; i < cExprs; ++i) {
                 Expression   expr   = listExprs.get(i);
@@ -383,7 +379,7 @@ public class CmpChainExpression
         Label labelFalse = fWhenTrue ? new Label("not_eq") : label;
 
         // otherwise, everything has to get compared, left to right
-        Token[] aTokOp  = operators;
+        Token[] aTokOp = operators;
         for (int iCmp = 0, cOps = aTokOp.length; iCmp < cOps; ++iCmp) {
             Argument arg1 = aArgs[iCmp];
             Argument arg2 = aArgs[iCmp + 1];
@@ -403,29 +399,6 @@ public class CmpChainExpression
             code.add(new Jump(label));
             code.add(labelFalse);
         }
-    }
-
-    @Override
-    public ExprAST getExprAST(Context ctx) {
-        int        cExpr = expressions.size();
-        ExprAST[]  aAst  = new ExprAST[cExpr];
-        Operator[] aOp   = new Operator[cExpr-1];
-
-        for (int i = 0; i < cExpr; i++) {
-            aAst[i] = expressions.get(i).getExprAST(ctx);
-            if (i < cExpr-1) {
-                aOp[i] = switch (operators[i].getId()) {
-                    case COMP_EQ    -> Operator.CompEq;
-                    case COMP_NEQ   -> Operator.CompNeq;
-                    case COMP_LT    -> Operator.CompLt;
-                    case COMP_GT    -> Operator.CompGt;
-                    case COMP_LTEQ  -> Operator.CompLtEq;
-                    case COMP_GTEQ  -> Operator.CompGtEq;
-                    default         -> throw new IllegalStateException();
-                };
-            }
-        }
-        return new CmpChainExprAST(aAst, aOp, m_idCmp);
     }
 
     // ----- compilation ---------------------------------------------------------------------------

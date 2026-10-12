@@ -14,10 +14,6 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.ConstantExprAST;
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.TupleExprAST;
-
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -454,22 +450,6 @@ public class TupleExpression
             aArgs[i] = expr.ensurePointInTime(code, arg, listExprs, i);
         }
         return aArgs;
-    }
-
-    @Override
-    public ExprAST getExprAST(Context ctx) {
-        if (isConstant()) {
-            return new ConstantExprAST(toConstant());
-        }
-
-        List<Expression> listExprs = exprs;
-        int              cArgs     = listExprs.size();
-        ExprAST[]        aAstArg   = new ExprAST[cArgs];
-
-        for (int i = 0; i < cArgs; ++i) {
-            aAstArg[i] = listExprs.get(i).getExprAST(ctx);
-        }
-        return new TupleExprAST(getType(), aAstArg);
     }
 
     // ----- debugging assistance ------------------------------------------------------------------

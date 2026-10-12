@@ -12,12 +12,6 @@ import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.ast.AssignAST;
-import org.xvm.asm.ast.BinaryAST;
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.IfStmtAST;
-import org.xvm.asm.ast.MultiExprAST;
-
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.Jump;
@@ -207,14 +201,11 @@ public class IfStatement
                 if (((Expression) cond).isConstantFalse()) {
                     // "if (false) {stmtThen}" is optimized out altogether.
                     if (stmtElse == null) {
-                        ctx.getHolder().setAst(this, new MultiExprAST(BinaryAST.NO_EXPRS));
                         return fReachable;
                     }
 
                     // "if (false) {stmtThen} else {stmtElse}" is compiled as "{stmtElse}"
-                    boolean fCompletes = stmtElse.completes(ctx, fReachable, code, errs);
-                    ctx.getHolder().setAst(this, ctx.getHolder().getAst(stmtElse));
-                    return fCompletes;
+                    return stmtElse.completes(ctx, fReachable, code, errs);
                 }
 
                 assert ((Expression) cond).isConstantTrue();
@@ -227,9 +218,7 @@ public class IfStatement
         // "if (true) {stmtThen}" is compiled as "{stmtThen}"
         // "if (true) {stmtThen} else {stmtElse}" is compiled as "{stmtThen}"
         if (fAlwaysTrue) {
-            boolean fCompletes = stmtThen.completes(ctx, fReachable, code, errs);
-            ctx.getHolder().setAst(this, ctx.getHolder().getAst(stmtThen));
-            return fCompletes;
+            return stmtThen.completes(ctx, fReachable, code, errs);
         }
 
         // "if (cond) {stmtThen}" is compiled as:
@@ -265,10 +254,9 @@ public class IfStatement
             }
         }
 
-        List<ExprAST> listExprs    = new ArrayList<>();
-        boolean       fFirst       = true;
-        boolean       fReachesThen = fReachable;
-        boolean       fReachesElse = fReachable;
+        boolean fFirst       = true;
+        boolean fReachesThen = fReachable;
+        boolean fReachesElse = fReachable;
         for (AstNode cond : conds) {
             boolean fCompletes;
             if (cond instanceof AssignmentStatement stmtCond) {
@@ -285,8 +273,6 @@ public class IfStatement
                     code.add(new Jump(labelElse));
                     code.add(labelNeg);
                 }
-
-                listExprs.add((AssignAST) ctx.getHolder().getAst(stmtCond));
             } else {
                 Expression exprCond = (Expression) cond;
                 if (exprCond.isConstantTrue()) {
@@ -298,12 +284,10 @@ public class IfStatement
                     // conditions, making the rest unreachable
                     fReachesThen = false;
                     code.add(new Jump(labelElse));
-                    listExprs.add(exprCond.getExprAST(ctx));
                     break;
                 } else {
                     fCompletes = exprCond.isCompletable();
                     exprCond.generateConditionalJump(ctx, code, labelElse, false, errs);
-                    listExprs.add(exprCond.getExprAST(ctx));
                 }
             }
 
@@ -315,34 +299,24 @@ public class IfStatement
             fFirst = false;
         }
 
-        ExprAST bastCond = listExprs.size() == 1
-                ? listExprs.get(0)
-                : new MultiExprAST(listExprs.toArray(new ExprAST[0]));
-
-        BinaryAST bastThen       = null;
-        boolean   fCompletesThen = fReachesThen;
+        boolean fCompletesThen = fReachesThen;
         if (fReachesThen) {
             fCompletesThen = stmtThen.completes(ctx, fReachesThen, code, errs);
-            bastThen       = ctx.getHolder().getAst(stmtThen);
             if (stmtElse != null) {
                 code.add(new Jump(labelExit));
             }
         }
 
-        BinaryAST bastElse       = null;
-        boolean   fCompletesElse = fReachesElse;
+        boolean fCompletesElse = fReachesElse;
         code.add(labelElse);
         if (fReachesElse && stmtElse != null) {
             fCompletesElse = stmtElse.completes(ctx, fReachesElse, code, errs);
-            bastElse       = ctx.getHolder().getAst(stmtElse);
         }
 
         code.add(labelExit);
         if (fScope) {
             code.add(new Exit());
         }
-
-        ctx.getHolder().setAst(this, new IfStmtAST(bastCond, bastThen, bastElse));
 
         return fCompletesThen | fCompletesElse;
     }

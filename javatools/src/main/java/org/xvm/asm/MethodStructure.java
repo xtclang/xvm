@@ -24,8 +24,6 @@ import java.util.stream.Stream;
 import org.xvm.asm.Op.ConstantRegistry;
 import org.xvm.asm.Op.Prefix;
 
-import org.xvm.asm.ast.RegisterAST;
-
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.ClassConstant;
@@ -42,9 +40,6 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeParameterConstant;
-
-import org.xvm.asm.ast.BinaryAST;
-import org.xvm.asm.ast.BinaryAST.ConstantResolver;
 
 import org.xvm.asm.op.Construct_0;
 import org.xvm.asm.op.Nop;
@@ -335,8 +330,8 @@ public class MethodStructure
             return true;
         }
 
-        Annotation[] aAll  = m_aAnnotations;
-        int          cAll  = aAll.length;
+        Annotation[] aAll = m_aAnnotations;
+        int          cAll = aAll.length;
         if (cMove == cAll) {
             addReturnAnnotations(aAll);
             m_aAnnotations = Annotation.NO_ANNOTATIONS;
@@ -642,8 +637,6 @@ public class MethodStructure
         m_fNative     = false;
         m_aconstLocal = null;
         m_abOps       = null;
-        m_abAst       = null;
-        m_ast         = null;
         m_code = code = new Code(this);
 
         markModified();
@@ -669,50 +662,6 @@ public class MethodStructure
         }
 
         return code.getAssembledOps();
-    }
-
-    /**
-     * @return the root BinaryAST, or null if none
-     */
-    public BinaryAST getAst() {
-        // check if the AST has been provided or has already been deserialized
-        BinaryAST ast = m_ast;
-        if (ast != null) {
-            return ast;
-        }
-
-        // deserialize the AST
-        byte[] abAst = m_abAst;
-        if (abAst != null) {
-            ConstantPool pool        = getConstantPool();
-            Constant[]   aconstLocal = m_aconstLocal;
-            assert aconstLocal != null;
-
-            ConstantResolver res = new ConstantRegistry(this, pool);
-            DataInput        in  = new DataInputStream(new ByteArrayInputStream(abAst));
-            try (var ignore = ConstantPool.withPool(pool)) {
-                return m_ast = BinaryAST.readAST(in, res);
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * At compile time, store the AST constructed by the compiler.
-     *
-     * @param astRoot     the root BinaryAST
-     * @param aAstParams  the parameter registers
-     */
-    public void setAst(BinaryAST astRoot, RegisterAST[] aAstParams) {
-        if (astRoot != m_ast || aAstParams != m_aAstParams) {
-            verifyMutable();
-            m_ast        = astRoot;
-            m_aAstParams = aAstParams;
-            m_abAst      = null;        // force a re-build of the binary form of the AST
-        }
     }
 
     /**
@@ -1085,64 +1034,23 @@ public class MethodStructure
     }
 
     boolean needsReassembly() {
-        return m_code != null && m_abOps == null
-            || m_ast  != null && m_abAst == null;
+        return m_code != null && m_abOps == null;
     }
 
     public void forceAssembly(ConstantPool pool) {
         verifyMutable();
 
-        // if we need to reassemble, we're going to throw away the bytes, so make sure that we have
-        // the deserialized form of those bytes ensured so that we can recreate the "new" version of
-        // the bytes
-        if (needsReassembly()) {
-            if (m_abOps != null) {
-                ensureCode();
-            }
-            if (m_abAst != null) {
-                getAst();
-            }
-        }
-
-        Code      code = m_code;
-        BinaryAST ast  = m_ast;
-        if (code != null || ast != null) {
+        Code code = m_code;
+        if (code != null) {
             m_abOps = null;
-            m_abAst = null;
 
             ConstantRegistry registry = new ConstantRegistry(this, pool);
-            m_registry = registry;
+            code.prepareOps();
+            code.registerConstants(registry);
+            m_aconstLocal = registry.getConstantArray();
+            code.ensureAssembled(registry);
 
-            // pre-assemble code and AST
-            if (code != null) {
-                code.prepareOps();
-                code.registerConstants(registry);
-            }
-            if (ast != null) {
-                registry.init(m_aAstParams);
-                ast.prepareWrite(registry);
-            }
-
-            m_aconstLocal = m_registry.getConstantArray();
-
-            // assemble code and AST
-            if (code != null) {
-                code.ensureAssembled(registry);
-            }
-            if (ast != null) {
-                try {
-                    ByteArrayOutputStream collectAst = new ByteArrayOutputStream();
-                    ast.write(new DataOutputStream(collectAst), registry);
-                    m_abAst = collectAst.toByteArray();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-
-            m_registry = null;
-
-            assert (m_code == null) == (m_abOps == null);
-            assert (m_ast  == null) == (m_abAst == null);
+            assert m_abOps != null;
         }
     }
 
@@ -1175,9 +1083,7 @@ public class MethodStructure
         if (fAbstract) {
             m_aconstLocal = null;
             m_abOps       = null;
-            m_abAst       = null;
             m_code        = null;
-            m_ast         = null;
             m_fNative     = false;
         }
 
@@ -1825,17 +1731,11 @@ public class MethodStructure
             that.m_code = null;
         }
 
-        // REVIEW is it necessary to explicitly clone the AST? we treat it as immutable data, but it
-        //        will hold references to Constants from the pool -- does that matter?
-
         if (this.m_aconstLocal != null) {
             that.m_aconstLocal = this.m_aconstLocal.clone();
         }
         if (this.m_aconstSuper != null) {
             that.m_aconstSuper = this.m_aconstSuper.clone();
-        }
-        if (this.m_aAstParams != null) {
-            that.m_aAstParams = this.m_aAstParams.clone();
         }
 
         // force the reloading of the m_structFinally
@@ -1914,9 +1814,6 @@ public class MethodStructure
             }
             if (m_aconstSuper != null) {
                 m_aconstSuper = m_aconstSuper.clone();
-            }
-            if (m_aAstParams != null) {
-                m_aAstParams = m_aAstParams.clone();
             }
             if (m_code != null) {
                 m_code.markReadOnly();
@@ -2009,19 +1906,6 @@ public class MethodStructure
 
         assert cConsts == 0 || cbOps > 0;
 
-        // read AST
-        byte[] abAST = null;
-        int    cbAST = readMagnitude(in);
-        if (cbAST > 0) {
-            // temporarily, we are producing both byte code and persistent AST, so if there is an
-            // AST, the current assumption (until we stop emitting byte code) is that there will
-            // also be ops
-            assert cbOps > 0;
-
-            abAST = new byte[cbAST];
-            in.readFully(abAST);
-        }
-
         Source source = new Source();
         source.disassemble(in);
 
@@ -2032,8 +1916,7 @@ public class MethodStructure
         m_aParams        = aParams;
         m_aconstLocal    = aconst;
         m_abOps          = abOps;
-        m_abAst          = abAST;
-        m_FHasCode       = abOps != null || abAST != null;
+        m_FHasCode       = abOps != null;
         m_source         = source.isPresent() ? source : null;
         adoptParameters(aReturns);
         adoptParameters(aParams);
@@ -2067,7 +1950,7 @@ public class MethodStructure
         // (2) otherwise, if the local constants are present (because we read them in), then make
         //     sure they're all registered;
         // (3) otherwise, assume there are no local constants
-        if (m_abOps != null || m_abAst != null) {
+        if (m_abOps != null) {
             // we didn't disassemble the individual ops, but we are responsible for registering the
             // constants that ops refer to
             if (m_aconstLocal != null) {
@@ -2080,11 +1963,6 @@ public class MethodStructure
             if (m_code != null) {
                 m_code.prepareOps();
                 m_code.registerConstants(registry);
-            }
-
-            if (m_ast != null) {
-                registry.init(m_aAstParams);
-                m_ast.prepareWrite(registry);
             }
 
             m_aconstLocal = registry.getConstantArray();
@@ -2150,28 +2028,6 @@ public class MethodStructure
         writePackedLong(out, cbOps);
         if (cbOps > 0) {
             out.write(abOps);
-        }
-
-        // produce the AST bytes if necessary
-        if (m_abAst == null && m_ast != null) {
-            try {
-                ByteArrayOutputStream collectAst = new ByteArrayOutputStream();
-                m_ast.write(new DataOutputStream(collectAst), m_registry);
-                m_abAst = collectAst.toByteArray();
-            } catch (IOException e) {
-                System.err.println("Error in MethodStructure.assemble() of AST for "
-                                       + this.getParent().getContainingClass().getName() + "."
-                                       + this.getName() + ": " + e);
-                throw new IOException(e);
-            }
-        }
-
-        // write out the AST bytes (if there are any)
-        byte[] abAst = m_abAst;
-        int    cbAst = abAst == null ? 0 : abAst.length;
-        writePackedLong(out, cbAst);
-        if (cbAst > 0) {
-            out.write(abAst);
         }
 
         (m_source == null ? new Source() : m_source).assemble(out);
@@ -2253,21 +2109,7 @@ public class MethodStructure
                     op.resolveCode(this, aconst);
                 }
             }
-//            try
-//                {
-//                // TODO REMOVE: TEMPORARY test of AST deserialization
-//                method.getAst();
-//            }
-//            catch (Throwable e)
-//                {
-//                if (alreadyReported.add(e.getClass()))
-//                    {
-//                    System.err.println("AST error: " + e.getMessage());
-//                }
-//            }
         }
-
-//        private static HashSet<Class> alreadyReported = new HashSet<>();
 
         Code(MethodStructure method, Code wrappee) {
             assert method != null;
@@ -3179,11 +3021,6 @@ public class MethodStructure
     private byte[] m_abOps;
 
     /**
-     * The serialized form of the AST.
-     */
-    private byte[] m_abAst;
-
-    /**
      * The constants used by the Ops.
      */
     Constant[] m_aconstLocal;
@@ -3197,16 +3034,6 @@ public class MethodStructure
      * The method's code (for assembling new code).
      */
     private transient Code m_code;
-
-    /**
-     * The method's AST.
-     */
-    private transient BinaryAST m_ast;
-
-    /**
-     * The method's parameters.
-     */
-    private transient RegisterAST[] m_aAstParams;
 
     /**
      * The max number of registers used by the method. Calculated from the ops.

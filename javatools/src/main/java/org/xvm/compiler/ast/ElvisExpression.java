@@ -258,8 +258,8 @@ public class ElvisExpression
             Label        labelEnd = getEndLabel();
             Assignable   varCond  = createTempVar(code, pool().typeBoolean());
             Assignable   varVal   = createTempVar(code, getType());
-            Assignable[] LVals    = new Assignable[] {varCond, varVal};
-            expr1.generateAssignments(ctx, code, LVals, errs);
+            Assignable[] lValues  = new Assignable[] {varCond, varVal};
+            expr1.generateAssignments(ctx, code, lValues, errs);
             code.add(new JumpTrue(varCond.getRegister(), labelEnd));
             expr2.generateAssignment(ctx, code, varVal, errs);
             code.add(labelEnd);

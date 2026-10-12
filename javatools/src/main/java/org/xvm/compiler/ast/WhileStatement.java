@@ -16,14 +16,6 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Op;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.BinaryAST;
-import org.xvm.asm.ast.DoWhileStmtAST;
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.LoopStmtAST;
-import org.xvm.asm.ast.RegAllocAST;
-import org.xvm.asm.ast.StmtBlockAST;
-import org.xvm.asm.ast.WhileStmtAST;
-
 import org.xvm.asm.constants.StringConstant;
 
 import org.xvm.asm.op.Enter;
@@ -193,7 +185,7 @@ public class WhileStatement
         // each attempt to validate the loop will log errors into a temporary error list; whichever
         // run is the "keeper" will have its temporary errors moved over (relogged) into the
         // original error listener
-        ErrorListener  errsOrig = errs;
+        ErrorListener errsOrig = errs;
 
         // by holding on to the original context, we can determine the impact on the incoming
         // context that would occur by the beginning of the second iteration of the loop, and
@@ -265,7 +257,7 @@ public class WhileStatement
                     // expression plays a role of an "if", since the block cannot be entered
                     // if this expression evaluates to "false"; in the case of "do-while", it
                     // is *only* used to calculate the impact of the "while"
-                    ctx     = ctx.enterIf();
+                    ctx = ctx.enterIf();
                     cExits += cConds;
 
                     for (int i = 0; i < cConds; ++i) {
@@ -439,12 +431,11 @@ public class WhileStatement
 
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
-        boolean   fCompletes    = fReachable;
-        boolean   fDoWhile      = isDoWhile();
-        Register  regFirst      = m_regFirst;
-        Register  regCount      = m_regCount;
-        boolean   fHasLabelVars = regFirst != null || regCount != null;
-        AstHolder holder        = ctx.getHolder();
+        boolean  fCompletes    = fReachable;
+        boolean  fDoWhile      = isDoWhile();
+        Register regFirst      = m_regFirst;
+        Register regCount      = m_regCount;
+        boolean  fHasLabelVars = regFirst != null || regCount != null;
 
         // any condition of false results in false (as long as all conditions up to that point are
         // constant); all condition of true results in true (as long as all conditions are constant)
@@ -470,7 +461,6 @@ public class WhileStatement
             if (!fDoWhile) {
                 // while(false) {body} - optimized out completely (unreachable)
                 block.completes(ctx, false, code, errs);
-                holder.setAst(this, StmtBlockAST.EMPTY);
                 return fCompletes;
             }
 
@@ -488,17 +478,6 @@ public class WhileStatement
             fCompletes = block.completes(ctx, fCompletes, code, errs);
             code.add(new Exit());
             code.add(getContinueLabel());
-
-            BinaryAST astBody = holder.getAst(block);
-            if (m_aAllocSpecial != null) {
-                int         cAllocs = m_aAllocSpecial.length;
-                BinaryAST[] aAst    = new BinaryAST[cAllocs + 1];
-                System.arraycopy(m_aAllocSpecial, 0, aAst, 0, cAllocs);
-                aAst[cAllocs] = astBody;
-                holder.setAst(this, new StmtBlockAST(aAst, true));
-            } else {
-                holder.setAst(this, astBody);
-            }
 
             return fCompletes;
         }
@@ -535,7 +514,6 @@ public class WhileStatement
             code.add(new LoopEnd());
             code.add(new Exit());
 
-            holder.setAst(this, new LoopStmtAST(m_aAllocSpecial, holder.getAst(block)));
             return false; // while(true) never completes naturally
         }
 
@@ -562,7 +540,6 @@ public class WhileStatement
             // we explicitly do NOT check the block completion, since our completion is not dependent on
             // the block's ability to complete (since the loop may execute zero times)
             block.completes(ctx, fCompletes, code, errs);
-            BinaryAST astBlock = holder.getAst(block);
 
             code.add(getContinueLabel());
             fCompletes = emitConditionTest(ctx, fCompletes, code, errs);
@@ -570,7 +547,6 @@ public class WhileStatement
             code.add(new LoopEnd());
             code.add(new Exit());
 
-            holder.setAst(this, new DoWhileStmtAST(m_aAllocSpecial, astBlock, m_astCond));
             return fCompletes;
         }
 
@@ -597,14 +573,12 @@ public class WhileStatement
         // we explicitly do NOT check the block completion, since our completion is not dependent on
         // the block's ability to complete (since the loop may execute zero times)
         block.completes(ctx, fCompletes, code, errs);
-        BinaryAST astBlock = holder.getAst(block);
 
         code.add(getContinueLabel());
         emitLabelVarUpdate(code, regFirst, regCount);
         code.add(new LoopEnd());
         code.add(new Exit());
 
-        holder.setAst(this, new WhileStmtAST(m_aAllocSpecial, null, m_astCond, astBlock));
         return fCompletes;
     }
 
@@ -617,32 +591,17 @@ public class WhileStatement
      * @param regCount  the (optional) register for the "count" variable
      */
     private void emitLabelVarCreation(Code code, Register regFirst, Register regCount) {
-        ConstantPool  pool   = pool();
-        RegAllocAST[] aAlloc = null;
+        ConstantPool pool = pool();
 
         if (regFirst != null) {
-            StringConstant name = pool.ensureStringConstant(
-                    ((LabeledStatement) getParent()).getName() + ".first");
+            StringConstant name = pool.ensureStringConstant(((LabeledStatement) getParent()).getName() + ".first");
             code.add(new Var_IN(regFirst, name, pool.valTrue()));
-
-            aAlloc = new RegAllocAST[regCount == null ? 1 : 2];
-            aAlloc[0] = regFirst.getRegAllocAST();
         }
 
         if (regCount != null) {
-            StringConstant name = pool.ensureStringConstant(
-                    ((LabeledStatement) getParent()).getName() + ".count");
+            StringConstant name = pool.ensureStringConstant(((LabeledStatement) getParent()).getName() + ".count");
             code.add(new Var_IN(regCount, name, pool.val0()));
-
-            RegAllocAST astCount = regCount.getRegAllocAST();
-            if (aAlloc == null) {
-                aAlloc = new RegAllocAST[] {astCount};
-            } else {
-                aAlloc[1] = astCount;
-            }
         }
-
-        m_aAllocSpecial = aAlloc;
     }
 
     /**
@@ -663,16 +622,14 @@ public class WhileStatement
     }
 
     /**
-     * Emit the condition test code and set the {@link #m_astCond}
+     * Emit the condition test code.
      */
     private boolean emitConditionTest(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
-        boolean   fCompletes = fReachable;
-        AstHolder holder     = ctx.getHolder();
-        int       cConds     = getConditionCount();
-        ExprAST[] aCondASTs  = new ExprAST[cConds];
+        boolean fCompletes = fReachable;
+        int     cConds     = getConditionCount();
 
         for (int i = 0; i < cConds; ++i) {
-            AstNode cond  = getCondition(i);
+            AstNode cond = getCondition(i);
             if (cond instanceof AssignmentStatement stmtCond) {
                 boolean fNegated = stmtCond.isNegated();
                 Label   labelNeg = fNegated ? new Label("negated") : null;
@@ -687,17 +644,13 @@ public class WhileStatement
                     code.add(new Jump(getEndLabel()));
                     code.add(labelNeg);
                 }
-
-                aCondASTs[i] = (ExprAST) holder.getAst(stmtCond);
             } else {
                 Expression exprCond = (Expression) cond;
                 exprCond.generateConditionalJump(ctx, code, getEndLabel(), false, errs);
                 fCompletes &= exprCond.isCompletable();
-                aCondASTs[i] = exprCond.getExprAST(ctx);
             }
         }
 
-        m_astCond = BinaryAST.makeCondition(aCondASTs);
         return fCompletes;
     }
 
@@ -758,16 +711,6 @@ public class WhileStatement
      * Generally null, unless there is a "continue" that jumps to this statement.
      */
     private transient List<Break> m_listContinues;
-
-    /**
-     * ExprAST produced by {@link #emitConditionTest}.
-     */
-    private transient ExprAST m_astCond;
-
-    /**
-     * An array of RegAllocAST produced by {@link #emitLabelVarCreation}.
-     */
-    private transient RegAllocAST[] m_aAllocSpecial;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(WhileStatement.class, "conds", "block");
 }

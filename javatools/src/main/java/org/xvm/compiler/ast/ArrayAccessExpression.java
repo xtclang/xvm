@@ -17,10 +17,6 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.ast.ArrayAccessExprAST;
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.InvokeExprAST;
-
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.RangeConstant;
@@ -154,9 +150,9 @@ public class ArrayAccessExpression
 
         // otherwise, the type comes from the return value from the op that is likely to be used to
         // access the "array" target
-        TypeInfo            infoTarget  = typeTarget.ensureTypeInfo();
-        int                 cIndexes    = indexes.size();
-        Set<MethodConstant> setMethods  = findPotentialOps(infoTarget, cIndexes);
+        TypeInfo            infoTarget = typeTarget.ensureTypeInfo();
+        int                 cIndexes   = indexes.size();
+        Set<MethodConstant> setMethods = findPotentialOps(infoTarget, cIndexes);
         for (MethodConstant idMethod : setMethods) {
             if (setMethods.size() == 1 || indexesFit(ctx, idMethod)) {
                 TypeConstant[] atypeReturns = idMethod.getRawReturns();
@@ -407,7 +403,7 @@ public class ArrayAccessExpression
                 Expression exprRow = aexprIndexes[1];
 
                 // matrix[index,index]
-                TypeConstant typeElement  = null;
+                TypeConstant typeElement = null;
                 if (exprCol.testFit(ctx, pool.typeInt64(), false, null).isFit() &&
                     exprRow.testFit(ctx, pool.typeInt64(), false, null).isFit()) {
                     typeElement = typeRequired;
@@ -582,7 +578,7 @@ public class ArrayAccessExpression
         } else {
             // I_GET  rvalue-target, rvalue-ix, lvalue        ; T = T[ix]
             // M_GET  rvalue-target, #:(rvalue-ix), lvalue    ; T = T[ix*]
-            Argument         argResult      = LVal.isLocalArgument()
+            Argument argResult = LVal.isLocalArgument()
                                             ? LVal.getLocalArgument()
                                             : createTempVar(code, getType()).getRegister();
             // the target argument for Invoke must not be on stack
@@ -636,28 +632,6 @@ public class ArrayAccessExpression
                 aArgIndexes[i] = expr.ensurePointInTime(code, arg, listIndex, i);
             }
             return new Assignable(argArray, aArgIndexes);
-        }
-    }
-
-    @Override
-    public ExprAST getExprAST(Context ctx) {
-        int cIndexes = indexes.size();
-        if (cIndexes == 1) {
-            ExprAST astArray = expr.getExprAST(ctx);
-            ExprAST astArg   = indexes.get(0).getExprAST(ctx);
-            return m_fSlice
-                ? new InvokeExprAST(m_idGet, getTypes(), astArray, new ExprAST[] {astArg}, false)
-                : new ArrayAccessExprAST(astArray, astArg);
-        }
-
-        if (m_idGet == null) {
-            throw notImplemented();
-        } else {
-            ExprAST[] astArgs = new ExprAST[cIndexes];
-            for (int i = 0; i < cIndexes; i++) {
-                astArgs[i] = indexes.get(i).getExprAST(ctx);
-            }
-            return new InvokeExprAST(m_idGet, getTypes(), expr.getExprAST(ctx), astArgs, false);
         }
     }
 
@@ -1002,8 +976,8 @@ public class ArrayAccessExpression
                 assert nLo <= nHi;
             } else {
                 nLo = nHi = index.convertTo(pool.typeInt64()).getIntValue().getInt();
-                fSlice    = false;
-                fReverse  = false;
+                fSlice   = false;
+                fReverse = false;
             }
         } catch (RuntimeException e) {
             return null;

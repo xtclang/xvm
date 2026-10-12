@@ -1,12 +1,10 @@
 package org.xvm.compiler.ast;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map.Entry;
-import java.util.Objects;
 
 import org.xvm.asm.Argument;
 import org.xvm.asm.Constant;
@@ -14,9 +12,6 @@ import org.xvm.asm.Constant.Format;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.MultiExprAST;
 
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IntConstant;
@@ -197,20 +192,6 @@ public class CaseManager<CookieType> {
         return m_mapLabels.get(label);
     }
 
-    /**
-     * @return the binary AST for the condition portion of the switch
-     */
-    public ExprAST getConditionBAST() {
-        return m_bastCond;
-    }
-
-    /**
-     * @return a bitmask indicating which conditions are "is a" tests
-     */
-    public long getConditionIsA() {
-        return m_afIsSwitch;
-    }
-
     // ----- operations ----------------------------------------------------------------------------
 
     /**
@@ -259,9 +240,9 @@ public class CaseManager<CookieType> {
      */
     protected boolean validateCondition(Context ctx, List<AstNode> listCond, int nArity,
                                         ErrorListener errs) {
-        boolean      fValid     = true;
-        ConstantPool pool       = pool();
-        boolean      fIfSwitch  = listCond == null;
+        boolean      fValid    = true;
+        ConstantPool pool      = pool();
+        boolean      fIfSwitch = listCond == null;
         if (fIfSwitch) {
             // there is no condition, so all of the case statements must evaluate to boolean, and
             // the first one that matches "True" will be used
@@ -283,7 +264,7 @@ public class CaseManager<CookieType> {
                 AstNode        nodeNew;
                 if (node instanceof AssignmentStatement stmtCond) {
                     // assignment represents a side-effect, so disable the constant optimizations
-                    fAllConst   = false;
+                    fAllConst = false;
                     m_fHasDecl |= stmtCond.hasDeclarations();
 
                     nodeNew = stmtCond.validate(ctx, errs);
@@ -744,8 +725,8 @@ public class CaseManager<CookieType> {
             // (enums are no longer supported, since cross-module dependencies without
             // re-compilation would cause the values to fail to "line up", so it's better to
             // use the JumpVal option instead of the JumpInt option)
-            int     cVals       = m_listsetCase.size();
-            int     cRange      = 0;
+            int cVals  = m_listsetCase.size();
+            int cRange = 0;
             if (fValid && m_pintMin != null && getConditionCount() == 1) {
                 PackedInteger pintRange = m_pintMax.sub(m_pintMin);
                 if (!pintRange.isBig()) {
@@ -1125,21 +1106,15 @@ public class CaseManager<CookieType> {
 
         Argument[] aArgVal  = new Argument[getConditionCount()];
         int        ofArgVal = 0;
-        ExprAST[]  abast    = new ExprAST[m_listCond.size()];
-        int        ibast    = 0;
         for (AstNode node : m_listCond) {
             Expression exprCond;
-            Expression exprBast = null;
             if (node instanceof AssignmentStatement stmt) {
                 if (!stmt.completes(ctx, true, code, errs)) {
                     m_fCondAborts = true;
                 }
                 exprCond = stmt.getLValue().getLValueExpression();
-                // review GG - was there some issue where getLValueExpression() was destructive? should this get moved up one line?
-                abast[ibast++] = (ExprAST) ctx.getHolder().getAst(stmt);
             } else {
                 exprCond = (Expression) node;
-                exprBast = exprCond;
             }
 
             if (usesJmpInt() && (!getJmpIntOffset().equals(PackedInteger.ZERO)
@@ -1156,15 +1131,8 @@ public class CaseManager<CookieType> {
             int cArgsAdd = Math.min(aArgsAdd.length, aArgVal.length - ofArgVal);
             System.arraycopy(aArgsAdd, 0, aArgVal, ofArgVal, cArgsAdd);
             ofArgVal += cArgsAdd;
-
-            if (exprBast != null) {
-                abast[ibast++] = exprBast.getExprAST(ctx);
-            }
         }
         assert ofArgVal == aArgVal.length;
-
-        assert ibast == abast.length && Arrays.stream(abast).allMatch(Objects::nonNull);
-        m_bastCond = abast.length == 1 ? abast[0] : new MultiExprAST(abast);
 
         return aArgVal;
     }
@@ -1291,11 +1259,6 @@ public class CaseManager<CookieType> {
      * If the condition evaluates to a constant, then this holds that value.
      */
     private Constant[] m_aconstCond;
-
-    /**
-     * The BAST expression for the condition.
-     */
-    private ExprAST m_bastCond;
 
     /**
      * The type of the condition.

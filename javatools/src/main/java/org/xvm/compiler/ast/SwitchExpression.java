@@ -9,9 +9,6 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.SwitchAST;
-
 import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -129,12 +126,12 @@ public class SwitchExpression
 
         Context ctxCase = ctx.enterIf();
 
-        ConstantPool   pool      = pool();
-        TypeCollector  collector = new TypeCollector(pool);
-        boolean        fInCase   = false;
-        int            cExprs    = 0;
-        int            cCases    = 0;    // number of cases preceding an expression
-        CaseStatement  stmtPrev  = null; // used for error reporting only
+        ConstantPool  pool      = pool();
+        TypeCollector collector = new TypeCollector(pool);
+        boolean       fInCase   = false;
+        int           cExprs    = 0;
+        int           cCases    = 0;    // number of cases preceding an expression
+        CaseStatement stmtPrev  = null; // used for error reporting only
         for (int iNode = 0, cNodes = listNodes.size(); iNode < cNodes; ++iNode) {
             AstNode node = listNodes.get(iNode);
             if (node instanceof CaseStatement stmtCase) {
@@ -261,35 +258,23 @@ public class SwitchExpression
     }
 
     private void generateCaseBodies(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs) {
-        List<AstNode> aNodes     = contents;
-        int           cNodes     = aNodes.size();
-        Label         labelCur   = null;
-        Label         labelExit  = new Label("switch_end");
-        int           cCases     = m_casemgr.getCaseCount();
-        Constant[]    aconstCase = new Constant[cCases]; // case values (null == default)
-        ExprAST[]     abastBody  = new ExprAST[cCases];  // case bodies (or nulls)
-        for (int i = 0, iCase = -1; i < cNodes; ++i) {
+        List<AstNode> aNodes    = contents;
+        Label         labelCur  = null;
+        Label         labelExit = new Label("switch_end");
+        for (int i = 0, c = aNodes.size(); i < c; ++i) {
             AstNode node = aNodes.get(i);
             if (node instanceof CaseStatement stmtCase) {
                 labelCur = stmtCase.getLabel();
-                iCase    = stmtCase.collectConstants(iCase, aconstCase);
             } else {
-                assert iCase >= 0 && iCase < cCases;
 
                 Expression expr = (Expression) node;
                 expr.updateLineNumber(code);
                 code.add(labelCur);
                 expr.generateAssignments(ctx, code, aLVal, errs);
                 code.add(new Jump(labelExit));
-
-                assert abastBody[iCase] == null;
-                abastBody[iCase] = expr.getExprAST(ctx);
             }
         }
         code.add(labelExit);
-
-        m_aconstCases = aconstCase;
-        m_abastBody   = abastBody;
     }
 
     @Override
@@ -314,14 +299,6 @@ public class SwitchExpression
             }
         }
         return false;
-    }
-
-    @Override
-    public ExprAST getExprAST(Context ctx) {
-        return isConstant()
-                ? toExprAst(toConstant())
-                : new SwitchAST(m_casemgr.getConditionBAST(), m_casemgr.getConditionIsA(),
-                        m_aconstCases, m_abastBody, getTypes());
     }
 
     // ----- debugging assistance ------------------------------------------------------------------
@@ -368,8 +345,6 @@ public class SwitchExpression
     protected long          lEndPos;
 
     private transient CaseManager<Expression> m_casemgr;
-    private transient Constant[]              m_aconstCases;
-    private transient ExprAST[]               m_abastBody;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(SwitchExpression.class, "cond", "contents");
 }
