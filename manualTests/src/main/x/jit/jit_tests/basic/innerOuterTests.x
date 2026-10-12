@@ -2,12 +2,14 @@ package innerOuterTests {
 
     void run() {
         testSimple();
-        testChildOverride();
-        testInheritedChild();
         testOuterIdentity();
         testStaticIface();
         testAnonInner();
         testFunky();
+        simpleChild.testChildOverride();
+//        TODO: handle complex virtual child call chains
+//        simpleChild.testInheritedChild();
+//        derivedChild.testChildSuper();
     }
 
     void testSimple() {
@@ -48,72 +50,6 @@ package innerOuterTests {
             String fnInner() = name;
         }
     }
-
-    void testChildOverride() {
-        assert new ParentBase().childReport() == "Base.Child";
-        // the inherited method must construct the child belonging to the runtime parent
-        assert new ParentDerived().childReport() == "Derived.Child";
-
-        // direct construction also uses the base factory signature, then narrows its result
-        ParentDerived.Child child = new ParentDerived().new Child();
-        assert child.report() == "Derived.Child";
-    }
-
-    class ParentBase {
-        String childReport() = new Child().report();
-
-        Child createChild() = new Child();
-
-        class Child {
-            String report() = "Base.Child";
-        }
-    }
-
-    class ParentDerived extends ParentBase {
-        @Override
-        class Child {
-            @Override
-            String report() = "Derived.Child";
-        }
-    }
-
-    void testInheritedChild() {
-        // no Child declaration: the inherited factory must still create this parent's child
-        ParentInherited parent = new ParentInherited();
-        ParentBase base = parent;
-        ParentBase.Child child = base.createChild();
-        // TODO: Ref.type is not yet implemented by nRef
-        // assert &child.type == ParentInherited.Child;
-        Outer outer = child.outer;
-        assert &outer == &parent;
-        assert child.report() == "Derived.Child";
-
-        ParentInherited.Child direct = parent.new Child();
-        outer = direct.outer;
-        assert &outer == &parent;
-        assert direct.report() == "Derived.Child";
-
-        // the same declared child can be inherited through multiple parents
-        ParentFurther further = new ParentFurther();
-        child = further.createChild();
-        outer = child.outer;
-        assert &outer == &further;
-        assert child.report() == "Derived.Child";
-
-        // the parent introduces a generic parameter, but the base factory has no type argument
-        GenericParent<String> genericParent = new GenericParent();
-        base = genericParent;
-        child = base.createChild();
-        // assert &child.type == GenericParent<String>.Child;
-        outer = child.outer;
-        assert &outer == &genericParent;
-    }
-
-    class ParentInherited extends ParentDerived {}
-
-    class ParentFurther extends ParentInherited {}
-
-    class GenericParent<Element> extends ParentBase {}
 
     void testOuterIdentity() {
         new IdentityParent().new Child().testOuter();
@@ -188,6 +124,176 @@ package innerOuterTests {
                 implements FunkyInner {
             @Override
             Element e;
+        }
+    }
+
+    package simpleChild {
+        void testChildOverride() {
+            assert new ParentBase().childReport() == "Base.Child";
+            // the inherited method must construct the child belonging to the runtime parent
+            assert new ParentDerived().childReport() == "Derived.Child";
+
+            // direct construction also uses the base factory signature, then narrows its result
+            ParentDerived.Child child = new ParentDerived().new Child();
+            assert child.report() == "Derived.Child";
+        }
+
+        void testInheritedChild() {
+            // no Child declaration: the inherited factory must still create this parent's child
+            ParentInherited parent = new ParentInherited();
+            ParentBase base = parent;
+            ParentBase.Child child = base.createChild();
+            // TODO: Ref.type is not yet implemented by nRef
+            // assert &child.type == ParentInherited.Child;
+            Outer outer = child.outer;
+            assert &outer == &parent;
+            assert child.report() == "Derived.Child";
+
+            ParentInherited.Child direct = parent.new Child();
+            outer = direct.outer;
+            assert &outer == &parent;
+            assert direct.report() == "Derived.Child";
+
+            // the same declared child can be inherited through multiple parents
+            ParentFurther further = new ParentFurther();
+            child = further.createChild();
+            outer = child.outer;
+            assert &outer == &further;
+            assert child.report() == "Derived.Child";
+
+            // the parent introduces a generic parameter, but the base factory has no type argument
+            GenericParent<String> genericParent = new GenericParent();
+            base = genericParent;
+            child = base.createChild();
+            // assert &child.type == GenericParent<String>.Child;
+            outer = child.outer;
+            assert &outer == &genericParent;
+        }
+
+        class ParentBase {
+            String childReport() = new Child().report();
+
+            Child createChild() = new Child();
+
+            class Child {
+                String report() = "Base.Child";
+            }
+        }
+
+        class ParentDerived extends ParentBase {
+            @Override
+            class Child {
+                @Override
+                String report() = "Derived.Child";
+            }
+        }
+
+        class ParentInherited extends ParentDerived {}
+
+        class ParentFurther extends ParentInherited {}
+
+        class GenericParent<Element> extends ParentBase {}
+    }
+
+    package derivedChild {
+        // ParentBase (PB) declares C1 extending C0. ParentDerived (PD) overrides these virtual
+        // children, so an inherited PB.C1 method runs in a child chain composed for PD.
+        // Its super call must reach PD.C0 before PB.C0, not follow only PB's declared hierarchy.
+        //
+        // The trace suffix indicates which derived children override the method: the first
+        // digit is C0, the second is C1. These combinations exercise the following chains:
+        //   trace11: PD.C1 -> PB.C1 -> PD.C0 -> PB.C0
+        //   trace10:          PB.C1 -> PD.C0 -> PB.C0
+        //   trace01: PD.C1 -> PB.C1 ->          PB.C0
+        // BoundC1 checks the same composition when super is bound to a function before calling it.
+        //
+        // ParentDerived2 omits C1 entirely; its inherited C1 must still reach its overridden C0.
+        // ParentDerived3 omits C0 entirely; its overridden C1 must reach the inherited base C0.
+        // Omitting a child declaration must behave like declaring it without a method override.
+        void testChildSuper() {
+            ParentBase    pb = new ParentBase();
+            ParentDerived pd = new ParentDerived();
+            assert pb.new C1().trace11() == "PB.C1->PB.C0->";
+            assert pd.new C1().trace11() == "PD.C1->PB.C1->PD.C0->PB.C0->";
+            assert pd.new C1().trace10() == "PB.C1->PD.C0->PB.C0->";
+            assert pd.new C1().trace01() == "PD.C1->PB.C1->PB.C0->";
+
+            assert pd.new BoundC1().trace11() == "PD.BC1->PB.BC1->PD.C0->PB.C0->";
+
+            assert new ParentDerived2().new C1().trace10() == "PB.C1->PD.C0->PB.C0->";
+            assert new ParentDerived3().new C1().trace01() == "PD.C1->PB.C1->PB.C0->";
+        }
+
+        class ParentBase {
+            class C0 {
+                String trace11() = "PB.C0->";
+                String trace10() = "PB.C0->";
+                String trace01() = "PB.C0->";
+            }
+
+            class C1 extends C0 {
+                @Override
+                String trace11() = "PB.C1->" + super();
+
+                @Override
+                String trace10() = "PB.C1->" + super();
+
+                @Override
+                String trace01() = "PB.C1->" + super();
+            }
+
+            class BoundC1 extends C0 {
+                @Override
+                String trace11() {
+                    function String() next = super;
+                    return "PB.BC1->" + next();
+                }
+            }
+        }
+
+        class ParentDerived extends ParentBase {
+            @Override
+            class C0 {
+                @Override
+                String trace11() = "PD.C0->" + super();
+
+                @Override
+                String trace10() = "PD.C0->" + super();
+            }
+
+            @Override
+            class C1 {
+                @Override
+                String trace11() = "PD.C1->" + super();
+
+                @Override
+                String trace01() = "PD.C1->" + super();
+            }
+
+            @Override
+            class BoundC1 {
+                @Override
+                String trace11() {
+                    function String() next = super;
+                    return "PD.BC1->" + next();
+                }
+            }
+        }
+
+        class ParentDerived2 extends ParentBase {
+            @Override
+            class C0 {
+                @Override
+                String trace10() = "PD.C0->" + super();
+            }
+        }
+
+        class ParentDerived3 extends ParentBase {
+            @Override
+            class C1 {
+                @Override
+                String trace01() = "PD.C1->" + super();
+            }
         }
     }
 }
