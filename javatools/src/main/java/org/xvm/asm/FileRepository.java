@@ -5,8 +5,11 @@ import java.io.IOException;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+
+import java.util.function.BiConsumer;
 
 import org.xvm.asm.FileStructure.FileInfo;
 
@@ -33,10 +36,29 @@ public class FileRepository
      * @param readOnly  true to make the repository "read-only"
      */
     public FileRepository(File file, boolean readOnly) {
+        this(file, readOnly, (candidate, cause) ->
+                System.out.println("Error reading module file " + candidate + ": " + cause));
+    }
+
+    /**
+     * Construct a repository with an observer for unsuccessful file reads.
+     *
+     * <p>The observer receives the candidate file and original I/O exception synchronously for
+     * each failed read attempt, including an unsupported binary version. It replaces the default
+     * console report; it does not change lookup or fallback. Cached absence produces no report.
+     * A report establishes neither the file's module identity nor why its contents became unreadable.
+     * Write failures continue to be thrown by {@link #storeModule(ModuleStructure)}.
+     *
+     * @param file           the file that contains the module(s)
+     * @param readOnly       true to make the repository read-only
+     * @param onReadFailure  the non-null observer; it must not reenter this repository
+     */
+    public FileRepository(File file, boolean readOnly, BiConsumer<File, IOException> onReadFailure) {
         assert file != null && !file.isDirectory();
 
-        this.file     = moduleFile(file);
-        this.readOnly = readOnly;
+        this.file          = moduleFile(file);
+        this.readOnly      = readOnly;
+        this.onReadFailure = Objects.requireNonNull(onReadFailure);
     }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -60,11 +82,6 @@ public class FileRepository
     @Override
     public synchronized Set<String> getModuleNames() {
         return validateCache() ? cachedVersionsByName.keySet() : Set.of();
-    }
-
-    @Override
-    public synchronized Map<File, IOException> getReadFailures() {
-        return readFailure == null ? Map.of() : Map.of(file, readFailure);
     }
 
     @Override
@@ -172,9 +189,10 @@ public class FileRepository
             fileStructure.writeTo(workFile);
             file.delete();
             if (workFile.renameTo(file)) {
-                cachedVersionsByName = fileStructure.buildFileInfo().modules();
-                cachedFileStructure  = fileStructure;
-                cacheOk              = true;
+                cachedVersionsByName   = fileStructure.buildFileInfo().modules();
+                cachedFileStructure    = fileStructure;
+                cacheOk                = true;
+                readFailed             = false;
             }
         } catch (IOException e) {
             throw new IOException("Error writing module to file: " + file, e);
@@ -233,16 +251,16 @@ public class FileRepository
      * Make sure that the cache is up to date.
      */
     private boolean validateCache() {
-        // Successful reads keep the usual burst cache. Failed reads retain their cause and are
+        // Successful reads keep the usual burst cache. Failed reads are
         // retried after the burst, or immediately if the file metadata changes.
         long now = System.currentTimeMillis();
         boolean unchanged = timestamp == file.lastModified() && size == file.length();
         boolean recent = now < lastScan + 60/*ms*/;
-        if (readFailure == null ? recent || unchanged : recent && unchanged) {
+        if (!readFailed ? recent || unchanged : recent && unchanged) {
             return cacheOk;
         }
 
-        boolean retryFailedRead = readFailure != null;
+        boolean retryFailedRead = readFailed;
         cachedVersionsByName   = Map.of();
         cachedFileStructure    = null;
         cachedModuleStructures = null;
@@ -262,7 +280,7 @@ public class FileRepository
                 cacheOk              = true;
             }
         } else {
-            readFailure = null;
+            readFailed = false;
         }
         timestamp = file.lastModified();
         size      = file.length();
@@ -301,29 +319,31 @@ public class FileRepository
     }
 
     /**
-     * @return the FileInfo freshly read from the file system, or null with a retained read failure
+     * @return the FileInfo freshly read from the file system, or null after reporting an unsuccessful read
      */
     private FileInfo readFileInfo() {
         try {
             FileInfo info = FileStructure.readFileInfo(file);
-            readFailure = null;
+            readFailed = false;
             return info;
         } catch (IOException e) {
-            readFailure = e;
+            readFailed = true;
+            onReadFailure.accept(file, e);
             return null;
         }
     }
 
     /**
-     * @return the FileStructure freshly read from the file system, or null with a retained read failure
+     * @return the FileStructure freshly read from the file system, or null after reporting an unsuccessful read
      */
     private FileStructure readFileStructure() {
         try {
             FileStructure structure = new FileStructure(file);
-            readFailure = null;
+            readFailed = false;
             return structure;
         } catch (IOException e) {
-            readFailure = e;
+            readFailed = true;
+            onReadFailure.accept(file, e);
             return null;
         }
     }
@@ -371,8 +391,10 @@ public class FileRepository
     private long    lastScan;
     private boolean cacheOk;
 
-    /** The most recent unsuccessful read; cleared by a successful retry or removal. */
-    private IOException readFailure;
+    /** Whether the last read failed and must be retried after the cache interval. */
+    private boolean readFailed;
+
+    private final BiConsumer<File, IOException> onReadFailure;
 
     /**
      * Cached file contents: module names and versions thereof.
