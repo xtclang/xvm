@@ -223,8 +223,8 @@ public class NotNullExpression
         if (m_fCond) {
             Assignable   varCond = createTempVar(code, pool().typeBoolean());
             Assignable   varVal  = createTempVar(code, getType());
-            Assignable[] LVals   = new Assignable[] {varCond, varVal};
-            expr.generateAssignments(ctx, code, LVals, errs);
+            Assignable[] lValues = new Assignable[] {varCond, varVal};
+            expr.generateAssignments(ctx, code, lValues, errs);
             code.add(new JumpFalse(varCond.getRegister(), m_labelShort));
             return varVal.getRegister();
         } else {

@@ -28,24 +28,24 @@ public class MultipleLValueStatement
     /**
      * Construct MultipleLValueStatement.
      *
-     * @param LVals a list of statements and expressions representing LValues
+     * @param lValues  a list of statements and expressions representing LValues
      */
-    public MultipleLValueStatement(List<AstNode> LVals) {
-        assert LVals.stream().allMatch(AstNode::isLValueSyntax);
+    public MultipleLValueStatement(List<AstNode> lValues) {
+        assert lValues.stream().allMatch(AstNode::isLValueSyntax);
 
-        this.LVals = LVals;
+        this.lValues = lValues;
     }
 
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override
     public long getStartPosition() {
-        return LVals.getFirst().getStartPosition();
+        return lValues.getFirst().getStartPosition();
     }
 
     @Override
     public long getEndPosition() {
-        return LVals.get(LVals.size() - 1).getEndPosition();
+        return lValues.get(lValues.size() - 1).getEndPosition();
     }
 
     @Override
@@ -57,7 +57,7 @@ public class MultipleLValueStatement
      * @return the types being assigned to
      */
     public TypeConstant[] getTypes() {
-        List<AstNode>  listLVals = LVals;
+        List<AstNode>  listLVals = lValues;
         int            cTypes    = listLVals.size();
         TypeConstant[] aTypes    = new TypeConstant[cTypes];
         for (int i = 0; i < cTypes; ++i) {
@@ -89,7 +89,7 @@ public class MultipleLValueStatement
                                             TypeConstant[] aTypes) {
         assert aTypes != null && aTypes.length >= 1;
 
-        List<AstNode> listLVals = LVals;
+        List<AstNode> listLVals = lValues;
         for (int i = 0, c = Math.min(aTypes.length, listLVals.size()); i < c; ++i) {
             listLVals.get(i).updateLValueFromRValueTypes(ctx, branch, fCond,
                     new TypeConstant[] {aTypes[i]});
@@ -98,7 +98,7 @@ public class MultipleLValueStatement
 
     @Override
     public void resetLValueTypes(Context ctx) {
-        for (AstNode listLVal : LVals) {
+        for (AstNode listLVal : lValues) {
             listLVal.resetLValueTypes(ctx);
         }
     }
@@ -135,7 +135,7 @@ public class MultipleLValueStatement
     int indexOfChild(AstNode node) {
         assert node != null;
 
-        List<AstNode> list = LVals;
+        List<AstNode> list = lValues;
         for (int i = 0, cNodes = list.size(); i < cNodes; ++i) {
             if (node == list.get(i)) {
                 return i;
@@ -157,7 +157,7 @@ public class MultipleLValueStatement
     Label ensureShortCircuitLabel(int i) {
         Label[] aLabels = aGroundLabels;
         if (aLabels == null) {
-            aGroundLabels = aLabels = new Label[LVals.size()];
+            aGroundLabels = aLabels = new Label[lValues.size()];
         }
 
         Label label = aLabels[i];
@@ -172,13 +172,13 @@ public class MultipleLValueStatement
 
     @Override
     protected Statement validateImpl(Context ctx, ErrorListener errs) {
-        for (int i = 0, c = LVals.size(); i < c; ++i) {
-            AstNode nodeOld = LVals.get(i);
+        for (int i = 0, c = lValues.size(); i < c; ++i) {
+            AstNode nodeOld = lValues.get(i);
             AstNode nodeNew = nodeOld instanceof Statement stmt
                     ? stmt.validate(ctx, errs)
                     : ((Expression) nodeOld).validate(ctx, null, errs);
             if (nodeNew != null && nodeNew != nodeOld) {
-                LVals.set(i, nodeNew);
+                lValues.set(i, nodeNew);
             }
         }
         return this;
@@ -188,10 +188,10 @@ public class MultipleLValueStatement
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
         boolean fCompletes = fReachable;
 
-        List<AstNode> LVals = this.LVals;
+        List<AstNode> lValues = this.lValues;
 
-        for (int i = 0, c = LVals.size(); i < c; ++i) {
-            AstNode node = LVals.get(i);
+        for (int i = 0, c = lValues.size(); i < c; ++i) {
+            AstNode node = lValues.get(i);
             if (node instanceof Statement stmt) {
                 fCompletes = stmt.completes(ctx, fCompletes, code, errs);
             }
@@ -208,7 +208,7 @@ public class MultipleLValueStatement
 
     @Override
     public String toString() {
-        return LVals.stream()
+        return lValues.stream()
                 .map(Object::toString)
                 .collect(Collectors.joining(", ", "(", ")"));
     }
@@ -463,10 +463,10 @@ public class MultipleLValueStatement
         List<Expression> ensureExpressions() {
             List<Expression> listExprs = this.exprs;
             if (listExprs == null) {
-                List<AstNode> LVals  = MultipleLValueStatement.this.LVals;
-                int           cExprs = LVals.size();
+                List<AstNode> lValues = MultipleLValueStatement.this.lValues;
+                int           cExprs  = lValues.size();
                 listExprs = new ArrayList<>(cExprs);
-                for (AstNode lVal : LVals) {
+                for (AstNode lVal : lValues) {
                     listExprs.add(lVal.getLValueExpression());
                 }
                 this.exprs = listExprs;
@@ -506,7 +506,7 @@ public class MultipleLValueStatement
     /**
      * The list of LValue statements and expressions that make up this MultipleLValueStatement.
      */
-    protected List<AstNode> LVals;
+    protected List<AstNode> lValues;
 
     /**
      * Grounding labels for LValue expressions that can short-circuit.
@@ -518,6 +518,6 @@ public class MultipleLValueStatement
      */
     protected transient MultipleLValueExpression expr;
 
-    private static final Field[] STMT_FIELDS = fieldsForNames(MultipleLValueStatement.class, "LVals");
+    private static final Field[] STMT_FIELDS = fieldsForNames(MultipleLValueStatement.class, "lValues");
     private static final Field[] EXPR_FIELDS = fieldsForNames(MultipleLValueExpression.class, "exprs");
 }

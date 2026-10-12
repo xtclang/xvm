@@ -594,14 +594,12 @@ public class WhileStatement
         ConstantPool pool = pool();
 
         if (regFirst != null) {
-            StringConstant name = pool.ensureStringConstant(
-                    ((LabeledStatement) getParent()).getName() + ".first");
+            StringConstant name = pool.ensureStringConstant(((LabeledStatement) getParent()).getName() + ".first");
             code.add(new Var_IN(regFirst, name, pool.valTrue()));
         }
 
         if (regCount != null) {
-            StringConstant name = pool.ensureStringConstant(
-                    ((LabeledStatement) getParent()).getName() + ".count");
+            StringConstant name = pool.ensureStringConstant(((LabeledStatement) getParent()).getName() + ".count");
             code.add(new Var_IN(regCount, name, pool.val0()));
         }
     }

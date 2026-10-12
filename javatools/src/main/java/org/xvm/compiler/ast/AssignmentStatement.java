@@ -72,7 +72,7 @@ public class AssignmentStatement
         }
 
         if (lvalue instanceof MultipleLValueStatement stmtMulti) {
-            for (AstNode LVal : stmtMulti.LVals) {
+            for (AstNode LVal : stmtMulti.lValues) {
                 if (LVal instanceof VariableDeclarationStatement) {
                     return true;
                 }
@@ -94,7 +94,7 @@ public class AssignmentStatement
                 aDecls = new VariableDeclarationStatement[] {stmtVar};
             } else if (LVal instanceof MultipleLValueStatement stmtMulti) {
                 ArrayList<VariableDeclarationStatement> list = new ArrayList<>();
-                for (AstNode node : stmtMulti.LVals) {
+                for (AstNode node : stmtMulti.lValues) {
                     if (node instanceof VariableDeclarationStatement stmtVar) {
                         list.add(stmtVar);
                     }
@@ -136,12 +136,12 @@ public class AssignmentStatement
                 aDecls = new VariableDeclarationStatement[] {stmt};
             }
         } else {
-            List<AstNode> LVals = ((MultipleLValueStatement) LVal).LVals;
+            List<AstNode> lValues = ((MultipleLValueStatement) LVal).lValues;
             List<VariableDeclarationStatement> listDecls = aDecls == null ? new ArrayList<>() : null;
-            for (int i = 0, c = LVals.size(); i < c; ++i) {
-                AstNode node = LVals.get(i);
+            for (int i = 0, c = lValues.size(); i < c; ++i) {
+                AstNode node = lValues.get(i);
                 if (node instanceof VariableDeclarationStatement stmt) {
-                    LVals.set(i, stmt.getLValueExpression());
+                    lValues.set(i, stmt.getLValueExpression());
                     if (listDecls != null) {
                         listDecls.add(stmt);
                     }
@@ -674,9 +674,9 @@ public class AssignmentStatement
                 fCompletes = stmt.completes(ctx, fCompletes, code, errs);
             }
 
-            Assignable[] LVals = lvalueExpr.generateAssignables(ctx, code, errs);
+            Assignable[] lValues = lvalueExpr.generateAssignables(ctx, code, errs);
             if (fCompletes &= lvalueExpr.isCompletable()) {
-                rvalue.generateAssignments(ctx, code, LVals, errs);
+                rvalue.generateAssignments(ctx, code, lValues, errs);
                 fCompletes &= rvalue.isCompletable();
             }
 
@@ -717,32 +717,32 @@ public class AssignmentStatement
                     LVal.assign(arg, code, errs);
                 }
             } else {
-                Assignable[] LVals    = lvalueExpr.generateAssignables(ctx, code, errs);
-                int          cLVals   = LVals.length;
-                int          cAll     = cLVals + 1;
-                Assignable[] LValsAll = new Assignable[cAll];
-                boolean      fCond    = isConditional();
-                Register     regCond  = code.createRegister(pool.typeBoolean());
+                Assignable[] lValues    = lvalueExpr.generateAssignables(ctx, code, errs);
+                int          cLVals     = lValues.length;
+                int          cAll       = cLVals + 1;
+                Assignable[] lValuesAll = new Assignable[cAll];
+                boolean      fCond      = isConditional();
+                Register     regCond    = code.createRegister(pool.typeBoolean());
 
-                LValsAll[0] = lvalueExpr.new Assignable(regCond);
+                lValuesAll[0] = lvalueExpr.new Assignable(regCond);
                 if (fCompletes &= lvalueExpr.isCompletable()) {
                     if (fCond || rvalue.isConditionalResult()) {
-                        System.arraycopy(LVals, 0, LValsAll, 1, cLVals);
-                        rvalue.generateAssignments(ctx, code, LValsAll, errs);
+                        System.arraycopy(lValues, 0, lValuesAll, 1, cLVals);
+                        rvalue.generateAssignments(ctx, code, lValuesAll, errs);
 
                         assert m_labelCondFalse == null || m_fCondFalseLabelTaken;
                     } else {
                         // neither the parent (e.g. "if" or "for") nor the r-value (invocation)
                         // are conditional; need to generate the conditional check ourselves
                         for (int i = 1; i < cAll; i++) {
-                            LValsAll[i] = lvalueExpr.new Assignable(code.createRegister(LVals[i-1].getType()));
+                            lValuesAll[i] = lvalueExpr.new Assignable(code.createRegister(lValues[i-1].getType()));
                         }
-                        rvalue.generateAssignments(ctx, code, LValsAll, errs);
+                        rvalue.generateAssignments(ctx, code, lValuesAll, errs);
 
                         Label label = new Label("skip_copy");
                         code.add(new JumpFalse(regCond, label));
                         for (int i = 0; i < cLVals; i++) {
-                            LVals[i].assign(LValsAll[i+1].getRegister(), code, errs);
+                            lValues[i].assign(lValuesAll[i+1].getRegister(), code, errs);
                         }
                         code.add(label);
                     }
