@@ -9,6 +9,16 @@ export class PlaybookCleanupFailure extends Error {
     constructor(readonly failures: readonly unknown[]) { super(`Playbook cleanup failed: ${failures.map(String).join('; ')}`); }
 }
 
+/** Always restore test settings; retain the original failure if cleanup also fails and abort the run. */
+export async function withPlaybookCleanup(body: () => Promise<void>, cleanup: () => Promise<void>): Promise<void> {
+    const failures: unknown[] = [];
+    try { await body(); }
+    catch (error) { failures.push(error); }
+    try { await cleanup(); }
+    catch (error) { throw new PlaybookCleanupFailure([...failures, error]); }
+    if (failures.length) throw failures[0];
+}
+
 export function mustStopPlaybook(error: unknown): boolean {
     return error instanceof PlaybookTimeout || error instanceof PlaybookCleanupFailure ||
         (error instanceof Error && error.name === 'TimeoutError') ||
