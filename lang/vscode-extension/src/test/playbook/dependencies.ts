@@ -20,7 +20,7 @@ async function linked(document: vscode.TextDocument, workspace: Workspace): Prom
 }
 
 export function dependencyCases(): void {
-    playbook('X45', async (workspace, data) => {
+    playbook('X45', async workspace => {
         const consumer = await workspace.dependencies();
         const location = shared.dependencyNavigation.location;
         assert.ok(!vscode.window.visibleTextEditors.some(editor => editor.document.uri.toString() === workspace.uri(location.targetFile).toString()));
@@ -139,7 +139,7 @@ export function dependencyCases(): void {
 }
 
 export function configurationCases(): void {
-    playbook('CFG1', async (workspace, data) => {
+    playbook('CFG1', async workspace => {
         const consumer = await workspace.dependencies();
         assert.strictEqual(consumer.uri.toString(), workspace.uri(shared.configuration.consumer).toString());
         await workspace.configure([]);
@@ -163,7 +163,7 @@ export function configurationCases(): void {
         } finally { registration.dispose(); }
     });
 
-    playbook('CFG3', async (workspace, data) => {
+    playbook('CFG3', async workspace => {
         const consumer = await workspace.dependencies();
         const version = consumer.version;
         await client().sendNotification('workspace/didChangeConfiguration', { settings: null });
