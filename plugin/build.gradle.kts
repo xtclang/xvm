@@ -145,6 +145,10 @@ tasks.withType<Javadoc>().configureEach {
     // TODO: Write JavaDocs for plugin.
 }
 
+tasks.named<ProcessResources>("processTestResources") {
+    from(layout.projectDirectory.file("../lang/gradle/compiler-model.init.gradle"))
+}
+
 tasks.withType<JavaCompile>().configureEach {
     inputs.property("pluginJavaLint", pluginJavaLint)
     if (pluginJavaLint.get()) {
