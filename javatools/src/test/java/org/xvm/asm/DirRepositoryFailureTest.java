@@ -9,7 +9,9 @@ import java.nio.file.Path;
 
 import java.time.Duration;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -51,7 +53,7 @@ class DirRepositoryFailureTest {
 
         reports.clear();
         new FileStructure("Broken").writeTo(file.toFile());
-        assertNotNull(repository.loadModule("Broken"));
+        awaitModule(repository, "Broken");
         assertTrue(reports.isEmpty());
     }
 
@@ -109,7 +111,7 @@ class DirRepositoryFailureTest {
     }
 
     @Test
-    void cachedFailureIsRetriedAndReportedByANewRepositoryInstance() throws IOException {
+    void cachedFailureIsReusedByANewRepositoryInstanceUntilFileChanges() throws IOException {
         Path file = directory.resolve("Broken.xtc");
         Files.writeString(file, "not a compiled module");
         assertTrue(new DirRepository(directory.toFile(), true, reports::put).getModuleNames().isEmpty());
@@ -117,33 +119,34 @@ class DirRepositoryFailureTest {
         var repository = new DirRepository(directory.toFile(), true, reports::put);
 
         assertNull(repository.loadModule("Broken"));
-        assertNotNull(reports.get(file.toFile()));
-        reports.clear();
+        assertTrue(reports.isEmpty(), "cached absence is not a new read attempt");
         new FileStructure("Broken").writeTo(file.toFile());
-        assertNotNull(repository.loadModule("Broken"));
+        awaitModule(repository, "Broken");
         assertTrue(reports.isEmpty());
     }
 
     @Test
-    void failedCandidateIsRetriedEvenWhenRepairPreservesItsMetadata() throws IOException {
-        Path file = directory.resolve("Good.xtc");
-        new FileStructure("Good").writeTo(file.toFile());
-        byte[] valid = Files.readAllBytes(file);
-        writeUnsupportedModule(file, "Good");
-        var timestamp = Files.getLastModifiedTime(file);
-        var repository = new DirRepository(directory.toFile(), true, reports::put);
-        assertNull(repository.loadModule("Good"));
-        assertNotNull(reports.get(file.toFile()));
+    void unchangedFailureIsNotReadAgainWhenTheScanIntervalExpires() throws Exception {
+        Path file = directory.resolve("Old.xtc");
+        writeUnsupportedModule(file, "Old");
+        var attempts = new ArrayList<File>();
+        var repository = new DirRepository(directory.toFile(), true, (candidate, cause) -> attempts.add(candidate));
+        assertNull(repository.loadModule("Old"));
+        assertEquals(List.of(file.toFile()), attempts);
 
-        reports.clear();
-        Files.write(file, valid);
-        Files.setLastModifiedTime(file, timestamp);
-        assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
-            while (repository.loadModule("Good") == null) {
-                Thread.sleep(10);
-            }
-        });
-        assertTrue(reports.isEmpty());
+        Thread.sleep(1100); // Advance past the production metadata-check interval.
+        for (int i = 0; i < 3; ++i) {
+            assertTrue(repository.getModuleNames().isEmpty());
+            assertNull(repository.loadModule("Missing"));
+        }
+        assertEquals(1, attempts.size(), "unchanged candidates must not be read or reported repeatedly");
+
+        new FileStructure("Good").writeTo(directory.resolve("Good.xtc").toFile());
+        awaitModule(repository, "Good");
+        assertEquals(1, attempts.size(), "a rebuild for another file must retain the failed entry");
+        new FileStructure("Repaired").writeTo(file.toFile());
+        awaitModule(repository, "Repaired");
+        assertEquals(1, attempts.size());
     }
 
     @Test
@@ -156,7 +159,9 @@ class DirRepositoryFailureTest {
 
         reports.clear();
         Files.delete(file);
-        assertTrue(repository.getModuleNames().isEmpty());
+        assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
+            while (!repository.getModuleNames().isEmpty()) Thread.sleep(10);
+        });
         assertTrue(reports.isEmpty());
     }
 
@@ -169,6 +174,12 @@ class DirRepositoryFailureTest {
         });
 
         assertSame(failure, assertThrows(IllegalStateException.class, () -> repository.loadModule("Missing")));
+    }
+
+    private static void awaitModule(ModuleRepository repository, String name) {
+        assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
+            while (repository.loadModule(name) == null) Thread.sleep(10);
+        });
     }
 
     private static void writeUnsupportedModule(Path file, String name) throws IOException {
