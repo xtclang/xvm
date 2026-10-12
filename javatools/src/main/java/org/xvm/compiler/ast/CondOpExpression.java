@@ -210,7 +210,7 @@ public class CondOpExpression
             return regAccum;
 
         case UandF:
-            // The value is always false, but evaluating the left operand is still required.
+            // the value is always false, but evaluating the left operand is still required
             expr1.generateArgument(ctx, code, fLocalPropOk, errs);
             return pool().valFalse();
 
@@ -298,7 +298,7 @@ public class CondOpExpression
             break;
 
         case UandF:
-            // Preserve left-hand effects even when the branch result is already known.
+            // preserve left-hand effects even when the branch result is already known
             expr1.generateArgument(ctx, code, true, errs);
             if (!fWhenTrue) {
                 code.add(new Jump(label));
