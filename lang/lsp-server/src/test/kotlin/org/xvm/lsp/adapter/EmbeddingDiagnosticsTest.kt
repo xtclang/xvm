@@ -14,6 +14,8 @@ import org.xvm.asm.FileStructure
 import org.xvm.asm.ModuleRepository
 import org.xvm.compiler.Source
 import org.xvm.tool.ModuleInfo
+import java.io.File
+import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Path
@@ -75,15 +77,20 @@ class EmbeddingDiagnosticsTest {
         val bytes = file.readBytes()
         ByteBuffer.wrap(bytes).putInt(2 * Int.SIZE_BYTES, FileStructure.getToolMinorVersion() - 1)
         Files.write(file.toPath(), bytes)
+        val reports = mutableMapOf<File, IOException>()
         val repository: ModuleRepository =
-            if (singleFile) FileRepository(file, true) else DirRepository(directory.toFile(), true)
+            if (singleFile) {
+                FileRepository(file, true, reports::put)
+            } else {
+                DirRepository(directory.toFile(), true, reports::put)
+            }
         val support = EmbeddingSupport.instance()
 
         for (text in listOf("module Test {}", "module Test { void broken( { }")) {
             val errors = ErrorList()
             val result = support.compileModule(Source(text), repository, errors)
             assertThat(result.succeeded()).isEqualTo(text == "module Test {}")
-            assertThat(repository.readFailures).containsKey(file)
+            assertThat(reports).containsKey(file)
             assertThat(errors.errors.map { it.code }).doesNotContain("EMB-5")
         }
 
@@ -95,9 +102,9 @@ class EmbeddingDiagnosticsTest {
                 errors,
             )
         assertThat(result.succeeded()).isFalse()
-        assertThat(errors.errors.map { it.code }).contains("COMPILER-24", "EMB-5")
-        assertThat(errors.errors.filter { it.code == "EMB-5" }.map { it.message })
-            .anyMatch { it.contains(file.path) && it.contains("Unsupported .xtc version") }
+        assertThat(errors.errors.map { it.code }).contains("COMPILER-24").doesNotContain("EMB-5")
+        assertThat(errors.errors).noneMatch { it.message.contains(file.path) }
+        assertThat(reports.getValue(file)).hasMessageContaining("Unsupported .xtc version")
     }
 
     @Test
