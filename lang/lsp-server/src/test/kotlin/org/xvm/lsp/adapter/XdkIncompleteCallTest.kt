@@ -7,6 +7,10 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Checks overload candidates for unfinished calls against all written arguments. Retains inferred expected
+ * types and named mappings while refusing invalid or duplicate bindings.
+ */
 class XdkIncompleteCallTest {
     @Test
     fun `written argument types filter overloads without selecting an unfinished call`() {

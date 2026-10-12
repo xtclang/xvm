@@ -10,6 +10,10 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRename
 import java.nio.file.Path
 
+/**
+ * Checks safe deletion of bounded private declarations. Public consumers, surviving references,
+ * initialization effects and comment loss must prevent removal despite an apparently unused local view.
+ */
 class XdkSafeDeleteTest {
     @TempDir lateinit var directory: Path
 

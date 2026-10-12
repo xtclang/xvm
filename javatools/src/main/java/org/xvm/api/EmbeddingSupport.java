@@ -51,7 +51,6 @@ import org.xvm.compiler.ast.AstNode;
 import org.xvm.compiler.ast.InvocationExpression;
 import org.xvm.compiler.ast.NewExpression;
 import org.xvm.compiler.ast.PropertyDeclarationStatement;
-import org.xvm.compiler.ast.Statement;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 import org.xvm.compiler.ast.partial.IncompleteStatement;
@@ -140,7 +139,7 @@ public class EmbeddingSupport {
      * @return the repository, or null if none of the directories exist
      */
     private static ModuleRepository repoOver(File... dirs) {
-        List<ModuleRepository> list = Arrays.stream(dirs)
+        var list = Arrays.stream(dirs)
                 .filter(File::isDirectory)
                 .<ModuleRepository>map(dir -> new DirRepository(dir, true))
                 .toList();
@@ -191,11 +190,10 @@ public class EmbeddingSupport {
      * @return the snapshot; pool counts are zero if no file structure was built
      */
     public Footprint footprint(Compilation compilation) {
-        ConstantPool pool    = compilation == null ? null : compilation.pool();
-        Runtime      runtime = Runtime.getRuntime();
+        var pool = compilation == null ? null : compilation.pool();
+        var runtime = Runtime.getRuntime();
         return new Footprint(cfgRepo == null ? 0 : cfgRepo.getModuleNames().size(), pool == null ? 0 : pool.size(),
-                pool == null ? 0 : pool.getInvalidationCount(),
-                runtime.totalMemory() - runtime.freeMemory());
+                pool == null ? 0 : pool.getInvalidationCount(), runtime.totalMemory() - runtime.freeMemory());
     }
 
     /**
@@ -212,8 +210,8 @@ public class EmbeddingSupport {
                 // Configuring only lib/ produced a repository that could never compile anything:
                 // every compile failed in prelinkSystemLibraries with "Unable to load module:
                 // mack.xtclang.org", reported as an internal error with no location
-                File             dirHome = new File(home);
-                ModuleRepository repo    = repoOver(new File(dirHome, "lib"), new File(dirHome, "javatools"));
+                var dirHome = new File(home);
+                var repo = repoOver(new File(dirHome, "lib"), new File(dirHome, "javatools"));
                 if (repo != null) {
                     configure(repo, null);
                 }
@@ -271,13 +269,16 @@ public class EmbeddingSupport {
     }
 
     /**
-     * Provide configuration necessary for the underlying Ecstasy tools and libraries. Must be
-     * called exactly one time before any other method.
+     * Provide configuration for the underlying Ecstasy tools and libraries before compiling or
+     * running a module. Repeating the same configuration is allowed; a conflicting configuration
+     * is rejected. Passive configuration and footprint queries do not require initialization.
      *
      * @param coreRepo        the ModuleRepository to load the core libraries from
      * @param customInjector  (optional) "module:class" name of a custom injector implementation to
      *                        use to provide injectable resources in lieu of the default injector
      *                        for this implementation
+     *
+     * @return this configured host support instance
      */
     public EmbeddingSupport configure(ModuleRepository coreRepo, String customInjector) {
         synchronized (LOCK) {
@@ -424,37 +425,73 @@ public class EmbeddingSupport {
             initializerBindings = identitySnapshot(initializerBindings);
         }
 
-        /** Retain hosts that supply constructor bindings without folded initializer facts. */
+        /**
+         * Retain hosts that supply constructor bindings without folded initializer facts.
+         *
+         * @param module               the compiled module, or null when compilation did not succeed
+         * @param file                 the file structure produced by the attempt, or null if none was built
+         * @param ast                  the assembled source root, or null if loading or parsing failed
+         * @param sourceTrees          the available per-source syntax trees, including recovered trees
+         * @param callBindings         validated method-call facts keyed by invocation identity
+         * @param functionBindings     validated function-call facts keyed by invocation identity
+         * @param constructorBindings  validated constructor-call facts keyed by construction identity
+         */
         public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
-                           List<StatementBlock> sourceTrees,
-                           Map<InvocationExpression, InvocationBinding> callBindings,
+                           List<StatementBlock> sourceTrees, Map<InvocationExpression, InvocationBinding> callBindings,
                            Map<InvocationExpression, InvocationBinding.FunctionCall> functionBindings,
                            Map<NewExpression, InvocationBinding> constructorBindings) {
             this(module, file, ast, sourceTrees, callBindings, functionBindings, constructorBindings, Map.of());
         }
 
-        /** Retain hosts that supply method and function bindings. */
+        /**
+         * Retain hosts that supply method and function bindings.
+         *
+         * @param module            the compiled module, or null when compilation did not succeed
+         * @param file              the file structure produced by the attempt, or null if none was built
+         * @param ast               the assembled source root, or null if loading or parsing failed
+         * @param sourceTrees       the available per-source syntax trees, including recovered trees
+         * @param callBindings      validated method-call facts keyed by invocation identity
+         * @param functionBindings  validated function-call facts keyed by invocation identity
+         */
         public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
-                           List<StatementBlock> sourceTrees,
-                           Map<InvocationExpression, InvocationBinding> callBindings,
+                           List<StatementBlock> sourceTrees, Map<InvocationExpression, InvocationBinding> callBindings,
                            Map<InvocationExpression, InvocationBinding.FunctionCall> functionBindings) {
             this(module, file, ast, sourceTrees, callBindings, functionBindings, Map.of());
         }
 
-        /** Retain hosts that supply only statically selected method calls. */
+        /**
+         * Retain hosts that supply only statically selected method calls.
+         *
+         * @param module        the compiled module, or null when compilation did not succeed
+         * @param file          the file structure produced by the attempt, or null if none was built
+         * @param ast           the assembled source root, or null if loading or parsing failed
+         * @param sourceTrees   the available per-source syntax trees, including recovered trees
+         * @param callBindings  validated method-call facts keyed by invocation identity
+         */
         public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
-                           List<StatementBlock> sourceTrees,
-                           Map<InvocationExpression, InvocationBinding> callBindings) {
+                           List<StatementBlock> sourceTrees, Map<InvocationExpression, InvocationBinding> callBindings) {
             this(module, file, ast, sourceTrees, callBindings, Map.of());
         }
 
-        /** Retain the construction API for hosts supplying structural source trees. */
-        public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
-                           List<StatementBlock> sourceTrees) {
+        /**
+         * Retain the construction API for hosts supplying structural source trees.
+         *
+         * @param module       the compiled module, or null when compilation did not succeed
+         * @param file         the file structure produced by the attempt, or null if none was built
+         * @param ast          the assembled source root, or null if loading or parsing failed
+         * @param sourceTrees  the available per-source syntax trees, including recovered trees
+         */
+        public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast, List<StatementBlock> sourceTrees) {
             this(module, file, ast, sourceTrees, Map.of());
         }
 
-        /** Retain the original construction API for hosts supplying one assembled tree. */
+        /**
+         * Retain the original construction API for hosts supplying one assembled tree.
+         *
+         * @param module  the compiled module, or null when compilation did not succeed
+         * @param file    the file structure produced by the attempt, or null if none was built
+         * @param ast     the assembled source root, or null if loading or parsing failed
+         */
         public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast) {
             this(module, file, ast, ast == null ? List.of() : List.of(ast));
         }
@@ -510,10 +547,7 @@ public class EmbeddingSupport {
      */
     public Compilation compileModule(Source source, ModuleRepository input, @NotNull ErrorListener errs) {
         requireNonNull(source, "source");
-        return compileModule(listener -> {
-            StatementBlock tree = new Parser(source, listener).parseSource();
-            return new ParsedSources(listener.hasSeriousErrors() ? null : tree, List.of(tree));
-        }, input, errs);
+        return compileModule(listener -> ParsedSources.parse(source, listener), input, errs);
     }
 
     /**
@@ -531,26 +565,30 @@ public class EmbeddingSupport {
      */
     public Compilation compileModule(ModuleInfo sources, ModuleRepository input, @NotNull ErrorListener errs) {
         requireNonNull(sources, "sources");
-        return compileModule(listener -> {
-            Node root = sources.getSourceTree(listener);
-            return new ParsedSources(root == null ? null : (StatementBlock) root.ast(),
-                    sources.getParsedSources());
-        }, input, errs);
+        return compileModule(listener -> ParsedSources.parse(sources, listener), input, errs);
     }
 
     /**
      * A successfully resolved declaration graph, before expression validation and code generation.
      * It contains no executable artifact. The calling worker exclusively owns these structures and
      * may inspect TypeInfo with its listener; ordinary compilation still validates every body.
+     *
+     * @param file         the file structure containing the resolved declarations
+     * @param ast          the assembled source tree
+     * @param sourceTrees  the available per-source trees, retained in source order
      */
-    public record DeclarationAnalysis(FileStructure file, StatementBlock ast,
-                                      List<StatementBlock> sourceTrees) {
+    public record DeclarationAnalysis(FileStructure file, StatementBlock ast, List<StatementBlock> sourceTrees) {
         public DeclarationAnalysis {
             requireNonNull(file, "file");
             requireNonNull(ast, "ast");
             sourceTrees = List.copyOf(sourceTrees);
         }
 
+        /**
+         * Obtain the pool that owns these resolved declarations.
+         *
+         * @return the constant pool owned by this declaration analysis
+         */
         public ConstantPool pool() {
             return file.getConstantPool();
         }
@@ -565,13 +603,9 @@ public class EmbeddingSupport {
      * @param errs    the host listener
      * @return resolved declarations, never a compiled module
      */
-    public Optional<DeclarationAnalysis> analyzeDeclarations(Source source, ModuleRepository input,
-                                                             @NotNull ErrorListener errs) {
+    public Optional<DeclarationAnalysis> analyzeDeclarations(Source source, ModuleRepository input, @NotNull ErrorListener errs) {
         requireNonNull(source, "source");
-        return analyzeDeclarations(listener -> {
-            StatementBlock tree = new Parser(source, listener).parseSource();
-            return new ParsedSources(listener.hasSeriousErrors() ? null : tree, List.of(tree));
-        }, input, errs);
+        return analyzeDeclarations(listener -> ParsedSources.parse(source, listener), input, errs);
     }
 
     /**
@@ -583,21 +617,15 @@ public class EmbeddingSupport {
      * @param errs     the host listener
      * @return resolved declarations, empty after any declaration failure or cancellation
      */
-    public Optional<DeclarationAnalysis> analyzeDeclarations(ModuleInfo sources, ModuleRepository input,
-                                                             @NotNull ErrorListener errs) {
+    public Optional<DeclarationAnalysis> analyzeDeclarations(ModuleInfo sources, ModuleRepository input, @NotNull ErrorListener errs) {
         requireNonNull(sources, "sources");
-        return analyzeDeclarations(listener -> {
-            Node root = sources.getSourceTree(listener);
-            return new ParsedSources(root == null ? null : (StatementBlock) root.ast(),
-                    sources.getParsedSources());
-        }, input, errs);
+        return analyzeDeclarations(listener -> ParsedSources.parse(sources, listener), input, errs);
     }
 
     private Optional<DeclarationAnalysis> analyzeDeclarations(Function<ErrorListener, ParsedSources> parse,
-                                                              ModuleRepository input, ErrorListener errs) {
-        CompilerAttempt attempt = runCompiler(parse, input, errs, CursorBinding.Collector.NONE,
-                CompilationGoal.DECLARATIONS);
-        EmbeddingCompiler compiler = attempt.compiler();
+                                                            ModuleRepository input, ErrorListener errs) {
+        var attempt = runCompiler(parse, input, errs, CursorBinding.Collector.NONE, CompilationGoal.DECLARATIONS);
+        var compiler = attempt.compiler();
         return attempt.succeeded()
                 ? Optional.of(new DeclarationAnalysis(compiler.file, compiler.ast, compiler.sourceTrees))
                 : Optional.empty();
@@ -635,7 +663,15 @@ public class EmbeddingSupport {
             functionBindings = identitySnapshot(functionBindings);
         }
 
-        /** Create partial facts with cursor and selected-method bindings. */
+        /**
+         * Create partial facts with cursor and selected-method bindings.
+         *
+         * @param sourceTrees     the available per-source syntax trees, including recovered trees
+         * @param sites           the retained incomplete source sites
+         * @param pool            the attempt's pool, or null if semantic analysis did not start
+         * @param callBindings    validated method-call facts keyed by invocation identity
+         * @param cursorBindings  visible scope and candidate facts keyed by incomplete-site identity
+         */
         public PartialAnalysis(List<StatementBlock> sourceTrees, List<IncompleteStatement> sites,
                                @Nullable ConstantPool pool,
                                Map<InvocationExpression, InvocationBinding> callBindings,
@@ -643,15 +679,27 @@ public class EmbeddingSupport {
             this(sourceTrees, sites, pool, callBindings, cursorBindings, Map.of());
         }
 
-        /** Create partial facts with call and receiver information only. */
+        /**
+         * Create partial facts with call and receiver information only.
+         *
+         * @param sourceTrees   the available per-source syntax trees, including recovered trees
+         * @param sites         the retained incomplete source sites
+         * @param pool          the attempt's pool, or null if semantic analysis did not start
+         * @param callBindings  validated method-call facts keyed by invocation identity
+         */
         public PartialAnalysis(List<StatementBlock> sourceTrees, List<IncompleteStatement> sites,
                                @Nullable ConstantPool pool, Map<InvocationExpression, InvocationBinding> callBindings) {
             this(sourceTrees, sites, pool, callBindings, Map.of());
         }
 
-        /** Create partial facts with syntax and receiver information only. */
-        public PartialAnalysis(List<StatementBlock> sourceTrees, List<IncompleteStatement> sites,
-                               @Nullable ConstantPool pool) {
+        /**
+         * Create partial facts with syntax and receiver information only.
+         *
+         * @param sourceTrees  the available per-source syntax trees, including recovered trees
+         * @param sites        the retained incomplete source sites
+         * @param pool         the attempt's pool, or null if semantic analysis did not start
+         */
+        public PartialAnalysis(List<StatementBlock> sourceTrees, List<IncompleteStatement> sites, @Nullable ConstantPool pool) {
             this(sourceTrees, sites, pool, Map.of());
         }
     }
@@ -675,57 +723,68 @@ public class EmbeddingSupport {
      *
      * @return partial facts with no success/module artifact contract
      */
-    public PartialAnalysis analyzeIncomplete(Source source, ModuleRepository input,
-                                            @NotNull ErrorListener errs) {
+    public PartialAnalysis analyzeIncomplete(Source source, ModuleRepository input, @NotNull ErrorListener errs) {
         requireNonNull(source, "source");
         return analyzeIncomplete(listener -> {
-            StatementBlock tree = Parser.forPartialAnalysis(source, listener).parseSource();
+            var tree = Parser.forPartialAnalysis(source, listener).parseSource();
             return new ParsedSources(tree, List.of(tree));
         }, Parser.UNEXPECTED_EOF, input, errs);
     }
 
     /**
-     * Analyze an incomplete member access/call at an explicit source position, including before
-     * existing closing braces or a semicolon. Source text is unchanged and later declarations
-     * retain their positions. The position must come from {@link Source#getPosition()} for this text.
-     * Supports standalone statements, simple assignment/initializer values, single return values,
-     * and final nested call arguments, including named arguments and existing closing parentheses.
-     * A cursor at the end of a written member token retains that token as a completion prefix.
-     * A cursor before a call's closing parenthesis inspects its receiver and written arguments,
-     * even when the selected syntax is complete. The selected member/call itself is not validated.
-     * Bare-name prefixes and empty statement boundaries expose visible scope; a final named argument
-     * awaiting its value retains its label. Candidate signatures can infer types from written arguments.
-     * Compound/conditional values and arguments following the cursor retain their real contexts.
-     * Constructors reuse normal receiver/type preparation, including virtual/inner/annotated types,
-     * required-type and argument-derived class inference, and parenthesized array initializers.
-     * Missing call/group/tuple parentheses and index/list/map brackets are retained at statement or
-     * outer-delimiter boundaries. Declaration values retain missing terminators; parameter defaults
-     * may retain a missing closing parenthesis before a body. An explicit cursor at EOF can also
-     * retain missing block braces. This does not invent operands, declaration names/types or literal
-     * contents, or repair unrelated errors. Anonymous construction prepares the retained declaration
-     * and fits its own or superclass constructors; it does not emit forwarding constructors or run
-     * capture analysis. Single-dimensional array brackets fit the size parameter of the fixed-size
-     * constructor, including an empty/final-name slot and a missing closing bracket. A following
-     * supplier is parsed for recovery but is outside this prefix proof. Multidimensional
-     * construction remains unsupported. Member/return and method-parameter type prefixes query
-     * types through the enclosing compiler scope. Flat qualified names resolve their qualifier
-     * and visible nested types, replacing only the final written identifier. Unqualified empty
-     * parameter slots are also supported. An unfinished header retains its written declaration
-     * name and range but registers no method/property component or parameters. Written leaf
-     * names inside parameterized and compound types also participate, including bounded missing
-     * angle/group closers. These are visible-type suggestions, not proof of generic constraints.
-     * Empty type/qualified slots, selected qualifier tokens, parameterized qualifiers, generic
-     * base names and function/sequence types are supported. Generic-method, multiple-return and
-     * type-composition headers query their enclosing scope; unregistered formals hide outer names
-     * without acquiring invented identities. A root module header registers only its written
-     * namespace/core import; its incomplete body and compositions cannot emit or contribute facts.
-     * Other syntax errors prevent semantic analysis; cursors outside supported boundaries yield no site.
+     * Analyze an incomplete member access or call at an explicit source position, including before
+     * existing closing braces or a semicolon. Source text is unchanged and later declarations retain
+     * their positions. The cursor must come from {@link Source#getPosition()} for this exact text.
+     *
+     * <p>Expression queries support standalone statements, assignment and initializer values, single
+     * return values, and nested call arguments, including named arguments and existing closing
+     * parentheses. Member tokens retain their completion prefix. A cursor before a call's closing
+     * parenthesis inspects its receiver and written arguments even when the selected syntax is
+     * complete. The selected member or call itself is not validated. Bare-name prefixes and empty
+     * statement boundaries expose visible scope; a named argument awaiting its value retains its
+     * label. Candidate signatures infer types from written arguments. Compound and conditional
+     * values, and arguments following the cursor, retain their real contexts.
+     *
+     * <p>Recovery retains missing call/group/tuple parentheses and index/list/map brackets at
+     * statement or outer-delimiter boundaries. Declaration values can retain missing terminators,
+     * parameter defaults can retain a missing closing parenthesis before a body, and a cursor at
+     * EOF can retain missing block braces. Recovery does not invent operands, declaration names or
+     * types, or literal contents, and does not repair unrelated errors.
+     *
+     * <p>Construction queries reuse normal receiver/type preparation, including virtual, inner and
+     * annotated types, required-type and argument-derived class inference, and parenthesized array
+     * initializers. Anonymous construction prepares the retained declaration and fits its own or
+     * superclass constructors without emitting forwarding constructors or running capture analysis.
+     * Single-dimensional array brackets fit the fixed-size constructor's size parameter, including
+     * an empty/final-name slot and a missing closing bracket. A following supplier is parsed for
+     * recovery but is outside this prefix proof. Multidimensional construction remains unsupported.
+     *
+     * <p>Declaration queries resolve member, return and method-parameter type prefixes through the
+     * enclosing compiler scope. Flat qualified names resolve their qualifier and visible nested
+     * types, replacing only the final written identifier. Unqualified empty parameter slots are
+     * supported. An unfinished header retains its written name and range but registers no method,
+     * property component or parameters. Written leaf names inside parameterized and compound types
+     * participate, including bounded missing angle/group closers; these are visible-type suggestions,
+     * not proof of generic constraints. Empty type/qualified slots, selected qualifier tokens,
+     * parameterized qualifiers, generic base names and function/sequence types are supported.
+     *
+     * <p>Generic-method, multiple-return and type-composition headers query their enclosing scope.
+     * Unregistered formals hide outer names without acquiring invented identities. A root module
+     * header registers only its written namespace/core import; its incomplete body and compositions
+     * cannot emit or contribute facts. Other syntax errors prevent semantic analysis, and cursors
+     * outside supported boundaries yield no site. Partial facts never promise executable output.
+     *
+     * @param source  a fresh named source whose text remains unchanged during this attempt
+     * @param cursor  the encoded source position at which to inspect incomplete syntax
+     * @param input   compiled dependencies, or null to use only the configured core repository
+     * @param errs    the host's diagnostic listener and abort policy
+     *
+     * @return retained source trees and available cursor/binding facts, without an executable module
      */
-    public PartialAnalysis analyzeIncomplete(Source source, long cursor, ModuleRepository input,
-                                            @NotNull ErrorListener errs) {
+    public PartialAnalysis analyzeIncomplete(Source source, long cursor, ModuleRepository input, @NotNull ErrorListener errs) {
         requireNonNull(source, "source");
         return analyzeIncomplete(listener -> {
-            StatementBlock tree = Parser.forPartialAnalysis(source, cursor, listener).parseSource();
+            var tree = Parser.forPartialAnalysis(source, cursor, listener).parseSource();
             return new ParsedSources(tree, List.of(tree));
         }, Parser.INCOMPLETE_EXPRESSION, input, errs);
     }
@@ -736,15 +795,22 @@ public class EmbeddingSupport {
      * The cursor refers to the selected file's snapshot, which may contain unsaved text. Neither
      * this ModuleInfo nor its parsed trees may be reused for another attempt or normal compilation.
      * Only the recognized cursor diagnostic is deferred during assembly; other source errors abort it.
+     *
+     * @param sources     a fresh module source snapshot for this attempt
+     * @param sourceFile  the file in that snapshot containing the cursor
+     * @param cursor      the selected position in the owning Source snapshot
+     * @param input       the optional repository of compiled dependencies
+     * @param errs        the diagnostic listener and abort policy for this operation
+     *
+     * @return retained syntax and any facts proved at the cursor; never a compiled module
      */
     public PartialAnalysis analyzeIncomplete(ModuleInfo sources, File sourceFile, long cursor,
                                             ModuleRepository input, @NotNull ErrorListener errs) {
         requireNonNull(sources, "sources");
-        String name = resolveFile(requireNonNull(sourceFile, "sourceFile")).getPath();
+        var name = resolveFile(requireNonNull(sourceFile, "sourceFile")).getPath();
         return analyzeIncomplete(listener -> {
-            ErrorListener assembly = ErrorListener.cancellable(
-                    ErrorListener.collecting(listener::log), listener::isAbortDesired);
-            Node root = sources.getSourceTree(assembly, (source, nodeErrors) -> {
+            var assembly = ErrorListener.cancellable(ErrorListener.collecting(listener::log), listener::isAbortDesired);
+            var root = sources.getSourceTree(assembly, (source, nodeErrors) -> {
                 if (!name.equals(source.getFileName())) {
                     return new Parser(source, nodeErrors).parseSource();
                 }
@@ -757,23 +823,21 @@ public class EmbeddingSupport {
                 }), listener::isAbortDesired);
                 return Parser.forPartialAnalysis(source, cursor, partial).parseSource();
             });
-            return new ParsedSources(root == null ? null : (StatementBlock) root.ast(),
-                    sources.getParsedSources());
+            return new ParsedSources(root == null ? null : (StatementBlock) root.ast(), sources.getParsedSources());
         }, Parser.INCOMPLETE_EXPRESSION, input, errs);
     }
 
-    private PartialAnalysis analyzeIncomplete(Function<ErrorListener, ParsedSources> parse,
-                                             String boundaryCode, ModuleRepository input,
-                                             ErrorListener errs) {
+    private PartialAnalysis analyzeIncomplete(Function<ErrorListener, ParsedSources> parse, String boundaryCode,
+                                             ModuleRepository input, ErrorListener errs) {
         verifyConfigured();
         requireNonNull(errs, "errs");
         Set<String> delivered = new HashSet<>();
-        ErrorListener host = ErrorListener.cancellable(ErrorListener.collecting(error -> {
+        var host = ErrorListener.cancellable(ErrorListener.collecting(error -> {
             if (delivered.add(error.genUID())) {
                 errs.log(error);
             }
         }), errs::isAbortDesired);
-        ErrorList syntaxErrors = new ErrorList(ErrorList.UNLIMITED);
+        var syntaxErrors = new ErrorList(ErrorList.UNLIMITED);
         ParsedSources parsed;
         try {
             if (host.isAbortDesired()) {
@@ -797,7 +861,7 @@ public class EmbeddingSupport {
         }
 
         var cursors = new CursorBinding.Collector();
-        Compilation attempt = compileModule(listener -> parsed, input, host, cursors);
+        var attempt = compileModule(listener -> parsed, input, host, cursors);
         // Anonymous construction can replace its deferred body with an owned class/validation
         // clone. Publish only surviving syntax, never the pre-validation cursor identity.
         // Primary-constructor defaults can expose the same surviving node through both the
@@ -809,8 +873,7 @@ public class EmbeddingSupport {
 
     /** Parsed children exist before parent links; expose the innermost unfinished operations. */
     private static Stream<IncompleteStatement> incompleteSites(AstNode node) {
-        var nested = PartialSyntax.children(node)
-                .flatMap(EmbeddingSupport::incompleteSites);
+        var nested = PartialSyntax.children(node).flatMap(EmbeddingSupport::incompleteSites);
         if (node instanceof IncompleteStatement site) {
             var descendants = nested.toList();
             return descendants.isEmpty() ? Stream.of(site) : descendants.stream();
@@ -818,36 +881,49 @@ public class EmbeddingSupport {
         return nested;
     }
 
-    /** An assembled tree is available only when parsing/loading succeeded. */
     /** Preserve node identity, reject null entries and detach from the collector. */
     private static <K, V> Map<K, V> identitySnapshot(Map<K, V> source) {
-        Map<K, V> copy = new IdentityHashMap<>();
+        var copy = new IdentityHashMap<K, V>();
         source.forEach((key, value) -> copy.put(requireNonNull(key), requireNonNull(value)));
         return Collections.unmodifiableMap(copy);
     }
 
-    private record ParsedSources(StatementBlock root, List<StatementBlock> sources) {}
+    /** Available source trees, with an assembled root only when parsing and loading succeeded. */
+    private record ParsedSources(StatementBlock root, List<StatementBlock> sources) {
+        /** Keep recovered syntax for diagnostics even when errors prevent compiling the root. */
+        static ParsedSources parse(Source source, ErrorListener errs) {
+            var tree = new Parser(source, errs).parseSource();
+            return new ParsedSources(errs.hasSeriousErrors() ? null : tree, List.of(tree));
+        }
 
-    private Compilation compileModule(Function<ErrorListener, ParsedSources> parse,
-                                      ModuleRepository input, ErrorListener errs) {
+        /** Assemble the module before reading the per-source trees populated during parsing. */
+        static ParsedSources parse(ModuleInfo sources, ErrorListener errs) {
+            var root = sources.getSourceTree(errs);
+            return new ParsedSources(root == null ? null : (StatementBlock) root.ast(), sources.getParsedSources());
+        }
+    }
+
+    private Compilation compileModule(Function<ErrorListener, ParsedSources> parse, ModuleRepository input, ErrorListener errs) {
         return compileModule(parse, input, errs, CursorBinding.Collector.NONE);
     }
 
     private Compilation compileModule(Function<ErrorListener, ParsedSources> parse,
-                                      ModuleRepository input, ErrorListener errs, CursorBinding.Collector cursors) {
+                                     ModuleRepository input, ErrorListener errs, CursorBinding.Collector cursors) {
         return runCompiler(parse, input, errs, cursors, CompilationGoal.MODULE).compiler().result();
     }
 
+    /** Selects declaration resolution alone or the full validation and emission pipeline. */
     private enum CompilationGoal { DECLARATIONS, MODULE }
 
+    /** Keeps partial compiler state alongside whether the requested goal completed successfully. */
     private record CompilerAttempt(EmbeddingCompiler compiler, boolean succeeded) {}
 
     private CompilerAttempt runCompiler(Function<ErrorListener, ParsedSources> parse,
-                                        ModuleRepository input, ErrorListener errs,
-                                        CursorBinding.Collector cursors, CompilationGoal goal) {
+                                       ModuleRepository input, ErrorListener errs,
+                                       CursorBinding.Collector cursors, CompilationGoal goal) {
         verifyConfigured();
         requireNonNull(errs, "errs");
-        EmbeddingCompiler compiler = new EmbeddingCompiler(parse, input, cfgRepo, errs, cursors, goal);
+        var compiler = new EmbeddingCompiler(parse, input, cfgRepo, errs, cursors, goal);
         try {
             return new CompilerAttempt(compiler, !errs.isAbortDesired() && compiler.process() == 0
                     && !errs.hasSeriousErrors() && !errs.isAbortDesired());
@@ -966,7 +1042,7 @@ public class EmbeddingSupport {
 
         @Override
         protected int process() {
-            ModuleRepository repoLib = ensureLibraryRepo();
+            var repoLib = ensureLibraryRepo();
             checkErrors("repository setup");
 
             prelinkSystemLibraries(repoLib);
@@ -976,9 +1052,8 @@ public class EmbeddingSupport {
             try {
                 // The launcher stops the next compilation stage on any error. Parsing can still
                 // recover within its own stage, subject to the host's budget and cancellation.
-                ErrorListener errs = ErrorListener.cancellable(
-                        ErrorListener.collecting(this::log), f_errs::isAbortDesired);
-                ParsedSources parsed = parse.apply(errs);
+                var errs = ErrorListener.cancellable(ErrorListener.collecting(this::log), f_errs::isAbortDesired);
+                var parsed = parse.apply(errs);
                 block = this.ast = parsed.root();
                 this.sourceTrees = parsed.sources();
             } catch (CompilerException e) {
@@ -997,15 +1072,14 @@ public class EmbeddingSupport {
                 block.log(this, ERROR, ERR_MODULE_SOURCE);
                 return checkErrors("source parsing");
             }
-            Statement stmt = block.getStatements().getLast();
-            if (!(stmt instanceof TypeCompositionStatement stmtModule) ||
-                    stmtModule.getCategory().getId() != Id.MODULE) {
+            var stmt = block.getStatements().getLast();
+            if (!(stmt instanceof TypeCompositionStatement stmtModule) || stmtModule.getCategory().getId() != Id.MODULE) {
                 stmt.log(this, ERROR, ERR_MODULE_SOURCE);
                 return checkErrors("source parsing");
             }
 
-            Compiler      compiler = new Compiler(stmtModule, this, bindings, cursors);
-            FileStructure struct   = compiler.generateInitialFileStructure();
+            var compiler = new Compiler(stmtModule, this, bindings, cursors);
+            var struct = compiler.generateInitialFileStructure();
             this.file = struct;
             if (struct == null || checkErrors("module creation") != 0) {
                 return 1;
@@ -1037,7 +1111,7 @@ public class EmbeddingSupport {
 
         @Override
         protected ModuleRepository configureLibraryRepo(List<File> ignore) {
-            BuildRepository build = new BuildRepository();
+            var build = new BuildRepository();
             return inRepo == null || inRepo == coreRepo
                     ? new LinkedRepository(true, build, coreRepo)
                     : new LinkedRepository(true, build, inRepo, coreRepo);
@@ -1226,8 +1300,8 @@ public class EmbeddingSupport {
         verifyConfigured();
         requireNonNull(errs, "errs");
 
-        ModuleRepository repository = new LinkedRepository(input, cfgRepo);
-        ModuleStructure module = version == null
+        var repository = new LinkedRepository(input, cfgRepo);
+        var module = version == null
                 ? repository.loadModule(moduleName)
                 : repository.loadModule(moduleName, version, true);
         if (module == null) {
@@ -1235,12 +1309,12 @@ public class EmbeddingSupport {
             return null;
         }
 
-        if (cfgInjector != null) {
+        if (injections != null && !injections.isEmpty() || customInjector != null || cfgInjector != null) {
             throw new UnsupportedOperationException("Custom injectors are not implemented yet");
         }
 
         try {
-            Connector connector = ensureConnector();
+            var connector = ensureConnector();
             return useJit()
                     ? JitControl.create(connector, module, repository, console, rootDir, errs)
                     : InterpreterControl.create(connector, module, repository, entry, console,

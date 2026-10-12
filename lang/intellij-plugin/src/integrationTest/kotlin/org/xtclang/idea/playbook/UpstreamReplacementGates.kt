@@ -182,6 +182,7 @@ internal fun ParityWorkspace.nativeInlineAlternatives(
     check(document.text == source)
 }
 
+/** Checks that virtual library documents remain valid and read-only in the IDE. */
 @Remote("com.intellij.openapi.vfs.VirtualFile")
 internal interface NativeLibraryFile {
     fun isValid(): Boolean

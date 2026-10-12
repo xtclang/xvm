@@ -18,6 +18,10 @@ import org.mockito.Mockito.`when`
 import org.xvm.lsp.adapter.mock.MockAdapter
 import java.util.concurrent.CompletableFuture
 
+/**
+ * Verifies that dynamic watcher registration waits for initialization and negotiated client support. Prevents
+ * startup traffic that a minimal or not-yet-ready client cannot handle.
+ */
 class StartupRegistrationTest {
     @Test
     fun `watcher requests wait for initialized and require negotiated dynamic registration`() {

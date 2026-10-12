@@ -1183,6 +1183,7 @@ internal fun ParityScenarios.platformCases() {
     }
 }
 
+/** Observes streamed protocol batches through the IDE-side test probe. */
 @Remote("org.xtclang.idea.playbook.probe.PartialResults", plugin = "org.xtclang.playbook.probe")
 interface PartialResults {
     fun listen(
@@ -1195,6 +1196,7 @@ interface PartialResults {
     fun dispose()
 }
 
+/** Applies protocol workspace edits through the installed IDE client. */
 @Remote("org.xtclang.idea.playbook.probe.WorkspaceEdits", plugin = "org.xtclang.playbook.probe")
 interface WorkspaceEdits {
     fun apply(
@@ -1203,6 +1205,7 @@ interface WorkspaceEdits {
     ): ClientFuture
 }
 
+/** Drives native file-tree operations and undo history for filesystem-edit scenarios. */
 @Remote("org.xtclang.idea.playbook.probe.FileTreeOperations", plugin = "org.xtclang.playbook.probe")
 interface FileTreeOperations {
     fun globalHistoryAvailable(

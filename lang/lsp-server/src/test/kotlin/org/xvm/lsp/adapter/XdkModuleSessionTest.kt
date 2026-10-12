@@ -15,6 +15,11 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 
+/**
+ * Exercises whole-module snapshots with unsaved members, implicit packages and resources. Diagnostics and URI
+ * aliases must remain attached to their real source while any member edit invalidates the shared module
+ * analysis.
+ */
 class XdkModuleSessionTest {
     @Test
     fun `structure warnings belong to a closed member declaration and follow its overlay`() {

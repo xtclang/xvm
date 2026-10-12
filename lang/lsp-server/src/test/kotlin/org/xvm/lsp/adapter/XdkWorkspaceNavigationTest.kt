@@ -6,6 +6,10 @@ import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
 
+/**
+ * Checks implementations, subtype relationships and call hierarchy across unopened consumers. Closed-file
+ * changes must expire old hierarchy handles even without timely watcher delivery.
+ */
 class XdkWorkspaceNavigationTest {
     @TempDir lateinit var directory: Path
 

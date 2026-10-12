@@ -8,6 +8,10 @@ import com.intellij.openapi.project.Project
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
+/**
+ * Owns compiler-model import for one IDE project. Coordinates model discovery and validation with the import
+ * state machine, and retires pending work when the project is disposed.
+ */
 @Service(Service.Level.PROJECT)
 internal class CompilerImportService(
     private val project: Project,

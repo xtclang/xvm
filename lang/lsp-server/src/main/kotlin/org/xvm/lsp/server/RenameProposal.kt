@@ -10,6 +10,10 @@ data class RenameProposal(
     val scope: RenameScope? = null,
 )
 
+/**
+ * Expected and proposed source graphs; clients apply the replacement only if the expected graph is still
+ * current.
+ */
 data class SourceGraphReplacement(
     val before: List<SourceModuleConfiguration>,
     val after: List<SourceModuleConfiguration>,

@@ -85,6 +85,7 @@ internal fun ParityScenarios.inlineCompletionCases() {
     }
 }
 
+/** Drives native inline completion and observes the suggested text. */
 @Remote("org.xtclang.idea.playbook.probe.InlineCompletionUi", plugin = "org.xtclang.playbook.probe")
 internal interface InlineCompletionProbe {
     fun type(

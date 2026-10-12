@@ -30,21 +30,26 @@ fun Driver.changeWorkspaceFolders(
         .didChangeWorkspaceFolders(params)
 }
 
+/** Exposes the workspace service of the IDE's existing language-server connection. */
 @Remote("org.eclipse.lsp4j.services.LanguageServer", plugin = "com.redhat.devtools.lsp4ij")
 interface RemoteLanguageServer {
     fun getWorkspaceService(): RemoteWorkspaceService
 }
 
+/** Delivers workspace-folder changes through the installed client connection. */
 @Remote("org.eclipse.lsp4j.services.WorkspaceService", plugin = "com.redhat.devtools.lsp4ij")
 interface RemoteWorkspaceService {
     fun didChangeWorkspaceFolders(params: RemoteWorkspaceFoldersParams)
 }
 
+/** Constructs a protocol workspace folder in the IDE process. */
 @Remote("org.eclipse.lsp4j.WorkspaceFolder", plugin = "com.redhat.devtools.lsp4ij")
 interface RemoteWorkspaceFolder
 
+/** Carries added and removed native workspace-folder values. */
 @Remote("org.eclipse.lsp4j.WorkspaceFoldersChangeEvent", plugin = "com.redhat.devtools.lsp4ij")
 interface RemoteWorkspaceFoldersEvent
 
+/** Wraps a workspace-folder change for the native protocol notification. */
 @Remote("org.eclipse.lsp4j.DidChangeWorkspaceFoldersParams", plugin = "com.redhat.devtools.lsp4ij")
 interface RemoteWorkspaceFoldersParams

@@ -7,6 +7,10 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
 
+/**
+ * Checks rename through recursive and dynamic delegation. Written contracts must move together without
+ * inventing executable implementation locations for unresolved runtime dispatch.
+ */
 class XdkCyclicRenameTest {
     @TempDir lateinit var directory: Path
 
