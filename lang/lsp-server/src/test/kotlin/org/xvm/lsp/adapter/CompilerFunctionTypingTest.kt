@@ -1,19 +1,19 @@
 package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
+import org.xvm.api.InterpreterConnector
 import org.xvm.asm.ConstantPool
 import org.xvm.asm.ErrorList
 import org.xvm.asm.FileStructure
+import org.xvm.asm.LinkedRepository
 import org.xvm.asm.ModuleStructure
 import org.xvm.asm.MultiMethodStructure
-import org.xvm.asm.ast.BinaryAST
-import org.xvm.asm.ast.BindFunctionAST
-import org.xvm.asm.ast.ReturnStmtAST
-import org.xvm.asm.ast.StmtBlockAST
 import org.xvm.asm.constants.TypeConstant
+import org.xvm.compiler.InstantRepository
 import org.xvm.compiler.Source
 import org.xvm.compiler.Token
 import org.xvm.compiler.Token.Id
@@ -27,34 +27,34 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 
 /** Verifies ordinary function typing without the partial-analysis or selected-call APIs. */
+@Timeout(30)
 class CompilerFunctionTypingTest {
     @ParameterizedTest
-    @ValueSource(strings = ["id", "&id", "pick", "&pick"])
-    fun `bound generic functions retain their callable type after serialization`(reference: String) {
+    @ValueSource(strings = ["id", "&id", "pick", "&pick", "plain", "&plain"])
+    fun `bound callable references retain their callable type and execute after serialization`(reference: String) {
         val module =
             compile(
-                "module FunctionTypes { static <T> T id(T value) = value; <T> T pick(T value) = value; " +
-                    "function Int(Int) make() = $reference; }",
+                "module FunctionTypes { static <T> T id(T value) = value; <T> T pick(T value) = value; Int plain(Int value) = value; " +
+                    "function Int(Int) make() = $reference; Int run() = make()(42); }",
             )
         val bytes = ByteArrayOutputStream().also { module.fileStructure.writeTo(it) }.toByteArray()
         val restored = FileStructure(ByteArrayInputStream(bytes)).module
         val method = (restored.getChild("make") as MultiMethodStructure).methods().single()
-        val returned =
-            statements(method.ast)
-                .filterIsInstance<ReturnStmtAST>()
-                .single()
-                .exprs
-                .single()
+        val functionType = method.identityConstant.rawReturns.single()
+        assertThat(method.ops).isNotEmpty()
+        assertThat(method.constantPool.extractFunctionParams(functionType))
+            .containsExactly(method.constantPool.typeInt64())
+        assertThat(method.constantPool.extractFunctionReturns(functionType))
+            .containsExactly(method.constantPool.typeInt64())
 
-        assertThat(returned).isInstanceOf(BindFunctionAST::class.java)
-        val binding = returned as BindFunctionAST
-        assertThat(binding.indexes).containsExactly(0)
-        assertThat(binding.args).hasSize(1)
-        assertThat(binding.getType(0)).isEqualTo(method.identityConstant.rawReturns.single())
-        assertThat(method.constantPool.extractFunctionParams(binding.getType(0)))
-            .containsExactly(method.constantPool.typeInt64())
-        assertThat(method.constantPool.extractFunctionReturns(binding.getType(0)))
-            .containsExactly(method.constantPool.typeInt64())
+        val repository = LinkedRepository(InstantRepository(restored), EmbeddingSupport.instance().configuredRepository)
+        val connector = InterpreterConnector(repository)
+        connector.loadModule(restored.name)
+        connector.start(null)
+        ConstantPool.withPool(connector.constantPool).use {
+            connector.invoke0(connector.findMethods("run").single())
+        }
+        assertThat(connector.join()).isEqualTo(42)
     }
 
     @ParameterizedTest
@@ -144,6 +144,4 @@ class CompilerFunctionTypingTest {
         assertThat(errors.errors).isEmpty()
         return requireNotNull(module) { "Compilation failed: ${errors.errors}" }
     }
-
-    private fun statements(ast: BinaryAST): List<BinaryAST> = if (ast is StmtBlockAST) ast.stmts.flatMap(::statements) else listOf(ast)
 }
