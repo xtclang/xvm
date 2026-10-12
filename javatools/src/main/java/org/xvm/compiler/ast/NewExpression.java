@@ -1505,8 +1505,8 @@ public class NewExpression
     protected boolean isImplicitDeref(String sCaptureName) {
         assert m_mapCapture.containsKey(sCaptureName);
 
-        Register reg    = m_captureBindings.registers().get(sCaptureName);
-        Boolean  FVar   = m_mapCapture  .get(sCaptureName);
+        Register reg  = m_captureBindings.registers().get(sCaptureName);
+        Boolean  FVar = m_mapCapture  .get(sCaptureName);
         return FVar || !reg.isEffectivelyFinal();
     }
 
