@@ -576,7 +576,7 @@ public class NewExpression
         List<Expression> listArgs = args;
         MethodConstant   idConstruct = findMethod(ctx, typeTarget, infoTarget, "construct", listArgs,
                                         MethodKind.Constructor, true, false, null, errsTemp);
-        MethodStructure constructor  = null;
+        MethodStructure constructor = null;
         if (fAnonymous) {
             // first, see if the constructor that we're looking for is on the anonymous
             // inner class (which -- other than the zero-args case -- will be rare, but it
@@ -1410,8 +1410,8 @@ public class NewExpression
     protected boolean isImplicitDeref(String sCaptureName) {
         assert m_mapCapture.containsKey(sCaptureName);
 
-        Register reg    = m_mapRegisters.get(sCaptureName);
-        Boolean  FVar   = m_mapCapture  .get(sCaptureName);
+        Register reg  = m_mapRegisters.get(sCaptureName);
+        Boolean  FVar = m_mapCapture  .get(sCaptureName);
         return FVar || !reg.isEffectivelyFinal();
     }
 

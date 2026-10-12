@@ -210,10 +210,10 @@ public class CmpChainExpression
         // expression that everything else can be compared to
         Constant constVal = null;
         if (fValid) {
-            Constant constPrev  = null;
-            boolean  fEquality  = operators[0].getId() == Id.COMP_EQ;
-            Constant FALSE      = pool.valFalse();
-            boolean  fAllConst  = true;
+            Constant constPrev = null;
+            boolean  fEquality = operators[0].getId() == Id.COMP_EQ;
+            Constant FALSE     = pool.valFalse();
+            boolean  fAllConst = true;
 
             for (int i = 0; i < cExprs; ++i) {
                 Expression   expr   = listExprs.get(i);
@@ -379,7 +379,7 @@ public class CmpChainExpression
         Label labelFalse = fWhenTrue ? new Label("not_eq") : label;
 
         // otherwise, everything has to get compared, left to right
-        Token[] aTokOp  = operators;
+        Token[] aTokOp = operators;
         for (int iCmp = 0, cOps = aTokOp.length; iCmp < cOps; ++iCmp) {
             Argument arg1 = aArgs[iCmp];
             Argument arg2 = aArgs[iCmp + 1];

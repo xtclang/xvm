@@ -2362,11 +2362,11 @@ public class Context {
             // TargetInfo carries a "local" view of the name and has a preference over the
             // inference; otherwise, the inference takes precedence
             if (!(arg instanceof TargetInfo)) {
-                SimpleCollector  collector = new SimpleCollector(errs);
-                TypeConstant     typeLeft  = f_typeLeft;
-                Access           access    = typeLeft.getAccess();
-                MethodStructure  method    = getMethod();
-                MethodConstant   idMethod  = method == null ? null : method.getIdentityConstant();
+                SimpleCollector collector = new SimpleCollector(errs);
+                TypeConstant    typeLeft  = f_typeLeft;
+                Access          access    = typeLeft.getAccess();
+                MethodStructure method    = getMethod();
+                MethodConstant  idMethod  = method == null ? null : method.getIdentityConstant();
 
                 if (typeLeft.resolveContributedName(sName, access, idMethod, collector) ==
                         ResolutionResult.RESOLVED) {

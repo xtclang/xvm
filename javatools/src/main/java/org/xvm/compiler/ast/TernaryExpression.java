@@ -133,8 +133,8 @@ public class TernaryExpression
         }
 
         TypeConstant[] atypeThen, atypeElse;
-        Usage          use = null;
-        Plan           plan;
+        Usage use = null;
+        Plan  plan;
         switch (plan = generatePlan(ctx, false)) {
         case ThenIsFalse:
             atypeThen = new TypeConstant[] {pool.typeFalse()};

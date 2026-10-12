@@ -154,16 +154,16 @@ public class MapExpression
 
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
-        ConstantPool     pool        = pool();
-        TypeFit          fit         = TypeFit.Fit;
-        List<Expression> listKeys    = keys;
-        List<Expression> listVals    = values;
-        boolean          fConstKeys  = true;
-        boolean          fConstVals  = true;
-        TypeConstant     typeActual  = pool.typeMap();
-        TypeConstant     typeKey     = null;
-        TypeConstant     typeVal     = null;
-        int              cExprs      = listKeys.size();
+        ConstantPool     pool       = pool();
+        TypeFit          fit        = TypeFit.Fit;
+        List<Expression> listKeys   = keys;
+        List<Expression> listVals   = values;
+        boolean          fConstKeys = true;
+        boolean          fConstVals = true;
+        TypeConstant     typeActual = pool.typeMap();
+        TypeConstant     typeKey    = null;
+        TypeConstant     typeVal    = null;
+        int              cExprs     = listKeys.size();
         assert cExprs == listVals.size();
 
         // default key and value type from the required type

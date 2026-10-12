@@ -89,7 +89,7 @@ public class MultipleLValueStatement
                                             TypeConstant[] aTypes) {
         assert aTypes != null && aTypes.length >= 1;
 
-        List<AstNode>  listLVals = LVals;
+        List<AstNode> listLVals = LVals;
         for (int i = 0, c = Math.min(aTypes.length, listLVals.size()); i < c; ++i) {
             listLVals.get(i).updateLValueFromRValueTypes(ctx, branch, fCond,
                     new TypeConstant[] {aTypes[i]});

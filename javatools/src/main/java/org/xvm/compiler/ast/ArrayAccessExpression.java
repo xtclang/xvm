@@ -150,9 +150,9 @@ public class ArrayAccessExpression
 
         // otherwise, the type comes from the return value from the op that is likely to be used to
         // access the "array" target
-        TypeInfo            infoTarget  = typeTarget.ensureTypeInfo();
-        int                 cIndexes    = indexes.size();
-        Set<MethodConstant> setMethods  = findPotentialOps(infoTarget, cIndexes);
+        TypeInfo            infoTarget = typeTarget.ensureTypeInfo();
+        int                 cIndexes   = indexes.size();
+        Set<MethodConstant> setMethods = findPotentialOps(infoTarget, cIndexes);
         for (MethodConstant idMethod : setMethods) {
             if (setMethods.size() == 1 || indexesFit(ctx, idMethod)) {
                 TypeConstant[] atypeReturns = idMethod.getRawReturns();
@@ -403,7 +403,7 @@ public class ArrayAccessExpression
                 Expression exprRow = aexprIndexes[1];
 
                 // matrix[index,index]
-                TypeConstant typeElement  = null;
+                TypeConstant typeElement = null;
                 if (exprCol.testFit(ctx, pool.typeInt64(), false, null).isFit() &&
                     exprRow.testFit(ctx, pool.typeInt64(), false, null).isFit()) {
                     typeElement = typeRequired;
@@ -578,7 +578,7 @@ public class ArrayAccessExpression
         } else {
             // I_GET  rvalue-target, rvalue-ix, lvalue        ; T = T[ix]
             // M_GET  rvalue-target, #:(rvalue-ix), lvalue    ; T = T[ix*]
-            Argument         argResult      = LVal.isLocalArgument()
+            Argument argResult = LVal.isLocalArgument()
                                             ? LVal.getLocalArgument()
                                             : createTempVar(code, getType()).getRegister();
             // the target argument for Invoke must not be on stack
@@ -976,8 +976,8 @@ public class ArrayAccessExpression
                 assert nLo <= nHi;
             } else {
                 nLo = nHi = index.convertTo(pool.typeInt64()).getIntValue().getInt();
-                fSlice    = false;
-                fReverse  = false;
+                fSlice   = false;
+                fReverse = false;
             }
         } catch (RuntimeException e) {
             return null;

@@ -185,7 +185,7 @@ public class WhileStatement
         // each attempt to validate the loop will log errors into a temporary error list; whichever
         // run is the "keeper" will have its temporary errors moved over (relogged) into the
         // original error listener
-        ErrorListener  errsOrig = errs;
+        ErrorListener errsOrig = errs;
 
         // by holding on to the original context, we can determine the impact on the incoming
         // context that would occur by the beginning of the second iteration of the loop, and
@@ -257,7 +257,7 @@ public class WhileStatement
                     // expression plays a role of an "if", since the block cannot be entered
                     // if this expression evaluates to "false"; in the case of "do-while", it
                     // is *only* used to calculate the impact of the "while"
-                    ctx     = ctx.enterIf();
+                    ctx = ctx.enterIf();
                     cExits += cConds;
 
                     for (int i = 0; i < cConds; ++i) {
@@ -431,11 +431,11 @@ public class WhileStatement
 
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
-        boolean   fCompletes    = fReachable;
-        boolean   fDoWhile      = isDoWhile();
-        Register  regFirst      = m_regFirst;
-        Register  regCount      = m_regCount;
-        boolean   fHasLabelVars = regFirst != null || regCount != null;
+        boolean  fCompletes    = fReachable;
+        boolean  fDoWhile      = isDoWhile();
+        Register regFirst      = m_regFirst;
+        Register regCount      = m_regCount;
+        boolean  fHasLabelVars = regFirst != null || regCount != null;
 
         // any condition of false results in false (as long as all conditions up to that point are
         // constant); all condition of true results in true (as long as all conditions are constant)
@@ -591,7 +591,7 @@ public class WhileStatement
      * @param regCount  the (optional) register for the "count" variable
      */
     private void emitLabelVarCreation(Code code, Register regFirst, Register regCount) {
-        ConstantPool  pool   = pool();
+        ConstantPool pool = pool();
 
         if (regFirst != null) {
             StringConstant name = pool.ensureStringConstant(
@@ -627,11 +627,11 @@ public class WhileStatement
      * Emit the condition test code.
      */
     private boolean emitConditionTest(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
-        boolean   fCompletes = fReachable;
-        int       cConds     = getConditionCount();
+        boolean fCompletes = fReachable;
+        int     cConds     = getConditionCount();
 
         for (int i = 0; i < cConds; ++i) {
-            AstNode cond  = getCondition(i);
+            AstNode cond = getCondition(i);
             if (cond instanceof AssignmentStatement stmtCond) {
                 boolean fNegated = stmtCond.isNegated();
                 Label   labelNeg = fNegated ? new Label("negated") : null;

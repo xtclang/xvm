@@ -1366,7 +1366,7 @@ public class ClassStructure
                             TypeConstant     typeSuper;
                             if (compSuper == null) {
                                 ConstantPool pool = getConstantPool();
-                                clzSuper  = (ClassStructure) o;
+                                clzSuper = (ClassStructure) o;
                                 assert clzSuper.isVirtualChild();
                                 typeSuper = pool.ensureVirtualChildTypeConstant(
                                         ((ClassStructure) component).getFormalType(), idThis.getName());
@@ -2935,9 +2935,9 @@ public class ClassStructure
             ConstantPool pool     = getConstantPool();
             TypeConstant typeProp = prop.getType();
 
-            boolean      fGet;
-            Parameter[]  aParams;
-            Parameter[]  aReturns;
+            boolean     fGet;
+            Parameter[] aParams;
+            Parameter[] aReturns;
             if ("get".equals(sigAccessor.getName())) {
                 fGet     = true;
                 aParams  = Parameter.NO_PARAMS;
@@ -2995,9 +2995,9 @@ public class ClassStructure
             PropertyInfo infoDelegate = infoPrivate.findProperty(sDelegate);
             TypeConstant typeDelegate = infoDelegate.getType();
 
-            Annotation[] aAnnos       = new Annotation[] {pool.ensureAnnotation(pool.clzOverride())};
-            Parameter[]  aParams      = method.getParamArray().clone();
-            Parameter[]  aReturns     = method.getReturnArray().clone();
+            Annotation[] aAnnos   = new Annotation[] {pool.ensureAnnotation(pool.clzOverride())};
+            Parameter[]  aParams  = method.getParamArray().clone();
+            Parameter[]  aReturns = method.getReturnArray().clone();
 
             methodDelegate = createMethod(false, method.getAccess(), aAnnos,
                     aReturns, method.getName(), aParams, true, false);
@@ -3458,8 +3458,8 @@ public class ClassStructure
             StringConstant constOldKey = entry.getKey();
             StringConstant constNewKey = pool.register(constOldKey);
 
-            TypeConstant   constOldVal = entry.getValue();
-            TypeConstant   constNewVal = pool.register(constOldVal);
+            TypeConstant constOldVal = entry.getValue();
+            TypeConstant constNewVal = pool.register(constOldVal);
 
             if (mapNew != mapOld || constOldKey != constNewKey) {
                 if (mapNew == mapOld) {

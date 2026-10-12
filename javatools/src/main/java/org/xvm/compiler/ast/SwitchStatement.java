@@ -37,7 +37,7 @@ public class SwitchStatement
 
     public SwitchStatement(Token keyword, List<AstNode> conds, StatementBlock block) {
         super(keyword, conds);
-        this.block   = block;
+        this.block = block;
     }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -115,10 +115,10 @@ public class SwitchStatement
 
         fValid &= mgr.validateCondition(ctxSwitch, conds, nArity, errs);
 
-        int              cStmts    = listStmts.size();
-        boolean          fInCase   = false;
-        CaseBlockContext ctxBlock  = null;
-        CaseGroup        group     = null;
+        int              cStmts   = listStmts.size();
+        boolean          fInCase  = false;
+        CaseBlockContext ctxBlock = null;
+        CaseGroup        group    = null;
         for (int i = 0; i < cStmts; ++i) {
             Statement stmt = listStmts.get(i);
             if (stmt instanceof CaseStatement stmtCase) {
@@ -586,7 +586,7 @@ public class SwitchStatement
         /**
          * What group number is this? Zero-based.
          */
-        int iGroup     = -1;
+        int iGroup = -1;
         /**
          * What is the index of the first case statement of this group? Index into "block".
          */
@@ -602,7 +602,7 @@ public class SwitchStatement
         /**
          * Does this group ever "continue"? If so, this is the label that it continues to.
          */
-        Label   labelContinueTo;
+        Label labelContinueTo;
     }
 
     // ----- fields --------------------------------------------------------------------------------

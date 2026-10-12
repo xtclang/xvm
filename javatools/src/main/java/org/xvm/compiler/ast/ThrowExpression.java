@@ -175,7 +175,7 @@ public class ThrowExpression
             // throw requires an exception, but T0D0 and various asserts do not; make sure that
             // the asserts are guaranteed to fail, since they do not & can not produce a value
             log(errs, Severity.ERROR, Compiler.ASSERT_EXPRESSION_MUST_THROW);
-            fValid  = false;
+            fValid = false;
             break;
 
         case TODO:

@@ -182,7 +182,7 @@ public class CmpExpression
 
         TypeConstant typeRequest = chooseCommonType(pool, fEqual, type1, type1Orig, false,
                                                                   type2, type2Orig, false, false);
-        Expression   expr1New    = expr1.validate(ctx, typeRequest, errs);
+        Expression expr1New = expr1.validate(ctx, typeRequest, errs);
         if (expr1New == null) {
             fValid = false;
         } else {
@@ -519,7 +519,7 @@ public class CmpExpression
     public void generateAssignment(Context ctx, Code code, Assignable LVal, ErrorListener errs) {
         if (LVal.isLocalArgument()) {
             // evaluate the sub-expressions
-            Argument arg1      = expr1.ensurePointInTime(code,
+            Argument arg1 = expr1.ensurePointInTime(code,
                                  expr1.generateArgument(ctx, code, true, errs), expr2);
             Argument arg2      = expr2.generateArgument(ctx, code, true, errs);
             Argument argResult = LVal.getLocalArgument();
@@ -556,9 +556,9 @@ public class CmpExpression
             Context ctx, Code code, Label label, boolean fWhenTrue, ErrorListener errs) {
         if (!isConstant() && producesBoolean()) {
             // evaluate the sub-expressions
-            Argument   arg1 = expr1.ensurePointInTime(code,
+            Argument arg1 = expr1.ensurePointInTime(code,
                               expr1.generateArgument(ctx, code, true, errs), expr2);
-            Argument   arg2 = expr2.generateArgument(ctx, code, true, errs);
+            Argument arg2 = expr2.generateArgument(ctx, code, true, errs);
             // generate the op that combines the two sub-expressions
             code.add(switch (operator.getId()) {
                 case COMP_EQ ->

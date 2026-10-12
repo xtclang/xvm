@@ -314,7 +314,7 @@ public class StatementBlock
             return false;
         }
 
-        boolean   fCompletes = that.completes(ctx.emittingContext(code), true, code, errs);
+        boolean fCompletes = that.completes(ctx.emittingContext(code), true, code, errs);
 
         if (fCompletes) {
             TypeConstant[] atypeReturn = code.getMethodStructure().getReturnTypes();
@@ -394,7 +394,7 @@ public class StatementBlock
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
         boolean fCompletable = fReachable;
 
-        List<Statement> stmts  = this.stmts;
+        List<Statement> stmts = this.stmts;
         if (stmts != null && !stmts.isEmpty()) {
             // there is an implicit scope for the top-most statement block of a method
             AstNode parent         = getParent();
@@ -423,10 +423,10 @@ public class StatementBlock
                         NewExpression  exprNew = ctxRoot.getAnonymousInnerClassExpression();
                         ClassStructure clzAnon = ctxRoot.getEnclosingClass();
                         for (Map.Entry<String, Register> entry : mapCapture.entrySet()) {
-                            String            sName   = entry.getKey();
-                            Register          reg     = entry.getValue();
-                            PropertyStructure prop    = (PropertyStructure) clzAnon.getChild(sName);
-                            PropertyConstant  id      = prop.getIdentityConstant();
+                            String            sName = entry.getKey();
+                            Register          reg   = entry.getValue();
+                            PropertyStructure prop  = (PropertyStructure) clzAnon.getChild(sName);
+                            PropertyConstant  id    = prop.getIdentityConstant();
 
                             if (exprNew.isImplicitDeref(sName)) {
                                 code.add(new Var_CN(reg, id.getNameConstant(), id));
@@ -828,17 +828,17 @@ public class StatementBlock
 
             // start with the current node, and one by one walk up to the root, asking at
             // each level for the node to resolve the name
-            ConstantPool     pool      = pool();
-            AstNode          node      = f_stmt;
-            Source           source    = node == null ? null : node.getSource();
-            boolean          fHasThis  = isMethod() || (isConstructor() && !isStaticPropertyInitializer());
-            TypeConstant     typeThis  = fHasThis ? ctxFrom.getThisType() : null;
-            int              cSteps    = 0;
-            Access           access    = Access.PRIVATE;
-            IdentityConstant idPrev    = null;
-            TypeInfo         infoPrev  = null;
-            ErrorListener    errsTemp  = errs.branch(null);
-            IdentityConstant idOuter   = getEnclosingClass().getIdentityConstant();
+            ConstantPool     pool     = pool();
+            AstNode          node     = f_stmt;
+            Source           source   = node == null ? null : node.getSource();
+            boolean          fHasThis = isMethod() || (isConstructor() && !isStaticPropertyInitializer());
+            TypeConstant     typeThis = fHasThis ? ctxFrom.getThisType() : null;
+            int              cSteps   = 0;
+            Access           access   = Access.PRIVATE;
+            IdentityConstant idPrev   = null;
+            TypeInfo         infoPrev = null;
+            ErrorListener    errsTemp = errs.branch(null);
+            IdentityConstant idOuter  = getEnclosingClass().getIdentityConstant();
 
             if (idOuter instanceof ClassConstant idClz) {
                 idOuter = idClz.getOutermost();
@@ -934,7 +934,7 @@ public class StatementBlock
                             return null;
                         }
                         fHasThis &= !info.isStatic();
-                        typeThis  = null;
+                        typeThis = null;
                         ++cSteps;
                     } else if (id instanceof PropertyConstant idProp) {
                         // first, look for a property of the given name inside the current
@@ -1134,14 +1134,14 @@ public class StatementBlock
                 break;
 
             case "this:struct":
-                type   = pool.ensureIntersectionTypeConstant(pool.typeStruct(),
+                type = pool.ensureIntersectionTypeConstant(pool.typeStruct(),
                              pool.ensureAccessTypeConstant(typeThis, Access.STRUCT));
                 nReg   = Op.A_STRUCT;
                 cSteps = getMethod().getThisSteps();
                 break;
 
             case "this:class":
-                type   = pool.ensureParameterizedTypeConstant(pool.typeClass(),
+                type = pool.ensureParameterizedTypeConstant(pool.typeClass(),
                         pool.ensureAccessTypeConstant(typeThis, Access.PUBLIC),
                         pool.ensureAccessTypeConstant(typeThis, Access.PROTECTED),
                         pool.ensureAccessTypeConstant(typeThis, Access.PRIVATE),

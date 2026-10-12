@@ -382,7 +382,7 @@ public class InvocationExpression
 
             // handle method or function
             if (argMethod instanceof MethodConstant idMethod) {
-                MethodStructure     method      = m_method;
+                MethodStructure method = m_method;
                 if (method == null) {
                     int q=0;
                 }
@@ -1288,9 +1288,9 @@ public class InvocationExpression
                                 chArgs = '1';
                                 if (cArgs == 1) {
                                     Expression expr = args.get(0);
-                                    arg0  = expr.generateArgument(ctx, code, true, errs);
+                                    arg0 = expr.generateArgument(ctx, code, true, errs);
                                 } else if (cTypeParams == 1) {
-                                    arg0  = aargTypeParams[0];
+                                    arg0 = aargTypeParams[0];
                                 } else { // (cDefaults == 1)
                                     arg0 = Register.DEFAULT;
                                 }
@@ -1504,11 +1504,11 @@ public class InvocationExpression
                 chArgs = '1';
                 if (cArgs == 1) {
                     Expression expr = args.get(0);
-                    arg0  = expr.generateArgument(ctx, code, true, errs);
+                    arg0 = expr.generateArgument(ctx, code, true, errs);
                 } else if (cTypeParams == 1) {
-                    arg0  = aargTypeParams[0];
+                    arg0 = aargTypeParams[0];
                 } else { // (cDefaults == 1)
-                    arg0  = Register.DEFAULT;
+                    arg0 = Register.DEFAULT;
                 }
                 break;
 
@@ -2003,9 +2003,9 @@ public class InvocationExpression
                         }
                         return null;
                     } else {
-                        m_targetInfo  = target; // (only used for non-constants)
-                        m_argMethod   = idCallable;
-                        m_method      = getMethod(ctx, typeTarget, infoTarget, idCallable);
+                        m_targetInfo = target; // (only used for non-constants)
+                        m_argMethod  = idCallable;
+                        m_method     = getMethod(ctx, typeTarget, infoTarget, idCallable);
                         if (m_method == null) {
                             log(errs, Severity.ERROR, Compiler.METHOD_INACCESSIBLE,
                                     idCallable.getValueString(), typeTarget.getValueString());

@@ -195,8 +195,8 @@ public class VariableDeclarationStatement
                 boolean      fInflate    = false;
                 TypeConstant typeReg     = pool.ensureParameterizedTypeConstant(
                         fVar ? pool.typeVar() : pool.typeRef(), typeVar);
-                int          ixFinal     = -1; // for error reporting only
-                int          ixVolatile  = -1;
+                int ixFinal    = -1; // for error reporting only
+                int ixVolatile = -1;
 
                 for (int i = cRefAnnos - 1; i >= 0; --i) {
                     AnnotationExpression exprAnno = listRefAnnos.get(i);

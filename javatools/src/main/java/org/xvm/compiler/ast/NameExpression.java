@@ -1003,7 +1003,6 @@ public class NameExpression
                     Register     regOuter = code.createRegister(type);
                     code.add(new MoveThis(cSteps, regOuter, type.getAccess()));
                     code.add(new P_Get(idProp, regOuter, argLVal));
-
                     break;
                 }
 
@@ -1013,14 +1012,12 @@ public class NameExpression
                                 idProp.getName());
                     }
                     code.add(new L_Get(idProp, argLVal));
-
                     break;
 
                 case Left: {
                     assert !idProp.getComponent().isStatic();
                     Argument argLeft = left.generateArgument(ctx, code, false, errs);
                     code.add(new P_Get(idProp, argLeft, argLVal));
-
                     break;
                 }
                 }
@@ -1089,7 +1086,6 @@ public class NameExpression
                 MethodConstant idHandler = m_idBjarnLambda;
 
                 code.add(new Move(idHandler, argLVal));
-
                 return;
             }
             }
@@ -1203,7 +1199,6 @@ public class NameExpression
                         pool().ensureSingletonConstConstant(m_idSingletonParent);
 
                     code.add(new P_Get(idProp, idSingleton, regTemp));
-
                     break;
                 }
 
@@ -1218,7 +1213,6 @@ public class NameExpression
                         code.add(new Var_D(regTemp));
                     }
                     code.add(new P_Get(idProp, regOuter, regTemp));
-
                     break;
                 }
 
@@ -1254,7 +1248,6 @@ public class NameExpression
                         code.add(new Var_D(regTemp));
                     }
                     code.add(new P_Get(idProp, argLeft, regTemp));
-
                     break;
                 }
 
@@ -1631,7 +1624,6 @@ public class NameExpression
                         SingletonConstant idSingleton = pool().ensureSingletonConstConstant(idParent);
                         regTarget = code.createRegister(idParent.getType());
                         code.add(new Var_I(regTarget, idSingleton));
-
                         break;
                     }
 
@@ -1647,7 +1639,6 @@ public class NameExpression
                         }
                         regTarget = code.createRegister(clz.getFormalType());
                         code.add(new MoveThis(cSteps, regTarget));
-
                         break;
                     }
 
@@ -1885,7 +1876,7 @@ public class NameExpression
 
                 if (idChild == null) {
                     // no child of that name on "Left"; try "Class<Left>"
-                    TypeInfo infoClz  = idLeft.getValueType(pool, null).ensureTypeInfo(errs);
+                    TypeInfo infoClz = idLeft.getValueType(pool, null).ensureTypeInfo(errs);
 
                     idChild           = infoClz.findName(pool, sName);
                     m_fClassAttribute = idChild != null;
@@ -2261,8 +2252,8 @@ public class NameExpression
                             TypeConstant typeParent = exprLeft.getType().getParamType(0);
                             type = pool.ensureVirtualChildTypeConstant(typeParent, clzTarget.getName());
                         } else {
-                            boolean        fMate   = idTarget.isNestMateOf(idThis);
-                            ClassConstant  idBase  = fMate
+                            boolean       fMate  = idTarget.isNestMateOf(idThis);
+                            ClassConstant idBase = fMate
                                 ? ((ClassConstant) idThis).getOutermost()
                                 : ((ClassConstant) idTarget).getAutoNarrowingBase();
                             ClassStructure clzBase = (ClassStructure) idBase.getComponent();
@@ -2317,12 +2308,12 @@ public class NameExpression
 
             // argRaw refers to the actual property identity, while the targetInfo may point to
             // a context specific id (i.e. nested)
-            PropertyConstant  idProp   = (PropertyConstant) argRaw;
-            TypeConstant      typeProp = idProp.getType();
-            TargetInfo        target   = m_targetInfo;
-            boolean           fClass   = m_fClassAttribute; // the class of Class?
-            PropertyInfo      infoProp;
-            TypeConstant      typeLeft;
+            PropertyConstant idProp   = (PropertyConstant) argRaw;
+            TypeConstant     typeProp = idProp.getType();
+            TargetInfo       target   = m_targetInfo;
+            boolean          fClass   = m_fClassAttribute; // the class of Class?
+            PropertyInfo     infoProp;
+            TypeConstant     typeLeft;
 
             // use the type inference to differentiate between a property de-referencing
             // and the Property instance itself (check for both Property and Property? types)

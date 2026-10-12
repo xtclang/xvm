@@ -51,9 +51,9 @@ public class ForStatement
             List<Statement> update,
             StatementBlock  block) {
         super(keyword, conds);
-        this.init    = init   == null ? Collections.emptyList() : init;
-        this.update  = update == null ? Collections.emptyList() : update;
-        this.block   = block;
+        this.init   = init   == null ? Collections.emptyList() : init;
+        this.update = update == null ? Collections.emptyList() : update;
+        this.block  = block;
     }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -127,12 +127,12 @@ public class ForStatement
         int     count;
         String  desc;
         if (fInit) {
-            count  = init.size();
-            desc   = "init";
+            count = init.size();
+            desc  = "init";
         } else {
-            index  = findUpdate(nodeChild);
-            count  = update.size();
-            desc   = "update";
+            index = findUpdate(nodeChild);
+            count = update.size();
+            desc  = "update";
             assert index >= 0;
         }
 
@@ -507,9 +507,9 @@ public class ForStatement
 
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
-        boolean   fCompletes = fReachable;
-        Register  regFirst   = m_regFirst;
-        Register  regCount   = m_regCount;
+        boolean  fCompletes = fReachable;
+        Register regFirst   = m_regFirst;
+        Register regCount   = m_regCount;
 
         code.add(new Enter());
 

@@ -72,8 +72,8 @@ public class EvalCompiler {
         MultiMethodStructure mms    = clz.ensureMultiMethodStructure("->");
         MethodStructure      lambda = mms.createLambda(TypeConstant.NO_TYPES, Utils.NO_NAMES);
 
-        TypeConstant[] atypeRets    = new TypeConstant[] {pool.typeObject()};
-        Parameter[]    aparamRets   = new Parameter[] {
+        TypeConstant[] atypeRets  = new TypeConstant[] {pool.typeObject()};
+        Parameter[]    aparamRets = new Parameter[] {
                 new Parameter(pool, typeReturn, null, null, true, 0, false)};
 
         lambda.configureLambda(Parameter.NO_PARAMS, 0, aparamRets);

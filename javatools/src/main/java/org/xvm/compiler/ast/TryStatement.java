@@ -206,7 +206,7 @@ public class TryStatement
                 CatchStatement catchNew = (CatchStatement) catchOld.validate(ctxCatch, errs);
 
                 fReachable |= ctxCatch.isReachable();
-                ctxNext     = ctxCatch.exit();
+                ctxNext = ctxCatch.exit();
 
                 if (catchNew == null) {
                     fValid = false;
@@ -405,10 +405,10 @@ public class TryStatement
                 CatchStart     opCatch   = new CatchStart(regCatch, constName);
                 code.add(new GuardStart(new CatchStart[] {opCatch}));
 
-                Argument argResource      = resources.get(i).getLValueExpression()
+                Argument argResource = resources.get(i).getLValueExpression()
                                                 .generateArgument(ctx, code, false, errs);
-                Label    labelSkipClose   = new Label("skip_close");
-                Label    labelFallThrough = new Label(getCodeContainerCounter());
+                Label labelSkipClose   = new Label("skip_close");
+                Label labelFallThrough = new Label(getCodeContainerCounter());
                 if (!argResource.getType().isA(typeCloseable)) {
                     code.add(new JumpNType(argResource, typeCloseable, labelSkipClose));
                 }

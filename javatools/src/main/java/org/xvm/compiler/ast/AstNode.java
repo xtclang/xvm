@@ -161,7 +161,7 @@ public abstract class AstNode
      *         null
      */
     public AstNode findChild(AstNode node) {
-        AstNode child  = node;
+        AstNode child = node;
         do {
             AstNode parent = child.getParent();
             if (parent == this) {
@@ -1419,7 +1419,7 @@ public abstract class AstNode
             Map<MethodConstant, MethodStructure> mapMethods, ErrorListener errs) {
         assert !setMethods.isEmpty();
 
-        MethodConstant idBest  = null;
+        MethodConstant idBest = null;
         for (MethodConstant idMethod : setMethods) {
             if (idBest == null) {
                 idBest = idMethod;
@@ -1469,7 +1469,7 @@ public abstract class AstNode
                     // (though we could also get the target's info, find the corresponding
                     //  TypeInfo and choose a more accommodating MethodInfo)
                     if (fNewBetter) {
-                        idBest  = idMethod;
+                        idBest = idMethod;
                     }
                 } else {
                     // note: theoretically there could still be one better than either of these two,
@@ -1523,9 +1523,9 @@ public abstract class AstNode
     protected TypeFit calculateReturnFit(TypeConstant[] atypeMethodReturn, String sName,
                                          boolean fCall, TypeConstant[] atypeReturn,
                                          TypeConstant typeCtx, ErrorListener errs) {
-        int      cMethodReturns = atypeMethodReturn.length;
-        int      cReturns       = atypeReturn.length;
-        TypeFit  fit            = TypeFit.Fit;
+        int     cMethodReturns = atypeMethodReturn.length;
+        int     cReturns       = atypeReturn.length;
+        TypeFit fit            = TypeFit.Fit;
 
         if (cMethodReturns < cReturns) {
             // we allow such an "asymmetrical" call in just one case:

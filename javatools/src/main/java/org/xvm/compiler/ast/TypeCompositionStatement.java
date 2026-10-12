@@ -200,7 +200,7 @@ public class TypeCompositionStatement
         this.qualified = Arrays.stream(Handy.parseDelimitedString(module.getName(), '.'))
                 .map(s -> new Token(0, 0, Id.IDENTIFIER, s))
                 .collect(Collectors.toCollection(ArrayList::new));
-        this.typeArgs  = new ArrayList<>(List.of(type));
+        this.typeArgs = new ArrayList<>(List.of(type));
 
         introduceParentage();
         setComponent(module);
@@ -859,11 +859,11 @@ public class TypeCompositionStatement
         // 3. verify that no more than one "extends", "import*", or "into" clause is used (subject
         //    to the exception defined by rule #8 above)
         // 4. verify that a package with an import does not have a body
-        boolean      fAlreadyExtends   = false;
-        boolean      fAlreadyImports   = false;
-        boolean      fAlreadyIntos     = false;
-        TypeConstant typeDefaultInto   = null;
-        TypeConstant typeDefaultImpl   = null;
+        boolean      fAlreadyExtends  = false;
+        boolean      fAlreadyImports  = false;
+        boolean      fAlreadyIntos    = false;
+        TypeConstant typeDefaultInto  = null;
+        TypeConstant typeDefaultImpl  = null;
         TypeConstant typeDefaultSuper = null;
 
         // virtual child super is analyzed/resolved by resolveNames()
@@ -1792,7 +1792,7 @@ public class TypeCompositionStatement
                 // scan for an @Override annotation
                 boolean fHasOverride = false;
                 if (annotations != null) {
-                    ClassConstant clzOverride  = pool().clzOverride();
+                    ClassConstant clzOverride = pool().clzOverride();
                     for (AnnotationExpression annotation : annotations) {
                         if (Handy.equals(clzOverride, annotation.toTypeExpression().ensureTypeConstant()
                                 .getSingleUnderlyingClass(false))) {
@@ -2090,7 +2090,7 @@ public class TypeCompositionStatement
         if (clzSuper != null && listParams != null) {
             TypeConstant typeSuper = pool.ensureAccessTypeConstant(
                                         clzSuper.getFormalType(), Access.PROTECTED);
-            TypeInfo     infoSuper = typeSuper.ensureTypeInfo(errs);
+            TypeInfo infoSuper = typeSuper.ensureTypeInfo(errs);
 
             Map<String, Component> mapChildren = component.getChildByNameMap();
             boolean                fInvalidate = false;
@@ -2376,11 +2376,11 @@ public class TypeCompositionStatement
                 }
             }
 
-            ConstantPool           pool          = pool();
-            List<Contribution>     listContribs  = null;
-            List<TypeConstant>     listTypes     = null;
-            List<MethodConstant>   listIds       = null;
-            List<List<Expression>> listArgLists  = null;
+            ConstantPool           pool         = pool();
+            List<Contribution>     listContribs = null;
+            List<TypeConstant>     listTypes    = null;
+            List<MethodConstant>   listIds      = null;
+            List<List<Expression>> listArgLists = null;
 
             for (Map.Entry<Contribution, List<Expression>> entry : m_mapContribArgs.entrySet()) {
                 Contribution contrib = entry.getKey();
@@ -2633,8 +2633,8 @@ public class TypeCompositionStatement
                 }
             }
 
-            boolean        fValid      = true;
-            TypeConstant[] atypeArgs   = idSuper.getRawParams();
+            boolean        fValid    = true;
+            TypeConstant[] atypeArgs = idSuper.getRawParams();
             for (int i = 0, c = listSuperArgs.size(); i < c; i++) {
                 Expression exprOld = listSuperArgs.get(i);
                 if (exprOld.isValidated()) {
@@ -2713,10 +2713,10 @@ public class TypeCompositionStatement
         // the constructor has two responsibilities:
         // 1) set each property based on the parameter name and value passed in as an arg
         // 2) call the super constructors (for extended class and incorporated mixins)
-        ConstantPool         pool      = pool();
-        ClassStructure       component = (ClassStructure) getComponent();
-        Code                 code      = constructor.ensureCode();
-        Context              ctxEmit   = ctxConstruct.emittingContext(code);
+        ConstantPool   pool      = pool();
+        ClassStructure component = (ClassStructure) getComponent();
+        Code           code      = constructor.ensureCode();
+        Context        ctxEmit   = ctxConstruct.emittingContext(code);
 
         if (args == null) {
             // parameters that don't exist on the super and mixins must be properties on "this"
@@ -2737,7 +2737,7 @@ public class TypeCompositionStatement
 
                 if (!fSuper) {
                     // there must be a property by the same name on "this:struct"
-                    TypeInfo infoThis  = pool.ensureAccessTypeConstant(
+                    TypeInfo infoThis = pool.ensureAccessTypeConstant(
                             component.getFormalType(), Access.STRUCT).ensureTypeInfo(errs);
                     PropertyInfo propThis = infoThis.findProperty(sParam);
                     if (propThis == null || !propThis.isVar()) {

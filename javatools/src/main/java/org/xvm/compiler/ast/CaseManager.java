@@ -240,9 +240,9 @@ public class CaseManager<CookieType> {
      */
     protected boolean validateCondition(Context ctx, List<AstNode> listCond, int nArity,
                                         ErrorListener errs) {
-        boolean      fValid     = true;
-        ConstantPool pool       = pool();
-        boolean      fIfSwitch  = listCond == null;
+        boolean      fValid    = true;
+        ConstantPool pool      = pool();
+        boolean      fIfSwitch = listCond == null;
         if (fIfSwitch) {
             // there is no condition, so all of the case statements must evaluate to boolean, and
             // the first one that matches "True" will be used
@@ -264,7 +264,7 @@ public class CaseManager<CookieType> {
                 AstNode        nodeNew;
                 if (node instanceof AssignmentStatement stmtCond) {
                     // assignment represents a side-effect, so disable the constant optimizations
-                    fAllConst   = false;
+                    fAllConst = false;
                     m_fHasDecl |= stmtCond.hasDeclarations();
 
                     nodeNew = stmtCond.validate(ctx, errs);
@@ -725,8 +725,8 @@ public class CaseManager<CookieType> {
             // (enums are no longer supported, since cross-module dependencies without
             // re-compilation would cause the values to fail to "line up", so it's better to
             // use the JumpVal option instead of the JumpInt option)
-            int     cVals       = m_listsetCase.size();
-            int     cRange      = 0;
+            int cVals  = m_listsetCase.size();
+            int cRange = 0;
             if (fValid && m_pintMin != null && getConditionCount() == 1) {
                 PackedInteger pintRange = m_pintMax.sub(m_pintMin);
                 if (!pintRange.isBig()) {

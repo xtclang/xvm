@@ -326,9 +326,9 @@ public class AssertStatement
             return !alwaysEvaluated();
         }
 
-        boolean   fCompletes   = fReachable;
-        boolean   fAutoMessage = message == null || fDebug;
-        Label     labelMessage = new Label("CustomMessage");
+        boolean fCompletes   = fReachable;
+        boolean fAutoMessage = message == null || fDebug;
+        Label   labelMessage = new Label("CustomMessage");
         for (int i = 0; i < cConds; ++i) {
             AstNode cond = getCondition(i);
             StringConstant constText = null;

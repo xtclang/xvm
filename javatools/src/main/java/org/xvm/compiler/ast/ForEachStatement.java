@@ -345,13 +345,13 @@ public class ForEachStatement
             exprLVal.requireAssignable(ctx, errs);
 
             // figure out which category the R-Value should be
-            Expression   exprRVal  = cond.getRValue();
-            ConstantPool pool      = pool();
-            Plan         plan      = null;
-            TypeConstant typeLVal  = fValid ? exprLVal.getType() : null;
-            TypeConstant typeRVal  = null;
-            int          cLVals    = 0;
-            boolean      fConvert  = false;
+            Expression   exprRVal = cond.getRValue();
+            ConstantPool pool     = pool();
+            Plan         plan     = null;
+            TypeConstant typeLVal = fValid ? exprLVal.getType() : null;
+            TypeConstant typeRVal = null;
+            int          cLVals   = 0;
+            boolean      fConvert = false;
 
             if (typeLVal != null) {
                 ctx = ctx.enterInferring(typeLVal);
@@ -1030,7 +1030,7 @@ public class ForEachStatement
         TypeConstant typeEach  = fKeysOnly ? typeKey : typeEntry;
         TypeConstant typeIter  = pool.ensureParameterizedTypeConstant(pool.typeIterator(), typeEach);
 
-        MethodConstant idNext  = findWellKnownMethod(typeIter.ensureTypeInfo(errs), "next", errs);
+        MethodConstant idNext = findWellKnownMethod(typeIter.ensureTypeInfo(errs), "next", errs);
         if (idNext == null) {
             return false;
         }
@@ -1167,8 +1167,8 @@ public class ForEachStatement
 
             Assignable lvalKey = m_exprLValue.generateAssignable(ctx, code, errs);
 
-            boolean    fTempKey = !lvalKey.isLocalArgument();
-            Argument   argKey   = fTempKey
+            boolean  fTempKey = !lvalKey.isLocalArgument();
+            Argument argKey   = fTempKey
                     ? code.createRegister(typeKey)
                     : lvalKey.getLocalArgument();
 

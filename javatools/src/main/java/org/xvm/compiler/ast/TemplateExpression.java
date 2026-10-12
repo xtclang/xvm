@@ -187,8 +187,8 @@ public class TemplateExpression
         //   {...}                          // for a void expression
         //   $.append("...");
         //   yield $.toString();
-        int          cchMin   = 0;
-        ConstantPool pool     = pool();
+        int          cchMin = 0;
+        ConstantPool pool   = pool();
         for (Expression expr : exprs) {
             if (isStringConst(expr)) {
                 cchMin += getStringConst(expr).length();

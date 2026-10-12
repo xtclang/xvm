@@ -126,12 +126,12 @@ public class SwitchExpression
 
         Context ctxCase = ctx.enterIf();
 
-        ConstantPool   pool      = pool();
-        TypeCollector  collector = new TypeCollector(pool);
-        boolean        fInCase   = false;
-        int            cExprs    = 0;
-        int            cCases    = 0;    // number of cases preceding an expression
-        CaseStatement  stmtPrev  = null; // used for error reporting only
+        ConstantPool  pool      = pool();
+        TypeCollector collector = new TypeCollector(pool);
+        boolean       fInCase   = false;
+        int           cExprs    = 0;
+        int           cCases    = 0;    // number of cases preceding an expression
+        CaseStatement stmtPrev  = null; // used for error reporting only
         for (int iNode = 0, cNodes = listNodes.size(); iNode < cNodes; ++iNode) {
             AstNode node = listNodes.get(iNode);
             if (node instanceof CaseStatement stmtCase) {

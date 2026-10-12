@@ -330,8 +330,8 @@ public class MethodStructure
             return true;
         }
 
-        Annotation[] aAll  = m_aAnnotations;
-        int          cAll  = aAll.length;
+        Annotation[] aAll = m_aAnnotations;
+        int          cAll = aAll.length;
         if (cMove == cAll) {
             addReturnAnnotations(aAll);
             m_aAnnotations = Annotation.NO_ANNOTATIONS;
