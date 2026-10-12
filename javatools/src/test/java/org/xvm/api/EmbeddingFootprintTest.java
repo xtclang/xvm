@@ -8,6 +8,10 @@ import org.xvm.compiler.BuildRepository;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * Ensures compiler memory observations inspect the supplied attempt without accidentally bootstrapping the
+ * runtime. Keeps lightweight language-server status queries separate from interpreter initialization.
+ */
 public class EmbeddingFootprintTest {
     @Test
     public void snapshotDoesNotBootstrapTheRuntime() {

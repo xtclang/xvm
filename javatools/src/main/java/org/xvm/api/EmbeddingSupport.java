@@ -33,7 +33,6 @@ import org.xvm.compiler.Source;
 
 import org.xvm.compiler.Token.Id;
 
-import org.xvm.compiler.ast.Statement;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
@@ -121,7 +120,7 @@ public class EmbeddingSupport {
      * @return the repository, or null if none of the directories exist
      */
     private static ModuleRepository repoOver(File... dirs) {
-        List<ModuleRepository> list = Arrays.stream(dirs)
+        var list = Arrays.stream(dirs)
                 .filter(File::isDirectory)
                 .<ModuleRepository>map(dir -> new DirRepository(dir, true))
                 .toList();
@@ -172,11 +171,10 @@ public class EmbeddingSupport {
      * @return the snapshot; pool counts are zero if no file structure was built
      */
     public Footprint footprint(Compilation compilation) {
-        ConstantPool pool    = compilation == null ? null : compilation.pool();
-        Runtime      runtime = Runtime.getRuntime();
+        var pool = compilation == null ? null : compilation.pool();
+        var runtime = Runtime.getRuntime();
         return new Footprint(cfgRepo == null ? 0 : cfgRepo.getModuleNames().size(), pool == null ? 0 : pool.size(),
-                pool == null ? 0 : pool.getInvalidationCount(),
-                runtime.totalMemory() - runtime.freeMemory());
+                pool == null ? 0 : pool.getInvalidationCount(), runtime.totalMemory() - runtime.freeMemory());
     }
 
     /**
@@ -193,8 +191,8 @@ public class EmbeddingSupport {
                 // Configuring only lib/ produced a repository that could never compile anything:
                 // every compile failed in prelinkSystemLibraries with "Unable to load module:
                 // mack.xtclang.org", reported as an internal error with no location
-                File             dirHome = new File(home);
-                ModuleRepository repo    = repoOver(new File(dirHome, "lib"), new File(dirHome, "javatools"));
+                var dirHome = new File(home);
+                var repo = repoOver(new File(dirHome, "lib"), new File(dirHome, "javatools"));
                 if (repo != null) {
                     configure(repo, null);
                 }
@@ -239,13 +237,16 @@ public class EmbeddingSupport {
     }
 
     /**
-     * Provide configuration necessary for the underlying Ecstasy tools and libraries. Must be
-     * called exactly one time before any other method.
+     * Provide configuration for the underlying Ecstasy tools and libraries before compiling or
+     * running a module. Repeating the same configuration is allowed; a conflicting configuration
+     * is rejected. Passive configuration and footprint queries do not require initialization.
      *
      * @param coreRepo        the ModuleRepository to load the core libraries from
      * @param customInjector  (optional) "module:class" name of a custom injector implementation to
      *                        use to provide injectable resources in lieu of the default injector
      *                        for this implementation
+     *
+     * @return this configured host support instance
      */
     public EmbeddingSupport configure(ModuleRepository coreRepo, String customInjector) {
         synchronized (LOCK) {
@@ -426,11 +427,10 @@ public class EmbeddingSupport {
         }, input, errs);
     }
 
-    private Compilation compileModule(Function<ErrorListener, StatementBlock> parse,
-                                      ModuleRepository input, ErrorListener errs) {
+    private Compilation compileModule(Function<ErrorListener, StatementBlock> parse, ModuleRepository input, ErrorListener errs) {
         verifyConfigured();
         requireNonNull(errs, "errs");
-        EmbeddingCompiler compiler = new EmbeddingCompiler(parse, input, cfgRepo, errs);
+        var compiler = new EmbeddingCompiler(parse, input, cfgRepo, errs);
         try {
             if (!errs.isAbortDesired()) {
                 compiler.process();
@@ -533,7 +533,7 @@ public class EmbeddingSupport {
 
         @Override
         protected int process() {
-            ModuleRepository repoLib = ensureLibraryRepo();
+            var repoLib = ensureLibraryRepo();
             checkErrors("repository setup");
 
             prelinkSystemLibraries(repoLib);
@@ -543,8 +543,7 @@ public class EmbeddingSupport {
             try {
                 // The launcher stops the next compilation stage on any error. Parsing can still
                 // recover within its own stage, subject to the host's budget and cancellation.
-                ErrorListener errs = ErrorListener.cancellable(
-                        ErrorListener.collecting(this::log), m_errors::isAbortDesired);
+                var errs = ErrorListener.cancellable(ErrorListener.collecting(this::log), m_errors::isAbortDesired);
                 block = this.ast = parse.apply(errs);
             } catch (CompilerException e) {
                 return 1;
@@ -562,15 +561,14 @@ public class EmbeddingSupport {
                 block.log(this, ERROR, ERR_MODULE_SOURCE);
                 return checkErrors("source parsing");
             }
-            Statement stmt = block.getStatements().getLast();
-            if (!(stmt instanceof TypeCompositionStatement stmtModule) ||
-                    stmtModule.getCategory().getId() != Id.MODULE) {
+            var stmt = block.getStatements().getLast();
+            if (!(stmt instanceof TypeCompositionStatement stmtModule) || stmtModule.getCategory().getId() != Id.MODULE) {
                 stmt.log(this, ERROR, ERR_MODULE_SOURCE);
                 return checkErrors("source parsing");
             }
 
-            Compiler      compiler = new Compiler(stmtModule, this);
-            FileStructure struct   = compiler.generateInitialFileStructure();
+            var compiler = new Compiler(stmtModule, this);
+            var struct = compiler.generateInitialFileStructure();
             this.file = struct;
             if (struct == null || checkErrors("module creation") != 0) {
                 return 1;
@@ -597,7 +595,7 @@ public class EmbeddingSupport {
 
         @Override
         protected ModuleRepository configureLibraryRepo(List<File> ignore) {
-            BuildRepository build = new BuildRepository();
+            var build = new BuildRepository();
             return inRepo == null || inRepo == coreRepo
                     ? new LinkedRepository(true, build, coreRepo)
                     : new LinkedRepository(true, build, inRepo, coreRepo);
@@ -719,8 +717,8 @@ public class EmbeddingSupport {
         verifyConfigured();
         requireNonNull(errs, "errs");
 
-        ModuleRepository repository = new LinkedRepository(input, cfgRepo);
-        ModuleStructure module = version == null
+        var repository = new LinkedRepository(input, cfgRepo);
+        var module = version == null
                 ? repository.loadModule(moduleName)
                 : repository.loadModule(moduleName, version, true);
         if (module == null) {
@@ -728,14 +726,12 @@ public class EmbeddingSupport {
             return null;
         }
 
-        if (injections != null && !injections.isEmpty()
-                || customInjector != null || cfgInjector != null) {
-            throw new UnsupportedOperationException(
-                    "Custom injectors are not implemented yet");
+        if (injections != null && !injections.isEmpty() || customInjector != null || cfgInjector != null) {
+            throw new UnsupportedOperationException("Custom injectors are not implemented yet");
         }
 
         try {
-            Connector connector = ensureConnector();
+            var connector = ensureConnector();
             return useJit()
                     ? JitControl.create(connector, module, repository, console, rootDir, errs)
                     : InterpreterControl.create(connector, module, repository, console, rootDir, errs);

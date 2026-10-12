@@ -7,8 +7,9 @@ compiler, IR, runtime, etc.
 This project uses the library produced by the "javatools_utils" project,
 and the `implicit.x` resource file from the "ecstasy" project.
 
-Long term, this project will be used to help support IDE
-plug-ins for common Java-based IDEs, such as IntelliJ IDEA.
+The compiler also supports embedded tooling hosts. Start with
+[Compiler embedding for language tooling](#compiler-embedding-for-language-tooling) for the design
+rationale and the diagnostic and source-snapshot contracts.
 
 (Note: The test portion of this project may have dependencies
 on test frameworks.) 
@@ -30,6 +31,19 @@ Status: Suitable for use
   `org.xvm.compiler.ast.AstNode` objects
 * AST nodes are multi-pass compiled (with optional re-queuing)
   via `org.xvm.compiler.ast.StageManager`
+
+## Compiler embedding for language tooling
+
+An editor needs structured diagnostics and the compilation state reached before an error, not just
+console output and a success flag. It also needs to compile a consistent snapshot of unsaved source
+files, cancel obsolete attempts, and receive diagnostics even when type information was cached by
+an earlier query. These are host requirements; the compiler has no dependency on LSP or an IDE.
+
+The APIs documented below establish diagnostic ownership, scoped reporting, snapshot inputs,
+compilation outcomes and cooperative cancellation. `EmbeddingSupport` exposes the result of each
+attempt; hosts must copy the information they share before releasing its compiler-owned state.
+The following diagnostic guide explains why these contracts are necessary, their compatibility
+boundaries and the regression tests that protect ordinary command-line compilation.
 
 ## Compiler diagnostics and error listeners
 
@@ -366,12 +380,11 @@ Check failures and skips in `javatools/build/test-results/test/TEST-*.xml`; a gr
 not establish that optional tests executed. The real compiler-consumer integration test additionally
 exercises the standard build path with compiled modules supplied by its Gradle dependencies.
 
-### Combined embedding review scope
+### Embedding API boundaries
 
-This combined change includes the listener contract and explicit-listener migration, scoped
-parser/validation reporting, compilation outcomes, cached TypeInfo diagnostic replay, cancellation
-and host-supplied module source snapshots. The shared behavior can be reviewed with its actual
-host consumer tests rather than inferred across separate API migrations.
+The embedding API combines the listener contract, scoped parser/validation reporting, compilation
+outcomes, cached TypeInfo diagnostic replay, cancellation and host-supplied source snapshots.
+Consumer tests exercise these mechanisms together through the public entry points.
 
 The independent [repository read-failure fix](https://github.com/xtclang/xvm/pull/683) supplies
 retained I/O causes; this API forwards them only after a required dependency search fails.

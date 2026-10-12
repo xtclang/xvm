@@ -116,6 +116,8 @@ class CompilerFunctionTypingTest {
 
     // Source diagnostics alone reject invalid programs even when the fitting routine mistakenly
     // returns a usable function type. Exercise its documented success/absence contract directly.
+
+    /** Exposes function fitting against a supplied compiler pool and source for focused inference assertions. */
     private class FunctionFitInvocation(
         private val compilerPool: ConstantPool,
         private val inputSource: Source,
