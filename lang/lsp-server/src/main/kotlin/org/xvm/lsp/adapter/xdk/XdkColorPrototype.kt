@@ -47,6 +47,7 @@ internal object XdkColorPrototype {
         ): String = text.substring(offset(start), offset(end))
     }
 
+    /** Compiler-bound constructor call inspected for supported literal color channels. */
     private data class Construction(
         val source: Source,
         val start: Long,
@@ -54,6 +55,7 @@ internal object XdkColorPrototype {
         val binding: InvocationBinding,
     )
 
+    /** Literal channel value and offsets to replace when applying an editor color selection. */
     internal data class Channel(
         val parameter: Int,
         val start: Int,
@@ -61,6 +63,7 @@ internal object XdkColorPrototype {
         val value: Int,
     )
 
+    /** Original constructor text and channel locations retained to preserve source spelling during color edits. */
     internal class Site(
         val sourceName: String?,
         val range: Range,

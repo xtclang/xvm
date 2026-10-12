@@ -26,6 +26,10 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Checks watcher events against incomplete-source snapshot inputs. Late directory creation can preserve a
+ * still-valid cursor result only when the effective inputs are unchanged.
+ */
 class XdkCursorWatchTest {
     @TempDir lateinit var directory: Path
 

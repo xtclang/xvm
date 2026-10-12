@@ -138,6 +138,7 @@ internal object SourceGraphConfiguration {
                 values.asJsonArray.map(::stringValue)
             }
 
+    /** Normalized module configuration used to compare source graphs independently of input ordering. */
     private data class CanonicalModule(
         val name: String,
         val uri: URI,

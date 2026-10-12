@@ -599,9 +599,7 @@ private class SemanticModelBuilder(
                     }
                 }
 
-                is PropertyDeclarationStatement -> {
-                    declare(node.nameToken, identity(node), SymbolKind.PROPERTY, node.source)
-                }
+                is PropertyDeclarationStatement -> declare(node.nameToken, identity(node), SymbolKind.PROPERTY, node.source)
 
                 is TypeCompositionStatement -> {
                     // Anonymous classes borrow the constructed type's span for their generated
@@ -614,9 +612,7 @@ private class SemanticModelBuilder(
                     }
                 }
 
-                is TypedefStatement -> {
-                    declare(node.nameToken, identity(node), SymbolKind.TYPE, node.source)
-                }
+                is TypedefStatement -> declare(node.nameToken, identity(node), SymbolKind.TYPE, node.source)
             }
             if (node is InvocationExpression) {
                 val callee = node.invokedExpression
@@ -627,9 +623,7 @@ private class SemanticModelBuilder(
         }
         nodes.forEach { node ->
             when (node) {
-                is MethodDeclarationStatement -> {
-                    identity(node)?.let(constants::get)?.let { callable(node, it) }
-                }
+                is MethodDeclarationStatement -> identity(node)?.let(constants::get)?.let { callable(node, it) }
 
                 is LambdaExpression -> {
                     val method = node.lambda ?: return@forEach
@@ -1234,17 +1228,12 @@ private class SemanticModelBuilder(
                                             ) ?: return@mapNotNull null
                                         val name =
                                             when {
-                                                !method.isConstructor -> {
-                                                    method.name
-                                                }
+                                                !method.isConstructor -> method.name
 
-                                                method.containingClass.isAnonInnerClass -> {
+                                                method.containingClass.isAnonInnerClass ->
                                                     "new ${operation.target.childNodes().filterIsInstance<TypeExpression>().single()}"
-                                                }
 
-                                                else -> {
-                                                    "new ${method.containingClass.name}"
-                                                }
+                                                else -> "new ${method.containingClass.name}"
                                             }
                                         PartialSemanticModel.CallCandidate(
                                             member =
@@ -1325,6 +1314,7 @@ private class SemanticModelBuilder(
         }
     }
 
+    /** Member lookup context used to distinguish instance, static and implicit receivers. */
     private enum class Lookup {
         INSTANCE,
         STATIC,
@@ -1675,25 +1665,17 @@ private class SemanticModelBuilder(
 
     private fun kind(target: Argument?): SymbolKind =
         when (target) {
-            is Register -> {
-                SymbolKind.VARIABLE
-            }
+            is Register -> SymbolKind.VARIABLE
 
             is Constant -> {
                 when (target.format) {
-                    Constant.Format.Module -> {
-                        SymbolKind.MODULE
-                    }
+                    Constant.Format.Module -> SymbolKind.MODULE
 
-                    Constant.Format.Package -> {
-                        SymbolKind.PACKAGE
-                    }
+                    Constant.Format.Package -> SymbolKind.PACKAGE
 
                     Constant.Format.Method,
                     Constant.Format.MultiMethod,
-                    -> {
-                        SymbolKind.METHOD
-                    }
+                    -> SymbolKind.METHOD
 
                     Constant.Format.Property -> {
                         if ((target as PropertyConstant).isFormalType) {
@@ -1706,19 +1688,13 @@ private class SemanticModelBuilder(
                     Constant.Format.TypeParameter,
                     Constant.Format.FormalTypeChild,
                     Constant.Format.DynamicFormal,
-                    -> {
-                        SymbolKind.TYPE_PARAMETER
-                    }
+                    -> SymbolKind.TYPE_PARAMETER
 
-                    else -> {
-                        SymbolKind.TYPE
-                    }
+                    else -> SymbolKind.TYPE
                 }
             }
 
-            else -> {
-                SymbolKind.VARIABLE
-            }
+            else -> SymbolKind.VARIABLE
         }
 
     private fun signature(target: Argument): Signature? {
@@ -1770,63 +1746,23 @@ private class SemanticModelBuilder(
             }
         val underlying =
             when {
-                constant.isRelationalType -> {
-                    listOf(copyType(constant.underlyingType), copyType(constant.underlyingType2))
-                }
-
-                constant.isModifyingType -> {
-                    listOf(copyType(constant.underlyingType))
-                }
-
-                else -> {
-                    emptyList()
-                }
+                constant.isRelationalType -> listOf(copyType(constant.underlyingType), copyType(constant.underlyingType2))
+                constant.isModifyingType -> listOf(copyType(constant.underlyingType))
+                else -> emptyList()
             }
         val form =
             when (constant.format) {
-                Constant.Format.TerminalType -> {
-                    if (constant.isFormalType) TypeForm.FORMAL else TypeForm.NAMED
-                }
-
-                Constant.Format.ParameterizedType -> {
-                    TypeForm.PARAMETERIZED
-                }
-
-                Constant.Format.ImmutableType -> {
-                    TypeForm.IMMUTABLE
-                }
-
-                Constant.Format.ServiceType -> {
-                    TypeForm.SERVICE
-                }
-
-                Constant.Format.AccessType -> {
-                    TypeForm.ACCESS
-                }
-
-                Constant.Format.AnnotatedType -> {
-                    TypeForm.ANNOTATED
-                }
-
-                Constant.Format.UnionType -> {
-                    TypeForm.UNION
-                }
-
-                Constant.Format.IntersectionType -> {
-                    TypeForm.INTERSECTION
-                }
-
-                Constant.Format.DifferenceType -> {
-                    TypeForm.DIFFERENCE
-                }
-
-                Constant.Format.RecursiveType -> {
-                    TypeForm.RECURSIVE
-                }
-
-                else -> {
-                    TypeForm.OTHER
-                }
+                Constant.Format.TerminalType -> if (constant.isFormalType) TypeForm.FORMAL else TypeForm.NAMED
+                Constant.Format.ParameterizedType -> TypeForm.PARAMETERIZED
+                Constant.Format.ImmutableType -> TypeForm.IMMUTABLE
+                Constant.Format.ServiceType -> TypeForm.SERVICE
+                Constant.Format.AccessType -> TypeForm.ACCESS
+                Constant.Format.AnnotatedType -> TypeForm.ANNOTATED
+                Constant.Format.UnionType -> TypeForm.UNION
+                Constant.Format.IntersectionType -> TypeForm.INTERSECTION
+                Constant.Format.DifferenceType -> TypeForm.DIFFERENCE
+                Constant.Format.RecursiveType -> TypeForm.RECURSIVE
+                else -> TypeForm.OTHER
             }
         types[id] =
             Type(
@@ -1870,13 +1806,9 @@ private class SemanticModelBuilder(
                     copyableType(constant.underlyingType2, visited)
             }
 
-            constant.isModifyingType -> {
-                copyableType(constant.underlyingType, visited)
-            }
+            constant.isModifyingType -> copyableType(constant.underlyingType, visited)
 
-            else -> {
-                true
-            }
+            else -> true
         }
     }
 
@@ -1902,26 +1834,18 @@ private class SemanticModelBuilder(
                 (
                     formal.method.isNascent ||
                         formal.method.rawParams[formal.register].containsUnresolved()
-                ) -> {
-                false
-            }
+                ) -> false
 
-            formal != null -> {
-                acyclicConstraint(formal.constraintType, visited)
-            }
+            formal != null -> acyclicConstraint(formal.constraintType, visited)
 
             constant.isRelationalType -> {
                 acyclicConstraint(constant.underlyingType, visited) &&
                     acyclicConstraint(constant.underlyingType2, visited)
             }
 
-            constant.isModifyingType -> {
-                acyclicConstraint(constant.underlyingType, visited)
-            }
+            constant.isModifyingType -> acyclicConstraint(constant.underlyingType, visited)
 
-            else -> {
-                true
-            }
+            else -> true
         }
     }
 
@@ -1936,9 +1860,7 @@ private class SemanticModelBuilder(
         val visited = seen + constant
         val resolved = constant.resolveTypedefs()
         return when {
-            resolved != constant -> {
-                typeDefinitions(resolved, visited)
-            }
+            resolved != constant -> typeDefinitions(resolved, visited)
 
             constant.isNullable -> {
                 // T? navigates to T, not to the Nullable marker that makes the union nullable.
@@ -1955,9 +1877,7 @@ private class SemanticModelBuilder(
                 operands.flatMap { typeDefinitions(it, visited) }
             }
 
-            constant.isModifyingType -> {
-                typeDefinitions(constant.underlyingType, visited)
-            }
+            constant.isModifyingType -> typeDefinitions(constant.underlyingType, visited)
 
             else -> {
                 val target = normalized(constant)

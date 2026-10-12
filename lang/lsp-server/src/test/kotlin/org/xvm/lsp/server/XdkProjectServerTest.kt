@@ -37,6 +37,11 @@ import java.nio.file.Path
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Exercises dependency/resource edits through server notifications and open-buffer overlays. Failed or
+ * deleted inputs must retire stale consumer facts; repair and closing an overlay restore the appropriate
+ * analysis.
+ */
 class XdkProjectServerTest {
     @TempDir lateinit var directory: Path
 
@@ -345,6 +350,7 @@ class XdkProjectServerTest {
         return directory.resolve("$name.x").toFile().also { it.writeText(text) }
     }
 
+    /** Configures a real compiler server with dependency fixtures and records consumer diagnostics. */
     private class Session(
         library: File,
         consumer: File,

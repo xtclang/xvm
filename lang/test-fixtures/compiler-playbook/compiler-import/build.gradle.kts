@@ -1,8 +1,10 @@
 import java.util.Properties
 import java.util.concurrent.TimeUnit
 
-// A real Gradle producer with deterministic publication/exit gates. The XTC plugin's evaluated
-// model is tested by TestKit; this fixture isolates the two IDEs' import and cancellation lifecycle.
+/**
+ * A real Gradle producer with deterministic publication/exit gates. The XTC plugin's evaluated
+ * model is tested by TestKit; this fixture isolates the two IDEs' import and cancellation lifecycle.
+ */
 abstract class ExportPlaybookModel : DefaultTask() {
     @get:Internal
     abstract val controlDirectory: DirectoryProperty

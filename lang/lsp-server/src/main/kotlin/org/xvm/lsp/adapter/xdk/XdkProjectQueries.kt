@@ -395,37 +395,25 @@ internal class XdkProjectQueries(
         }
         val targets =
             when {
-                target is ProofIdentity.Parameter -> {
-                    parameterFamily(before, target) ?: return null
-                }
+                target is ProofIdentity.Parameter -> parameterFamily(before, target) ?: return null
 
                 symbol.kind in
                     setOf(
                         SemanticModel.SymbolKind.TYPE,
                         SemanticModel.SymbolKind.PACKAGE,
                         SemanticModel.SymbolKind.MODULE,
-                    ) -> {
-                    setOf(target)
-                }
+                    ) -> setOf(target)
 
                 symbol.kind in
                     setOf(SemanticModel.SymbolKind.METHOD, SemanticModel.SymbolKind.PROPERTY) &&
                     SemanticModel.Modifier.STATIC in symbol.modifiers &&
-                    symbol.name != "construct" -> {
-                    setOf(target)
-                }
+                    symbol.name != "construct" -> setOf(target)
 
-                symbol.kind == SemanticModel.SymbolKind.PROPERTY -> {
-                    propertyFamily(before, target) ?: return null
-                }
+                symbol.kind == SemanticModel.SymbolKind.PROPERTY -> propertyFamily(before, target) ?: return null
 
-                symbol.kind == SemanticModel.SymbolKind.METHOD -> {
-                    methodFamily(before, target) ?: return null
-                }
+                symbol.kind == SemanticModel.SymbolKind.METHOD -> methodFamily(before, target) ?: return null
 
-                else -> {
-                    return null
-                }
+                else -> return null
             }
         val ids = before.constants.filterValues { members(it).all(targets::contains) }.keys
         val base = XdkRename.plan(before, texts, source, line, column, name, ids) ?: return null
@@ -614,9 +602,7 @@ internal class XdkProjectQueries(
                                                 }
                                         }
 
-                                        else -> {
-                                            null
-                                        }
+                                        else -> null
                                     }
                                 }
                             }.firstOrNull() ?: return@map null
@@ -1260,13 +1246,9 @@ internal class XdkProjectQueries(
 
     private fun members(identity: ProofIdentity): Set<ProofIdentity> =
         when (identity) {
-            is ProofIdentity.Alternatives -> {
-                identity.targets.flatMapTo(linkedSetOf(), ::members)
-            }
+            is ProofIdentity.Alternatives -> identity.targets.flatMapTo(linkedSetOf(), ::members)
 
-            is ProofIdentity.Composed -> {
-                identity.members.flatMapTo(linkedSetOf(), ::members)
-            }
+            is ProofIdentity.Composed -> identity.members.flatMapTo(linkedSetOf(), ::members)
 
             is ProofIdentity.Parameter -> {
                 members(identity.method).mapTo(linkedSetOf()) {
@@ -1274,9 +1256,7 @@ internal class XdkProjectQueries(
                 }
             }
 
-            else -> {
-                setOf(identity)
-            }
+            else -> setOf(identity)
         }
 
     /** Parameter names belong to callable slots, including differently named overrides. */
@@ -1311,6 +1291,7 @@ internal class XdkProjectQueries(
         return parameters.takeIf { declarations.keys.containsAll(it) }
     }
 
+    /** Whether a proposed edit must preserve a complete compilation or repair an already incomplete one. */
     private enum class Proof {
         COMPLETE,
         REPAIR,

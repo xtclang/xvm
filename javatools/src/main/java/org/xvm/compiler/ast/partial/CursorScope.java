@@ -1,4 +1,4 @@
-package org.xvm.compiler.ast;
+package org.xvm.compiler.ast.partial;
 
 import java.util.Arrays;
 import java.util.Comparator;
@@ -30,7 +30,21 @@ import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
-import org.xvm.compiler.ast.partial.IncompleteStatement;
+import org.xvm.compiler.ast.AstNode;
+import org.xvm.compiler.ast.BadTypeExpression;
+import org.xvm.compiler.ast.BiTypeExpression;
+import org.xvm.compiler.ast.Context;
+import org.xvm.compiler.ast.DecoratedTypeExpression;
+import org.xvm.compiler.ast.NameExpression;
+import org.xvm.compiler.ast.NameResolver;
+import org.xvm.compiler.ast.NamedTypeExpression;
+import org.xvm.compiler.ast.NullableTypeExpression;
+import org.xvm.compiler.ast.Parameter;
+import org.xvm.compiler.ast.PartialAst;
+import org.xvm.compiler.ast.StageMgr;
+import org.xvm.compiler.ast.StatementBlock;
+import org.xvm.compiler.ast.TypeCompositionStatement;
+import org.xvm.compiler.ast.TypeExpression;
 
 import static org.xvm.asm.ErrorListener.Silence.PROBE;
 import static org.xvm.asm.ErrorListener.silent;
@@ -39,10 +53,7 @@ import static org.xvm.asm.ErrorListener.silent;
 final class CursorScope {
     /** Copy scope facts now; callers must not retain this validation context. */
     static CursorBinding capture(Context ctx) {
-        // Parameter registers are initialized lazily, including their assignment state.
-        Stream.iterate(ctx, Objects::nonNull, Context::getOuterContext).forEach(Context::getNameMap);
-        Set<String> names = new HashSet<>();
-        ctx.collectVariables(names);
+        var names = PartialAst.variableNames(ctx);
         var variables = names.stream().sorted()
                 .filter(name -> !ctx.isReservedName(name))
                 .map(name -> ctx.getVar(name) instanceof Register register
@@ -70,7 +81,7 @@ final class CursorScope {
             List<Parameter> writtenFormals, ErrorListener errs) {
         if (site.getTarget() instanceof NamedTypeExpression type) {
             if (writtenFormals.stream().anyMatch(formal -> formal.getName().equals(firstName(type)))) {
-                if (type.left != null || type.getNames().length < 2) {
+                if (PartialAst.qualifier(type) != null || type.getNames().length < 2) {
                     return List.of();
                 }
                 var parameters = writtenFormals.stream()
@@ -81,21 +92,22 @@ final class CursorScope {
                 }
                 // NameResolver's FORMAL_TYPE mode permits virtual child classes, not typedefs
                 // or static nested types. An upper bound must not erase that distinction.
+                var names = PartialAst.nameTokens(type);
                 var candidates = parameterizedTypes(new NamedTypeExpression(
-                        qualifier, type.names.subList(1, type.names.size()), type.paramTypes, type.getEndPosition()),
+                        qualifier, names.subList(1, names.size()), type.getParamTypes(), type.getEndPosition()),
                         scope, site.getCompletionPrefix(), errs);
-                if (type.names.size() == 2) {
+                if (names.size() == 2) {
                     return candidates.stream().filter(candidate ->
                             candidate.identity().getComponent() instanceof ClassStructure child && child.isVirtualChild()).toList();
                 }
                 var bound = formalBound(parameters.get(firstName(type)), scope, parameters, Set.of(), errs);
                 var probe = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
                 var first = bound == null ? null : bound.ensureTypeInfo(scope.getComponent().getIdentityConstant(), probe)
-                        .getChildInfosByName().get(type.names.get(1).getValueText());
+                        .getChildInfosByName().get(names.get(1).getValueText());
                 return first != null && first.getIdentity().getComponent() instanceof ClassStructure child
                         && child.isVirtualChild() && !probe.hasSeriousErrors() && !probe.isAbortDesired() ? candidates : List.of();
             }
-            if (type.left != null) {
+            if (PartialAst.qualifier(type) != null) {
                 return parameterizedTypes(type, scope, site.getCompletionPrefix(), errs);
             }
             if (type.getNames().length > 1) {
@@ -111,14 +123,14 @@ final class CursorScope {
     }
 
     private static String firstName(NamedTypeExpression type) {
-        return type.left instanceof NamedTypeExpression left ? firstName(left) : type.getNames()[0];
+        return PartialAst.qualifier(type) instanceof NamedTypeExpression left ? firstName(left) : type.getNames()[0];
     }
 
     /** Resolve bounds on disposable syntax only; no unfinished class/method or formal is registered. */
     static List<CursorBinding.Formal> declarationFormals(IncompleteStatement site, AstNode scope,
             List<Parameter> writtenFormals, ErrorListener errs) {
         return site.getTarget() instanceof NamedTypeExpression named
-                && (named.left != null || named.getNames().length > 1) ? List.of() : resolveFormals(site, scope, writtenFormals, errs);
+                && (PartialAst.qualifier(named) != null || named.getNames().length > 1) ? List.of() : resolveFormals(site, scope, writtenFormals, errs);
     }
 
     private static List<CursorBinding.Formal> resolveFormals(IncompleteStatement site, AstNode scope, List<Parameter> parameters,
@@ -126,7 +138,7 @@ final class CursorScope {
         var byName = parameters.stream().collect(Collectors.toMap(Parameter::getName, Function.identity(),
                 (first, second) -> first));
         return parameters.stream().takeWhile(parameter -> !errs.isAbortDesired()).map(parameter -> {
-            if (parameter.getType() instanceof BadTypeExpression bad && bad.nonType instanceof TypeExpression written
+            if (parameter.getType() instanceof BadTypeExpression bad && PartialAst.writtenType(bad) instanceof TypeExpression written
                     && site.getTarget() instanceof NamedTypeExpression selected
                     && parameter.getName().startsWith(site.getCompletionPrefix())) {
                 var proposal = completeBound(written, selected.getNameToken(), parameter.getNameToken());
@@ -147,7 +159,7 @@ final class CursorScope {
 
     /** Replace just the selected leaf on disposable syntax, retaining every other bound operand. */
     private static TypeExpression completeBound(TypeExpression written, Token selected, Token name) {
-        if (written instanceof NamedTypeExpression named && named.left == null && named.paramTypes == null
+        if (written instanceof NamedTypeExpression named && PartialAst.qualifier(named) == null && named.getParamTypes() == null
                 && named.getNames().length == 1
                 && named.getNameToken().getStartPosition() == selected.getStartPosition()) {
             return new NamedTypeExpression(null, List.of(name), null, null, null, named.getEndPosition());
@@ -179,12 +191,12 @@ final class CursorScope {
                     .map(child -> writtenBound(child, scope, parameters, resolving, depth, errs))
                     .reduce(BoundSyntax.COMPLETE, BoundSyntax::combine);
         }
-        if (!(type instanceof NamedTypeExpression named) || named.left != null) {
+        if (!(type instanceof NamedTypeExpression named) || PartialAst.qualifier(named) != null) {
             return BoundSyntax.INVALID;
         }
         String name = named.getNames()[0];
         if (parameters.containsKey(name)) {
-            if (named.getNames().length != 1 || named.paramTypes != null) {
+            if (named.getNames().length != 1 || named.getParamTypes() != null) {
                 return BoundSyntax.INVALID;
             }
             if (resolving.containsKey(name)) {
@@ -199,8 +211,8 @@ final class CursorScope {
             return writtenBound(parameter.getType(), scope, parameters, active, depth, errs);
         }
         var probe = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
-        var reference = new NamedTypeExpression(null, named.names, named.access, null, null, named.getEndPosition());
-        reference.setParent(scope);
+        var reference = PartialAst.typeReference(named);
+        PartialAst.inScope(reference, scope);
         var target = new NameResolver(reference, Arrays.asList(named.getNames()).iterator()).forceResolve(probe);
         if (!(target instanceof IdentityConstant identity) || !isTypeIdentity(identity)
                 || !visible(identity, scope.getComponent().getIdentityConstant())
@@ -208,11 +220,12 @@ final class CursorScope {
             return BoundSyntax.INVALID;
         }
         int nested = depth + (identity.getComponent() instanceof ClassStructure ? 1 : 0);
-        return named.paramTypes == null ? BoundSyntax.COMPLETE : named.paramTypes.stream()
+        return named.getParamTypes() == null ? BoundSyntax.COMPLETE : named.getParamTypes().stream()
                 .map(argument -> writtenBound(argument, scope, parameters, resolving, nested, errs))
                 .reduce(BoundSyntax.COMPLETE, BoundSyntax::combine);
     }
 
+    /** Classifies a written type bound without inventing a formal type for recursive syntax. */
     private enum BoundSyntax {
         COMPLETE, RECURSIVE, INVALID;
 
@@ -231,7 +244,7 @@ final class CursorScope {
         if (copy == null) {
             return null;
         }
-        copy.setParent(scope);
+        PartialAst.inScope(copy, scope);
         var probe = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
         TypeConstant bound = resolveType(copy, probe);
         return bound != null && visibleNames(copy, scope.getComponent().getIdentityConstant()) ? bound : null;
@@ -244,7 +257,7 @@ final class CursorScope {
             return null;
         }
         if (parameter.getType() == null) {
-            return new NamedTypeExpression(new NameExpression(parameter.getNameToken()), scope.pool().typeObject());
+            return new NamedTypeExpression(new NameExpression(parameter.getNameToken()), PartialAst.pool(scope).typeObject());
         }
         var active = Stream.concat(resolving.stream(), Stream.of(parameter.getName()))
                 .collect(Collectors.toUnmodifiableSet());
@@ -257,15 +270,15 @@ final class CursorScope {
         if (type instanceof BadTypeExpression) {
             return null;
         }
-        if (type instanceof NamedTypeExpression named && named.left == null
+        if (type instanceof NamedTypeExpression named && PartialAst.qualifier(named) == null
                 && parameters.containsKey(named.getNames()[0])) {
             TypeExpression replacement = formalConstraint(parameters.get(named.getNames()[0]), scope, parameters, resolving, errs);
-            if (replacement == null || named.paramTypes != null) {
+            if (replacement == null || named.getParamTypes() != null) {
                 return null;
             }
-            return named.getNames().length == 1 ? replacement
-                    : new NamedTypeExpression(replacement, named.names.subList(1, named.names.size()),
-                            null, named.getEndPosition());
+            var names = PartialAst.nameTokens(named);
+            return names.size() == 1 ? replacement
+                    : new NamedTypeExpression(replacement, names.subList(1, names.size()), null, named.getEndPosition());
         }
         var children = StreamSupport.stream(type.children().spliterator(), false).toList();
         for (AstNode child : children) {
@@ -315,11 +328,12 @@ final class CursorScope {
     /** Resolve only a disposable copy of the complete written qualifier, including its arguments. */
     private static List<CursorBinding.NamedType> parameterizedTypes(NamedTypeExpression type, AstNode scope,
                                                                    String prefix, ErrorListener errs) {
-        var left = (TypeExpression) type.left.clone();
-        TypeExpression qualifier = type.names.size() == 1 ? left
-                : new NamedTypeExpression(left, type.names.subList(0, type.names.size() - 1), null,
-                        type.names.get(type.names.size() - 2).getEndPosition());
-        qualifier.setParent(scope);
+        var left = (TypeExpression) PartialAst.qualifier(type).clone();
+        var names = PartialAst.nameTokens(type);
+        TypeExpression qualifier = names.size() == 1 ? left
+                : new NamedTypeExpression(left, names.subList(0, names.size() - 1), null,
+                        names.get(names.size() - 2).getEndPosition());
+        PartialAst.inScope(qualifier, scope);
         var lookup = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
         var owner = scope.getComponent().getIdentityConstant();
         TypeConstant resolved = resolveType(qualifier, lookup);
@@ -341,7 +355,7 @@ final class CursorScope {
                     var name = new Token(written.getStartPosition(), written.getEndPosition(), Id.IDENTIFIER, child.getName());
                     var candidate = new NamedTypeExpression((TypeExpression) qualifier.clone(), List.of(name), null,
                             written.getEndPosition());
-                    candidate.setParent(scope);
+                    PartialAst.inScope(candidate, scope);
                     var probe = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
                     TypeConstant result = resolveType(candidate, probe);
                     var target = candidate.getNameBindings().getLast().target();
@@ -364,7 +378,7 @@ final class CursorScope {
         return (!(node instanceof NamedTypeExpression named)
                 || named.getNameBindings().stream().allMatch(binding ->
                         binding.target() instanceof IdentityConstant identity && visible(identity, owner)
-                        || binding.target() instanceof TypeConstant && named.alreadyReached(Stage.Validated)))
+                        || binding.target() instanceof TypeConstant && named.getStage().compareTo(Stage.Validated) >= 0))
                 && StreamSupport.stream(node.children().spliterator(), false).allMatch(child -> visibleNames(child, owner));
     }
 
@@ -415,7 +429,7 @@ final class CursorScope {
                     var probe = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
                     var trial = ctx.enter();
                     try {
-                        var value = PartialCallResolver.proposedInstance(site, text).validate(trial, required, probe);
+                        var value = PartialAst.validate(PartialCallResolver.proposedInstance(site, text), trial, required, probe);
                         return value != null && value.getTypeFit().isFit()
                                 && !probe.hasSeriousErrors() && !probe.isAbortDesired();
                     } finally {
@@ -447,17 +461,7 @@ final class CursorScope {
                 }
             }
             if (node instanceof StatementBlock block) {
-                if (block.imports != null) {
-                    names.addAll(block.imports.keySet());
-                }
-                if (block.importsWild != null) {
-                    block.importsWild.forEach(statement -> {
-                        if (statement.getNameResolver().getConstant() instanceof IdentityConstant identity
-                                && identity.getComponent() != null) {
-                            names.addAll(identity.getComponent().getChildByNameMap().keySet());
-                        }
-                    });
-                }
+                names.addAll(PartialAst.importNames(block));
             }
         });
         writtenFormals.stream().map(Parameter::getName).forEach(names::remove);

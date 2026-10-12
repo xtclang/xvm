@@ -26,6 +26,11 @@ import java.util.IdentityHashMap
 import java.util.UUID
 import java.util.concurrent.Executors
 
+/**
+ * Exercises the compiler contracts needed by a detached editor model using emitted and reloaded modules.
+ * Checks executable generic bindings, dependency replacement and identity separation across modules and
+ * overloads.
+ */
 class CompilerBoundaryRequirementsTest {
     @ParameterizedTest
     @ValueSource(strings = ["id", "&id", "pick", "&pick"])

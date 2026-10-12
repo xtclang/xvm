@@ -94,9 +94,7 @@ class XtcRenameHandler : RenameHandler {
                             .showErrorHint(editor, "This symbol cannot be renamed.")
                     }
 
-                    else -> {
-                        RenameDialog(file, editor, offset, prepared).show()
-                    }
+                    else -> RenameDialog(file, editor, offset, prepared).show()
                 }
             }
         }
@@ -112,6 +110,7 @@ class XtcRenameHandler : RenameHandler {
         invoke(project, editor, file, dataContext)
     }
 
+    /** Server and original name returned by the prepare-rename step. */
     private data class Prepared(
         val server: LanguageServerItem,
         val name: String,
@@ -152,9 +151,7 @@ class XtcRenameHandler : RenameHandler {
                 ReadAction.computeBlocking<Prepared?, RuntimeException> {
                     val name =
                         when {
-                            result.isSecond -> {
-                                result.second.placeholder
-                            }
+                            result.isSecond -> result.second.placeholder
 
                             result.isFirst -> {
                                 LSPIJUtils
@@ -171,15 +168,14 @@ class XtcRenameHandler : RenameHandler {
                                     )?.let(editor.document::getText)
                             }
 
-                            else -> {
-                                null
-                            }
+                            else -> null
                         }
                     name?.let { Prepared(server, it) }
                 }
             }
     }
 
+    /** Collects a symbol name while retaining the document stamp needed to reject a stale proposal. */
     private class RenameDialog(
         private val file: PsiFile,
         private val editor: Editor,

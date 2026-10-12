@@ -167,13 +167,9 @@ internal object XdkSyntaxCompletions {
             val newline = newlines.find(text)?.value ?: "\n"
             val words =
                 when (context) {
-                    Context.FILE -> {
-                        fileKeywords
-                    }
+                    Context.FILE -> fileKeywords
 
-                    Context.TYPE -> {
-                        typeKeywords
-                    }
+                    Context.TYPE -> typeKeywords
 
                     Context.STATEMENT -> {
                         val enclosing =
@@ -222,6 +218,7 @@ internal object XdkSyntaxCompletions {
             }
         }
 
+    /** Syntax node and its ancestors used to determine visible declarations and completion context. */
     private data class Entry(
         val node: AstNode,
         val ancestors: List<AstNode>,
@@ -262,17 +259,11 @@ internal object XdkSyntaxCompletions {
     ): DeclarationName? {
         fun base(node: TypeExpression): String? =
             when (node) {
-                is NamedTypeExpression -> {
-                    node.nameToken?.valueText
-                }
+                is NamedTypeExpression -> node.nameToken?.valueText
 
-                is FunctionTypeExpression -> {
-                    "fn"
-                }
+                is FunctionTypeExpression -> "fn"
 
-                is BiTypeExpression -> {
-                    "value"
-                }
+                is BiTypeExpression -> "value"
 
                 is ArrayTypeExpression -> {
                     node
@@ -291,9 +282,7 @@ internal object XdkSyntaxCompletions {
                         ?.let(::base)
                 }
 
-                else -> {
-                    null
-                }
+                else -> null
             }
         if (type is VariableTypeExpression) {
             val suggestion =
@@ -322,9 +311,7 @@ internal object XdkSyntaxCompletions {
                         }
                     }
 
-                    else -> {
-                        null
-                    }
+                    else -> null
                 }
             return suggestion?.let { DeclarationName(it, "written $type initializer") }
         }
@@ -364,6 +351,7 @@ internal object XdkSyntaxCompletions {
         )
     }
 
+    /** Syntactic location that determines which keyword templates can be offered. */
     private enum class Context(
         val description: String,
     ) {
@@ -372,6 +360,7 @@ internal object XdkSyntaxCompletions {
         STATEMENT("statement"),
     }
 
+    /** Keyword completion with plain-text and snippet forms for one syntactic context. */
     private data class Template(
         val context: Context,
         val keyword: String,

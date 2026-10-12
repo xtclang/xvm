@@ -43,6 +43,7 @@ class ParityWorkspace(
     private val projectRoot = with(driver) { Path.of(singleProject().getBasePath()) }
     val directory: Path = projectRoot.resolve("parity/$id")
 
+    /** Couples a fixture's path and text with its playbook workspace identity. */
     inner class Document(
         val file: String,
         private val source: VirtualFile,
@@ -488,6 +489,7 @@ internal fun JsonObject.pattern(name: String): Regex =
         )
     }
 
+/** Finds fixture files through IntelliJ's virtual filesystem. */
 @Remote("com.intellij.openapi.vfs.LocalFileSystem")
 interface ParityFiles {
     fun getInstance(): ParityFiles
@@ -495,6 +497,7 @@ interface ParityFiles {
     fun refreshAndFindFileByPath(path: String): VirtualFile?
 }
 
+/** Obtains native documents for fixture files through the IDE document manager. */
 @Remote("com.intellij.openapi.fileEditor.FileDocumentManager")
 interface ParityDocuments {
     fun getDocument(file: VirtualFile): ParityDocument?
@@ -508,6 +511,7 @@ interface ParityDocuments {
     fun saveDocument(document: ParityDocument)
 }
 
+/** Reads the fixture's actual IDE buffer through the driver. */
 @Remote("com.intellij.openapi.editor.Document")
 interface ParityDocument {
     fun getText(): String

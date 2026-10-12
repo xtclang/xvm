@@ -6,6 +6,10 @@ import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import java.net.URI
 
+/**
+ * Exercises source-graph validation, guarded replacement and Undo. Preserves resource order, explicit
+ * empty/discovered states and unrelated settings when asynchronous proposals meet newer configuration edits.
+ */
 class SourceGraphConfigurationTest {
     @Test
     fun `resource roots preserve order empty automatic and rename ownership`() {

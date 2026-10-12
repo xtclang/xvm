@@ -18,6 +18,10 @@ import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.toDependency
 
+/**
+ * Exercises cursor fitting for anonymous construction without emitting forwarding constructors or capturing
+ * the body. Checks that only accessible, real constructor candidates are presented.
+ */
 class XdkAnonymousConstructorTest {
     @ParameterizedTest
     @ValueSource(

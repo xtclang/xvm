@@ -12,6 +12,10 @@ import org.xvm.lsp.adapter.xdk.XdkSources
 import java.nio.file.Files
 import java.nio.file.Path
 
+/**
+ * Checks whether late filesystem notifications still describe the inputs already compiled. Identical events
+ * can retain current work; real source, membership or resource changes must retire stale results.
+ */
 class XdkFileChangesTest {
     @TempDir lateinit var directory: Path
 

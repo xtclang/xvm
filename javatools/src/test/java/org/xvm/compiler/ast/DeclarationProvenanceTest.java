@@ -113,6 +113,7 @@ class DeclarationProvenanceTest {
         }
     }
 
+    /** Controls when a nested class scope becomes resolvable so retries can be checked for source provenance. */
     private static class ResolvingScope extends AstNode {
         private final FileStructure file = new FileStructure("Provenance");
         private final Source source = new Source("Outer.Inner.Missing");

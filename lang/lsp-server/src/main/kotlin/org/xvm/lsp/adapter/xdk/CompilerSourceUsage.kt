@@ -34,17 +34,13 @@ internal fun compilerWrites(nodes: List<AstNode>): List<Pair<NameExpression, Usa
                     .toList()
             }
 
-            else -> {
-                emptyList()
-            }
+            else -> emptyList()
         }
     }
 
 private fun writeTargets(node: AstNode): List<NameExpression> =
     when (node) {
-        is NameExpression -> {
-            listOf(node)
-        }
+        is NameExpression -> listOf(node)
 
         is MultipleLValueStatement,
         is TupleExpression,
@@ -57,7 +53,5 @@ private fun writeTargets(node: AstNode): List<NameExpression> =
                 .toList()
         }
 
-        else -> {
-            emptyList()
-        }
+        else -> emptyList()
     }

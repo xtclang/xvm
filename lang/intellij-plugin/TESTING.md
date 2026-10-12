@@ -748,8 +748,7 @@ released dependency. Standalone formatting Undo/Redo and reconnection of closed 
 are separate requirements. See the [client limits](../doc/manual-test-plan.md#client-compatibility-limits).
 
 Readiness polling accepts a successful observation once, using a monotonic deadline. Pinned
-Driver `waitFor` rechecks success and can falsely report a timeout during connection replacement
-(UP29). `UiWaitsTest` covers this race, actual expiry, pending reads, cancellation and null values;
+Driver `waitFor` rechecks success and can falsely report a timeout during connection replacement. `UiWaitsTest` covers this race, actual expiry, pending reads, cancellation and null values;
 `PlaybookFailureTest` retains fatal timeout/cancellation behavior. These tests run without opening
 an IDE through `testCompilerPlaybook --tests '*UiWaitsTest' --tests '*PlaybookFailureTest'`.
 The wrapper only retries observations; edit/refactoring actions remain outside polling loops.
@@ -860,7 +859,7 @@ All testing and development tasks for the IntelliJ plugin, runnable from the pro
 - [Integration Tests: API Interaction (Mar 2025)](https://blog.jetbrains.com/platform/2025/03/integration-tests-for-plugin-developers-api-interaction/)
 - [IntelliJ Platform SDK — IDE Development Instance](https://plugins.jetbrains.com/docs/intellij/ide-development-instance.html)
 
-### L82 refresh and VFS regression selection
+### Refresh and VFS regression selection
 
 X146 additionally keeps 16 extra documents connected and schedules 64 lens, hint and semantic-token
 refreshes each while a write action delays their read passes. The test temporarily raises the sandbox
@@ -888,7 +887,7 @@ neither editor bundles test binaries in source control. Use
 `-PintellijPlaybookCases=X266,X267,X268` for this selection. The new URI round-trip regression
 keeps case-sensitive module names in the virtual URI path because hosts normalize URI authorities.
 See the [acceptance reports](../doc/manual-test-plan.md#acceptance-reports)
-for native results; a successful fallback-file check does not close UP25's virtual-editor gap.
+for native results; a successful fallback-file check does not close LSP4IJ's virtual-library-editor gap.
 
 ### Machine-local JVM tuning and log support
 
