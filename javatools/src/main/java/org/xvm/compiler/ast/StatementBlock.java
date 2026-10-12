@@ -317,6 +317,16 @@ public class StatementBlock
         return compileMethod(code, errs, bindings, CursorBinding.Collector.NONE);
     }
 
+    /**
+     * Compile a method while preserving both of the enclosing attempt's fact collectors.
+     *
+     * @param code      the method code object receiving generated instructions
+     * @param errs      the diagnostic listener and abort policy for this operation
+     * @param bindings  the attempt-owned call-fact collector, or its NONE instance to disable collection
+     * @param cursors   the attempt-owned cursor-fact collector, or its NONE instance to disable collection
+     *
+     * @return whether compilation completed without a condition that must stop further progress
+     */
     public boolean compileMethod(Code code, ErrorListener errs, InvocationBinding.Collector bindings,
                                  CursorBinding.Collector cursors) {
         return compileMethod(new RootContext(this, code.getMethodStructure(), bindings, cursors), code, errs);
@@ -585,6 +595,14 @@ public class StatementBlock
             this(stmt, method, bindings, CursorBinding.Collector.NONE);
         }
 
+        /**
+         * Create a method-body context that shares the enclosing attempt's fact collectors.
+         *
+         * @param stmt      the method body whose context is being created
+         * @param method    the method whose body is being compiled
+         * @param bindings  the attempt-owned call-fact collector, or its NONE instance to disable collection
+         * @param cursors   the attempt-owned cursor-fact collector, or its NONE instance to disable collection
+         */
         public RootContext(StatementBlock stmt, MethodStructure method,
                            InvocationBinding.Collector bindings, CursorBinding.Collector cursors) {
             super(null, false);

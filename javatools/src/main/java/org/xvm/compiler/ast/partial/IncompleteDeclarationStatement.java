@@ -12,7 +12,6 @@ import org.xvm.compiler.Parser;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.ast.Context;
 import org.xvm.compiler.ast.Parameter;
-import org.xvm.compiler.ast.PartialQueries;
 import org.xvm.compiler.ast.StageMgr;
 import org.xvm.compiler.ast.Statement;
 
@@ -25,12 +24,32 @@ import static org.xvm.asm.ErrorListener.in;
  * validation contexts.
  */
 public final class IncompleteDeclarationStatement extends Statement {
+    /** Distinguishes the declaration headers retained when parsing stops at incomplete syntax. */
     public enum Kind { METHOD, PROPERTY }
 
+    /**
+     * Retain an unfinished declaration header without registering a declaration component.
+     *
+     * @param kind     the written declaration category
+     * @param name     the written declaration name token, or null if absent
+     * @param start    the declaration's inclusive source start
+     * @param end      the declaration's exclusive source end
+     * @param cursors  the incomplete type or name query sites retained in the header
+     */
     public IncompleteDeclarationStatement(Kind kind, Token name, long start, long end, List<IncompleteStatement> cursors) {
         this(kind, name, start, end, cursors, List.of());
     }
 
+    /**
+     * Retain an unfinished declaration header without registering a declaration component.
+     *
+     * @param kind     the written declaration category
+     * @param name     the written declaration name token, or null if absent
+     * @param start    the declaration's inclusive source start
+     * @param end      the declaration's exclusive source end
+     * @param cursors  the incomplete type or name query sites retained in the header
+     * @param formals  written formal names and constraints, without invented declaration identities
+     */
     public IncompleteDeclarationStatement(Kind kind, Token name, long start, long end, List<IncompleteStatement> cursors, List<Parameter> formals) {
         this.kind = kind;
         this.name = name;
@@ -40,11 +59,20 @@ public final class IncompleteDeclarationStatement extends Statement {
         this.formals = List.copyOf(formals);
     }
 
+    /**
+     * Identify the written declaration category retained for structural queries.
+     *
+     * @return the retained method or property declaration category
+     */
     public Kind getKind() {
         return kind;
     }
 
-    /** A written name only; an absent declaration name does not acquire a placeholder. */
+    /**
+     * A written name only; an absent declaration name does not acquire a placeholder.
+     *
+     * @return the written name token, or null if no declaration name was written
+     */
     public Optional<Token> getNameToken() {
         return Optional.ofNullable(name);
     }

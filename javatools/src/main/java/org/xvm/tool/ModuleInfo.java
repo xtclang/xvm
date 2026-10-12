@@ -717,6 +717,11 @@ public class ModuleInfo {
      * partial analysis while retaining the same source snapshot, resources and package assembly.
      * The parser must report other syntax errors to its supplied listener; incomplete syntax
      * must never be passed to ordinary compilation. Use a fresh ModuleInfo for each attempt.
+     *
+     * @param errs   the diagnostic listener and abort policy for this operation
+     * @param parse  the parser factory applied to each discovered source with its diagnostic listener
+     *
+     * @return the assembled source root, or null if loading or parsing prevented assembly
      */
     public Node getSourceTree(ErrorListener errs,
                               BiFunction<Source, ErrorListener, StatementBlock> parse) {
@@ -893,7 +898,12 @@ public class ModuleInfo {
             }
         }
 
-        /** Parse with an attempt-owned strategy; existing custom nodes retain their own parser. */
+        /**
+         * Parse with an attempt-owned strategy; existing custom nodes retain their own parser.
+         *
+         * @param errs   the diagnostic listener and abort policy for this operation
+         * @param parse  the parser factory applied to each discovered source with its diagnostic listener
+         */
         public void parse(ErrorListener errs, BiFunction<Source, ErrorListener, StatementBlock> parse) {
             parse(errs);
         }

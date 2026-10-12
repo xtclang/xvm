@@ -63,6 +63,11 @@ public class Parser {
     /**
      * Create a parser that can retain a trailing incomplete expression statement for explicit
      * partial analysis. Errors are still reported; this does not make the source compilable.
+     *
+     * @param source    the source snapshot to parse
+     * @param listener  the diagnostic listener and abort policy for this parse
+     *
+     * @return a parser that retains only the explicitly supported incomplete syntax boundaries
      */
     public static Parser forPartialAnalysis(Source source, ErrorListener listener) {
         return new Parser(source, listener, null, true, NO_CURSOR);
@@ -76,6 +81,12 @@ public class Parser {
      * need not be malformed; it is inspected as a prefix, without validating the selected operation.
      * Missing call/group/index closers around that operation retain their enclosing syntax at a
      * statement or outer-delimiter boundary; a cursor at EOF also retains unfinished blocks.
+     *
+     * @param source    the source snapshot to parse
+     * @param cursor    the selected position in the owning Source snapshot
+     * @param listener  the diagnostic listener and abort policy for this parse
+     *
+     * @return a parser that retains only the explicitly supported incomplete syntax boundaries
      */
     public static Parser forPartialAnalysis(Source source, long cursor, ErrorListener listener) {
         if (cursor == NO_CURSOR) {
@@ -5373,6 +5384,7 @@ public class Parser {
         return new IncompleteHeader(new IncompleteStatement(prefix, f_cursor, INCOMPLETE_EXPRESSION));
     }
 
+    /** Unwinds header parsing while carrying the incomplete site, written type and formal parameters. */
     private static class IncompleteHeader extends CompilerException {
         private IncompleteHeader(IncompleteStatement site) {
             this(site, site.getTarget(), List.of());
