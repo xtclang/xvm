@@ -52,7 +52,7 @@ class RepositoryReportingTest {
     }
 
     @Test
-    fun `Ecstasy repositories preserve platform fallback and retry with optional reporting`() {
+    fun `Ecstasy repositories cache unchanged failures and recover after normal replacement`() {
         CompilerTestSupport.configure()
         val first = Files.createDirectory(directory.resolve("first"))
         val second = Files.createDirectory(directory.resolve("second"))
@@ -86,20 +86,28 @@ class RepositoryReportingTest {
                     ModuleRepository linked = new LinkedRepository([primary, fallback].toArray(Constant, True));
                     assert ModuleTemplate good := linked.getModule("Good.example.org");
                     assert good.qualifiedName == "Good.example.org";
-                    assert reports.count >= 2;
-                    assert !(linked.getModule("Missing"));
+                    assert reports.count == 2;
+                    for (Int i = 0; i < 3; ++i) {
+                        // Missing lookups force a metadata check even within the scan interval.
+                        assert !(linked.getModule("Missing"));
+                        assert linked.getModule("Good.example.org");
+                        assert primary.moduleNames.empty;
+                    }
+                    assert reports.count == 2;
 
                     first.fileFor("Good.xtc").contents = second.fileFor("Good.xtc").contents;
                     assert primary.getModule("Good.example.org");
                     assert !(primary.getModule("ForceRefresh"));
                     assert primary.getModule("Good.example.org");
                     assert primary.moduleNames.contains("Good.example.org");
+                    assert reports.count == 2; // Rebuilding after repair does not reread Old.xtc.
 
                     first.fileFor("Old.xtc").delete();
                     first.fileFor("Good.xtc").delete();
                     assert !(primary.getModule("ForceRefresh"));
                     assert primary.moduleNames.empty;
                     assert linked.getModule("Good.example.org");
+                    assert reports.count == 2;
                     return 42;
                 }
             }
