@@ -25,7 +25,8 @@ service DirRepository
      * each failed read attempt. Scanning continues so another candidate can satisfy the lookup.
      * A report does not identify the requested module or establish whether the file was damaged,
      * written unsuccessfully, or produced by an incompatible compiler. Cached results do not
-     * generate reports; a later retry can report another failure for the same file.
+     * generate reports. An unchanged failed candidate remains cached as unavailable; a change to
+     * its size or timestamp permits another read, which may report a new failure.
      *
      * @param dir            the directory that contains the repository contents
      * @param onReadFailure  the observer; it must not call back into this repository
@@ -47,10 +48,9 @@ service DirRepository
     /**
      * Internal state.
      */
-    private Map<String, ModuleInfo> modulesByName = new HashMap();
-    private Map<String, ModuleInfo> modulesByFile = new HashMap();
-    private Time                    lastScan      = Time.EPOCH;
-    private Boolean                 failedScan    = False;
+    private Map<String, FileTemplate> modulesByName = new HashMap();
+    private Map<String, ModuleInfo>   modulesByFile = new HashMap();
+    private Time                     lastScan      = Time.EPOCH;
 
     private function void(File, Exception) onReadFailure;
 
@@ -65,18 +65,18 @@ service DirRepository
     @Override
     conditional ModuleTemplate getModule(String name, Version? version = Null) {
         Boolean fresh = ensureCache();
-        if (FileTemplate   fileTemplate := modulesByName.get(name),
-            ModuleTemplate template     := fileTemplate.extractVersion(version)) {
-            return True, template;
+        if (FileTemplate   template := modulesByName.get(name),
+            ModuleTemplate module   := template.extractVersion(version)) {
+            return True, module;
         }
 
         if (!fresh) {
             // refresh the cache before blowing up
             lastScan = Time.EPOCH;
             ensureCache();
-            if (FileTemplate   fileTemplate := modulesByName.get(name),
-                ModuleTemplate template     := fileTemplate.extractVersion(version)) {
-                return True, template;
+            if (FileTemplate   template := modulesByName.get(name),
+                ModuleTemplate module   := template.extractVersion(version)) {
+                return True, module;
             }
         }
         return False;
@@ -103,10 +103,9 @@ service DirRepository
             return False;
         }
 
-        Map<String, ModuleInfo> oldModules = modulesByFile;
-        Map<String, ModuleInfo> newByFile  = new HashMap();
-        Map<String, ModuleInfo> newByName  = new HashMap();
-        failedScan = False;
+        Map<String, ModuleInfo>   oldModules = modulesByFile;
+        Map<String, ModuleInfo>   newByFile  = new HashMap();
+        Map<String, FileTemplate> newByName  = new HashMap();
 
         for (File file : dir.files().filter(MODULES_ONLY)) {
             ModuleInfo info;
@@ -114,16 +113,12 @@ service DirRepository
             if (previous != Null && previous.timestamp == file.modified && previous.size == file.size) {
                 info = previous;
             } else {
-                try {
-                    info = new ModuleInfo(file);
-                } catch (Exception e) {
-                    failedScan = True;
-                    onReadFailure(file, e);
-                    continue;
-                }
+                info = new ModuleInfo(file, onReadFailure);
             }
             newByFile.put(file.name, info);
-            newByName.put(info.template.mainModule.qualifiedName, info);
+            if (FileTemplate template ?= info.template) {
+                newByName.put(template.mainModule.qualifiedName, template);
+            }
         }
 
         modulesByFile = newByFile;
@@ -141,10 +136,6 @@ service DirRepository
         // only scan once a second (at the most)
         if (clock.now < lastScan + Duration.Second) {
             return True;
-        }
-
-        if (failedScan) {
-            return False;
         }
 
         Int count = 0;
@@ -174,19 +165,17 @@ service DirRepository
         Int           size;
         FileTemplate? template;
 
-        construct(File file) {
+        construct(File file, function void(File, Exception) onReadFailure) {
             this.file      = file;
             this.timestamp = file.modified;
             this.size      = file.size;
 
-            // retain metadata for failed reads too, so later scans do not retry unchanged files
+            // Retain metadata for failed reads too, so later scans do not retry unchanged files.
             FileTemplate? template = Null;
             try {
                 template = tryLoad(file);
             } catch (Exception e) {
-                @Inject Console console;
-                console.print($|DirRepository: Failed to load a module from "{file}": {e.message}
-                             );
+                onReadFailure(file, e);
             }
             this.template = template;
         }
