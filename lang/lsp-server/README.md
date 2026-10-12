@@ -515,14 +515,31 @@ precise supported contexts and exclusions.
 
 ```bash
 # Build the project (with lang enabled)
-./gradlew :lang:lsp-server:build
+./gradlew :lang:lsp-server:build -PincludeBuildLang=true -PincludeBuildAttachLang=true
 
-# Run tests
-./gradlew :lang:lsp-server:test
+# Run tests, including the extended retention workload
+./gradlew :lang:lsp-server:test -PincludeBuildLang=true -PincludeBuildAttachLang=true
 
 # Create fat JAR with all dependencies
-./gradlew :lang:lsp-server:fatJar
+./gradlew :lang:lsp-server:fatJar -PincludeBuildLang=true -PincludeBuildAttachLang=true
 ```
+
+Tests use two separate JVM workers, each reusing its own bundled XDK repository. Test methods
+remain sequential within each JVM because some tests change compiler globals. Use
+`-PlspTestForks=1` to run with one worker on memory-constrained machines.
+
+PR CI runs the compiler and Tree-sitter regressions, packaged-server stdio tests, and a 36-cycle
+retention test covering every expression/header variant. It passes `-PlspTestHeavy=false` to
+exclude only JUnit tests tagged `heavy`, currently the extended 120-cycle retention workload.
+Local runs include that workload by default; `-Plsp.retentionCycles=N` controls its length.
+For a fresh run, add `--rerun-tasks --no-build-cache` and inspect the JUnit XML under
+`build/test-results/test` and `build/test-results/compilerStdioTest`.
+
+To run the extended workload before merging, dispatch **Verify Commit** on the branch with
+both **include-lang** and **lsp-heavy-tests** enabled. Master push builds include it as well.
+CI keeps one compiler-default server artifact throughout the job; tests select the Tree-sitter
+backend explicitly, avoiding a second full suite run caused by rebuilding the JAR with a different
+default adapter.
 
 ## Tree-sitter Native Library
 

@@ -2,6 +2,7 @@ package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.xvm.api.EmbeddingSupport
@@ -20,13 +21,26 @@ import java.util.concurrent.TimeUnit.NANOSECONDS
 import java.util.concurrent.TimeUnit.SECONDS
 
 /**
- * A bounded repeatable retention workload; it is not a multi-hour editor soak or a performance SLA.
+ * Verifies that dependency replacement, editing, renaming and cursor queries release compiler graphs.
+ * The regular test covers every cursor/header variant; the heavy test repeats the workload longer
+ * to expose accumulation across many requests. Neither test defines a performance SLA.
  */
 class XdkRetentionTest {
     @TempDir lateinit var directory: Path
 
     @Test
     fun `source graphs replacements rename and cursor proofs release attempts after close and shutdown`() {
+        // Four headers, each selected once every nine cycles, plus all eight expression variants.
+        verifyRetention(36)
+    }
+
+    @Test
+    @Tag("heavy")
+    fun `extended editing workload does not accumulate compiler graphs`() {
+        verifyRetention(CYCLES)
+    }
+
+    private fun verifyRetention(cycles: Int) {
         CompilerTestSupport.configure()
         directory = directory.toRealPath()
         val support = EmbeddingSupport.instance()
@@ -102,7 +116,7 @@ class XdkRetentionTest {
                     "new Object(te|) { construct(String value) {} Int read() = box.number; };" to
                         "textValue",
                 )
-            repeat(CYCLES) { cycle ->
+            repeat(cycles) { cycle ->
                 adapter.replaceDependencies(listOf(artifacts[cycle % artifacts.size]))
                 val started = System.nanoTime()
                 val storm =
@@ -167,7 +181,7 @@ class XdkRetentionTest {
         assertReleased(observed)
         val millis = timings.map(NANOSECONDS::toMillis).sorted()
         println(
-            "Retention workload: cycles=$CYCLES, edit requests=${CYCLES * 8}, weak references=${observed.size}, retained=0, " +
+            "Retention workload: cycles=$cycles, edit requests=${cycles * 8}, weak references=${observed.size}, retained=0, " +
                 "rebuild p50=${millis[millis.size / 2]}ms, p95=${millis[(millis.size * 0.95).toInt()]}ms (includes debounce)",
         )
     }
