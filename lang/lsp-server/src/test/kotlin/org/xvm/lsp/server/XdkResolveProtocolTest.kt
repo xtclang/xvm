@@ -36,6 +36,10 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Checks deferred completion documentation and code-action edits with eager fallbacks. Resolution preserves
+ * insertion identity and refuses changed inputs instead of applying a stale edit.
+ */
 class XdkResolveProtocolTest {
     @TempDir lateinit var directory: Path
 

@@ -13,6 +13,10 @@ import javax.swing.JTable
 import javax.swing.KeyStroke
 import javax.swing.SwingUtilities
 
+/**
+ * Reproduces native navigation-popup selection without relying on global keyboard focus. The selected row
+ * must reach the popup action exactly once, preventing a stalled playbook or duplicate navigation.
+ */
 class NavigationChooserTest {
     @Test
     fun `the chosen row reaches the popup action once without keyboard focus`() =

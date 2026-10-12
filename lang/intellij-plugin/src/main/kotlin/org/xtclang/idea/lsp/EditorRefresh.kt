@@ -25,6 +25,7 @@ internal class EditorRefresh(
     private val owner: Disposable,
     private val isDisposed: () -> Boolean,
 ) {
+    /** Editor presentation whose refresh requests can be coalesced independently. */
     enum class Feature {
         LENSES,
         HINTS,
@@ -38,6 +39,7 @@ internal class EditorRefresh(
             Feature.TOKENS to SemanticTokensEditorFeature(),
         )
 
+    /** Editor and PSI file paired with the presentation updates to run for that editor. */
     private data class Presentation(
         val file: PsiFile,
         val editor: Editor,

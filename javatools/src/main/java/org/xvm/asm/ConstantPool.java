@@ -1277,7 +1277,11 @@ public class ConstantPool
         return IMPLICITS.byPath().get(sPath);
     }
 
-    /** The language's implicit import names, without resolving or loading their components. */
+    /**
+     * The language's implicit import names, without resolving or loading their components.
+     *
+     * @return the names available through implicit imports
+     */
     public static Set<String> getImplicitImportNames() {
         return IMPLICITS.byName().keySet();
     }

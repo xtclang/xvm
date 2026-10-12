@@ -164,11 +164,13 @@ fun Driver.hasCompletionMetadata(
         (expected["sorted"]?.asBoolean != true || value["sortText"]?.asString?.isNotBlank() == true)
 }
 
+/** Exposes the native lookup element underlying a visible completion choice. */
 @Remote("com.intellij.codeInsight.lookup.LookupElement")
 interface NativeCompletionElement {
     fun getObject(): NativeCompletionProposal
 }
 
+/** Reads the protocol completion proposal retained by LSP4IJ's lookup element. */
 @Remote(
     "com.redhat.devtools.lsp4ij.client.features.LSPCompletionProposal",
     plugin = "com.redhat.devtools.lsp4ij",

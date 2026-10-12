@@ -12,6 +12,10 @@ data class ColorValue(
     }
 }
 
+/**
+ * An actual color value and its source range, used for editor swatches and color presentations. Source-code
+ * highlighting uses semantic tokens instead.
+ */
 data class DocumentColor(
     val range: Range,
     val color: ColorValue,

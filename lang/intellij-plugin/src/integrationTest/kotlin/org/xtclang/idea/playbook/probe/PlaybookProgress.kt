@@ -47,6 +47,7 @@ object PlaybookProgress {
     @JvmStatic
     fun text(project: Project): String = (WindowManager.getInstance().getStatusBar(project)?.getWidget(ID) as Widget).label.text
 
+    /** Renders the running scenario and completion count in the IDE status bar. */
     private class Widget(
         private val frame: JFrame?,
     ) : CustomStatusBarWidget {

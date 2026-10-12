@@ -21,6 +21,7 @@ data class SymbolMoniker(
     val identifier: String,
     val kind: Kind,
 ) {
+    /** Relationship between a moniker and its provider: imported, exported or local to this document. */
     enum class Kind { IMPORT, EXPORT, LOCAL }
 }
 

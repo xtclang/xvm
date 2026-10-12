@@ -34,6 +34,10 @@ internal class ConnectionProgress(
         CompletableFuture<Void>().completeOnTimeout(null, 10, SECONDS)
     },
 ) : AutoCloseable {
+    /**
+     * Progress title and cancelable request future, with optional detail text evaluated when reporting
+     * progress.
+     */
     private data class Entry(
         val title: String,
         val result: CompletableFuture<*>,
@@ -215,7 +219,7 @@ internal class ConnectionProgress(
         try {
             dispatcher.execute(block)
         } catch (_: RejectedExecutionException) {
-            // Connection already closed.
+            // A late completion or cancellation callback raced with dispatcher shutdown.
         }
     }
 

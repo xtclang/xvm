@@ -42,7 +42,12 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
 
+/**
+ * Controls asynchronous cursor queries at the server boundary. Ensures typing, cancellation and document
+ * lifecycle changes retire pending requests without borrowing facts from a different revision.
+ */
 class XdkCursorServerTest {
+    /** Selects the asynchronous request whose lifecycle is under test. */
     enum class Feature {
         COMPLETION,
         SIGNATURE,
@@ -50,11 +55,13 @@ class XdkCursorServerTest {
         REFERENCES,
     }
 
+    /** Couples a queued result future with the action that completes it on demand. */
     private class Pending(
         val future: CompletableFuture<*>,
         val finish: () -> Unit,
     )
 
+    /** Controls analysis readiness and query completion, including deliberately ignored cancellation. */
     private class Backend(
         val gate: CompletableFuture<Unit> = CompletableFuture.completedFuture(Unit),
         val ignoreCancellation: Boolean = false,
@@ -139,6 +146,7 @@ class XdkCursorServerTest {
         ): CompletableFuture<List<Location>> = query(listOf(Location(uri, line, column, line, column + 1)))
     }
 
+    /** Owns the server connection and document lifecycle around the controllable backend. */
     private class Session(
         val backend: Backend,
     ) : AutoCloseable {

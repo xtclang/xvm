@@ -5,6 +5,7 @@ import java.io.File
 
 /** Plan qualification changes from resolved type identities, never from matching source text. */
 internal object XdkTypeMoves {
+    /** Type-move edits, resource moves and dependency changes awaiting a complete compiler proof. */
     data class Proposal(
         val edits: Map<String, List<XdkRename.Edit>>,
         val resources: Map<String, String>,
@@ -24,6 +25,7 @@ internal object XdkTypeMoves {
             }
     }
 
+    /** Expected module and declaration path after moving a source type. */
     data class Destination(
         val source: String,
         val module: String,
@@ -199,6 +201,7 @@ internal object XdkTypeMoves {
         return resolved.second + implicit.map { it.name }
     }
 
+    /** Original type identity paired with the proposed owner path, file moves and rename plan. */
     private data class Move(
         val owner: TypePath,
         val module: String,
@@ -209,9 +212,7 @@ internal object XdkTypeMoves {
 
     private fun directory(identity: ProofIdentity): File? =
         when (identity) {
-            is ProofIdentity.Directory -> {
-                File(identity.path)
-            }
+            is ProofIdentity.Directory -> File(identity.path)
 
             is ProofIdentity.Source -> {
                 identity.location.sourceName
@@ -222,8 +223,6 @@ internal object XdkTypeMoves {
                     }?.let { File(it.parentFile, it.nameWithoutExtension) }
             }
 
-            else -> {
-                null
-            }
+            else -> null
         }
 }

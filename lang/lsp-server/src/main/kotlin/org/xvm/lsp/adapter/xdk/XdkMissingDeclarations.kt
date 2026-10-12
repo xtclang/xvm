@@ -14,6 +14,10 @@ import org.xvm.lsp.adapter.Range
 
 /** Syntax chooses a writable declaration; a complete compiler repair must prove its use. */
 internal object XdkMissingDeclarations {
+    /**
+     * Proposed declaration and its unresolved use, retained so recompilation can prove that the use binds to
+     * the inserted declaration.
+     */
     data class Candidate(
         val name: String,
         val kind: SemanticModel.SymbolKind,
@@ -153,9 +157,7 @@ internal object XdkMissingDeclarations {
                         Candidate(node.name, SemanticModel.SymbolKind.PROPERTY, location(node), edit, expected)
                     }
 
-                    else -> {
-                        null
-                    }
+                    else -> null
                 }
             }.distinct()
     }

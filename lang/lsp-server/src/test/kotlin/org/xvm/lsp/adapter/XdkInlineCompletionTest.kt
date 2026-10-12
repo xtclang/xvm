@@ -8,6 +8,10 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkInlineCompletions
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Exercises compiler-backed inline suggestions for names, members and literals. Checks fitting and explicit-
+ * trigger behavior in complete and incomplete source without relying on text-only guesses.
+ */
 class XdkInlineCompletionTest {
     @ParameterizedTest
     @ValueSource(strings = ["consume(ans§);", "consume(ans§", "consume(value = ans§);", "Int result = ans§;"])

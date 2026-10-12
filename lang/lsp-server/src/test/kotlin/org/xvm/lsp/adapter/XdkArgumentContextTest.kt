@@ -5,6 +5,10 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 
+/**
+ * Checks completion against the entire written call, including arguments after the cursor. A locally
+ * plausible suggestion must be rejected when the surrounding call cannot fit.
+ */
 class XdkArgumentContextTest {
     @ParameterizedTest
     @ValueSource(

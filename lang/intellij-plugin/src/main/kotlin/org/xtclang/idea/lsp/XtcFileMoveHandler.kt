@@ -61,6 +61,7 @@ class XtcFileMoveHandler : MoveHandlerDelegate() {
             else -> null
         }
 
+    /** Collects the destination and optional new name before requesting a compiler-validated move. */
     private class MoveDialog(
         project: Project,
         private val files: List<VirtualFile>,

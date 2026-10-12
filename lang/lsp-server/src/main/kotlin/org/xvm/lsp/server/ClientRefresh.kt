@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicReference
 internal class ClientRefresh(
     private val client: () -> LanguageClient?,
 ) : AutoCloseable {
+    /** Client presentation with its own negotiated refresh capability and request slot. */
     enum class Feature {
         DIAGNOSTICS,
         TOKENS,
@@ -37,6 +38,10 @@ internal class ClientRefresh(
         features.filter { it in enabled.get() }.forEach { slots.getValue(it).request() }
     }
 
+    /**
+     * Coalesces refresh requests for one feature while allowing a change during an in-flight refresh to
+     * schedule another.
+     */
     private inner class Slot(
         private val feature: Feature,
     ) {

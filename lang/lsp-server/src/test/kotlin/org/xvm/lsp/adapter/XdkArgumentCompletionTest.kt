@@ -16,6 +16,10 @@ import org.xvm.lsp.adapter.xdk.semanticSnapshot
 import java.nio.file.Path
 import java.util.concurrent.Executors
 
+/**
+ * Verifies value completion against compiler argument fitting for positional, named and overloaded calls.
+ * Suggestions must preserve the exact edited token and must not choose an overload prematurely.
+ */
 class XdkArgumentCompletionTest {
     @TempDir lateinit var directory: Path
 

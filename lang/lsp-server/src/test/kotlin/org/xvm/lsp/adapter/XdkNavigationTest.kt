@@ -5,6 +5,10 @@ import org.junit.jupiter.api.Test
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.model.Location
 
+/**
+ * Checks source navigation, references and highlights by compiler identity rather than name. Covers
+ * shadowing, reused register slots and narrowed views of the same declaration.
+ */
 class XdkNavigationTest {
     @Test
     fun `a local definition points to its declaration name and excludes it from ordinary references`() {

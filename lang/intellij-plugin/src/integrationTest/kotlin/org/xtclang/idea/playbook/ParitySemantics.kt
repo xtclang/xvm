@@ -116,6 +116,7 @@ internal fun ParityScenarios.semanticCases() {
                     )
                 }!!
 
+            /** Decodes semantic-token positions for comparison with native editor observations. */
             data class Token(
                 val line: Int,
                 val character: Int,

@@ -11,6 +11,14 @@ import org.xvm.compiler.Token;
 public final class ProposedLiteralToken extends Token {
     private final String spelling;
 
+    /**
+     * Create a zero-width trial literal with an explicit source spelling.
+     *
+     * @param cursor    the selected position in the owning Source snapshot
+     * @param id        the token kind for the proposed literal
+     * @param value     the proposed literal's parsed value
+     * @param spelling  the source spelling to use for literal conversion
+     */
     public ProposedLiteralToken(long cursor, Id id, Object value, String spelling) {
         super(cursor, cursor, id, value);
         this.spelling = spelling;
