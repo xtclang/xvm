@@ -14,7 +14,25 @@ service DirRepository
      * @param dir  the directory that contains the repository contents
      */
     construct(Directory dir) {
-        this.dir = dir;
+        this.dir           = dir;
+        this.onReadFailure = reportReadFailure;
+    }
+
+    /**
+     * Construct a repository with an observer for unsuccessful candidate reads.
+     *
+     * The observer replaces the default console report and receives the file and exception for
+     * each failed read attempt. Scanning continues so another candidate can satisfy the lookup.
+     * A report does not identify the requested module or establish whether the file was damaged,
+     * written unsuccessfully, or produced by an incompatible compiler. Cached results do not
+     * generate reports; a later retry can report another failure for the same file.
+     *
+     * @param dir            the directory that contains the repository contents
+     * @param onReadFailure  the observer; it must not call back into this repository
+     */
+    construct(Directory dir, function void(File, Exception) onReadFailure) {
+        this.dir           = dir;
+        this.onReadFailure = onReadFailure;
     }
 
     // ----- properties ----------------------------------------------------------------------------
@@ -29,9 +47,12 @@ service DirRepository
     /**
      * Internal state.
      */
-    private Map<String, FileTemplate> modulesByName = new HashMap();
-    private Map<String, ModuleInfo>   modulesByFile = new HashMap();
-    private Time                      lastScan      = Time.EPOCH;
+    private Map<String, ModuleInfo> modulesByName = new HashMap();
+    private Map<String, ModuleInfo> modulesByFile = new HashMap();
+    private Time                    lastScan      = Time.EPOCH;
+    private Boolean                 failedScan    = False;
+
+    private function void(File, Exception) onReadFailure;
 
     // ----- ModuleRepository API ------------------------------------------------------------------
 
@@ -82,22 +103,27 @@ service DirRepository
             return False;
         }
 
-        Map<String, ModuleInfo>   oldModules = modulesByFile;
-        Map<String, ModuleInfo>   newByFile  = new HashMap();
-        Map<String, FileTemplate> newByName  = new HashMap();
+        Map<String, ModuleInfo> oldModules = modulesByFile;
+        Map<String, ModuleInfo> newByFile  = new HashMap();
+        Map<String, ModuleInfo> newByName  = new HashMap();
+        failedScan = False;
 
         for (File file : dir.files().filter(MODULES_ONLY)) {
             ModuleInfo info;
-            if (ModuleInfo previous := oldModules.get(file.name),
-                    previous.timestamp == file.modified, previous.size == file.size) {
+            ModuleInfo? previous = oldModules.getOrNull(file.name);
+            if (previous != Null && previous.timestamp == file.modified && previous.size == file.size) {
                 info = previous;
             } else {
-                info = new ModuleInfo(file);
+                try {
+                    info = new ModuleInfo(file);
+                } catch (Exception e) {
+                    failedScan = True;
+                    onReadFailure(file, e);
+                    continue;
+                }
             }
             newByFile.put(file.name, info);
-            if (FileTemplate template ?= info.template) {
-                newByName.put(template.mainModule.qualifiedName, template);
-            }
+            newByName.put(info.template.mainModule.qualifiedName, info);
         }
 
         modulesByFile = newByFile;
@@ -117,6 +143,10 @@ service DirRepository
             return True;
         }
 
+        if (failedScan) {
+            return False;
+        }
+
         Int count = 0;
         for (File file : dir.files().filter(MODULES_ONLY)) {
             ++count;
@@ -128,6 +158,12 @@ service DirRepository
         }
 
         return count == modulesByFile.size;
+    }
+
+    private static void reportReadFailure(File file, Exception cause) {
+        @Inject Console console;
+        console.print($|DirRepository: Failed to load a module from "{file}": {cause.message}
+                     );
     }
 
     // ----- inner class: ModuleInfo ---------------------------------------------------------------
@@ -161,7 +197,7 @@ service DirRepository
 
                 return linker.loadFileTemplate(xtcFile);
             } catch (Exception e) {
-                throw new IOException($"Error: Failed to resolve the module: {xtcFile} ({e.text})");
+                throw new IOException($"Failed to read module file: {xtcFile}", e);
             }
         }
     }
