@@ -105,6 +105,9 @@ module.exports = grammar({
         [$.type_name, $.qualified_type_name],
         [$._expression, $.qualified_type_name],
         [$._expression, $.type_name, $.qualified_type_name],
+        // Contextual declaration keywords can also name variables. Keep both
+        // readings until the enclosing syntax distinguishes a type from a value.
+        [$._expression, $.keyword_type],
         [$.non_null_type, $.conditional_type],
         // `protected Foo` as an access-qualified type vs `protected` as a
         // declaration modifier followed by a type — GLR forks, and
@@ -1236,7 +1239,8 @@ module.exports = grammar({
         expression_statement: $ => prec(-100, seq($._expression, ';')),
 
         // Expressions
-        // Note: var/val are context keywords and can be used as variable names
+        // Contextual keywords remain legal variable names, including those
+        // also recognized as keyword types by the lexer.
         _expression: $ => choice(
             $.assignment_expression,
             $.else_expression,
@@ -1283,6 +1287,13 @@ module.exports = grammar({
             // Context keywords as identifiers (variable names)
             alias('var', $.identifier),
             alias('val', $.identifier),
+            alias('module', $.identifier),
+            alias('package', $.identifier),
+            alias('class', $.identifier),
+            alias('service', $.identifier),
+            alias('const', $.identifier),
+            alias('enum', $.identifier),
+            alias('struct', $.identifier),
             $._literal,
             // Wildcard _ used as expression for partial function application
             $.wildcard,
