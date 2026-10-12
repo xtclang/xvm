@@ -411,7 +411,7 @@ public class ArrayAccessExpression
                 Expression exprRow = aexprIndexes[1];
 
                 // matrix[index,index]
-                TypeConstant typeElement  = null;
+                TypeConstant typeElement = null;
                 if (exprCol.testFit(ctx, pool.typeInt64(), false, probe).isFit() &&
                     exprRow.testFit(ctx, pool.typeInt64(), false, probe).isFit()) {
                     typeElement = typeRequired;
