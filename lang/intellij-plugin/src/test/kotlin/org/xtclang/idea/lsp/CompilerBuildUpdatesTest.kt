@@ -4,6 +4,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.nio.file.Path
 
+/**
+ * Verifies that compiler-model watching recognizes atomic report replacement and deletion while ignoring
+ * unrelated paths. Protects automatic refresh from missed updates and unnecessary reimports.
+ */
 class CompilerBuildUpdatesTest {
     @Test
     fun `atomic report replacement and removal affect inputs but unrelated paths do not`() {

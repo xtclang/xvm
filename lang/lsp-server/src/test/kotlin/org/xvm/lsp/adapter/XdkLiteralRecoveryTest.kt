@@ -13,6 +13,10 @@ import org.xvm.compiler.Source
 import org.xvm.compiler.ast.MethodDeclarationStatement
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 
+/**
+ * Exercises completion around unfinished literal containers and declaration values. Preserves subsequent
+ * declarations and the inner argument context without fabricating literal contents.
+ */
 class XdkLiteralRecoveryTest {
     @ParameterizedTest
     @ValueSource(

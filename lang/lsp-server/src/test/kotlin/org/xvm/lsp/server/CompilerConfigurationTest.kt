@@ -32,6 +32,11 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Exercises compiler configuration replacement and presentation-only updates through the server. Preserves
+ * accepted inputs and cached work when settings do not change compilation, and keeps explicit graph ownership
+ * distinct from discovery.
+ */
 class CompilerConfigurationTest {
     @Test
     fun `unchanged library settings preserve discovered resource inputs and cached compilation`() {
@@ -336,6 +341,7 @@ class CompilerConfigurationTest {
         }
     }
 
+    /** Owns a compiler server and captures configuration requests and published diagnostics for one test. */
     private inner class Session(
         pull: Boolean = false,
     ) : AutoCloseable {

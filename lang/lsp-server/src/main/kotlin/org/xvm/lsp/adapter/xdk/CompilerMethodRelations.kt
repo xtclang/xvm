@@ -13,6 +13,10 @@ internal class CompilerMethodRelations(
     val declarations: Set<MethodConstant>,
     val chains: List<Chain>,
 ) {
+    /**
+     * Ordered methods contributed to an owner, including cycle and alternative-dispatch evidence needed for
+     * refactoring checks.
+     */
     data class Chain(
         val owner: IdentityConstant,
         val methods: List<MethodConstant>,

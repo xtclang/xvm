@@ -7,6 +7,10 @@ import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 
+/**
+ * Checks revision-owned library source documents and monikers in virtual and file-backed views. Navigation
+ * must find declarations independently of which symbols a consumer previously queried.
+ */
 class XdkLibraryDocumentsTest {
     @Test
     fun `matching bundled sources have revision owned content and monikers in file and virtual views`() {

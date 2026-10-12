@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/** AST4 lifetime controls: observation is passive, resolution is resumable, clones need owners. */
+/** Observation is passive, resolution is resumable, and tree copies have distinct owners. */
 class DeclarationProvenanceTest {
     @Test
     void deferredResolutionPublishesOnlyCompletedSegmentsAndDoesNotDuplicateThemOnRetry() {
@@ -113,6 +113,7 @@ class DeclarationProvenanceTest {
         }
     }
 
+    /** Controls when a nested class scope becomes resolvable so retries can be checked for source provenance. */
     private static class ResolvingScope extends AstNode {
         private final FileStructure file = new FileStructure("Provenance");
         private final Source source = new Source("Outer.Inner.Missing");

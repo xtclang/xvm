@@ -59,6 +59,7 @@ class XtcFileRenameHandler :
         }
     }
 
+    /** Collects a source-file name before requesting and applying its compiler-validated rename. */
     private class RenameDialog(
         project: Project,
         private val file: VirtualFile,

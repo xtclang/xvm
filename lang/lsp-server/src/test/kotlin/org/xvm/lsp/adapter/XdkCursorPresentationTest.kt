@@ -4,6 +4,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 
+/**
+ * Verifies documentation, ordering and active-parameter metadata on compiler cursor results. Repeated
+ * analyses must preserve source documentation and named/default argument mappings.
+ */
 class XdkCursorPresentationTest {
     @Test
     fun `completion carries source documentation and stable ordering across fresh attempts`() {

@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 /** Timing metadata only: never logs source buffers, protocol payloads or compiler objects. */
 internal object ExecutionTrace {
+    /** Operation identity, parent and monotonic start time propagated across asynchronous work. */
     data class Span(
         val id: Long,
         val parent: Long?,
@@ -18,6 +19,7 @@ internal object ExecutionTrace {
         val created: Long = System.nanoTime(),
     )
 
+    /** Active trace span and API nesting depth for the current scoped execution. */
     private data class Context(
         val span: Span,
         val apiDepth: Int,

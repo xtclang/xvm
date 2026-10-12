@@ -4,6 +4,7 @@ import com.intellij.driver.sdk.WaitForException
 import java.util.concurrent.CancellationException
 import java.util.concurrent.TimeoutException
 
+/** Stops the playbook when cleanup cannot restore a safe state for subsequent scenarios. */
 internal class PlaybookCleanupFailure(
     cause: Throwable,
 ) : IllegalStateException("Could not restore the playbook workspace", cause)

@@ -3,6 +3,7 @@ package org.xtclang.idea.playbook
 import com.intellij.driver.client.Remote
 import com.intellij.driver.sdk.Project
 
+/** Drives adapter selection and language-service settings through the IDE-side probe. */
 @Remote(
     "org.xtclang.idea.playbook.probe.LanguageServicePage",
     plugin = "org.xtclang.playbook.probe",

@@ -239,6 +239,7 @@ fun Driver.partialGraphHierarchy(
     }
 }
 
+/** Invokes a native dialog button through the driver instead of relying on keyboard focus. */
 @Remote("javax.swing.JButton")
 interface NativeButton {
     fun isEnabled(): Boolean
@@ -246,11 +247,13 @@ interface NativeButton {
     fun doClick()
 }
 
+/** Selects a native list row before invoking the associated dialog action. */
 @Remote("javax.swing.JList")
 interface NativeListSelection {
     fun setSelectedIndex(index: Int)
 }
 
+/** Selects and activates a native navigation-popup target deterministically. */
 @Remote("org.xtclang.idea.playbook.probe.NavigationChooser", plugin = "org.xtclang.playbook.probe")
 internal interface NativeNavigationChooser {
     fun choose(

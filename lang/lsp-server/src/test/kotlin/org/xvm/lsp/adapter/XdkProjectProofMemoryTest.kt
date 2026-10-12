@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 class XdkProjectProofMemoryTest {
     @TempDir lateinit var directory: Path
 
+    /** Enumerates proof-query exit paths that must all release temporary compiler state. */
     enum class Outcome {
         SUCCESS,
         REJECTED,

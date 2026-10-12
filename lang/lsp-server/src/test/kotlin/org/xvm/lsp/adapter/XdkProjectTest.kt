@@ -18,6 +18,10 @@ import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
 
+/**
+ * Exercises dependency-ordered module compilation and caching under rapid edits. Reuse requires exact
+ * captured inputs; obsolete or uncooperative compilations cannot publish stale dependency artifacts.
+ */
 class XdkProjectTest {
     @TempDir lateinit var directory: Path
 

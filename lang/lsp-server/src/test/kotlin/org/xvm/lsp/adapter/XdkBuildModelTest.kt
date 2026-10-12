@@ -18,6 +18,10 @@ import java.net.URI
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Compiles evaluated build-model inputs across source sets and projects. Checks dependency visibility,
+ * processed resources, member imports and replacement of imported binary paths.
+ */
 class XdkBuildModelTest {
     @TempDir lateinit var directory: Path
 

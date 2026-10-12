@@ -11,6 +11,11 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.model.Location
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Verifies diagnostic source ownership and UTF-16 positions for local, foreign and unpositioned reports.
+ * Unexpected compiler failures must remain internal failures rather than masquerading as configuration
+ * problems.
+ */
 class XdkDiagnosticTest {
     @Test
     fun `binary only structure diagnostics keep the document fallback`() {
