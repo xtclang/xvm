@@ -72,22 +72,22 @@ public class ModuleInfo {
      * @param moduleName  the module identity obtained from the host's source snapshot
      */
     protected ModuleInfo(File sourceFile, String moduleName) {
-        this.fileSpec = Objects.requireNonNull(sourceFile, "sourceFile").getAbsoluteFile();
-        this.moduleName = Objects.requireNonNull(moduleName, "moduleName");
-        if (moduleName.isBlank() || !isExplicitSourceFile(fileSpec.getName())) {
+        this.fileSpec      = Objects.requireNonNull(sourceFile, "sourceFile").getAbsoluteFile();
+        this.moduleName    = Objects.requireNonNull(moduleName, "moduleName");
+        if (moduleName.isBlank() || !isExplicitSourceFile(this.fileSpec.getName())) {
             throw new IllegalArgumentException("A module name and .x source root are required");
         }
-        this.sourceFile = fileSpec;
-        deduce        = false;
-        fileName      = removeExtension(fileSpec.getName());
-        sourceDir     = fileSpec.getParentFile();
-        projectDir    = sourceDir;
-        sourceStatus  = Status.Exists;
-        sourceContent = Content.Module;
-        resourceDir   = NoResources;
-        binaryDir     = sourceDir;
-        binaryStatus  = Status.NotExists;
-        binaryContent = Content.Invalid;
+        this.sourceFile    = this.fileSpec;
+        this.deduce        = false;
+        this.fileName      = removeExtension(this.fileSpec.getName());
+        this.sourceDir     = this.fileSpec.getParentFile();
+        this.projectDir    = this.sourceDir;
+        this.sourceStatus  = Status.Exists;
+        this.sourceContent = Content.Module;
+        this.resourceDir   = NoResources;
+        this.binaryDir     = this.sourceDir;
+        this.binaryStatus  = Status.NotExists;
+        this.binaryContent = Content.Invalid;
     }
 
     /**
@@ -846,6 +846,8 @@ public class ModuleInfo {
         /**
          * Parse while observing the host's abort request. The no-argument entry point is retained
          * for CLI consumers that drain the node's diagnostics themselves.
+         *
+         * @param errs  the diagnostic listener and abort policy for this operation
          */
         public void parse(ErrorListener errs) {
             if (!errs.isAbortDesired()) {

@@ -5716,6 +5716,8 @@ public class Parser {
      * a kept attempt is the real parse and nothing re-reads those tokens. An attempt is a
      * {@link ErrorListener#branch} instead, so keeping it merges what it had to say and dropping
      * it drops the lot, which is the behaviour the rest of the compiler already gets.
+     *
+     * @return a scope that restores tokens and discards diagnostics unless the attempt is kept
      */
     public Attempt attempt() {
         return new Attempt();
@@ -5726,6 +5728,7 @@ public class Parser {
      */
     public class Attempt
             implements AutoCloseable, ErrorListener {
+        /** Save the token position and install a diagnostic branch until this attempt is closed. */
         public Attempt() {
             // read the destination before moving it: the branch buffers into whatever this parser
             // was reporting to when the attempt began
