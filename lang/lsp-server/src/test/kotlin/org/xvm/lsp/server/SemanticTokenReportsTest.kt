@@ -5,6 +5,10 @@ import org.eclipse.lsp4j.Position
 import org.eclipse.lsp4j.Range
 import org.junit.jupiter.api.Test
 
+/**
+ * Checks full/range/delta token responses and bounded history. Reconstructed deltas must match exact token
+ * arrays; foreign or expired result IDs fall back to full responses.
+ */
 class SemanticTokenReportsTest {
     @Test
     fun `delta reconstructs insertions removals integer edits and unchanged results`() {

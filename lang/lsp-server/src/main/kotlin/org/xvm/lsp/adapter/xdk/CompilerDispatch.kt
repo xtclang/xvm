@@ -24,6 +24,7 @@ internal data class CompilerDispatch(
         val branches: List<Branch>,
     )
 
+    /** A possible receiver type paired with its compiler-selected dispatch chain. */
     data class Branch(
         val receiver: TypeConstant,
         val dispatch: CompilerDispatch,
@@ -139,9 +140,7 @@ internal fun TypeInfo.dispatch(
                     CompilerDispatch(listOf(body.identity), supported = false)
                 }
 
-                else -> {
-                    CompilerDispatch(listOf(body.identity), supported = false)
-                }
+                else -> CompilerDispatch(listOf(body.identity), supported = false)
             }
         }
     return CompilerDispatch(
@@ -159,9 +158,7 @@ private fun MethodInfo.closingContracts(depth: Int = 0): List<MethodConstant>? {
     return chain
         .flatMap { body ->
             when (body.implementation) {
-                Implementation.Delegating -> {
-                    emptyList()
-                }
+                Implementation.Delegating -> emptyList()
 
                 Implementation.Union -> {
                     val left = body.unionLeft.closingContracts(depth + 1) ?: return null
@@ -171,13 +168,9 @@ private fun MethodInfo.closingContracts(depth: Int = 0): List<MethodConstant>? {
 
                 Implementation.Declared, Implementation.Abstract, Implementation.Default,
                 Implementation.Explicit, Implementation.SansCode,
-                -> {
-                    listOf(body.methodStructure?.takeUnless { it.isSynthetic }?.identityConstant ?: return null)
-                }
+                -> listOf(body.methodStructure?.takeUnless { it.isSynthetic }?.identityConstant ?: return null)
 
-                else -> {
-                    return null
-                }
+                else -> return null
             }
         }.distinct()
 }

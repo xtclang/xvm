@@ -21,6 +21,10 @@ import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 import org.junit.jupiter.api.Test
 import java.net.URI
 
+/**
+ * Exercises open/change ordering and transmitted document versions across typing, restart and reopen.
+ * Protects server-edit validation from stale ownership, reused versions and incorrect UTF-16 patching.
+ */
 class DocumentStartupMessagesTest {
     private val uri = "file:///Startup.x"
     private val buffers =

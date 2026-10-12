@@ -18,6 +18,11 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import kotlin.jvm.optionals.getOrNull
 
+/**
+ * Validated limits for server log rolling and closed-session cleanup. File and total-size limits configure
+ * each rolling appender; age also limits its history. Age and session count govern closed-session pruning,
+ * which preserves live sessions even when those retention targets are exceeded.
+ */
 internal data class LogRetention(
     val historyDays: Int = 7,
     val maxFileMb: Int = 10,
@@ -41,7 +46,14 @@ internal data class LogRetention(
     }
 }
 
-/** Owned session files only. Never traverses source roots, other applications' logs, or symlinks. */
+/**
+ * Locates, prunes and exports this server's logs and execution traces. Each process gets its own
+ * session directory; concurrent servers share only the root and the lock used for pruning.
+ *
+ * Cleanup removes closed sessions only when every entry is a recognized regular log file. Unknown
+ * files, symlinks and live processes keep a directory intact. Export reads bounded tails from the
+ * current session and configured trace directory, so a support bundle cannot grow with the log files.
+ */
 internal object ServerLogs {
     val process = TraceProcessId().propertyValue
     val root: Path =
@@ -68,7 +80,10 @@ internal object ServerLogs {
             "exportFileLimitBytes" to FILE_LIMIT,
         )
 
-    /** Active sessions are protected, including a PID with an unknown start time. */
+    /**
+     * Removes expired or excess closed sessions and returns the number deleted. A held retention lock
+     * makes this call a no-op; active processes, including a PID with an unknown start time, are kept.
+     */
     fun prune(
         root: Path = this.root,
         policy: LogRetention = retention,
@@ -134,6 +149,7 @@ internal object ServerLogs {
         return actualStart == null || actualStart.toEpochMilli() == started
     }
 
+    /** Packages recent log tails and the supplied service status as a bounded, base64-encoded ZIP. */
     fun export(status: Map<String, Any?>): Map<String, String> {
         val files =
             listOf(directory, traceDirectory)

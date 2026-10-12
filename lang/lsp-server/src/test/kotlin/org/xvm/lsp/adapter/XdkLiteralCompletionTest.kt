@@ -6,6 +6,10 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 
+/**
+ * Checks proposed literals with compiler fitting and compilation of the accepted edit. Covers positional and
+ * named slots so syntactically plausible but incompatible values are not offered.
+ */
 class XdkLiteralCompletionTest {
     @ParameterizedTest
     @ValueSource(strings = ["Int", "String", "Boolean", "String?"])

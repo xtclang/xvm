@@ -189,6 +189,7 @@ internal fun ParityWorkspace.awaitRetired(
     }
 }
 
+/** Obtains rename proposals through the plugin's native rename integration. */
 @Remote("org.xtclang.idea.lsp.XtcRenameEdit", plugin = "org.xtclang.idea")
 interface NativeRenameRequests {
     fun request(
@@ -199,9 +200,11 @@ interface NativeRenameRequests {
     ): ClientFuture
 }
 
+/** Keeps a workspace edit in the IDE process until the native transaction applies it. */
 @Remote("org.eclipse.lsp4j.WorkspaceEdit", plugin = "com.redhat.devtools.lsp4ij")
 interface NativeWorkspaceEdit
 
+/** Applies a prepared rename using the plugin's native edit transaction. */
 @Remote("org.xtclang.idea.lsp.XtcRenameEdit", plugin = "org.xtclang.idea")
 interface NativeRenameTransaction {
     fun getEdit(): NativeWorkspaceEdit
@@ -209,6 +212,7 @@ interface NativeRenameTransaction {
     fun apply(): Boolean
 }
 
+/** Polls a prepared native rename operation. */
 @Remote("java.util.concurrent.CompletableFuture")
 interface NativeRenameFuture : ClientFuture {
     fun get(): NativeRenameTransaction?

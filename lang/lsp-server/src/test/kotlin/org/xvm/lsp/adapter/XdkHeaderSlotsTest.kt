@@ -11,6 +11,10 @@ import org.xvm.compiler.Source
 import org.xvm.compiler.ast.partial.IncompleteTypeCompositionStatement
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 
+/**
+ * Exercises cursor positions in declaration type slots. Checks visible compiler scope and exact replacement
+ * boundaries without publishing incomplete declaration identities.
+ */
 class XdkHeaderSlotsTest {
     @ParameterizedTest
     @ValueSource(

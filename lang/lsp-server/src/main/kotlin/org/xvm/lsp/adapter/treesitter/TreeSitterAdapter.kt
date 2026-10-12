@@ -624,9 +624,7 @@ class TreeSitterAdapter : AbstractAdapter() {
                 "type_expression",
                 "type_name",
                 "generic_type",
-                -> {
-                    return CompletionContext.TYPE
-                }
+                -> return CompletionContext.TYPE
 
                 "annotation" -> {
                     return CompletionContext.ANNOTATION
@@ -1000,15 +998,11 @@ class TreeSitterAdapter : AbstractAdapter() {
         return when (parent.type) {
             "assignment_statement",
             "assignment_expression",
-            -> {
-                parent.childByFieldName("left")?.let { isOrContains(it, node) } == true
-            }
+            -> parent.childByFieldName("left")?.let { isOrContains(it, node) } == true
 
             "variable_declaration",
             "parameter",
-            -> {
-                parent.childByFieldName("name")?.let { isSameNode(it, node) } == true
-            }
+            -> parent.childByFieldName("name")?.let { isSameNode(it, node) } == true
 
             else -> {
                 false
@@ -1131,9 +1125,7 @@ class TreeSitterAdapter : AbstractAdapter() {
                 "line_comment",
                 "block_comment",
                 "doc_comment",
-                -> {
-                    FoldingRange.FoldingKind.COMMENT
-                }
+                -> FoldingRange.FoldingKind.COMMENT
 
                 "import_list" -> {
                     FoldingRange.FoldingKind.IMPORTS
@@ -1677,17 +1669,9 @@ class TreeSitterAdapter : AbstractAdapter() {
         buildList {
             val message =
                 when {
-                    node.isError -> {
-                        "Syntax error: unexpected '${node.text.take(20)}${if (node.text.length > 20) "..." else ""}'"
-                    }
-
-                    node.isMissing -> {
-                        "Syntax error: missing ${node.type}"
-                    }
-
-                    else -> {
-                        null
-                    }
+                    node.isError -> "Syntax error: unexpected '${node.text.take(20)}${if (node.text.length > 20) "..." else ""}'"
+                    node.isMissing -> "Syntax error: missing ${node.type}"
+                    else -> null
                 }
 
             if (message != null) {

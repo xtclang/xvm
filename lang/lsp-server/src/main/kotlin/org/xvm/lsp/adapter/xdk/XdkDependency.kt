@@ -57,6 +57,7 @@ class XdkDependency
                 }.toByteArray()
                 .let { HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(it)) }
 
+        /** Constant-table symbol identity qualified by its module and immutable artifact revision. */
         data class SymbolKey(
             val module: String,
             val revision: String,
@@ -123,6 +124,11 @@ internal data class DependencyDeclaration(
     val location: SemanticModel.SourceLocation,
 )
 
+/**
+ * Immutable set of external binary modules for a compilation. Rejects duplicate or bundled-module
+ * replacements and opens fresh compiler repositories on the worker so mutable pools are not shared between
+ * attempts.
+ */
 internal class XdkDependencies(
     dependencies: List<XdkDependency>,
 ) {
@@ -161,6 +167,10 @@ internal class XdkDependencies(
         return Open(repository, declarations, modules.mapValues { it.value.revision }, modules)
     }
 
+    /**
+     * Attempt-owned repository and declaration identities, paired with the artifact revisions that produced
+     * them.
+     */
     class Open(
         val repository: ModuleRepository,
         val declarations: Map<IdentityConstant, DependencyDeclaration>,

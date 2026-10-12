@@ -12,6 +12,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermission
 
+/**
+ * Checks that unresolved receiver calls create methods in the compiler-selected source owner. Signature
+ * identities, visibility and instance/static dispatch must survive editing a closed destination.
+ */
 class XdkCrossOwnerMissingMethodsTest {
     @TempDir lateinit var directory: Path
 

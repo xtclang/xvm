@@ -9,6 +9,10 @@ import org.eclipse.lsp4j.jsonrpc.json.MessageJsonHandler
 import org.eclipse.lsp4j.jsonrpc.messages.NotificationMessage
 import org.junit.jupiter.api.Test
 
+/**
+ * Checks wire serialization of configuration resets. Explicit discovery reset must survive JSON encoding
+ * without changing normal omission of unrelated optional protocol fields.
+ */
 class ConfigurationJsonTest {
     @Test
     fun `configuration notification preserves explicit discovery reset on the wire`() {

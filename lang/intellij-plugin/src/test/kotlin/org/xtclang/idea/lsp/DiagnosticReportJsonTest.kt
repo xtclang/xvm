@@ -12,6 +12,10 @@ import org.eclipse.lsp4j.jsonrpc.services.ServiceEndpoints
 import org.eclipse.lsp4j.services.TextDocumentService
 import org.junit.jupiter.api.Test
 
+/**
+ * Exercises full, unchanged and related pull-diagnostic report decoding with the client JSON configuration. A
+ * valid report shape must not terminate the message reader or lose related-document updates.
+ */
 class DiagnosticReportJsonTest {
     @Test
     fun `related full and unchanged reports decode without killing the message reader`() {

@@ -133,6 +133,7 @@ internal fun ParityWorkspace.captureColorScheme(document: ParityWorkspace.Docume
     }
 }
 
+/** Exercises the IDE's native color decoration and picker through a test probe. */
 @Remote("org.xtclang.idea.playbook.probe.ColorUi", plugin = "org.xtclang.playbook.probe")
 internal interface ColorProbe {
     fun offsets(editor: Editor): List<Int>

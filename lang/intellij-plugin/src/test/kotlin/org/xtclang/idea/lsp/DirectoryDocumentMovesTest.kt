@@ -7,6 +7,10 @@ import com.intellij.testFramework.LightVirtualFile
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
+/**
+ * Checks the LSP4IJ directory-move bridge and its pinned client API. Open descendants must reconnect once at
+ * their new URIs while unrelated documents and ordinary file operations retain their normal lifecycle.
+ */
 class DirectoryDocumentMovesTest {
     @Test
     fun `pinned LSP4IJ exposes the owned disconnect operation required by the directory move bridge`() {
@@ -54,6 +58,7 @@ class DirectoryDocumentMovesTest {
         assertThat(DirectoryDocumentMoves.descendants(events) { error("Handled by LSP4IJ") }).isEmpty()
     }
 
+    /** Supplies an in-memory file's parent and directory status without creating a real IDE filesystem. */
     private class File(
         name: String,
         private val folder: VirtualFile? = null,

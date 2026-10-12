@@ -15,6 +15,7 @@ import org.xvm.lsp.util.ExecutionTrace
 
 /** Private source members have bounded consumers; public APIs and initialization effects do not. */
 internal object XdkSafeDelete {
+    /** Proposed declaration removal and the binding sites intentionally removed with it. */
     data class Candidate(
         val name: String,
         val identity: ProofIdentity,
@@ -56,9 +57,7 @@ internal object XdkSafeDelete {
                     }
                 }
 
-                else -> {
-                    null
-                }
+                else -> null
             } ?: return null
         if (parents[parents[member]] !is TypeCompositionStatement) return null
         if (XdkRefactoringSyntax.tree(member).any { (node, _) -> node is AnnotationExpression }) return null

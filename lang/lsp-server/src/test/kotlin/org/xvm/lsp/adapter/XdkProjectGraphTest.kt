@@ -8,6 +8,10 @@ import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import java.nio.file.Files
 import java.nio.file.Path
 
+/**
+ * Checks that dependency watch roots include unopened source modules and missing resource directories.
+ * Ensures later file creation can invalidate the same graph that compilation uses.
+ */
 class XdkProjectGraphTest {
     @TempDir lateinit var directory: Path
 

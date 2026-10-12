@@ -102,9 +102,10 @@ The test outputs parse timing sorted by slowest files, helping identify grammar 
 
 ## Kotlin Formatting
 
-Spotless runs ktlint's default rules over Kotlin sources, tests, IntelliJ integration tests
+Spotless runs ktlint over Kotlin sources, tests, IntelliJ integration tests
 and the `lang` Gradle scripts, using the same formatter versions as master. Versions are pinned in
-the shared version catalog. Generated build outputs are excluded. From the repository root:
+the shared version catalog. The local `.editorconfig` permits concise single-expression `when`
+entries alongside entries that need blocks. Generated build outputs are excluded. From the repository root:
 
 ```bash
 # Format all lang Kotlin sources and Gradle scripts
@@ -291,24 +292,18 @@ Generated files:
 ```
 
 Compiler mode is the default. Its bounded semantic features and dependency host API are described in the
-[LSP server README](./lsp-server/README.md); the capability matrix below records supported requests
-and remaining project/workspace limits. No external XDK installation is required.
+[LSP server README](./lsp-server/README.md), including supported requests and remaining
+project/workspace limits. No external XDK installation is required.
 
-## Canonical Status Documents
+## Feature and Architecture Guides
 
-To avoid duplicating stale implementation matrices across multiple READMEs, the canonical
-status documents are:
-
-- [`doc/plans/plan-ide-integration.md`](./doc/plans/plan-ide-integration.md)
-  - current implementation matrix across adapters and IDE integration status
-- [`doc/plans/plan-tree-sitter.md`](./doc/plans/plan-tree-sitter.md)
-  - tree-sitter architecture and implementation status
-- [`doc/plans/existing-tree-sitter-functionality-missing.md`](./doc/plans/existing-tree-sitter-functionality-missing.md)
-  - current tree-sitter implemented vs remaining functionality
-- [`lsp-server/README.md`](./lsp-server/README.md)
-  - LSP-server-specific build, runtime, and configuration details
-- [`intellij-plugin/README.md`](./intellij-plugin/README.md)
-  - IntelliJ-plugin-specific build/testing/runtime details
+- [LSP server](./lsp-server/README.md): adapter capabilities, runtime and configuration.
+- [Manual playbook](./doc/manual-test-plan.md): runnable examples, native IDE tests and feature limits.
+- [Compiler architecture](../javatools/README.md#compiler-architecture-for-language-tooling):
+  why tooling needs compiler facts, diagnostic ownership and bounded partial analysis.
+- [IntelliJ plugin](./intellij-plugin/README.md) and [VS Code extension](./vscode-extension/README.md):
+  installation, settings and publication.
+- [Tree-sitter](./tree-sitter/README.md): grammar and native library builds.
 
 ## Dependency Versions & Compatibility
 
@@ -368,10 +363,8 @@ All versions are defined in `/gradle/libs.versions.toml`.
 
 ## Documentation
 
-- [Implementation Plans](./doc/plans/README.md) - Current plans, status docs, and retained design notes for language tooling
+- [Historical design notes](./doc/plans/README.md) - Background proposals; use the feature guides above for current behavior
 - [LSP Implementation Survey](./doc/lsp-implementations-survey.md) - Survey of how other languages implement language server support
-
-Architecture analysis and research documentation: *Internal documentation*
 
 ## TODOs
 

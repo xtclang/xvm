@@ -113,9 +113,9 @@ notifications are failures; do not replay a timed-out mutation to manufacture a 
 ## Client compatibility limits
 
 - VS Code's native batch-move and overlapping-move Undo paths have recorded host failures
-  (X130/UP16 and X218/UP23). The cases remain assertions, not silently skipped successes.
-- IntelliJ uses the supported read-only file fallback for library content (X254/UP25).
-  X257/UP26 covers inline-completion constraints partly through the installed connection because
+  (X130 and X218). The cases remain assertions, not silently skipped successes.
+- IntelliJ uses the supported read-only file fallback for library content (X254).
+  X257 covers inline-completion constraints partly through the installed connection because
   released LSP4IJ does not expose all required native invocation metadata. Both report partial coverage.
 - The optional color-value prototype is disabled by default. X273–X275 explicitly enable it;
   its native swatch refresh has a recorded VS Code failure. Theme-based source highlighting is
@@ -141,7 +141,7 @@ The native project-lifecycle tests exercise ownership and process exit. Check th
 separately from the feature catalog; old processes from another run are not evidence of a leak
 in the current run.
 
-## IntelliJ startup editing acceptance (L56)
+## IntelliJ startup editing acceptance
 
 Run in a fresh compiler-mode project before waiting for the Language Servers panel to report ready.
 The unit tests cover notification permutations; these steps exercise the actual client/editor path.
@@ -165,7 +165,7 @@ The unit tests cover notification permutations; these steps exercise the actual 
 The report includes `startup-editing.json` (PID/version/text stamps and phase results) and
 `server-trace/` (one execution trace per child process). X103's forward/reverse file rename also
 passes after removing the transport read lock that caused a real EDT deadlock. This regression
-was unrelated to focus loss. X42/X97/X108 contain the shared L57–L59 semantic variants.
+was unrelated to focus loss. X42/X97/X108 contain the shared inlay, completion and declaration-context variants.
 
 ## Current development batch: workspace queries and editing
 
@@ -222,7 +222,7 @@ or Undo against an already modified fixture.
 Focused automated gate after compilation/unit checks: CFG2, X57, X101, X105, X118,
 X122–X134 in each host, plus the existing native lens/link/inlay/workspace-navigation checks
 when their display path changed. Run both newly added and modified tests. A full catalog checkpoint
-and longer idle/restart/memory runs remain the submission gate under L82; selected cases alone
+and longer idle/restart/memory runs remain part of responsiveness and lifecycle acceptance; selected cases alone
 cannot establish full playbook completion.
 
 Backend command for the save/sync/range checks (no editor window):
@@ -991,7 +991,7 @@ Workspace folders take precedence; extra roots are merged in. Non-existent paths
 
 ## Adapter Comparison Summary
 
-> See [plan-ide-integration.md](plans/plan-ide-integration.md#adapter-capability-matrix) for the canonical adapter comparison matrix.
+> See the [backend comparison](../lsp-server/README.md#backend-comparison) for compiler and Tree-sitter feature boundaries.
 
 ---
 
@@ -1276,7 +1276,7 @@ colors, and a theme can give multiple categories the same appearance.
 #### Compiler semantic-color prototype
 
 This is the requested source-highlighting feature. It uses the IDE theme and requires no new
-Ecstasy library or application-color API. The separate L77 picker experiment below is opt-in.
+Ecstasy library or application-color API. The separate color-value picker experiment below is opt-in.
 
 Open [`semantic-colors.code-workspace`](../test-fixtures/semantic-highlighting/semantic-colors.code-workspace)
 in VS Code with the compiler extension, then open `SemanticColors.x`. The workspace only adds
@@ -1290,7 +1290,7 @@ Inspect lowercase `counter` as `class`, uppercase `Count` as `parameter`, `count
 `next` as `variable`, `Reader` and imported `List` as `interface`, `Mode` as `enum`, and both uses
 of `Quiet` as `enumMember`. `create` is `function.static` at its declaration and call; `read` is
 `method`. The `count += 1` target has `modification`; its reads do not. This is source-code
-highlighting, separate from L77 color-value swatches and pickers.
+highlighting, separate from color-value swatches and pickers.
 
 `XdkSemanticColorTest` compiles this fixture and checks classifications. Shared X41/X154 check
 functions, enum values, imported interfaces and writes in both editor drivers. Both cases pass in
@@ -1301,7 +1301,7 @@ names used as parameters/properties/locals and incomplete-member edits followed 
 
 ---
 
-### L77 color-value prototype
+### Experimental color-value picker
 
 This opt-in experiment is separate from syntax/semantic highlighting. The ordinary fixture
 [`ColorPrototype.x`](../test-fixtures/color-values/ColorPrototype.x) defines a four-byte `Rgba`
@@ -1831,12 +1831,11 @@ module Consumers {
 | X43 | Keep hierarchy items open, insert a blank line before `run`, then reopen hierarchy. Break the module with an unfinished declaration, correct it and close/reopen the file. | Fresh results use current ranges. Old hierarchy items do not resolve against the edited snapshot. A parse failure clears semantic answers; correction restores them. |
 | X44 | In the section D two-file fixture, add `static Int target(Int n) = n;` to Project and `Int callTarget() = target(1);` to Child, then close Child and show incoming calls on `target`. | `callTarget` and its call site point to the closed Child source. An unsaved member edit moves the result; stale positions are not reused. |
 
-Also unavailable: separate Go to Declaration, document links and linked editing. The bounded
-rename checks below exercise recompilation plus binding comparison. The interactive fixtures
-do not configure dependency artifacts; source navigation through the host API is tested separately
-below. Workspace-wide reference/implementation searches and external or conditional-mixin hierarchy
-remain open. No Tree-sitter fallback runs in compiler mode. Check the
-[capability matrix](plans/plan-ide-integration.md#adapter-capability-matrix) when those limits change.
+The bounded rename checks below exercise recompilation plus binding comparison. Declaration
+navigation, links, linked editing, cross-module queries and dependency navigation have their own
+scenarios later in this playbook. Passing these initial fixtures does not establish coverage of
+those features. Compiler mode does not run a Tree-sitter fallback; consult the
+[backend comparison](../lsp-server/README.md#backend-comparison) for its feature boundaries.
 
 Record the commit, editor/version, confirmed backend, case ID, source/unsaved edits, expected and
 actual result, and relevant server-log lines for failures. Mark unsupported client actions and
@@ -1986,7 +1985,7 @@ accepted edits before continuing. These are bounded semantic edits, not general 
 | X57 | Start a rename and edit another file in the same module, close/reopen the target, or change its version before applying. | Pending work is canceled or rejected as changed; an edit for an old open-buffer version is not applied. Fast machines may need the controlled server regression below to exercise this race. |
 | X58 | Introduce a syntax error, try rename, fix it and retry. Try an invalid identifier or an existing local name. | Broken/unsupported/conflicting requests give no edits or temporary diagnostics. A valid rename works again after correction. |
 
-#### Additional L62 rename checks
+#### Additional compiler-validated rename checks
 
 Shared cases **X109–X117** now carry these sources, expected edits and file destinations for
 both editor drivers. Each starts with other consumers closed and checks a single Undo against
@@ -2114,7 +2113,7 @@ module Dormant {
 | # | Action | Expected result |
 |---|--------|-----------------|
 | X59 | Find References on the interface's `map` in Contracts.x, with Uses.x and Dormant.x unopened. | The declaration and the two calls through `api.Mapper<String>` appear. The concrete override and `impl.map` have their own identity and are excluded from this exact reference query. |
-| X60 | Rename that `map` to `convert`; inspect the preview, apply, then undo. | Five edits across all three files: the contract, concrete override, and all three calls. No diagnostics after recompilation. Closed files have null edit versions; open buffers carry their current versions. IntelliJ persists edited closed consumers through the UP21 bridge before opening them; the original open buffer stays unsaved. |
+| X60 | Rename that `map` to `convert`; inspect the preview, apply, then undo. | Five edits across all three files: the contract, concrete override, and all three calls. No diagnostics after recompilation. Closed files have null edit versions; open buffers carry their current versions. IntelliJ persists edited closed consumers through the closed-document persistence bridge before opening them; the original open buffer stays unsaved. |
 | X61 | Rename Contracts.Base's `pick` to `choose`. | No edit. The unchanged `box.choose(1)` would select a different overload even though the edited graph compiles. |
 | X62 | Open Uses.x, invoke signature help inside `indexOf('a')`, then try renaming `indexOf`. Separately try renaming Named's `toString` override. | The bundled XDK supplies the Char overload's signature; binary `String.indexOf` cannot be renamed. The source override also cannot be renamed because its contract belongs to the bundled XDK. These are resolved binary targets, not missing dependencies. |
 | X63 | Add a second `mapper.map("d")` call to Dormant's return expression without saving, query references/rename, then temporarily replace its body with `MissingType broken;`. Restore the fixture. | Queries include the unsaved call and rename uses its current buffer version. An incomplete configured graph gives no reference list or rename edit; proof compilations add no diagnostics of their own. Restoring it restores results. |
@@ -2308,7 +2307,7 @@ module Advanced {
 | X94 | In temporary `Editing.x`, complete `Str` in `List<Str>`, `Map<Int, List<Str>>`, `Map<Str, Int>`, `List<(Int \| Str)>`, `Object + Str` and `Object - Str` parameter headers. Also try `List<Str>` property/return types and `List<ecstasy.text.Str>`. Use the shared X94 variants. Finally remove both `>` from the nested `Map` header, accept `String`, then restore `>>`. | Only the selected leaf token changes; generic arguments, compound operators and qualifiers stay intact. Values such as `StringValue` are excluded and no call signature appears. Complete accepted headers clear Problems. Missing `>` still reports an error after acceptance; adding the closers clears it. Type suggestions establish visibility, not generic-constraint compatibility. Both drivers consume the same nine variants. |
 | X95 | In temporary `Editing.x`, use the shared X95 replacement program. Complete the marked type in class `extends`, interface `extends`, `implements`, `delegates`, `incorporates` and mixin `into` headers. Also try `Owner.Nes`, `List<Str>` and the missing-`>` variant. Accept the selected entry, then restore the repaired declaration. | Completion replaces only the final token and offers visible types rather than values. Complete accepted headers clear Problems; accepting `String` with a missing `>` leaves an error until the closer is restored. No signature appears in a type slot. Both drivers consume the same nine variants; native IntelliJ assertions pass. |
 | X96 | In temporary `Editing.x`, use the shared X96 replacement program. Complete registered `Element` in a type prefix and empty generic slot, `String` before a later generic argument, and `Item`/`Alias` after `Owner<String>`. Put the cursor inside `String`, `StringBuffer` and `Item`, then accept the selected entry. | All eight variants preserve surrounding syntax and clear Problems after acceptance. Empty slots insert at the cursor; mid-token edits replace the whole identifier without duplicating its suffix. Parameterized aliases retain their substituted compiler type. No signature appears. Both editor drivers consume the same data; native IntelliJ assertions pass. |
-| X97 | In temporary `Editing.x`, run the shared argument-context variants: later/named arguments, groups, qualified properties, function values, construction, operators and missing operands. Accept the specified variable or literal in each row. | Fitting rejects incompatible values, preserves surrounding syntax and exact edits, retains signature help and clears diagnostics after acceptance. Literal rows verify Value kind and sort metadata; method rows verify documentation and active parameters. The 30 shared variants include character, decimal, binary, array, map and tuple insertions; see the latest L64 receipt for validation. |
+| X97 | In temporary `Editing.x`, run the shared argument-context variants: later/named arguments, groups, qualified properties, function values, construction, operators and missing operands. Accept the specified variable or literal in each row. | Fitting rejects incompatible values, preserves surrounding syntax and exact edits, retains signature help and clears diagnostics after acceptance. Literal rows verify Value kind and sort metadata; method rows verify documentation and active parameters. The 30 shared variants include character, decimal, binary, array, map and tuple insertions; record the selected completion cases in the acceptance report. |
 | X98 | Complete `Li|st<String>` and `Li|<String>`, including a nested `Map` argument. | Only the base identifier is replaced; `<String>` and nested delimiters survive. The accepted source compiles. VS Code passes in `run-KoAP6K`; the IntelliJ consumer compiles and awaits its native checkpoint. |
 | X99 | In an isolated discovered workspace, create `LiveLibrary.x` with `module LiveLibrary { static Int value() = 1; }` and `LiveConsumer.x` with `module LiveConsumer {}`. Add `package lib import LiveLibrary; Int run() = lib.value();` to the consumer without saving. Change the library result to `String`, then discard it. | Definition reaches `value`; consumer Problems updates for the incompatible unsaved dependency and clears on discard. Neither buffer is saved by the server. |
 | X100 | Create a healthy module with `class Base {}` and `class Child extends Base {}`, plus an independent module. Break the neighbor with `Missing broken;`, then request Base's subtypes. | Child remains navigable. Exact references return no complete answer while the graph is broken. Repairing the neighbor restores full graph queries. |
@@ -2319,7 +2318,7 @@ module Advanced {
 | X105 | Use unresolved `Document` in a type header; apply the import quick fix for `xml.xtclang.org`. Then try unresolved `Widget` declared in a separate discovered source module. | Only imports whose complete graph compiles are offered; applying clears diagnostics. Source imports also add the discovered dependency edge. Explicit graphs do not silently gain dependencies. |
 | X106 | In Editing.x, complete `Str` inside `function Str(Int)`, `function void(Str)`, `function (Int, Str)(Int)` and `Function<<Str>, <Int>>` parameter types. Repeat with a missing function/sequence closer. | Only the written leaf token is replaced. Complete forms compile; missing delimiters remain diagnostics until repaired. No callable signature is invented for a declaration header. The same eight variants are implemented in both drivers. |
 | X107 | Complete a trailing `ecstasy.text.` type, edit `te` inside `ecstasy.text.StringBuffer`, and fill empty union/intersection/difference operands. | Insert only into an empty slot or replace only the selected qualifier token; preserve the remaining suffix and compile the accepted source. |
-| X108 | Complete type names in multiple-return lists, generic method/class headers, package compositions and written `Element`/`Other` formals, including `Chain<Element>` recursion. | Preserve exact ranges and restore compilation. Recursive constraints are explicitly labelled written syntax with no invented formal identity. The 17 shared variants include compound/nullable/immutable recursion and a cursor inside its own bound; see the latest L64 receipt for validation. |
+| X108 | Complete type names in multiple-return lists, generic method/class headers, package compositions and written `Element`/`Other` formals, including `Chain<Element>` recursion. | Preserve exact ranges and restore compilation. Recursive constraints are explicitly labelled written syntax with no invented formal identity. The 17 shared variants include compound/nullable/immutable recursion and a cursor inside its own bound; record the selected completion cases in the acceptance report. |
 | X109 | In the shared `X109` fixture, public parameter rename updates a closed caller and preserves another overload. Keep every other fixture file closed before Rename. | Compare all files with the shared expected contents; preserve unrelated overloads/aliases; verify moved paths, then Undo once and verify every original path and source. |
 | X110 | In the shared `X110` fixture, override parameter slots join differently named declarations and callers. Keep every other fixture file closed before Rename. | Compare all files with the shared expected contents; preserve unrelated overloads/aliases; verify moved paths, then Undo once and verify every original path and source. |
 | X111 | In the shared `X111` fixture, constructor parameter rename starts at a named argument. Keep every other fixture file closed before Rename. | Compare all files with the shared expected contents; preserve unrelated overloads/aliases; verify moved paths, then Undo once and verify every original path and source. |
@@ -2359,12 +2358,12 @@ module Advanced {
 | X142 | Open configured `FoldedInitializer.x`; hover and navigate from `Int copy = value`, find references, rename `value` to `number`, then Undo. | The declaration, folded initializer and method body share one semantic identity; all three rename together, compile cleanly and restore on Undo. |
 | X143 | Configure `PartialSymbols.x` with 130 classes. Compare ordinary workspace symbols with a request carrying a partial-result token. | Ordered progress batches contain at most 64 symbols each; their combined names match the ordinary result exactly and the final response is empty. |
 | X144 | Apply a current versioned text edit through the installed client, Undo it, then send a two-document edit with one stale version. | Current edit and native Undo succeed. A stale target refuses the whole batch and preserves both current buffers. Drivers invoke the installed application handler; packaged tests separately exercise server-to-client transport. |
-| X145 | Replace ProgressWork with the shared workload and request references. Verify the progress source/activity text, cancel, then check hover; repeat and restart while pending. | Cancellation terminates only the request; progress disappears. Restart preserves unsaved text, retires the pending reader and exits the old PID. Visible VS Code Cancel-control checks use 20,000 methods; automatic IntelliJ Cancel, the ordinary VS Code callback and restart use 5,000. A request finishing too early fails as unexercised. Historical model-cancellation receipts and current visible-control acceptance are distinguished in the L81 section below. |
+| X145 | Replace ProgressWork with the shared workload and request references. Verify the progress source/activity text, cancel, then check hover; repeat and restart while pending. | Cancellation terminates only the request; progress disappears. Restart preserves unsaved text, retires the pending reader and exits the old PID. Visible VS Code Cancel-control checks use 20,000 methods; automatic IntelliJ Cancel, the ordinary VS Code callback and restart use 5,000. A request finishing too early fails as unexercised. Historical model-cancellation receipts and current visible-control acceptance are distinguished in the progress and cancellation section below. |
 | X146 | Open RefreshConsumer with inferred `var value = lib.make()`. Change only RefreshLibrary from returning Int to String, then restore it. In IntelliJ, also keep at least 16 additional documents connected and issue a burst of lens/hint/token refreshes before the dependency changes. | Both clients receive provider refreshes and show the changed inferred-type hint. Consumer text/version stays unchanged. IntelliJ reads the native cached inlay result and must report no read-action overload; its driver restores the temporary tab limit. VS Code observes the registered provider's refresh events and result. |
 | X147 | Hold an older settings report while requesting a newer one, changing settings, restarting or closing the settings page. Complete the old reply last. | Older reports cannot overwrite current or disposed UI state. VS Code delays a real server reply; IntelliJ drives the real settings component with controlled asynchronous report data and an EDT completion barrier. Restart retires the old PID and preserves source. |
 | X148 | Open the shared Extract.x fixture, select exactly `42` in the return statement, and choose Extract literal to local variable. Undo, Redo, then Undo. Repeat with a string/character literal; try selecting a call or only part of a literal. | The action inserts `val extractedValue = 42;` immediately before the return, which uses that local. Existing identifiers force a fresh suffix. Exact text, indentation and diagnostics survive Undo/Redo. Unsupported selections offer no extraction. Selected X148 acceptance passes in both editors. |
 | X149 | Open the shared Naming.x variants. Complete `str` in the middle of `strange` to `string`; repeat in a parameter, then complete `st` with another `string` already present. Undo each acceptance. | The whole declaration token is replaced. The collision variant proposes `string1`. No reference or rename is claimed. Both drivers pass exact source, diagnostics and one Undo (see the per-case acceptance reports). |
-| X150 | Open the shared Templates.x variants. Complete `cl` with `class declaration`, then `if`, `for`, `do` and `try` with their block templates, and `interface` with its declaration template. Inspect the selected name/condition, press Tab to reach the body, and Undo. Also try `mo` in an empty file and completion inside a string, comment, member access and argument. | Templates appear only in the corresponding file/member/statement context. Placeholder navigation leaves exact indentation and source unchanged; Undo restores the prefix. IntelliJ may first restore the placeholder selection without changing text, then undo the insertion. Comments, strings and value/type positions receive no syntax templates. Clients without snippet support receive plain text without placeholder syntax. Both editor cases pass; syntax exclusions and minimal-client behavior have backend/protocol coverage. IntelliJ uses the documented UP18 indentation constraint. |
+| X150 | Open the shared Templates.x variants. Complete `cl` with `class declaration`, then `if`, `for`, `do` and `try` with their block templates, and `interface` with its declaration template. Inspect the selected name/condition, press Tab to reach the body, and Undo. Also try `mo` in an empty file and completion inside a string, comment, member access and argument. | Templates appear only in the corresponding file/member/statement context. Placeholder navigation leaves exact indentation and source unchanged; Undo restores the prefix. IntelliJ may first restore the placeholder selection without changing text, then undo the insertion. Comments, strings and value/type positions receive no syntax templates. Clients without snippet support receive plain text without placeholder syntax. Both editor cases pass; syntax exclusions and minimal-client behavior have backend/protocol coverage. IntelliJ uses the documented LSP4IJ snippet-indentation constraint. |
 | X151 | Open the shared MissingNames.x variants. Invoke completion after the space following the property or parameter type, before the initializer or closing parenthesis. Accept `string1`, `string`, `list`, `stringArray`, `fn` and `value` across named, nullable, array, function and compound types, then Undo each insertion. Also try an empty name at EOF, an already written name, a comment and a bare local expression. | Completion inserts only the suggested name at the empty cursor range, preserving the written type, whitespace and remaining source. Collision checks include existing document identifiers. Accepted variants compile; one Undo restores the incomplete source. Existing names, comments and ambiguous expressions acquire no empty declaration-name slot. X151 passes in both editors; EOF, UTF-16/CRLF and refusal controls pass in parser/backend/protocol tests (see the per-case acceptance reports). |
 
 | X152 | Open the shared SemanticValues.x variants. Complete `thi` to `this.Owner`, then `this.Ow` to `this.Owner` inside a nested class call. Complete an empty indexed callback argument with `0`. Undo each acceptance. | Only an enclosing instance that fits the actual call is offered. Qualified insertion replaces only the selected member. Indexed functions retain their function parameter type. Every accepted document compiles and Undo restores the exact incomplete source. Static-boundary and incompatible-type refusals have backend coverage. |
@@ -2625,7 +2624,7 @@ sections instead of silently counting provider responses as complete UI acceptan
 | Diagnostics and Problems | X1/X2/X23/X27/X46–X52/X123, 7a.8/7a.9 | Inspect error/warning presentation, source code and related-location navigation in Problems; verify closed/deleted URIs, duplicate-free warnings, configuration failures without modal loops, and refresh without changing buffer versions. Long editing/idle/restart runs are distinct from one successful correction. |
 | Completion and signature UI | X6–X20/X70–X98/X106–X108/X125 | Keyboard and mouse acceptance, Escape without edits, overload selection/active parameter after retrigger, IME/non-ASCII identifiers and end-of-file/no-final-newline boundaries. Existing UTF-16/CRLF and syntax-recovery variants remain mandatory; untested forms are not implied by a fitting result. |
 | Navigation, symbols and hierarchy | X3–X5/X21–X22/X28/X33–X44/X59/X63–X69/X99–X101/X131 | Native workspace-symbol search/navigation for closed roots, multiple declaration targets, back navigation, ambiguous/missing source attachments, inherited generic/compound edges and stale closed-file handles. Do not infer a complete conditional-mixin hierarchy or dynamic call graph. |
-| Highlights, folds and selection | X1/X4/X41/X92 and L56 startup test | Exact nested selection expansion/shrink, empty/recovered document fallback, folding boundaries after closing/reopening or deleting text, and theme/read/write visual distinctions. Startup race assertions are a separate harness test, not the normal readiness wait. |
+| Highlights, folds and selection | X1/X4/X41/X92 and the startup-editing test | Exact nested selection expansion/shrink, empty/recovered document fallback, folding boundaries after closing/reopening or deleting text, and theme/read/write visual distinctions. Startup race assertions are a separate harness test, not the normal readiness wait. |
 | Inlay hints | X42/X131 | Enable/disable through native controls, inspect tooltip rendering for locals/parameters/lambdas, verify no misleading names for unnamed function calls, named arguments or omitted defaults. A protocol tooltip does not prove the UI renders it. |
 | Formatting | X31/X132; backend token-preservation tests; sections 13–13c | Apply full/range/on-type edits through native actions; verify literal and multiline-string/comment bytes, CRLF, tabs, final-newline policy, untouched lines and idempotence. X138 verifies live indent settings; X249/X250 verify continuation/comment margins and bounded width wrapping with native history. Backend regressions cover custom indentation and tabs. Not every variant is a shared-driver scenario. |
 | Document links | X131 plus lexical unit tests; section 15 | Click HTTP(S) URLs in comments/strings; verify exact ranges and absence of invented import/file/unsupported-scheme links. Malformed/partial literals must not create arbitrary targets. External browser launching is a manual action, separate from resolving a URI. |
@@ -2634,7 +2633,7 @@ sections instead of silently counting provider responses as complete UI acceptan
 | Rename, actions and resource edits | X53–X63/X102–X105/X109–X122/X127–X130 | Collision/capture refusals, cancellation, stale documents, graph persistence, closed consumers, one Undo/Redo and source text plus filesystem bytes; see the batch matrix. Explorer drag/drop and arbitrary third-party edit application are separate host paths. |
 | Discovery, paths and build settings | CFG1–CFG3/X99/X100/X124/X129/X134 | Multiple roots, Unicode/space-containing paths, symlinks, project close/reopen and external shared watch leases. Gradle-import failure, missing generated resources and no-Gradle projects must retain usable last-valid inputs and show actionable status. |
 | Generic editor integration | Separate sections 1, 16, 17 and VS Code V-cases | File association, TextMate fallback, comment/uncomment, templates/snippets, keybindings, plugin reload and Community-only startup. Compiler shared scenarios do not replace these checks or an explicit Tree-sitter smoke run. |
-| Reliability and configuration | X29/X30/X51/X57 plus process/retention suites | Cross-platform/remote filesystems, large-workspace latency/heap bounds, prolonged run/stop/crash cycles, cancellation under queue pressure, and UI1–UI7 settings acceptance remain explicit L82 gates. |
+| Reliability and configuration | X29/X30/X51/X57 plus process/retention suites | Cross-platform/remote filesystems, large-workspace latency/heap bounds, prolonged run/stop/crash cycles, cancellation under queue pressure, and UI1–UI7 settings acceptance remain separate responsiveness and lifecycle acceptance requirements. |
 
 A catalog entry's `coverage: full` means the driver implements that **case's stated assertions**;
 it does not mean the entire feature family is exhaustive. Manual checks should record pass/fail/
@@ -2685,13 +2684,13 @@ Still to come:
 - Binary source attachment, conditional-mixin hierarchy and broader implementation targets
 - Wider member/workspace rename: unsupported composition routes and automatic external-consumer
   enumeration. X119–X121 add primary-constructor properties, lambda parameters and method-value
-  escapes. The L62 extension also covers public/explicit-constructor parameters, supported
+  escapes. The rename checks also cover public/explicit-constructor parameters, supported
   composition families, qualified modules and implicit package directories. Both clients implement graph persistence through native Rename. Shared X109–X118
   pass in selected runs in both editors. VS Code edited-file moves with refactoring auto-save
   disabled remain refused. Consumers outside the graph remain unknown
 - Diagnostic-driven quick fixes and refactorings
 
-L61 declaration acceptance: X4 now also requests Go to Declaration for the shadowed local and
+Declaration-navigation acceptance: X4 now also requests Go to Declaration for the shadowed local and
 property and checks that their distinct declaration targets match definition. VS Code uses its
 declaration provider; IntelliJ checks the request through the installed client transport beside
 the existing native navigation actions. Backend/protocol cases cover multiple inherited contracts,
@@ -2765,9 +2764,9 @@ preferences. Check invalid JSON retains a running service, native Reset/Cancel n
 and restart never saves a dirty source. Remote filesystems, alternate keymaps and restricted
 workspace build execution remain explicit boundaries, not assertions covered by these local runs.
 
-Protocol hardening acceptance (L80/L81): X136/X137/X140/X141 pass in VS Code `run-5eCFZV` and
+Protocol and lifecycle acceptance: X136/X137/X140/X141 pass in VS Code `run-5eCFZV` and
 IntelliJ `run-15914309414363009017` (also START, zero IDE errors). X140 checks a method-body reference
-after an emoji; the subsequent L83 implementation is exercised separately by X142 below.
+after an emoji; constant-folded initializer navigation is exercised separately by X142 below.
 For a large configured project, request workspace diagnostics or references
 and observe the work-done progress notification. Cancel the request: its progress must end, while
 another reader and document analysis remain usable. Check no stuck progress after restart/close.
@@ -2779,7 +2778,7 @@ features exercised by changing the modern IDE's capability declaration.
 
 ### Protocol and lifecycle coverage map
 
-This map covers the L80/L81 protocol batch and the accompanying state-ownership fixes. A shared
+This map covers protocol negotiation, lifecycle and state ownership. A shared
 scenario is automated in both editors only where named below. Controlled backend tests exercise
 interleavings that normal editor actions cannot reliably force. Manual rows remain acceptance
 work; they are not passing automated receipts. The current catalog has 152 cases. The earlier
@@ -2838,7 +2837,7 @@ Pending manual acceptance in both editors:
 
 The disk-index/open-buffer, long-lived path-picker and stalled watcher-registration fixes and
 their deterministic regressions are explicit in the [acceptance reports](#acceptance-reports).
-Partial-result streaming and L83 initializer facts are implemented; their acceptance and remaining
+Partial-result streaming and constant-initializer facts are implemented; their acceptance and remaining
 limits are recorded below. Generic IntelliJ server-initiated text-edit checking is implemented;
 X144 passes both editors. The catalog now contains 152 cases; the receipts below retain their original scope.
 
@@ -2946,7 +2945,7 @@ X130 alone passes in `run-QLBWYV`; it is not evidence of a host fix. The
 [acceptance reports](#acceptance-reports)
 records the failed focus attempt, correction, upstream source and remaining repair task.
 
-### Final L80 protocol checks (2026-10-01)
+### Protocol capability checks
 
 The current response/provider capability audit is complete; see the
 [acceptance reports](#acceptance-reports).
@@ -2963,11 +2962,11 @@ identity when related information is suppressed. The tests include supported and
 
 For the next normal editor acceptance run, retain the existing signature-help cases, X123 diagnostics
 and X131 resolve checks in both drivers. These exercise the installed clients' negotiated behavior;
-they cannot substitute for the reduced-client protocol tests. L81 manual checks and the X130 host
+they cannot substitute for the reduced-client protocol tests. Manual progress and cancellation checks and the X130 host
 failure remain open. Exact test receipts are in the
 [acceptance reports](#acceptance-reports).
 
-### L81 detailed progress and upstream acceptance (2026-10-01)
+### Progress, cancellation and client compatibility
 
 X145 now checks that reference progress names its source. The editor supplies the Ecstasy
 service/source name once; the operation title is simply `Finding references`, without another
@@ -3008,11 +3007,11 @@ retains failed attempts separately from passing refresh/restart cases. IntelliJ
 VS Code `run-VeotM0` passes its automated visible-control check in 17.6 seconds, plus X146/X147/X259.
 
 All upstream compatibility issues are collected in [client compatibility limits](#client-compatibility-limits).
-Source `TODO LSP4IJ:` / `TODO VSCODE:` markers carry matching UP IDs and removal conditions.
-UP15's malformed-parameter classification and UP16's X130 host repaint remain defects; a passing
+Source `TODO LSP4IJ:` / `TODO VSCODE:` markers carry the affected behavior and removal conditions.
+Malformed-parameter classification and the X130 host repaint remain defects; a passing
 reader-recovery or Move/Undo/Redo check is not evidence that those defects are repaired.
 
-### Bounded L82 regression and memory checkpoint
+### Bounded regression and memory workload
 
 Run the combined compiler/LSP/packaged-server/plugin checks before the full editor catalogs.
 Confirm XML counts and record existing disabled/opt-in cases separately; a cached task or missing
@@ -3025,7 +3024,7 @@ For a repeatable real-project memory run, with the compiler server already built
 python3 lang/scripts/compiler-workload.py \
   --workspace ../platform \
   --jar lang/lsp-server/build/libs/lsp-server-0.4.4-SNAPSHOT-all.jar \
-  --output lang/lsp-server/build/reports/platform-workload/l82-checkpoint \
+  --output lang/lsp-server/build/reports/platform-workload/memory-checkpoint \
   --cycles 400 --restarts 2 --sample-rss --gc-every 100 --heap-histograms
 ```
 
@@ -3074,7 +3073,7 @@ restart while a report is pending, extract with Undo/Redo, and refresh an untouc
 dependency edits. Keep the usual deadlines. The generated workload supplies the many-buffer scale
 evidence; a three-case native selection does not reproduce the full catalog's retained workload.
 
-### Large-file IntelliJ diagnostic (L82 / UP17)
+### Large-file IntelliJ responsiveness diagnostic
 
 The optional `CompilerPlaybookTest.largeFileEditing` probe reproduces the recorded UI freeze.
 It is disabled by default, including in ordinary full playbook runs. The
@@ -3088,7 +3087,7 @@ For a manual check, open its generated `parity/LARGE_FILE/LargeFile.x` and repla
 semantic colors before replacing: the compiler replying does not establish that the IDE applied
 its highlights. Check typing, repaint and navigation responsiveness, then Undo and verify the
 source and highlighting recover. Record UI and server times separately. A freeze or missing
-decoration fails this acceptance; a passing bounded X145 does not override it. UP17 remains open.
+decoration fails this acceptance; a passing bounded X145 does not override it. The large-file responsiveness issue remains open.
 
 Startup notification presentation: the bold service title appears once. Beneath it, Version,
 Adapter and PID share one compact line with dimmed, theme-aware labels and normal value text.
@@ -3104,7 +3103,7 @@ one-line versus whole-file hints, tokens, hover, queue/API phases and transport 
 project-query compilation distinct from warmed responses. This does not replace the decorated
 IntelliJ probe, native tooltip/theme checks or a prolonged editing/retention workload.
 
-### Native project lifetime checks (L81)
+### Native project lifetime checks
 
 These optional checks open disposable native windows and exercise real close/reopen behavior:
 
@@ -3156,27 +3155,27 @@ The whole identifier must be replaced once and
 Both drivers use the same completion variants and exact expected resulting documents; their
 earlier X105 passes establish only quick fixes.
 
-L65 manual-module check (backend regression coverage passes; these manual actions remain available): in
+Implementation-navigation manual check (backend regression coverage passes; these manual actions remain available): in
 `manualTests/src/main/x/jit/jit_tests/basic/mixinTests.x`, use Go to Implementation on
 `t5.Root.self`; verify the written `Base.self` body and no generated redirect location. In
 `delegationTests.x`, `ReportableAsString.showText` reaches `ReportableString.showText`; the
 interface-valued delegate field does not invent another executable source body.
 
-L62 manual-module check (backend regression coverage passes): rename `t5.Root.self` to `copySelf`
+Compiler-validated rename manual check (backend regression coverage passes): rename `t5.Root.self` to `copySelf`
 in mixinTests; Root, Base, Mix and the test5 call change together, while t6 stays unchanged. Undo restores exact
 text. In condMixinTests rename the first `MixS.size` to `width`; only its corresponding test1 call
 changes, not the independent t2 composition. A rename colliding with another default method must
 be refused. Go to Definition on Element in a conditional-incorporation clause reaches the
 corresponding mixin formal.
 
-L64 closure additions (execution pending): X150 now includes a function argument lambda. Accept
+Lambda and inferred-name completion checks: X150 now includes a function argument lambda. Accept
 `(arg1) -> TODO()`, verify that TODO() is selected, Tab reaches the end of the expression and Undo
 restores the empty argument. This is a scaffold; replace TODO() before executing the program.
 X151 adds unnamed val/var locals with string, integer and constructor initializers; accept the
 syntax-derived name, verify the following source and Undo. X152 adds ordinary return expressions
 with `thi` and `this.Ow`; verify the real enclosing instance, exact replacement and Undo.
 
-L65 closure additions (execution pending):
+Dispatch navigation and semantic highlighting checks:
 
 | ID | Manual actions | Expected result |
 | --- | --- | --- |
@@ -3198,7 +3197,7 @@ L65 closure additions (execution pending):
 | X162 | Configure App at `old/App.x` with resource roots `old/assets`, then `fallback`; keep Consumer closed and its resources disabled (`[]`). Move `old` into `target` through native Move. Inspect compiler settings, reopen both modules, Undo once and Redo once. Then add an unresolved name in App.x without saving and repair it. | Source and resource paths move together; resource precedence, dependency names and `[]` are retained. One Undo/Redo restores/reapplies files and settings, with clean diagnostics. Subsequent typing produces and clears diagnostics at the current path without duplicate document connections. |
 | X163 | Configure App at `old/App.x` without resource overrides and keep Consumer closed. Move just `App.x` into `target`. Inspect its companion directory, `old/data.txt` and compiler settings, then Undo/Redo. Add and repair an unresolved name without saving. | The companion follows the source. Default resources left behind become an explicit `old` root; the resource bytes remain available. Undo restores the absent override; Redo restores the pinned root. Continued editing reaches the moved source and diagnostics clear after repair. |
 
-L67 index replacement check: with an unopened consumer, navigate a member from a host-indexed
+Dependency-index replacement check: with an unopened consumer, navigate a member from a host-indexed
 binary. Replace its source index with another source location, remove the index while retaining
 the binary, then configure editable source for that module. Navigation must follow the replacement,
 be absent without an index, and prefer the configured source. Previously prepared hierarchy
@@ -3224,7 +3223,7 @@ refused participation reply can veto a host move.
 
 X166–X168 have shared fixtures and implementations in both drivers. All three pass alongside
 X164/X165 in the latest selected runs recorded at the top of this file. Exact receipts, the shared
-catalog hash, proof boundaries and the failed/repaired IntelliJ UP20 evidence are in the
+catalog hash, proof boundaries and the failed and repaired IntelliJ directory-move synchronization evidence are in the
 [acceptance reports](#acceptance-reports).
 For manual focus coverage, switch away while Rename is opening, return to its dialog and submit
 once; inspect the exact edits and Undo once. The native harness now observes focus while the
@@ -3246,7 +3245,7 @@ a pinned resource root is conservatively refused. Undo restores the stored, prov
 its original resource configuration. Before applying refactorings, save any pre-existing unsaved
 closed IntelliJ document; the host refuses buffers that were not available to the compiler proof.
 
-### L62 empty destinations and qualified-name trivia
+### Empty move destinations and qualified-name trivia
 
 Shared X173–X176 pass in both drivers in the selected runs recorded at the top of this file.
 The setup creates the listed empty directories explicitly, without a Marker.x source.
@@ -3258,7 +3257,7 @@ The setup creates the listed empty directories explicitly, without a Marker.x so
 | X175 | Request the shared batch into empty util with an inline Taken collision. | No proposal, edits, file changes or settings changes. This is a protocol refusal; it cannot veto arbitrary VS Code Explorer moves. |
 | X176 | Move First.x and Second.x together into empty util. Undo and Redo. | Mutual references and the closed consumer update as one transaction; diagnostics remain clean. |
 
-### L63 local initializer and unused-local actions
+### Local initializer and unused-local actions
 
 Shared X177–X180 pass in both drivers in the selected runs recorded at the top of this file.
 Use the exact source in `lang/test-fixtures/compiler-playbook/scenarios.json` for each row.
@@ -3274,7 +3273,7 @@ Inferred locals, changed expected types, partial/deferred expressions, interveni
 Ref/Var annotations and runtime initializers remain refusal controls in backend tests. General
 extract-method, missing-declaration generation and global safe delete remain separate work.
 
-### L63 private helper extraction
+### Private helper extraction
 
 X181–X184 pass in both drivers in the selected runs recorded at the top of this file.
 
@@ -3291,7 +3290,7 @@ broken neighbors. Swapped helper arguments and changed moved-call targets must f
 when both programs compile. Multi-statement extraction and mutable/by-reference captures remain
 outside this slice.
 
-### Missing-method quick fixes (L63, X185–X188)
+### Missing-method quick fixes (X185–X188)
 
 Use compiler mode. The call must initially report an error. Place the caret on `missing` and
 open Quick Fix / intentions (Alt+Enter in IntelliJ; Quick Fix in VS Code). Generated methods are
@@ -3316,9 +3315,9 @@ No diagnostic text or numeric error code is used to invent a signature.
 
 Run **X181 followed by X185** together when validating IntelliJ: an unchanged error after a
 source-graph refresh must still offer a working quick fix. Standalone X185 passing did not catch
-the UP07 stale-annotation issue. Final acceptance passes all six selected cases in both editors.
+the stale-diagnostic-annotation issue. Final acceptance passes all six selected cases in both editors.
 
-### Local arguments and typed initializer quick fixes (L63, X189–X192)
+### Local arguments and typed initializer quick fixes (X189–X192)
 
 Use the exact fixtures in the shared catalog. Place a caret on `missing`, invoke Quick Fix
 (IntelliJ Option/Alt+Enter; VS Code Quick Fix), and select **Create private method 'missing'**.
@@ -3332,11 +3331,11 @@ Use the exact fixtures in the shared catalog. Place a caret on `missing`, invoke
 
 For X189–X191, compare the complete expected source, require diagnostics to clear, Undo to restore
 the error/source, Redo to clear them and Undo once more. X192 checks refusal through the installed
-connection in both editors. The selected continuation also runs X181 → X185, retaining the UP07
+connection in both editors. The selected continuation also runs X181 → X185, retaining the stale-annotation
 quick-fix-refresh regression. These cases use the existing shared action drivers; they add no
 editor-specific production bridge.
 
-### Qualified missing-method quick fixes (L63, X193–X196)
+### Qualified missing-method quick fixes (X193–X196)
 
 Use the exact shared sources in compiler mode. Place the caret on the leaf `missing` token, then
 invoke Quick Fix (IntelliJ Option/Alt+Enter; VS Code Quick Fix).
@@ -3353,7 +3352,7 @@ restore source/error, Redo to clear them and Undo again. Refusals use the instal
 in both editors. The backend additionally rejects a repair that still compiles after changing
 `peer` to `this`, and verifies that selecting only the receiver does not offer member creation.
 
-### Class-qualified missing-method quick fixes (L63, X197–X200)
+### Class-qualified missing-method quick fixes (X197–X200)
 
 Use the exact shared sources in compiler mode, with the caret on the leaf `missing` token.
 Open Quick Fix / intentions and select **Create private method 'missing'** where offered.
@@ -3373,7 +3372,7 @@ other class owners, existing static overloads, explicit generic/singleton qualif
 The parameter type in X200 is qualified deliberately: `Box Box` shadows its own type annotation
 and reports a separate dynamic-type diagnostic before the missing call can be analyzed.
 
-### Cross-owner missing-method quick fixes (L63, X201–X204)
+### Cross-owner missing-method quick fixes (X201–X204)
 
 Use the exact shared sources in compiler mode. Open only the caller initially, put the caret on
 `missing` and inspect Quick Fix / intentions. The public action explicitly names the destination;
@@ -3393,7 +3392,7 @@ binary destinations, another configured module, generic/const classes, existing 
 neighbors, supported signature type shapes, and destination document versions (null when closed,
 its own version when open). The next continuation adds bounded local arguments and typed initializers.
 
-### Cross-owner local types and initializer contexts (L63, X205–X208)
+### Cross-owner local types and initializer contexts (X205–X208)
 
 Use the shared source for each case in compiler mode. The public action states both visibility
 and destination; `TODO()` still needs an implementation. These cases reuse the same native
@@ -3410,7 +3409,7 @@ Backend controls additionally cover typed/var/val locals, separately assigned lo
 class qualifiers, zero/mixed arguments, source and compound types, invalid/out-of-scope locals,
 and compilable signature substitutions or argument rebinding that the proof must reject.
 
-### Cross-module missing-method destinations (L63, X209–X212)
+### Cross-module missing-method destinations (X209–X212)
 
 Use compiler mode and the complete shared fixture set for each case. Keep the destination closed
 until applying the Quick Fix on `missing`. Successful actions must edit only the named destination;
@@ -3428,7 +3427,7 @@ Backend controls cover explicit dependency graphs, unrelated roots, binary artif
 source indexes, read-only destinations, unsupported owners, existing members, closed broken consumers,
 missing destination imports, exact signature identity and destination-specific document versions.
 
-### Missing-method destination imports (L63, X213–X215)
+### Missing-method destination imports (X213–X215)
 
 Load every shared fixture and use the explicit `sourceModules` graph recorded for each case.
 The source import alone does not establish the destination's dependency permission. Keep the
@@ -3446,9 +3445,9 @@ Backend controls include repeated/compound types, multiple imports with collidin
 existing alias reuse, unused dependency exclusion, CRLF preservation, open/closed document versions,
 and rejection of compilable signature substitutions after import insertions shift the method.
 
-### L62 ownership and relocation closure checks
+### Ownership and relocation checks
 
-X216–X220 are implemented in both drivers; selected acceptance and the UP23 exception are below.
+X216–X220 are implemented in both drivers; selected acceptance and the VS Code overlapping-resource Undo exception are below.
 Use the shared fixtures for exact source, destination and graph settings.
 
 | Case | Manual action | Required result |
@@ -3465,7 +3464,7 @@ file operations. Parent-first application can partially fail; child-first applic
 also fails because VS Code retains the inverse move order. X218 remains a failing VS Code
 acceptance case, while IntelliJ passes. See [client compatibility limits](#client-compatibility-limits).
 
-### L63 generic repairs and broader refactorings (X221–X242)
+### Generic repairs and broader refactorings (X221–X242)
 
 These shared scenarios have passing selected-run receipts in both drivers. The
 [acceptance reports](#acceptance-reports)
@@ -3507,14 +3506,14 @@ The backend repeats that import/type-spelling check with a compiled binary depen
 Boundaries: runtime Class/Type values without a concrete source owner, invented generic inverse
 substitutions, static-property initializers, mutable capture/control-flow extraction, argument
 substitution for method inline, instance-property getters and public API deletion are not inferred.
-Private member inline keeps the declaration; safe delete is a separate action. UP23 remains the
-recorded VS Code overlapping-resource Undo defect; this text-edit batch does not repair it.
+Private member inline keeps the declaration; safe delete is a separate action. The recorded
+VS Code overlapping-resource Undo defect remains; these text-edit checks do not repair it.
 
-### L66 structural and editing continuation
+### Structural and editing checks
 
 X243–X250 have passing selected receipts in both editors, together with X132/X138/X139/X158.
 The [acceptance reports](#acceptance-reports)
-retains the failed attempts and corrections, including UP24 (IntelliJ formatting Redo). The shared
+retains the failed attempts and corrections, including the IntelliJ formatting Redo issue. The shared
 formatting fixtures preserve their existing final newline; newline insertion remains an independent
 editor setting. Four/eight spaces and a 120-column margin are the default settings. Change IntelliJ
 Ecstasy Code Style or VS Code `xtc.formatting.*` to verify custom indentation and width; use
@@ -3531,7 +3530,7 @@ Ecstasy Code Style or VS Code `xtc.formatting.*` to verify custom indentation an
 | X249 | Format continuation expressions and standalone block comments, repeat, then Undo/Redo/Undo. | Shared indentation is exact and stable; literal contents and relative comment layout remain intact. |
 | X250 | Format the shared long concatenation, repeat, then Undo/Redo/Undo. | Wrap at token boundaries at the configured 120-column margin; preserve every literal and native history. |
 
-### L67 graph-index acceptance (2026-10-05)
+### Graph-index acceptance
 
 | Case | Actions | Expected result |
 | --- | --- | --- |
@@ -3546,7 +3545,7 @@ Selected acceptance passes in VS Code `run-8dtGVL` and IntelliJ `run-33434998256
 X45/X59/X63/X143/X251, with zero scenario failures; IntelliJ also passes startup. The catalog now has
 256 cases. This does not claim a full-catalog rerun.
 
-### Portable symbol identities — L74
+### Portable symbol identities
 
 | Case | Action | Expected result |
 |------|--------|-----------------|
@@ -3558,11 +3557,11 @@ trace for `scheme`, `identifier`, `unique` and `kind`; neither IDE currently pro
 X31 now requires the compiler moniker provider. Binary-only/source-indexed parity and checkout
 relocation are backend tests, not claims about native editor widgets.
 
-### Read-only library documents — L75
+### Read-only library documents
 
 | Case | Action | Expected result |
 |------|--------|-----------------|
-| X254 | Open the shared LibraryViews fixture and navigate to String and xml.Document. Open each matching source, compare its declaration moniker with the consumer, and request formatting. Attempt an edit in the VS Code virtual editor. | VS Code negotiates revision-owned virtual content and refuses edits; IntelliJ uses protected file views (UP25). Declaration/export and consumer/import share artifact identity. Formatting leaves the source unchanged. |
+| X254 | Open the shared LibraryViews fixture and navigate to String and xml.Document. Open each matching source, compare its declaration moniker with the consumer, and request formatting. Attempt an edit in the VS Code virtual editor. | VS Code negotiates revision-owned virtual content and refuses edits; IntelliJ uses protected file views. Declaration/export and consumer/import share artifact identity. Formatting leaves the source unchanged. |
 
 Select **X31,X101,X158,X252,X253,X254** to cover existing bundled navigation, portable identities and the
 new library-view path. X254 runs the same String/xml.Document source fixture in both editors.
@@ -3571,7 +3570,7 @@ new library-view path. X254 runs the same String/xml.Document source fixture in 
 2. In VS Code, confirm the target uses `ecstasy-library:` and displays the matching declaration.
    Typing must leave the document unchanged and clean. Formatting must return no edits.
 3. In IntelliJ, confirm the matching source file opens read-only and formatting leaves it unchanged.
-   LSP4IJ 0.21.0 lacks virtual content/refresh (UP25); this explicitly tests the supported file fallback.
+   LSP4IJ 0.21.0 lacks virtual content/refresh; this explicitly tests the supported file fallback.
 4. The driver requests `textDocument/moniker` at the library declaration. Its scheme/identifier must
    match the consumer import; the declaration kind is `export`. Neither IDE has a moniker browser.
 5. For supporting clients, `workspace/textDocumentContent` returns exact matching bundled text.
@@ -3583,20 +3582,20 @@ opening a library view does not add it to the writable source graph. Externally 
 indexes remain file views because they do not carry a verified source-text snapshot. This does not
 claim complete semantic editing/navigation inside library bodies.
 
-### Compiler inline completion (L76)
+### Compiler inline completion
 
 | Case | Action | Expected |
 |---|---|---|
 | X255 | Accept and undo a compiler-backed inline name. Use the shared `X255/InlineValues.x` source. | Native ghost text accepts answer; one Undo restores ans. |
 | X256 | Dismiss ghost text and keep suggestions current while typing. Use the shared `X256/InlineValues.x` source. | Dismissal leaves source unchanged; further typing produces a current suggestion. |
-| X257 | Respect ambiguity and the selected completion item. Use the shared `X257/InlineValues.x` source. | Automatic ambiguity yields nothing; explicit alternatives and selection constraints match the source. IntelliJ native trigger/selection limits are UP26. |
+| X257 | Respect ambiguity and the selected completion item. Use the shared `X257/InlineValues.x` source. | Automatic ambiguity yields nothing; explicit alternatives and selection constraints match the source. IntelliJ cannot distinguish an explicit inline-completion trigger or transmit the selected popup item. |
 | X258 | Complete a type-compatible value in an unfinished call. Use the shared `X258/InlineValues.x` source. | Only the Int-compatible answer is suggested; missing delimiters remain untouched. |
 | X259 | Keep RefreshConsumer open, including its bundled recursive json.Doc method signature. Disable inlay hints, change RefreshLibrary.make from Int to String, re-enable hints and restart. Restore the dependency while toggling hints again. | Visible consumer hints disappear when disabled, then show String and Int in order. Recursive signatures do not crash workspace analysis. The consumer text/version stays unchanged and the old server exits. X146 separately verifies all five refresh families; X147 covers late report publication. |
 
 Ghost suggestions are plain compiler names/values. No imports or placeholder bodies are inserted.
 VS Code uses its Inline Suggest commands (Tab to accept, Escape to dismiss); IntelliJ uses
 Insert Inline Completion and Escape. Explicit ambiguous suggestions are a VS Code native check;
-LSP4IJ currently sends Automatic even for a direct invocation (UP26).
+LSP4IJ currently sends Automatic even for a direct invocation.
 
 ### Compiler build import lifecycle (UI5–UI7)
 
@@ -3661,7 +3660,7 @@ Selected acceptance (2026-10-06): VS Code `run-uZLiO0` passes X129/X254/X260/X26
 `run-Fpp8xO` passes X267; corrected `run-HTMdex` passes X266/X268. The initial runs exposed
 URI hostname normalization and picker/URI-spelling assumptions, all fixed and retained as failed
 receipts. IntelliJ `run-5914234873745700022` passes START/X129/X260/X263/X266/X267 and keeps
-X254 partial for UP25; `run-5018889098298757849` passes START/X268 after creating its source-row
+X254 partial because IntelliJ uses file-backed library views; `run-5018889098298757849` passes START/X268 after creating its source-row
 fixture explicitly. Both IntelliJ runs record zero IDE errors. The backend selection passes 33
 tests, IntelliJ units 114, and VS Code extension tests 41, without failures or skips.
 
@@ -3781,10 +3780,10 @@ visual comparisons; normal native runs leave it alone.
 All four focused cases pass in both editors; final X277 grammar/recovery checks and the six VS Code
 startup comparisons are recorded in the [acceptance reports](#acceptance-reports).
 
-### Full catalog and UP12 follow-up (2026-10-07)
+### Recorded full-catalog run and diagnostic recovery (2026-10-07)
 
-VS Code's full attempt and continuations cover the same 284 cases: 281 pass, X130/UP16 and
-X218/UP23 retain their host failures, and experimental X273 fails to display native color swatches.
+VS Code's full attempt and continuations cover the same 284 cases: 281 pass, X130 and
+X218 retain their host failures, and experimental X273 fails to display native color swatches.
 Its first native color request receives `ContentModified`; a later explicit provider query returns
 the expected colors, but the 30-second rendered check still fails. A fresh selected launch reproduces
 that failure. X274/X275, theme-based highlighting X276/X277, documentation X278 and reference lenses
@@ -3793,5 +3792,5 @@ toggles rendering merely to obtain a pass. The color prototype remains off by de
 
 See the [acceptance reports](#acceptance-reports)
 for every receipt, the X31/X127 harness corrections and the outstanding prototype refresh investigation.
-This is combined VS Code coverage, not an uninterrupted green run. UP17's opt-in large-file test,
+This is combined VS Code coverage, not an uninterrupted green run. The opt-in large-file responsiveness test,
 prolonged workloads and cross-platform/remote-host acceptance remain separate.

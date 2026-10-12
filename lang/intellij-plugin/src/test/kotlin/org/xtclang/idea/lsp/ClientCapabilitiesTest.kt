@@ -14,6 +14,10 @@ import org.eclipse.lsp4j.SynchronizationCapabilities
 import org.eclipse.lsp4j.TextDocumentClientCapabilities
 import org.junit.jupiter.api.Test
 
+/**
+ * Checks that the IntelliJ client advertises only capabilities its native integration can honor. Guards
+ * snippet indentation, save-hook limitations and deferred resolution against misleading negotiation.
+ */
 class ClientCapabilitiesTest {
     @Test
     fun `advertise the indentation mode implemented by native snippet expansion`() {

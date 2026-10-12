@@ -21,6 +21,7 @@ import java.util.zip.ZipOutputStream
 @Service(Service.Level.PROJECT)
 @State(name = "EcstasySupportLogs", storages = [Storage(StoragePathMacros.WORKSPACE_FILE)])
 internal class ServerSupportLogs : SerializablePersistentStateComponent<ServerSupportLogs.Session>(Session()) {
+    /** Persisted identity and log locations of a server launch, including sessions from earlier IDE runs. */
     data class Session(
         @field:OptionTag @JvmField val id: String = "",
         @field:OptionTag @JvmField val started: String = "",

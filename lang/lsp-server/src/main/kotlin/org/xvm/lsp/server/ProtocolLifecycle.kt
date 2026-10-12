@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 /** Enforces the wire lifecycle without restricting direct embedding/test use of server services. */
 internal class ProtocolLifecycle {
+    /** Connection phase used to validate the ordering of wire requests and notifications. */
     private enum class Phase {
         NEW,
         INITIALIZING,
@@ -19,6 +20,7 @@ internal class ProtocolLifecycle {
         SHUTDOWN,
     }
 
+    /** Current wire phase and the initialize request ID needed to recognize its response. */
     private data class State(
         val phase: Phase,
         val initialization: Either<String, Number>? = null,
@@ -65,9 +67,7 @@ internal class ProtocolLifecycle {
                                             (message.method != "shutdown" || state.compareAndSet(previous, State(Phase.SHUTDOWN)))
                                     }
 
-                                    else -> {
-                                        false
-                                    }
+                                    else -> false
                                 }
                             if (permitted) {
                                 next.consume(message)

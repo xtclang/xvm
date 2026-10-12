@@ -441,14 +441,14 @@ X142 verifies constant-initializer navigation and rename/Undo. X143 compares par
 workspace-symbol batches with the ordinary response. These checks complement the protocol
 and lifecycle cases; see the [manual playbook](../doc/manual-test-plan.md).
 
-For the L81 visible-control check, select X145 with `-PcompilerPlaybookCancelUi=true`.
+For the visible progress-cancellation check, select X145 with `-PcompilerPlaybookCancelUi=true`.
 The test clicks the actual Cancel button through the isolated Electron renderer using
 `playwright-core`; it does not move the desktop pointer or download a browser. Shared X259 checks
 rendered consumer inlays across settings changes and restart. After building, run
 `node scripts/run-vscode-tests.cjs --project-lifecycle --shared-process` from this directory to
 check two windows in one Electron process, independent compiler ownership and real hot-exit
 restoration. Omit `--shared-process` for separate application instances. See the
-[manual playbook](../doc/manual-test-plan.md#native-project-lifetime-checks-l81) for the full checks.
+[manual playbook](../doc/manual-test-plan.md#native-project-lifetime-checks) for the full checks.
 
 Compiler workspace synchronization now has shared X263–X265 cases for nested composite input
 aggregation, automatic Gradle refresh/export watching, and project/folder closure during import.
@@ -517,11 +517,11 @@ Untrusted and virtual workspaces are explicitly unsupported; remote hosts remain
 
 ### Experimental color-value picker
 
-The opt-in L77 prototype recognizes literal `ColorPrototype.Rgba` constructors from the shared
+The opt-in color-value prototype recognizes literal `ColorPrototype.Rgba` constructors from the shared
 fixture. It supplies native color swatches and picker edits separately from normal semantic
 highlighting. It is disabled for ordinary launches and does not introduce a public XDK color API.
 Shared X273–X275 exercise picker edits, dismissal, native Undo/Redo and diagnostic recovery.
-See the [prototype recipe and acceptance](../doc/manual-test-plan.md#l77-color-value-prototype).
+See the [prototype recipe and acceptance](../doc/manual-test-plan.md#experimental-color-value-picker).
 
 The playbook keeps its startup theme. For explicit theme comparisons, the Node/npm launcher accepts
 `--playbook --cases=X277 --theme="Default Light Modern"` and the optional `--lexical-baseline`.

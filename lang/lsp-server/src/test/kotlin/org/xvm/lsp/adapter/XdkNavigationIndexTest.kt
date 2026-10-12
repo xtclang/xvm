@@ -19,6 +19,10 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.TimeSource
 
+/**
+ * Verifies reuse of detached navigation facts by exact source and dependency inputs. Rebuilds only affected
+ * roots and detects resource-content changes even when timestamps match.
+ */
 class XdkNavigationIndexTest {
     @TempDir lateinit var directory: Path
 

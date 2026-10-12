@@ -10,6 +10,10 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
 
+/**
+ * Challenges renames with capture, overload and named-argument cases. Successful recompilation is necessary
+ * but insufficient: every surviving binding must retain its intended identity.
+ */
 class XdkRenameTest {
     @TempDir lateinit var directory: Path
 

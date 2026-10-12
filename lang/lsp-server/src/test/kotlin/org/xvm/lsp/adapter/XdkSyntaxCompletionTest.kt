@@ -7,6 +7,10 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSyntaxCompletions
 import java.util.concurrent.CancellationException
 
+/**
+ * Exercises syntax-derived names and templates at valid declaration or statement positions. Checks exact
+ * replacement ranges and excludes contexts where a template would corrupt existing source.
+ */
 class XdkSyntaxCompletionTest {
     @Test
     fun `declaration names use written types and replace the entire identifier`() {

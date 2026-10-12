@@ -50,6 +50,7 @@ internal class XdkProject(
 ) {
     val modules: Map<String, XdkSourceModule> = immutableMap(modules.associateBy { it.name })
 
+    /** Canonical source-module inputs used to compare project configurations. */
     private data class Configuration(
         val name: String,
         val uri: String,

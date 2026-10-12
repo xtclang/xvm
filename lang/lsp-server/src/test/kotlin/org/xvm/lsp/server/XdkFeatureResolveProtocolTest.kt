@@ -40,6 +40,10 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicReference
 
+/**
+ * Checks lazy lenses, links, inlays and workspace symbols against document identity and negotiated fields.
+ * Eager clients get complete results, stale handles expire, and disabling reference lenses preserves Run.
+ */
 class XdkFeatureResolveProtocolTest {
     @TempDir lateinit var root: Path
     private val source =

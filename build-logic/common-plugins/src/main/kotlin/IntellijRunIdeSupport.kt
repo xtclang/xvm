@@ -17,6 +17,10 @@ import java.nio.file.StandardOpenOption.READ
 import java.nio.file.attribute.BasicFileAttributes
 import kotlin.concurrent.thread
 
+/**
+ * Reports the versions, caches and log paths used by the development IDE. Reads live sandbox state at
+ * execution time so the report also explains what a reused sandbox contains.
+ */
 @UntrackedTask(because = "Runtime reporting task reads live sandbox state and should never be state-tracked")
 abstract class RunIdeEnvironmentReportTask : DefaultTask() {
     @get:Input
@@ -88,6 +92,10 @@ abstract class RunIdeEnvironmentReportTask : DefaultTask() {
     }
 }
 
+/**
+ * Forwards new language-server log lines to the Gradle console while the development IDE runs. A named daemon
+ * thread follows session creation and log rollover; restarting this task replaces the previous tailer.
+ */
 @UntrackedTask(because = "Runtime log tail task manages background thread state and should never be state-tracked")
 abstract class StartLogTailTask : DefaultTask() {
     // The directory may not exist until the first server starts; its live contents are not inputs.
@@ -126,6 +134,7 @@ abstract class StartLogTailTask : DefaultTask() {
     }
 }
 
+/** Stops the named development-IDE log tailer when the IDE run finishes. */
 @UntrackedTask(because = "Runtime log tail stop task manages background thread state and should never be state-tracked")
 abstract class StopLogTailTask : DefaultTask() {
     @get:Input
@@ -141,8 +150,10 @@ abstract class StopLogTailTask : DefaultTask() {
 internal object ServerLogTails {
     private val sessionName = Regex("server-[0-9]+-[0-9]+")
 
+    /** File identity and byte offset used to distinguish appended text from truncation or rollover. */
     data class Position(val key: Any?, val offset: Long)
 
+    /** New log lines and the detached file cursors to use on the next poll. */
     data class Batch(val positions: Map<Path, Position>, val lines: List<String>)
 
     fun poll(root: Path, previous: Map<Path, Position>, skipExisting: Boolean = false): Batch {

@@ -3,6 +3,7 @@ package org.xtclang.idea.playbook
 import com.intellij.driver.client.Remote
 import com.intellij.driver.sdk.Project
 
+/** Drives the plugin's compiler settings through its IDE-side test probe. */
 @Remote(
     "org.xtclang.idea.playbook.probe.CompilerSettingsPage",
     plugin = "org.xtclang.playbook.probe",

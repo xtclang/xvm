@@ -20,6 +20,10 @@ import org.mockito.Mockito.mock
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Checks template and name-completion wire edits against snippet and indentation capabilities. Minimal
+ * clients receive plain text without placeholder leakage, with exact Unicode insertion positions.
+ */
 class XdkSyntaxCompletionProtocolTest {
     @Test
     fun `missing declaration names use a plain empty edit at the original Unicode position`() {

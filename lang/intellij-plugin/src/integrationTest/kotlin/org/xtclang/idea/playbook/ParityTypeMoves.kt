@@ -199,6 +199,7 @@ internal fun ParityScenarios.typeMoveCases() {
     }
 }
 
+/** Enters the target name in the native move dialog. */
 @Remote("javax.swing.JTextField")
 private interface MoveNameField {
     fun setText(text: String)

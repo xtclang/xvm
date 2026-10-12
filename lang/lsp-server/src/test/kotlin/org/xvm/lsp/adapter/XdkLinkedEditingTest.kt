@@ -7,6 +7,10 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRename
 
+/**
+ * Checks linked ranges for lexical lambda parameters and explicit aliases. Callable parameters and member
+ * contracts must use graph rename rather than unsafe local linked editing.
+ */
 class XdkLinkedEditingTest {
     @ParameterizedTest
     @ValueSource(strings = ["(Int input) -> input", "input -> input"])

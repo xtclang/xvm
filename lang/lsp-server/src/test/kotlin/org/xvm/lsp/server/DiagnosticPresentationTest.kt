@@ -11,6 +11,10 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.model.Diagnostic
 import org.xvm.lsp.model.Location
 
+/**
+ * Checks pull-diagnostic capability negotiation independently of push diagnostics. Related information and
+ * related-document results must obey the client features that apply to their own response path.
+ */
 class DiagnosticPresentationTest {
     @ParameterizedTest
     @ValueSource(booleans = [false, true])

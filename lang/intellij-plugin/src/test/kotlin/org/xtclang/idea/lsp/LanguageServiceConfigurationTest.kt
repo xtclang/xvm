@@ -4,6 +4,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
+/**
+ * Checks inheritance, validation and concurrent updates of language-service settings. Applying a stale
+ * settings page must not replace a newer service preference or a source graph changed by refactoring.
+ */
 class LanguageServiceConfigurationTest {
     @Test
     fun `adapter selection preserves inherited preferences and compiler paths`() {

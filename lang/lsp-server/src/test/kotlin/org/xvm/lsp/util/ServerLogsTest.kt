@@ -13,6 +13,10 @@ import java.time.Instant
 import java.util.Base64
 import java.util.zip.ZipInputStream
 
+/**
+ * Exercises session pruning and bounded support archives using real temporary files. Live processes, foreign
+ * entries and symlinks must remain untouched, and invalid retention limits must fail before cleanup.
+ */
 class ServerLogsTest {
     @TempDir lateinit var root: Path
 

@@ -11,6 +11,10 @@ import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 
+/**
+ * Checks source and companion-resource relocation during file and module rename. Forward and reverse
+ * operations must preserve imports, resource ownership and exact source contents.
+ */
 class XdkResourceRenameTest {
     @TempDir lateinit var directory: Path
 

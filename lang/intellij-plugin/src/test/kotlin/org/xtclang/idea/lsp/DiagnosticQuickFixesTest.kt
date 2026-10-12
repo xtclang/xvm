@@ -19,6 +19,10 @@ import org.eclipse.lsp4j.jsonrpc.messages.RequestMessage
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseMessage
 import org.junit.jupiter.api.Test
 
+/**
+ * Protects diagnostic quick-fix refresh when visible error text stays unchanged. Checks that presentation
+ * revisions refresh lazy actions while original opaque server data survives the request round trip.
+ */
 class DiagnosticQuickFixesTest {
     @Test
     fun `presentation preserves decoded full and unchanged companion reports`() {

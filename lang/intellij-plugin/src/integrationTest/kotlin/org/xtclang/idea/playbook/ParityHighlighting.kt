@@ -5,6 +5,7 @@ import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Editor
 import kotlin.time.Duration.Companion.seconds
 
+/** Captures painted token text and attributes for lexical and semantic highlighting comparisons. */
 private data class HighlightToken(
     val start: Int,
     val end: Int,
@@ -133,6 +134,7 @@ internal fun ParityScenarios.highlightingCases() {
     }
 }
 
+/** Reads editor highlighters to verify the final theme-based colors shown to the user. */
 @Remote("org.xtclang.idea.playbook.probe.HighlightingUi", plugin = "org.xtclang.playbook.probe")
 internal interface HighlightingProbe {
     fun lexical(

@@ -4,6 +4,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.util.concurrent.CompletableFuture
 
+/**
+ * Verifies cancellation propagation through analysis and dependent proof futures. A canceled request must not
+ * start later proof work, and cancellation during future construction must reach the newly created work.
+ */
 class AdapterFuturesTest {
     @Test
     fun `cancellation before analysis completes does not start proof`() {

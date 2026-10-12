@@ -11,7 +11,15 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Controls compiler execution to force edit, close and reopen races. Obsolete attempts may finish, but must
+ * neither publish stale document views nor prevent queued edits from coalescing.
+ */
 class XdkAdapterLifecycleTest {
+    /**
+     * Holds the first compilation until the test releases it, deliberately ignoring cancellation to expose
+     * stale-result races.
+     */
     private class PausedCompiler {
         val started = CountDownLatch(1)
         val release = CountDownLatch(1)

@@ -10,6 +10,11 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRename
 import java.nio.file.Path
 
+/**
+ * Checks bounded class and property creation from unresolved source uses. Rejects unknown ownership,
+ * unsupported constructor requirements and unrelated errors instead of guessing a declaration that merely
+ * compiles.
+ */
 class XdkMissingDeclarationsTest {
     @TempDir lateinit var directory: Path
 

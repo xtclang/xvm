@@ -19,9 +19,14 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Controls partial analysis to force request supersession and cancellation. Cursor work may not publish after
+ * an edit, and retiring it must leave ordinary compilation diagnostics intact.
+ */
 class XdkCursorRequestTest {
     @TempDir lateinit var directory: Path
 
+    /** Holds one cursor analysis beyond cancellation so late results can be checked against request ownership. */
     private class PausedCursor {
         val started = CountDownLatch(1)
         val release = CountDownLatch(1)

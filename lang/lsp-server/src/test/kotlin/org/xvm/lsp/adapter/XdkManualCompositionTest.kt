@@ -6,6 +6,10 @@ import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
 
+/**
+ * Exercises implementation navigation with real manual-test mixin and delegation sources. Navigation must
+ * reach written bodies without inventing a runtime receiver target.
+ */
 class XdkManualCompositionTest {
     @TempDir lateinit var directory: Path
 

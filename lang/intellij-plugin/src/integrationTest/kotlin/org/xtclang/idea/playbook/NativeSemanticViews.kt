@@ -193,6 +193,7 @@ internal fun targetNames(
             ?: error("Target does not select a declaration: $location")
     }
 
+/** Locates native location, hover, token and inlay support for an editor file. */
 @Remote("com.redhat.devtools.lsp4ij.LSPFileSupport", plugin = "com.redhat.devtools.lsp4ij")
 interface NativeSemanticSupport {
     fun getDefinitionSupport(): NativeLocationsSupport
@@ -208,6 +209,7 @@ interface NativeSemanticSupport {
     fun getInlayHintsSupport(): NativeInlaysSupport
 }
 
+/** Uses the installed client's location feature for navigation assertions. */
 @Remote(
     "com.redhat.devtools.lsp4ij.features.AbstractLSPDocumentFeatureSupport",
     plugin = "com.redhat.devtools.lsp4ij",
@@ -216,16 +218,19 @@ interface NativeLocationsSupport {
     fun getValidLSPFuture(): NativeLocationsFuture?
 }
 
+/** Polls a native navigation request and exposes its completed locations. */
 @Remote("java.util.concurrent.CompletableFuture")
 interface NativeLocationsFuture : ClientFuture {
     fun get(): List<NativeLocation>
 }
 
+/** Reads a native navigation target's URI and source range. */
 @Remote("com.redhat.devtools.lsp4ij.usages.LocationData", plugin = "com.redhat.devtools.lsp4ij")
 interface NativeLocation {
     fun location(): ClientValue
 }
 
+/** Requests hover through the installed client's feature support. */
 @Remote(
     "com.redhat.devtools.lsp4ij.features.documentation.LSPHoverSupport",
     plugin = "com.redhat.devtools.lsp4ij",
@@ -234,11 +239,13 @@ interface NativeHoverSupport {
     fun getValidLSPFuture(): NativeHoverFuture?
 }
 
+/** Polls the native hover result without blocking the UI thread. */
 @Remote("java.util.concurrent.CompletableFuture")
 interface NativeHoverFuture : ClientFuture {
     fun get(): List<NativeHover>
 }
 
+/** Exposes the hover contents received by the IDE client. */
 @Remote(
     "com.redhat.devtools.lsp4ij.features.documentation.HoverData",
     plugin = "com.redhat.devtools.lsp4ij",
@@ -247,6 +254,7 @@ interface NativeHover {
     fun hover(): ClientValue
 }
 
+/** Requests semantic tokens through the installed client. */
 @Remote(
     "com.redhat.devtools.lsp4ij.features.semanticTokens.LSPSemanticTokensSupport",
     plugin = "com.redhat.devtools.lsp4ij",
@@ -255,11 +263,13 @@ interface NativeTokensSupport {
     fun getValidLSPFuture(): NativeTokensFuture?
 }
 
+/** Polls the native semantic-token result. */
 @Remote("java.util.concurrent.CompletableFuture")
 interface NativeTokensFuture : ClientFuture {
     fun get(): NativeTokens?
 }
 
+/** Exposes the encoded semantic-token data received by the client. */
 @Remote(
     "com.redhat.devtools.lsp4ij.features.semanticTokens.SemanticTokensData",
     plugin = "com.redhat.devtools.lsp4ij",
@@ -268,6 +278,7 @@ interface NativeTokens {
     fun getSemanticTokens(): ClientValue
 }
 
+/** Requests inlay hints through the installed client. */
 @Remote(
     "com.redhat.devtools.lsp4ij.features.inlayhint.LSPInlayHintsSupport",
     plugin = "com.redhat.devtools.lsp4ij",
@@ -276,11 +287,13 @@ interface NativeInlaysSupport {
     fun getValidLSPFuture(): NativeInlaysFuture?
 }
 
+/** Polls the native inlay-hint result. */
 @Remote("java.util.concurrent.CompletableFuture")
 interface NativeInlaysFuture : ClientFuture {
     fun get(): List<NativeInlayData>
 }
 
+/** Reads an inlay hint retained by the client for rendering. */
 @Remote(
     "com.redhat.devtools.lsp4ij.features.inlayhint.InlayHintData",
     plugin = "com.redhat.devtools.lsp4ij",
@@ -289,11 +302,13 @@ interface NativeInlayData {
     fun inlayHint(): ClientValue
 }
 
+/** Locates the actual editor inlay model for painted-hint assertions. */
 @Remote("com.intellij.openapi.editor.Editor")
 interface NativeInlayEditor {
     fun getInlayModel(): NativeInlayModel
 }
 
+/** Enumerates rendered inlays in the editor's source range. */
 @Remote("com.intellij.openapi.editor.InlayModel")
 interface NativeInlayModel {
     fun getInlineElementsInRange(
@@ -302,6 +317,7 @@ interface NativeInlayModel {
     ): List<NativeInlay>
 }
 
+/** Exposes a rendered inlay's offset for comparison with its protocol position. */
 @Remote("com.intellij.openapi.editor.Inlay")
 interface NativeInlay {
     fun getOffset(): Int

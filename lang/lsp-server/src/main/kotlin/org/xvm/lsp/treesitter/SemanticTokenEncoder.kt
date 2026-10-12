@@ -299,9 +299,7 @@ class SemanticTokenEncoder {
                     child.text == "inject" ||
                     child.text == "delegate" ||
                     child.text == "readonly" ||
-                    child.text == "immutable" -> {
-                    emitToken(child, "modifier", 0)
-                }
+                    child.text == "immutable" -> emitToken(child, "modifier", 0)
             }
         }
     }

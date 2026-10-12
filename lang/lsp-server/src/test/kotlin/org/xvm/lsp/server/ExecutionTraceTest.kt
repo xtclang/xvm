@@ -20,6 +20,10 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Checks trace ownership across queued, nested and asynchronous operations. Cancellation must not pretend
+ * work stopped, and protocol spans must distinguish request direction and end at actual reply delivery.
+ */
 class ExecutionTraceTest {
     @Test
     fun `queue lists preserve order and cancellation does not pretend running work stopped`() {
@@ -191,6 +195,7 @@ class ExecutionTraceTest {
         }
     }
 
+    /** Attaches a temporary trace appender and detaches it on close to isolate captured JSON events. */
     private class Recording : AutoCloseable {
         val entries = CopyOnWriteArrayList<JsonObject>()
         private val logger = LoggerFactory.getLogger("org.xvm.lsp.trace") as Logger

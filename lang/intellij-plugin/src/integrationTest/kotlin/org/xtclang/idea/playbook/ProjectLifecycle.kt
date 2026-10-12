@@ -175,6 +175,7 @@ internal fun Driver.projectLifecycle(shared: SharedScenarios) {
     )
 }
 
+/** Opens and closes native projects through the lifecycle test probe. */
 @Remote("org.xtclang.idea.playbook.probe.ProjectLifecycle", plugin = "org.xtclang.playbook.probe")
 internal interface ProjectLifecycle {
     fun open(path: String): OpenProjectFuture
@@ -197,11 +198,13 @@ internal interface ProjectLifecycle {
     fun visible(project: Project): Boolean
 }
 
+/** Polls native project opening before subsequent playbook actions use the project. */
 @Remote("java.util.concurrent.CompletableFuture")
 internal interface OpenProjectFuture : ClientFuture {
     fun get(): Project?
 }
 
+/** Polls native project disposal before lifecycle assertions continue. */
 @Remote("java.util.concurrent.CompletableFuture")
 internal interface CloseProjectFuture : ClientFuture {
     fun get(): Boolean

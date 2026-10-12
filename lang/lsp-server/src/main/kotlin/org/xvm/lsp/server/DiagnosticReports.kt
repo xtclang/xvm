@@ -19,6 +19,7 @@ import java.util.UUID
 
 /** Called under the document lifecycle lock. IDs belong to this server and one document's items. */
 internal class DiagnosticReports {
+    /** Diagnostic items and their result ID, retained for unchanged pull-diagnostic responses. */
     private data class Entry(
         val id: String,
         val diagnostics: List<Diagnostic>,

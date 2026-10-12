@@ -22,6 +22,7 @@ import org.xvm.lsp.util.ExecutionTrace
 
 /** Copy one private member expression at its use; declaration deletion is a separate proof. */
 internal object XdkMemberInline {
+    /** Proposed member inlining with the use, replacement and intentionally removed binding sites. */
     data class Candidate(
         val title: String,
         val source: String,
@@ -92,9 +93,7 @@ internal object XdkMemberInline {
                     Triple(property, read, value)
                 }
 
-                else -> {
-                    return null
-                }
+                else -> return null
             }
         if (owner(member) !== owner(use)) return null
         // A local callable or closure can have a different receiver or capture environment.

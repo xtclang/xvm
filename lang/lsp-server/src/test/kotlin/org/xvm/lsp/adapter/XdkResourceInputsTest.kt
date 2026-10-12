@@ -10,6 +10,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Exercises conventional and explicit resource roots, including absent directories and same-timestamp edits.
+ * Only affected source consumers should recompile, and repaired resources must recover diagnostics.
+ */
 class XdkResourceInputsTest {
     @TempDir lateinit var directory: Path
 

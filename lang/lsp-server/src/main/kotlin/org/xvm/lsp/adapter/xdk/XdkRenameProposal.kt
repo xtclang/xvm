@@ -34,6 +34,7 @@ class XdkRenameScope
         sourceUris: List<String>,
         val revision: String,
     ) {
+        /** Whether the proposal depends on an explicitly configured source graph or a discovered one. */
         enum class Boundary {
             CONFIGURED_GRAPH,
             DISCOVERED_GRAPH,

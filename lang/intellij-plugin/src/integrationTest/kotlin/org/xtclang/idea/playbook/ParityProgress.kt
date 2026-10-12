@@ -103,6 +103,7 @@ internal fun ParityScenarios.progressCases() {
     }
 }
 
+/** Observes and cancels the IDE's displayed work-progress indicators. */
 @Remote("org.xtclang.idea.playbook.probe.ProgressUi", plugin = "org.xtclang.playbook.probe")
 internal interface ProgressUi {
     fun visible(

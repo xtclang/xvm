@@ -8,6 +8,10 @@ import org.eclipse.lsp4j.TextEdit
 import org.eclipse.lsp4j.jsonrpc.messages.Either
 import org.junit.jupiter.api.Test
 
+/**
+ * Compares supported platform and LSP4IJ edit representations. Malformed or unsupported alternatives must be
+ * refused as a whole rather than becoming a partial refactoring.
+ */
 class ServerWorkspaceEditTest {
     @Test
     fun `platform and LSP4IJ edit representations preserve the same edits`() {

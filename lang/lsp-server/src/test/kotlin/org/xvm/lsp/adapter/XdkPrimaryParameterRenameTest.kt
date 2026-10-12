@@ -8,6 +8,10 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
 
+/**
+ * Checks the relationship between shorthand constructor parameters, named arguments and generated properties.
+ * All proven source uses rename together while collisions and local capture remain refused.
+ */
 class XdkPrimaryParameterRenameTest {
     @TempDir lateinit var directory: Path
 

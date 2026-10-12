@@ -25,16 +25,19 @@ interface XtcLanguageServer : LanguageServer {
     fun renameFilesProposal(params: RenameFilesParams): CompletableFuture<RenameProposal?>
 }
 
+/** Server rename edit paired with any source-graph change that must be applied in the same transaction. */
 data class RenameProposal(
     val edit: WorkspaceEdit,
     val graph: SourceGraphReplacement? = null,
 )
 
+/** Expected and proposed source graphs for a guarded configuration replacement. */
 data class SourceGraphReplacement(
     val before: List<SourceModuleConfiguration>,
     val after: List<SourceModuleConfiguration>,
 )
 
+/** Wire representation of a source module, excluding server-only compiler and filesystem state. */
 data class SourceModuleConfiguration(
     val name: String,
     val uri: String,

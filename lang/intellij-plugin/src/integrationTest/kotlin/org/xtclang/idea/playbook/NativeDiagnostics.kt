@@ -9,6 +9,7 @@ import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.singleProject
 import com.intellij.driver.sdk.ui.components.common.JEditorUiComponent
 
+/** Captures one painted editor diagnostic for severity, message and range assertions. */
 data class Diagnostic(
     val severity: String,
     val description: String,
@@ -24,6 +25,7 @@ fun JEditorUiComponent.installedDiagnostics(): List<Diagnostic> =
         Gson().fromJson(json, Array<Diagnostic>::class.java).toList()
     }
 
+/** Reads diagnostics actually painted in the IDE rather than querying the server independently. */
 @Remote("org.xtclang.idea.playbook.probe.EditorDiagnostics", plugin = "org.xtclang.playbook.probe")
 interface EditorDiagnostics {
     fun read(

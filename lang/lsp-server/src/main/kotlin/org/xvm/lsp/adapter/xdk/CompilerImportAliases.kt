@@ -49,17 +49,9 @@ internal fun compilerImportAliases(
                     .mapNotNull { node ->
                         val first =
                             when (node) {
-                                is NameExpression -> {
-                                    node.nameToken.takeIf { node.leftExpression == null }
-                                }
-
-                                is NamedTypeExpression -> {
-                                    node.nameBindings.firstOrNull()?.name()
-                                }
-
-                                else -> {
-                                    null
-                                }
+                                is NameExpression -> node.nameToken.takeIf { node.leftExpression == null }
+                                is NamedTypeExpression -> node.nameBindings.firstOrNull()?.name()
+                                else -> null
                             } ?: return@mapNotNull null
                         if (first.valueText != alias.aliasName) return@mapNotNull null
                         val at = range(first.startPosition, first.endPosition)

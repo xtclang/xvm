@@ -35,18 +35,14 @@ internal object XdkPresentation {
     ): String? {
         val label =
             when {
-                symbol != null && signature != null -> {
-                    XdkCursorQueries.signature(model, symbol.name, signature).label
-                }
+                symbol != null && signature != null -> XdkCursorQueries.signature(model, symbol.name, signature).label
 
                 symbol != null -> {
                     listOfNotNull(type ?: symbol.kind.name.lowercase(), symbol.name)
                         .joinToString(" ")
                 }
 
-                else -> {
-                    type
-                }
+                else -> type
             } ?: return null
         return "```xtc\n$label\n```" + symbol?.documentation?.let { "\n\n$it" }.orEmpty()
     }
@@ -67,9 +63,7 @@ internal object XdkPresentation {
                         when (symbol.kind) {
                             SymbolKind.MODULE,
                             SymbolKind.PACKAGE,
-                            -> {
-                                "namespace"
-                            }
+                            -> "namespace"
 
                             SymbolKind.TYPE -> {
                                 if (occurrence.annotation) {
@@ -95,25 +89,15 @@ internal object XdkPresentation {
                                 }
                             }
 
-                            SymbolKind.TYPE_PARAMETER -> {
-                                "typeParameter"
-                            }
+                            SymbolKind.TYPE_PARAMETER -> "typeParameter"
 
-                            SymbolKind.METHOD -> {
-                                if (symbol.isFunction) "function" else "method"
-                            }
+                            SymbolKind.METHOD -> if (symbol.isFunction) "function" else "method"
 
-                            SymbolKind.PROPERTY -> {
-                                "property"
-                            }
+                            SymbolKind.PROPERTY -> "property"
 
-                            SymbolKind.VARIABLE -> {
-                                "variable"
-                            }
+                            SymbolKind.VARIABLE -> "variable"
 
-                            SymbolKind.PARAMETER -> {
-                                "parameter"
-                            }
+                            SymbolKind.PARAMETER -> "parameter"
                         }
                     val modifiers =
                         buildList {

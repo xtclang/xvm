@@ -11,6 +11,10 @@ import org.xvm.lsp.adapter.xdk.XdkLexical
 import org.xvm.lsp.adapter.xdk.XdkRename
 import java.nio.file.Path
 
+/**
+ * Exercises compiler formatting across syntax and range boundaries. Checks idempotence, configured width,
+ * line endings and unchanged literal contents, including malformed lexemes and on-type edits.
+ */
 class XdkFormattingBreadthTest {
     @ParameterizedTest
     @ValueSource(strings = ["\n", "\r\n", "\r"])

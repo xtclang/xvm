@@ -16,6 +16,10 @@ import org.xvm.lsp.adapter.xdk.semanticSnapshot
 import java.nio.file.Path
 import java.util.concurrent.Executors
 
+/**
+ * Checks property-value suggestions using compiler readability, narrowing and argument fitting. Accepted
+ * edits must preserve the original token boundaries and ordinary validation rules.
+ */
 class XdkPropertyArgumentCompletionTest {
     @TempDir lateinit var directory: Path
 

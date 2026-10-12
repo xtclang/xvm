@@ -32,6 +32,7 @@ internal class XdkSources
         /** Cache identity contains only immutable input values, never a parsed ModuleInfo tree. */
         val inputs = Inputs(this.text, immutableSet(directories), immutableMap(aliases), resources)
 
+        /** Captured source text, directories, aliases and resources that identify one compilation input set. */
         data class Inputs(
             val text: Map<File, String>,
             val directories: Set<File>,
@@ -86,6 +87,7 @@ internal class XdkSources
             text[file]?.toCharArray()
                 ?: throw IOException("Source is absent from this compilation snapshot: $file")
 
+        /** Unsaved editor text paired with its document URI for source snapshot construction. */
         private data class Overlay(
             val uri: String,
             val text: String,

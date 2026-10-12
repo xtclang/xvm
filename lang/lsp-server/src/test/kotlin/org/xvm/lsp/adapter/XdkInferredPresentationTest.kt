@@ -4,6 +4,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 
+/**
+ * Checks inferred lambda and destructuring hints from compiler types. Explicit annotations suppress redundant
+ * hints, and captures must not be mistaken for lambda parameters.
+ */
 class XdkInferredPresentationTest {
     @Test
     fun `lambda parameter and return hints use the function signature without captures`() {

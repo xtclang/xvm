@@ -6,6 +6,7 @@ import java.util.concurrent.atomic.AtomicReference
 
 /** A late configuration reply cannot undo a newer preference or restore a reset value. */
 internal class EditorFormattingState : AutoCloseable {
+    /** Formatting preference and revision updated atomically, including the terminal closed state. */
     private data class Snapshot(
         val revision: Long = 0,
         val config: FormattingConfig? = null,

@@ -66,6 +66,7 @@ internal fun ParityScenarios.referenceLensCases() {
     }
 }
 
+/** Reads and activates native code lenses, including reference counts and Run. */
 @Remote("org.xtclang.idea.playbook.probe.CodeLensUi", plugin = "org.xtclang.playbook.probe")
 interface CodeLensProbe {
     fun titles(editor: Editor): List<String>

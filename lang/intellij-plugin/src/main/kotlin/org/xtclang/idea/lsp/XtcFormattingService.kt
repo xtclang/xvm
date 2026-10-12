@@ -84,13 +84,9 @@ class XtcFormattingService : LSPFormattingAndRangeBothService() {
                         val snapshot = EditorFactory.getInstance().createDocument(original)
                         val formatted = LSPIJUtils.applyEdits(snapshot, edits ?: emptyList())
                         when {
-                            formatted == original -> {
-                                request.onTextReady(null)
-                            }
+                            formatted == original -> request.onTextReady(null)
 
-                            synchronous -> {
-                                request.onTextReady(formatted)
-                            }
+                            synchronous -> request.onTextReady(formatted)
 
                             else -> {
                                 // TODO LSP4IJ: UP24 — IDEA's asynchronous formatting application is

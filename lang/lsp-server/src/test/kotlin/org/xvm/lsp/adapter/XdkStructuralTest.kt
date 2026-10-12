@@ -8,6 +8,10 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRename
 import java.nio.file.Path
 
+/**
+ * Checks current outlines, folds and strictly nested selection ranges in shared damaged-source fixtures.
+ * Structure must recover without stale nodes or duplicate selection spans.
+ */
 class XdkStructuralTest {
     @ParameterizedTest
     @ValueSource(strings = ["\n", "\r\n", "\r"])

@@ -12,6 +12,7 @@ import org.xvm.lsp.util.ExecutionTrace
 
 /** Worker-only edit planning and binding comparison. Compiler constants never escape this proof. */
 internal object XdkRename {
+    /** Replacement text and offsets in the original source, before any edits are applied. */
     data class Edit(
         val start: Int,
         val end: Int,
@@ -26,6 +27,10 @@ internal object XdkRename {
         val contentOffset: Int,
     )
 
+    /**
+     * Source snapshots, text edits and file moves for a trial refactoring. Also translates source locations
+     * so bindings can be compared across the original and proposed compilations.
+     */
     class Plan(
         val original: Map<String, String>,
         val edits: Map<String, List<Edit>>,
@@ -643,13 +648,9 @@ internal object XdkRename {
 
                 is ProofIdentity.Binary,
                 is ProofIdentity.Method,
-                -> {
-                    target == Target.External(contract)
-                }
+                -> target == Target.External(contract)
 
-                else -> {
-                    false
-                }
+                else -> false
             }
         val changed = newDispatch - oldDispatch
         val additions =
@@ -713,21 +714,10 @@ internal object XdkRename {
             chains: Set<Dispatch>,
         ): Site? =
             when (target) {
-                is Target.Declaration -> {
-                    target.site
-                }
-
-                is Target.SourceProof -> {
-                    target.site
-                }
-
-                is Target.Composed -> {
-                    (memberBridge(target, chains)?.firstOrNull() as? Target.Declaration)?.site
-                }
-
-                else -> {
-                    null
-                }
+                is Target.Declaration -> target.site
+                is Target.SourceProof -> target.site
+                is Target.Composed -> (memberBridge(target, chains)?.firstOrNull() as? Target.Declaration)?.site
+                else -> null
             }
 
         fun selectedRebinding(
@@ -784,9 +774,7 @@ internal object XdkRename {
                         it
                     }
 
-                    else -> {
-                        return null
-                    }
+                    else -> return null
                 }
             }
         return written.takeIf {
@@ -839,6 +827,7 @@ internal object XdkRename {
                 Target.Declaration(Site(source, start, end), symbol.kind) to slot
             }.toMap()
 
+    /** Renamed owner and contribution chain used to detect unintended override or dispatch changes. */
     private data class Dispatch(
         val owner: Target,
         val members: List<Target>,
@@ -915,6 +904,7 @@ internal object XdkRename {
         return Site(moved(source), start, end)
     }
 
+    /** Source occurrence translated through a refactoring, distinguishing calls from other bindings. */
     private data class Site(
         val source: String,
         val start: Int,
@@ -922,48 +912,59 @@ internal object XdkRename {
         val call: Boolean = false,
     )
 
+    /** Binding identity normalized through a proposed edit for comparison across compilation attempts. */
     private sealed interface Target {
+        /** Written declaration identified by its translated location and symbol kind. */
         data class Declaration(
             val site: Site,
             val kind: SemanticModel.SymbolKind,
         ) : Target
 
+        /** Detached dependency identity unaffected by source-location translation. */
         data class External(
             val constant: ProofIdentity,
         ) : Target
 
+        /** Translated directory identity for an implicit package. */
         data class Directory(
             val path: String,
         ) : Target
 
+        /** Value parameter identified by the translated method and parameter slot. */
         data class Parameter(
             val method: Target,
             val index: Int,
         ) : Target
 
+        /** Generic method parameter identified separately from visible value parameters. */
         data class MethodFormal(
             val method: Target,
             val index: Int,
         ) : Target
 
+        /** Compiler-generated primary constructor identified by its translated owner. */
         data class PrimaryConstructor(
             val owner: Target,
         ) : Target
 
+        /** Super receiver interpreted relative to its translated method. */
         data class Super(
             val method: Target,
         ) : Target
 
+        /** Predefined receiver identified by its translated owner and compiler register. */
         data class Receiver(
             val owner: Target,
             val register: Int,
         ) : Target
 
+        /** Translated source declaration and constant kind used in a detached proof. */
         data class SourceProof(
             val site: Site,
             val format: Constant.Format,
         ) : Target
 
+        /** Translated dispatch composition, preserving member order, delegates, cycles and alternatives. */
         data class Composed(
             val owner: Target,
             val members: List<Target>,
@@ -972,10 +973,12 @@ internal object XdkRename {
             val alternatives: List<Target>,
         ) : Target
 
+        /** Unordered possible bindings whose translated identities must remain equivalent. */
         data class Alternatives(
             val targets: Set<Target>,
         ) : Target
 
+        /** Translated structural type identity with its component bindings. */
         data class TypeShape(
             val format: Constant.Format,
             val components: List<Target>,
@@ -1000,9 +1003,14 @@ internal object XdkRename {
         translate: (String, Int) -> Int?,
     ): Target? {
         return when (identity) {
-            is ProofIdentity.TypeShape -> {
-                Target.TypeShape(identity.format, identity.components.map { composedTarget(it, texts, moved, translate) ?: return null })
-            }
+            is ProofIdentity.TypeShape ->
+                Target.TypeShape(
+                    identity.format,
+                    identity.components.map {
+                        composedTarget(it, texts, moved, translate)
+                            ?: return null
+                    },
+                )
 
             is ProofIdentity.Alternatives -> {
                 Target.Alternatives(
@@ -1029,13 +1037,15 @@ internal object XdkRename {
                     ?.let(Target::PrimaryConstructor)
             }
 
-            is ProofIdentity.Super -> {
-                composedTarget(identity.method, texts, moved, translate)?.let(Target::Super)
-            }
+            is ProofIdentity.Super -> composedTarget(identity.method, texts, moved, translate)?.let(Target::Super)
 
-            is ProofIdentity.Receiver -> {
-                composedTarget(identity.owner, texts, moved, translate)?.let { Target.Receiver(it, identity.register) }
-            }
+            is ProofIdentity.Receiver ->
+                composedTarget(
+                    identity.owner,
+                    texts,
+                    moved,
+                    translate,
+                )?.let { Target.Receiver(it, identity.register) }
 
             is ProofIdentity.Composed -> {
                 val owner = composedTarget(identity.owner, texts, moved, translate) ?: return null
@@ -1064,9 +1074,7 @@ internal object XdkRename {
                 Target.SourceProof(Site(moved(source), start, end), identity.format)
             }
 
-            else -> {
-                Target.External(identity)
-            }
+            else -> Target.External(identity)
         }
     }
 

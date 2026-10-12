@@ -22,12 +22,14 @@ import org.xvm.lsp.util.ExecutionTrace
  * preserve relocated references and calls as well as every unaffected binding and dispatch chain.
  */
 internal object XdkLocalExtraction {
+    /** Proposed local extraction and the relocation needed to compare its bindings after recompilation. */
     data class Candidate(
         val title: String,
         val edits: List<XdkRename.Edit>,
         val relocation: XdkRename.Relocation,
     )
 
+    /** Statement and expression selected for extraction, with any known type. */
     private data class Selected(
         val statement: AstNode,
         val expression: Expression,
@@ -71,9 +73,7 @@ internal object XdkLocalExtraction {
                                 }
                             }
 
-                            else -> {
-                                null
-                            }
+                            else -> null
                         }
                     } else {
                         null

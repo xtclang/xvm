@@ -13,6 +13,10 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 
+/**
+ * Exercises project and build-root ownership of compiler imports. Disposed or unlinked owners must cancel
+ * their producers and reject late work rather than resurrecting stale inputs.
+ */
 class CompilerImportServiceTest {
     /** Cancellation ownership is tested without installing an application-wide ProgressManager. */
     private class Indicator : EmptyProgressIndicatorBase(ModalityState.nonModal()) {

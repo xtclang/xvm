@@ -11,6 +11,10 @@ import org.xvm.compiler.Source
 import org.xvm.compiler.ast.NamedTypeExpression
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 
+/**
+ * Exercises completion within incomplete generic type headers. Accepting a base name must preserve written
+ * arguments and delimiters rather than replacing the surrounding type expression.
+ */
 class XdkGenericHeaderTest {
     @ParameterizedTest
     @ValueSource(

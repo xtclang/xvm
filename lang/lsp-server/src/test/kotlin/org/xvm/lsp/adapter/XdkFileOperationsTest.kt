@@ -10,6 +10,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Exercises compiler-proven file, package and module moves as combined graph edits. Checks reference/resource
+ * preservation and distinguishes edits supplied by the server from physical operations owned by the host.
+ */
 class XdkFileOperationsTest {
     @TempDir lateinit var directory: Path
 

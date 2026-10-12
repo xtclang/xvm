@@ -31,6 +31,10 @@ import org.xvm.lsp.adapter.InlineCompletionContext as AdapterContext
 import org.xvm.lsp.adapter.Position as AdapterPosition
 import org.xvm.lsp.adapter.Range as AdapterRange
 
+/**
+ * Checks independently negotiated inline completion, including trigger and selected-item context. Edits and
+ * cancellation must retire a query before any stale suggestion is published.
+ */
 class InlineCompletionProtocolTest {
     @Test
     fun `inline completion negotiates independently and round trips selection trigger and plain edits`() {

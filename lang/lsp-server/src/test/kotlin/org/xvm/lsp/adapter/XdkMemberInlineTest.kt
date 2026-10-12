@@ -10,6 +10,10 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRename
 import java.nio.file.Path
 
+/**
+ * Checks bounded private-member inlining while retaining the declaration. Preserves evaluation and bindings,
+ * and refuses capture, recursive bodies and unsupported runtime initializer behavior.
+ */
 class XdkMemberInlineTest {
     @TempDir lateinit var directory: Path
 

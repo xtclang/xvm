@@ -161,6 +161,7 @@ class XtcTextDocumentService(
         private val logger = LoggerFactory.getLogger(XtcTextDocumentService::class.java)
     }
 
+    /** Open-buffer revision and the analysis future associated with that exact content and module scope. */
     private class Document(
         val content: String,
         val version: Int,
@@ -319,9 +320,7 @@ class XtcTextDocumentService(
                     synchronized(lifecycle) {
                         if (!result.isDone) {
                             when {
-                                stale() -> {
-                                    result.completeExceptionally(contentModified())
-                                }
+                                stale() -> result.completeExceptionally(contentModified())
 
                                 failure != null -> {
                                     val cause =

@@ -10,6 +10,10 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRename
 import java.nio.file.Path
 
+/**
+ * Exercises local extraction in initializer contexts. Preserves contextual types, comments and evaluation
+ * order, and refuses partial or ambiguous selections that lack a safe insertion contract.
+ */
 class XdkLocalInitializerActionsTest {
     @TempDir lateinit var directory: Path
 

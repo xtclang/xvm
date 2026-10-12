@@ -11,6 +11,7 @@ import org.xvm.compiler.ast.PropertyDeclarationStatement
 import org.xvm.compiler.ast.TypeCompositionStatement
 import org.xvm.lsp.util.ExecutionTrace
 
+/** Declaration located in attached library source, with the source range used for navigation. */
 internal data class LibraryDeclaration(
     val path: List<String>,
     val range: SemanticModel.Range,

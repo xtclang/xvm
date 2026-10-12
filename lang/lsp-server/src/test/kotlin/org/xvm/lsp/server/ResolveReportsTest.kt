@@ -5,6 +5,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
+/**
+ * Checks opaque handles for bounded deferred response data. Foreign, stale, tampered or evicted handles must
+ * fail rather than resolving an item from another document revision.
+ */
 class ResolveReportsTest {
     @Test
     fun `handles preserve detached values and reject foreign stale tampered and evicted requests`() {

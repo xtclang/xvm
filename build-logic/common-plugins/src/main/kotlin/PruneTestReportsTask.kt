@@ -33,6 +33,11 @@ abstract class PruneTestReportsTask : DefaultTask() {
     }
 }
 
+/**
+ * Prunes disposable IDE payloads from completed playbook runs while retaining their reports. Cleanup is
+ * serialized by a file lock, honors explicit artifact retention, and refuses to traverse symlinks or delete a
+ * checkout.
+ */
 internal object TestReportRetention {
     fun prune(root: Path, keep: Int = 5): Int {
         require(keep >= 1) { "Keep at least one complete run" }

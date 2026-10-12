@@ -7,6 +7,11 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.ZipFile
 
+/**
+ * Checks ownership and bounds of offline support archives, including failed launches. Late callbacks and
+ * foreign sessions must not replace the current project's recorded server, and symlinks must not expand the
+ * archive scope.
+ */
 class ServerSupportLogsTest {
     @TempDir lateinit var temporary: Path
 

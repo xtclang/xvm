@@ -8,6 +8,10 @@ import org.xvm.lsp.model.Location
 import java.net.URI
 import java.nio.file.Path
 
+/**
+ * Distinguishes Go to Declaration from implementation selection. Checks written contracts, lexical locals,
+ * import aliases and closed consumers, and prevents failed analyses from reusing old targets.
+ */
 class XdkDeclarationTest {
     @TempDir lateinit var directory: Path
 

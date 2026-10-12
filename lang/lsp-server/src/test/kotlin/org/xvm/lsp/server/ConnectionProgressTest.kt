@@ -18,7 +18,12 @@ import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicReference
 
+/**
+ * Controls progress creation acknowledgements, completion, cancellation and close races. Each token must own
+ * only its request, report live details and finish once without canceling shared compiler work.
+ */
 class ConnectionProgressTest {
+    /** Controls client acknowledgements, reporting and expiry independently of real-time scheduling. */
     private class Session : AutoCloseable {
         val dispatcher = Executors.newSingleThreadExecutor()
         val client = mock(LanguageClient::class.java)

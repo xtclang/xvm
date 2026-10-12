@@ -9,6 +9,10 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import java.nio.file.Path
 
+/**
+ * Checks reference lenses across closed consumers and overloads, excluding declarations from counts. Also
+ * verifies documentation actions in configured projects without changing disk inputs during analysis.
+ */
 class XdkReferenceLensTest {
     @TempDir lateinit var directory: Path
 

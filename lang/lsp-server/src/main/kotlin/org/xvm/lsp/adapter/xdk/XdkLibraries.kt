@@ -11,11 +11,13 @@ import java.util.Set.copyOf as immutableSet
 
 /** The compiler and its matching libraries travel together in the language server. */
 internal object XdkLibraries {
+    /** Bundled compiler repository and the immutable artifacts used to reopen its modules. */
     private data class Bundle(
         val repository: BuildRepository,
         val artifacts: Map<String, Artifact>,
     )
 
+    /** Library artifact revision with lazily materialized detached symbols. */
     private data class Artifact(
         val revision: String,
         val symbols: Lazy<XdkArtifactSymbols>,

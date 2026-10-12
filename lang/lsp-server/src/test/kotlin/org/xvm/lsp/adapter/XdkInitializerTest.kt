@@ -9,6 +9,10 @@ import org.xvm.lsp.treesitter.SemanticTokenLegend
 import java.nio.file.Files
 import java.nio.file.Path
 
+/**
+ * Protects source facts erased by constant folding. A folded initializer must still participate in hover,
+ * references, tokens and complete compiler-validated rename.
+ */
 class XdkInitializerTest {
     @Test
     fun `folded initializer participates in hover navigation references tokens and complete rename`(

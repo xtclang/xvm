@@ -23,7 +23,12 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Forces compiler completion and transport cancellation around document locks. Callbacks must release the
+ * compiler worker before publication so cancellation cannot deadlock behind a reader.
+ */
 class XdkCallbackServerTest {
+    /** Selects analysis or query completion when reproducing compiler callback races. */
     enum class Callback {
         ANALYSIS,
         QUERY,

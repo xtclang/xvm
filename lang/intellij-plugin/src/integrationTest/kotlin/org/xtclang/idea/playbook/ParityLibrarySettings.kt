@@ -114,6 +114,7 @@ internal fun ParityScenarios.librarySettingsCases() {
     }
 }
 
+/** Edits explicit compiler libraries through the native settings probe. */
 @Remote("org.xtclang.idea.playbook.probe.CompilerLibrariesPage", plugin = "org.xtclang.playbook.probe")
 interface CompilerLibrariesPage {
     fun content(project: Project): String?
