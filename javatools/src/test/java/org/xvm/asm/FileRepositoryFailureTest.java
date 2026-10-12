@@ -1,6 +1,7 @@
 package org.xvm.asm;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 
 import java.nio.file.Files;
@@ -9,11 +10,14 @@ import java.nio.file.Path;
 import java.time.Duration;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -25,45 +29,47 @@ class FileRepositoryFailureTest {
     @TempDir
     Path directory;
 
+    private final Map<File, IOException> reports = new HashMap<>();
+
     @Test
-    void invalidHeaderRetainsItsCauseAndCanBeRepaired() throws IOException {
+    void invalidHeaderIsReportedAndCanBeRepaired() throws IOException {
         Path file = directory.resolve("broken.xtc");
         Files.writeString(file, "not a compiled module");
-        var repository = new FileRepository(file.toFile(), true);
+        var repository = new FileRepository(file.toFile(), true, reports::put);
 
-        assertTrue(repository.getReadFailures().isEmpty(), "inspection must not initiate a read");
+        assertTrue(reports.isEmpty(), "construction must not initiate a read");
         assertTrue(repository.getModuleNames().isEmpty());
         assertNull(repository.loadModule("Broken"));
-        var failures = repository.getReadFailures();
-        assertEquals(Set.of(file.toFile()), failures.keySet());
-        assertNotNull(failures.get(file.toFile()));
-        assertThrows(UnsupportedOperationException.class, failures::clear);
+        assertEquals(Set.of(file.toFile()), reports.keySet());
+        assertNotNull(reports.get(file.toFile()));
 
+        reports.clear();
         new FileStructure("Broken").writeTo(file.toFile());
         assertNotNull(repository.loadModule("Broken"));
-        assertTrue(repository.getReadFailures().isEmpty());
-        assertEquals(1, failures.size(), "an earlier snapshot must not change");
+        assertTrue(reports.isEmpty());
     }
 
     @Test
-    void truncatedModuleRetainsItsCauseAfterItsHeaderWasRead() throws IOException {
+    void truncatedPayloadIsReportedAfterItsHeaderWasRead() throws IOException {
         Path file = directory.resolve("broken.xtc");
+        reports.clear();
         new FileStructure("Broken").writeTo(file.toFile());
         byte[] contents = Files.readAllBytes(file);
         var input = new ByteArrayInputStream(contents);
         FileStructure.readFileInfo(input);
         Files.write(file, Arrays.copyOf(contents, contents.length - input.available()));
-        var repository = new FileRepository(file.toFile(), true);
+        var repository = new FileRepository(file.toFile(), true, reports::put);
 
         assertTrue(repository.getModuleNames().contains("Broken"));
         assertNull(repository.loadModule("Broken"));
-        assertNotNull(repository.getReadFailures().get(file.toFile()));
+        assertNotNull(reports.get(file.toFile()));
         assertNull(repository.loadModule("Broken"));
-        assertNotNull(repository.getReadFailures().get(file.toFile()));
+        assertNotNull(reports.get(file.toFile()));
 
+        reports.clear();
         Files.write(file, contents);
         assertNotNull(repository.loadModule("Broken"));
-        assertTrue(repository.getReadFailures().isEmpty());
+        assertTrue(reports.isEmpty());
     }
 
     @Test
@@ -75,10 +81,11 @@ class FileRepositoryFailureTest {
         broken[0] = 0; // Invalidate the magic value without changing the file size.
         Files.write(file, broken);
         var timestamp = Files.getLastModifiedTime(file);
-        var repository = new FileRepository(file.toFile(), true);
+        var repository = new FileRepository(file.toFile(), true, reports::put);
         assertNull(repository.loadModule("Good"));
-        assertNotNull(repository.getReadFailures().get(file.toFile()));
+        assertNotNull(reports.get(file.toFile()));
 
+        reports.clear();
         Files.write(file, valid);
         Files.setLastModifiedTime(file, timestamp);
         assertTimeoutPreemptively(Duration.ofSeconds(5), () -> {
@@ -86,19 +93,35 @@ class FileRepositoryFailureTest {
                 Thread.sleep(10);
             }
         });
-        assertTrue(repository.getReadFailures().isEmpty());
+        assertTrue(reports.isEmpty());
     }
 
     @Test
-    void removingAnUnreadableFileClearsItsFailure() throws IOException {
+    void removedCandidatesProduceNoFurtherReports() throws IOException {
         Path file = directory.resolve("Broken.xtc");
         Files.writeString(file, "not a compiled module");
-        var repository = new FileRepository(file.toFile(), true);
+        var repository = new FileRepository(file.toFile(), true, reports::put);
         assertNull(repository.loadModule("Broken"));
-        assertNotNull(repository.getReadFailures().get(file.toFile()));
+        assertNotNull(reports.get(file.toFile()));
 
+        reports.clear();
         Files.delete(file);
         assertTrue(repository.getModuleNames().isEmpty());
-        assertTrue(repository.getReadFailures().isEmpty());
+        assertTrue(reports.isEmpty());
     }
+    @Test
+    void failedWritesAreThrownSeparatelyFromReadReports() throws IOException {
+        Path file = directory.resolve("Old.xtc");
+        Files.writeString(file, "unreadable candidate");
+        byte[] original = Files.readAllBytes(file);
+        var repository = new FileRepository(file.toFile(), true, reports::put);
+
+        assertNull(repository.loadModule("Missing"));
+        assertEquals(Set.of(file.toFile()), reports.keySet());
+        reports.clear();
+        assertThrows(IOException.class, () -> repository.storeModule(new FileStructure("Good").getModule()));
+        assertTrue(reports.isEmpty(), "a write failure is not a read event");
+        assertArrayEquals(original, Files.readAllBytes(file));
+    }
+
 }
