@@ -94,7 +94,7 @@ class XdkLiteralRecoveryTest {
                 generateSequence(site.parent) { it.parent }
                     .filterIsInstance<MethodDeclarationStatement>()
                     .firstOrNull()
-            if (owner != null) assertThat((owner.component as MethodStructure).ast).isNull()
+            if (owner != null) assertThat((owner.component as MethodStructure).hasOps()).isFalse()
             assertThat(
                 adapter.getCompletions(URI, 0, prefix.length).map {
                     it.label

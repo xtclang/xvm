@@ -73,8 +73,8 @@ class XdkPartialAnalysisTest {
             (
                 parents(site).filterIsInstance<MethodDeclarationStatement>().first().component
                     as MethodStructure
-            ).ast,
-        ).isNull()
+            ).hasOps(),
+        ).isFalse()
     }
 
     @Test
@@ -142,7 +142,7 @@ class XdkPartialAnalysisTest {
             }
             assertThat((site.parent as IncompleteExpression).isValidated).isFalse()
             val method = parents(site).filterIsInstance<MethodDeclarationStatement>().first()
-            assertThat((method.component as MethodStructure).ast).isNull()
+            assertThat((method.component as MethodStructure).hasOps()).isFalse()
             assertThat(
                 analysis
                     .semanticSnapshot(errors)
@@ -198,7 +198,7 @@ class XdkPartialAnalysisTest {
         assertThat(copied.members.map { it.name }).contains(if (site.isCall) "indexOf" else "size")
         assertThat(errors.errors.map { it.code }).containsExactly(Parser.INCOMPLETE_EXPRESSION)
         val method = parents(site).filterIsInstance<MethodDeclarationStatement>().first()
-        assertThat((method.component as MethodStructure).ast).isNull()
+        assertThat((method.component as MethodStructure).hasOps()).isFalse()
     }
 
     @ParameterizedTest
@@ -329,7 +329,7 @@ class XdkPartialAnalysisTest {
             assertThat(Source.calculateOffset(later.startPosition))
                 .isEqualTo(text.indexOf("Int later"))
             val method = parents(site).filterIsInstance<MethodDeclarationStatement>().first()
-            assertThat((method.component as MethodStructure).ast).isNull()
+            assertThat((method.component as MethodStructure).hasOps()).isFalse()
 
             val compileErrors = ErrorList()
             assertThat(
@@ -489,7 +489,7 @@ class XdkPartialAnalysisTest {
         assertThat(model.semantics.type(copied.receiverType!!)!!.displayName).isEqualTo("String")
         assertThat(copied.members.map { it.name }).contains("size")
         val method = parents(site).filterIsInstance<MethodDeclarationStatement>().first()
-        assertThat((method.component as MethodStructure).ast).isNull()
+        assertThat((method.component as MethodStructure).hasOps()).isFalse()
         assertThat(
             descendants(analysis.sourceTrees().single())
                 .filterIsInstance<MethodDeclarationStatement>()
@@ -532,7 +532,7 @@ class XdkPartialAnalysisTest {
         assertThat(model.semantics.calls.map { model.semantics.symbol(it.method)?.name })
             .doesNotContain("indexOf")
         val method = parents(site).filterIsInstance<MethodDeclarationStatement>().first()
-        assertThat((method.component as MethodStructure).ast).isNull()
+        assertThat((method.component as MethodStructure).hasOps()).isFalse()
         assertThat(
             descendants(analysis.sourceTrees().single())
                 .filterIsInstance<MethodDeclarationStatement>()
@@ -699,7 +699,7 @@ class XdkPartialAnalysisTest {
         }
         val method = parents(site).filterIsInstance<MethodDeclarationStatement>().first()
         assertThat(method.name).isEqualTo("run")
-        assertThat((method.component as MethodStructure).ast).isNull()
+        assertThat((method.component as MethodStructure).hasOps()).isFalse()
 
         val compileErrors = ErrorList()
         val compilation =
@@ -736,7 +736,7 @@ class XdkPartialAnalysisTest {
                     .type.valueString,
             ).contains("String")
         }
-        assertThat((method.component as MethodStructure).ast).isNull()
+        assertThat((method.component as MethodStructure).hasOps()).isFalse()
     }
 
     @Test

@@ -2,25 +2,15 @@ package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
-import org.xvm.asm.Component
 import org.xvm.asm.ErrorList
-import org.xvm.asm.FileStructure
-import org.xvm.asm.MethodStructure
 import org.xvm.asm.ModuleStructure
-import org.xvm.asm.MultiMethodStructure
-import org.xvm.asm.ast.BinaryAST
-import org.xvm.asm.ast.InvokeExprAST
-import org.xvm.asm.ast.PropertyExprAST
-import org.xvm.asm.ast.ReturnStmtAST
-import org.xvm.asm.ast.StmtBlockAST
-import org.xvm.asm.ast.UnaryOpExprAST
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 
-/** Compiles real source and inspects atomic operation types after binary serialization. */
+/** Verifies atomic results and receiver mutations by executing serialized compiler output. */
+@Timeout(30)
 class CompilerAtomicEmissionTest {
     @ParameterizedTest
     @ValueSource(
@@ -36,85 +26,61 @@ class CompilerAtomicEmissionTest {
                 "count--",
             ],
     )
-    fun `atomic sequential results retain their type in the serialized binary AST`(expression: String) {
+    fun `atomic sequential operations return the correct value and mutate their receiver`(expression: String) {
+        val changed = if (expression.contains("++")) 2 else 0
+        val expected = if (expression.startsWith("++") || expression.startsWith("--")) changed else 1
+        val property = expression.replace("++", "").replace("--", "")
         val result =
             compile(
-                "module Emission { @Atomic Int count = 1; class Counter<T> { @Atomic Int count = 1; } " +
-                    "Int run(Counter<String> counter) = $expression; }",
+                "module Emission { class Counter<T> { @Atomic Int count = 1; " +
+                    "Int check() { Counter<String> counter = new Counter<String>(); Int value = $expression; " +
+                    "assert value == $expected; assert $property == $changed; return 42; } } " +
+                    "Int run() = new Counter<String>().check(); }",
             )
-        val method = restoredMethod(result)
-        val returned =
-            statements(method.ast)
-                .filterIsInstance<ReturnStmtAST>()
-                .single()
-                .exprs
-                .single()
-        assertThat(returned).isInstanceOf(InvokeExprAST::class.java)
-        assertThat(returned.count).isEqualTo(1)
-        assertThat(returned.getType(0)).isEqualTo(method.identityConstant.rawReturns.single())
+        assertThat(CompilerTestSupport.execute(result)).isEqualTo(42)
     }
 
     @ParameterizedTest
     @ValueSource(strings = ["++count", "count++", "--count", "count--"])
     fun `atomic operations can target enclosing instances`(expression: String) {
+        val changed = if (expression.contains("++")) 2 else 0
+        val expected = if (expression.startsWith("++") || expression.startsWith("--")) changed else 1
         val result =
             compile(
                 "module Emission { class Counter { @Atomic Int count = 1; " +
-                    "class Worker { Int run() = $expression; } } }",
+                    "class Worker { Int check() { Int value = $expression; assert value == $expected; " +
+                    "assert count == $changed; return 42; } } Int check() = new Worker().check(); } " +
+                    "Int run() = new Counter().check(); }",
             )
-        val method = restoredMethod(result, "Counter", "Worker")
-        val returned =
-            statements(method.ast)
-                .filterIsInstance<ReturnStmtAST>()
-                .single()
-                .exprs
-                .single()
-                as InvokeExprAST
-        assertThat(returned.count).isEqualTo(1)
-        assertThat(returned.getType(0)).isEqualTo(method.identityConstant.rawReturns.single())
-        val property = (returned.target as UnaryOpExprAST).expr as PropertyExprAST
-        assertThat(
-            property.target
-                .getType(0)
-                .getSingleUnderlyingClass(true)
-                .name,
-        ).isEqualTo("Counter")
+        assertThat(CompilerTestSupport.execute(result)).isEqualTo(42)
     }
 
     @ParameterizedTest
     @ValueSource(strings = ["count += 1", "counter.count += 1", "counter.count <<= 1"])
-    fun `atomic compound assignments retain their concrete target and void result`(statement: String) {
+    fun `atomic compound assignments update the intended receiver`(statement: String) {
+        val property = statement.substringBefore(" ")
         val result =
             compile(
-                "module Emission { @Atomic Int count = 1; class Counter<T extends IntNumber>(T seed) { @Atomic T count = seed; } " +
-                    "void run(Counter<Int> counter) { $statement; } }",
+                "module Emission { class Counter<T extends IntNumber> { " +
+                    "construct(T seed) { count = seed; } @Atomic T count; } " +
+                    "class Runner { @Atomic Int count = 1; " +
+                    "Int check() { Counter<Int> counter = new Counter<Int>(1); $statement; " +
+                    "assert $property == 2; return 42; } } Int run() = new Runner().check(); }",
             )
-        val method = restoredMethod(result)
-        val call = statements(method.ast).filterIsInstance<InvokeExprAST>().single()
-        assertThat(call.count).isZero()
-        assertThat(call.target.getType(0).getParamType(0))
-            .isEqualTo(method.constantPool.typeInt64())
-        assertThat(call.args).hasSize(1)
+        assertThat(CompilerTestSupport.execute(result)).isEqualTo(42)
     }
 
     @Test
-    fun `generic atomic referents retain their concrete result and target types`() {
+    fun `generic atomic referents produce correctly typed executable results`() {
         val result =
             compile(
-                "module Emission { class Counter<T extends IntNumber>(T seed) { @Atomic T count = seed; } " +
-                    "Int run(Counter<Int> counter) = ++counter.count; }",
+                "module Emission { class Counter<T extends IntNumber> { " +
+                    "construct(T seed) { count = seed; } @Atomic T count; } " +
+                    "Int increment(Counter<Int> counter) = ++counter.count; " +
+                    "Int run() { Counter<Int> counter = new Counter<Int>(1); assert increment(counter) == 2; " +
+                    "assert counter.count == 2; return 42; } }",
             )
-        val method = restoredMethod(result)
-        val returned =
-            statements(method.ast)
-                .filterIsInstance<ReturnStmtAST>()
-                .single()
-                .exprs
-                .single()
-                as InvokeExprAST
-        assertThat(returned.count).isEqualTo(1)
-        assertThat(returned.getType(0)).isEqualTo(method.identityConstant.rawReturns.single())
-        assertThat(returned.target.getType(0).getParamType(0)).isEqualTo(returned.getType(0))
+        assertThat(CompilerTestSupport.execute(result)).isEqualTo(42)
     }
 
     @ParameterizedTest
@@ -138,22 +104,4 @@ class CompilerAtomicEmissionTest {
         assertThat(errors.errors).isEmpty()
         return requireNotNull(module) { "Compilation failed: ${errors.errors}" }
     }
-
-    private fun restoredMethod(
-        result: ModuleStructure,
-        vararg owners: String,
-    ): MethodStructure {
-        val restored =
-            owners.fold(roundTrip(result).module as Component) { parent, name ->
-                parent.getChild(name)
-            }
-        return (restored.getChild("run") as MultiMethodStructure).methods().single()
-    }
-
-    private fun roundTrip(result: ModuleStructure): FileStructure {
-        val bytes = ByteArrayOutputStream().also { result.fileStructure.writeTo(it) }.toByteArray()
-        return FileStructure(ByteArrayInputStream(bytes))
-    }
-
-    private fun statements(ast: BinaryAST): List<BinaryAST> = if (ast is StmtBlockAST) ast.stmts.flatMap(::statements) else listOf(ast)
 }
