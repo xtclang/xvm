@@ -1,7 +1,5 @@
 package org.xvm.compiler;
 
-import static java.util.Objects.requireNonNull;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
