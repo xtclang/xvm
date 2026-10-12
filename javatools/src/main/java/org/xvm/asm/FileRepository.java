@@ -48,6 +48,7 @@ public class FileRepository
      * console report; it does not change lookup or fallback. Cached absence produces no report.
      * A report establishes neither the file's module identity nor why its contents became unreadable.
      * Write failures continue to be thrown by {@link #storeModule(ModuleStructure)}.
+     * An unchanged failed file remains cached as unavailable until its size or timestamp changes.
      *
      * @param file           the file that contains the module(s)
      * @param readOnly       true to make the repository read-only
@@ -250,12 +251,11 @@ public class FileRepository
      * Make sure that the cache is up to date.
      */
     private boolean validateCache() {
-        // Successful reads keep the usual burst cache. Failed reads are
-        // retried after the burst, or immediately if the file metadata changes.
+        // Both successful and failed reads use the usual metadata-based burst cache.
         long now = System.currentTimeMillis();
         boolean unchanged = timestamp == file.lastModified() && size == file.length();
         boolean recent = now < lastScan + 60/*ms*/;
-        if (!readFailed ? recent || unchanged : recent && unchanged) {
+        if (recent || unchanged) {
             return cacheOk;
         }
 
@@ -390,7 +390,7 @@ public class FileRepository
     private long    lastScan;
     private boolean cacheOk;
 
-    /** Whether the last read failed and must be retried after the cache interval. */
+    /** A replacement must pass a complete read after a prior failure, not just a header read. */
     private boolean readFailed;
 
     private final BiConsumer<File, IOException> onReadFailure;
