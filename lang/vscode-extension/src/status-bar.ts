@@ -19,13 +19,14 @@ export function updateStatusBar(state: 'starting' | 'ready' | 'stopped' | 'error
             statusBarItem.backgroundColor = undefined;
             statusBarItem.command = 'xtc.showServerOutput';
             break;
-        case 'ready':
+        case 'ready': {
             const label = adapter === 'XDK' ? 'Compiler' : adapter === 'TreeSitter' ? 'Tree-sitter' : adapter;
             statusBarItem.text = `$(check) Ecstasy${label ? ` · ${label}` : ''}`;
             statusBarItem.tooltip = `Ecstasy Language Server: Ready${label ? ` (${label})` : ''} — click to switch adapter`;
             statusBarItem.backgroundColor = undefined;
             statusBarItem.command = 'xtc.selectLanguageAdapter';
             break;
+        }
         case 'stopped':
             statusBarItem.text = '$(error) Ecstasy';
             statusBarItem.tooltip = 'Ecstasy Language Server: Stopped - click to restart';
