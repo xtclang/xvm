@@ -65,6 +65,7 @@ public class DirRepository
      * Cached absence produces no report. A candidate can be unrelated to the requested module,
      * and a report does not identify a failed write, corruption or the file's module identity.
      * Write failures continue to be thrown by {@link #storeModule(ModuleStructure)}.
+     * An unchanged failed candidate remains cached as unavailable until its size or timestamp changes.
      *
      * @param dir            the directory that contains the repository contents
      * @param fReadOnly      true to make the repository read-only
@@ -198,8 +199,7 @@ public class DirRepository
         fWriteCache |= files.length != oldModulesByFile.size();
         for (File file : files) {
             ModuleInfo info = oldModulesByFile.get(file);
-            if (info == null || info.hasReadFailure()
-                    || info.timestamp != file.lastModified() || info.size != file.length()) {
+            if (info == null || info.timestamp != file.lastModified() || info.size != file.length()) {
                 // build a new one to cache
                 info = createModuleInfo(file);
                 fWriteCache = true;
@@ -366,10 +366,8 @@ public class DirRepository
      * @return true if the cache is still good, or false if it needs to be rebuilt
      */
     private boolean isCacheValid() {
-        // Failed candidates are retried once per second, or immediately when metadata changes.
-        boolean recent = System.currentTimeMillis() < lastScan + 1000;
-        boolean failed = modulesByFile.values().stream().anyMatch(ModuleInfo::hasReadFailure);
-        if (recent && !failed) {
+        // Check metadata at the usual interval; a failed read alone does not invalidate the cache.
+        if (System.currentTimeMillis() < lastScan + 1000) {
             return true;
         }
 
@@ -385,7 +383,7 @@ public class DirRepository
             }
         }
 
-        return !failed || recent;
+        return true;
     }
 
     // ----- inner class: ModuleInfo ---------------------------------------------------------------
@@ -436,13 +434,8 @@ public class DirRepository
             }
         }
 
-        boolean hasReadFailure() {
-            // A failed entry read from the disk cache must be retried, even with unchanged metadata.
-            return err || readFailed;
-        }
-
         ModuleStructure ensureModule() {
-            if (err) {
+            if (err || readFailed) {
                 return null;
             }
 
@@ -466,7 +459,7 @@ public class DirRepository
          */
         private transient ModuleStructure module;
 
-        /** Whether a payload read failed after the header was cached. */
+        /** A failed lazy read remains unavailable until changed metadata replaces this entry. */
         private boolean readFailed;
 
         private final BiConsumer<File, IOException> onReadFailure;
