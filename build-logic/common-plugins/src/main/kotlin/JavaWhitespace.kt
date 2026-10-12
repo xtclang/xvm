@@ -10,7 +10,10 @@ object JavaWhitespace {
         if (UNICODE_ESCAPE.containsMatchIn(source)) return source
         val lines = source.split('\n').toMutableList()
         val code = maskNonCode(source).split('\n')
-        val entries = code.map(::entry)
+        val entries = code.mapIndexed { line, text ->
+            // A comment or literal inside the matched prefix must be copied verbatim as well.
+            entry(text)?.takeIf { lines[line].take(it.end) == text.take(it.end) }
+        }
         var index = 0
         while (index < lines.size) {
             val first = entries[index]

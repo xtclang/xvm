@@ -70,6 +70,9 @@ class JavaWhitespaceTest {
                     String escaped = "a\\\"b";
                     char escapedQuote = '\'';
                     char slash = '/';
+                    /* keep this explanation */ Code                 local     = create();
+                    java.util.Map</* key */ String, Object> values = create();
+                    values["preserve  spaces"]    = value;
                     use(slash);
                     Code                 code     = create();
                 }
