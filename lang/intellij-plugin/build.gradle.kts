@@ -480,13 +480,10 @@ intellijPlatform {
     // cost ~1 GB and a verification per IDE. failureLevel is explicit so the build fails
     // on real breaks but not on every deprecated/experimental API touch.
     //
-    // INTERNAL_API_USAGES is included so the build fails if the plugin calls an
-    // IntelliJ API marked @ApiStatus.Internal. Such APIs are not meant for client
-    // plugins and can change without notice; gating on them here is what catches a
-    // regression like a switch to PluginManager.findEnabledPlugin (internal) over
-    // PluginManagerCore.getPlugin (public). Previously these were only logged as
-    // "Compatible. N usages of internal API" and silently passed CI while still
-    // generating a JetBrains verifier email on every Marketplace upload.
+    // Internal API reports are checked by verifyPluginInternalApis below. LSP4IJ marks
+    // several required integration points internal; a version-bound list names those
+    // exact signatures. Other internal APIs (including IntelliJ Platform internals)
+    // still fail, and the complete usage report remains available for review.
     pluginVerification {
         ides {
             latest {
@@ -500,7 +497,6 @@ intellijPlatform {
                 VerifyPluginTask.FailureLevel.COMPATIBILITY_PROBLEMS,
                 VerifyPluginTask.FailureLevel.INVALID_PLUGIN,
                 VerifyPluginTask.FailureLevel.MISSING_DEPENDENCIES,
-                VerifyPluginTask.FailureLevel.INTERNAL_API_USAGES,
             )
     }
 }
@@ -522,7 +518,18 @@ val summarizeSearchableOptions =
         manifestFile.set(layout.buildDirectory.file("tmp/buildSearchableOptions/content.json"))
     }
 
-val verifyPlugin = tasks.named("verifyPlugin")
+val verifyPlugin = tasks.named<VerifyPluginTask>("verifyPlugin")
+val verifyPluginInternalApis =
+    tasks.register<VerifyPluginInternalApis>("verifyPluginInternalApis") {
+        group = "verification"
+        description = "Reject unreviewed internal APIs in the IntelliJ Plugin Verifier reports."
+        reportsDirectory.set(verifyPlugin.flatMap { it.verificationReportsDirectory })
+        acceptedApis.set(layout.projectDirectory.file("verifier-lsp4ij-apis.txt"))
+        lsp4ijVersion.set(libs.versions.lang.intellij.lsp4ij)
+    }
+
+// A direct verifyPlugin invocation must enforce the same policy as publishing.
+verifyPlugin.configure { finalizedBy(verifyPluginInternalApis) }
 
 val publishPlugin =
     tasks.named("publishPlugin") {
@@ -531,7 +538,7 @@ val publishPlugin =
         // Enforce binary-compat verification before publishing, regardless of who
         // invokes publishPlugin (CI, local, snapshot pipeline). Catches removed/
         // changed APIs and missing dependencies that would otherwise reach users.
-        dependsOn(verifyPlugin)
+        dependsOn(verifyPluginInternalApis)
     }
 
 // Searchable options allow IntelliJ's Settings search (Cmd+Shift+A / Ctrl+Shift+A) to index
