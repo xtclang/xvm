@@ -113,6 +113,16 @@ The plugin invokes `xtc init` to scaffold the project, then imports it as a Grad
 
 ### Build Artifacts
 
+`verifyPlugin` also runs `verifyPluginInternalApis`. Binary incompatibilities, invalid plugins
+and missing dependencies fail verification. Internal API usages are checked against
+[`verifier-lsp4ij-apis.txt`](verifier-lsp4ij-apis.txt), which records the exact LSP4IJ 0.21.0
+signatures used for live-connection ownership, semantic-cache invalidation and coalesced editor
+refresh. These remain unsupported upstream APIs; the list documents a compatibility risk, not a
+public-API guarantee. Other internal APIs, changed signatures and LSP4IJ version changes fail the
+check. Complete verifier reports are retained under `build/reports/pluginVerifier` and uploaded
+by CI. Revisit the exceptions when upgrading LSP4IJ, and remove them as public replacements are
+adopted. Publishing requires both checks.
+
 | Task | Output | Use Case |
 |------|--------|----------|
 | `buildPlugin` | `build/distributions/*.zip` | Install in any IntelliJ instance |
