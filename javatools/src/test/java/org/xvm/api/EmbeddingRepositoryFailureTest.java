@@ -1,10 +1,12 @@
 package org.xvm.api;
 
+import java.io.File;
 import java.io.IOException;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import java.util.HashMap;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -25,46 +27,52 @@ class EmbeddingRepositoryFailureTest {
     Path directory;
 
     @Test
-    void incompleteSourceDoesNotHideAnUnexpectedRepositoryFailure() throws IOException {
+    void incompleteSourcePreservesSeparateRepositoryReadReports() throws IOException {
         Path file = directory.resolve("broken.xtc");
         Files.writeString(file, "not a compiled module");
-        var support = new EmbeddingSupport().configure(new FileRepository(file.toFile(), true), null);
+        var reports = new HashMap<File, IOException>();
+        var support = new EmbeddingSupport().configure(new FileRepository(file.toFile(), true, reports::put), null);
         var errors = new ErrorList();
 
         var result = support.analyzeIncomplete(new Source("module Test { void run() { console."), null, errors);
 
         assertNull(result.pool());
         assertTrue(errors.hasError(Parser.UNEXPECTED_EOF));
-        assertTrue(errors.hasError("EMB-5"));
-        assertTrue(errors.getErrors().stream().anyMatch(error -> error.getMessage().contains("broken.xtc")));
+        assertTrue(reports.containsKey(file.toFile()));
+        assertFalse(errors.getErrors().stream().anyMatch(error -> error.getMessage().contains("broken.xtc")));
     }
 
     @Test
-    void corruptRepositoryReachesTheModuleCompilerListener() throws IOException {
+    void moduleCompilerDoesNotAttributeAnUnreadableFileToAMissingModule() throws IOException {
         Path file = directory.resolve("broken.xtc");
         Files.writeString(file, "not a compiled module");
-        var compiler = new ModuleCompiler(new FileRepository(file.toFile(), true));
+        var reports = new HashMap<File, IOException>();
+        var compiler = new ModuleCompiler(new FileRepository(file.toFile(), true, reports::put));
         var errors = new ErrorList();
 
         assertNull(compiler.compile("module Test {}", null, errors));
-        assertTrue(errors.hasError("EMB-5"));
-        assertTrue(errors.getErrors().stream().anyMatch(error -> error.getMessage().contains("broken.xtc")));
+        assertTrue(errors.hasSeriousErrors());
+        assertTrue(reports.containsKey(file.toFile()));
+        assertFalse(errors.getErrors().stream().anyMatch(error -> error.getMessage().contains("broken.xtc")));
     }
 
     @Test
-    void corruptRepositoryReachesTheEmbeddingListener() throws IOException {
+    void embeddingDoesNotAttributeAnUnreadableFileToAMissingModule() throws IOException {
         Path file = directory.resolve("broken.xtc");
         Files.writeString(file, "not a compiled module");
-        List.of(new FileRepository(file.toFile(), true),
-                new DirRepository(directory.toFile(), true)).forEach(repository -> {
+        var reports = new HashMap<File, IOException>();
+        List.of(new FileRepository(file.toFile(), true, reports::put),
+                new DirRepository(directory.toFile(), true, reports::put)).forEach(repository -> {
+            reports.clear();
             var support = new EmbeddingSupport().configure(repository, null);
             var errors = new ErrorList();
 
             var result = support.compileModule(new Source("module Test {}"), null, errors);
 
             assertFalse(result.succeeded());
-            assertTrue(errors.getErrors().stream().anyMatch(error -> error.getCode().equals("EMB-5")));
-            assertTrue(errors.getErrors().stream().anyMatch(error -> error.getMessage().contains("broken.xtc")));
+            assertTrue(errors.hasSeriousErrors());
+            assertTrue(reports.containsKey(file.toFile()));
+            assertFalse(errors.getErrors().stream().anyMatch(error -> error.getMessage().contains("broken.xtc")));
         });
     }
 }
