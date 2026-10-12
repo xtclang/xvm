@@ -7,10 +7,6 @@ import java.util.Set;
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.UnaryOpExprAST;
-import org.xvm.asm.ast.UnaryOpExprAST.Operator;
-
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
@@ -160,35 +156,6 @@ public abstract class PrefixExpression
     @Override
     public boolean isShortCircuiting() {
         return expr.isShortCircuiting();
-    }
-
-    @Override
-    public ExprAST getExprAST(Context ctx) {
-        Operator op;
-        switch (operator.getId()) {
-        case NOT:
-            op = Operator.Not;
-            break;
-        case ADD:
-            return expr.getExprAST(ctx); // unary "+" is a no-op
-        case SUB:
-            op = Operator.Minus;
-            break;
-        case BIT_NOT:
-            op = Operator.Compl;
-            break;
-        case INC:
-            op = Operator.PreInc;
-            break;
-        case DEC:
-            op = Operator.PreDec;
-            break;
-
-        default:
-            throw new UnsupportedOperationException(operator.getValueText());
-        }
-
-        return new UnaryOpExprAST(expr.getExprAST(ctx), op, getType());
     }
 
     @Override

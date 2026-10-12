@@ -8,10 +8,6 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.ConstantExprAST;
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.ThrowExprAST;
-
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -322,34 +318,6 @@ public class ThrowExpression
             code.add(new New_N(constNew, new Argument[] {argMsg, pool.valNull()}, argEx));
         }
         code.add(new Throw(argEx));
-    }
-
-    @Override
-    public ExprAST getExprAST(Context ctx) {
-        ExprAST astEx;
-        ExprAST astMsg;
-        if (keyword.getId() == Token.Id.THROW) {
-            assert message == null;
-
-            astEx  = expr.getExprAST(ctx);
-            astMsg = null;
-        } else {
-            assert expr == null;
-
-            ConstantPool  pool    = pool();
-            ClassConstant constEx = computeExceptionClass();
-
-            astEx  = new ConstantExprAST(constEx);
-            astMsg = message == null
-                    ? new ConstantExprAST(pool.ensureStringConstant(computeMessage()))
-                    : message.getExprAST(ctx);
-        }
-
-        TypeConstant typeResult = getType();
-        if (typeResult == null) {
-            typeResult = pool().typeObject();
-        }
-        return new ThrowExprAST(typeResult, astEx, astMsg);
     }
 
     private ClassConstant computeExceptionClass() {

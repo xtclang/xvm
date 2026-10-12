@@ -28,13 +28,6 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.TypedefStructure;
 
-import org.xvm.asm.ast.AssignAST;
-import org.xvm.asm.ast.BinaryAST;
-import org.xvm.asm.ast.ConstantExprAST;
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.ReturnStmtAST;
-import org.xvm.asm.ast.StmtBlockAST;
-
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
@@ -322,24 +315,12 @@ public class StatementBlock
         }
 
         boolean   fCompletes = that.completes(ctx.emittingContext(code), true, code, errs);
-        BinaryAST astRoot    = ctx.getHolder().getAst(this);
 
         if (fCompletes) {
             TypeConstant[] atypeReturn = code.getMethodStructure().getReturnTypes();
             if (atypeReturn.length == 0 || isVoid(atypeReturn)) {
                 // a void method has an implicit "return;" at the end of it
                 code.add(new Return_0());
-
-                // add the return statement to the BinaryAST
-                if (astRoot instanceof StmtBlockAST astBlock) {
-                    BinaryAST[] oldStmts = astBlock.getStmts();
-                    int         oldSize  = oldStmts.length;
-                    int         newSize  = oldSize + 1;
-                    BinaryAST[] newStmts = new BinaryAST[newSize];
-                    System.arraycopy(oldStmts, 0, newStmts, 0, oldSize);
-                    newStmts[oldSize] = new ReturnStmtAST(ExprAST.NO_EXPRS);
-                    astRoot = new StmtBlockAST(newStmts, true);
-                }
             } else {
                 errs.log(Severity.ERROR, Compiler.RETURN_REQUIRED, null, getSource(),
                         getEndPosition(), getEndPosition());
@@ -351,7 +332,6 @@ public class StatementBlock
             code.add(new Nop());
         }
 
-        ctx.getMethod().setAst(astRoot, ctx.collectParameters());
         return true;
     }
 
@@ -414,9 +394,7 @@ public class StatementBlock
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
         boolean fCompletable = fReachable;
 
-        AstHolder       holder = ctx.getHolder();
         List<Statement> stmts  = this.stmts;
-        BinaryAST[]     asts   = BinaryAST.NO_ASTS;
         if (stmts != null && !stmts.isEmpty()) {
             // there is an implicit scope for the top-most statement block of a method
             AstNode parent         = getParent();
@@ -424,7 +402,6 @@ public class StatementBlock
             boolean fLambda        = parent instanceof LambdaExpression;
             boolean fSuppressScope = fMethod | fLambda | m_fSuppressScope;
 
-            ArrayList<BinaryAST> listAsts = new ArrayList<>(stmts.size());
             if (fLambda) {
                 // go through all the parameters looking for any implicit de-reference params
                 // (a new local variable will be created for each, effectively hiding the original
@@ -435,10 +412,6 @@ public class StatementBlock
                         Register regVar = (Register) ctx.getVar(param.getName());
                         Register regVal = param.deref(regVar, method);
                         code.add(new Var_C(regVal, regVar));
-
-                        BinaryAST astAssign = new AssignAST(regVal.getRegAllocAST(),
-                            AssignAST.Operator.Deref, regVar.getRegisterAST());
-                        listAsts.add(astAssign);
                     }
                 }
             } else if (fMethod) {
@@ -454,18 +427,11 @@ public class StatementBlock
                             Register          reg     = entry.getValue();
                             PropertyStructure prop    = (PropertyStructure) clzAnon.getChild(sName);
                             PropertyConstant  id      = prop.getIdentityConstant();
-                            ExprAST           astProp = new ConstantExprAST(id);
 
                             if (exprNew.isImplicitDeref(sName)) {
                                 code.add(new Var_CN(reg, id.getNameConstant(), id));
-
-                                listAsts.add(new AssignAST(
-                                        reg.getRegAllocAST(), AssignAST.Operator.Deref, astProp));
                             } else {
                                 code.add(new Var_IN(reg, id.getNameConstant(), id));
-
-                                listAsts.add(new AssignAST(
-                                        reg.getRegAllocAST(), AssignAST.Operator.Asn, astProp));
                             }
                         }
                     }
@@ -485,20 +451,6 @@ public class StatementBlock
 
                 fCompletable &= stmt.completes(ctx, fReachable, code, errs);
 
-                if (fReachable && !(stmt instanceof ComponentStatement)) {
-                    BinaryAST bast = holder.getAst(stmt);
-                    if (bast == BinaryAST.POISON) {
-                        if (!errs.hasSeriousErrors()) {
-                            stmt.log(errs, Severity.ERROR, Compiler.NOT_IMPLEMENTED,
-                                "BAST for " + stmt.getClass().getSimpleName());
-                        }
-                        return false;
-                    }
-                    if (bast != null) {
-                        listAsts.add(bast);
-                    }
-                }
-
                 if (fReachable && !fCompletable) {
                     if (stmt.isTodo()) {
                         // T0D0 expression is allowed to have stuff that follows it that is unreachable
@@ -513,11 +465,8 @@ public class StatementBlock
             if (!fSuppressScope) {
                 code.add(new Exit());
             }
-
-            asts = listAsts.toArray(BinaryAST.NO_ASTS);
         }
 
-        holder.setAst(this, new StmtBlockAST(asts, hasScope()));
         return fCompletable;
     }
 
@@ -596,7 +545,6 @@ public class StatementBlock
             super(null, false);
             f_stmt   = stmt;
             f_method = method;
-            f_holder = new AstHolder(); // temporary
         }
 
         @Override
@@ -606,10 +554,6 @@ public class StatementBlock
 
         public StatementBlock getStatementBlock() {
             return f_stmt;
-        }
-
-        public AstHolder getHolder() {
-            return f_holder;
         }
 
         /**
@@ -1455,7 +1399,6 @@ public class StatementBlock
 
         private final StatementBlock  f_stmt;
         private final MethodStructure f_method;
-        private final AstHolder       f_holder;
         private       Context         m_ctxValidating;
         private       boolean         m_fEmitting;
 

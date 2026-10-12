@@ -6,10 +6,6 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.ast.BinaryAST;
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.StmtExprAST;
-
 import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -235,12 +231,6 @@ public class StatementExpression
             errs.log(Severity.ERROR, Compiler.RETURN_REQUIRED, null, getSource(),
                     getEndPosition(), getEndPosition());
         }
-        m_astBody = ctx.getHolder().getAst(body);
-    }
-
-    @Override
-    public ExprAST getExprAST(Context ctx) {
-        return new StmtExprAST(m_astBody, getTypes());
     }
 
     @Override
@@ -314,7 +304,6 @@ public class StatementExpression
     private transient TypeConstant[] m_atypeRequired;
     private transient TypeCollector  m_collector;
     private transient Assignable[]   m_aLVal;
-    private transient BinaryAST      m_astBody;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(StatementExpression.class, "body");
 }

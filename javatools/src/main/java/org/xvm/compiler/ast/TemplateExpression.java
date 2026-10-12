@@ -10,9 +10,6 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.TemplateExprAST;
-
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
@@ -239,17 +236,6 @@ public class TemplateExpression
         code.add(new Invoke_01(m_reg$, idToString, LVal.getLocalArgument()));
 
         code.add(new Exit());
-    }
-
-    @Override
-    public ExprAST getExprAST(Context ctx) {
-        int       cExprs = exprs.size();
-        ExprAST[] aExpr  = new ExprAST[1 + cExprs];
-        aExpr[0] = m_reg$.getRegAllocAST();
-        for (int i = 0; i < cExprs; i++) {
-            aExpr[i+1] = exprs.get(i).getExprAST(ctx);
-        }
-        return new TemplateExprAST(aExpr);
     }
 
     // ----- debugging assistance ------------------------------------------------------------------

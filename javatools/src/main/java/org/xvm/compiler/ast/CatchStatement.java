@@ -131,7 +131,6 @@ public class CatchStatement
         boolean fCompletes = block.completes(ctx, fReachable, code, errs);
         code.add(new CatchEnd(m_labelEndCatch));
 
-        ctx.getHolder().setAst(this, ctx.getHolder().getAst(block));
         return fCompletes;
     }
 

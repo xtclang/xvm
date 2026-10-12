@@ -6,10 +6,6 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.UnaryOpExprAST;
-import org.xvm.asm.ast.UnaryOpExprAST.Operator;
-
 import org.xvm.compiler.Compiler.Stage;
 
 /**
@@ -95,22 +91,6 @@ public abstract class SyntheticExpression
     @Override
     public boolean isShortCircuiting() {
         return expr.isShortCircuiting();
-    }
-
-    @Override
-    public ExprAST getExprAST(Context ctx) {
-        if (isConstant()) {
-            return expr.getExprAST(ctx);
-        }
-
-        Operator op = switch (this) {
-            case PackExpression  ignored -> Operator.Pack;
-            case ToIntExpression ignored -> Operator.ToInt;
-            case TraceExpression ignored -> Operator.Trace;
-            default                      -> throw new UnsupportedOperationException();
-        };
-
-        return new UnaryOpExprAST(expr.getExprAST(ctx), op, getType());
     }
 
     @Override

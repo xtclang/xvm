@@ -23,18 +23,6 @@ import org.xvm.asm.Parameter;
 import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.AssignAST;
-import org.xvm.asm.ast.BinaryAST;
-import org.xvm.asm.ast.CallExprAST;
-import org.xvm.asm.ast.ConstantExprAST;
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.InitAST;
-import org.xvm.asm.ast.NewExprAST;
-import org.xvm.asm.ast.OuterExprAST;
-import org.xvm.asm.ast.PropertyExprAST;
-import org.xvm.asm.ast.RegisterAST;
-import org.xvm.asm.ast.StmtBlockAST;
-
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.DynamicFormalConstant;
 import org.xvm.asm.constants.ExpressionConstant;
@@ -808,29 +796,20 @@ public class NewExpression
             List<Expression> listArgs = args;
             int              cArgs    = listArgs.size();
             Argument[]       aArgs    = new Argument[cArgs];
-            ExprAST[]        aAstArgs = new ExprAST[cArgs];
             for (int i = 0; i < cArgs; ++i) {
                 Expression expr = listArgs.get(i);
                 Argument   arg  = expr.generateArgument(ctx, code, false, errs);
                 aArgs[i] = expr.ensurePointInTime(code, arg, listArgs, i);
-                aAstArgs[i] = expr.getExprAST(ctx);
             }
 
             if (anon != null) {
                 aArgs = addCaptures(code, aArgs);
             }
 
-            generateNew(ctx, code, aArgs, LVal.getLocalArgument(), aAstArgs, errs);
+            generateNew(ctx, code, aArgs, LVal.getLocalArgument(), errs);
         } else {
             super.generateAssignment(ctx, code, LVal, errs);
         }
-    }
-
-    @Override
-    public ExprAST getExprAST(Context ctx) {
-        return m_astNew == null
-                ? super.getExprAST(ctx)
-                : m_astNew;
     }
 
     // ----- compilation helpers -------------------------------------------------------------------
@@ -856,7 +835,7 @@ public class NewExpression
      * Generate the NEW_* op-code
      */
     private void generateNew(Context ctx, Code code, Argument[] aArgs, Argument argResult,
-                             ExprAST[] aAstArgs, ErrorListener errs) {
+                             ErrorListener errs) {
         assert m_constructor.getTypeParamCount() == 0;
 
         TypeConstant typeTarget;
@@ -890,23 +869,19 @@ public class NewExpression
             }
 
             Argument argOuter = null;
-            ExprAST  astOuter = null;
             if (m_plan == Plan.Child) {
                 if (left == null) {
                     if (m_nParentSteps == 0) {
                         argOuter = ctx.getThisRegister();
-                        astOuter = ctx.getThisRegisterAST();
                     } else {
                         TypeConstant typeParent = typeTarget.getParentType();
                         int          cSteps     = m_nParentSteps;
 
                         argOuter = code.createRegister(typeParent);
                         code.add(new MoveThis(cSteps, argOuter));
-                        astOuter = new OuterExprAST(ctx.getThisRegisterAST(), cSteps, typeParent);
                     }
                 } else {
                     argOuter = left.generateArgument(ctx, code, true, errs);
-                    astOuter = left.getExprAST(ctx);
                 }
             }
 
@@ -914,13 +889,10 @@ public class NewExpression
                 Register regType;
                 if (m_plan == Plan.Virtual) {
                     Argument argTarget;
-                    ExprAST  astTarget;
                     if (left == null) {
                         argTarget = new Register(ctx.getThisType(), null, Op.A_TARGET);
-                        astTarget = new ConstantExprAST(argTarget.getType());
                     } else {
                         argTarget = left.generateArgument(ctx, code, true, errs);
-                        astTarget = left.getExprAST(ctx);
                     }
 
                     regType = code.createRegister(pool().typeType());
@@ -928,7 +900,6 @@ public class NewExpression
                     // it's a responsibility of the MoveType op to ensure that the explicit
                     // immutability aspect of the target should not be carried over
                     code.add(new MoveType(argTarget, regType));
-                    m_astNew = new NewExprAST(astTarget, idConstruct, aAstArgs);
                 } else {
                     if (typeTarget.isGenericType()) {
                         regType = code.createRegister(pool().typeType());
@@ -936,7 +907,6 @@ public class NewExpression
                     } else {
                         regType = m_regFormal;
                     }
-                    m_astNew = new NewExprAST(typeTarget, idConstruct, aAstArgs);
                 }
                 switch (cParams) {
                 case 0:
@@ -966,8 +936,6 @@ public class NewExpression
                             idConstruct = ((ArrayTypeExpression) type).getSupplyConstructor();
 
                             code.add(new NewG_N(idConstruct, typeTarget, aArg2, argResult));
-
-                            aAstArgs = new ExprAST[] {aAstArgs[0], Register.DEFAULT.getRegisterAST()};
                         } else {
                             code.add(new NewG_1(idConstruct, typeTarget, aArgs[0], argResult));
                         }
@@ -977,7 +945,6 @@ public class NewExpression
                         code.add(new NewG_N(idConstruct, typeTarget, aArgs, argResult));
                         break;
                     }
-                    m_astNew = new NewExprAST(typeTarget, idConstruct, aAstArgs);
                 } else {
                     switch (cParams) {
                     case 0:
@@ -992,7 +959,6 @@ public class NewExpression
                         code.add(new NewCG_N(idConstruct, argOuter, typeTarget, aArgs, argResult));
                         break;
                     }
-                    m_astNew = new NewExprAST(astOuter, typeTarget, idConstruct, aAstArgs);
                 }
             } else {
                 if (argOuter == null) {
@@ -1009,7 +975,6 @@ public class NewExpression
                         code.add(new New_N(idConstruct, aArgs, argResult));
                         break;
                     }
-                    m_astNew = new NewExprAST(typeTarget, idConstruct, aAstArgs);
                 } else {
                     switch (cParams) {
                     case 0:
@@ -1024,7 +989,6 @@ public class NewExpression
                         code.add(new NewC_N(idConstruct, argOuter, aArgs, argResult));
                         break;
                     }
-                    m_astNew = new NewExprAST(astOuter, typeTarget, idConstruct, aAstArgs);
                 }
             }
         }
@@ -1252,21 +1216,15 @@ public class NewExpression
         constrThis.setSynthetic(true);
 
         Code                 code     = constrThis.createCode();
-        ArrayList<BinaryAST> listAsts = new ArrayList<>();
 
         // call the default initializer
         assert constrThis.isAnonymousClassWrapperConstructor();
         if (!methodSuper.isAnonymousClassWrapperConstructor()) {
             code.add(new SynInit());
-
-            listAsts.add(InitAST.INSTANCE);
         }
-        RegisterAST[] aAstArgs = new RegisterAST[cParams];
         if (cParams == 1) {
             Register regParam = new Register(aParams[0].getType(), null, 0);
             code.add(new Construct_1(idSuper, regParam));
-
-            aAstArgs[0] = (RegisterAST) regParam.getRegisterAST();
         } else {
             assert cParams > 1;
             Register[] aArgs = new Register[cParams];
@@ -1274,15 +1232,10 @@ public class NewExpression
                 Register regParam = new Register(aParams[i].getType(), null, i);
 
                 aArgs[i]    = regParam;
-                aAstArgs[i] = (RegisterAST) regParam.getRegisterAST();
             }
             code.add(new Construct_N(idSuper, aArgs));
         }
         code.add(new Return_0());
-
-        listAsts.add(new CallExprAST(
-                new ConstantExprAST(idSuper), TypeConstant.NO_TYPES, aAstArgs, false));
-        constrThis.setAst(new StmtBlockAST(listAsts.toArray(BinaryAST.NO_ASTS), false), aAstArgs);
 
         return constrThis;
     }
@@ -1356,7 +1309,6 @@ public class NewExpression
                 Parameter.NO_PARAMS, "construct", aNewParams, true, false);
         constrNew.setSynthetic(true);
         Code                 codeConstr = constrNew.createCode();
-        ArrayList<BinaryAST> listAsts   = new ArrayList<>();
 
         Register[] aRegs = new Register[cNewParams];
         for (int i = 0; i < cOldParams; i++) {
@@ -1368,8 +1320,6 @@ public class NewExpression
         // will hold it, and store the value (which is being passed into the new constructor) into
         // that property
         if (cCaptures > 0) {
-            ExprAST astThis = new RegisterAST(Op.A_STRUCT,
-                    pool.ensureAccessTypeConstant(clzAnon.getFormalType(), Access.STRUCT), null);
             for (int iCapture = 0; iCapture < cCaptures; ++iCapture) {
                 iNewParam = cOldParams + iCapture;
                 Parameter    param = aNewParams[iNewParam];
@@ -1387,23 +1337,14 @@ public class NewExpression
                 // store the constructor parameter into the property
                 PropertyConstant idProp = prop.getIdentityConstant();
                 codeConstr.add(new L_Set(idProp, reg));
-
-                listAsts.add(new AssignAST(new PropertyExprAST(astThis, idProp),
-                                AssignAST.Operator.Asn, reg.getRegisterAST()));
             }
         }
 
         if (!constrOld.isAnonymousClassWrapperConstructor()) {
             // call the default initializer
             codeConstr.add(new SynInit());
-
-            listAsts.add(InitAST.INSTANCE);
         }
 
-        RegisterAST[] aAstRegNew = new RegisterAST[cNewParams];
-        for (int i = 0; i < cNewParams; i++) {
-            aAstRegNew[i] = (RegisterAST) aRegs[i].getRegisterAST();
-        }
         // call the previous constructor
         MethodConstant idOld = constrOld.getIdentityConstant();
         switch (cOldParams) {
@@ -1425,15 +1366,6 @@ public class NewExpression
             break;
         }
         codeConstr.add(new Return_0());
-
-        RegisterAST[] aAstRegOld = aAstRegNew;
-        if (cCaptures > 0) {
-            aAstRegOld = new RegisterAST[cOldParams];
-            System.arraycopy(aAstRegNew, 0, aAstRegOld, 0, cOldParams);
-        }
-        listAsts.add(new CallExprAST(
-                new ConstantExprAST(idOld), TypeConstant.NO_TYPES, aAstRegOld, false));
-        constrNew.setAst(new StmtBlockAST(listAsts.toArray(BinaryAST.NO_ASTS), false), aAstRegNew);
 
         // the new constructor calls the old constructor, so we need to call the new constructor
         m_constructor = constrNew;
@@ -1679,10 +1611,6 @@ public class NewExpression
      * True if the newable type has non-constant annotation parameters.
      */
     private transient boolean m_fDynamicAnno;
-    /**
-     * Cached NewExprAST node.
-     */
-    private transient ExprAST m_astNew;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(NewExpression.class, "left", "type", "args", "anon");
 }

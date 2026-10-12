@@ -3,8 +3,6 @@ package org.xvm.compiler.ast;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.ast.ContinueStmtAST;
-
 import org.xvm.asm.op.Jump;
 
 import org.xvm.compiler.Compiler;
@@ -53,7 +51,6 @@ public class ContinueStatement
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
         code.add(new Jump(getJumpLabel()));
 
-        ctx.getHolder().setAst(this, new ContinueStmtAST(getTargetDepth()));
         return false;
     }
 }

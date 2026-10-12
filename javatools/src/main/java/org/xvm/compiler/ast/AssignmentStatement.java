@@ -12,19 +12,8 @@ import org.xvm.asm.Assignment;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.AssignAST;
-import org.xvm.asm.ast.AssignAST.Operator;
-import org.xvm.asm.ast.BinaryAST;
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.InvokeExprAST;
-import org.xvm.asm.ast.MultiExprAST;
-import org.xvm.asm.ast.UnaryOpExprAST;
-
-import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Jump;
@@ -667,7 +656,6 @@ public class AssignmentStatement
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
         boolean      fCompletes = fReachable;
         ConstantPool pool       = pool();
-        ExprAST      astAssign  = null;
 
         switch (getCategory()) {
         case Assign: {
@@ -679,15 +667,11 @@ public class AssignmentStatement
                     && rvalue.supportsCompactInit(stmtVar)) {
                 assert lvalueExpr.isCompletable();
                 rvalue.generateCompactInit(ctx, code, stmtVar,  errs);
-                astAssign = new AssignAST(stmtVar.getRegister().getRegAllocAST(),
-                                Operator.Asn, rvalue.getExprAST(ctx));
                 break;
             }
 
-            ExprAST astLVal = null;
             if (lvalue instanceof Statement stmt) {
                 fCompletes = stmt.completes(ctx, fCompletes, code, errs);
-                astLVal    = (ExprAST) ctx.getHolder().getAst(stmt);
             }
 
             Assignable[] LVals = lvalueExpr.generateAssignables(ctx, code, errs);
@@ -696,25 +680,14 @@ public class AssignmentStatement
                 fCompletes &= rvalue.isCompletable();
             }
 
-            // for now, we only "unwrap" rvalue if it's a ConvertExpression; if necessary, we
-            // should create a corresponding abstract method on Expression an implement
-            // as required
-            astLVal   = combineLValueAST(astLVal, lvalueExpr.getExprAST(ctx));
-            astAssign = rvalue instanceof ConvertExpression exprConv &&
-                        !exprConv.isSingle() && !exprConv.isConstant()
-                    ? exprConv.unwrapConvertAST(ctx, astLVal)
-                    : new AssignAST(astLVal, Operator.Asn, rvalue.getExprAST(ctx));
             break;
         }
 
         case CondRight: {
-            ExprAST astLVal = null;
             if (lvalue instanceof Statement stmt) {
                 fCompletes = stmt.completes(ctx, fCompletes, code, errs);
-                astLVal    = (ExprAST) ctx.getHolder().getAst(stmt);
             }
 
-            Operator operAsn;
             if (op.getId() == Id.COND_NN_ASN) {
                 Argument arg = rvalue.generateArgument(ctx, code, false, errs);
                 fCompletes &= rvalue.isCompletable();
@@ -743,8 +716,6 @@ public class AssignmentStatement
                     Assignable LVal = lvalueExpr.generateAssignable(ctx, code, errs);
                     LVal.assign(arg, code, errs);
                 }
-
-                operAsn = Operator.AsnIfNotNull;
             } else {
                 Assignable[] LVals    = lvalueExpr.generateAssignables(ctx, code, errs);
                 int          cLVals   = LVals.length;
@@ -777,12 +748,8 @@ public class AssignmentStatement
                     }
                     fCompletes &= rvalue.isCompletable();
                 }
-
-                operAsn = Operator.AsnIfNotFalse;
             }
 
-            astLVal   = combineLValueAST(astLVal, lvalueExpr.getExprAST(ctx));
-            astAssign = new AssignAST(astLVal, operAsn, rvalue.getExprAST(ctx));
             break;
         }
 
@@ -794,21 +761,17 @@ public class AssignmentStatement
             if (fCompletes &= lvalueExpr.isCompletable()) {
                 Argument argLVal   = LVal.generateArgument(ctx, code, true, errs);
                 Label    labelSkip = new Label(op.getValueText() + " _skip_assign");
-                Operator operAsn;
                 switch (op.getId()) {
                 case COND_AND_ASN:
                     code.add(new JumpFalse(argLVal, labelSkip));
-                    operAsn = Operator.AsnIfWasTrue;
                     break;
 
                 case COND_OR_ASN:
                     code.add(new JumpTrue(argLVal, labelSkip));
-                    operAsn = Operator.AsnIfWasFalse;
                     break;
 
                 case COND_ELSE_ASN:
                     code.add(new JumpNotNull(argLVal, labelSkip));
-                    operAsn = Operator.AsnIfWasNull;
                     break;
 
                 default:
@@ -817,8 +780,6 @@ public class AssignmentStatement
                 rvalue.generateAssignment(ctx, code, LVal, errs);
                 fCompletes &= rvalue.isCompletable();
                 code.add(labelSkip);
-
-                astAssign = new AssignAST(lvalueExpr.getExprAST(ctx), operAsn, rvalue.getExprAST(ctx));
             }
             break;
         }
@@ -829,50 +790,6 @@ public class AssignmentStatement
                 Argument argRVal = rvalue.generateArgument(ctx, code, true, errs);
                 if (fCompletes &= rvalue.isCompletable()) {
                     LVal.assignInPlaceResult(op, argRVal, code, errs);
-
-                    ExprAST  astLValue = lvalueExpr.getExprAST(ctx);
-                    ExprAST  astRValue = rvalue.getExprAST(ctx);
-                    Operator operAsn   = switch (op.getId()) {
-                        case ADD_ASN     -> Operator.AddAsn;
-                        case SUB_ASN     -> Operator.SubAsn;
-                        case MUL_ASN     -> Operator.MulAsn;
-                        case DIV_ASN     -> Operator.DivAsn;
-                        case MOD_ASN     -> Operator.ModAsn;
-                        case SHL_ASN     -> Operator.ShiftLAsn;
-                        case SHR_ASN     -> Operator.ShiftRAsn;
-                        case USHR_ASN    -> Operator.UShiftRAsn;
-                        case BIT_AND_ASN -> Operator.AndAsn;
-                        case BIT_OR_ASN  -> Operator.OrAsn;
-                        case BIT_XOR_ASN -> Operator.XorAsn;
-                        default          -> throw new IllegalStateException("op=" + op.getId().TEXT);
-                    };
-
-                    if (LVal.isProperty()) {
-                        // check if an assignment such as "c.p += k" or "p += k" is for an
-                        // atomic property
-                        PropertyConstant  idProp = LVal.getProperty();
-                        PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
-                        if (prop != null && prop.isAtomic()) {
-                            MethodConstant idOp = findAtomicInPlaceAssignMethod(ctx, LVal.getType());
-                            if (idOp != null) {
-                                ExprAST astVar = new UnaryOpExprAST(
-                                        astLValue, UnaryOpExprAST.Operator.Var, idProp.getRefType(null));
-                                astAssign = new InvokeExprAST(idOp, TypeConstant.NO_TYPES, astVar,
-                                        new ExprAST[] {astRValue}, false);
-                                break;
-                            }
-                        }
-                    }
-
-                    // otherwise create a regular assignment operation
-                    // TODO: it should always hold:  astRvalue.getType(0) == argRVal.getType(),
-                    //       however under some scenarios (mostly with array access) we're
-                    //       loosing the fidelity; this is a temporary compensation
-                    TypeConstant typeTarget = astLValue.getType(0);
-                    TypeConstant typeArg    = argRVal.getType();
-
-                    astAssign = new AssignAST(astLValue, operAsn, astRValue,
-                        findInPlaceAssignMethod(ctx, typeTarget, typeArg, errs));
                 }
             }
             break;
@@ -882,105 +799,7 @@ public class AssignmentStatement
             throw new IllegalStateException();
         }
 
-        if (astAssign != null) {
-            ctx.getHolder().setAst(this, astAssign);
-        }
-
         return fCompletes;
-    }
-
-    private MethodConstant findAtomicInPlaceAssignMethod(Context ctx, TypeConstant typeArg) {
-        if (lvalueExpr instanceof NameExpression exprLValue) {
-            String sMethod, sOp;
-            switch (op.getId()) {
-                case ADD_ASN     -> {sMethod = "addAssign"          ; sOp = "+="  ;}
-                case SUB_ASN     -> {sMethod = "subAssign"          ; sOp = "-="  ;}
-                case MUL_ASN     -> {sMethod = "mulAssign"          ; sOp = "*="  ;}
-                case DIV_ASN     -> {sMethod = "divAssign"          ; sOp = "/="  ;}
-                case MOD_ASN     -> {sMethod = "modAssign"          ; sOp = "%="  ;}
-                case SHL_ASN     -> {sMethod = "shiftLeftAssign"    ; sOp = "<<=" ;}
-                case SHR_ASN     -> {sMethod = "shiftRightAssign"   ; sOp = ">>=" ;}
-                case USHR_ASN    -> {sMethod = "shiftAllRightAssign"; sOp = ">>>=";}
-                case BIT_AND_ASN -> {sMethod = "andAssign"          ; sOp = "&="  ;}
-                case BIT_OR_ASN  -> {sMethod = "orAssign"           ; sOp = "|="  ;}
-                case BIT_XOR_ASN -> {sMethod = "xorAssign"          ; sOp = "^="  ;}
-                default          -> throw new IllegalStateException("op=" + op.getId().TEXT);
-            }
-            return exprLValue.findAtomicInPlaceAssignMethod(ctx, sMethod, sOp, typeArg);
-        }
-        return null;
-    }
-
-    private MethodConstant findInPlaceAssignMethod(Context ctx, TypeConstant typeTarget,
-                                                   TypeConstant typeArg, ErrorListener errs) {
-        String sMethod, sOp;
-        switch (op.getId()) {
-            case ADD_ASN     -> {sMethod = "add"          ; sOp = "+"  ;}
-            case SUB_ASN     -> {sMethod = "sub"          ; sOp = "-"  ;}
-            case MUL_ASN     -> {sMethod = "mul"          ; sOp = "*"  ;}
-            case DIV_ASN     -> {sMethod = "div"          ; sOp = "/"  ;}
-            case MOD_ASN     -> {sMethod = "mod"          ; sOp = "%"  ;}
-            case SHL_ASN     -> {sMethod = "shiftLeft"    ; sOp = "<<" ;}
-            case SHR_ASN     -> {sMethod = "shiftRight"   ; sOp = ">>" ;}
-            case USHR_ASN    -> {sMethod = "shiftAllRight"; sOp = ">>>";}
-            case BIT_AND_ASN -> {sMethod = "and"          ; sOp = "&"  ;}
-            case BIT_OR_ASN  -> {sMethod = "or"           ; sOp = "|"  ;}
-            case BIT_XOR_ASN -> {sMethod = "xor"          ; sOp = "^"  ;}
-            default          -> throw new IllegalStateException("op=" + op.getId().TEXT);
-        }
-
-        Set<MethodConstant> setMethods = typeTarget.ensureTypeInfo().findOpMethods(sMethod, sOp, 1);
-        MethodConstant      idOp       = switch (setMethods.size()) {
-            case 0  -> null;
-            case 1  -> setMethods.iterator().next();
-            default -> RelOpExpression.chooseBestMethod(setMethods, typeArg);
-        };
-
-        if (idOp != null) {
-            return idOp;
-        }
-
-        lvalueExpr.log(errs, Severity.ERROR, setMethods == null ?
-                        Compiler.MISSING_OPERATOR : Compiler.AMBIGUOUS_OPERATOR_SIGNATURE,
-                op.getValueText(), typeTarget.getValueString());
-        return null;
-    }
-
-    /**
-     * Check if there were any deferred ExprAST nodes in astLVal and replace them to ones from the
-     * astLValExpr.
-     *
-     * @param astLVal      the ExprAST produced by the {@link #lvalue}
-     * @param astLValExpr  the ExprAST produced by the {@link #lvalueExpr}
-     *
-     * @return the combined ExprAST
-     */
-    public static ExprAST combineLValueAST(ExprAST astLVal,
-                                           ExprAST astLValExpr) {
-        if (astLVal == null) {
-            return astLValExpr;
-        }
-
-        if (!(astLVal instanceof MultiExprAST astLValMulti)) {
-            return astLVal;
-        }
-
-        ExprAST[] aAstLVal     = astLValMulti.getExprs();
-        ExprAST[] aAstLValExpr = ((MultiExprAST) astLValExpr).getExprs();
-
-        boolean fReplaced = false;
-        for (int i = 0, c = aAstLVal.length; i < c; i++) {
-            if (aAstLVal[i] == BinaryAST.POISON) {
-                if (!fReplaced) {
-                    fReplaced = true;
-                    aAstLVal  = aAstLVal.clone();
-                }
-                aAstLVal[i] = aAstLValExpr[i];
-            }
-        }
-        return fReplaced
-                ? new MultiExprAST(aAstLVal)
-                : astLVal;
     }
 
     // ----- compiling helpers ---------------------------------------------------------------------

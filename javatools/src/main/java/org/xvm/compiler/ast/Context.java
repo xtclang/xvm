@@ -27,17 +27,12 @@ import org.xvm.asm.PropertyStructure;
 import org.xvm.asm.Register;
 import org.xvm.asm.Assignment;
 
-import org.xvm.asm.ast.BinaryAST;
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.RegisterAST;
-
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IdentityConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.compiler.ast.Statement.AstHolder;
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
 
 import org.xvm.compiler.Compiler;
@@ -187,20 +182,6 @@ public class Context {
             m_regThis = regThis;
         }
         return regThis;
-    }
-
-    /**
-     * @return the Register for "this"
-     */
-    public ExprAST getThisRegisterAST() {
-        return getThisRegister().getRegisterAST();
-    }
-
-    /**
-     * @return the AST holder
-     */
-    public AstHolder getHolder() {
-        return getOuterContext().getHolder();
     }
 
     /**
@@ -1652,29 +1633,6 @@ public class Context {
             ensureNameMap().put(sName, reg = new Register(param.getType(), sName, iReg));
         }
         return reg;
-    }
-
-    /**
-     * @return an array of {@link RegisterAST} for the method parameters
-     */
-    public RegisterAST[] collectParameters() {
-        // create registers for the method parameters
-        MethodStructure method  = getMethod();
-        int             cParams = method.getParamCount();
-        if (cParams == 0) {
-            return BinaryAST.NO_REGS;
-        }
-
-        RegisterAST[] aReg = new RegisterAST[cParams];
-        for (int i = 0; i < cParams; i++) {
-            Parameter param = method.getParam(i);
-
-            Register reg = (Register) getVar(param.getName());
-            aReg[i] = reg == null
-                    ? new RegisterAST(param.getType(), param.getNameConstant())
-                    : (RegisterAST) reg.getOriginalRegister().getRegisterAST();
-        }
-        return aReg;
     }
 
     @Override

@@ -3,8 +3,6 @@ package org.xvm.compiler.ast;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.ast.BreakStmtAST;
-
 import org.xvm.asm.op.Jump;
 
 import org.xvm.compiler.Compiler;
@@ -49,7 +47,6 @@ public class BreakStatement
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
         code.add(new Jump(getJumpLabel()));
 
-        ctx.getHolder().setAst(this, new BreakStmtAST(getTargetDepth()));
         return false;
     }
 }

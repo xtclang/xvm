@@ -13,11 +13,6 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.BinaryAST;
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.ReturnStmtAST;
-import org.xvm.asm.ast.UnpackExprAST;
-
 import org.xvm.asm.constants.EnumValueConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -285,7 +280,6 @@ public class ReturnStatement
             // TODO m_fTupleReturn, m_fConditionalTernary, m_fFutureReturn
             Assignable[] aLVal  = exprStmt.getAssignables();
             int          cLVals = aLVal.length;
-            ExprAST[]    aAst   = new ExprAST[cLVals];
             for (int i = 0, cExprs = exprs == null ? 0 : exprs.size(); i < cExprs; ++i) {
                 Expression expr = exprs.get(i);
                 if (i < cLVals) {
@@ -293,11 +287,8 @@ public class ReturnStatement
                 } else {
                     expr.generateVoid(ctx, code, errs);
                 }
-                aAst[i] = expr.getExprAST(ctx);
             }
             code.add(new Jump(exprStmt.body.getEndLabel()));
-
-            ctx.getHolder().setAst(this, new ReturnStmtAST(aAst));
 
             // "return" does not complete
             return false;
@@ -310,7 +301,6 @@ public class ReturnStatement
         int              cRets     = atypeRets == null ? 0 : atypeRets.length;
         List<Expression> listExprs = this.exprs;
         int              cExprs    = listExprs == null ? 0 : listExprs.size();
-        BinaryAST        astResult;
 
         if (m_fTupleReturn) {
             assert cExprs == 1;
@@ -320,22 +310,15 @@ public class ReturnStatement
             Expression expr = listExprs.get(0);
             Argument   arg  = expr.generateArgument(ctx, code, true, errs);
             code.add(new Return_T(arg));
-
-            astResult = new ReturnStmtAST(new ExprAST[]{
-                            new UnpackExprAST(expr.getExprAST(ctx),
-                                atypeRets == null ? TypeConstant.NO_TYPES : atypeRets)});
         } else if (m_fConditionalTernary) {
             TernaryExpression exprTernary = (TernaryExpression) listExprs.get(0);
             exprTernary.generateConditionalReturn(ctx, code, errs);
-
-            astResult = new ReturnStmtAST(exprTernary.getExprAST(ctx));
         } else {
             // Note: it's a responsibility of the conditional return to *not* return anything else
             //       if the value at index 0 is "False"
             switch (cExprs) {
             case 0:
                 code.add(new Return_0());
-                astResult = new ReturnStmtAST(ExprAST.NO_EXPRS);
                 break;
 
             case 1: {
@@ -409,7 +392,6 @@ public class ReturnStatement
                         }
                     }
                 }
-                astResult = new ReturnStmtAST(new ExprAST[]{expr.getExprAST(ctx)});
                 break;
             }
 
@@ -417,12 +399,10 @@ public class ReturnStatement
                 assert cRets == cExprs;
 
                 Argument[] aArgs = new Argument[cRets];
-                ExprAST[]  aASTs = new ExprAST[cRets];
                 for (int i = 0; i < cRets; ++i) {
                     Expression expr = listExprs.get(i);
                     Argument   arg  = expr.generateArgument(ctx, code, true, errs);
                     aArgs[i] = expr.ensurePointInTime(code, arg, listExprs, i);
-                    aASTs[i] = expr.getExprAST(ctx);
                 }
 
                 if (fConditional && aArgs[0] instanceof EnumValueConstant enumValue) {
@@ -445,12 +425,9 @@ public class ReturnStatement
                         code.add(new Return_1(pool.valFalse()));
                     }
                 }
-                astResult = new ReturnStmtAST(aASTs);
                 break;
             }}
         }
-
-        ctx.getHolder().setAst(this, astResult);
 
         // return never completes
         return false;

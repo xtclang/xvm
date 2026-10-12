@@ -7,10 +7,6 @@ import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Argument;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.BiExprAST.Operator;
-import org.xvm.asm.ast.CondOpExprAST;
-import org.xvm.asm.ast.ExprAST;
-
 import org.xvm.asm.constants.ConditionalConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -317,31 +313,6 @@ public class CondOpExpression
 
         default:
             throw new IllegalStateException();
-        }
-    }
-
-    @Override
-    public ExprAST getExprAST(Context ctx) {
-        if (isConstant()) {
-            return toExprAst(toConstant());
-        }
-
-        switch (combine(expr1.toConstant(), getOperatorString(), expr2.toConstant())) {
-        case UorF:
-        case UandT:
-            // result is the same as the result of the first expression
-            return expr1.getExprAST(ctx);
-
-        case ForU:
-        case ForT:
-        case TandU:
-            // result is the same as the result of the second expression
-            return expr2.getExprAST(ctx);
-
-        default:
-            return new CondOpExprAST(expr1.getExprAST(ctx),
-                 isAnd() ? Operator.CondAnd : Operator.CondOr,
-                 expr2.getExprAST(ctx));
         }
     }
 

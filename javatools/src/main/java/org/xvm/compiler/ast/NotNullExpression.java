@@ -8,9 +8,6 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.NotNullExprAST;
-
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.JumpFalse;
@@ -257,11 +254,6 @@ public class NotNullExpression
     @Override
     public boolean isScopeRequired() {
         return m_fNarrowed;
-    }
-
-    @Override
-    public ExprAST getExprAST(Context ctx) {
-        return new NotNullExprAST(expr.getExprAST(ctx), getType());
     }
 
     // ----- debugging assistance ------------------------------------------------------------------

@@ -6,10 +6,6 @@ import java.util.Map;
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.Op;
-
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.RegisterAST;
 
 import org.xvm.asm.constants.TypeConstant;
 
@@ -71,11 +67,6 @@ public class IgnoredNameExpression
     @Override
     public Argument generateArgument(Context ctx, Code code, boolean fLocalPropOk, ErrorListener errs) {
         return generateBlackHole(null);
-    }
-
-    @Override
-    public ExprAST getExprAST(Context ctx) {
-        return new RegisterAST(Op.A_IGNORE, pool().typeObject(), null);
     }
 
     @Override

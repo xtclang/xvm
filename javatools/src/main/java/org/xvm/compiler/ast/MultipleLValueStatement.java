@@ -10,10 +10,6 @@ import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.ast.BinaryAST;
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.MultiExprAST;
-
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Label;
@@ -193,18 +189,11 @@ public class MultipleLValueStatement
         boolean fCompletes = fReachable;
 
         List<AstNode> LVals = this.LVals;
-        int           cVals = LVals.size();
-        ExprAST[]     aAst  = new ExprAST[cVals];
 
         for (int i = 0, c = LVals.size(); i < c; ++i) {
             AstNode node = LVals.get(i);
             if (node instanceof Statement stmt) {
                 fCompletes = stmt.completes(ctx, fCompletes, code, errs);
-                aAst[i]    = (ExprAST) ctx.getHolder().getAst(stmt);
-            } else {
-                // the elements of the array that represent expressions will be computed later based
-                // on the MultipleLValueExpression (see AssignmentStatement#combineLValueAST)
-                aAst[i] = BinaryAST.POISON;
             }
 
             Label labelGround = peekShortCircuitLabel(i);
@@ -212,7 +201,6 @@ public class MultipleLValueStatement
                 code.add(labelGround);
             }
         }
-        ctx.getHolder().setAst(this, new MultiExprAST(aAst));
         return fCompletes;
     }
 
@@ -394,18 +382,6 @@ public class MultipleLValueStatement
                 aLVals[i] = listExprs.get(i).generateAssignable(ctx, code, errs);
             }
             return aLVals;
-        }
-
-        @Override
-        public ExprAST getExprAST(Context ctx) {
-            List<Expression> listExprs = ensureExpressions();
-            int              cExprs    = listExprs.size();
-            ExprAST[]        aAstExpr  = new ExprAST[cExprs];
-
-            for (int i = 0; i < cExprs; ++i) {
-                aAstExpr[i] = listExprs.get(i).getExprAST(ctx);
-            }
-            return new MultiExprAST(aAstExpr);
         }
 
         @Override

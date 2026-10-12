@@ -12,10 +12,6 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.ConstantExprAST;
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.MapExprAST;
-
 import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeCollector;
 import org.xvm.asm.constants.TypeConstant;
@@ -363,37 +359,20 @@ public class MapExpression
     }
 
     /**
-     * Helper method to generate an array of keys or values and set the {@link #m_aKeyAST} and
-     * {@link #m_aValueAST}.
+     * Helper method to generate an array of keys or values.
      */
     private Argument[] collectArguments(Context ctx, Code code, boolean fKeys, ErrorListener errs) {
         List<Expression> listArgs = fKeys ? keys : values;
         int              cArgs    = listArgs.size();
         Argument[]       aArg     = new Argument[cArgs];
-        ExprAST[]        aAST     = new ExprAST[cArgs];
 
         for (int i = 0; i < cArgs; ++i) {
             Expression expr = listArgs.get(i);
             Argument   arg  = expr.generateArgument(ctx, code, true, errs);
             aArg[i] = expr.ensurePointInTime(code, arg, listArgs, i);
-            aAST[i] = expr.getExprAST(ctx);
         }
 
-        if (fKeys) {
-            m_aKeyAST = aAST;
-        } else {
-            m_aValueAST = aAST;
-        }
         return aArg;
-    }
-
-    @Override
-    public ExprAST getExprAST(Context ctx) {
-        if (m_aKeyAST == null) {
-            assert isConstant();
-            return new ConstantExprAST(toConstant());
-        }
-        return new MapExprAST(getType(), m_aKeyAST, m_aValueAST);
     }
 
     // ----- internal helpers ----------------------------------------------------------------------
@@ -448,9 +427,6 @@ public class MapExpression
     protected List<Expression> keys;
     protected List<Expression> values;
     protected long             lEndPos;
-
-    private transient ExprAST[] m_aKeyAST;
-    private transient ExprAST[] m_aValueAST;
 
     private static final Field[] CHILD_FIELDS = fieldsForNames(MapExpression.class, "type", "keys", "values");
 }

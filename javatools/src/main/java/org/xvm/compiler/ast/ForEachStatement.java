@@ -17,13 +17,6 @@ import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 import org.xvm.asm.Register;
 
-import org.xvm.asm.ast.BinaryAST;
-import org.xvm.asm.ast.BinaryAST.NodeType;
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.ForEachStmtAST;
-import org.xvm.asm.ast.RegAllocAST;
-import org.xvm.asm.ast.StmtBlockAST;
-
 import org.xvm.asm.constants.ClassConstant;
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.IntConstant;
@@ -574,68 +567,51 @@ public class ForEachStatement
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
         boolean   fCompletes = fReachable;
-        AstHolder holder     = ctx.getHolder();
 
         code.add(new Enter());
 
-        List<RegAllocAST> listSpecial = new ArrayList<>();
         if (isLabeled()) {
             ConstantPool pool = pool();
             if (m_regFirst != null) {
                 code.add(new Var_IN(m_regFirst, toConst(m_regFirst.getName()), pool.valTrue()));
-                listSpecial.add(m_regFirst.getRegAllocAST());
             }
             if (m_regCount != null) {
                 code.add(new Var_IN(m_regCount, toConst(m_regCount.getName()), pool.val0()));
-                listSpecial.add(m_regCount.getRegAllocAST());
             }
             if (m_regLast != null) {
                 // no need to initialize; we always compute it
                 code.add(new Var_N(m_regLast, toConst(m_regLast.getName())));
-                listSpecial.add(m_regLast.getRegAllocAST());
             }
             if (m_regEntry != null) {
                 code.add(new Var_N(m_regEntry, toConst(m_regEntry.getName())));
-                listSpecial.add(m_regEntry.getRegAllocAST());
             }
             if (m_regKeyType != null) {
                 code.add(new Var_N(m_regKeyType, toConst(m_regKeyType.getName())));
-                listSpecial.add(m_regKeyType.getRegAllocAST());
             }
             if (m_regValType != null) {
                 code.add(new Var_N(m_regValType, toConst(m_regValType.getName())));
-                listSpecial.add(m_regValType.getRegAllocAST());
             }
         }
 
-        ExprAST astLVal = m_exprLValue.getExprAST(ctx);
         if (getCondition().getLValue() instanceof Statement stmt) {
             fCompletes = stmt.completes(ctx, fCompletes, code, errs);
-            astLVal    = AssignmentStatement.combineLValueAST(
-                (ExprAST) ctx.getHolder().getAst(stmt), astLVal);
         }
 
-        NodeType nodeType;
         switch (m_plan) {
         case ITERATOR:
             fCompletes = emitIterator(ctx, fCompletes, code, errs);
-            nodeType   = NodeType.ForIterableStmt;
             break;
         case RANGE:
             fCompletes = emitRange(ctx, fCompletes, code, errs);
-            nodeType   = NodeType.ForRangeStmt;
             break;
         case LIST:
             fCompletes = emitList(ctx, fCompletes, code, errs);
-            nodeType   = NodeType.ForListStmt;
             break;
         case MAP:
             fCompletes = emitMap(ctx, fCompletes, code, errs);
-            nodeType   = NodeType.ForMapStmt;
             break;
         case ITERABLE:
             fCompletes = emitIterable(ctx, fCompletes, code, errs);
-            nodeType   = NodeType.ForIterableStmt;
             break;
         default:
             throw new IllegalStateException();
@@ -643,10 +619,6 @@ public class ForEachStatement
 
         code.add(new Exit());
 
-        if (fCompletes) {
-            holder.setAst(this, new ForEachStmtAST(nodeType, listSpecial.toArray(BinaryAST.NO_ALLOCS),
-                    astLVal, m_exprRValue.getExprAST(ctx), holder.getAst(block)));
-        }
         return fCompletes;
     }
 
@@ -791,7 +763,6 @@ public class ForEachStatement
         if (range.size() < 1) {
             // block is unreachable
             block.completes(ctx, false, code, errs);
-            ctx.getHolder().setAst(block, StmtBlockAST.EMPTY);
             return fReachable;
         }
 

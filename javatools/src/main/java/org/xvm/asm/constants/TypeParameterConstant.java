@@ -12,10 +12,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.Constant;
 import org.xvm.asm.ConstantPool;
 
-import org.xvm.asm.ast.ExprAST;
-
-import org.xvm.compiler.ast.Context;
-
 import org.xvm.util.Hash;
 import org.xvm.util.TransientThreadLocal;
 
@@ -128,11 +124,6 @@ public class TypeParameterConstant
             }
         }
         return m_typeConstraint = typeConstraint;
-    }
-
-    @Override
-    public ExprAST toExprAst(Context ctx) {
-        return ctx.getParameter(getRegister()).getRegisterAST();
     }
 
     // ----- IdentityConstant methods --------------------------------------------------------------

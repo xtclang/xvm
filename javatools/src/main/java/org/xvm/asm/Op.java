@@ -6,28 +6,17 @@ import java.io.IOException;
 
 import java.lang.classfile.CodeBuilder;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.Stack;
 
 import org.xvm.asm.Component.Format;
-import org.xvm.asm.Constants.Access;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.ast.RegisterAST;
-
-import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.MethodInfo;
-import org.xvm.asm.constants.SignatureConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
-
-import org.xvm.asm.ast.BinaryAST;
 
 import org.xvm.asm.op.*;
 
@@ -654,8 +643,7 @@ public abstract class Op {
      * Kind of like a ConstantPool, but this is local to a MethodStructure, and just collects
      * together all the constants used by the ops.
      */
-    public static class ConstantRegistry
-            implements BinaryAST.ConstantResolver {
+    public static class ConstantRegistry {
         /**
          * Construct a ConstantRegistry.
          *
@@ -665,17 +653,6 @@ public abstract class Op {
         public ConstantRegistry(MethodStructure method, ConstantPool pool) {
             f_method = method;
             f_pool   = pool;
-
-            // create registers for the method parameters
-            int cParams = f_method.getParamCount();
-            if (cParams > 0) {
-                RegisterAST[] aReg = new RegisterAST[cParams];
-                for (int i = 0; i < cParams; i++) {
-                    Parameter param = f_method.getParam(i);
-                    aReg[i] = new RegisterAST(param.getType(), param.getNameConstant());
-                }
-                init(aReg);
-            }
         }
 
         /**
@@ -686,7 +663,6 @@ public abstract class Op {
          *
          * @return the constant reference to use (may be different from the passed constant)
          */
-        @Override
         public Constant register(Constant constant) {
             ensureRegistering();
 
@@ -718,16 +694,6 @@ public abstract class Op {
             return m_aconst;
         }
 
-        @Override
-        public Constant getConstant(int id) {
-            return getConstantArray()[id];
-        }
-
-        @Override
-        public TypeConstant typeForName(String name) {
-            return f_pool.getImplicitlyImportedIdentity(name).getType();
-        }
-
         /**
          * Obtain the index of the specified constant, as it appears in the optimized order.
          *
@@ -735,7 +701,6 @@ public abstract class Op {
          *
          * @return the index of the constant in the array returned by {@link #getConstantArray()}
          */
-        @Override
         public int indexOf(Constant constant) {
             ensureOptimized();
 
@@ -745,181 +710,6 @@ public abstract class Op {
                 throw new IllegalArgumentException("missing constant: " + constant);
             }
             return index;
-        }
-
-        @Override
-        public void init(RegisterAST[] params) {
-            assert params != null && Arrays.stream(params).allMatch(Objects::nonNull);
-            assert m_aregParams == BinaryAST.NO_REGS || m_aregParams.length == params.length;
-            assert m_stackScopes.empty();
-
-            m_aregParams = params;
-            m_listRegs.clear();
-            for (RegisterAST reg : params) {
-                register(reg);
-            }
-        }
-
-        @Override
-        public void enter() {
-            m_stackScopes.push(m_listRegs.size());
-        }
-
-        @Override
-        public void register(RegisterAST reg) {
-            assert reg != null;
-            int regId = reg.getRegId();
-            if (regId < 0) {
-                switch (regId) {
-                case Op.A_IGNORE:
-                case Op.A_IGNORE_ASYNC:
-                case Op.A_DEFAULT:
-                case Op.A_THIS:
-                case Op.A_TARGET:
-                case Op.A_PUBLIC:
-                case Op.A_PROTECTED:
-                case Op.A_PRIVATE:
-                case Op.A_STRUCT:
-                case Op.A_CLASS:
-                case Op.A_SERVICE:
-                case Op.A_SUPER:
-                    // weird that this is being set from the outside; just ignore it, since we
-                    // provide our own
-                    break;
-
-                default:
-                    throw new IllegalArgumentException("regId=" + regId);
-                }
-            } else {
-                assert !reg.isRegIdAssigned() || regId == m_listRegs.size();
-
-                regId = m_listRegs.size();
-                reg.setRegId(regId);
-                m_listRegs.add(reg);
-            }
-        }
-
-        @Override
-        public RegisterAST getRegister(int regId) {
-            RegisterAST reg = regId >= 0 ? m_listRegs.get(regId) : m_aregSpecial[-1-regId];
-            if (reg == null) {
-                TypeConstant type = null;
-                String       name = null;
-
-                TypeConstant typeThis = f_method.getContainingClass().getFormalType();
-                switch (regId) {
-                case Op.A_IGNORE:
-                case Op.A_IGNORE_ASYNC:
-                    type = f_pool.typeObject();
-                    name = "_";
-                    break;
-
-                case Op.A_DEFAULT:
-                    type = f_pool.typeObject(); // technically wrong, but no better answer
-                    name = "?";
-                    break;
-
-                case Op.A_THIS:
-                    assert !f_method.isConstructor() && !f_method.isValidator() &&
-                           !f_method.isStatic();
-                    type = typeThis;
-                    name = "this";
-                    break;
-
-                case Op.A_TARGET:
-                    assert !f_method.isConstructor() && !f_method.isValidator() &&
-                           !f_method.isStatic();
-                    type = typeThis;
-                    name = "this:target";
-                    break;
-
-                case Op.A_PUBLIC:
-                    assert !f_method.isConstructor() && !f_method.isValidator() &&
-                           !f_method.isStatic();
-                    type = f_pool.ensureAccessTypeConstant(typeThis, Access.PUBLIC);
-                    name = "this:public";
-                    break;
-
-                case Op.A_PROTECTED:
-                    assert !f_method.isConstructor() && !f_method.isValidator() &&
-                           !f_method.isStatic();
-                    type = f_pool.ensureAccessTypeConstant(typeThis, Access.PROTECTED);
-                    name = "this:protected";
-                    break;
-
-                case Op.A_PRIVATE:
-                    assert !f_method.isConstructor() && !f_method.isValidator() &&
-                           !f_method.isStatic();
-                    type = f_pool.ensureAccessTypeConstant(typeThis, Access.PRIVATE);
-                    name = "this:private";
-                    break;
-
-                case Op.A_STRUCT:
-                    assert f_method.isConstructor() || f_method.isValidator() ||
-                           !f_method.isStatic();
-                    type = f_pool.ensureIntersectionTypeConstant(f_pool.typeStruct(),
-                            f_pool.ensureAccessTypeConstant(typeThis, Access.STRUCT));
-                    name = "this:struct";
-                    break;
-
-                case Op.A_CLASS:
-                    type = f_pool.ensureParameterizedTypeConstant(f_pool.typeClass(),
-                            f_pool.ensureAccessTypeConstant(typeThis, Access.PUBLIC),
-                            f_pool.ensureAccessTypeConstant(typeThis, Access.PROTECTED),
-                            f_pool.ensureAccessTypeConstant(typeThis, Access.PRIVATE),
-                            f_pool.ensureIntersectionTypeConstant(f_pool.typeStruct(),
-                                f_pool.ensureAccessTypeConstant(typeThis, Access.STRUCT)));
-                    name = "this:class";
-                    break;
-
-                case Op.A_SERVICE:
-                    type = f_pool.typeService();
-                    name = "this:service";
-                    break;
-
-                case Op.A_SUPER:
-                    assert f_method.isSuperAllowed();
-                    MethodConstant    idMethod   = f_method.getIdentityConstant();
-                    Access            access     = idMethod.isTopLevel() ? Access.PROTECTED : Access.PRIVATE;
-                    TypeConstant      typeCtx    = f_pool.ensureAccessTypeConstant(typeThis, access);
-                    TypeInfo          infoType   = typeCtx.ensureTypeInfo();
-                    MethodInfo        infoMethod = infoType.getMethodById(idMethod);
-                    SignatureConstant sigSuper   = infoMethod == null ? null : infoMethod.getSuper(infoType);
-
-                    if (sigSuper == null) {
-                        if (f_method.isConstructor()
-                                && f_method.getContainingClass().containsAnnotation(f_pool.clzOverride())) {
-                            // an "@Override" virtual child may not have a compile-time super;
-                            // assume an identical signature
-                            sigSuper = idMethod.getSignature();
-                        } else {
-                            return null;
-                        }
-                    }
-
-                    type = sigSuper.asFunctionType();
-                    name = "super";
-                    break;
-                }
-
-                if (type == null) {
-                    throw new IllegalStateException("missing register " + regId);
-                } else {
-                    reg = new RegisterAST(regId, type, name == null ? null : f_pool.ensureStringConstant(name));
-                    m_aregSpecial[-1-regId] = reg;
-                }
-            }
-                return reg;
-        }
-
-        @Override
-        public void exit() {
-            int cPrev = m_stackScopes.pop();
-            int cCur  = m_listRegs.size();
-            assert cCur >= cPrev;
-            while (cCur > cPrev) {
-                m_listRegs.remove(--cCur);
-            }
         }
 
         /**
@@ -991,28 +781,6 @@ public abstract class Op {
          * The array of constants in their optimized order.
          */
         private Constant[] m_aconst;
-
-        /**
-         * The working set of registers. This is a point-in-time data structure used during reading
-         * the AST and during simulation (i.e. when registers ids are being calculated).
-         */
-        private final ArrayList<RegisterAST> m_listRegs = new ArrayList<>();
-
-        /**
-         * A Stack of scopes entered but not exited. Each value in the stack is the number of
-         * registers that existed at the time the corresponding scope was entered.
-         */
-        private final Stack<Integer> m_stackScopes = new Stack<>();
-
-        /**
-         * The parameter registers.
-         */
-        private RegisterAST[] m_aregParams = BinaryAST.NO_REGS;
-
-        /**
-         * The "special" registers, such as "this".
-         */
-        private final RegisterAST[] m_aregSpecial = new RegisterAST[-Op.CONSTANT_OFFSET];
     }
 
     // ----- static helpers ------------------------------------------------------------------------
@@ -2107,7 +1875,7 @@ public abstract class Op {
     /**
      * Pre-defined return register: a frame-local stack
      *
-     * Note: This id is used by the Op codes and related runtime, but is not used by the binary AST.
+     * Note: This id is used by the Op codes and related runtime, and is reserved for runtime use.
      */
     public static final int A_STACK         = -1;
 
@@ -2174,19 +1942,19 @@ public abstract class Op {
     /**
      * Pre-defined argument: an indicator for "multiple return values" (internal)
      *
-     * Note: This id is used by the Op code based runtime, but is not used by the binary AST.
+     * Note: This id is used by the Op code based runtime, and is reserved for runtime use.
      */
     public static final int A_MULTI         = -14;
     /**
      * Pre-defined argument: an indicator for a "tuple return" (internal)
      *
-     * Note: This id is used by the Op code based runtime, but is not used by the binary AST.
+     * Note: This id is used by the Op code based runtime, and is reserved for runtime use.
      */
     public static final int A_TUPLE         = -15;
     /**
      * Pre-defined and compile-time only argument: A label.
      *
-     * Note: This id is used by the compiler, but is not used by the Op codes or binary AST.
+     * Note: This id is used by the compiler, but is not used by the Op codes.
      */
     public static final int A_LABEL         = -16;
 

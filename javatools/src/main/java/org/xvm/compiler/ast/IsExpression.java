@@ -6,9 +6,6 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.IsExprAST;
-
 import org.xvm.asm.constants.FormalConstant;
 import org.xvm.asm.constants.TypeConstant;
 
@@ -275,13 +272,6 @@ public class IsExpression
         code.add(fWhenTrue
                 ? new JumpType(argTarget, argType, label)
                 : new JumpNType(argTarget, argType, label));
-    }
-
-    @Override
-    public ExprAST getExprAST(Context ctx) {
-        TypeConstant[] atypeRet = getTypes();
-        return new IsExprAST(expr1.getExprAST(ctx), expr2.getExprAST(ctx),
-                atypeRet.length == 1 ? null : atypeRet[1]);
     }
 
     // ----- debugging assistance ------------------------------------------------------------------

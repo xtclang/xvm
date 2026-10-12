@@ -5,15 +5,7 @@ import java.util.Map;
 import org.xvm.asm.Argument;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
-import org.xvm.asm.PropertyStructure;
 
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.InvokeExprAST;
-import org.xvm.asm.ast.UnaryOpExprAST;
-import org.xvm.asm.ast.UnaryOpExprAST.Operator;
-
-import org.xvm.asm.constants.MethodConstant;
-import org.xvm.asm.constants.PropertyConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
@@ -148,42 +140,6 @@ public class SequentialAssignExpression
     @Override
     protected void selectTraceableExpressions(Map<String, Expression> mapExprs) {
         // do not go inside of this expression (it's the result of this expression that matters)
-    }
-
-    @Override
-    public ExprAST getExprAST(Context ctx) {
-        Operator op = isPre()
-                ? isInc()
-                    ? Operator.PreInc
-                    : Operator.PreDec
-                : isInc()
-                    ? Operator.PostInc
-                    : Operator.PostDec;
-
-        if (expr instanceof NameExpression exprName &&
-                exprName.getMeaning() == NameExpression.Meaning.Property) {
-            PropertyConstant idProp = (PropertyConstant)
-                    exprName.resolveRawArgument(ctx, false, ErrorListener.BLACKHOLE);
-            PropertyStructure prop   = (PropertyStructure) idProp.getComponent();
-            if (prop != null && prop.isAtomic()) {
-                String sMethod, sOp;
-                switch (op) {
-                    case PreInc  -> {sMethod = "preIncrement" ; sOp = "++#";}
-                    case PreDec  -> {sMethod = "preDecrement" ; sOp = "--#";}
-                    case PostInc -> {sMethod = "postIncrement"; sOp = "#++";}
-                    case PostDec -> {sMethod = "postDecrement"; sOp = "#--";}
-                    default      -> throw new IllegalStateException("op=" + op);
-                }
-
-                MethodConstant idOp = exprName.findAtomicInPlaceAssignMethod(ctx, sMethod, sOp, null);
-                if (idOp != null) {
-                    ExprAST astVar = new UnaryOpExprAST(
-                            expr.getExprAST(ctx), Operator.Var, idProp.getRefType(null));
-                    return new InvokeExprAST(idOp, TypeConstant.NO_TYPES, astVar, ExprAST.NO_EXPRS, false);
-                }
-            }
-        }
-        return new UnaryOpExprAST(expr.getExprAST(ctx), op, getType());
     }
 
     // ----- fields --------------------------------------------------------------------------------

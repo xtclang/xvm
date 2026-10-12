@@ -8,9 +8,6 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.Version;
 
-import org.xvm.asm.ast.ConstantExprAST;
-import org.xvm.asm.ast.ExprAST;
-
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.compiler.Compiler;
@@ -200,11 +197,6 @@ public class LiteralExpression
             typeRequired = typeRequired.resolveConstraints();
         }
         return finishValidation(ctx, typeRequired, typeActual, TypeFit.Fit, constVal, errs);
-    }
-
-    @Override
-    public ExprAST getExprAST(Context ctx) {
-        return new ConstantExprAST(toConstant());
     }
 
     // ----- helpers -------------------------------------------------------------------------------

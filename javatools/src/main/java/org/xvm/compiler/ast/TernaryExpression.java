@@ -7,9 +7,6 @@ import org.xvm.asm.ConstantPool;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.TernaryExprAST;
-
 import org.xvm.asm.constants.TypeConstant;
 
 import org.xvm.asm.op.Enter;
@@ -453,12 +450,6 @@ public class TernaryExpression
         }
     }
 
-    @Override
-    public ExprAST getExprAST(Context ctx) {
-        return new TernaryExprAST(cond.getExprAST(ctx),
-                exprThen.getExprAST(ctx), exprElse.getExprAST(ctx), getTypes());
-    }
-
     // ----- helpers -------------------------------------------------------------------------------
 
     /**
@@ -579,7 +570,6 @@ public class TernaryExpression
                 }
                 atypeR[i] = type.resolveConstraints();
             }
-
         }
         return atypeR;
     }

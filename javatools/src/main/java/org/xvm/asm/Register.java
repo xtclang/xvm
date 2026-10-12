@@ -1,11 +1,5 @@
 package org.xvm.asm;
 
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.NarrowedExprAST;
-import org.xvm.asm.ast.RegAllocAST;
-import org.xvm.asm.ast.RegisterAST;
-
-import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.constants.TypeConstant;
 
 /**
@@ -391,37 +385,6 @@ public class Register
         return m_fMarkedUnassigned;
     }
 
-    /**
-     * @return a {@link RegAllocAST} that represents this register
-     */
-    public RegAllocAST getRegAllocAST() {
-        RegAllocAST astAlloc = m_astAlloc;
-        if (astAlloc == null) {
-            StringConstant constName = f_sName == null
-                    ? null
-                    : m_type.getConstantPool().ensureStringConstant(f_sName);
-            m_astAlloc = astAlloc = m_typeReg == null
-                    ? new RegAllocAST(m_type, constName)
-                    : new RegAllocAST(m_typeReg, m_type, constName);
-        }
-        return astAlloc;
-    }
-
-    /**
-     * @return a {@link RegisterAST} (or {@link NarrowedExprAST}) that represents this register
-     */
-    public ExprAST getRegisterAST() {
-        if (isPredefined()) {
-            RegisterAST regSpecial = m_astSpecial;
-            if (regSpecial == null) {
-                regSpecial = m_astSpecial = new RegisterAST(m_iArg, getType(), null);
-            }
-            return regSpecial;
-        }
-
-        return getRegAllocAST().getRegister();
-    }
-
     @Override
     public boolean equals(Object obj) {
         if (this == obj) {
@@ -730,30 +693,6 @@ public class Register
         }
 
         @Override
-        public RegAllocAST getRegAllocAST() {
-            if (isInPlace()) {
-                return Register.this.getRegAllocAST();
-            }
-            // shadow doesn't have an "alloc" register
-            throw new IllegalStateException();
-        }
-
-        @Override
-        public ExprAST getRegisterAST() {
-            ExprAST astNarrowed = m_astNarrowed;
-            if (astNarrowed == null) {
-                TypeConstant typeNarrowed = getType();
-                TypeConstant typeOrig     = getOriginalType();
-                ExprAST      astOrig      = Register.this.getRegisterAST();
-
-                astNarrowed = m_astNarrowed = typeNarrowed.equals(typeOrig)
-                    ? astOrig
-                    : new NarrowedExprAST(astOrig, typeNarrowed);
-            }
-            return astNarrowed;
-        }
-
-        @Override
         public boolean isNormal() {
             return Register.this.isNormal();
         }
@@ -778,11 +717,6 @@ public class Register
          * Indicates that this register is a replacement of the original.
          */
         private boolean m_fInPlace = false;
-
-        /**
-         * Cached ExprAST for shadow register (could be the same as for the original register).
-         */
-        private ExprAST m_astNarrowed;
     }
 
     // ----- constants and fields ------------------------------------------------------------------
@@ -849,14 +783,4 @@ public class Register
      * Explicitly "@Unassigned" register (allow compiler access).
      */
     private boolean m_fMarkedUnassigned;
-
-    /**
-     * The Binary AST register allocation that is required in order for this register to exist.
-     */
-    private transient RegAllocAST m_astAlloc;
-
-    /**
-     * The Binary AST register for special registers.
-     */
-    private transient RegisterAST m_astSpecial;
 }

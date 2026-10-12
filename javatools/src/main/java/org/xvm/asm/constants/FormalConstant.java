@@ -6,10 +6,6 @@ import java.io.IOException;
 import org.xvm.asm.ConstantPool;
 import org.xvm.asm.GenericTypeResolver;
 
-import org.xvm.asm.ast.ExprAST;
-
-import org.xvm.compiler.ast.Context;
-
 /**
  * FormalConstant is a Constant that represents a formal type, which could be generic class level
  * type parameter, such as Map.Key, a method type parameter (such as Object.equals.CompileType)
@@ -60,11 +56,4 @@ public abstract class FormalConstant
     public TypeConstant resolve(GenericTypeResolver resolver) {
         return resolver.resolveFormalType(this);
     }
-
-    /**
-     * Convert this formal constant to a {@link ExprAST binary expression AST}.
-     *
-     * @return the resulting {@link ExprAST} or null if the conversion is not feasible
-     */
-    public abstract ExprAST toExprAst(Context ctx);
 }

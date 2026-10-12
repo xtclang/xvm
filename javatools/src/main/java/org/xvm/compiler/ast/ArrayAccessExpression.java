@@ -17,10 +17,6 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure;
 import org.xvm.asm.MethodStructure.Code;
 
-import org.xvm.asm.ast.ArrayAccessExprAST;
-import org.xvm.asm.ast.ExprAST;
-import org.xvm.asm.ast.InvokeExprAST;
-
 import org.xvm.asm.constants.ArrayConstant;
 import org.xvm.asm.constants.IntConstant;
 import org.xvm.asm.constants.RangeConstant;
@@ -636,28 +632,6 @@ public class ArrayAccessExpression
                 aArgIndexes[i] = expr.ensurePointInTime(code, arg, listIndex, i);
             }
             return new Assignable(argArray, aArgIndexes);
-        }
-    }
-
-    @Override
-    public ExprAST getExprAST(Context ctx) {
-        int cIndexes = indexes.size();
-        if (cIndexes == 1) {
-            ExprAST astArray = expr.getExprAST(ctx);
-            ExprAST astArg   = indexes.get(0).getExprAST(ctx);
-            return m_fSlice
-                ? new InvokeExprAST(m_idGet, getTypes(), astArray, new ExprAST[] {astArg}, false)
-                : new ArrayAccessExprAST(astArray, astArg);
-        }
-
-        if (m_idGet == null) {
-            throw notImplemented();
-        } else {
-            ExprAST[] astArgs = new ExprAST[cIndexes];
-            for (int i = 0; i < cIndexes; i++) {
-                astArgs[i] = indexes.get(i).getExprAST(ctx);
-            }
-            return new InvokeExprAST(m_idGet, getTypes(), expr.getExprAST(ctx), astArgs, false);
         }
     }
 
