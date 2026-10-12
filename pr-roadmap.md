@@ -24,6 +24,17 @@ Independent PRs retain their review scope: #683 is repository behavior, #685 is 
 #687 is callable typing/fitting. They do not absorb #692's removal diff. Their applicable fixes,
 including review-requested test removals, are mirrored into the integration branches.
 
+The current incremental comparisons contain **36 semantic-facts files**, **40 partial-analysis
+files** and **648 LSP/editor files**. Updated comparison bases are actual ancestors of the
+corresponding branches, so shared cleanup does not appear again in each GitHub diff. These
+ancestry merges preserve the already-tested source trees exactly.
+
+Fresh integration validation passed on both the full reference and the LSP mono-code branch:
+**2,246 LSP tests and 82 packaged-server tests on each**, with zero failures/errors. The Java
+compiler/runtime suites passed **544** and **580** tests respectively. Both 120-cycle retention
+workloads reported **zero retained compiler objects**. Two LSP tests and 42 Java tests remain
+skipped by their pre-existing controls; no new skips were introduced for this removal.
+
 <a id="outside-lang-comparison"></a>
 
 ## Outside-`lang/` comparison branch
