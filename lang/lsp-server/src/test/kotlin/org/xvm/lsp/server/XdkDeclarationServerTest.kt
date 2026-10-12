@@ -14,6 +14,10 @@ import org.xvm.lsp.adapter.mock.MockAdapter
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Checks declaration-provider negotiation and conversion of multiple targets to wire locations. Unsupported
+ * adapters must not advertise or serve guessed declaration results.
+ */
 class XdkDeclarationServerTest {
     @Test
     fun `declaration is advertised only by the implementing adapter and preserves multiple wire targets`() {

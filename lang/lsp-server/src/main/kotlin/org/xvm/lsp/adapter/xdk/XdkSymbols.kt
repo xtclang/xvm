@@ -95,17 +95,11 @@ internal object XdkSymbols {
         node: AstNode,
     ): SymbolInfo? =
         when (node) {
-            is TypeCompositionStatement -> {
-                node.name?.let { SymbolInfo.of(it, kindOf(node), rangeOf(uri, node)) }
-            }
+            is TypeCompositionStatement -> node.name?.let { SymbolInfo.of(it, kindOf(node), rangeOf(uri, node)) }
 
-            is MethodDeclarationStatement -> {
-                SymbolInfo.of(node.name, SymbolKind.METHOD, rangeOf(uri, node))
-            }
+            is MethodDeclarationStatement -> SymbolInfo.of(node.name, SymbolKind.METHOD, rangeOf(uri, node))
 
-            is PropertyDeclarationStatement -> {
-                SymbolInfo.of(node.name, SymbolKind.PROPERTY, rangeOf(uri, node))
-            }
+            is PropertyDeclarationStatement -> SymbolInfo.of(node.name, SymbolKind.PROPERTY, rangeOf(uri, node))
 
             is TypedefStatement -> {
                 // LSP has no alias kind; represent the written type declaration as a type.
@@ -124,9 +118,7 @@ internal object XdkSymbols {
                 }
             }
 
-            else -> {
-                null
-            }
+            else -> null
         }
 
     /**

@@ -1345,6 +1345,10 @@ public class MethodInfo
      * The written method body selected by super dispatch, when there is one. Field, native,
      * delegation and into-constraint bodies have no source method target. Inspection uses the
      * same chain selection as getSuper(), without generating or optimizing forwarding code.
+     *
+     * @param infoType  the enclosing type information used to locate the inherited method
+     *
+     * @return the written super-dispatch target, or empty when no source method represents it
      */
     public Optional<MethodConstant> getSuperMethod(TypeInfo infoType) {
         MethodStructure method = getTopmostMethodStructure(infoType);

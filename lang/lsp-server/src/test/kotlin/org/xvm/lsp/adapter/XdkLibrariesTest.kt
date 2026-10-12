@@ -14,6 +14,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermission
 
+/**
+ * Exercises the production bundled XDK library set. Confirms modules resolve without an external installation
+ * and bundled source remains navigable, read-only and outside rename/replacement authority.
+ */
 class XdkLibrariesTest {
     @TempDir lateinit var directory: Path
 

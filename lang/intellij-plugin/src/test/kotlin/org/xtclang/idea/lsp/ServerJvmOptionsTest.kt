@@ -4,6 +4,11 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
+/**
+ * Validates server launch options and retention limits before publishing machine settings. Rejects launch
+ * overrides, contradictory arguments and impossible heap policies while preserving each accepted option as
+ * one argument.
+ */
 class ServerJvmOptionsTest {
     @Test fun `supported options remain separate arguments`() {
         val options = listOf("-Xms256M", "-Xmx2G", "-Xss1M", "-XX:ActiveProcessorCount=4", "-XX:+UseG1GC")

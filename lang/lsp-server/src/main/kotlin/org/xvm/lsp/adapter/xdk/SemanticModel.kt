@@ -49,12 +49,14 @@ class SemanticModel
                 values,
             )
 
+        /** How much semantic information this compilation snapshot could establish. */
         enum class Status {
             UNAVAILABLE,
             PARTIAL,
             COMPLETE,
         }
 
+        /** Language declaration category exposed independently of compiler implementation classes. */
         enum class SymbolKind {
             MODULE,
             PACKAGE,
@@ -66,17 +68,20 @@ class SemanticModel
             TYPE_PARAMETER,
         }
 
+        /** Whether a source occurrence declares a symbol or refers to an existing declaration. */
         enum class Role {
             DECLARATION,
             REFERENCE,
         }
 
+        /** Read/write role of a bound source occurrence. */
         enum class Usage {
             READ,
             WRITE,
             READ_WRITE,
         }
 
+        /** Declaration properties used by editor presentation and semantic highlighting. */
         enum class Modifier {
             READONLY,
             STATIC,
@@ -94,6 +99,7 @@ class SemanticModel
             ENUM_VALUE,
         }
 
+        /** Structural type form retained without exposing a compiler TypeConstant. */
         enum class TypeForm {
             NAMED,
             FORMAL,
@@ -133,11 +139,13 @@ class SemanticModel
             operator fun contains(position: Position): Boolean = position in start..<end
         }
 
+        /** Snapshot-local symbol identity; the snapshot token prevents mixing IDs from different analyses. */
         data class SymbolId(
             val snapshot: UUID,
             val index: Int,
         )
 
+        /** Snapshot-local type identity; indices are meaningful only within their originating analysis. */
         data class TypeId(
             val snapshot: UUID,
             val index: Int,
@@ -174,6 +182,7 @@ class SemanticModel
                 val nullable: Boolean,
             )
 
+        /** Detached signature parameter, including formal-type and default-value flags. */
         data class Parameter(
             val name: String?,
             val type: TypeId,
@@ -196,6 +205,7 @@ class SemanticModel
                 val conditional: Boolean,
             )
 
+        /** Detached declaration facts shared by navigation, references, signatures and highlighting. */
         data class Symbol(
             val id: SymbolId,
             val name: String,
@@ -230,6 +240,7 @@ class SemanticModel
             val annotation: Boolean = false,
         )
 
+        /** Source expression range paired with its type in this semantic snapshot. */
         data class ExpressionType(
             val range: Range,
             val type: TypeId,
@@ -241,6 +252,7 @@ class SemanticModel
             val signature: Signature,
         )
 
+        /** Mapping from a written argument range to its compiler-selected parameter slot. */
         data class CallArgument(
             val range: Range,
             val parameterIndex: Int,
@@ -278,6 +290,7 @@ class SemanticModel
             val selection: Range,
         )
 
+        /** Declared symbol and the resolved supertype contributed to it. */
         data class Supertype(
             val symbol: SymbolId,
             val type: TypeId,

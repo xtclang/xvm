@@ -5,6 +5,10 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 
+/**
+ * Exercises completion of missing operands within larger expressions. Suggestions must fit the original
+ * argument and surrounding expression, preserving exact source edits and rejecting incompatible candidates.
+ */
 class XdkOperandCompletionTest {
     @ParameterizedTest
     @ValueSource(
@@ -108,6 +112,7 @@ class XdkOperandCompletionTest {
     }
 }
 
+/** Supplies matching method, constructor and function argument contexts for operand-completion tests. */
 private object XdkArgumentContextFixture {
     const val HEADER =
         "module Operands { class Pair(Int number, String text) {} " +

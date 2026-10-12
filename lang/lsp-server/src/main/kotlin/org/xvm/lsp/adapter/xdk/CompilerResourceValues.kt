@@ -47,13 +47,9 @@ private fun resourceValue(value: Constant?): String? {
     fun append(value: Constant?): Boolean {
         text(value?.format?.name ?: return false)
         when (value) {
-            is StringConstant -> {
-                text(value.value)
-            }
+            is StringConstant -> text(value.value)
 
-            is UInt8ArrayConstant -> {
-                bytes(value.value)
-            }
+            is UInt8ArrayConstant -> bytes(value.value)
 
             is FileStoreConstant -> {
                 text(value.path)
@@ -65,9 +61,7 @@ private fun resourceValue(value: Constant?): String? {
                 // Filesystem timestamps change during ordinary Move/Undo. Content and names
                 // must remain equivalent; incidental timestamp metadata is not a binding.
                 when (value.format) {
-                    Constant.Format.FSFile -> {
-                        bytes(value.fileBytes)
-                    }
+                    Constant.Format.FSFile -> bytes(value.fileBytes)
 
                     Constant.Format.FSDir -> {
                         val children = value.directoryContents.sortedBy { it.name }
@@ -75,19 +69,13 @@ private fun resourceValue(value: Constant?): String? {
                         return children.all(::append)
                     }
 
-                    Constant.Format.FSLink -> {
-                        return append(value.linkTarget)
-                    }
+                    Constant.Format.FSLink -> return append(value.linkTarget)
 
-                    else -> {
-                        return false
-                    }
+                    else -> return false
                 }
             }
 
-            else -> {
-                return false
-            }
+            else -> return false
         }
         return true
     }

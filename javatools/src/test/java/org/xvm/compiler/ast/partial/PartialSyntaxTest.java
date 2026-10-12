@@ -1,4 +1,4 @@
-package org.xvm.compiler.ast;
+package org.xvm.compiler.ast.partial;
 
 import java.util.List;
 import java.util.function.UnaryOperator;
@@ -8,9 +8,18 @@ import org.junit.jupiter.api.Test;
 import org.xvm.compiler.Parser;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
-import org.xvm.compiler.ast.partial.IncompleteExpression;
-import org.xvm.compiler.ast.partial.IncompleteStatement;
-import org.xvm.compiler.ast.partial.PartialSyntax;
+import org.xvm.compiler.ast.Expression;
+import org.xvm.compiler.ast.ExpressionStatement;
+import org.xvm.compiler.ast.InvocationExpression;
+import org.xvm.compiler.ast.LabeledExpression;
+import org.xvm.compiler.ast.LambdaExpression;
+import org.xvm.compiler.ast.NameExpression;
+import org.xvm.compiler.ast.NewExpression;
+import org.xvm.compiler.ast.NonBindingExpression;
+import org.xvm.compiler.ast.ParenthesizedExpression;
+import org.xvm.compiler.ast.PartialAst;
+import org.xvm.compiler.ast.RelOpExpression;
+import org.xvm.compiler.ast.StatementBlock;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -134,7 +143,7 @@ public class PartialSyntaxTest {
         var creation = new NewExpression(null, token(Id.NEW), null, List.of(), 0, null, 40);
         var dimensions = new IncompleteStatement(creation, token(Id.L_SQUARE),
                 List.of(value), List.of(), 40);
-        dimensions.introduceParentage();
+        PartialAst.parentTree(dimensions, null);
 
         assertTrue(PartialSyntax.containsAt(dimensions, 20));
         assertTrue(PartialSyntax.argument(dimensions).isEmpty());
@@ -210,7 +219,7 @@ public class PartialSyntaxTest {
         var call = new IncompleteStatement(name("work"), token(Id.L_PAREN),
                 List.of(name("first"), argument, name("last")),
                 List.of(token(Id.COMMA), token(Id.COMMA)), 100);
-        call.introduceParentage();
+        PartialAst.parentTree(call, null);
         return call;
     }
 

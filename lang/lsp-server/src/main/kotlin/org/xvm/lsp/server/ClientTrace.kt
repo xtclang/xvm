@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicReference
 internal class ClientTrace(
     private val client: () -> LanguageClient?,
 ) : AutoCloseable {
+    /** Protocol trace verbosity negotiated with the client through initialize and setTrace. */
     private enum class Level(
         val value: String,
     ) {

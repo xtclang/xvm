@@ -20,6 +20,11 @@ import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Path
 
+/**
+ * Exercises public embedding diagnostics with invalid roots, dependency failures and fallback repositories.
+ * Protects source errors from being mislabeled as internal failures and preserves useful repository causes
+ * without poisoning successful fallback.
+ */
 class EmbeddingDiagnosticsTest {
     @TempDir lateinit var directory: Path
 

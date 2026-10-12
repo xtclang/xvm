@@ -86,6 +86,7 @@ class NameResolverReportingTest {
         assertEquals(1, inner.getErrors().size());
     }
 
+    /** Routes name resolution through a supplied component resolver to observe diagnostic ownership. */
     private static class ResolvingNode extends AstNode {
         ResolvingNode(ComponentResolver resolver) {
             f_resolver = resolver;

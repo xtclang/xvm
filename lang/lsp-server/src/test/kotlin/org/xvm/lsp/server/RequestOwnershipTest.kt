@@ -14,6 +14,10 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
 
+/**
+ * Separates reader cancellation from shared analysis ownership. Closing or canceling a request must retire it
+ * immediately even if the underlying compilation ignores cancellation and another reader still needs it.
+ */
 class RequestOwnershipTest {
     @Test
     fun `canceling a request awaiting analysis does not cancel another reader or shared analysis`() {

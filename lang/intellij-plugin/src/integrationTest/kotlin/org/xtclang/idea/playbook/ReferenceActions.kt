@@ -78,11 +78,13 @@ fun NativeUsageView.rangesIn(path: String): List<IntRange> =
         .mapNotNull { it.getNavigationRange() }
         .map { it.getStartOffset() until it.getEndOffset() }
 
+/** Locates the native Find Usages result view. */
 @Remote("com.intellij.usages.UsageViewManager")
 interface NativeUsageViews {
     fun getSelectedUsageView(): NativeUsageView?
 }
 
+/** Exposes the usages displayed by IntelliJ for reference-result assertions. */
 @Remote("com.intellij.usages.UsageView")
 interface NativeUsageView {
     fun isSearchInProgress(): Boolean
@@ -90,11 +92,13 @@ interface NativeUsageView {
     fun getUsages(): Collection<NativeUsage>
 }
 
+/** Reads one native usage entry's underlying source information. */
 @Remote("com.intellij.usages.UsageInfo2UsageAdapter")
 interface NativeUsage {
     fun getMergedInfos(): Array<NativeUsageInfo>
 }
 
+/** Exposes a usage's file and source range through the driver. */
 @Remote("com.intellij.usageView.UsageInfo")
 interface NativeUsageInfo {
     fun getVirtualFile(): VirtualFile?
@@ -102,6 +106,7 @@ interface NativeUsageInfo {
     fun getNavigationRange(): NativeSourceRange?
 }
 
+/** Reads offsets from a native usage result without converting to protocol coordinates. */
 @Remote("com.intellij.openapi.util.Segment")
 interface NativeSourceRange {
     fun getStartOffset(): Int
@@ -109,6 +114,7 @@ interface NativeSourceRange {
     fun getEndOffset(): Int
 }
 
+/** Requests document highlights through the installed native client. */
 @Remote(
     "com.redhat.devtools.lsp4ij.features.highlight.LSPHighlightSupport",
     plugin = "com.redhat.devtools.lsp4ij",
@@ -117,6 +123,7 @@ interface HighlightSupport {
     fun getValidLSPFuture(): HighlightFuture?
 }
 
+/** Polls the client's document-highlight result. */
 @Remote("java.util.concurrent.CompletableFuture")
 interface HighlightFuture {
     fun isDone(): Boolean
@@ -126,6 +133,7 @@ interface HighlightFuture {
     fun get(): List<ClientHighlight>
 }
 
+/** Reads a native document highlight's range and access kind. */
 @Remote("org.eclipse.lsp4j.DocumentHighlight", plugin = "com.redhat.devtools.lsp4ij")
 interface ClientHighlight {
     fun getRange(): SourceRange
@@ -133,6 +141,7 @@ interface ClientHighlight {
     fun getKind(): ClientHighlightKind?
 }
 
+/** Exposes the protocol highlight kind by enum name. */
 @Remote("org.eclipse.lsp4j.DocumentHighlightKind", plugin = "com.redhat.devtools.lsp4ij")
 interface ClientHighlightKind {
     fun name(): String

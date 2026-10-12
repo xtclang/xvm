@@ -15,6 +15,10 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.SECONDS
 import java.net.URI as SourceUri
 
+/**
+ * Checks navigation from inferred and specialized types to their real declarations. Generic returns,
+ * covariant overrides and unrelated same-named types must not collapse into a textual lookup.
+ */
 class XdkSemanticLookupTest {
     @TempDir lateinit var directory: Path
 

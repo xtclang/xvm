@@ -19,11 +19,20 @@ import org.xvm.compiler.ast.Expression;
  * receiver/argument ownership without a second semantic cache or clone-reset protocol.
  */
 public final class IncompleteExpression extends Expression {
+    /**
+     * Retain an incomplete site in a value-expression position without fabricating a value.
+     *
+     * @param site  the retained incomplete source site
+     */
     public IncompleteExpression(IncompleteStatement site) {
         this.site = site;
     }
 
-    /** The retained source operation; exposes syntax ownership without a validation result. */
+    /**
+     * The retained source operation; exposes syntax ownership without a validation result.
+     *
+     * @return the incomplete site retained in this expression position
+     */
     public IncompleteStatement getSite() {
         return site;
     }

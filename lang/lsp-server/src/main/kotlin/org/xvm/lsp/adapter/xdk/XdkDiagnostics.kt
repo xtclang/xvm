@@ -31,18 +31,12 @@ internal fun ErrorListener.ErrorInfo.toDiagnostic(
     return Diagnostic(
         location =
             when (where) {
-                is ErrorListener.Site.In -> {
-                    sourceUri?.let { spanOf(it, where) } ?: wholeDocument(uri)
-                }
+                is ErrorListener.Site.In -> sourceUri?.let { spanOf(it, where) } ?: wholeDocument(uri)
 
-                is ErrorListener.Site.At -> {
-                    declarations[where.xs()] ?: wholeDocument(uri)
-                }
+                is ErrorListener.Site.At -> declarations[where.xs()] ?: wholeDocument(uri)
 
                 // a whole-compilation failure belongs to the document, not to a line in it
-                else -> {
-                    wholeDocument(uri)
-                }
+                else -> wholeDocument(uri)
             },
         severity = severity.toLspSeverity(),
         message =
