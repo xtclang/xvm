@@ -1739,10 +1739,11 @@ public class CommonBuilder
                 continue;
             }
 
+            // a phantom child still needs this parent's type
             TypeConstant   childType   = pool().ensureVirtualChildTypeConstant(jitType, child.getName());
             ClassStructure childStruct = (ClassStructure) child.getComponent();
-            TypeConstant   childJIC    = childStruct.getFormalType().
-                                            resolveGenerics(pool(), childType).getJitICType();
+            TypeConstant   childJIC    = childStruct.getFormalType().resolveGenerics(pool(), childType).
+                                            ensureVirtualParent(jitType, true).getJitICType();
             TypeInfo       infoJIC     = childJIC.ensureAccess(Access.PRIVATE).ensureTypeInfo();
             if (infoJIC.isAbstract()) {
                 continue;
