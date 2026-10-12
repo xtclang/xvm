@@ -1325,13 +1325,13 @@ reruns just the editor suite. It reports existing host-test evidence without reb
 See the [extension testing notes](../vscode-extension/README.md#testing) for display/`xvfb` requirements.
 
 The host suite also includes `CompilerAtomicEmissionTest` and `CompilerEmissionAuditTest`: they
-execute serialized atomic operations through qualified, singleton, enclosing-instance and generic
+execute serialized atomic operations through qualified, implicit, enclosing-instance and generic
 receivers, check source/dependency diagnostic delivery, and inspect dense-switch bytecode conversions.
 These are compiler-output checks that the editor UI cannot establish. To run them without launching VS Code:
 
 ```bash
 ./gradlew :lang:lsp-server:test --tests org.xvm.lsp.adapter.CompilerEmissionAuditTest \
-    --rerun --no-build-cache \
+    --tests org.xvm.lsp.adapter.CompilerAtomicEmissionTest --rerun-tasks --no-build-cache \
     -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
 ```
 
