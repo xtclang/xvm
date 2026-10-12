@@ -1,5 +1,37 @@
 # Compiler foundations and LSP PR roadmap
 
+**Complete implementation reference:** [draft #693](https://github.com/xtclang/xvm/pull/693) contains the distilled compiler-backed LSP and IDE integrations. It is available for testing and later review, and should likely not be merged as is. The bulk of the change is LSP improvements; the assembled product demonstrates why the compiler and embedding mechanisms outside `lang/` are necessary. Existing foundation PRs remain separate.
+
+## Full-reference rebase and playbook instructions — 2026-10-12
+
+[Draft #693](https://github.com/xtclang/xvm/pull/693) now uses current master `3034dbeb3`
+as its ancestor. The rebase reconciles master's dependency updates while preserving every
+compiler, server, editor, test and fixture file from the previous full reference byte for byte.
+The only pre-documentation tree changes are Logback and the VS Code dependency manifest/lockfile.
+Already merged #688/#689 changes remain present through master. A complete Git bundle and local
+backup branch preserve the old head `11f3c944a`.
+
+The current comparison is **886 paths: 274 modified, 559 added and 53 deleted**;
+**647 under `lang/`, 239 outside**, including **415 test-source paths**. Older extraction inventories
+below are historical snapshots. This smaller count comes from changes already merged to master,
+not from removing implementation.
+
+The [manual playbook on the full branch](https://github.com/xtclang/xvm/blob/errs/full-testable-lsp-20261009/lang/doc/manual-test-plan.md#try-the-complete-implementation)
+now starts with editor launch commands, manual demo instructions and feature links. Its
+[acceptance section](https://github.com/xtclang/xvm/blob/errs/full-testable-lsp-20261009/lang/doc/manual-test-plan.md#acceptance-reports)
+includes full and selected IntelliJ/VS Code commands, report locations and coverage limits.
+The PR body links to that branch-specific guide and includes both native commands directly.
+The documentation and dependency reconciliation are also mirrored in the integration and editor
+review branches.
+
+Post-rebase native selection: VS Code X1/X2/X3/X6 passed in `run-aUHduW`; IntelliJ
+START/X1/X2/X3/X6 passed in `run-3213407040874368723`, with no IDE failures.
+These are selected checks, not a new full-catalog acceptance claim. TypeScript compilation,
+root/server formatting checks and a fresh 82-test packaged-server run passed with zero failures
+or skips.
+ESLint still reports the same three errors and six warnings with both the old and updated
+dependency versions; this existing cleanup is recorded in the draft PR.
+
 ## Synchronization update — 2026-10-12
 
 The eight integration/comparison branches now include the binary-AST removal from
@@ -39,7 +71,7 @@ skipped by their pre-existing controls; no new skips were introduced for this re
 
 ## Outside-`lang/` comparison branch
 
-**Comparison branch only — no PR has been opened.** The full-reference branch also has no PR. This extra view isolates the changes to established compiler and build code so reviewers can examine them without the server/editor implementation. It does not replace or close any existing PR.
+**Outside-`lang/` comparison branch only — no PR has been opened for this view.** The full-reference branch is now [draft #693](https://github.com/xtclang/xvm/pull/693). This extra view isolates the changes to established compiler and build code so reviewers can examine them without the server/editor implementation. It does not replace or close any existing PR.
 
 Branch: `errs/compiler-foundations-reference-20261009` at `cfc0d06d4`, based directly on master `da07a0be8`.
 
@@ -117,7 +149,7 @@ Of these files, **415 are test sources** and **9 are shared/runtime fixtures**. 
 The foundation comparison contains 165 files and the product comparison contains 650 files. Three paths occur in both comparisons, so the combined inventory contains **165 + 650 − 3 = 812 unique paths**. Files are listed once below, using their final status against master.
 <!-- full-reference-inventory-summary:end -->
 
-Updated **2026-10-09**. The agreed strategy is to review complete compiler/build capabilities first, then the complete LSP and editor product. There are **six existing open PRs** and **three prepared review branches awaiting PR submission**. The full reference and outside-`lang/` reference are additional comparison branches only; neither has a PR.
+**Historical extraction status, 2026-10-09:** the strategy was to review complete compiler/build capabilities first, then the complete LSP and editor product, with six open PRs and three prepared review branches awaiting submission. The two aggregate comparisons had no PR at that point. The full reference is now [draft #693](https://github.com/xtclang/xvm/pull/693); the outside-`lang/` reference remains a comparison only.
 
 Recovery, cursor queries, incomplete-call/constructor fitting and declaration/header analysis are **one combined partial-analysis PR**. The LSP server, IntelliJ plugin and VS Code extension are **one product PR** after their foundations. The Gradle exporter and Boolean operand-effects correction are independent changes that can land against master.
 
@@ -160,7 +192,7 @@ GitHub state checked while preparing the comparison: all six are open and target
 
 The recorded master baseline is `da07a0be8`, which includes #684. The compiler comparison base `errs/compiler-review-base-20261009` combines #685 and #687 and inherits #683. The product comparison base `errs/lsp-review-base-20261009` combines the partial-analysis stack, Gradle exporter, #686 and the Boolean correction. **These two base refs are comparison aids, not PRs to submit.**
 
-All five review branches and both comparison bases are published. The Boolean branch now includes the console-free fixture and standard runtime-suite registration. The LSP review branch and full reference both point to `c63a56010`; their trees are identical. The outside-`lang/` comparison at `cfc0d06d4` is published separately. Neither comparison has a PR.
+At the 2026-10-09 extraction checkpoint, all five review branches and both comparison bases were published. The Boolean branch included the console-free fixture and standard runtime-suite registration. The LSP review branch and full reference pointed to `c63a56010`, with identical trees; the outside-`lang/` comparison was published at `cfc0d06d4`. See the synchronization update above for later changes. The full reference is now [draft #693](https://github.com/xtclang/xvm/pull/693); the outside-`lang/` comparison has no PR.
 
 The extraction source was preserved at `errs/review-source-20261009` (`c9d16c50d`). Subsequent integration synchronization is committed and pushed as `374d9c16e` on `lagergren/errs`, including the new compiler-consumer tests and roadmap. Nothing was removed from the integration implementation merely to simplify a review branch. Remaining differences requiring a disposition are listed at the end.
 

@@ -5,18 +5,100 @@ The shared catalog contains **284 scenarios**: X1–X279, CFG1–CFG3 and 7a.8/7
 The compiler adapter is enabled by default; Tree-sitter remains a selectable syntax-only adapter.
 Scenario definitions, source fixtures and native assertions are retained below.
 
+## Try the complete implementation
+
+Use this guide from the same checkout as the plugin you build. For the complete reference in
+[draft #693](https://github.com/xtclang/xvm/pull/693), check out
+`errs/full-testable-lsp-20261009`. All commands below run from the repository root.
+Use JDK 25 or newer to start Gradle. The build prepares the bundled server/compiler and editor
+dependencies; the first run may download the IDE, Node and native parser tools.
+IntelliJ's native harness needs a graphical desktop. VS Code also needs a display, or `xvfb-run`
+on headless Linux (see the [extension testing notes](../vscode-extension/README.md#testing)).
+
+Choose either automated acceptance or manual exploration. The automated harness owns its isolated
+editor window and closes it afterward; launch a separate development session for manual work.
+
+### Manually verify the demo programs
+
+Launch one editor:
+
+```bash
+# IntelliJ sandbox with the plugin and compiler server
+./gradlew :lang:intellij-plugin:runIde \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
+
+# Or VS Code Extension Development Host
+./gradlew :lang:vscode-extension:runCode \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler
+```
+
+1. Open a fresh scratch folder/project in the launched editor. Confirm the compiler backend using
+   [Launch and confirm the backend](#launch-and-confirm-the-backend). No separate XDK installation
+   is required; matching libraries are bundled.
+2. Pick a feature in the [XdkAdapter playbook](#xdkadapter-playbook). Copy its fenced Ecstasy demo
+   into the exact filenames and directory layout specified there. For cases that refer to shared
+   variants, open [scenarios.json](../test-fixtures/compiler-playbook/scenarios.json), find the
+   case ID, and use its `values` sources and `manual` notes. Preserve the stated source-module
+   configuration for multi-module cases. JSON strings must be decoded when copied into `.x` files.
+3. Perform the row's action and compare the visible result and source edits with its expected
+   result. `|` in a row and `§` in a shared anchor mark cursor positions; do not insert them into
+   the program. Undo temporary edits before trying another row. Deliberately incomplete programs
+   can have diagnostics while completion and signature help remain available.
+4. To compare adapters, invoke **Tools → Switch Ecstasy Language Adapter** in IntelliJ or
+   **Ecstasy: Switch Language Adapter** in VS Code. The server restarts and restores open buffers.
+   Compiler-specific semantic expectations apply to Compiler mode; switch back before continuing.
+5. For a finding, record the commit, editor/version, adapter, case ID, exact source and actions,
+   expected/actual result, and server/editor logs. Use the coverage and compatibility notes below
+   to distinguish a known client limitation from a regression.
+
+Useful starting points:
+
+| Feature | Demo and cases |
+| --- | --- |
+| Diagnostics, hover, definitions, references, outline and folding | [Navigation.x, X1–X5](#a-diagnostics-navigation-and-structure) |
+| Typed completion and overload/signature help | [Editing.x, X6–X20](#b-typed-and-scope-aware-completion) |
+| Multiple source files and type hierarchy | [Project.x and Project/Child.x](#d-module-files-overlays-and-type-hierarchy) |
+| Implementations, call hierarchy, highlighting and inlays | [Lookups.x and Consumers.x](#f-type-definition-and-implementation-lookup) |
+| Rename, dependencies and checked edits | [Compiler-validated rename](#h-compiler-validated-rename), then later scenario tables |
+| Themes, CodeLens, settings, imports and refactoring variants | Find the feature name or X-number in this document and the [shared catalog](../test-fixtures/compiler-playbook/scenarios.json) |
+
 ## Acceptance reports
 
-Run both native harnesses from the repository root:
+Run the complete native playbooks sequentially from the repository root:
 
 ```bash
 ./gradlew :lang:intellij-plugin:testCompilerPlaybook \
-    -PincludeBuildLang=true -PincludeBuildAttachLang=true
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler \
+    --rerun-tasks --no-build-cache
 ./gradlew :lang:vscode-extension:testCompilerPlaybook \
-    -PincludeBuildLang=true -PincludeBuildAttachLang=true
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler \
+    --rerun-tasks --no-build-cache
 ```
 
-Each editor writes per-case results under its `build/reports/compiler-playbook/` directory.
+These commands force fresh execution, including prerequisite host tests where scheduled. VS Code's
+unfiltered task also runs the LSP unit and packaged-stdio suites. IntelliJ's task includes feature,
+startup, focus, settings and project-lifecycle checks; the large-file probe remains opt-in.
+The catalog currently has 284 scenarios; a partial-coverage result is not a full pass.
+
+For a short feature selection, use exact IDs (this example checks structure, diagnostics, hover
+and typed completion):
+
+```bash
+./gradlew :lang:intellij-plugin:testCompilerPlaybook \
+    --tests '*CompilerPlaybookTest.compilerPlaybook' \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler \
+    -PintellijPlaybookCases=X1,X2,X3,X6 --rerun --no-build-cache
+./gradlew :lang:vscode-extension:testCompilerPlaybook \
+    -PincludeBuildLang=true -PincludeBuildAttachLang=true -Plsp.adapter=compiler \
+    -PcompilerPlaybookCases=X1,X2,X3,X6
+```
+
+The IntelliJ method filter limits this selection to the feature session; remove it for the other
+lifecycle sessions. VS Code's selected-case task does not schedule the host regression suites.
+Selected runs report excluded cases separately and cannot establish whole-catalog acceptance.
+
+Each editor writes per-case results under `lang/<editor>/build/reports/compiler-playbook/run-*/`
+(`intellij-plugin` or `vscode-extension` for `<editor>`). VS Code also writes `latest-run.txt`.
 IntelliJ also records IDE failures, screenshots and server traces; VS Code records extension errors
 and the isolated workspace. Judge acceptance from those reports, including their catalog hash,
 selected IDs, skipped/not-selected cases and errors. Historical selected runs do not establish
@@ -1291,7 +1373,7 @@ Run the compiler playbook from the repository root:
 
 This builds the extension and its bundled compiler, runs the server and packaged-JAR regression
 suites, then launches a real VS Code extension host. It reads the fixtures below directly, creates
-a separate workspace/profile, and runs one case for every X1–X265 row plus the configuration and
+a separate workspace/profile, and runs one case for every X1–X279 row plus the configuration and
 compiler-diagnostic checks. Missing case IDs, a wrong backend, failures and skipped editor cases
 fail the run. The editor cases run on every invocation; Gradle may reuse unchanged host-test results.
 The test window's status bar shows completed/selected cases, remaining cases and the current case,
@@ -1439,14 +1521,15 @@ case to execute. Native runs remain occasional checkpoints.
 ### Shared editor scenarios
 
 Both drivers read [the shared scenario data](../test-fixtures/compiler-playbook/scenarios.json)
-for all 148 scenarios: X1–X143, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
+for all 284 scenarios: X1–X279, CFG1–CFG3 and 7a.8–7a.9. The catalog owns titles, source-module
 configuration, fixture selectors, edits, cursor/definition anchors, variants, expectations and
 manual-check notes. Base programs remain the canonical fixtures below; bounded replacement
 programs also live in the shared scenario values. A `§` marks an offset;
 `${0}` templates substitute literal values without evaluating code.
 
 Native TypeScript and Kotlin code still performs editor actions and assertions. VS Code executes
-all 148 cases. IntelliJ now has assertions for the same 148, plus a separate startup check.
+all 284 cases. IntelliJ has coverage entries for the same catalog, including the explicitly
+documented partial cases, plus separate startup and lifecycle checks.
 Current selected native pass receipts are recorded above; implementation is not validation. A missing driver implementation
 must be called `not-implemented`, not an unsupported IDE feature. `not-run` means an implemented
 case was unselected or prevented from running, such as after an earlier failure. Partial coverage never appears
@@ -1462,8 +1545,8 @@ entry. Keep client-specific protocol and UI mechanics in the drivers.
 
 ### Launch and confirm the backend
 
-From the repository root, choose one command. Keep `-Plsp.adapter=compiler` on the editor launch
-task too: a later build without it can restore the default backend.
+From the repository root, choose one command. Compiler mode is the repository default;
+`-Plsp.adapter=compiler` makes the intended backend explicit if local properties override it.
 
 ```bash
 # IntelliJ sandbox
