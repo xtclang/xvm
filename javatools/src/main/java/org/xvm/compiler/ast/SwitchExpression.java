@@ -258,11 +258,10 @@ public class SwitchExpression
     }
 
     private void generateCaseBodies(Context ctx, Code code, Assignable[] aLVal, ErrorListener errs) {
-        List<AstNode> aNodes     = contents;
-        int           cNodes     = aNodes.size();
-        Label         labelCur   = null;
-        Label         labelExit  = new Label("switch_end");
-        for (int i = 0; i < cNodes; ++i) {
+        List<AstNode> aNodes    = contents;
+        Label         labelCur  = null;
+        Label         labelExit = new Label("switch_end");
+        for (int i = 0, c = aNodes.size(); i < c; ++i) {
             AstNode node = aNodes.get(i);
             if (node instanceof CaseStatement stmtCase) {
                 labelCur = stmtCase.getLabel();

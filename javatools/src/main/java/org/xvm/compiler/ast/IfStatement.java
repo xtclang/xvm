@@ -205,8 +205,7 @@ public class IfStatement
                     }
 
                     // "if (false) {stmtThen} else {stmtElse}" is compiled as "{stmtElse}"
-                    boolean fCompletes = stmtElse.completes(ctx, fReachable, code, errs);
-                    return fCompletes;
+                    return stmtElse.completes(ctx, fReachable, code, errs);
                 }
 
                 assert ((Expression) cond).isConstantTrue();
@@ -219,8 +218,7 @@ public class IfStatement
         // "if (true) {stmtThen}" is compiled as "{stmtThen}"
         // "if (true) {stmtThen} else {stmtElse}" is compiled as "{stmtThen}"
         if (fAlwaysTrue) {
-            boolean fCompletes = stmtThen.completes(ctx, fReachable, code, errs);
-            return fCompletes;
+            return stmtThen.completes(ctx, fReachable, code, errs);
         }
 
         // "if (cond) {stmtThen}" is compiled as:
@@ -256,9 +254,9 @@ public class IfStatement
             }
         }
 
-        boolean       fFirst       = true;
-        boolean       fReachesThen = fReachable;
-        boolean       fReachesElse = fReachable;
+        boolean fFirst       = true;
+        boolean fReachesThen = fReachable;
+        boolean fReachesElse = fReachable;
         for (AstNode cond : conds) {
             boolean fCompletes;
             if (cond instanceof AssignmentStatement stmtCond) {
@@ -301,7 +299,7 @@ public class IfStatement
             fFirst = false;
         }
 
-        boolean   fCompletesThen = fReachesThen;
+        boolean fCompletesThen = fReachesThen;
         if (fReachesThen) {
             fCompletesThen = stmtThen.completes(ctx, fReachesThen, code, errs);
             if (stmtElse != null) {
@@ -309,7 +307,7 @@ public class IfStatement
             }
         }
 
-        boolean   fCompletesElse = fReachesElse;
+        boolean fCompletesElse = fReachesElse;
         code.add(labelElse);
         if (fReachesElse && stmtElse != null) {
             fCompletesElse = stmtElse.completes(ctx, fReachesElse, code, errs);

@@ -974,7 +974,6 @@ public class NameExpression
                 Register regTemp = code.createRegister(typeReferent);
                 code.add(new MoveThis(cSteps, regTemp, typeRef.getAccess()));
                 code.add(new MoveRef(regTemp, argLVal));
-
                 return;
             }
 
@@ -995,7 +994,6 @@ public class NameExpression
                     SingletonConstant idSingleton =
                         pool().ensureSingletonConstConstant(m_idSingletonParent);
                     code.add(new P_Get(idProp, idSingleton, argLVal));
-
                     break;
                 }
 
@@ -1192,8 +1190,7 @@ public class NameExpression
                 if (left instanceof NameExpression nameLeft) {
                     if (nameLeft.getMeaning() == Meaning.Label) {
                         LabelVar labelVar = (LabelVar) nameLeft.m_arg;
-                        Register regLabel = labelVar.getPropRegister(ctx, getName());
-                        return regLabel;
+                        return labelVar.getPropRegister(ctx, getName());
                     }
                 }
 
@@ -1352,11 +1349,8 @@ public class NameExpression
             return regFn;
         }
 
-        case BjarneLambda: {
-            MethodConstant idHandler = m_idBjarnLambda;
-
-            return idHandler;
-        }
+        case BjarneLambda:
+            return m_idBjarnLambda;
 
         default:
             throw new IllegalStateException("arg=" + argRaw);
@@ -1578,8 +1572,7 @@ public class NameExpression
 
         case Left:
             assert !idProp.getComponent().isStatic();
-            Argument arg = left.generateArgument(ctx, code, true, errs);
-            return arg;
+            return left.generateArgument(ctx, code, true, errs);
 
         default:
             throw new IllegalStateException();

@@ -2783,7 +2783,7 @@ public class TypeCompositionStatement
                 Argument[]       aSuperArgs    = new Argument[cSuperArgs];
                 int              cArgs         = listSuperArgs == null ? 0 : listSuperArgs.size();
 
-                Label    labelSkipSuper = null;
+                Label labelSkipSuper = null;
                 if (contrib.getComposition() == Composition.Extends) {
                     if (constructor.isAnonymousClassWrapperConstructor() &&
                             !constructSuper.isAnonymousClassWrapperConstructor()) {

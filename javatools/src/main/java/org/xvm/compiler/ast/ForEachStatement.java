@@ -566,7 +566,7 @@ public class ForEachStatement
 
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
-        boolean   fCompletes = fReachable;
+        boolean fCompletes = fReachable;
 
         code.add(new Enter());
 
@@ -597,25 +597,14 @@ public class ForEachStatement
             fCompletes = stmt.completes(ctx, fCompletes, code, errs);
         }
 
-        switch (m_plan) {
-        case ITERATOR:
-            fCompletes = emitIterator(ctx, fCompletes, code, errs);
-            break;
-        case RANGE:
-            fCompletes = emitRange(ctx, fCompletes, code, errs);
-            break;
-        case LIST:
-            fCompletes = emitList(ctx, fCompletes, code, errs);
-            break;
-        case MAP:
-            fCompletes = emitMap(ctx, fCompletes, code, errs);
-            break;
-        case ITERABLE:
-            fCompletes = emitIterable(ctx, fCompletes, code, errs);
-            break;
-        default:
-            throw new IllegalStateException();
-        }
+        fCompletes = switch (m_plan) {
+            case ITERATOR -> emitIterator(ctx, fCompletes, code, errs);
+            case RANGE    -> emitRange(ctx, fCompletes, code, errs);
+            case LIST     -> emitList(ctx, fCompletes, code, errs);
+            case MAP      -> emitMap(ctx, fCompletes, code, errs);
+            case ITERABLE -> emitIterable(ctx, fCompletes, code, errs);
+            default       -> throw new IllegalStateException();
+        };
 
         code.add(new Exit());
 

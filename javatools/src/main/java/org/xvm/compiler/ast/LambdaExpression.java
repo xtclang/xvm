@@ -776,8 +776,7 @@ public class LambdaExpression
         if (m_lambda.isFunction() && aargBind.length == 0) {
             // if no binding is required (either MBIND or FBIND) then the resulting argument is the
             // identity of the lambda function itself
-            MethodConstant idLambda = m_lambda.getIdentityConstant();
-            return idLambda;
+            return m_lambda.getIdentityConstant();
         }
 
         return super.generateArgument(ctx, code, fLocalPropOk, errs);

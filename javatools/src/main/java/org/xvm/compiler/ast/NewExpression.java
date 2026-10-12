@@ -1215,7 +1215,7 @@ public class NewExpression
                 Parameter.NO_PARAMS, "construct", aParams, true, false);
         constrThis.setSynthetic(true);
 
-        Code                 code     = constrThis.createCode();
+        Code code = constrThis.createCode();
 
         // call the default initializer
         assert constrThis.isAnonymousClassWrapperConstructor();
@@ -1231,7 +1231,7 @@ public class NewExpression
             for (int i = 0; i < cParams; ++i) {
                 Register regParam = new Register(aParams[i].getType(), null, i);
 
-                aArgs[i]    = regParam;
+                aArgs[i] = regParam;
             }
             code.add(new Construct_N(idSuper, aArgs));
         }
@@ -1308,7 +1308,7 @@ public class NewExpression
         MethodStructure constrNew = clzAnon.createMethod(true, Access.PUBLIC, null,
                 Parameter.NO_PARAMS, "construct", aNewParams, true, false);
         constrNew.setSynthetic(true);
-        Code                 codeConstr = constrNew.createCode();
+        Code codeConstr = constrNew.createCode();
 
         Register[] aRegs = new Register[cNewParams];
         for (int i = 0; i < cOldParams; i++) {

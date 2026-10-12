@@ -1875,7 +1875,7 @@ public abstract class Op {
     /**
      * Pre-defined return register: a frame-local stack
      *
-     * Note: This id is used by the Op codes and related runtime, and is reserved for runtime use.
+     * Note: This id is reserved for runtime use.
      */
     public static final int A_STACK         = -1;
 

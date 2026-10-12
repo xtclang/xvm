@@ -1113,7 +1113,6 @@ public class CaseManager<CookieType> {
                     m_fCondAborts = true;
                 }
                 exprCond = stmt.getLValue().getLValueExpression();
-                // review GG - was there some issue where getLValueExpression() was destructive? should this get moved up one line?
             } else {
                 exprCond = (Expression) node;
             }

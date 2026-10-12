@@ -350,8 +350,7 @@ public class TryStatement
         if (catches != null) {
             code.add(new GuardEnd(labelCatchEnd));
 
-            int c = catches.size();
-            for (int i = 0; i < c; ++i) {
+            for (int i = 0, c = catches.size(); i < c; ++i) {
                 CatchStatement stmtCatch = catches.get(i);
                 stmtCatch.setCatchLabel(labelCatchEnd);
                 fAnyCatchCompletes |= stmtCatch.completes(ctx, fCompletes, code, errs);

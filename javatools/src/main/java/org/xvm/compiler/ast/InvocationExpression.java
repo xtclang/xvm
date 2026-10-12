@@ -1712,7 +1712,7 @@ public class InvocationExpression
             TargetInfo targetInfo = m_targetInfo;
             Register   regTarget;
             if (targetInfo == null) {
-                regTarget   = ctx.getThisRegister();
+                regTarget = ctx.getThisRegister();
             } else {
                 TypeConstant typeTarget = targetInfo.getTargetType();
                 int          cStepsOut  = targetInfo.getStepsOut();
@@ -1729,7 +1729,7 @@ public class InvocationExpression
             }
             argTarget = regTarget;
         } else {
-            argTarget   = exprLeft.generateArgument(ctx, code, fLocalPropOk, errs);
+            argTarget = exprLeft.generateArgument(ctx, code, fLocalPropOk, errs);
         }
         return argTarget;
     }

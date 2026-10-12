@@ -1045,13 +1045,10 @@ public class MethodStructure
             m_abOps = null;
 
             ConstantRegistry registry = new ConstantRegistry(this, pool);
-            m_registry = registry;
-
             code.prepareOps();
             code.registerConstants(registry);
             m_aconstLocal = registry.getConstantArray();
             code.ensureAssembled(registry);
-            m_registry = null;
 
             assert m_abOps != null;
         }
@@ -1909,17 +1906,6 @@ public class MethodStructure
 
         assert cConsts == 0 || cbOps > 0;
 
-        // retain the method record layout when reading files produced by older compilers
-        int cbLegacy = readMagnitude(in);
-        while (cbLegacy > 0) {
-            int cbSkipped = in.skipBytes(cbLegacy);
-            if (cbSkipped == 0) {
-                in.readByte();
-                cbSkipped = 1;
-            }
-            cbLegacy -= cbSkipped;
-        }
-
         Source source = new Source();
         source.disassemble(in);
 
@@ -2043,9 +2029,6 @@ public class MethodStructure
         if (cbOps > 0) {
             out.write(abOps);
         }
-
-        // reserve the legacy metadata slot so existing readers retain the same record layout
-        writePackedLong(out, 0);
 
         (m_source == null ? new Source() : m_source).assemble(out);
 

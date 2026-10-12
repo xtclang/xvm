@@ -558,15 +558,13 @@ public class ForStatement
             }
         }
 
-        boolean   fBlockReachable = fCompletes;
+        boolean fBlockReachable = fCompletes;
 
         if (fAlwaysFalse) {
             code.add(new Jump(getEndLabel()));
             fBlockReachable = false;
-
         } else if (!fAlwaysTrue) {
-            int cConds = getConditionCount();
-            for (int i = 0; i < cConds; ++i) {
+            for (int i = 0, c = getConditionCount(); i < c; ++i) {
                 AstNode cond = getCondition(i);
                 if (cond instanceof AssignmentStatement stmtCond) {
                     boolean fNegated = stmtCond.isNegated();

@@ -430,7 +430,6 @@ public class AssertStatement
                             ? new Assert(pool.valFalse(), constNew)
                             : new Jump(labelMessage));
                     fCompletes = false;
-
                     continue;
                 }
 
