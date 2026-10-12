@@ -4,7 +4,7 @@ import * as path from 'node:path';
 import * as vscode from 'vscode';
 import { stopLanguageClient } from '../../lsp-client';
 import { readArchive } from '../archive';
-import { PlaybookCleanupFailure } from '../wait';
+import { withPlaybookCleanup } from '../wait';
 import { WorkbenchUi } from '../workbenchUi';
 import { catalog } from './shared';
 import { client, noErrors, playbook } from './support';
@@ -21,7 +21,7 @@ export function runtimeSettingsCases(): void {
         const status = () => client().sendRequest<Status>('xtc/languageServiceStatus');
         const before = await status();
         const ui = await WorkbenchUi.connect();
-        try {
+        await withPlaybookCleanup(async () => {
             await settings.update('java.vmOptions', data.vmOptions, vscode.ConfigurationTarget.Global);
             if (id === 'X270') await settings.update('server.logs', data.logs, vscode.ConfigurationTarget.Global);
             assert.strictEqual((await status()).pid, before.pid, 'Saving runtime settings must not restart a working server');
@@ -53,15 +53,14 @@ export function runtimeSettingsCases(): void {
                 assert.strictEqual((await status()).pid, applied.pid);
             }
             assert.strictEqual(document.getText(), data.source);
-        } finally {
+        }, async () => {
             try {
                 await settings.update('java.vmOptions', previousVm, vscode.ConfigurationTarget.Global);
                 await settings.update('server.logs', previousLogs, vscode.ConfigurationTarget.Global);
                 await vscode.commands.executeCommand('xtc.restartServer');
                 await vscode.commands.executeCommand('notifications.clearAll');
-            } catch (error) { throw new PlaybookCleanupFailure([error]); }
-            finally { await ui.close(); }
-        }
+            } finally { await ui.close(); }
+        });
     });
     for (const id of ['X271', 'X272'] as const) playbook(id, async workspace => {
         const data = catalog.common.runtimeSettings;
@@ -74,7 +73,7 @@ export function runtimeSettingsCases(): void {
         const unhandled: unknown[] = [];
         const rejected = (error: unknown) => { unhandled.push(error); };
         process.on('unhandledRejection', rejected);
-        try {
+        await withPlaybookCleanup(async () => {
             if (id === 'X271') await stopLanguageClient();
             else {
                 await settings.update('java.vmOptions', data.startupFailureOptions, vscode.ConfigurationTarget.Global);
@@ -99,19 +98,18 @@ export function runtimeSettingsCases(): void {
                 assert.ok(entries.get('launcher.log')!.includes(data.startupFailureOptions[0]));
                 assert.strictEqual(manifest.logs, undefined, 'Failed launch must not reuse an earlier successful session');
             }
-        } finally {
+        }, async () => {
             try {
                 await settings.update('java.vmOptions', original, vscode.ConfigurationTarget.Global);
                 await vscode.commands.executeCommand('xtc.restartServer');
                 await noErrors(document.uri);
                 assert.strictEqual(document.getText(), data.source);
                 await vscode.commands.executeCommand('notifications.clearAll');
-            } catch (error) { throw new PlaybookCleanupFailure([error]); }
-            finally {
+            } finally {
                 process.off('unhandledRejection', rejected);
                 await ui.close();
             }
-        }
+        });
         assert.deepStrictEqual(unhandled, [], 'Startup failures must reject the command without orphaned promise rejections');
     });
 
