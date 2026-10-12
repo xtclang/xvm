@@ -12,6 +12,10 @@ import org.xvm.lsp.adapter.xdk.semanticSnapshot
 import org.xvm.tool.ModuleInfo
 import java.nio.file.Path
 
+/**
+ * Checks recovered source structure separately from successful compilation. Outlines, folding and selection
+ * must reflect the current damaged buffer without reusing stale semantic answers.
+ */
 class XdkRecoveryTest {
     @TempDir lateinit var directory: Path
 

@@ -7,6 +7,10 @@ import org.xvm.lsp.adapter.xdk.XdkMoveInputs
 import java.nio.file.Files
 import java.nio.file.Path
 
+/**
+ * Checks captured resource inputs used to authorize moves. Changed bytes, newly introduced members and
+ * symbolic links must invalidate ownership even when ordinary metadata appears unchanged.
+ */
 class XdkMoveInputsTest {
     @TempDir lateinit var directory: Path
 

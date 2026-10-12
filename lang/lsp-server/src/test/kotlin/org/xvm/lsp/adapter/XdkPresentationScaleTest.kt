@@ -7,6 +7,10 @@ import org.xvm.lsp.adapter.xdk.XdkPresentation
 import org.xvm.lsp.treesitter.SemanticTokenLegend
 import java.util.UUID
 
+/**
+ * Checks detached semantic presentation on large models. Protects lexical gaps, non-overlapping token ranges
+ * and half-open hint boundaries without requiring an editor process.
+ */
 class XdkPresentationScaleTest {
     @Test
     fun `semantic coverage preserves adjacent lexical tokens and excludes nested overlaps`() {

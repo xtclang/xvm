@@ -14,6 +14,10 @@ import org.xvm.compiler.ast.NamedTypeExpression
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
 
+/**
+ * Checks qualified type-prefix completion in damaged headers. Only accessible nested types are offered, and
+ * replacement is limited to the final identifier rather than the qualifier.
+ */
 class XdkQualifiedHeaderTest {
     @TempDir lateinit var directory: Path
 

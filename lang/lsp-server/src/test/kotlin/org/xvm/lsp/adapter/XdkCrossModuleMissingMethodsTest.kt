@@ -18,6 +18,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermission
 
+/**
+ * Exercises method generation into configured dependency modules, including closed companions and imported
+ * signature types. Refuses edits that would invent ownership or introduce an invalid reverse dependency.
+ */
 class XdkCrossModuleMissingMethodsTest {
     @TempDir lateinit var directory: Path
 

@@ -21,6 +21,10 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 
+/**
+ * Checks navigation and identity across emitted dependency artifacts and source attachments. Recompilation
+ * and replacement must preserve only matching declarations and retire obsolete accessor or overload targets.
+ */
 class XdkDependencyTest {
     @TempDir lateinit var directory: Path
 

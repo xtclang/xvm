@@ -7,6 +7,10 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkLexical
 import org.xvm.lsp.treesitter.SemanticTokenLegend
 
+/**
+ * Checks lexical token projection used alongside semantic highlighting. Preserves documentation modifiers and
+ * UTF-16 ranges, including large inputs without repeated whole-source scans.
+ */
 class XdkLexicalTest {
     @ParameterizedTest
     @ValueSource(strings = ["\n", "\r\n", "\r"])

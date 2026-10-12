@@ -4,11 +4,13 @@ import org.xvm.lsp.adapter.Range
 
 /** Immutable contracts and atomic class-member edits. */
 internal object XdkMemberActions {
+    /** Import declaration and its insertion position in the destination source. */
     data class Import(
         val position: SemanticModel.Position,
         val declaration: String,
     )
 
+    /** Generated member insertion and any imports needed by its signature. */
     data class Edits(
         val member: XdkRename.Edit,
         val imports: List<XdkRename.Edit>,
@@ -17,6 +19,7 @@ internal object XdkMemberActions {
             get() = imports + member
     }
 
+    /** Compiler-derived member contract and proposed implementation at a specific owner. */
     data class Candidate(
         val owner: SemanticModel.SourceLocation,
         val contract: ProofIdentity,
@@ -38,6 +41,7 @@ internal object XdkMemberActions {
                 owner.range.end >= SemanticModel.Position(range.start.line, range.start.column)
     }
 
+    /** Group of member implementations offered together as one code action. */
     data class Action(
         val members: List<Candidate>,
     ) {

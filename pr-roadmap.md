@@ -2,6 +2,40 @@
 
 **Complete implementation reference:** [draft #693](https://github.com/xtclang/xvm/pull/693) contains the distilled compiler-backed LSP and IDE integrations. It is available for testing and later review, and should likely not be merged as is. The bulk of the change is LSP improvements; the assembled product demonstrates why the compiler and embedding mechanisms outside `lang/` are necessary. Existing foundation PRs remain separate.
 
+## Readability and partial-package synchronization — 2026-10-12
+
+The full reference includes the cleanup in
+[`f5b206c37`](https://github.com/xtclang/xvm/commit/f5b206c37f27afaa5a2247b8868a813ae7085637):
+documented compiler and editor contracts, simpler Java/Kotlin layout, and feature-based language
+documentation without internal implementation milestones. The applicable changes are mirrored
+in the integration branch, both aggregate references, the review stack and the independent
+embedding, repository and compiler-correctness branches. Earlier review units retain their API
+boundaries; they do not acquire later partial-analysis or LSP APIs.
+
+Five helpers now live in `org.xvm.compiler.ast.partial`: `PartialArgument`, `PartialCallResolver`,
+`PartialConstructionResolver`, `PartialQueries` and `CursorScope`. The package-private helpers
+use one documented internal bridge,
+[PartialAst.java](/private/tmp/xvm-full-testable-lsp-20261009/javatools/src/main/java/org/xvm/compiler/ast/PartialAst.java),
+without widening the visibility of ordinary AST operations. `PartialSyntaxTest` moved into the
+same package. Local file links below follow the new locations; pinned historical diff links
+continue to show their recorded revisions.
+
+Current incremental comparisons contain **37 semantic-facts files**, **42 partial-analysis files**
+and **651 LSP/editor files**. Their updated bases are ancestors, and the ancestry-only merges
+preserved each tested tree exactly. The full reference against its current master base contains
+**890 paths: 276 modified, 561 added and 53 deleted**, with **650 under `lang/` and 240 outside**.
+The outside-`lang/` reference has **249 paths** against its older master base; differences between
+those totals reflect the recorded bases, not omitted compiler changes. Older counts below are
+historical snapshots.
+
+Validation for this cleanup: **2,246 LSP tests passed**, followed by **215 focused partial/header
+tests** after the final edits; **544 Java compiler/runtime tests** and **123 IntelliJ unit tests**
+passed. The full LSP run retained its two existing disabled tests, and the Java suite retained
+42 existing skips. Java doclint and root/language formatting checks passed. The native harness
+compiled; the GUI playbooks were not rerun for this cleanup. Synchronization also compiled the
+adapted earlier compiler branches and the integration server. Backup refs preserve every branch's
+previous head; this synchronization uses forward commits and merges without rewriting history.
+
 ## Full-reference rebase and playbook instructions — 2026-10-12
 
 [Draft #693](https://github.com/xtclang/xvm/pull/693) now uses current master `3034dbeb3`
@@ -354,14 +388,14 @@ The combined API must cover UTF-16 cursor positions, unsaved module members, bou
 | M | [javatools/src/main/java/org/xvm/compiler/Parser.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/main/java/org/xvm/compiler/Parser.java) | 1073 / 243 |
 | M | [javatools/src/main/java/org/xvm/compiler/ast/AstNode.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/main/java/org/xvm/compiler/ast/AstNode.java) | 7 / 1 |
 | M | [javatools/src/main/java/org/xvm/compiler/ast/Context.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/main/java/org/xvm/compiler/ast/Context.java) | 7 / 0 |
-| A | [javatools/src/main/java/org/xvm/compiler/ast/CursorScope.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/main/java/org/xvm/compiler/ast/CursorScope.java) | 466 / 0 |
+| A | [javatools/src/main/java/org/xvm/compiler/ast/CursorScope.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/main/java/org/xvm/compiler/ast/partial/CursorScope.java) | 466 / 0 |
 | M | [javatools/src/main/java/org/xvm/compiler/ast/LambdaExpression.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/main/java/org/xvm/compiler/ast/LambdaExpression.java) | 2 / 2 |
 | M | [javatools/src/main/java/org/xvm/compiler/ast/MethodDeclarationStatement.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/main/java/org/xvm/compiler/ast/MethodDeclarationStatement.java) | 3 / 3 |
 | M | [javatools/src/main/java/org/xvm/compiler/ast/NewExpression.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/main/java/org/xvm/compiler/ast/NewExpression.java) | 49 / 8 |
-| A | [javatools/src/main/java/org/xvm/compiler/ast/PartialArgument.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/main/java/org/xvm/compiler/ast/PartialArgument.java) | 49 / 0 |
-| A | [javatools/src/main/java/org/xvm/compiler/ast/PartialCallResolver.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/main/java/org/xvm/compiler/ast/PartialCallResolver.java) | 452 / 0 |
-| A | [javatools/src/main/java/org/xvm/compiler/ast/PartialConstructionResolver.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/main/java/org/xvm/compiler/ast/PartialConstructionResolver.java) | 139 / 0 |
-| A | [javatools/src/main/java/org/xvm/compiler/ast/PartialQueries.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/main/java/org/xvm/compiler/ast/PartialQueries.java) | 77 / 0 |
+| A | [javatools/src/main/java/org/xvm/compiler/ast/PartialArgument.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/main/java/org/xvm/compiler/ast/partial/PartialArgument.java) | 49 / 0 |
+| A | [javatools/src/main/java/org/xvm/compiler/ast/PartialCallResolver.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/main/java/org/xvm/compiler/ast/partial/PartialCallResolver.java) | 452 / 0 |
+| A | [javatools/src/main/java/org/xvm/compiler/ast/PartialConstructionResolver.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/main/java/org/xvm/compiler/ast/partial/PartialConstructionResolver.java) | 139 / 0 |
+| A | [javatools/src/main/java/org/xvm/compiler/ast/PartialQueries.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/main/java/org/xvm/compiler/ast/partial/PartialQueries.java) | 77 / 0 |
 | M | [javatools/src/main/java/org/xvm/compiler/ast/PropertyDeclarationStatement.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/main/java/org/xvm/compiler/ast/PropertyDeclarationStatement.java) | 11 / 1 |
 | M | [javatools/src/main/java/org/xvm/compiler/ast/StageMgr.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/main/java/org/xvm/compiler/ast/StageMgr.java) | 19 / 0 |
 | M | [javatools/src/main/java/org/xvm/compiler/ast/Statement.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/main/java/org/xvm/compiler/ast/Statement.java) | 7 / 1 |
@@ -382,7 +416,7 @@ The combined API must cover UTF-16 cursor positions, unsaved module members, bou
 | A | [javatools/src/test/java/org/xvm/compiler/ParserDeclarationNameTest.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/test/java/org/xvm/compiler/ParserDeclarationNameTest.java) | 172 / 0 |
 | A | [javatools/src/test/java/org/xvm/compiler/ParserRecoveryTest.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/test/java/org/xvm/compiler/ParserRecoveryTest.java) | 672 / 0 |
 | A | [javatools/src/test/java/org/xvm/compiler/ast/AstTreeCopyTest.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/test/java/org/xvm/compiler/ast/AstTreeCopyTest.java) | 134 / 0 |
-| A | [javatools/src/test/java/org/xvm/compiler/ast/PartialSyntaxTest.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/test/java/org/xvm/compiler/ast/PartialSyntaxTest.java) | 233 / 0 |
+| A | [javatools/src/test/java/org/xvm/compiler/ast/PartialSyntaxTest.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/test/java/org/xvm/compiler/ast/partial/PartialSyntaxTest.java) | 233 / 0 |
 | A | [javatools/src/test/java/org/xvm/compiler/ast/partial/RegisteredChildFieldsTest.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/test/java/org/xvm/compiler/ast/partial/RegisteredChildFieldsTest.java) | 143 / 0 |
 | M | [javatools/src/test/java/org/xvm/tool/ModuleInfoTest.java](/private/tmp/xvm-compiler-partial-analysis-20261009/javatools/src/test/java/org/xvm/tool/ModuleInfoTest.java) | 41 / 22 |
 | A | [lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/CompilerDeclarationAnalysisTest.kt](/private/tmp/xvm-compiler-partial-analysis-20261009/lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/CompilerDeclarationAnalysisTest.kt) | 80 / 0 |
@@ -2132,12 +2166,12 @@ No files in this category.
 | File | GitHub | + / − |
 | --- | --- | ---: |
 | [AnonymousClassBindings.java](/private/tmp/xvm-full-testable-lsp-20261009/javatools/src/main/java/org/xvm/compiler/ast/AnonymousClassBindings.java) | [Diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...c63a560106ebe306a22b5f80a7addcc114183b88#diff-c43990083fe98c64635ce0a2cf4e1a451162d64323a64bf047cc27238ccbb2db) | +54 / −0 |
-| [CursorScope.java](/private/tmp/xvm-full-testable-lsp-20261009/javatools/src/main/java/org/xvm/compiler/ast/CursorScope.java) | [Diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...c63a560106ebe306a22b5f80a7addcc114183b88#diff-17b4bd078ad906a77673e2b83ea25180618f9b4f97c584af931d4d4056cbe5bc) | +466 / −0 |
+| [CursorScope.java](/private/tmp/xvm-full-testable-lsp-20261009/javatools/src/main/java/org/xvm/compiler/ast/partial/CursorScope.java) | [Diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...c63a560106ebe306a22b5f80a7addcc114183b88#diff-17b4bd078ad906a77673e2b83ea25180618f9b4f97c584af931d4d4056cbe5bc) | +466 / −0 |
 | [LambdaBindings.java](/private/tmp/xvm-full-testable-lsp-20261009/javatools/src/main/java/org/xvm/compiler/ast/LambdaBindings.java) | [Diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...c63a560106ebe306a22b5f80a7addcc114183b88#diff-7bc47f0867cb7105a42a01cc18a62ad8ff15f353015fe52292f278462fd60eed) | +76 / −0 |
-| [PartialArgument.java](/private/tmp/xvm-full-testable-lsp-20261009/javatools/src/main/java/org/xvm/compiler/ast/PartialArgument.java) | [Diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...c63a560106ebe306a22b5f80a7addcc114183b88#diff-41e26cc2956a0a608a0b8d1406597ffcc461b3c943043a4f6d91da90274b73be) | +49 / −0 |
-| [PartialCallResolver.java](/private/tmp/xvm-full-testable-lsp-20261009/javatools/src/main/java/org/xvm/compiler/ast/PartialCallResolver.java) | [Diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...c63a560106ebe306a22b5f80a7addcc114183b88#diff-70038b3c673ab87760bbc9359becbd7a86ea84348130b41fa50c42c2b7865f8c) | +452 / −0 |
-| [PartialConstructionResolver.java](/private/tmp/xvm-full-testable-lsp-20261009/javatools/src/main/java/org/xvm/compiler/ast/PartialConstructionResolver.java) | [Diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...c63a560106ebe306a22b5f80a7addcc114183b88#diff-5546a827833c2444757862471b2aeac6efa0da89ed9335905890c2e567645950) | +139 / −0 |
-| [PartialQueries.java](/private/tmp/xvm-full-testable-lsp-20261009/javatools/src/main/java/org/xvm/compiler/ast/PartialQueries.java) | [Diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...c63a560106ebe306a22b5f80a7addcc114183b88#diff-949a1e943589961627f792d180ee262bcb9fecdd01c7c6eda41dc53259496696) | +77 / −0 |
+| [PartialArgument.java](/private/tmp/xvm-full-testable-lsp-20261009/javatools/src/main/java/org/xvm/compiler/ast/partial/PartialArgument.java) | [Diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...c63a560106ebe306a22b5f80a7addcc114183b88#diff-41e26cc2956a0a608a0b8d1406597ffcc461b3c943043a4f6d91da90274b73be) | +49 / −0 |
+| [PartialCallResolver.java](/private/tmp/xvm-full-testable-lsp-20261009/javatools/src/main/java/org/xvm/compiler/ast/partial/PartialCallResolver.java) | [Diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...c63a560106ebe306a22b5f80a7addcc114183b88#diff-70038b3c673ab87760bbc9359becbd7a86ea84348130b41fa50c42c2b7865f8c) | +452 / −0 |
+| [PartialConstructionResolver.java](/private/tmp/xvm-full-testable-lsp-20261009/javatools/src/main/java/org/xvm/compiler/ast/partial/PartialConstructionResolver.java) | [Diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...c63a560106ebe306a22b5f80a7addcc114183b88#diff-5546a827833c2444757862471b2aeac6efa0da89ed9335905890c2e567645950) | +139 / −0 |
+| [PartialQueries.java](/private/tmp/xvm-full-testable-lsp-20261009/javatools/src/main/java/org/xvm/compiler/ast/partial/PartialQueries.java) | [Diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...c63a560106ebe306a22b5f80a7addcc114183b88#diff-949a1e943589961627f792d180ee262bcb9fecdd01c7c6eda41dc53259496696) | +77 / −0 |
 | [ValidationScope.java](/private/tmp/xvm-full-testable-lsp-20261009/javatools/src/main/java/org/xvm/compiler/ast/ValidationScope.java) | [Diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...c63a560106ebe306a22b5f80a7addcc114183b88#diff-722294827b6880f382d113b7bd7eb21c0dac268447365b4d4e6abe819e362ab7) | +24 / −0 |
 
 #### `javatools/src/main/java/org/xvm/compiler/ast/partial`
@@ -2197,7 +2231,7 @@ No files in this category.
 | [DeclarationProvenanceTest.java](/private/tmp/xvm-full-testable-lsp-20261009/javatools/src/test/java/org/xvm/compiler/ast/DeclarationProvenanceTest.java) | [Diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...c63a560106ebe306a22b5f80a7addcc114183b88#diff-6ce63635546929d42791f4a81d74269c2e610be4e834043e2d4a2f1df757e3e6) | +151 / −0 |
 | [NameResolverReportingTest.java](/private/tmp/xvm-full-testable-lsp-20261009/javatools/src/test/java/org/xvm/compiler/ast/NameResolverReportingTest.java) | [Diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...c63a560106ebe306a22b5f80a7addcc114183b88#diff-1b57bb6f4044d70d55f4e2ff383b355b54433d52209247f378caa3d9705dde20) | +109 / −0 |
 | [OrdinaryAstTreeCopyTest.java](/private/tmp/xvm-full-testable-lsp-20261009/javatools/src/test/java/org/xvm/compiler/ast/OrdinaryAstTreeCopyTest.java) | [Diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...c63a560106ebe306a22b5f80a7addcc114183b88#diff-617664fb79aad083862ae0eafd88e160b419b345cb1aebd92e0347f1bb59c9ba) | +42 / −0 |
-| [PartialSyntaxTest.java](/private/tmp/xvm-full-testable-lsp-20261009/javatools/src/test/java/org/xvm/compiler/ast/PartialSyntaxTest.java) | [Diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...c63a560106ebe306a22b5f80a7addcc114183b88#diff-ae70a8ec583f378ba691079960e0bfafa76c61c0f1d739f96828215cc0674d2f) | +233 / −0 |
+| [PartialSyntaxTest.java](/private/tmp/xvm-full-testable-lsp-20261009/javatools/src/test/java/org/xvm/compiler/ast/partial/PartialSyntaxTest.java) | [Diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...c63a560106ebe306a22b5f80a7addcc114183b88#diff-ae70a8ec583f378ba691079960e0bfafa76c61c0f1d739f96828215cc0674d2f) | +233 / −0 |
 | [ValidationScopeTest.java](/private/tmp/xvm-full-testable-lsp-20261009/javatools/src/test/java/org/xvm/compiler/ast/ValidationScopeTest.java) | [Diff](https://github.com/xtclang/xvm/compare/da07a0be8525962391f7e46215e4a8f277bd0b14...c63a560106ebe306a22b5f80a7addcc114183b88#diff-03a466a7a289e2ea19bcf02e97736d7cf0a164a707c3260e145ca0c30b4fd82f) | +156 / −0 |
 
 #### `javatools/src/test/java/org/xvm/compiler/ast/partial`

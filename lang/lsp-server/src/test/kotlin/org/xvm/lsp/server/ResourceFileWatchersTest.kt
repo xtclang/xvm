@@ -17,6 +17,10 @@ import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Forces stalled and failed watcher registration/removal replies. The queue must recover, IDs must not be
+ * reused while retirement is pending, and disconnect must release all outstanding work.
+ */
 class ResourceFileWatchersTest {
     @TempDir lateinit var directory: Path
 

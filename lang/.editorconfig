@@ -1,0 +1,3 @@
+[*.{kt,kts}]
+# Keep single-expression when entries concise even when another entry needs a block.
+ktlint_standard_when-entry-bracing = disabled

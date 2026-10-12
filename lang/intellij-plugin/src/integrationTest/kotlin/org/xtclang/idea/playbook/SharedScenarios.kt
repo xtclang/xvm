@@ -14,6 +14,7 @@ class SharedScenarios(
     val common: Common,
     val scenarios: Map<String, Scenario>,
 ) {
+    /** Holds fixture and configuration data shared by all editor scenarios. */
     data class Common(
         val sourceModules: List<SourceModule>,
         val fixtures: List<Fixture>,
@@ -22,22 +23,26 @@ class SharedScenarios(
         val colorPrototype: JsonObject,
     )
 
+    /** Identifies a fixture file and the source pattern used to populate it. */
     data class Fixture(
         val file: String,
         val pattern: String,
     )
 
+    /** Identifies the shared edit, run and inspect targets. */
     data class Editing(
         val file: String,
         val run: String,
         val inspect: String,
     )
 
+    /** Records native-client coverage and explicit limitations for one scenario. */
     data class Coverage(
         val coverage: String,
         val limitations: List<String>,
     )
 
+    /** Retains a scenario's instructions, expectations and IntelliJ coverage from the shared catalog. */
     data class Scenario(
         val title: String,
         val manual: List<String>,
@@ -65,6 +70,7 @@ class SharedScenarios(
     val configuration: Configuration = core("CFG1")
     val warning: Warning = core("7a.8")
 
+    /** Describes a fixture module's sources, dependencies and optional resource roots. */
     data class SourceModule(
         val name: String,
         val uri: String,
@@ -72,6 +78,7 @@ class SharedScenarios(
         val resourceRoots: List<String>? = null,
     )
 
+    /** Replaces a unique source fragment so both editor drivers make the same change. */
     data class Edit(
         val from: String,
         val to: String,
@@ -82,12 +89,14 @@ class SharedScenarios(
         }
     }
 
+    /** Pairs a source cursor marker with the expected navigation target. */
     data class Location(
         val cursor: String,
         val targetFile: String,
         val target: String,
     )
 
+    /** Couples an intentional source error with its expected diagnostic classification and range. */
     data class ExpectedError(
         val edit: Edit,
         val severity: String,
@@ -97,6 +106,7 @@ class SharedScenarios(
         val rangeEnd: String,
     )
 
+    /** Describes the shared diagnostic introduction and repair scenario. */
     data class Diagnostics(
         val id: String,
         val file: String,
@@ -104,12 +114,14 @@ class SharedScenarios(
         val cleanAppend: String,
     )
 
+    /** Lists the source-to-definition assertions shared by both editors. */
     data class Definitions(
         val id: String,
         val file: String,
         val locations: List<Location>,
     )
 
+    /** Describes the incomplete source, chosen completion and expected accepted edit. */
     data class Completion(
         val id: String,
         val file: String,
@@ -119,12 +131,14 @@ class SharedScenarios(
         val accepted: Edit,
     )
 
+    /** Describes one navigation assertion in its fixture file. */
     data class Navigation(
         val id: String,
         val file: String,
         val location: Location,
     )
 
+    /** Describes a dependency edit whose effects must reach its consumer. */
     data class DependencyEdit(
         val id: String,
         val file: String,
@@ -132,11 +146,13 @@ class SharedScenarios(
         val edit: Edit,
     )
 
+    /** Identifies the consumer used to verify compiler configuration changes. */
     data class Configuration(
         val id: String,
         val consumer: String,
     )
 
+    /** Describes warning counts, source ownership and the edit that changes them. */
     data class Warning(
         val id: String,
         val file: String,

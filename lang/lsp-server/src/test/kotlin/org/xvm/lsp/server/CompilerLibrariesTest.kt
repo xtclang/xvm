@@ -17,6 +17,10 @@ import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 
+/**
+ * Checks ordered binary libraries and attached navigation sources through server configuration. Replacement
+ * and removal retire old facts while inheritance, empty paths and bundled-module ownership remain distinct.
+ */
 class CompilerLibrariesTest {
     @TempDir lateinit var directory: Path
 

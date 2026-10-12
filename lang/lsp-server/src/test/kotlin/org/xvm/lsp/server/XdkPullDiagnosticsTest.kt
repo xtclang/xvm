@@ -43,6 +43,10 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
 
+/**
+ * Checks negotiated document/workspace pull diagnostics alongside the push fallback. Closed roots can be
+ * diagnosed without becoming editor buffers, and result IDs must reflect repaired or changed analyses.
+ */
 class XdkPullDiagnosticsTest {
     @TempDir lateinit var directory: Path
 
@@ -347,6 +351,7 @@ class XdkPullDiagnosticsTest {
         }
     }
 
+    /** Negotiates pull capabilities and records push reports and refreshes for comparison. */
     private class Session(
         pull: Boolean = true,
         related: Boolean = true,

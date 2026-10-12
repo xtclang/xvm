@@ -124,16 +124,19 @@ fun Driver.selectionParents(
     withContext(OnDispatcher.EDT) { editor.editor.getSelectionModel().removeSelection() }
 }
 
+/** Exposes an editor's native folding model through the driver. */
 @Remote("com.intellij.openapi.editor.Editor")
 interface FoldingEditor {
     fun getFoldingModel(): EditorFolding
 }
 
+/** Enumerates the fold regions installed in the native editor. */
 @Remote("com.intellij.openapi.editor.FoldingModel")
 interface EditorFolding {
     fun getAllFoldRegions(): Array<EditorFoldRegion>
 }
 
+/** Reads native fold offsets and validity for folding assertions. */
 @Remote("com.intellij.openapi.editor.FoldRegion")
 interface EditorFoldRegion {
     fun isValid(): Boolean
@@ -143,6 +146,7 @@ interface EditorFoldRegion {
     fun getEndOffset(): Int
 }
 
+/** Reads the actual editor selection for expand-selection assertions. */
 @Remote("com.intellij.openapi.editor.SelectionModel")
 interface SelectionOffsets {
     fun getSelectionStart(): Int
@@ -150,6 +154,7 @@ interface SelectionOffsets {
     fun getSelectionEnd(): Int
 }
 
+/** Requests selection ranges through the installed client's feature support. */
 @Remote(
     "com.redhat.devtools.lsp4ij.features.selectionRange.LSPSelectionRangeSupport",
     plugin = "com.redhat.devtools.lsp4ij",
@@ -158,6 +163,7 @@ interface SelectionRangeSupport {
     fun getValidLSPFuture(): SelectionRangeFuture?
 }
 
+/** Polls native selection-range results. */
 @Remote("java.util.concurrent.CompletableFuture")
 interface SelectionRangeFuture {
     fun isDone(): Boolean
@@ -167,6 +173,7 @@ interface SelectionRangeFuture {
     fun get(): List<ClientSelectionRange>
 }
 
+/** Exposes a protocol selection range and its enclosing parent. */
 @Remote("org.eclipse.lsp4j.SelectionRange", plugin = "com.redhat.devtools.lsp4ij")
 interface ClientSelectionRange {
     fun getRange(): SourceRange

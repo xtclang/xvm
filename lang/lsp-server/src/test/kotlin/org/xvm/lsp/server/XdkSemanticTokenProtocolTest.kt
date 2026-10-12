@@ -34,6 +34,10 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Checks negotiated semantic-token delta, refresh and reopen behavior through the compiler server.
+ * Unsupported request forms must fail without corrupting the full-token response path.
+ */
 class XdkSemanticTokenProtocolTest {
     @Test
     fun `compiler token delta survives edits and resets on reopen with negotiated refresh`() {
