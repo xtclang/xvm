@@ -27,17 +27,20 @@ import java.net.URI
 internal class DocumentStartupMessages(
     private val snapshot: (String) -> Snapshot?,
 ) {
+    /** Owner, document stamp and text used to check whether startup synchronization is still current. */
     data class Snapshot(
         val owner: Any,
         val stamp: Long,
         val text: String,
     )
 
+    /** Document owner and deferred change notification while its open message is being coordinated. */
     private data class Opening(
         val owner: Any,
         val change: NotificationMessage,
     )
 
+    /** Optional startup snapshot to incorporate into one document notification. */
     private data class Fold(
         val uri: String,
         val snapshot: Snapshot?,
@@ -45,6 +48,11 @@ internal class DocumentStartupMessages(
 
     // The actual transmitted version, never a second counter. A closed entry retains only the
     // version ceiling: LSP4IJ can reuse versions on reopen, making old server edits ambiguous.
+
+    /**
+     * Last transmitted document state. The retired version ceiling prevents a replacement synchronizer from
+     * reusing an older LSP version.
+     */
     private data class Sent(
         val owner: Any?,
         val version: Int,
@@ -84,17 +92,11 @@ internal class DocumentStartupMessages(
             val params = (message as? NotificationMessage)?.params
             val uri =
                 when (params) {
-                    is DidOpenTextDocumentParams -> {
-                        params.textDocument.uri
-                    }
+                    is DidOpenTextDocumentParams -> params.textDocument.uri
 
-                    is DidChangeTextDocumentParams -> {
-                        params.textDocument.uri
-                    }
+                    is DidChangeTextDocumentParams -> params.textDocument.uri
 
-                    is DidCloseTextDocumentParams -> {
-                        params.textDocument.uri
-                    }
+                    is DidCloseTextDocumentParams -> params.textDocument.uri
 
                     else -> {
                         ((message as? RequestMessage)?.params as? FoldingRangeRequestParams)
@@ -108,17 +110,11 @@ internal class DocumentStartupMessages(
             val current = uri?.let(snapshot)
             synchronized(lock) {
                 when (params) {
-                    is DidOpenTextDocumentParams -> {
-                        open(message, params, current, next)
-                    }
+                    is DidOpenTextDocumentParams -> open(message, params, current, next)
 
-                    is DidChangeTextDocumentParams -> {
-                        change(message, params, current, next)
-                    }
+                    is DidChangeTextDocumentParams -> change(message, params, current, next)
 
-                    is DidCloseTextDocumentParams -> {
-                        close(params.textDocument.uri, current, next)
-                    }
+                    is DidCloseTextDocumentParams -> close(params.textDocument.uri, current, next)
 
                     else -> {
                         if (message is RequestMessage && message.params is FoldingRangeRequestParams) {

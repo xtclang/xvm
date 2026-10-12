@@ -74,22 +74,22 @@ public class ModuleInfo {
      * @param moduleName  the module identity obtained from the host's source snapshot
      */
     protected ModuleInfo(File sourceFile, String moduleName) {
-        this.fileSpec = Objects.requireNonNull(sourceFile, "sourceFile").getAbsoluteFile();
-        this.moduleName = Objects.requireNonNull(moduleName, "moduleName");
-        if (moduleName.isBlank() || !isExplicitSourceFile(fileSpec.getName())) {
+        this.fileSpec      = Objects.requireNonNull(sourceFile, "sourceFile").getAbsoluteFile();
+        this.moduleName    = Objects.requireNonNull(moduleName, "moduleName");
+        if (moduleName.isBlank() || !isExplicitSourceFile(this.fileSpec.getName())) {
             throw new IllegalArgumentException("A module name and .x source root are required");
         }
-        this.sourceFile = fileSpec;
-        deduce        = false;
-        fileName      = removeExtension(fileSpec.getName());
-        sourceDir     = fileSpec.getParentFile();
-        projectDir    = sourceDir;
-        sourceStatus  = Status.Exists;
-        sourceContent = Content.Module;
-        resourceDir   = NoResources;
-        binaryDir     = sourceDir;
-        binaryStatus  = Status.NotExists;
-        binaryContent = Content.Invalid;
+        this.sourceFile    = this.fileSpec;
+        this.deduce        = false;
+        this.fileName      = removeExtension(this.fileSpec.getName());
+        this.sourceDir     = this.fileSpec.getParentFile();
+        this.projectDir    = this.sourceDir;
+        this.sourceStatus  = Status.Exists;
+        this.sourceContent = Content.Module;
+        this.resourceDir   = NoResources;
+        this.binaryDir     = this.sourceDir;
+        this.binaryStatus  = Status.NotExists;
+        this.binaryContent = Content.Invalid;
     }
 
     /**
@@ -717,6 +717,11 @@ public class ModuleInfo {
      * partial analysis while retaining the same source snapshot, resources and package assembly.
      * The parser must report other syntax errors to its supplied listener; incomplete syntax
      * must never be passed to ordinary compilation. Use a fresh ModuleInfo for each attempt.
+     *
+     * @param errs   the diagnostic listener and abort policy for this operation
+     * @param parse  the parser factory applied to each discovered source with its diagnostic listener
+     *
+     * @return the assembled source root, or null if loading or parsing prevented assembly
      */
     public Node getSourceTree(ErrorListener errs,
                               BiFunction<Source, ErrorListener, StatementBlock> parse) {
@@ -884,6 +889,8 @@ public class ModuleInfo {
         /**
          * Parse while observing the host's abort request. The no-argument entry point is retained
          * for CLI consumers that drain the node's diagnostics themselves.
+         *
+         * @param errs  the diagnostic listener and abort policy for this operation
          */
         public void parse(ErrorListener errs) {
             if (!errs.isAbortDesired()) {
@@ -891,7 +898,12 @@ public class ModuleInfo {
             }
         }
 
-        /** Parse with an attempt-owned strategy; existing custom nodes retain their own parser. */
+        /**
+         * Parse with an attempt-owned strategy; existing custom nodes retain their own parser.
+         *
+         * @param errs   the diagnostic listener and abort policy for this operation
+         * @param parse  the parser factory applied to each discovered source with its diagnostic listener
+         */
         public void parse(ErrorListener errs, BiFunction<Source, ErrorListener, StatementBlock> parse) {
             parse(errs);
         }

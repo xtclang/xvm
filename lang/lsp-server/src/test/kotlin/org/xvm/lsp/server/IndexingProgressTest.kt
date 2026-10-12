@@ -20,6 +20,10 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Checks progress labels and ownership for real background indexing lifetimes. Cancellation must belong to
+ * the announced scan or query rather than an unrelated request.
+ */
 class IndexingProgressTest {
     @Test
     fun `query progress identifies the requested source or workspace`() {

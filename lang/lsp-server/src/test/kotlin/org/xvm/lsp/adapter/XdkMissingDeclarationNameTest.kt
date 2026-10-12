@@ -5,6 +5,10 @@ import org.junit.jupiter.api.Test
 import org.xvm.lsp.adapter.xdk.PartialSemanticModel
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 
+/**
+ * Exercises suggestions for unwritten declaration names using the written type. Missing names must not become
+ * registered compiler identities before the user accepts an edit.
+ */
 class XdkMissingDeclarationNameTest {
     @Test
     fun `missing property and parameter names use written types without registering bindings`() {

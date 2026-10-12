@@ -12,6 +12,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Checks type relocation between packages with closed consumers and companion resources. Qualification and
+ * imports must preserve resolved identities rather than rewriting every matching name.
+ */
 class XdkTypeMoveTest {
     @TempDir lateinit var directory: Path
 

@@ -13,6 +13,10 @@ import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.time.TimeSource
 
+/**
+ * Checks reusable diagnostics for closed project roots and independent pull consumers. Dependency edits
+ * invalidate only affected builds, while cancellation belongs to one reader rather than the shared analysis.
+ */
 class XdkDiagnosticIndexTest {
     @TempDir lateinit var directory: Path
 

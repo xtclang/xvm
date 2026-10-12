@@ -11,6 +11,10 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkRename
 import java.nio.file.Path
 
+/**
+ * Exercises method generation from unresolved calls using compiler-derived signature types. Refuses types
+ * without a proven destination spelling and verifies instance/static and value/void contracts.
+ */
 class XdkMissingMethodsTest {
     @TempDir lateinit var directory: Path
 

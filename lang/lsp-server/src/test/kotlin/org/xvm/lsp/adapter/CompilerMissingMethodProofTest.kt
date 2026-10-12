@@ -15,6 +15,11 @@ import org.xvm.lsp.adapter.xdk.projectRenameFacts
 import org.xvm.lsp.adapter.xdk.renameFacts
 import org.xvm.lsp.adapter.xdk.toDependency
 
+/**
+ * Challenges generated method signatures and argument bindings after imports, relocation and cross-module
+ * insertion. Compatible but different types or rebound arguments must fail proof even when the proposed
+ * source compiles.
+ */
 class CompilerMissingMethodProofTest {
     @Test
     fun `imports shift the inserted method but cannot weaken its source signature proof`() {

@@ -31,6 +31,10 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Exercises connection-owned virtual library content and refresh. Only registered current artifact URIs may
+ * be read; client-provided paths or presentations cannot replace authoritative source content.
+ */
 class LibraryContentProtocolTest {
     @Test
     fun `library content is negotiated per connection and cannot read unregistered or retired URIs`() {

@@ -5,6 +5,10 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 
+/**
+ * Protects method folding boundaries around closing braces and adjacent declarations. Damaged syntax must not
+ * make a fold consume the following declaration.
+ */
 class XdkFoldingTest {
     @ParameterizedTest
     @ValueSource(strings = ["\n", "\r\n"])

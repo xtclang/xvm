@@ -4,6 +4,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 
+/**
+ * Checks constructor candidates in partial source using normal accessibility and type inference. Incomplete
+ * input must not select an overload or offer constructors unavailable to ordinary compilation.
+ */
 class XdkIncompleteConstructorTest {
     @Test
     fun `constructor signatures fit written arguments without selecting an overload`() {

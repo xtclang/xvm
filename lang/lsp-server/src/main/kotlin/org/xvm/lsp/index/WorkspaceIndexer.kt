@@ -57,8 +57,10 @@ class WorkspaceIndexer(
     private val parseLock = Any()
     private val closed = AtomicBoolean()
 
-    // Owned by parseLock. Identity distinguishes reads across edits, closes and disk events;
-    // a later disk read must also supersede an earlier read of the same closed file.
+    /**
+     * Identity token for one open-buffer or disk-read revision, owned by the parse lock. Even two reads of
+     * the same closed file must have distinct tokens so late results cannot replace newer ones.
+     */
     private class Revision(
         val open: Boolean,
     )

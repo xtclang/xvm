@@ -360,13 +360,8 @@ class AdapterFormatter {
         if (prevTrimmed.endsWith("{}")) {
             val bodyIndent =
                 when {
-                    isContinuationLine(prevTrimmed) -> {
-                        findDeclarationIndent(tree, prevLineIndex) + config.indentSize
-                    }
-
-                    else -> {
-                        prevIndent + config.indentSize
-                    }
+                    isContinuationLine(prevTrimmed) -> findDeclarationIndent(tree, prevLineIndex) + config.indentSize
+                    else -> prevIndent + config.indentSize
                 }
             val closingIndent =
                 when {
@@ -403,13 +398,8 @@ class AdapterFormatter {
             val currentIndent = currentLine.takeWhile { it == ' ' }.length
             val bodyIndent =
                 when {
-                    isContinuationLine(prevTrimmed) -> {
-                        findDeclarationIndent(tree, prevLineIndex) + config.indentSize
-                    }
-
-                    else -> {
-                        prevIndent + config.indentSize
-                    }
+                    isContinuationLine(prevTrimmed) -> findDeclarationIndent(tree, prevLineIndex) + config.indentSize
+                    else -> prevIndent + config.indentSize
                 }
             val closingIndent =
                 when {

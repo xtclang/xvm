@@ -20,6 +20,10 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 
+/**
+ * Checks bounded streaming before the final protocol response. Every item is delivered once, while
+ * cancellation, stale ownership, disconnect and backend failure prevent later batches from escaping.
+ */
 class PartialResultsTest {
     @Test
     fun `partial batches precede an empty final response and preserve every item once`() {

@@ -39,6 +39,11 @@ import java.util.concurrent.CompletableFuture
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Exercises compiler-backed server behavior across dependency replacement, diagnostics and shutdown.
+ * Unchanged consumer versions must still refresh after dependency edits, and foreign reports retain their
+ * actual source ownership.
+ */
 class XdkLanguageServerTest {
     @Test
     fun `host dependency replacement republishes diagnostics for unchanged consumer versions`() {
@@ -134,6 +139,7 @@ class XdkLanguageServerTest {
         }
     }
 
+    /** Captures pushed diagnostics and closes the initialized server after each lifecycle test. */
     private class Session(
         adapter: Adapter,
     ) : AutoCloseable {
@@ -184,6 +190,7 @@ class XdkLanguageServerTest {
     private class PendingAdapter(
         private val delegate: MockAdapter = MockAdapter(),
     ) : Adapter by delegate {
+        /** Retains one compilation's exact input and future until the test chooses its completion order. */
         private data class Pending(
             val uri: String,
             val content: String,
