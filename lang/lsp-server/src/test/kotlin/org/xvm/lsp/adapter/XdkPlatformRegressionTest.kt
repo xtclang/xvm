@@ -94,7 +94,6 @@ class XdkPlatformRegressionTest {
                     .filterIsInstance<MethodDeclarationStatement>()
                     .first()
                     .component as MethodStructure
-            assertThat(method.ast).isNull()
             assertThat(method.hasOps()).isFalse()
             val items = adapter.getCompletions(URI, at.line, at.column)
             assertThat(items.map { it.label }).describedAs("partial=%s", adapter.analyzeAtAsync(URI, at).join()?.sites).contains("size")

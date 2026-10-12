@@ -72,7 +72,6 @@ class XdkAnonymousConstructorTest {
         assertThat(owner.children().filterIsInstance<ClassStructure>())
             .containsExactly(shell.component as ClassStructure)
         assertThat(components(owner).filterIsInstance<MethodStructure>()).allSatisfy { method ->
-            assertThat(method.ast).describedAs(method.identityConstant.toString()).isNull()
             assertThat(method.hasOps()).isFalse()
         }
         val nodes = analysis.sourceTrees().flatMap(::nodes)

@@ -29,7 +29,7 @@ import java.util.concurrent.Executors
 class CompilerBoundaryRequirementsTest {
     @ParameterizedTest
     @ValueSource(strings = ["id", "&id", "pick", "&pick"])
-    fun `bound generic functions retain binary AST and emit readable artifacts`(reference: String) {
+    fun `bound generic functions emit readable executable artifacts`(reference: String) {
         val result =
             compile(
                 "module Boundary { static <T> T id(T value) = value; <T> T pick(T value) = value; function Int(Int) make() = $reference; }",
@@ -37,8 +37,8 @@ class CompilerBoundaryRequirementsTest {
         val artifact = bytes(result)
         val restored = FileStructure(ByteArrayInputStream(artifact)).module
         assertThat(restored.name).isEqualTo("Boundary")
-        assertThat((restored.getChild("make") as MultiMethodStructure).methods().single().ast)
-            .isNotNull()
+        assertThat((restored.getChild("make") as MultiMethodStructure).methods().single().ops)
+            .isNotEmpty()
         assertPure(result.semanticSnapshot())
     }
 

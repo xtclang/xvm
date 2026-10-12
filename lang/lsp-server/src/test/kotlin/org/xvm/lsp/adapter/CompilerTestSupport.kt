@@ -1,7 +1,5 @@
 package org.xvm.lsp.adapter
 
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
 import org.xvm.api.EmbeddingSupport
 import org.xvm.api.InterpreterConnector
 import org.xvm.asm.ConstantPool
@@ -10,6 +8,8 @@ import org.xvm.asm.LinkedRepository
 import org.xvm.asm.ModuleStructure
 import org.xvm.compiler.InstantRepository
 import org.xvm.lsp.adapter.xdk.XdkLibraries
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
 
 /** Tests use the same bundled module artifacts as the production server. */
 internal object CompilerTestSupport {
