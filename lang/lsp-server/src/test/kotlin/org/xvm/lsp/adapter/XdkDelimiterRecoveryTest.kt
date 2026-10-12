@@ -192,7 +192,7 @@ class XdkDelimiterRecoveryTest {
             generateSequence(site.parent) { it.parent }
                 .filterIsInstance<MethodDeclarationStatement>()
                 .first()
-        assertThat((method.component as MethodStructure).ast).isNull()
+        assertThat((method.component as MethodStructure).hasOps()).isFalse()
         val model = analysis.semanticSnapshot(errors)
         assertThat(
             model.sites
