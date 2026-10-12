@@ -8,6 +8,10 @@ import org.xvm.lsp.adapter.xdk.XdkAdapter
 import org.xvm.lsp.adapter.xdk.XdkSourceModule
 import java.nio.file.Path
 
+/**
+ * Checks rename across nested generic delegation and module boundaries. Written contracts and implementations
+ * must remain one proven family after serialization and source edits.
+ */
 class XdkDelegatedRenameTest {
     @TempDir lateinit var directory: Path
 

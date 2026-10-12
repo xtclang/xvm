@@ -8,11 +8,13 @@ import java.net.URI
 import java.nio.file.Files
 import java.nio.file.Path
 
+/** Binary and source-library settings; a null module path inherits the Gradle model. */
 internal data class LibraryOptions(
     val modulePath: List<String>? = null,
     val sourceAttachments: List<LibraryAttachment> = emptyList(),
 )
 
+/** Ordered source roots attached to a binary module for source navigation. */
 internal data class LibraryAttachment(
     val module: String,
     val roots: List<String>,

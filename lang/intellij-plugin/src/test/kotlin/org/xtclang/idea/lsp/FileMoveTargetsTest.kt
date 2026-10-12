@@ -6,6 +6,10 @@ import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Files
 import java.nio.file.Path
 
+/**
+ * Validates move destinations before any filesystem writes and again after asynchronous compiler proof.
+ * Covers collisions, missing parents and ambiguous batches so a stale proposal cannot overwrite new files.
+ */
 class FileMoveTargetsTest {
     @TempDir lateinit var root: Path
 

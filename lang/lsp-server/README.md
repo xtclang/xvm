@@ -21,9 +21,9 @@ This project provides the LSP server that powers IDE features like:
 The server is used by both the [IntelliJ plugin](../intellij-plugin/) and
 [VS Code extension](../vscode-extension/).
 
-For the canonical cross-adapter feature matrix and current implementation status, see
-[`../doc/plans/plan-ide-integration.md`](../doc/plans/plan-ide-integration.md). This
-README focuses on LSP-server-specific build/runtime/configuration details.
+The [backend comparison](#backend-comparison) and [supported features](#supported-lsp-features)
+describe the adapter boundaries. For the architectural changes required in the compiler, start with
+[the javatools guide](../../javatools/README.md#compiler-architecture-for-language-tooling).
 
 > **Note:** All `./gradlew :lang:*` commands below assume `-PincludeBuildLang=true -PincludeBuildAttachLang=true` are passed when running from the project root. See [Composite Build Properties](../../CLAUDE.md) in the project CLAUDE.md for details.
 
@@ -122,7 +122,7 @@ Compiler mode has implementations for all 27 capabilities in this project's adap
 plus push/pull diagnostics and document/workspace synchronization. Several implementations remain
 bounded; the interface does not cover every LSP feature. Debug inline values, notebooks and broader
 refactorings remain incomplete. Color values have an opt-in, fixture-only constructor prototype;
-a public Ecstasy color-library contract remains deferred. See the [explicit absent-feature inventory](../doc/plans/plan-ide-integration.md#compiler-completeness-snapshot)
+a public Ecstasy color-library contract remains deferred. See the [feature boundaries below](#supported-lsp-features)
 and [acceptance reports](../doc/manual-test-plan.md#acceptance-reports).
 Capability coverage, semantic completeness and native test coverage are tracked separately.
 Compiler code actions include expression/local extraction, private helper extraction for contiguous
@@ -204,7 +204,7 @@ explicit import aliases and member-file type/package moves also use compiler pro
 include existing companion directories and simple discovery-owned module roots, updating closed
 imports while retaining local package aliases. Versioned text edits precede file/directory moves.
 They require client resource-operation support and reject collisions and symlinks. Qualified modules,
-implicit package directories and bounded cross-module ownership moves use the L62 graph proof.
+implicit package directories and bounded cross-module ownership moves use compiler proof across the affected source graph.
 Explicit source-graph replacement is available through guarded native `xtc/rename` and
 `xtc/renameFiles` proposals with configuration persistence and Undo; generic LSP clients cannot
 apply that configuration change through a standard rename. The `construct` keyword stays unchanged.
@@ -230,9 +230,8 @@ single-source inputs. Source roots use the normal file/same-name-directory modul
 
 ## Supported LSP Features
 
-The canonical feature matrix lives in
-[`../doc/plans/plan-ide-integration.md`](../doc/plans/plan-ide-integration.md#adapter-capability-matrix).
-At a high level, the explicit Tree-sitter backend provides:
+The [manual playbook](../doc/manual-test-plan.md) supplies examples and acceptance checks for these
+features. At a high level, the explicit Tree-sitter backend provides:
 
 - document symbols, same-file navigation, workspace-symbol search, and best-effort cross-file navigation
 - context-aware completion
@@ -307,7 +306,8 @@ enclosing compiler scope, including flat qualified names, without registering in
 Explicit cursor queries also recover missing operands inside compound call arguments and validate
 the complete proposed expression. Declaration/parameter names, missing map entries and
 unterminated literal contents remain outside this recovery. The
-[capability matrix](../doc/plans/plan-ide-integration.md) records the remaining syntax/callable limits.
+[manual completion checks](../doc/manual-test-plan.md#xdkadapter-playbook) exercise the supported
+syntax and callable boundaries.
 
 Declaration-header recovery retains malformed method names and source extents for outline and
 folding. Compiler folds keep the heading line and a real closing brace visible; precise end columns
@@ -763,8 +763,8 @@ where users can configure indent size, continuation indent, tab usage, and right
 settings are forwarded to the LSP server via `workspace/configuration` at startup and whenever
 the configuration changes. The server uses them as a fallback when no `xtc-format.toml` is present.
 
-See [formatting-plan.md](../doc/plans/formatting-plan.md) for the full implementation plan
-including the `xtc-format.toml` config file schema and the configuration architecture.
+See the [formatting design reference](../doc/plans/formatting-plan.md#configuration-architecture)
+for the `xtc-format.toml` schema and configuration precedence.
 
 ## Known Issues: IntelliJ Platform and LSP4IJ
 
@@ -820,8 +820,8 @@ in slow operation reports:
 ## Documentation
 
 - [Tree-sitter Feature Matrix](../tree-sitter/doc/functionality.md) - What Tree-sitter can/cannot do
-- [Tree-sitter Integration Plan](../doc/plans/plan-tree-sitter.md) - Full implementation details
-- [Formatting Plan](../doc/plans/formatting-plan.md) - On-type formatting design, configuration architecture, industry survey
+- [Compiler architecture](../../javatools/README.md#compiler-architecture-for-language-tooling) - Embedding, diagnostics and source-analysis contracts
+- [Manual playbook](../doc/manual-test-plan.md) - Feature examples, native tests and client limitations
 
 
 The server uses UTF-16 positions and adapts hover, outline, symbol
@@ -856,7 +856,7 @@ URIs include the binary and source-archive revisions; registered content comes f
 bundle, never from an arbitrary path or an editor overlay. Compiler input replacement refreshes
 fetched views; immutable revision URIs keep their original text. Closing the server retires its
 content registry. Line-ending normalization preserves declaration positions; other client text
-rewrites withhold monikers until matching presentation is restored. Clients without this capability retain protected file views (LSP4IJ UP25).
+rewrites withhold monikers until matching presentation is restored. Clients without this capability retain protected file views (LSP4IJ).
 External host source indexes remain host-owned file locations: they supply declaration ranges,
 not verified source text, and are not silently promoted to virtual library snapshots.
 Selected X31/X252/X253 pass in both editors; full-catalog/release acceptance remains separate.
@@ -871,7 +871,7 @@ placeholders, mid-token edits and read-only libraries are excluded. Cancellation
 versions retire pending suggestions. No new embedding/AST API or generative service is involved.
 
 Both editor clients have native providers. IntelliJ's direct invocation currently sends Automatic
-and omits popup selection (UP26); shared X255–X258 distinguish native from protocol coverage.
+and omits popup selection; shared X255–X258 distinguish native from protocol coverage.
 
 See the [acceptance report format](../doc/manual-test-plan.md#acceptance-reports) for how native
 and protocol coverage are recorded.

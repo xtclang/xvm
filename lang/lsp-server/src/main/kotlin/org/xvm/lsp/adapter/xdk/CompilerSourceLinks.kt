@@ -34,9 +34,7 @@ internal fun compilerSourceLinks(
                         Triple(owner?.importedModule?.identityConstant, node.startPosition, node.endPosition)
                     }
 
-                    else -> {
-                        return@mapNotNull null
-                    }
+                    else -> return@mapNotNull null
                 }
             val target = imported.first?.let(declaration)?.takeIf { it.sourceName != null } ?: return@mapNotNull null
 

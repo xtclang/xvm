@@ -18,6 +18,7 @@ internal object XdkWorkspaceDiscovery {
     private val excluded =
         setOf(".git", ".gradle", ".idea", ".vscode-test", "build", "out", "node_modules")
 
+    /** Source header and imports discovered without requiring a successful module compilation. */
     data class Header(
         val text: String,
         val module: String?,
@@ -25,6 +26,10 @@ internal object XdkWorkspaceDiscovery {
         val incomplete: Boolean,
     )
 
+    /**
+     * Immutable inventory of discovered source headers. Source changes produce a new catalog so a queued
+     * query can retain a consistent view.
+     */
     class Catalog(
         private val files: Map<File, Header> = emptyMap(),
     ) {

@@ -9,6 +9,10 @@ import org.xvm.lsp.adapter.xdk.XdkLibrarySources
 import org.xvm.lsp.adapter.xdk.XdkRename
 import java.nio.file.Path
 
+/**
+ * Checks import links and explicit alias ranges from resolved compiler identities. Wildcards resolve their
+ * actual container while unsupported syntax produces diagnostics rather than guessed paths.
+ */
 class XdkSourceLinksTest {
     @TempDir lateinit var directory: Path
 

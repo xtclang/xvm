@@ -26,19 +26,36 @@ public record InitializerBinding(List<Reference> references, List<TypedExpressio
         calls       = List.copyOf(calls);
     }
 
+    /** Source positions identifying an initializer fragment after its temporary validation method is discarded. */
     public record Span(long startPosition, long endPosition) {
+        /**
+         * Copy source coordinates without retaining the AST node.
+         *
+         * @param node  the node whose source range is copied
+         *
+         * @return the node range as immutable source coordinates
+         */
         public static Span of(AstNode node) {
             return new Span(node.getStartPosition(), node.getEndPosition());
         }
     }
 
+    /** A name occurrence and the declaration and type selected while validating the initializer. */
     public record Reference(String name, Span span, Constant target, TypeConstant type) {}
 
+    /** An initializer expression and its compiler-selected type. */
     public record TypedExpression(Span span, TypeConstant type) {}
 
+    /** A call or construction inside the initializer, with its selected invocation binding. */
     public record Call(Span span, Span callee, InvocationBinding binding, boolean construction) {}
 
-    /** Capture the written nodes before validation can replace constant subexpressions. */
+    /**
+     * Capture the written nodes before validation can replace constant subexpressions.
+     *
+     * @param root  the initializer root whose written descendants are retained
+     *
+     * @return the original initializer nodes in breadth-first traversal order
+     */
     public static List<AstNode> writtenNodes(AstNode root) {
         List<AstNode> nodes = new ArrayList<>(List.of(root));
         for (int i = 0; i < nodes.size(); i++) {
@@ -47,7 +64,14 @@ public record InitializerBinding(List<Reference> references, List<TypedExpressio
         return List.copyOf(nodes);
     }
 
-    /** Called only after successful validation/emission and the decision to discard the method. */
+    /**
+     * Called only after successful validation/emission and the decision to discard the method.
+     *
+     * @param written  the original initializer nodes captured before validation rewrites
+     * @param facts    the validated call and construction facts from this initializer attempt
+     *
+     * @return detached source associations retained after discarding the synthetic initializer method
+     */
     public static InitializerBinding capture(List<AstNode> written, InvocationBinding.Facts facts) {
         List<Reference> references = new ArrayList<>();
         List<TypedExpression> expressions = new ArrayList<>();

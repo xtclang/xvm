@@ -6,6 +6,10 @@ import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
 
+/**
+ * Verifies hierarchy edges from compiler-selected calls with exact source ownership. Covers overloads,
+ * recursion, lambdas and closed members while refusing to invent runtime targets for dynamic calls.
+ */
 class XdkCallHierarchyTest {
     @TempDir lateinit var directory: Path
 

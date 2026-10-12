@@ -17,15 +17,21 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit.SECONDS
 import java.util.concurrent.atomic.AtomicBoolean
 
+/**
+ * Forces changes and cancellation during project queries. Open overlays, closed disk inputs and graph
+ * ownership must stay current until publication; trial results must not become normal editor analyses.
+ */
 class XdkProjectQueryLifecycleTest {
     @TempDir lateinit var directory: Path
 
+    /** Selects the project query whose ownership and stale-result behavior is exercised. */
     enum class Feature {
         REFERENCES,
         CODE_LENSES,
         RENAME,
     }
 
+    /** Enumerates changes that must retire an outstanding project query. */
     private enum class Change {
         EDIT,
         CLOSE,
@@ -218,6 +224,7 @@ class XdkProjectQueryLifecycleTest {
         }
     }
 
+    /** Owns a real adapter and a two-module fixture with controllable compilation delays. */
     private inner class Session : AutoCloseable {
         val library =
             directory

@@ -18,6 +18,7 @@ class PartialSemanticModel
         sites: List<Site>,
         syntaxCompletions: List<CompletionItem> = emptyList(),
     ) {
+        /** Incomplete source operation for which the compiler retained cursor information. */
         enum class Kind {
             NAME,
             DECLARATION_NAME,
@@ -39,6 +40,7 @@ class PartialSemanticModel
             val writtenConstraint: String? = null,
         )
 
+        /** Detached member candidate visible at an incomplete source position. */
         @ConsistentCopyVisibility
         data class Member
             internal constructor(
@@ -49,6 +51,7 @@ class PartialSemanticModel
                 val signature: Signature?,
             )
 
+        /** Written argument range, optional label and any type established before parsing or fitting stopped. */
         data class Argument(
             val range: Range,
             val label: String?,
@@ -61,6 +64,7 @@ class PartialSemanticModel
             val range: Range,
         )
 
+        /** Possible method or constructor binding; incomplete analysis has not selected it as the final call. */
         @ConsistentCopyVisibility
         data class CallCandidate
             internal constructor(
@@ -70,6 +74,7 @@ class PartialSemanticModel
                 val constructor: Boolean = false,
             )
 
+        /** Possible function signature and its argument mapping at an incomplete call. */
         @ConsistentCopyVisibility
         data class FunctionCandidate
             internal constructor(

@@ -1,4 +1,4 @@
-package org.xvm.compiler.ast;
+package org.xvm.compiler.ast.partial;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,12 +18,21 @@ import org.xvm.asm.constants.TypeInfo.MethodKind;
 
 import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.Token.Id;
-import org.xvm.compiler.ast.partial.IncompleteStatement;
+import org.xvm.compiler.ast.Context;
+import org.xvm.compiler.ast.Expression;
+import org.xvm.compiler.ast.NewExpression;
+import org.xvm.compiler.ast.NonBindingExpression;
+import org.xvm.compiler.ast.PartialAst;
 
 import static org.xvm.asm.ErrorListener.Silence.PROBE;
 import static org.xvm.asm.ErrorListener.silent;
 
-/** Constructor cursor queries reuse normal type preparation and argument fitting. */
+/**
+ * Inspects incomplete construction using normal type preparation and argument fitting through
+ * {@link PartialAst}, without exposing {@link NewExpression}'s internal preparation methods.
+ * Stops before synthesis and emission, retaining candidate signatures for the cursor query
+ * instead of selecting a final constructor.
+ */
 final class PartialConstructionResolver {
     static CursorBinding inspect(IncompleteStatement site, NewExpression creation, Context ctx,
                                  TypeConstant required, ErrorListener errs) {
@@ -35,15 +44,15 @@ final class PartialConstructionResolver {
         // An anonymous declaration owns its class shell in this analysis attempt. Preparing a
         // detached clone would attach orphan components to the enclosing source method instead.
         // Stop before forwarding-constructor synthesis, capture validation or emission.
-        boolean anonymous = creation.body != null;
+        boolean anonymous = PartialAst.hasAnonymousBody(creation);
         var trial = anonymous ? creation : (NewExpression) creation.clone();
-        var construction = trial.prepareConstruction(ctx.enter(), required, validation, true);
+        var construction = PartialAst.prepareConstruction(trial, ctx.enter(), required, validation);
         if (construction == null || validation.hasSeriousErrors() || validation.isAbortDesired()) {
             return scope;
         }
         var lookup = ErrorListener.cancellable(ErrorListener.collecting(errs::log), errs::isAbortDesired);
         var info = anonymous ? construction.target().ensureTypeInfo(lookup)
-                : trial.getTypeInfo(ctx, construction.target(), lookup);
+                : PartialAst.typeInfo(trial, ctx, construction.target(), lookup);
         if (lookup.hasSeriousErrors() || lookup.isAbortDesired()
                 || construction.requiresNewable() && !info.isNewable(false, validation)) {
             return scope;
@@ -60,9 +69,8 @@ final class PartialConstructionResolver {
                 // Brackets select the size slot of the real fixed-size array constructor.
                 // Other Array overloads (copy, mutability, capacity) are not dimension syntax.
                 .filter(method -> site.getOperator().getId() != Id.L_SQUARE
-                        || trial.type instanceof ArrayTypeExpression array
-                            && target.getMethodById(method).getTopmostMethodStructure(target)
-                                    .getIdentityConstant().equals(array.getSupplyConstructor()))
+                        || target.getMethodById(method).getTopmostMethodStructure(target)
+                                .getIdentityConstant().equals(PartialAst.arrayConstructor(trial)))
                 .filter(method -> anonymous || target.getType().getAccess() == Access.PRIVATE
                         || target.getMethodById(method).isVisible(ctx.getThisClassId()))
                 // A class shell's generated default is only a placeholder for superclass
@@ -94,6 +102,7 @@ final class PartialConstructionResolver {
                         .anyMatch(candidate -> PartialCallResolver.validateArguments(ctx, candidate, arguments(site, values), errs)));
     }
 
+    /** Candidate constructor paired with the type information that supplies its signature. */
     private record Constructor(TypeInfo info, MethodConstant method) {}
 
     private static List<Expression> arguments(IncompleteStatement site, List<Expression> values) {
@@ -112,16 +121,14 @@ final class PartialConstructionResolver {
         var trial = ctx.enter();
         List<Expression> ordered = written.stream().map(value -> (Expression) value.clone())
                 .collect(Collectors.toCollection(ArrayList::new));
-        if (creation.containsNamedArgs(ordered)) {
-            ordered = creation.rearrangeNamedArgs(method, ordered, validation);
-            if (ordered == null) {
-                return null;
-            }
+        ordered = PartialAst.orderArguments(creation, method, ordered, validation);
+        if (ordered == null) {
+            return null;
         }
         for (int index = 0; index < ordered.size() && !validation.isAbortDesired(); ++index) {
             var value = ordered.get(index);
             if (!(value instanceof NonBindingExpression)) {
-                var validated = value.validate(trial, candidate.signature().getRawParams()[index], validation);
+                var validated = PartialAst.validate(value, trial, candidate.signature().getRawParams()[index], validation);
                 if (validated == null || !validated.getTypeFit().isFit()) {
                     return null;
                 }
@@ -131,9 +138,9 @@ final class PartialConstructionResolver {
         if (validation.hasSeriousErrors() || validation.isAbortDesired()) {
             return null;
         }
-        var inferred = creation.inferTypeFromConstructor(trial, owner, method, ordered);
+        var inferred = PartialAst.inferConstruction(creation, trial, owner, method, ordered);
         return inferred == null ? candidate : new CursorBinding.Candidate(candidate.method(),
-                method.getIdentityConstant().getSignature().resolveGenericTypes(creation.pool(), inferred),
+                method.getIdentityConstant().getSignature().resolveGenericTypes(PartialAst.pool(creation), inferred),
                 candidate.arguments(), candidate.converting());
     }
 }

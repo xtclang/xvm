@@ -16,6 +16,7 @@ internal class CompilerPropertyRelations(
     val declarations: Set<PropertyConstant> = emptySet(),
     val chains: List<Chain> = emptyList(),
 ) {
+    /** Ordered property contributions for an owner, retaining whether their equivalence can be proved. */
     data class Chain(
         val owner: IdentityConstant,
         val properties: List<PropertyConstant>,

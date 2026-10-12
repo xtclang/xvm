@@ -110,9 +110,7 @@ internal class ProtocolTrace(
                                 )
                             }
 
-                            is DidCloseTextDocumentParams -> {
-                                mapOf("uri" to params.textDocument.uri)
-                            }
+                            is DidCloseTextDocumentParams -> mapOf("uri" to params.textDocument.uri)
 
                             is PublishDiagnosticsParams -> {
                                 mapOf(
@@ -122,9 +120,7 @@ internal class ProtocolTrace(
                                 )
                             }
 
-                            else -> {
-                                emptyMap()
-                            }
+                            else -> emptyMap()
                         }
                     val span =
                         ExecutionTrace.span(
@@ -142,9 +138,7 @@ internal class ProtocolTrace(
                     }
                 }
 
-                else -> {
-                    next.consume(message)
-                }
+                else -> next.consume(message)
             }
         }
 

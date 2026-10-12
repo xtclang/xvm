@@ -6,6 +6,10 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 
+/**
+ * Checks generated documentation comments against real declarations and compiler parameter names. Preserves
+ * tabs, line endings and existing comments while rejecting bodies, locals and ambiguous same-line sites.
+ */
 class XdkDocumentationTest {
     @ParameterizedTest
     @ValueSource(strings = ["\n", "\r\n", "\r"])

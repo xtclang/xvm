@@ -6,6 +6,10 @@ import org.junit.jupiter.api.io.TempDir
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
 
+/**
+ * Checks method and constructor parameter rename across named callers, overloads and overrides. Uses the
+ * compiler's visible parameter slots and refuses capture or unrelated same-named parameters.
+ */
 class XdkParameterRenameTest {
     @TempDir lateinit var directory: Path
 

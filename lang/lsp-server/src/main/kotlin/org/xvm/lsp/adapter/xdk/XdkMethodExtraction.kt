@@ -24,6 +24,7 @@ import org.xvm.lsp.util.ExecutionTrace
 
 /** Same-owner expression extraction. Syntax proposes the helper; compiler facts prove the edit. */
 internal object XdkMethodExtraction {
+    /** Value captured by an extracted method, with declaration identity, type and argument/parameter offsets. */
     data class Capture(
         val declaration: SemanticModel.SourceLocation,
         val kind: SemanticModel.SymbolKind,
@@ -33,6 +34,7 @@ internal object XdkMethodExtraction {
         val argumentOffset: Int,
     )
 
+    /** Proposed helper method, replacement and captured values to verify in the trial compilation. */
     data class Candidate(
         val name: String,
         val expression: SemanticModel.SourceLocation,
@@ -134,12 +136,14 @@ internal object XdkMethodExtraction {
                     }
 
                     is AssignmentStatement -> {
-                        if (statement.rValue === expression) XdkLocalDeclarations.initializer(text, statement)?.type else null
+                        if (statement.rValue === expression) {
+                            XdkLocalDeclarations.initializer(text, statement)?.type
+                        } else {
+                            null
+                        }
                     }
 
-                    else -> {
-                        null
-                    }
+                    else -> null
                 } ?: facts.sourceTypes[selectedLocation] ?: return null
             }
         val selectedNodes = roots.flatMap { XdkRefactoringSyntax.tree(it).map { entry -> entry.first }.toList() }
@@ -194,13 +198,11 @@ internal object XdkMethodExtraction {
                             written.type
                         }
 
-                        is VariableDeclarationStatement -> {
-                            written.childNodes().filterIsInstance<TypeExpression>().singleOrNull() ?: return null
-                        }
+                        is VariableDeclarationStatement ->
+                            written.childNodes().filterIsInstance<TypeExpression>().singleOrNull()
+                                ?: return null
 
-                        else -> {
-                            return null
-                        }
+                        else -> return null
                     }
                 if (type is VariableTypeExpression || type is AnnotatedTypeExpression) return null
                 Capture(declaration, symbol.kind, symbol.name, spelling(type) ?: return null, 0, 0)

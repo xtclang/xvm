@@ -8,6 +8,10 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
 
+/**
+ * Checks rename through unions nested in generic and recursive delegation. Every possible written contract
+ * and receiver remains part of the proof, including alternatives hidden behind generated dispatch.
+ */
 class XdkUnionDelegationRenameTest {
     @TempDir lateinit var directory: Path
 
