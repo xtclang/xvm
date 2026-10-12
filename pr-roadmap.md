@@ -1,5 +1,29 @@
 # Compiler foundations and LSP PR roadmap
 
+## Synchronization update — 2026-10-12
+
+The eight integration/comparison branches now include the binary-AST removal from
+[#692](https://github.com/xtclang/xvm/pull/692): the LSP mono-code branch, compiler review base,
+semantic facts, partial analysis, LSP review base, editors, full testable reference and
+outside-`lang/` reference. Removed classes, producers, accessors and test dependencies are gone.
+Compiler source ASTs, semantic/cursor facts and executable bytecode remain. The method file
+record only skips legacy metadata and writes an empty slot to preserve `.xtc` compatibility.
+Atomic regressions execute serialized modules, and incomplete-analysis regressions assert that
+no executable operations were emitted.
+
+[Current full reference diff](https://github.com/xtclang/xvm/compare/master...errs/full-testable-lsp-20261009)
+· [Current outside-`lang/` diff](https://github.com/xtclang/xvm/compare/master...errs/compiler-foundations-reference-20261009)
+· [Removal PR](https://github.com/xtclang/xvm/pull/692)
+
+The pinned inventories below are **2026-10-09 extraction snapshots**, not current branch file
+counts. The removal adds 53 deleted classes and changes the associated compiler/tests; use the
+current comparisons above for the synchronized trees. Historical development notes describe the
+older implementation and do not imply a remaining binary-AST dependency.
+
+Independent PRs retain their review scope: #683 is repository behavior, #685 is embedding, and
+#687 is callable typing/fitting. They do not absorb #692's removal diff. Their applicable fixes,
+including review-requested test removals, are mirrored into the integration branches.
+
 <a id="outside-lang-comparison"></a>
 
 ## Outside-`lang/` comparison branch
@@ -1388,47 +1412,24 @@ updated submission plan.
 </details>
 
 <details>
-<summary>#687: exact six-file scope and compiler regression evidence</summary>
+<summary>#687: current three-file scope after review</summary>
 
-**Published as [#687](https://github.com/xtclang/xvm/pull/687):** branch
-`errs/compiler-type-correctness-20261009`, based directly on
-master `da07a0be8`, in `/private/tmp/xvm-compiler-correctness-20261009`. This extraction is
-independent of #683/#685 and leaves their API migrations out. Commit `f29cf28c0` is pushed; the PR
-is ready for review by ggleyzer, cpurdy and thegridman.
+[#687](https://github.com/xtclang/xvm/pull/687) now contains **three files** on
+`errs/compiler-type-correctness-20261009`. It is independent of #683/#685. The changes that only
+supported the removed metadata implementation were withdrawn during review; #692 handles its
+removal separately.
 
-**Exact diff: 6 files, +365/−29 lines.** Production accounts for +57/−29 across four files;
-the two new direct-consumer test files add 308 lines. The compiler changes were extracted from
-the existing implementation; the tests use master's current embedding API.
-
-Review the [complete six-file patch](build/reviews/compiler-correctness-20261009/compiler-correctness.patch)
-and [recorded test counts](build/reviews/compiler-correctness-20261009/validation.json).
-The adjacent `test-results` directory preserves the baseline, fixed and integration JUnit XMLs.
-
-| File | Extracted change |
+| File | Current change |
 | --- | --- |
-| [NameExpression.java](/private/tmp/xvm-compiler-correctness-20261009/javatools/src/main/java/org/xvm/compiler/ast/NameExpression.java) | Bind hidden generic type arguments in both the callable type and binary AST; retain concrete function register types; resolve atomic reference owners consistently for explicit, current, singleton and enclosing receivers; correct the enclosing-instance AST's owner type. |
-| [InvocationExpression.java](/private/tmp/xvm-compiler-correctness-20261009/javatools/src/main/java/org/xvm/compiler/ast/InvocationExpression.java) | Combine argument and return fitting validity instead of overwriting an earlier argument failure. |
-| [SequentialAssignExpression.java](/private/tmp/xvm-compiler-correctness-20261009/javatools/src/main/java/org/xvm/compiler/ast/SequentialAssignExpression.java) | Preserve the validated result type and concrete atomic reference type in prefix/postfix binary ASTs. |
-| [AssignmentStatement.java](/private/tmp/xvm-compiler-correctness-20261009/javatools/src/main/java/org/xvm/compiler/ast/AssignmentStatement.java) | Use the resolved atomic reference type for compound assignment AST targets. |
-| [CompilerFunctionTypingTest.kt](/private/tmp/xvm-compiler-correctness-20261009/lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/CompilerFunctionTypingTest.kt) | 12 cases: four bound generic function forms and serialization, complete-call controls, and direct fitting-contract checks for matching returns with valid/missing/excess/wrong-type arguments. |
-| [CompilerAtomicEmissionTest.kt](/private/tmp/xvm-compiler-correctness-20261009/lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/CompilerAtomicEmissionTest.kt) | 18 cases: typed serialized prefix/postfix results, enclosing owners, generic receivers, compound assignments and invalid-operation controls. |
+| [NameExpression.java](/private/tmp/xvm-compiler-correctness-20261009/javatools/src/main/java/org/xvm/compiler/ast/NameExpression.java) | Bind hidden generic parameters in the callable type, retain the concrete function register type, and pass type values correctly to the runtime binding instruction. |
+| [InvocationExpression.java](/private/tmp/xvm-compiler-correctness-20261009/javatools/src/main/java/org/xvm/compiler/ast/InvocationExpression.java) | Combine argument and return fitting validity so a matching return cannot erase an argument failure. |
+| [CompilerFunctionTypingTest.kt](/private/tmp/xvm-compiler-correctness-20261009/lang/lsp-server/src/test/kotlin/org/xvm/lsp/adapter/CompilerFunctionTypingTest.kt) | Twelve cases cover serialized function execution, valid/invalid calls and the fitting contract directly, without reflection or private field names. |
 
-The source-level failure controls alone cannot expose the argument-fitting defect: existing
-diagnostics already reject the complete invalid program. The direct test additionally verifies
-the protected fitting method's documented type-or-absence result, using actual compiler types
-and literal fitting, without reflection or private field access.
-
-**Focused evidence:** unchanged master fails 22 of these 30 cases; the extracted fixes pass all
-30. The same 30 cases pass in the LSP mono-code branch. The fixes have been restored after the
-baseline comparison, and the new tests are mirrored in the integration checkout.
-
-**Full validation:** the forced Java and language-server suite run has zero failures or errors:
-386 Java tests passed with 42 skipped; 462 language-server tests passed with 3 skipped. All 30
-new cases ran without skips. XDK distribution assembly, root and language-server formatting
-checks, and `git diff --check` passed. These checks validate compilation and serialized compiler
-output; the new regressions do not execute programs in the runtime.
-
-Switch audit controls and cached-warning replay are not production changes in this PR.
+Source diagnostics alone reject invalid programs even when the fitting routine mistakenly
+returns a usable function type. The direct checks therefore test the fitting API's success or
+absence result as well as diagnostics. Execution checks verify both the callable type and the
+serialized instructions used by ordinary programs. Integration branches retain additional
+static-function cases and atomic execution checks outside this PR's narrower scope.
 
 </details>
 
