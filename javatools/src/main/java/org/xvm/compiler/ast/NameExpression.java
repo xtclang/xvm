@@ -1626,7 +1626,7 @@ public class NameExpression
                 aArgBind[i] = ctx.getParameter(iReg);
             } else {
                 // the type itself is the value
-                aArgBind[i] = type;
+                aArgBind[i] = type.getType();
             }
         }
         code.add(new FBind(argFnOrig, anBindIx, aArgBind, argFnResult));
