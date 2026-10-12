@@ -77,6 +77,11 @@ on:
                 type: boolean
                 required: false
                 default: false
+            lsp-heavy-tests:
+                description: 'Include the extended LSP retention workload (also enable include-lang)'
+                type: boolean
+                required: false
+                default: false
             include-lang:
                 description: 'Include lang projects in build and run tree-sitter validation'
                 type: boolean
@@ -90,6 +95,10 @@ env:
     ORG_GRADLE_PROJECT_includeBuildAttachManualTests: ${{ github.event_name != 'workflow_dispatch' || !(github.event.inputs.skip-tests == true || github.event.inputs.skip-tests == 'true') }}
     ORG_GRADLE_PROJECT_xtcPluginOverrideVerboseLogging: true
     RUN_INTEGRATION_TESTS: true
+    # Keep compiler regressions and a complete retention smoke test in every applicable PR run.
+    # The longer repetition workload also runs locally by default and can run before merge via dispatch.
+    ORG_GRADLE_PROJECT_lspTestHeavy: ${{ github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && (github.event.inputs.lsp-heavy-tests == true || github.event.inputs.lsp-heavy-tests == 'true')) }}
+    ORG_GRADLE_PROJECT_lspTestForks: 2
 
     # Lang build inclusion - overrides gradle.properties default (true) to exclude lang
     # from push/PR CI builds. Only included via workflow_dispatch with include-lang=true.
@@ -696,7 +705,7 @@ jobs:
                   # Gradle stops at the first failing task and names it in the output.
                   # - core: tree-sitter grammar compiles (tree-sitter generate), parser handles the
                   #   XDK corpus, native libraries build for all platforms (cached by content
-                  #   hash); LSP adapter tests with the tree-sitter adapter; DSL tests, which also
+                  #   hash); both LSP adapters against one compiler-default artifact; DSL tests, which also
                   #   read the XDK corpus
                   # - VS Code extension: headless integration tests, then bundle and package the VSIX, and,
                   #   only when the repository variable VSCODE_MARKETPLACE_PUBLISH is true, the
@@ -729,14 +738,17 @@ jobs:
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
                   echo "🌳 LANG VALIDATION: core $VALIDATE_CORE, VS Code extension $VALIDATE_VSCODE"
                   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-                  ./gradlew $GRADLE_OPTIONS $LANG_OPTS -Plsp.adapter=treesitter $LANG_TASKS
+                  # Keep the same packaged default as the main build and stdio checks. Switching
+                  # defaults rewrites build-info and the JAR, invalidating every test's classpath and
+                  # rerunning the entire suite. Tests select Tree-sitter explicitly where needed.
+                  ./gradlew $GRADLE_OPTIONS $LANG_OPTS -Plsp.adapter=compiler $LANG_TASKS
 
                   echo ""
                   if [ "$VALIDATE_CORE" = "true" ]; then
                       echo "✅ Grammar: VALID"
                       echo "✅ Corpus parsing: PASSED"
                       echo "✅ Native libraries: BUILT"
-                      echo "✅ Tree-sitter adapter tests: PASSED"
+                      echo "✅ Compiler and Tree-sitter adapter tests: PASSED"
                       echo "✅ DSL tests: PASSED"
                   fi
                   if [ "$VALIDATE_VSCODE" = "true" ]; then
@@ -801,6 +813,15 @@ jobs:
                   assert counts["tests"] > 0 and all(counts[key] == 0 for key in ("failures", "errors", "skipped")), ("server.XdkStdioTest", counts)
                   print("server.XdkStdioTest", counts)
                   PYTEST
+
+            - name: Upload LSP test results and timings
+              if: always() && matrix.os == 'ubuntu-latest'
+              uses: actions/upload-artifact@v7
+              with:
+                  name: lsp-test-results-${{ env.ARTIFACT_SHA }}
+                  path: lang/lsp-server/build/test-results/**/*.xml
+                  if-no-files-found: ignore
+                  retention-days: 7
 
             # The checks that lang validation ran passed; later runs of this pull request on the
             # same inputs skip them.
