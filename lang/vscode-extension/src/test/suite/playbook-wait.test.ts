@@ -1,6 +1,6 @@
 import * as assert from 'node:assert';
 import Mocha from 'mocha';
-import { PlaybookCleanupFailure, PlaybookTimeout, stopOnUnsafeFailure, waitFor } from '../wait';
+import { mustStopPlaybook, PlaybookCleanupFailure, PlaybookTimeout, stopOnUnsafeFailure, waitFor, withPlaybookCleanup } from '../wait';
 
 suite('Playbook timeout isolation', () => {
     test('condition timeout fails with its last observation', async () => {
@@ -32,6 +32,36 @@ suite('Playbook timeout isolation', () => {
             const failures = await new Promise<number>(resolve => stopOnUnsafeFailure(mocha.run(resolve)));
             assert.strictEqual(failures, 1);
             assert.strictEqual(followingRan, false);
+        }
+    });
+
+    test('cleanup runs after success or failure and preserves both failures when restoration fails', async () => {
+        const assertion = new Error('Assertion failed');
+        const restoration = new Error('Could not restore settings');
+        for (const bodyFails of [false, true]) {
+            for (const cleanupFails of [false, true]) {
+                const calls: string[] = [];
+                const operation = withPlaybookCleanup(async () => {
+                    calls.push('body');
+                    if (bodyFails) throw assertion;
+                }, async () => {
+                    calls.push('cleanup');
+                    if (cleanupFails) throw restoration;
+                });
+                if (cleanupFails) {
+                    await assert.rejects(operation, error => {
+                        assert.ok(error instanceof PlaybookCleanupFailure);
+                        assert.deepStrictEqual(error.failures, bodyFails ? [assertion, restoration] : [restoration]);
+                        assert.ok(mustStopPlaybook(error));
+                        return true;
+                    });
+                } else if (bodyFails) {
+                    await assert.rejects(operation, error => error === assertion);
+                } else {
+                    await operation;
+                }
+                assert.deepStrictEqual(calls, ['body', 'cleanup']);
+            }
         }
     });
 });

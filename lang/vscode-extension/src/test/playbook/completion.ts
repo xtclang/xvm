@@ -19,7 +19,7 @@ export function completionCases(): void {
         }
     });
 
-    playbook('X7', async (workspace, data) => {
+    playbook('X7', async workspace => {
         const scenario = shared.completion;
         const document = await workspace.open(scenario.file);
         const incomplete = editScenario(fixture(scenario.file), scenario.edit);

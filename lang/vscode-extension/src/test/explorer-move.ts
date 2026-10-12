@@ -13,7 +13,7 @@ export async function cutAndPasteDirectories(sources: readonly vscode.Uri[], des
             await trace.command('workbench.files.action.focusFilesExplorer');
             await trace.command('workbench.files.action.collapseExplorerFolders');
             await trace.command('revealInExplorer', sources[0]);
-            for (const _ of sources.slice(1)) await trace.command('list.expandSelectionDown');
+            for (let index = 1; index < sources.length; index++) await trace.command('list.expandSelectionDown');
             await trace.command('copyFilePath');
             const selected = (await vscode.env.clipboard.readText()).split(/\r?\n/).sort();
             if (JSON.stringify(selected) === JSON.stringify(expected)) {
