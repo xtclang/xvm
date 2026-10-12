@@ -30,6 +30,7 @@ fun Driver.receivedDiagnostics(editor: JEditorUiComponent): List<ReceivedDiagnos
         }
 }
 
+/** Copies the client's received diagnostic coordinates and classification into the test process. */
 data class ReceivedDiagnostic(
     val code: String?,
     val source: String?,
@@ -38,12 +39,14 @@ data class ReceivedDiagnostic(
     val end: Pair<Int, Int>,
 )
 
+/** Exposes the project's started LSP4IJ servers through the IDE driver. */
 @Remote("com.redhat.devtools.lsp4ij.LanguageServiceAccessor", plugin = "com.redhat.devtools.lsp4ij")
 interface LanguageClients {
     // Driver transports collection results as lists even when the IDE method returns a Set.
     fun getStartedServers(): Collection<StartedLanguageServer>
 }
 
+/** Gives the driver access to a running client's documents, lifecycle and protocol trace. */
 @Remote("com.redhat.devtools.lsp4ij.LanguageServerWrapper", plugin = "com.redhat.devtools.lsp4ij")
 interface StartedLanguageServer {
     fun getOpenedDocuments(): Collection<ClientDocument>
@@ -67,11 +70,13 @@ interface StartedLanguageServer {
     fun getServerTrace(): ClientTraceLevel
 }
 
+/** Reads the client's lifecycle state without loading its enum into the test process. */
 @Remote("com.redhat.devtools.lsp4ij.ServerStatus", plugin = "com.redhat.devtools.lsp4ij")
 interface ClientServerStatus {
     fun name(): String
 }
 
+/** Exposes one recorded protocol message from the IDE-side LSP trace. */
 @Remote(
     "com.redhat.devtools.lsp4ij.LanguageServerWrapper\$LSPTrace",
     plugin = "com.redhat.devtools.lsp4ij",
@@ -80,6 +85,7 @@ interface ClientTraceEntry {
     fun message(): ClientValue
 }
 
+/** Reads the file, diagnostics and synchronizer already owned by the IDE client. */
 @Remote("com.redhat.devtools.lsp4ij.OpenedDocument", plugin = "com.redhat.devtools.lsp4ij")
 interface ClientDocument {
     fun getFile(): VirtualFile
@@ -89,6 +95,7 @@ interface ClientDocument {
     fun getSynchronizer(): DocumentSynchronizer?
 }
 
+/** Lets the driver observe document-open completion and flush pending native text changes. */
 @Remote(
     "com.redhat.devtools.lsp4ij.DocumentContentSynchronizer",
     plugin = "com.redhat.devtools.lsp4ij",
@@ -101,6 +108,7 @@ interface DocumentSynchronizer {
     fun getDocument(): ParityDocument
 }
 
+/** Polls native document synchronization without blocking the driver on a remote future. */
 @Remote("java.util.concurrent.CompletableFuture")
 interface DocumentOpenFuture {
     fun isDone(): Boolean
@@ -108,6 +116,7 @@ interface DocumentOpenFuture {
     fun isCompletedExceptionally(): Boolean
 }
 
+/** Reads the diagnostic delivered to the native client rather than issuing a separate request. */
 @Remote("org.eclipse.lsp4j.Diagnostic", plugin = "com.redhat.devtools.lsp4ij")
 interface ClientDiagnostic {
     fun getCode(): DiagnosticCode?
@@ -119,6 +128,7 @@ interface ClientDiagnostic {
     fun getRange(): SourceRange
 }
 
+/** Exposes both protocol representations of a diagnostic code across the driver boundary. */
 @Remote("org.eclipse.lsp4j.jsonrpc.messages.Either", plugin = "com.redhat.devtools.lsp4ij")
 interface DiagnosticCode {
     fun getLeft(): String?
@@ -126,11 +136,13 @@ interface DiagnosticCode {
     fun getRight(): Int?
 }
 
+/** Reads the native diagnostic severity by enum name. */
 @Remote("org.eclipse.lsp4j.DiagnosticSeverity", plugin = "com.redhat.devtools.lsp4ij")
 interface DiagnosticSeverity {
     fun name(): String
 }
 
+/** Exposes a protocol range from the IDE process for exact diagnostic assertions. */
 @Remote("org.eclipse.lsp4j.Range", plugin = "com.redhat.devtools.lsp4ij")
 interface SourceRange {
     fun getStart(): SourcePosition
@@ -138,6 +150,7 @@ interface SourceRange {
     fun getEnd(): SourcePosition
 }
 
+/** Reads zero-based protocol line and character coordinates through the driver. */
 @Remote("org.eclipse.lsp4j.Position", plugin = "com.redhat.devtools.lsp4ij")
 interface SourcePosition {
     fun getLine(): Int
@@ -145,6 +158,7 @@ interface SourcePosition {
     fun getCharacter(): Int
 }
 
+/** Exposes the IDE document modification stamp used to await a fresh diagnostic snapshot. */
 @Remote("com.intellij.openapi.editor.Document")
 interface DocumentVersion {
     fun getModificationStamp(): Long

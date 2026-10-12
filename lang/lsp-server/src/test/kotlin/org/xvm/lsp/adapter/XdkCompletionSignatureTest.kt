@@ -5,6 +5,10 @@ import org.junit.jupiter.api.Test
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Checks member completion and signature help against resolved receiver types and incomplete calls. Preserves
+ * overload alternatives, accessibility and argument positions without inventing a selected invocation.
+ */
 class XdkCompletionSignatureTest {
     @Test
     fun `member completion preserves overloads substitutes receiver types and excludes private members`() {

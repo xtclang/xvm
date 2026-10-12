@@ -23,7 +23,13 @@ public final class PartialSyntax {
         // empty
     }
 
-    /** Include deferred anonymous source bodies without changing compiler child ownership. */
+    /**
+     * Include deferred anonymous source bodies without changing compiler child ownership.
+     *
+     * @param node  the syntax node to inspect, or null for the containment queries
+     *
+     * @return the direct children, including a retained anonymous source body when present
+     */
     public static Stream<AstNode> children(AstNode node) {
         var children = StreamSupport.stream(node.childNodes().spliterator(), false);
         return node instanceof NewExpression creation ? Stream.concat(children, creation.getUnregisteredBody().stream()) : children;
@@ -32,12 +38,25 @@ public final class PartialSyntax {
     /** A value cursor and its written argument slot; no inferred type or candidate is retained. */
     public record ArgumentCursor(IncompleteStatement cursor, int index) {}
 
-    /** Whether this node or any descendant is retained incomplete syntax; null has no syntax. */
+    /**
+     * Whether this node or any descendant is retained incomplete syntax; null has no syntax.
+     *
+     * @param node  the syntax node to inspect, or null for the containment queries
+     *
+     * @return whether this node or a descendant retains an incomplete site; false for null
+     */
     public static boolean contains(AstNode node) {
         return contains(node, site -> true);
     }
 
-    /** Whether a retained site ends at exactly this source cursor, including beneath nested calls. */
+    /**
+     * Whether a retained site ends at exactly this source cursor, including beneath nested calls.
+     *
+     * @param node    the syntax node to inspect, or null for the containment queries
+     * @param cursor  the selected position in the owning Source snapshot
+     *
+     * @return whether a retained site ends at exactly the supplied source position
+     */
     public static boolean containsAt(AstNode node, long cursor) {
         return contains(node, site -> site.getEndPosition() == cursor);
     }
@@ -47,7 +66,13 @@ public final class PartialSyntax {
                 || children(node).anyMatch(child -> contains(child, matches)));
     }
 
-    /** Find a value cursor in a written argument, excluding array-dimension slots. */
+    /**
+     * Find a value cursor in a written argument, excluding array-dimension slots.
+     *
+     * @param call  the retained incomplete call whose arguments are inspected
+     *
+     * @return the first supported written argument containing a value cursor, or empty if none exists
+     */
     public static Optional<ArgumentCursor> argument(IncompleteStatement call) {
         // Multiple array dimensions are not positional arguments to an ordinary constructor.
         if (call.getOperator().getId() == Id.L_SQUARE) {
@@ -63,6 +88,11 @@ public final class PartialSyntax {
     /**
      * Find the single value cursor inside labels, groups or compound expressions. A nested call,
      * construction or lambda owns its own arguments/scope and is never searched through here.
+     *
+     * @param expression  the written value expression to inspect
+     *
+     * @return the unique value cursor in the expression, or empty when absent, ambiguous or behind a call/scope
+     *         boundary
      */
     public static Optional<IncompleteStatement> valueCursor(Expression expression) {
         if (expression instanceof IncompleteExpression hole) {
@@ -77,7 +107,13 @@ public final class PartialSyntax {
         return sites.size() == 1 ? Optional.of(sites.getFirst()) : Optional.empty();
     }
 
-    /** Find the real call containing a direct, labeled, grouped or compound argument cursor. */
+    /**
+     * Find the real call containing a direct, labeled, grouped or compound argument cursor.
+     *
+     * @param site  the retained incomplete source site
+     *
+     * @return the real containing incomplete call, or empty outside a supported argument context
+     */
     public static Optional<IncompleteStatement> argumentCall(IncompleteStatement site) {
         AstNode parent = site.getParent();
         while (parent instanceof Expression expression && !isArgumentBoundary(expression)) {

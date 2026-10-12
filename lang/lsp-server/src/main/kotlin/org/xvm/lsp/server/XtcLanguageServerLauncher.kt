@@ -74,23 +74,17 @@ internal enum class AdapterBackend(
 
         fun fromSetting(setting: String? = null): AdapterBackend =
             when (setting?.lowercase()) {
-                "mock" -> {
-                    MOCK
-                }
+                "mock" -> MOCK
 
                 "treesitter",
                 "tree-sitter",
-                -> {
-                    TREE_SITTER
-                }
+                -> TREE_SITTER
 
                 null,
                 "compiler",
                 "xtc",
                 "full",
-                -> {
-                    COMPILER
-                }
+                -> COMPILER
 
                 else -> {
                     throw IllegalArgumentException(
@@ -135,9 +129,7 @@ private fun createAdapter(requested: AdapterBackend): Pair<Adapter, AdapterBacke
             }
         }
 
-        AdapterBackend.MOCK -> {
-            MockAdapter() to AdapterBackend.MOCK
-        }
+        AdapterBackend.MOCK -> MockAdapter() to AdapterBackend.MOCK
     }
 
 fun main(

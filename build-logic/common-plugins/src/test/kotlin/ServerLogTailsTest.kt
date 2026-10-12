@@ -5,6 +5,11 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption.APPEND
 
+/**
+ * Protects the development IDE log tailer from losing or replaying output as servers start and logs roll
+ * over. Uses real temporary files to check partial UTF-8 lines, bounded reads and exclusion of unrelated
+ * files or symlinks without launching an IDE.
+ */
 class ServerLogTailsTest {
     @TempDir lateinit var root: Path
 

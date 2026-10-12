@@ -4,11 +4,13 @@ import org.xvm.lsp.adapter.Range
 
 /** Detached signatures from fresh declarations; only a complete repair proof can publish them. */
 internal object XdkMissingMethods {
+    /** Whether the generated method must be an instance member or a static function. */
     enum class Dispatch {
         INSTANCE,
         STATIC,
     }
 
+    /** Destination type and dispatch mode established from the unresolved call receiver. */
     data class Receiver(
         val destination: SemanticModel.SourceLocation,
         val dispatch: Dispatch,
@@ -23,11 +25,13 @@ internal object XdkMissingMethods {
         val importSource: String? = null,
     )
 
+    /** Type spelling and imports required in the generated method's destination. */
     data class TypeSource(
         val source: String,
         val imports: List<XdkMemberActions.Import> = emptyList(),
     )
 
+    /** Detached parameter, return and generic constraints used to prove a generated method signature. */
     data class Signature(
         val parameters: List<ProofIdentity>,
         val returns: List<ProofIdentity>,
@@ -43,17 +47,20 @@ internal object XdkMissingMethods {
         val expressions: Map<SemanticModel.SourceLocation, LocalType> = emptyMap(),
     )
 
+    /** Detached local type identity paired with source context for destination rendering. */
     data class LocalType(
         val source: String?,
         val identity: ProofIdentity,
         val destinationSources: Map<SemanticModel.SourceLocation, TypeSource> = emptyMap(),
     )
 
+    /** Argument use and the declaration it must continue to reference after the edit. */
     data class ArgumentBinding(
         val use: SemanticModel.SourceLocation,
         val declaration: SemanticModel.SourceLocation,
     )
 
+    /** Missing-method proposal with its destination, argument bindings and visibility requirements. */
     data class Candidate(
         val callee: SemanticModel.SourceLocation,
         val name: String,
@@ -142,9 +149,7 @@ internal object XdkMissingMethods {
                     new: ProofIdentity,
                 ): Boolean =
                     when (old) {
-                        in binders -> {
-                            binders[old] == new
-                        }
+                        in binders -> binders[old] == new
 
                         is ProofIdentity.TypeShape if new is ProofIdentity.TypeShape -> {
                             old.format == new.format && old.components.size == new.components.size &&
@@ -156,9 +161,7 @@ internal object XdkMissingMethods {
                                 old.targets.all { first -> new.targets.any { sameType(first, it) } }
                         }
 
-                        else -> {
-                            XdkRename.sameType(old, new, plan)
-                        }
+                        else -> XdkRename.sameType(old, new, plan)
                     }
 
                 fun equivalent(

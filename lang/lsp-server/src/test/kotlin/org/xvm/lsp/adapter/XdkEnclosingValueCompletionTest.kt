@@ -6,6 +6,10 @@ import org.junit.jupiter.api.Test
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
 
+/**
+ * Checks completion of enclosing instances against actual compiler scope and argument fitting. Accepted edits
+ * must compile and must not expose an unrelated or inaccessible receiver.
+ */
 class XdkEnclosingValueCompletionTest {
     @Test
     fun `shared enclosing fixtures accept their exact edits and compile`() {

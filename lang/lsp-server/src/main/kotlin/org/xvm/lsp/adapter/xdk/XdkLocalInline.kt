@@ -18,6 +18,7 @@ import org.xvm.lsp.util.ExecutionTrace
 
 /** Inline single-use locals with either adjacent evaluation or compiler-proven constant values. */
 internal object XdkLocalInline {
+    /** Inline-local edits and the removed or relocated source sites needed for compiler proof. */
     data class Candidate(
         val title: String,
         val edits: List<XdkRename.Edit>,
@@ -26,6 +27,7 @@ internal object XdkLocalInline {
         val expression: SemanticModel.SourceLocation? = null,
     )
 
+    /** Adjacent declaration and use eligible for inlining without changing evaluation order. */
     private data class AdjacentUse(
         val assignment: AssignmentStatement,
         val statement: AstNode,
@@ -85,9 +87,7 @@ internal object XdkLocalInline {
                                 }
                             }
 
-                            else -> {
-                                null
-                            }
+                            else -> null
                         }
                     }
                 } else {

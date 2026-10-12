@@ -11,6 +11,12 @@ import org.eclipse.lsp4j.WorkspaceEdit
 
 // TODO LSP4IJ: UP21 — WorkspaceEdit leaves closed documents unsaved and disconnected from the
 // server. Persist only this transaction's closed documents, including after native Undo/Redo.
+
+/**
+ * Keeps closed documents changed by a refactoring synchronized with disk. Undo actions bracket the edit so
+ * saving happens after text and paths are restored on both Undo and Redo; pre-existing unsaved buffers are
+ * excluded during capture.
+ */
 internal class ClosedRefactoringDocuments private constructor(
     private val project: Project,
     private val documents: List<Document>,
