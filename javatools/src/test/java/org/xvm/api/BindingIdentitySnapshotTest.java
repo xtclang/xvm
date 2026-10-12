@@ -98,6 +98,7 @@ public class BindingIdentitySnapshotTest {
         return new Token(0, 4, Id.IDENTIFIER, "call");
     }
 
+    /** Gives distinct call nodes equal values so the test detects accidental equality-based binding maps. */
     private static class EqualInvocation extends InvocationExpression {
         EqualInvocation() {
             super(new NameExpression(name()), false, List.of(), 4);
@@ -114,6 +115,7 @@ public class BindingIdentitySnapshotTest {
         }
     }
 
+    /** Gives distinct construction nodes equal values so their compiler facts must still be keyed by identity. */
     private static class EqualConstruction extends NewExpression {
         EqualConstruction() {
             super(null, new Token(0, 3, Id.NEW, null), null, List.of(), -1, null, 4);
@@ -130,6 +132,7 @@ public class BindingIdentitySnapshotTest {
         }
     }
 
+    /** Builds minimal compilation and partial-analysis results around the same source tree and pool. */
     private record HostInputs(FileStructure file, StatementBlock tree) {
         HostInputs() {
             this(new FileStructure("IdentityFacts"), new StatementBlock(List.of()));

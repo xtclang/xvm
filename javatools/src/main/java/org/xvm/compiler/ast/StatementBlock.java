@@ -303,7 +303,15 @@ public class StatementBlock
         return compileMethod(code, errs, InvocationBinding.Collector.NONE);
     }
 
-    /** Compile a method with the collector owned by its enclosing compilation attempt. */
+    /**
+     * Compile a method with the collector owned by its enclosing compilation attempt.
+     *
+     * @param code      the method code object receiving generated instructions
+     * @param errs      the diagnostic listener and abort policy for this operation
+     * @param bindings  the attempt-owned call-fact collector, or its NONE instance to disable collection
+     *
+     * @return whether compilation completed without a condition that must stop further progress
+     */
     public boolean compileMethod(Code code, ErrorListener errs, InvocationBinding.Collector bindings) {
         return compileMethod(new RootContext(this, code.getMethodStructure(), bindings), code, errs);
     }
@@ -559,6 +567,13 @@ public class StatementBlock
             this(stmt, method, InvocationBinding.Collector.NONE);
         }
 
+        /**
+         * Create a method-body context that shares the enclosing attempt's fact collectors.
+         *
+         * @param stmt      the method body whose context is being created
+         * @param method    the method whose body is being compiled
+         * @param bindings  the attempt-owned call-fact collector, or its NONE instance to disable collection
+         */
         public RootContext(StatementBlock stmt, MethodStructure method,
                            InvocationBinding.Collector bindings) {
             super(null, false);

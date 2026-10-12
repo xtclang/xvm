@@ -42,7 +42,6 @@ import org.xvm.compiler.ast.AstNode;
 import org.xvm.compiler.ast.InvocationExpression;
 import org.xvm.compiler.ast.NewExpression;
 import org.xvm.compiler.ast.PropertyDeclarationStatement;
-import org.xvm.compiler.ast.Statement;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 
@@ -401,37 +400,73 @@ public class EmbeddingSupport {
             initializerBindings = identitySnapshot(initializerBindings);
         }
 
-        /** Retain hosts that supply constructor bindings without folded initializer facts. */
+        /**
+         * Retain hosts that supply constructor bindings without folded initializer facts.
+         *
+         * @param module               the compiled module, or null when compilation did not succeed
+         * @param file                 the file structure produced by the attempt, or null if none was built
+         * @param ast                  the assembled source root, or null if loading or parsing failed
+         * @param sourceTrees          the available per-source syntax trees, including recovered trees
+         * @param callBindings         validated method-call facts keyed by invocation identity
+         * @param functionBindings     validated function-call facts keyed by invocation identity
+         * @param constructorBindings  validated constructor-call facts keyed by construction identity
+         */
         public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
-                           List<StatementBlock> sourceTrees,
-                           Map<InvocationExpression, InvocationBinding> callBindings,
+                           List<StatementBlock> sourceTrees, Map<InvocationExpression, InvocationBinding> callBindings,
                            Map<InvocationExpression, InvocationBinding.FunctionCall> functionBindings,
                            Map<NewExpression, InvocationBinding> constructorBindings) {
             this(module, file, ast, sourceTrees, callBindings, functionBindings, constructorBindings, Map.of());
         }
 
-        /** Retain hosts that supply method and function bindings. */
+        /**
+         * Retain hosts that supply method and function bindings.
+         *
+         * @param module            the compiled module, or null when compilation did not succeed
+         * @param file              the file structure produced by the attempt, or null if none was built
+         * @param ast               the assembled source root, or null if loading or parsing failed
+         * @param sourceTrees       the available per-source syntax trees, including recovered trees
+         * @param callBindings      validated method-call facts keyed by invocation identity
+         * @param functionBindings  validated function-call facts keyed by invocation identity
+         */
         public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
-                           List<StatementBlock> sourceTrees,
-                           Map<InvocationExpression, InvocationBinding> callBindings,
+                           List<StatementBlock> sourceTrees, Map<InvocationExpression, InvocationBinding> callBindings,
                            Map<InvocationExpression, InvocationBinding.FunctionCall> functionBindings) {
             this(module, file, ast, sourceTrees, callBindings, functionBindings, Map.of());
         }
 
-        /** Retain hosts that supply only statically selected method calls. */
+        /**
+         * Retain hosts that supply only statically selected method calls.
+         *
+         * @param module        the compiled module, or null when compilation did not succeed
+         * @param file          the file structure produced by the attempt, or null if none was built
+         * @param ast           the assembled source root, or null if loading or parsing failed
+         * @param sourceTrees   the available per-source syntax trees, including recovered trees
+         * @param callBindings  validated method-call facts keyed by invocation identity
+         */
         public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
-                           List<StatementBlock> sourceTrees,
-                           Map<InvocationExpression, InvocationBinding> callBindings) {
+                           List<StatementBlock> sourceTrees, Map<InvocationExpression, InvocationBinding> callBindings) {
             this(module, file, ast, sourceTrees, callBindings, Map.of());
         }
 
-        /** Retain the construction API for hosts supplying structural source trees. */
-        public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast,
-                           List<StatementBlock> sourceTrees) {
+        /**
+         * Retain the construction API for hosts supplying structural source trees.
+         *
+         * @param module       the compiled module, or null when compilation did not succeed
+         * @param file         the file structure produced by the attempt, or null if none was built
+         * @param ast          the assembled source root, or null if loading or parsing failed
+         * @param sourceTrees  the available per-source syntax trees, including recovered trees
+         */
+        public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast, List<StatementBlock> sourceTrees) {
             this(module, file, ast, sourceTrees, Map.of());
         }
 
-        /** Retain the original construction API for hosts supplying one assembled tree. */
+        /**
+         * Retain the original construction API for hosts supplying one assembled tree.
+         *
+         * @param module  the compiled module, or null when compilation did not succeed
+         * @param file    the file structure produced by the attempt, or null if none was built
+         * @param ast     the assembled source root, or null if loading or parsing failed
+         */
         public Compilation(ModuleStructure module, FileStructure file, StatementBlock ast) {
             this(module, file, ast, ast == null ? List.of() : List.of(ast));
         }
@@ -454,9 +489,7 @@ public class EmbeddingSupport {
             return module != null;
         }
 
-        /**
-         * @return the pool this compilation interned into, or null if there was no compilation
-         */
+        /** @return this attempt's pool, or null if no file structure was built */
         public ConstantPool pool() {
             return file == null ? null : file.getConstantPool();
         }
@@ -487,10 +520,7 @@ public class EmbeddingSupport {
      */
     public Compilation compileModule(Source source, ModuleRepository input, @NotNull ErrorListener errs) {
         requireNonNull(source, "source");
-        return compileModule(listener -> {
-            StatementBlock tree = new Parser(source, listener).parseSource();
-            return new ParsedSources(listener.hasSeriousErrors() ? null : tree, List.of(tree));
-        }, input, errs);
+        return compileModule(listener -> ParsedSources.parse(source, listener), input, errs);
     }
 
     /**
@@ -508,25 +538,32 @@ public class EmbeddingSupport {
      */
     public Compilation compileModule(ModuleInfo sources, ModuleRepository input, @NotNull ErrorListener errs) {
         requireNonNull(sources, "sources");
-        return compileModule(listener -> {
-            Node root = sources.getSourceTree(listener);
-            return new ParsedSources(root == null ? null : (StatementBlock) root.ast(),
-                    sources.getParsedSources());
-        }, input, errs);
+        return compileModule(listener -> ParsedSources.parse(sources, listener), input, errs);
     }
 
-    /** An assembled tree is available only when parsing/loading succeeded. */
     /** Preserve node identity, reject null entries and detach from the collector. */
     private static <K, V> Map<K, V> identitySnapshot(Map<K, V> source) {
-        Map<K, V> copy = new IdentityHashMap<>();
+        var copy = new IdentityHashMap<K, V>();
         source.forEach((key, value) -> copy.put(requireNonNull(key), requireNonNull(value)));
         return Collections.unmodifiableMap(copy);
     }
 
-    private record ParsedSources(StatementBlock root, List<StatementBlock> sources) {}
+    /** Available source trees, with an assembled root only when parsing and loading succeeded. */
+    private record ParsedSources(StatementBlock root, List<StatementBlock> sources) {
+        /** Keep recovered syntax for diagnostics even when errors prevent compiling the root. */
+        static ParsedSources parse(Source source, ErrorListener errs) {
+            var tree = new Parser(source, errs).parseSource();
+            return new ParsedSources(errs.hasSeriousErrors() ? null : tree, List.of(tree));
+        }
 
-    private Compilation compileModule(Function<ErrorListener, ParsedSources> parse,
-                                      ModuleRepository input, ErrorListener errs) {
+        /** Assemble the module before reading the per-source trees populated during parsing. */
+        static ParsedSources parse(ModuleInfo sources, ErrorListener errs) {
+            var root = sources.getSourceTree(errs);
+            return new ParsedSources(root == null ? null : (StatementBlock) root.ast(), sources.getParsedSources());
+        }
+    }
+
+    private Compilation compileModule(Function<ErrorListener, ParsedSources> parse, ModuleRepository input, ErrorListener errs) {
         verifyConfigured();
         requireNonNull(errs, "errs");
         var compiler = new EmbeddingCompiler(parse, input, cfgRepo, errs);
@@ -654,9 +691,8 @@ public class EmbeddingSupport {
             try {
                 // The launcher stops the next compilation stage on any error. Parsing can still
                 // recover within its own stage, subject to the host's budget and cancellation.
-                ErrorListener errs = ErrorListener.cancellable(
-                        ErrorListener.collecting(this::log), m_errors::isAbortDesired);
-                ParsedSources parsed = parse.apply(errs);
+                var errs = ErrorListener.cancellable(ErrorListener.collecting(this::log), m_errors::isAbortDesired);
+                var parsed = parse.apply(errs);
                 block = this.ast = parsed.root();
                 this.sourceTrees = parsed.sources();
             } catch (CompilerException e) {
@@ -681,8 +717,8 @@ public class EmbeddingSupport {
                 return checkErrors("source parsing");
             }
 
-            Compiler      compiler = new Compiler(stmtModule, this, bindings);
-            FileStructure struct   = compiler.generateInitialFileStructure();
+            var compiler = new Compiler(stmtModule, this, bindings);
+            var struct = compiler.generateInitialFileStructure();
             this.file = struct;
             if (struct == null || checkErrors("module creation") != 0) {
                 return 1;

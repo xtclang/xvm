@@ -45,6 +45,35 @@ attempt; hosts must copy the information they share before releasing its compile
 The following diagnostic guide explains why these contracts are necessary, their compatibility
 boundaries and the regression tests that protect ordinary command-line compilation.
 
+### Preserve selected semantic facts
+
+`InvocationBinding` records selected methods, function signatures, constructors and argument-to-
+parameter mappings at the point where the compiler establishes them. The maps use AST identity;
+they do not guess a target by spelling or make a dynamic function call look like a statically
+selected method. `InitializerBinding` preserves validated source facts before a constant
+initializer's temporary method is discarded. Without that step, a name can compile correctly but
+disappear from references, rename and highlighting after constant folding.
+
+These facts belong to a compilation attempt. An immutable map does not make the contained AST,
+type constants or constant pool safe to share across workers. The language adapter copies the
+facts it needs into detached models before releasing the attempt. Keeping this boundary explicit
+is essential for a long-running editor that repeatedly replaces analyses of unsaved text.
+
+### Copy source trees and preserve ordinary compiler behavior
+
+The old pervasive `clone()` calls obscure an important distinction: `Object.clone()` starts with
+a shallow field copy, while AST overrides selectively copy children and repair ownership. The
+name alone does not tell a caller which bindings, transient state or parents remain shared, and
+adding a field can silently change what a clone retains. A clone of a validated node is therefore
+not equivalent to freshly parsed syntax. This is especially confusing for speculative editor
+queries, which need to know exactly what a trial may mutate without affecting the original.
+
+`copyTree()` names the source-tree copy contract and gives expression/statement callers covariant
+return types. Its contract covers child ownership, source metadata and the existing stage-aware
+copy behavior; it is not a general deep copy of an entire compiler or constant pool. The existing
+`clone()` entry point continues to use the same copying machinery so the two APIs cannot drift
+independently.
+
 ## Compiler diagnostics and error listeners
 
 ### Why the old reporting model had to change
@@ -394,8 +423,9 @@ validation of specific input files can read those files before constructing thei
 default-budget and lexical-rollback behavior preserved here. Empty transient-local retention is
 an independent utility fix. None of these APIs depends on an LSP implementation or editor.
 
-Selected-call facts, declaration-only analysis, incomplete-source recovery, cursor completion,
-AST copying and the production language server remain later review boundaries. The result here
+Selected-call facts and source-tree copying extend the embedding contract in this branch, as
+described above. Declaration-only analysis, incomplete-source recovery, cursor completion and
+the production language server remain separate review boundaries. The result here
 exposes ordinary compilation progress, not recovered syntax or executable output from invalid code.
 
 ### Scoped parser and validation reporting

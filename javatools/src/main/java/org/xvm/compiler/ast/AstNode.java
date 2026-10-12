@@ -277,21 +277,19 @@ public abstract class AstNode
 
             if (oVal != null) {
                 if (oVal instanceof AstNode node) {
-                    AstNode nodeNew = node.copyTree();
+                    var nodeNew = node.copyTree();
 
                     that.adopt(nodeNew);
                     oVal = nodeNew;
-                } else if (oVal instanceof List list) {
-                    ArrayList<AstNode> listNew = new ArrayList<>();
-                    for (AstNode node : (List<AstNode>) list) {
-                        listNew.add(node.copyTree());
-                    }
-
+                } else if (oVal instanceof List<?> list) {
+                    var listNew = list.stream()
+                            .map(AstNode.class::cast)
+                            .map(AstNode::copyTree)
+                            .collect(Collectors.toCollection(ArrayList::new));
                     that.adopt(listNew);
                     oVal = listNew;
                 } else {
-                    throw new IllegalStateException(
-                            "unsupported container type: " + oVal.getClass().getSimpleName());
+                    throw new IllegalStateException("unsupported container type: " + oVal.getClass().getSimpleName());
                 }
 
                 try {

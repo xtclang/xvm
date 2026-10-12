@@ -32,9 +32,14 @@ public class Compiler {
         this(stmtModule, errs, InvocationBinding.Collector.NONE);
     }
 
-    /** Construct a compiler that records call facts in the supplied attempt-owned collector. */
-    public Compiler(TypeCompositionStatement stmtModule, ErrorListener errs,
-                    InvocationBinding.Collector bindings) {
+    /**
+     * Construct a compiler that records call facts in the supplied attempt-owned collector.
+     *
+     * @param stmtModule  the assembled module declaration to compile
+     * @param errs        the diagnostic listener and abort policy for this operation
+     * @param bindings    the attempt-owned call-fact collector, or its NONE instance to disable collection
+     */
+    public Compiler(TypeCompositionStatement stmtModule, ErrorListener errs, InvocationBinding.Collector bindings) {
         if (stmtModule == null) {
             throw new IllegalArgumentException("AST node for module required");
         }
