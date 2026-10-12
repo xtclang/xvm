@@ -27,9 +27,7 @@ internal fun receiverIdentity(
     fun nested(type: TypeConstant) = receiverIdentity(type, identity, depth + 1)
     return when (type) {
         // Recursive types extend TerminalTypeConstant but have no single defining constant.
-        is RecursiveTypeConstant -> {
-            identity(type.typedef)
-        }
+        is RecursiveTypeConstant -> identity(type.typedef)
 
         is TerminalTypeConstant -> {
             when (val declaration = type.definingConstant) {
@@ -53,9 +51,11 @@ internal fun receiverIdentity(
             ProofIdentity.TypeShape(type.format, listOf(base, annotation) + arguments)
         }
 
-        is ImmutableTypeConstant, is ServiceTypeConstant -> {
-            ProofIdentity.TypeShape(type.format, listOf(nested(type.underlyingType) ?: return null))
-        }
+        is ImmutableTypeConstant, is ServiceTypeConstant ->
+            ProofIdentity.TypeShape(
+                type.format,
+                listOf(nested(type.underlyingType) ?: return null),
+            )
 
         is VirtualChildTypeConstant -> {
             val parent = nested(type.parentType) ?: return null
@@ -63,9 +63,11 @@ internal fun receiverIdentity(
             ProofIdentity.TypeShape(type.format, listOf(parent, identity(type.definingConstant)) + listOfNotNull(origin))
         }
 
-        is InnerChildTypeConstant -> {
-            ProofIdentity.TypeShape(type.format, listOf(nested(type.parentType) ?: return null, identity(type.definingConstant)))
-        }
+        is InnerChildTypeConstant ->
+            ProofIdentity.TypeShape(
+                type.format,
+                listOf(nested(type.parentType) ?: return null, identity(type.definingConstant)),
+            )
 
         is RelationalTypeConstant -> {
             val operands = listOf(nested(type.underlyingType) ?: return null, nested(type.underlyingType2) ?: return null)
@@ -78,8 +80,6 @@ internal fun receiverIdentity(
             ProofIdentity.TypeShape(type.format, components)
         }
 
-        else -> {
-            null
-        }
+        else -> null
     }
 }

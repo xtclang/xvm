@@ -8,12 +8,14 @@ import java.util.concurrent.atomic.AtomicLong
 
 /** Observes the existing worker; no compiler work or future completion runs under this lock. */
 internal class CompilerQueueTrace {
+    /** Scheduling phase reported for a compiler request before and during execution. */
     private enum class Phase {
         DEBOUNCING,
         QUEUED,
         RUNNING,
     }
 
+    /** Trace span, submission time and current scheduling phase for one request. */
     private data class Job(
         val span: ExecutionTrace.Span,
         val submission: Long,
@@ -35,6 +37,7 @@ internal class CompilerQueueTrace {
         action: () -> Unit,
     ): Work = Work(kind, uri, result, action)
 
+    /** Runs a queued operation inside its trace span and completes its associated result future. */
     inner class Work
         internal constructor(
             kind: String,
@@ -161,21 +164,13 @@ internal class CompilerQueueTrace {
         fun Job.label(): String {
             val operation =
                 when (span.operation) {
-                    "compile" -> {
-                        "compiling"
-                    }
+                    "compile" -> "compiling"
 
-                    "project-REFERENCES" -> {
-                        "finding references in"
-                    }
+                    "project-REFERENCES" -> "finding references in"
 
-                    "project-DIAGNOSTICS" -> {
-                        "checking diagnostics in"
-                    }
+                    "project-DIAGNOSTICS" -> "checking diagnostics in"
 
-                    "rename-proof", "project-RENAME", "project-RENAME_PROPOSAL", "project-FILE_RENAME" -> {
-                        "checking rename in"
-                    }
+                    "rename-proof", "project-RENAME", "project-RENAME_PROPOSAL", "project-FILE_RENAME" -> "checking rename in"
 
                     else -> {
                         val kind =

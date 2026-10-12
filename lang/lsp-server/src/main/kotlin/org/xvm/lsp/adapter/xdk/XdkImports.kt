@@ -16,6 +16,7 @@ import org.xvm.lsp.util.ExecutionTrace
  * publication.
  */
 internal object XdkImports {
+    /** Proposed import edit awaiting the compiler checks that establish its safety. */
     data class Candidate(
         val title: String,
         val kind: CodeActionKind,

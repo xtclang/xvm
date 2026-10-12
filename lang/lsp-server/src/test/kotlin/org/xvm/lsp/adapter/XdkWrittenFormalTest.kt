@@ -6,6 +6,10 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 
+/**
+ * Exercises incomplete written generic bounds without inventing formal identities. Recursive suggestions
+ * require a real guarding type structure and must not expose invalid sibling or direct cycles.
+ */
 class XdkWrittenFormalTest {
     private val uri = "untitled:Formals.x"
 

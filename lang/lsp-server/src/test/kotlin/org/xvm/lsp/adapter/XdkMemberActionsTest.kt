@@ -13,6 +13,10 @@ import org.xvm.lsp.adapter.xdk.XdkDependency
 import org.xvm.lsp.adapter.xdk.toDependency
 import java.nio.file.Path
 
+/**
+ * Checks generated implementations and overrides against compiler-selected member contracts. Unsupported
+ * recursive signatures must not hide independent actions or weaken proof for the generated member.
+ */
 class XdkMemberActionsTest {
     @TempDir lateinit var directory: Path
 

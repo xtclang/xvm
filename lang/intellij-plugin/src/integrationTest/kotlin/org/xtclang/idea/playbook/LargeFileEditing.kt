@@ -75,6 +75,7 @@ fun Driver.largeFileEditing(
     println("IntelliJ large-file editing receipt: $report")
 }
 
+/** Measures native editor work with and without language decorations. */
 @Remote("org.xtclang.idea.playbook.probe.LargeFileProbe", plugin = "org.xtclang.playbook.probe")
 interface LargeFileProbe {
     fun plain(

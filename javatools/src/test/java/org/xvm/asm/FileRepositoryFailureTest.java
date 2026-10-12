@@ -25,6 +25,10 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * Exercises failed and repaired module-file reads, including repairs that preserve file metadata. Ensures
+ * failure observations do not turn write errors into read reports or leave failed reads permanently cached.
+ */
 class FileRepositoryFailureTest {
     @TempDir
     Path directory;

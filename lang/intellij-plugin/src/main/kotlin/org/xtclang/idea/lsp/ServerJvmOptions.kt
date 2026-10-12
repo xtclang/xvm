@@ -10,13 +10,9 @@ internal object ServerJvmOptions {
             options.map { option ->
                 val size = memory.matchEntire(option)
                 when {
-                    size != null -> {
-                        size.groupValues[1]
-                    }
+                    size != null -> size.groupValues[1]
 
-                    collector.matches(option) -> {
-                        "collector"
-                    }
+                    collector.matches(option) -> "collector"
 
                     Regex("-XX:ActiveProcessorCount=[1-9][0-9]*").matches(option) -> {
                         require(option.substringAfter('=').toIntOrNull() in 1..1024) { "ActiveProcessorCount must be between 1 and 1024" }

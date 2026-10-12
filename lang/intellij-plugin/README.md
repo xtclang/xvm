@@ -670,14 +670,14 @@ Apache License 2.0 - See [LICENSE](../../LICENSE) for details.
 The native file-tree Move action now requests compiler proof before moving selected source files
 or module containers. Shared X130 passes native batch Move and project Undo/Redo. Labels
 use Ecstasy; implementation names retain Xtc. Upstream compatibility bridges carry searchable
-`// TODO LSP4IJ:` comments with their removal conditions and stable UP identifiers in the
+`// TODO LSP4IJ:` comments with their removal conditions and their affected behavior in the
 [client compatibility limits](../doc/manual-test-plan.md#client-compatibility-limits).
 
 Lazy action selection now uses a registered client command to resolve and apply the edit in a
 version-checked undo command; selected native X105/X122/X127 acceptance passes. X131 adds protocol assertions
 for code-lens/link/inlay/symbol resolution through the installed client connection.
 
-L72 adds shared X132 for multiple-range formatting and negotiated save hooks; selected native
+Shared X132 covers for multiple-range formatting and negotiated save hooks; selected native
 acceptance and the backend/packaged transport regressions pass.
 The server defaults to full synchronization and no save-time edits; custom LSP hosts can set
 `initializationOptions.xtcDocumentSync` with independent `incremental` and `formatOnSave` booleans.
@@ -718,7 +718,7 @@ applied libraries** rereads saved paths without a restart. The source-module tab
 **Order resource directories…** with native path selection and automatic-resource inheritance.
 
 Attachments supply navigation-only snapshots; they do not add compiler source modules. IntelliJ
-opens protected fallback files until LSP4IJ supports our virtual library editor (UP25). Use matching
+opens protected fallback files until LSP4IJ supports our virtual library editor. Use matching
 sources; available debug text is checked but is not a complete binary/source equivalence proof.
 Project settings survive server restart; invalid replacements retain accepted compiler inputs.
 Shared X266–X268 and their [acceptance reports](../doc/manual-test-plan.md#acceptance-reports)
@@ -755,11 +755,11 @@ stale replies cannot replace a newer report.
 
 ### Experimental color-value picker
 
-The opt-in L77 prototype recognizes literal `ColorPrototype.Rgba` constructors from the shared
+The opt-in color-value prototype recognizes literal `ColorPrototype.Rgba` constructors from the shared
 fixture. It supplies native color swatches and picker edits separately from normal semantic
 highlighting. It is disabled for ordinary launches and does not introduce a public XDK color API.
 Shared X273–X275 exercise picker edits, dismissal, native Undo/Redo and diagnostic recovery.
-See the [prototype recipe and acceptance](../doc/manual-test-plan.md#l77-color-value-prototype).
+See the [prototype recipe and acceptance](../doc/manual-test-plan.md#experimental-color-value-picker).
 
 ### Compiler documentation and reference counts
 

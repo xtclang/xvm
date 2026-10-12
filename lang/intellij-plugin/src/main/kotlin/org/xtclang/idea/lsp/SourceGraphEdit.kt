@@ -57,6 +57,7 @@ internal class SourceGraphEdit
                 throw UnexpectedUndoException(failure.message)
             }
 
+        /** Captured project, server and settings content that must still match when a graph edit is applied. */
         class Snapshot(
             val project: Project,
             val serverId: String,

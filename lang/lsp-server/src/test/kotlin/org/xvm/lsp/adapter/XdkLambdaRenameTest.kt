@@ -8,6 +8,10 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
 
+/**
+ * Checks lambda parameter rename through captures, nesting and argument/return contexts. Refuses name capture
+ * even when the resulting program would still compile.
+ */
 class XdkLambdaRenameTest {
     @TempDir lateinit var directory: Path
 

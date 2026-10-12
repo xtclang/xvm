@@ -5,6 +5,10 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 
+/**
+ * Validates imported Gradle compiler inputs, including resource precedence and composite-build ownership.
+ * Malformed or ambiguous models must be refused before accepted project configuration changes.
+ */
 class CompilerBuildModelTest {
     private val entry =
         mapOf(

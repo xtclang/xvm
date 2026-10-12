@@ -45,10 +45,12 @@ internal data class CompilerMissingMethod(
 ) {
     /** Fresh declaration types and already detached body types never share compiler pools. */
     sealed interface Type {
+        /** Attempt-owned compiler type used while deriving a missing method signature. */
         data class Resolved(
             val value: TypeConstant,
         ) : Type
 
+        /** Type proof that remains usable after the compilation attempt is released. */
         data class Detached(
             val value: ProofIdentity,
         ) : Type
@@ -61,6 +63,7 @@ internal data class CompilerMissingInputs(
     val receivers: Map<SemanticModel.SourceLocation, XdkMissingMethods.Receiver> = emptyMap(),
     val expressions: Map<SemanticModel.SourceLocation, LocalType> = emptyMap(),
 ) {
+    /** Compiler type and source context needed to spell it in each possible destination. */
     data class LocalType(
         val source: String?,
         val type: TypeConstant,
@@ -68,12 +71,14 @@ internal data class CompilerMissingInputs(
     )
 }
 
+/** Source spelling, detached type proof and imports required for a generated type reference. */
 private data class MissingType(
     val source: String,
     val proof: CompilerMissingMethod.Type,
     val imports: List<XdkMemberActions.Import> = emptyList(),
 )
 
+/** Proposed parameter spelling and type, with its argument binding and required imports. */
 private data class MissingParameter(
     val source: String,
     val type: CompilerMissingMethod.Type,
@@ -204,9 +209,7 @@ internal fun compilerMissingMethods(
                 } ?: local.takeIf { it.hasExplicitMethodType() }?.type?.let(::render)
             val returns =
                 when (val statement = call.parent) {
-                    is ExpressionStatement -> {
-                        if (statement.expression === call) emptyList() else return@mapNotNull null
-                    }
+                    is ExpressionStatement -> if (statement.expression === call) emptyList() else return@mapNotNull null
 
                     is ReturnStatement -> {
                         if (statement.expressions?.singleOrNull() !== call) return@mapNotNull null
@@ -221,9 +224,7 @@ internal fun compilerMissingMethods(
                         listOf(localType(local) ?: return@mapNotNull null)
                     }
 
-                    else -> {
-                        return@mapNotNull null
-                    }
+                    else -> return@mapNotNull null
                 }
 
             val conditional = declaration.isConditionalReturn && call.parent is ReturnStatement

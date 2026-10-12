@@ -7,6 +7,10 @@ import org.junit.jupiter.api.Test
 import java.nio.file.Path
 import java.util.concurrent.CompletableFuture
 
+/**
+ * Checks shared watch leases, wire registration decoding and exact cleanup. Prevents root replacement or
+ * disconnect from leaking watches or subscribing to unintended global paths.
+ */
 class CompilerRootWatchesTest {
     @Test
     fun `watch leases share roots replace settings and close exactly once`() {

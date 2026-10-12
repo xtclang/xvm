@@ -58,41 +58,28 @@ internal fun memberSignature(
             val rendered = render(type) ?: return null
             val default =
                 if (parameter.hasDefaultValue()) {
-                    // Validated primitive constants are independent of their original
-                    // expression/scope.
-                    // Fresh declaration repair accepts only parser-owned literal tokens; the
-                    // complete
-                    // proposed compilation must validate both the original and generated defaults.
+                    // Validated primitive constants are independent of their original expression/scope.
+                    // Fresh declaration repair accepts only parser-owned literal tokens; the proposed
+                    // compilation must validate both the original and generated defaults.
                     val value =
                         when (val constant = parameter.defaultValue) {
-                            is StringConstant -> {
-                                constant.valueString
-                            }
+                            is StringConstant -> constant.valueString
 
-                            is CharConstant -> {
-                                constant.valueString
-                            }
+                            is CharConstant -> constant.valueString
 
-                            is IntConstant -> {
-                                constant.valueString
-                            }
+                            is IntConstant -> constant.valueString
 
-                            is SingletonConstant -> {
+                            is SingletonConstant ->
                                 when (constant) {
                                     constant.constantPool.valTrue() -> "ecstasy.Boolean.True"
                                     constant.constantPool.valFalse() -> "ecstasy.Boolean.False"
                                     constant.constantPool.valNull() -> "ecstasy.Nullable.Null"
                                     else -> return null
                                 }
-                            }
 
-                            null -> {
-                                literalDefaults[name] ?: return null
-                            }
+                            null -> literalDefaults[name] ?: return null
 
-                            else -> {
-                                return null
-                            }
+                            else -> return null
                         }
                     " = $value"
                 } else {
@@ -126,9 +113,7 @@ internal fun TypeConstant.memberSourceType(
 ): String? {
     return when (this) {
         // A recursive alias is a TerminalTypeConstant without a single defining constant.
-        is RecursiveTypeConstant -> {
-            null
-        }
+        is RecursiveTypeConstant -> null
 
         is ParameterizedTypeConstant -> {
             val base = underlyingType.memberSourceType(owner, formals, modules) ?: return null
@@ -139,9 +124,7 @@ internal fun TypeConstant.memberSourceType(
             arguments.joinToString(", ", "$base<", ">")
         }
 
-        is ImmutableTypeConstant -> {
-            underlyingType.memberSourceType(owner, formals, modules)?.let { "immutable $it" }
-        }
+        is ImmutableTypeConstant -> underlyingType.memberSourceType(owner, formals, modules)?.let { "immutable $it" }
 
         is RelationalTypeConstant -> {
             val operator =
@@ -158,9 +141,7 @@ internal fun TypeConstant.memberSourceType(
 
         is TerminalTypeConstant -> {
             when (val identity = definingConstant) {
-                is TypeParameterConstant -> {
-                    formals[identity]
-                }
+                is TypeParameterConstant -> formals[identity]
 
                 is PropertyConstant -> {
                     // Class formals are properties, not method type parameters. Only the exact
@@ -174,13 +155,9 @@ internal fun TypeConstant.memberSourceType(
 
                 is ClassConstant -> {
                     when {
-                        constantPool.getImplicitlyImportedIdentity(identity.name) == identity -> {
-                            identity.name
-                        }
+                        constantPool.getImplicitlyImportedIdentity(identity.name) == identity -> identity.name
 
-                        identity.moduleConstant == owner.moduleConstant -> {
-                            identity.pathString
-                        }
+                        identity.moduleConstant == owner.moduleConstant -> identity.pathString
 
                         XdkAutoImports.target(identity) != null -> {
                             modules[identity.moduleConstant.name]?.let {
@@ -188,48 +165,25 @@ internal fun TypeConstant.memberSourceType(
                             }
                         }
 
-                        else -> {
-                            null
-                        }
+                        else -> null
                     }
                 }
 
-                else -> {
-                    null
-                }
+                else -> null
             }
         }
 
-        else -> {
-            null
-        }
+        else -> null
     }
 }
 
 /** Inspect only type structures whose source spelling the renderer understands. */
 internal fun TypeConstant.memberClasses(): List<ClassConstant> =
     when (this) {
-        is RecursiveTypeConstant -> {
-            emptyList()
-        }
-
-        is ParameterizedTypeConstant -> {
-            underlyingType.memberClasses() + paramTypes.flatMap { it.memberClasses() }
-        }
-
-        is RelationalTypeConstant -> {
-            underlyingType.memberClasses() + underlyingType2.memberClasses()
-        }
-
-        is ImmutableTypeConstant -> {
-            underlyingType.memberClasses()
-        }
-
-        is TerminalTypeConstant -> {
-            listOfNotNull(definingConstant as? ClassConstant)
-        }
-
-        else -> {
-            emptyList()
-        }
+        is RecursiveTypeConstant -> emptyList()
+        is ParameterizedTypeConstant -> underlyingType.memberClasses() + paramTypes.flatMap { it.memberClasses() }
+        is RelationalTypeConstant -> underlyingType.memberClasses() + underlyingType2.memberClasses()
+        is ImmutableTypeConstant -> underlyingType.memberClasses()
+        is TerminalTypeConstant -> listOfNotNull(definingConstant as? ClassConstant)
+        else -> emptyList()
     }

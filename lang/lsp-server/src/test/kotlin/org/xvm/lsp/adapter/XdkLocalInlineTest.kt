@@ -8,6 +8,10 @@ import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.lsp.adapter.xdk.XdkAdapter
 import java.nio.file.Path
 
+/**
+ * Checks local inlining against evaluation count, contextual type and binding preservation. Unsafe reads,
+ * writes, intervening effects or broken graphs must prevent publication.
+ */
 class XdkLocalInlineTest {
     @TempDir lateinit var directory: Path
 

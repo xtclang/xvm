@@ -22,6 +22,7 @@ internal object XdkLocalDeclarations {
             ?.takeIf { it.kind == SemanticModel.SymbolKind.VARIABLE && it.declarationSource == source }
     }
 
+    /** Local declaration and its assignment, retaining the written type for source edits. */
     data class Initializer(
         val statement: AssignmentStatement,
         val local: VariableDeclarationStatement,

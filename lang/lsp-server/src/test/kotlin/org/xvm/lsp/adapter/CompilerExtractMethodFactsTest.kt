@@ -8,6 +8,10 @@ import org.xvm.compiler.Source
 import org.xvm.lsp.adapter.xdk.XdkDependencies
 import org.xvm.lsp.adapter.xdk.projectRenameFacts
 
+/**
+ * Checks the compiler evidence used to capture inputs for extracted methods. Distinguishes stable values from
+ * writes and reference storage while keeping ordinary rename analysis free of extraction-only data.
+ */
 class CompilerExtractMethodFactsTest {
     @Test
     fun `capture evidence distinguishes stable values from writes and reference storage`() {

@@ -14,7 +14,13 @@ import java.util.UUID
 // suppresses annotation refresh. Give each delivered full report a client-only data revision so
 // annotations acquire the new fixes. Restore the server's exact data before a code-action request.
 // Remove when upstream retains equivalent lazy fixes or refreshes their owning annotations.
+
+/**
+ * Invalidates diagnostic quick-fix presentations when the server refreshes their actions, even if the visible
+ * diagnostic text is unchanged.
+ */
 internal object DiagnosticQuickFixes {
+    /** Original diagnostic data plus a revision that makes refreshed quick fixes a new presentation. */
     private data class Presentation(
         val original: Any?,
         val revision: UUID,

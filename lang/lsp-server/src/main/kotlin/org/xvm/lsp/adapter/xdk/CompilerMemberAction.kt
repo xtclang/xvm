@@ -72,9 +72,7 @@ internal fun compilerMemberActions(
                                             }
                                     }
 
-                                    else -> {
-                                        null
-                                    }
+                                    else -> null
                                 } ?: return@mapNotNull null
                             parameter.name to
                                 if (value is UnaryMinusExpression) "-$token" else token.toString()

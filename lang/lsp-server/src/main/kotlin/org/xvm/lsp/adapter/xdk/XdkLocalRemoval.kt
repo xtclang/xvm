@@ -11,6 +11,7 @@ import org.xvm.lsp.util.ExecutionTrace
 
 /** Delete an unused plain local only after the compiler proves its initializer needs no evaluation. */
 internal object XdkLocalRemoval {
+    /** Proposed local removal and the source locations whose disappearance is intentional. */
     data class Candidate(
         val edit: XdkRename.Edit,
         val removed: Set<SemanticModel.SourceLocation>,

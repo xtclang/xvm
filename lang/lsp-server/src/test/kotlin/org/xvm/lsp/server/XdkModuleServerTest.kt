@@ -37,6 +37,10 @@ import java.nio.file.Path
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit.SECONDS
 
+/**
+ * Checks whole-module analysis through document versions and filesystem notifications. Member diagnostics and
+ * hierarchy handles must follow their own sources and expire when the shared module snapshot changes.
+ */
 class XdkModuleServerTest {
     @TempDir lateinit var directory: Path
 
@@ -192,6 +196,7 @@ class XdkModuleServerTest {
         return root to member
     }
 
+    /** Owns a real compiler server and records diagnostics across whole-module document changes. */
     private class Session : AutoCloseable {
         val server = XtcLanguageServer(XdkAdapter())
         val documents = server.textDocumentService

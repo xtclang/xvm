@@ -11,6 +11,10 @@ import org.xvm.lsp.adapter.xdk.XdkMethodExtraction
 import org.xvm.lsp.adapter.xdk.XdkRename
 import org.xvm.lsp.adapter.xdk.projectRenameFacts
 
+/**
+ * Challenges method-extraction proposals that still compile but rebind a capture or call. Ensures successful
+ * compilation alone is insufficient to authorize the transformation.
+ */
 class CompilerMethodExtractionProofTest {
     @Test
     fun `compiling helper with swapped arguments fails capture proof`() {

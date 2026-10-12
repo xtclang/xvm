@@ -19,8 +19,10 @@ import javax.swing.JComponent
 import javax.swing.JPanel
 import javax.swing.JTextArea
 
+/** Edits application defaults for new projects and projects that inherit language-service settings. */
 class LanguageServiceApplicationConfigurable : LanguageServiceConfigurable(null)
 
+/** Edits project language-service overrides, with an explicit option to inherit application defaults. */
 class LanguageServiceProjectConfigurable(
     project: Project,
 ) : LanguageServiceConfigurable(project)
