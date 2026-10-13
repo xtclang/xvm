@@ -2,6 +2,8 @@ package org.xvm.lsp.adapter
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.xvm.api.EmbeddingSupport
 import org.xvm.asm.ErrorList
 import org.xvm.compiler.Source
@@ -21,6 +23,22 @@ import org.xvm.lsp.adapter.xdk.toDependency
  * source compiles.
  */
 class CompilerMissingMethodProofTest {
+    @ParameterizedTest
+    @ValueSource(strings = ["const Key(String name);", "class Empty;", "service Idle;"])
+    fun `semicolon-only types do not break missing method destinations for neighboring classes`(declaration: String) {
+        CompilerTestSupport.configure()
+        val text = "module Library { $declaration class Other {} }"
+        val errors = ErrorList()
+        val compilation = EmbeddingSupport.instance().compileModule(Source(text, SOURCE), null, errors)
+        assertThat(compilation.succeeded()).describedAs(errors.errors.toString()).isTrue()
+
+        val destinations = compilation.missingMethodDestinations()
+
+        assertThat(destinations).hasSize(1)
+        val destination = destinations.values.single()
+        assertThat(XdkRename.offset(text, destination.insertion)).isEqualTo(text.indexOf("{}") + 1)
+    }
+
     @Test
     fun `imports shift the inserted method but cannot weaken its source signature proof`() {
         CompilerTestSupport.configure()
