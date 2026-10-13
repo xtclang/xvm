@@ -16,13 +16,13 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodKind;
 
-import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.Context;
 import org.xvm.compiler.ast.Expression;
 import org.xvm.compiler.ast.NewExpression;
 import org.xvm.compiler.ast.NonBindingExpression;
 import org.xvm.compiler.ast.PartialAst;
+import org.xvm.compiler.ast.bindings.CursorBinding;
 
 import static org.xvm.asm.ErrorListener.Silence.PROBE;
 import static org.xvm.asm.ErrorListener.silent;

@@ -51,6 +51,7 @@ import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.Context.CaptureContext;
 import org.xvm.compiler.ast.LabeledStatement.LabelVar;
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
+import org.xvm.compiler.ast.bindings.LambdaBindings;
 
 import org.xvm.util.Handy;
 import org.xvm.util.Severity;
@@ -128,7 +129,7 @@ public class LambdaExpression
      *         its generated method has been validated
      */
     public LambdaBindings getSourceBindings() {
-        return m_ctxLambda == null || !m_ctxLambda.f_bindings.isFor(m_lambda) ? null : m_ctxLambda.f_bindings;
+        return m_ctxLambda == null ? null : m_ctxLambda.f_bindings.getBindings(m_lambda);
     }
 
     /** Record a generated parameter through the context that owns its source associations. */
@@ -1424,7 +1425,7 @@ public class LambdaExpression
             }
         }
 
-        private final LambdaBindings f_bindings = new LambdaBindings();
+        private final LambdaBindings.Collector f_bindings = new LambdaBindings.Collector();
 
         private final TypeConstant[] f_atypeParams;
         private final String[]       f_asParams;

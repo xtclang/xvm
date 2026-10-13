@@ -39,11 +39,12 @@ import org.xvm.asm.op.*;
 
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
-import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.Context.CaptureContext;
+import org.xvm.compiler.ast.bindings.AnonymousClassBindings;
+import org.xvm.compiler.ast.bindings.InvocationBinding;
 import org.xvm.compiler.ast.partial.PartialSyntax;
 
 import org.xvm.util.Severity;
@@ -197,7 +198,7 @@ public class NewExpression
      * @return source bindings collected by capture analysis, or null before it completes
      */
     public AnonymousClassBindings getSourceBindings() {
-        return m_captureBindings != null && m_captureBindings.isFor(this) ? m_captureBindings : null;
+        return m_captureBindings == null ? null : m_captureBindings.getBindings(this);
     }
 
     void bindSourceCapture(String name, Register captured) {
@@ -796,7 +797,7 @@ public class NewExpression
             // logic (as the variables go out of scope in the method body that contains this
             // NewExpression); for now, store off the data from the capture context
             m_mapCapture      = ctxAnon.getCaptureMap();
-            m_captureBindings = new AnonymousClassBindings(this, ctxAnon.ensureRegisterMap());
+            m_captureBindings = new AnonymousClassBindings.Collector(this, ctxAnon.ensureRegisterMap());
             m_fInstanceChild  = ctxAnon.isInstanceChild();
             m_ctxCapture      = null;
 
@@ -1669,7 +1670,7 @@ public class NewExpression
      * The capture-analysis result: enclosing registers and source origins for their local reads.
      * Replaces the former name-to-register map; created when capture analysis completes.
      */
-    private transient AnonymousClassBindings m_captureBindings;
+    private transient AnonymousClassBindings.Collector m_captureBindings;
 
     /**
      * The construction plan:
