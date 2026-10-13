@@ -991,7 +991,7 @@ public class ForEachStatement
                     Register regTemp = code.createRegister(lval.getType());
                     code.add(new Var(regTemp));
                     code.add(new I_Get(argVal, index, regTemp));
-                    lvalVal.assign(regTemp, code, errs);
+                    lval.assign(regTemp, code, errs);
                 }
             }
         } else {
