@@ -729,9 +729,9 @@ public abstract class AstNode
      * checking for errors that are obvious from "this point down" (no lateral evaluation of
      * structures, because we can't count on them even existing yet.)</li>
      *
-     * <li>The general idea is that this method recurses through the structure, allowing each node
-     * to introduce itself as the parent of each node under it, and that the nodes which will be
-     * structures in the resulting FileStructure will register themselves.</li>
+     * <li>This method recurses through the tree, establishing each node as the parent of its
+     * children. Nodes that represent structures in the resulting FileStructure also register
+     * themselves.</li>
      *
      * <li>Type parameters for the types must also be registered, because they are also types, and
      * they will be required to already be present when the second pass begins.</li>
@@ -752,9 +752,8 @@ public abstract class AstNode
      * compilation is not only unpredictable, but the potential exists for dependencies in either
      * direction (first to last and/or vice versa).
      *
-     * <p>As a result, some questions may come to an AstNode to resolve that it is not yet prepared to
-     * resolve, in which case the caller (another AstNode) has to add itself to the list of nodes
-     * that require another pass.
+     * <p>A node may be asked to resolve a name before its dependencies are ready. In that case,
+     * the calling node must defer its own resolution to another pass.
      *
      * <ul>
      * <li>Packages that import modules are able to verify that those modules are available to
@@ -813,11 +812,9 @@ public abstract class AstNode
         // determine what stage we're trying to catch the children up to
         Stage stageTarget = getStage();
         if (!stageTarget.isTargetable()) {
-            // we want to catch up to the last target that this component completed, and not
-            // actually pass the stage that this component is at, which can be accomplished using
-            // StageMgr processChildrenExcept() or processChildren() if the children need to
-            // complete the stage that this node is currently working on (if this node is currently
-            // in a transition stage)
+            // catch up only to the last completed target stage
+            // use StageMgr.processChildrenExcept() or processChildren() when children must
+            // complete the stage this node is currently processing
             stageTarget = stageTarget.prevTarget();
             if (!stageTarget.isTargetable()) {
                 assert stageTarget == Stage.Initial;
@@ -896,9 +893,8 @@ public abstract class AstNode
             return !resolver.getNameResolver().isFirstTime();
         }
 
-        // for all other components (that don't override this method because they know more about
-        // whether or not they can resolve names), we'll assume that if they haven't been resolved,
-        // then they don't know how to resolve names
+        // other components must have reached name resolution before they can resolve names
+        // subclasses can override this method when they have more specific readiness checks
         return alreadyReached(Stage.Resolving);
     }
 
@@ -1868,11 +1864,9 @@ public abstract class AstNode
     /**
      * Build and return a map that allows the caller to navigate the children of this node.
      *
-     * <p>Assume some type T which represents either an AstNode instance, or an object that implements
-     * toString(). The keys of the map should be strings that describe the categories of the
-     * children, while the values should provide the info about the children of this AstNode,
-     * either as an object of type T, a Collection of type T, an array of type T, or a Map whose
-     * keys and values are of type T.
+     * <p>Keys describe the categories of children. Each value is a child, a collection or array
+     * of children, or a map whose keys and values describe children. A child can be an AstNode
+     * or another object with a useful {@code toString()} representation.
      *
      * @return a map containing all the child information to dump
      */
