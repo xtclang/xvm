@@ -68,7 +68,7 @@ final class CursorScope {
         String prefix = site.getCompletionPrefix();
         var probe = ErrorListener.cancellable(silent(PROBE), errs::isAbortDesired);
         return names(site).stream().filter(name -> name.startsWith(prefix)).sorted()
-                .takeWhile(name -> !errs.isAbortDesired())
+                .takeWhile(_ -> !errs.isAbortDesired())
                 .map(name -> {
                     var token = new Token(site.getEndPosition(), site.getEndPosition(), Id.IDENTIFIER, name);
                     var target = ctx.resolveName(token, probe);
@@ -85,7 +85,7 @@ final class CursorScope {
                     return List.of();
                 }
                 var parameters = writtenFormals.stream()
-                        .collect(Collectors.toMap(Parameter::getName, Function.identity(), (first, second) -> first));
+                        .collect(Collectors.toMap(Parameter::getName, Function.identity(), (first, _) -> first));
                 var qualifier = formalConstraint(parameters.get(firstName(type)), scope, parameters, Set.of(), errs);
                 if (qualifier == null) {
                     return List.of();
@@ -97,8 +97,7 @@ final class CursorScope {
                         qualifier, names.subList(1, names.size()), type.getParamTypes(), type.getEndPosition()),
                         scope, site.getCompletionPrefix(), errs);
                 if (names.size() == 2) {
-                    return candidates.stream().filter(candidate ->
-                            candidate.identity().getComponent() instanceof ClassStructure child && child.isVirtualChild()).toList();
+                    return candidates.stream().filter(c -> c.identity().getComponent() instanceof ClassStructure child && child.isVirtualChild()).toList();
                 }
                 var bound = formalBound(parameters.get(firstName(type)), scope, parameters, Set.of(), errs);
                 var probe = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
@@ -117,7 +116,7 @@ final class CursorScope {
         String prefix = site.getCompletionPrefix();
         var probe = ErrorListener.cancellable(silent(PROBE), errs::isAbortDesired);
         return names(site, writtenFormals).stream().filter(name -> name.startsWith(prefix)).sorted()
-                .takeWhile(name -> !errs.isAbortDesired())
+                .takeWhile(_ -> !errs.isAbortDesired())
                 .map(name -> namedType(name, new NameResolver(scope, name).forceResolve(probe)))
                 .filter(Objects::nonNull).toList();
     }
@@ -136,8 +135,8 @@ final class CursorScope {
     private static List<CursorBinding.Formal> resolveFormals(IncompleteStatement site, AstNode scope, List<Parameter> parameters,
             ErrorListener errs) {
         var byName = parameters.stream().collect(Collectors.toMap(Parameter::getName, Function.identity(),
-                (first, second) -> first));
-        return parameters.stream().takeWhile(parameter -> !errs.isAbortDesired()).map(parameter -> {
+                (first, _) -> first));
+        return parameters.stream().takeWhile(_ -> !errs.isAbortDesired()).map(parameter -> {
             if (parameter.getType() instanceof BadTypeExpression bad && PartialAst.writtenType(bad) instanceof TypeExpression written
                     && site.getTarget() instanceof NamedTypeExpression selected
                     && parameter.getName().startsWith(site.getCompletionPrefix())) {
@@ -316,7 +315,7 @@ final class CursorScope {
                 .filter(child -> info.getType().getAccess().canSee(child.getAccess())
                         || child.getIdentity().getClassIdentity().isNestMateOf(owner))
                 .sorted(Comparator.comparing(ChildInfo::getName))
-                .takeWhile(child -> !errs.isAbortDesired())
+                .takeWhile(_ -> !errs.isAbortDesired())
                 .map(child -> {
                     String name = child.getName();
                     var resolved = new NameResolver(type, Stream.concat(qualifier.stream(), Stream.of(name)).iterator())
@@ -349,7 +348,7 @@ final class CursorScope {
                 .filter(child -> info.getType().getAccess().canSee(child.getAccess())
                         || child.getIdentity().getClassIdentity().isNestMateOf(owner))
                 .sorted(Comparator.comparing(ChildInfo::getName))
-                .takeWhile(child -> !errs.isAbortDesired())
+                .takeWhile(_ -> !errs.isAbortDesired())
                 .map(child -> {
                     Token written = type.getNameToken();
                     var name = new Token(written.getStartPosition(), written.getEndPosition(), Id.IDENTIFIER, child.getName());
@@ -424,7 +423,7 @@ final class CursorScope {
         if (site.isCall() || site.isTypeCompletion() || site.getDeclarationType().isPresent()) {
             return List.of();
         }
-        return PartialCallResolver.instanceSpellings(site).takeWhile(text -> !errs.isAbortDesired())
+        return PartialCallResolver.instanceSpellings(site).takeWhile(_ -> !errs.isAbortDesired())
                 .filter(text -> {
                     var probe = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);
                     var trial = ctx.enter();
@@ -456,8 +455,8 @@ final class CursorScope {
             if (node.isComponentNode() && node.getComponent() != null) {
                 names.addAll(node.getComponent().getChildByNameMap().keySet());
                 if (node.getComponent() instanceof MethodStructure method) {
-                    method.getParams().stream().filter(parameter -> parameter.isTypeParameter())
-                            .map(parameter -> parameter.getName()).forEach(names::add);
+                    method.getParams().stream().filter(org.xvm.asm.Parameter::isTypeParameter)
+                            .map(org.xvm.asm.Parameter::getName).forEach(names::add);
                 }
             }
             if (node instanceof StatementBlock block) {
