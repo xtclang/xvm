@@ -7,7 +7,6 @@ import org.xvm.asm.ClassStructure;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.constants.TypeConstant;
 
-import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.ast.AstNode;
 import org.xvm.compiler.ast.Context;
 import org.xvm.compiler.ast.Expression;
@@ -16,6 +15,7 @@ import org.xvm.compiler.ast.LambdaExpression;
 import org.xvm.compiler.ast.NonBindingExpression;
 import org.xvm.compiler.ast.Parameter;
 import org.xvm.compiler.ast.PartialAst;
+import org.xvm.compiler.ast.bindings.CursorBinding;
 
 /**
  * Semantic entry points used by retained incomplete nodes. Contexts and bindings belong to the
