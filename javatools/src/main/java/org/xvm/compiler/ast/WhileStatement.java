@@ -21,7 +21,6 @@ import org.xvm.asm.constants.StringConstant;
 import org.xvm.asm.op.Enter;
 import org.xvm.asm.op.Exit;
 import org.xvm.asm.op.IP_Inc;
-import org.xvm.asm.op.Jump;
 import org.xvm.asm.op.Label;
 import org.xvm.asm.op.Loop;
 import org.xvm.asm.op.LoopEnd;
@@ -74,16 +73,11 @@ public class WhileStatement
         Label   label   = getContinueLabel();
 
         if (ctxOrigin.isReachable()) {
-            // generate a delta of assignment information for the jump
-            Map<String, Assignment> mapAsn = new HashMap<>();
-            Map<String, Argument>   mapArg = new HashMap<>();
-            ctxOrigin.prepareJump(ctxDest, mapAsn, mapArg);
-
             // record the jump that landed on this statement by recording its assignment impact
             if (m_listContinues == null) {
                 m_listContinues = new ArrayList<>();
             }
-            m_listContinues.add(new Break(nodeOrigin, mapAsn, mapArg, label));
+            m_listContinues.add(prepareJump(nodeOrigin, ctxOrigin, ctxDest, label));
         }
 
         return label;
@@ -282,21 +276,7 @@ public class WhileStatement
                         // the condition is either a boolean expression or an assignment
                         // statement whose R-value is a multi-value with the first value
                         // being a boolean
-                        if (condOld instanceof AssignmentStatement stmtCond) {
-                            if (stmtCond.isNegated()) {
-                                ctx = ctx.enterNot();
-                            }
-
-                            condNew = stmtCond.validate(ctx, errs);
-
-                            if (stmtCond.isNegated()) {
-                                ctx = ctx.exit();
-                            }
-                        } else {
-                            // the node must be cloned, because we may end up repeating this
-                            // validation process with a different set of assumptions
-                            condNew = ((Expression) condOld).validate(ctx, pool().typeBoolean(), errs);
-                        }
+                        condNew = validateCondition(ctx, condOld, errs);
 
                         if (condNew == null) {
                             fValid = false;
@@ -321,7 +301,7 @@ public class WhileStatement
                                         fValid = false;
                                     }
                                 } else {
-                                    assert ((Expression) condNew).isConstantTrue();
+                                    assert exprCond.isConstantTrue();
                                     fAlwaysTrue = true;
                                 }
                             }
@@ -441,11 +421,10 @@ public class WhileStatement
 
     @Override
     protected boolean emit(Context ctx, boolean fReachable, Code code, ErrorListener errs) {
-        boolean  fCompletes    = fReachable;
-        boolean  fDoWhile      = isDoWhile();
-        Register regFirst      = m_regFirst;
-        Register regCount      = m_regCount;
-        boolean  fHasLabelVars = regFirst != null || regCount != null;
+        boolean  fCompletes = fReachable;
+        boolean  fDoWhile   = isDoWhile();
+        Register regFirst   = m_regFirst;
+        Register regCount   = m_regCount;
 
         // any condition of false results in false (as long as all conditions up to that point are
         // constant); all condition of true results in true (as long as all conditions are constant)
@@ -593,8 +572,7 @@ public class WhileStatement
     }
 
     /**
-     * Internal method: create the variables for the "first" and "count" label variables, but only
-     * if necessary and set the {@link #m_aAllocSpecial}.
+     * Emit declarations for the requested "first" and "count" label variables.
      *
      * @param code      the code to emit
      * @param regFirst  the (optional) register for the "first" variable
@@ -640,25 +618,7 @@ public class WhileStatement
 
         for (int i = 0; i < cConds; ++i) {
             AstNode cond = getCondition(i);
-            if (cond instanceof AssignmentStatement stmtCond) {
-                boolean fNegated = stmtCond.isNegated();
-                Label   labelNeg = fNegated ? new Label("negated") : null;
-
-                stmtCond.setConditionFalseLabel(fNegated ? labelNeg : getEndLabel());
-
-                fCompletes &= stmtCond.completes(ctx, fCompletes, code, errs);
-
-                assert stmtCond.isConditionFalseLabelTaken();
-
-                if (fNegated) {
-                    code.add(new Jump(getEndLabel()));
-                    code.add(labelNeg);
-                }
-            } else {
-                Expression exprCond = (Expression) cond;
-                exprCond.generateConditionalJump(ctx, code, getEndLabel(), false, errs);
-                fCompletes &= exprCond.isCompletable();
-            }
+            fCompletes &= emitCondition(ctx, cond, fCompletes, code, getEndLabel(), errs);
         }
 
         return fCompletes;
@@ -673,7 +633,7 @@ public class WhileStatement
         if (keyword.getId() == Token.Id.WHILE || keyword.getId() == Token.Id.FOR) {
             sb.append(keyword.getId().TEXT)
               .append(" (")
-              .append(conds.get(0));
+              .append(conds.getFirst());
 
             for (int i = 1, c = conds.size(); i < c; ++i) {
                 sb.append(", ")
@@ -690,7 +650,7 @@ public class WhileStatement
               .append(indentLines(block.toString(), "    "))
               .append("\nwhile (");
 
-            sb.append(conds.get(0));
+            sb.append(conds.getFirst());
             for (int i = 1, c = conds.size(); i < c; ++i) {
                 sb.append(", ")
                   .append(conds.get(i));
