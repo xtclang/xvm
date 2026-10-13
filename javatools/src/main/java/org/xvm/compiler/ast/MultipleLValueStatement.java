@@ -45,7 +45,7 @@ public class MultipleLValueStatement
 
     @Override
     public long getEndPosition() {
-        return lValues.get(lValues.size() - 1).getEndPosition();
+        return lValues.getLast().getEndPosition();
     }
 
     @Override
