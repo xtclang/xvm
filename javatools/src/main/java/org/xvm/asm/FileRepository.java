@@ -228,15 +228,16 @@ public class FileRepository
      * Make sure that the cache is up to date.
      */
     private boolean validateCache() {
-        // Both successful and failed reads use the usual metadata-based burst cache.
-        long now = System.currentTimeMillis();
+        // both successful and failed reads use the usual metadata-based burst cache
+        long    now       = System.currentTimeMillis();
         boolean unchanged = timestamp == file.lastModified() && size == file.length();
-        boolean recent = now < lastScan + 60/*ms*/;
+        boolean recent    = now < lastScan + 60/*ms*/;
         if (recent || unchanged) {
             return cacheOk;
         }
 
         boolean retryFailedRead = readFailed;
+
         cachedVersionsByName   = Map.of();
         cachedFileStructure    = null;
         cachedModuleStructures = null;
@@ -245,9 +246,9 @@ public class FileRepository
         if (file.exists() && file.isFile() && file.canRead()) {
             FileInfo info;
             if (retryFailedRead) {
-                // A successful header alone cannot clear an earlier payload failure.
+                // a successful header alone cannot clear an earlier payload failure
                 cachedFileStructure = readFileStructure();
-                info = cachedFileStructure == null ? null : cachedFileStructure.buildFileInfo();
+                info                = cachedFileStructure == null ? null : cachedFileStructure.buildFileInfo();
             } else {
                 info = readFileInfo();
             }
@@ -287,7 +288,7 @@ public class FileRepository
     private boolean ensureFileStructure() {
         if (validateCache() && cachedFileStructure == null) {
             if ((cachedFileStructure = readFileStructure()) == null) {
-                cacheOk = false;
+                cacheOk  = false;
                 lastScan = System.currentTimeMillis();
             }
         }

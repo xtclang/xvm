@@ -31,7 +31,7 @@ service DirRepository
      */
     private Map<String, FileTemplate> modulesByName = new HashMap();
     private Map<String, ModuleInfo>   modulesByFile = new HashMap();
-    private Time                     lastScan      = Time.EPOCH;
+    private Time                      lastScan      = Time.EPOCH;
 
     // ----- ModuleRepository API ------------------------------------------------------------------
 
@@ -88,8 +88,8 @@ service DirRepository
 
         for (File file : dir.files().filter(MODULES_ONLY)) {
             ModuleInfo info;
-            ModuleInfo? previous = oldModules.getOrNull(file.name);
-            if (previous != Null && previous.timestamp == file.modified && previous.size == file.size) {
+            if (ModuleInfo previous := oldModules.get(file.name),
+                    previous.timestamp == file.modified, previous.size == file.size) {
                 info = previous;
             } else {
                 info = new ModuleInfo(file);
@@ -130,12 +130,6 @@ service DirRepository
         return count == modulesByFile.size;
     }
 
-    private static void reportReadFailure(File file, Exception cause) {
-        @Inject Console console;
-        console.print($|DirRepository: Failed to load a module from "{file}": {cause.message}
-                     );
-    }
-
     // ----- inner class: ModuleInfo ---------------------------------------------------------------
 
     static const ModuleInfo {
@@ -149,12 +143,14 @@ service DirRepository
             this.timestamp = file.modified;
             this.size      = file.size;
 
-            // Retain metadata for failed reads too, so later scans do not retry unchanged files.
+            // retain metadata for failed reads too, so later scans do not retry unchanged files
             FileTemplate? template = Null;
             try {
                 template = tryLoad(file);
             } catch (Exception e) {
-                reportReadFailure(file, e);
+                @Inject Console console;
+                console.print($|DirRepository: Failed to load a module from "{file}": {e.message}
+                             );
             }
             this.template = template;
         }

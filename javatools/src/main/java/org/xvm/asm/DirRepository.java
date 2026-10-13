@@ -155,7 +155,7 @@ public class DirRepository
     }
 
     private void rebuildCache(File[] files) {
-        // An unexpected failure must not leave a partially rebuilt cache marked current.
+        // an unexpected failure must not leave a partially rebuilt cache marked current
         lastScan = 0;
         Map<File, ModuleInfo> oldModulesByFile = modulesByFile;
         boolean               fWriteCache      = false;
@@ -343,7 +343,7 @@ public class DirRepository
      * @return true if the cache is still good, or false if it needs to be rebuilt
      */
     private boolean isCacheValid() {
-        // Check metadata at the usual interval; a failed read alone does not invalidate the cache.
+        // check metadata at the usual interval; a failed read alone does not invalidate the cache
         if (System.currentTimeMillis() < lastScan + 1000) {
             return true;
         }
