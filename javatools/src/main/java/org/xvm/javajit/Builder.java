@@ -113,7 +113,7 @@ public abstract class Builder {
         TypeConstant superType = typeInfo.getExtends();
         return superType == null
             ? thisType.isConst() ? CD_nConst : CD_nObject
-            : ensureClassDesc(superType);
+            : getCCDesc(superType);
     }
 
     // ----- helper methods ------------------------------------------------------------------------
@@ -128,8 +128,8 @@ public abstract class Builder {
     /**
      * Ensure a unique ClassDesc for the specified type.
      */
-    public ClassDesc ensureClassDesc(TypeConstant type) {
-        return type.getCallableClassDesc(typeSystem);
+    public ClassDesc getCCDesc(TypeConstant type) {
+        return type.getJitCCDesc(typeSystem);
     }
 
     /**
@@ -138,8 +138,8 @@ public abstract class Builder {
      *
      * @see "doc/jit_class_names.txt"
      */
-    public String ensureJitClassName(TypeConstant type) {
-        return type.ensureJitClassName(typeSystem);
+    public String getCCName(TypeConstant type) {
+        return type.getJitCCName(typeSystem);
     }
 
     /**
@@ -148,10 +148,9 @@ public abstract class Builder {
      *
      * @see "doc/jit_class_names.txt"
      */
-    public String ensureJitInstanceClassName(TypeConstant type) {
-        assert type.isSingleUnderlyingClass(false);
+    public String getICName(TypeConstant type) {
         // TODO
-        return type.ensureJitClassName(typeSystem);
+        return type.getJitICName(typeSystem);
     }
 
     /**
@@ -252,7 +251,7 @@ public abstract class Builder {
                 }
                 case IntN, UIntN -> {
                     TypeConstant type  = intConstant.getType();
-                    ClassDesc    cd    = ensureClassDesc(type);
+                    ClassDesc    cd    = getCCDesc(type);
                     String       value = intConstant.getIntValue().getBigInteger().toString();
                     ClassDesc    biCD  = ClassDesc.of(BigInteger.class.getName());
 
@@ -354,7 +353,7 @@ public abstract class Builder {
                     // instead of holding the value, the field contains a container-independent
                     // MethodHandle used to compute the value and cache it at the container
                     code.aload(bctx.ctxSlot(code))
-                        .getstatic(ensureClassDesc(ownerType),
+                        .getstatic(getCCDesc(ownerType),
                                 propId.ensureJitPropertyName(typeSystem), CD_MethodHandle)
                         .invokevirtual(CD_Ctx, "getStatic", Ctx.MD_getStatic);
                     code.checkcast(jtd.cd);
@@ -363,14 +362,14 @@ public abstract class Builder {
 
                 switch (jtd.flavor) {
                 case Primitive:
-                    code.getstatic(ensureClassDesc(ownerType),
+                    code.getstatic(getCCDesc(ownerType),
                             propId.ensureJitPropertyName(typeSystem),
                             JitTypeDesc.requirePrimitiveFieldClass(propType));
                     normalizePrimitiveField(code, propType);
                     return singletonReg;
 
                 case Specific, Widened:
-                    code.getstatic(ensureClassDesc(propId.getClassIdentity().getType()),
+                    code.getstatic(getCCDesc(propId.getClassIdentity().getType()),
                         propId.ensureJitPropertyName(typeSystem), jtd.cd);
                     return singletonReg;
 
@@ -437,7 +436,9 @@ public abstract class Builder {
             TypeConstant     type    = constId.getValueType(pool, null);
 
             if (type.isA(pool.typeEnumeration())) {
-                String    name = ensureJitClassName(type);
+                // the enum's class-of-class holds the singleton, not the generalized Enumeration
+                String    name = TypeSystem.enumerationClass(
+                        getCCName(type.getParamType(0)));
                 ClassDesc cd   = ClassDesc.of(name);
                 code.getstatic(cd, Instance, cd);
                 return new SingleSlot(type, Specific, cd, "");
@@ -485,7 +486,7 @@ public abstract class Builder {
                 if (alias) {
                     // an alias can refer to a method on another type, e.g. FPConvertible.toDec
                     containerType = containerId.getType();
-                    containerCD   = ensureClassDesc(containerType);
+                    containerCD   = getCCDesc(containerType);
                     containerInfo = bctx.getTypeInfo(containerType);
                 }
 
@@ -592,7 +593,7 @@ public abstract class Builder {
             MethodInfo     ctorInfo = typeInfo.getMethodById(ctorId);
             JitCtorDesc    ctorJmd  = (JitCtorDesc) ctorInfo.getJitDesc(this, mapType);
             String         ctorName = ctorInfo.ensureJitMethodName(typeSystem).replace("construct", NEW);
-            String         clzName  = ensureJitClassName(mapType);
+            String         clzName  = getICName(mapType);
             ClassDesc      mapCd    = ClassDesc.of(clzName);
             JitMethodDesc  newJmd   = convertConstructToNew(typeInfo, mapCd, ctorJmd);
 
@@ -942,7 +943,7 @@ public abstract class Builder {
         code.dup();
         loadCtx(bctx, code);
         code.invokevirtual(cdArray, "$makeImmut", MD_xvmVoid);
-        return new SingleSlot(arrayType, Specific, ensureClassDesc(arrayType), "");
+        return new SingleSlot(arrayType, Specific, getCCDesc(arrayType), "");
     }
 
     private SingleSlot loadRange(BuildContext bctx, CodeBuilder code, RangeConstant rangeConst) {
@@ -963,7 +964,7 @@ public abstract class Builder {
             code.iconst_0();
         });
 
-        return new SingleSlot(rangeType, Specific, ensureClassDesc(rangeType), "");
+        return new SingleSlot(rangeType, Specific, getCCDesc(rangeType), "");
     }
 
     /**
@@ -1034,7 +1035,7 @@ public abstract class Builder {
         }
 
         String    getterName = jitInfo.ensureGetterJitMethodName(typeSystem);
-        ClassDesc ownerCD    = ensureClassDesc(typeOwner);
+        ClassDesc ownerCD    = getCCDesc(typeOwner);
 
         MethodTypeDesc md;
         if (jmdGet.isOptimized && allowUnboxing) {
@@ -1060,7 +1061,7 @@ public abstract class Builder {
         TypeConstant jitType = jitInfo.getType();
         TypeConstant xvmType = xvmInfo.getType();
         if (!jitType.isJitAssignableTo(xvmType)) {
-            code.checkcast(ensureClassDesc(xvmType));
+            code.checkcast(getCCDesc(xvmType));
         }
         return xvmInfo;
     }
@@ -1818,7 +1819,7 @@ public abstract class Builder {
         Label endLabel     = code.newLabel();
         Label successLabel = code.newLabel();
 
-        ClassDesc cd = ensureClassDesc(typeTo);
+        ClassDesc cd = getCCDesc(typeTo);
         code.labelBinding(startLabel)
             .checkcast(cd)
             .goto_(successLabel)
@@ -1941,7 +1942,7 @@ public abstract class Builder {
                     ctorId.getValueString() + "\" for " + targetType.getValueString());
         }
 
-        ClassDesc     targetCD   = ensureClassDesc(targetType);
+        ClassDesc     targetCD   = getCCDesc(targetType);
         String        instorName = ctor.ensureJitMethodName(typeSystem).replace("construct", NEW);
         JitMethodDesc instorMD;
 
@@ -1952,7 +1953,7 @@ public abstract class Builder {
             TypeInfo     baseInfo = ctor.getChildConstructorOrigin().getTypeInfo();
             TypeConstant baseType = baseInfo.getType().getJitICType();
 
-            instorMD = convertConstructToNew(baseInfo, ensureClassDesc(baseType),
+            instorMD = convertConstructToNew(baseInfo, getCCDesc(baseType),
                         (JitCtorDesc) ctor.getJitDesc(this, baseType));
 
             MethodTypeDesc md;
@@ -1964,7 +1965,7 @@ public abstract class Builder {
             }
 
             TypeConstant parentType = targetJIC.getParentType();
-            ClassDesc    parentCD   = ensureClassDesc(parentType);
+            ClassDesc    parentCD   = getCCDesc(parentType);
 
             RegisterInfo outerReg = outer.load(code);
             if (!outerReg.type().isJitAssignableTo(parentType)) {

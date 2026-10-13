@@ -425,7 +425,7 @@ public abstract class OpInvocable extends Op {
             throw new IllegalStateException("Union method branch is not a union type: " + typeTarget);
         }
 
-        ClassDesc cdPart    = bctx.builder.ensureClassDesc(typeTarget);
+        ClassDesc cdPart    = bctx.builder.getCCDesc(typeTarget);
         Label     labelNext = code.newLabel();
 
         Builder.load(code, cdTarget, slotTarget);
@@ -458,7 +458,7 @@ public abstract class OpInvocable extends Op {
                     getNamespace().getType();
             if (!typeOwner.equals(typeTarget)) {
                 typeInvoke = typeOwner;
-                cdInvoke   = bctx.builder.ensureClassDesc(typeOwner);
+                cdInvoke   = bctx.builder.getCCDesc(typeOwner);
                 if (!typeTarget.isJitAssignableTo(typeOwner)) {
                     // the target type could be a mixin, which is a Java interface, so invoking a
                     // method from its "into" class requires a cast to that class
@@ -476,7 +476,7 @@ public abstract class OpInvocable extends Op {
         if (isTupleReturn()) {
             if (jmd.isPrimitivized() && fUnboxed) {
                 Builder.box(code, typeInvoke);
-                cdInvoke = bctx.builder.ensureClassDesc(typeInvoke);
+                cdInvoke = bctx.builder.getCCDesc(typeInvoke);
                 fUnboxed = false;
             }
             jmd = jmd.standardOnly();
@@ -511,7 +511,7 @@ public abstract class OpInvocable extends Op {
         bctx.loadCallArguments(code, jmd, anArgValue);
 
         if (fPrimitive) {
-            cdInvoke = typeInvoke.getCallableClassDesc(bctx.typeSystem);
+            cdInvoke = typeInvoke.getJitCCDesc(bctx.typeSystem);
             code.invokestatic(cdInvoke, methodName, md);
         } else if (infoTarget.getType().isJitInterface()) {
             code.invokeinterface(cdInvoke, methodName, md);

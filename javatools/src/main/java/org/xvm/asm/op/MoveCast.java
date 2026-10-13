@@ -143,7 +143,7 @@ public class MoveCast
         if (typeTo.isJitPrimitive()) {
             if (typeTo.isNullable()) {
                 Builder.unboxNullable(code, typeTo,
-                        bctx.builder.ensureClassDesc(typeTo.removeNullable()));
+                        bctx.builder.getCCDesc(typeTo.removeNullable()));
             } else {
                 Builder.unbox(code, typeTo);
             }

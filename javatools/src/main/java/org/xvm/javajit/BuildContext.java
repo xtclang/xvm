@@ -723,7 +723,7 @@ public class BuildContext {
             // an augmented interface (e.g. Service) can declare the method while every runtime
             // instance is represented by the corresponding native class (nService)
             if (thisType.isInterfaceType()) {
-                ClassDesc cdValue = builder.ensureClassDesc(thisType);
+                ClassDesc cdValue = builder.getCCDesc(thisType);
                 if (!cdValue.equals(CD_this)) {
                     regThis = new Narrowed(Op.A_THIS, regThis.slots(), thisType, Specific, cdValue,
                             regThis.slotCds(), "thi$", 0, regThis);
@@ -1283,7 +1283,7 @@ public class BuildContext {
 
             // keep the register's canonical representation; the narrowed view is only used by the
             // current op to select and invoke the appropriate boxed implementation
-            ClassDesc narrowedCD = builder.ensureClassDesc(mtxType);
+            ClassDesc narrowedCD = builder.getCCDesc(mtxType);
             JitFlavor flavor     = regType.getJitDesc(builder).flavor;
 
             return new Narrowed(reg.regId(), reg.slots(), mtxType, flavor, narrowedCD,
@@ -1567,7 +1567,7 @@ public class BuildContext {
             // TODO: track the current service in Ctx; this:service will NPE for now
             TypeConstant type = pool().typeService();
             code.aconst_null();
-            return new SingleSlot(type, Specific, builder.ensureClassDesc(type), "");
+            return new SingleSlot(type, Specific, builder.getCCDesc(type), "");
         }
 
         default:
@@ -1596,7 +1596,7 @@ public class BuildContext {
 
             buildSuper(jitName, nDepth);
         } else {
-            containerCD = builder.ensureClassDesc(containerId.getType());
+            containerCD = builder.getCCDesc(containerId.getType());
         }
 
         JitMethodDesc               jmd  = bodySuper.getJitDesc(builder, thisType);
@@ -2003,7 +2003,7 @@ public class BuildContext {
                 }
 
                 Label        varStart   = code.newLabel();
-                ClassDesc    resourceCD = builder.ensureClassDesc(resourceType);
+                ClassDesc    resourceCD = builder.getCCDesc(resourceType);
                 int          slot       = scope.allocateLocal(regId, TypeKind.REFERENCE);
                 RegisterInfo reg        = new SingleSlot(regId, slot, Specific, resourceType,
                                             resourceCD, name);
@@ -2166,7 +2166,7 @@ public class BuildContext {
 
             case "Widened->Primitive",
                  "Widened->XvmPrimitive":
-                if (!srcReg.cd().equals(builder.ensureClassDesc(pd.type))) {
+                if (!srcReg.cd().equals(builder.getCCDesc(pd.type))) {
                     generateCheckCast(code, pd.type);
                 }
                 Builder.unbox(code, pd.type);
@@ -2175,7 +2175,7 @@ public class BuildContext {
             case "Widened->NullablePrimitive",
                  "Widened->NullableXvmPrimitive":
                 Builder.unboxNullable(code, pd.type,
-                        builder.ensureClassDesc(pd.type.removeNullable()));
+                        builder.getCCDesc(pd.type.removeNullable()));
                 continue;
 
             case "Specific->Widened",
@@ -2415,7 +2415,7 @@ public class BuildContext {
                         Builder.load(code, origReg.cd(), origReg.slot());
                     } else {
                         origReg.load(code);
-                        code.checkcast(builder.ensureClassDesc(narrowingType)); // boxed
+                        code.checkcast(builder.getCCDesc(narrowingType)); // boxed
                         Builder.unbox(code, narrowedReg);
                     }
                 } else if (narrowingType.isXvmPrimitive()) {
@@ -2434,7 +2434,7 @@ public class BuildContext {
                         }
                     } else {
                         origReg.load(code);
-                        code.checkcast(builder.ensureClassDesc(narrowingType)); // boxed
+                        code.checkcast(builder.getCCDesc(narrowingType)); // boxed
                         Builder.unbox(code, narrowedReg);
                     }
                 } else if (narrowingType.isOnlyNullable()) {
@@ -2686,7 +2686,7 @@ public class BuildContext {
                 ? DirectMethodHandleDesc.Kind.INTERFACE_VIRTUAL
                 : DirectMethodHandleDesc.Kind.VIRTUAL;
 
-        code.ldc(MethodHandleDesc.ofMethod(kind, builder.ensureClassDesc(ownerType),
+        code.ldc(MethodHandleDesc.ofMethod(kind, builder.getCCDesc(ownerType),
                 methodName, jmd.standardMD));
 
         RegisterInfo loadedTarget = targetReg.load(code);
@@ -2721,7 +2721,7 @@ public class BuildContext {
         }
 
         TypeConstant ownerType = propInfo.getOwnerType(builder, targetReg.type());
-        ClassDesc    cdOwner   = builder.ensureClassDesc(ownerType);
+        ClassDesc    cdOwner   = builder.getCCDesc(ownerType);
         String       fieldName = propInfo.getIdentity().ensureJitPropertyName(typeSystem);
 
         for (int i = 0; i < returns.length; i++) {
@@ -2882,7 +2882,7 @@ public class BuildContext {
             case "Widened->Specific" -> {
                 TypeConstant dstType = propInfo.getType();
                 if (!srcType.isJitAssignableTo(dstType)) {
-                    code.checkcast(builder.ensureClassDesc(dstType));
+                    code.checkcast(builder.getCCDesc(dstType));
                 }
             }
 
@@ -2946,7 +2946,7 @@ public class BuildContext {
         if (useField) {
             buildSetPropertyField(code, targetReg, propInfo, jmd);
         } else if (jmd.isOptimizedStatic) {
-            code.invokestatic(builder.ensureClassDesc(jmd.typeTarget), setterName, md);
+            code.invokestatic(builder.getCCDesc(jmd.typeTarget), setterName, md);
         } else {
             code.invokevirtual(targetReg.cd(), setterName, md);
         }
@@ -2976,7 +2976,7 @@ public class BuildContext {
         }
 
         TypeConstant typeOwner = propInfo.getOwnerType(builder, targetReg.type());
-        ClassDesc    cdOwner   = builder.ensureClassDesc(typeOwner);
+        ClassDesc    cdOwner   = builder.getCCDesc(typeOwner);
         String       fieldName = propInfo.getIdentity().ensureJitPropertyName(typeSystem);
 
         for (int i = 0; i < params.length; i++) {
@@ -3357,7 +3357,7 @@ public class BuildContext {
                  "Widened->NullablePrimitive",
                  "Widened->NullableXvmPrimitive" -> {
                 TypeConstant typeSansNull = destType.removeNullable();
-                Builder.unboxNullable(code, destType, builder.ensureClassDesc(typeSansNull));
+                Builder.unboxNullable(code, destType, builder.getCCDesc(typeSansNull));
             }
 
             default ->
@@ -3445,7 +3445,7 @@ public class BuildContext {
                  "Widened->NullableXvmPrimitive" -> {
                 loadFromContext(code, pdRet.cd, pdRet.altIndex);
                 TypeConstant typeSansNull = destType.removeNullable();
-                Builder.unboxNullable(code, destType, builder.ensureClassDesc(typeSansNull));
+                Builder.unboxNullable(code, destType, builder.getCCDesc(typeSansNull));
             }
 
             default ->
@@ -3535,7 +3535,7 @@ public class BuildContext {
         for (int i = 0; i < cds.length; i++) {
             tempSlots[i] = scope.allocateJavaSlot(cds[i]);
         }
-        ClassDesc    cd      = builder.ensureClassDesc(type);
+        ClassDesc    cd      = builder.getCCDesc(type);
         JitFlavor    flavor  = type.getJitDesc(builder).flavor;
         RegisterInfo tempReg = new MultiSlot(Op.A_STACK, tempSlots, NO_EXT, flavor, type, cd, cds, "");
         tempRegStack.push(tempReg);

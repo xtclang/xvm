@@ -7170,8 +7170,8 @@ public abstract class TypeConstant
      *
      * @see doc/jit_class_names.txt
      */
-    public ClassDesc getCallableClassDesc(TypeSystem ts) {
-        return ClassDesc.of(getJitCCType().ensureJitClassName(ts));
+    public ClassDesc getJitCCDesc(TypeSystem ts) {
+        return ClassDesc.of(getJitCCName(ts));
     }
 
     /**
@@ -7180,8 +7180,8 @@ public abstract class TypeConstant
      *
      * @see doc/jit_class_names.txt
      */
-    public ClassDesc getInstanceeClassDesc(TypeSystem ts) {
-        return ClassDesc.of(getJitICType().ensureJitClassName(ts));
+    public ClassDesc getJitICDesc(TypeSystem ts) {
+        return ClassDesc.of(getJitICName(ts));
     }
 
     /**
@@ -7190,7 +7190,25 @@ public abstract class TypeConstant
      *
      * @see doc/jit_class_names.txt
      */
-    public String ensureJitClassName(TypeSystem ts) {
+    public String getJitCCName(TypeSystem ts) {
+        return getJitCCType().ensureJitName(ts);
+    }
+
+    /**
+     * Ensure a unique Java class name that represents a "JIT Instance Class Name" for this type in
+     * the specified TypeSystem.
+     *
+     * @see doc/jit_class_names.txt
+     */
+    public String getJitICName(TypeSystem ts) {
+        return getJitICType().ensureJitName(ts);
+    }
+
+    /**
+     * Ensure the Java class name for a type already selected by {@link #getJitCCType()} or
+     * {@link #getJitICType()}.
+     */
+    private String ensureJitName(TypeSystem ts) {
         assert isSingleUnderlyingClass(true);
 
         String sJitName = m_sJitName;
@@ -7198,7 +7216,7 @@ public abstract class TypeConstant
             // get the master instance of the type constant
             ModuleLoader loader = ts.findOwnerLoader(this);
             TypeConstant that   = loader.module.getConstantPool().register(this);
-            sJitName   = this == that ? buildJitClassName(ts, loader) : that.ensureJitClassName(ts);
+            sJitName   = this == that ? buildJitClassName(ts, loader) : that.ensureJitName(ts);
             m_sJitName = sJitName;
         }
         return sJitName;
@@ -7248,7 +7266,7 @@ public abstract class TypeConstant
                     || (typeValue.isSingleUnderlyingClass(true)
                             && typeValue.getSingleUnderlyingClass(true).equals(pool.clzEnum()))
                     ? Builder.N_Enumeration
-                    : TypeSystem.enumerationClass(typeValue.ensureJitClassName(ts));
+                    : TypeSystem.enumerationClass(typeValue.getJitCCName(ts));
         }
 
         if (id.equals(pool.clzFunction())) {
@@ -7395,7 +7413,7 @@ public abstract class TypeConstant
         }
         assert isSingleUnderlyingClass(true);
 
-        return new JitTypeDesc(getJitCCType(), Specific, builder.ensureClassDesc(this));
+        return new JitTypeDesc(getJitCCType(), Specific, builder.getCCDesc(this));
     }
 
     /**
@@ -7626,14 +7644,14 @@ public abstract class TypeConstant
 
             switch (nOp) {
             case Op.OP_CMP:
-                code.invokestatic(bctx.builder.ensureClassDesc(this), methodName, methodDesc);
+                code.invokestatic(bctx.builder.getCCDesc(this), methodName, methodDesc);
                 generateOrdered(bctx, code);
                 return;
 
             case Op.OP_IS_EQ,  Op.OP_JMP_EQ,
                  Op.OP_IS_NEQ, Op.OP_JMP_NEQ:
                 // boolean equals(Ctx, primitives1..., primitives2...)
-                code.invokestatic(bctx.builder.ensureClassDesc(this), methodName, methodDesc);
+                code.invokestatic(bctx.builder.getCCDesc(this), methodName, methodDesc);
                 switch (nOp) {
                 case Op.OP_IS_EQ,  Op.OP_JMP_EQ  -> code.ifne(lblTrue);
                 case Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> code.ifeq(lblTrue);
@@ -7646,7 +7664,7 @@ public abstract class TypeConstant
                  Op.OP_IS_LT,  Op.OP_JMP_LT,
                  Op.OP_IS_LTE, Op.OP_JMP_LTE:
                 // int compare(Ctx, primitives1..., primitives2...)
-                code.invokestatic(bctx.builder.ensureClassDesc(this), methodName, methodDesc);
+                code.invokestatic(bctx.builder.getCCDesc(this), methodName, methodDesc);
                 code.iconst_0();
 
                 switch (nOp) {
@@ -7695,7 +7713,7 @@ public abstract class TypeConstant
                 assert typeFunky.isJitInterface();
 
                 cd         = ClassDesc.of(TypeSystem.funkyInterface(
-                                bctx.builder.ensureJitClassName(typeFunky)));
+                                bctx.builder.getCCName(typeFunky)));
                 sJitName   = idFunky.ensureJitMethodName(ts);
                 jmd        = bodyFunky.getJitDesc(bctx.builder, typeFunky);
                 fInterface = true;
@@ -7703,7 +7721,7 @@ public abstract class TypeConstant
                 MethodInfo   method     = bctx.getTypeInfo(this).getMethodBySignature(sig);
                 TypeConstant typeTarget = method.getJitIdentity().getNamespace().getType();
 
-                cd         = bctx.builder.ensureClassDesc(typeTarget);
+                cd         = bctx.builder.getCCDesc(typeTarget);
                 sJitName   = method.ensureJitMethodName(ts);
                 jmd        = method.getJitDesc(bctx.builder, this);
                 fInterface = typeTarget.isJitInterface();

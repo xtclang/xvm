@@ -55,14 +55,14 @@ public class JitParamDesc extends JitTypeDesc {
         ClassDesc      cd;
 
         if ((cd = JitTypeDesc.getJavaPrimitive(type)) != null) {
-            ClassDesc cdStd = builder.ensureClassDesc(type);
+            ClassDesc cdStd = builder.getCCDesc(type);
 
             apdStdParam = new JitParamDesc[] {
                 new JitParamDesc(type, Specific, cdStd, 0, 0, false)};
             apdOptParam = new JitParamDesc[] {
                 new JitParamDesc(type, Primitive, cd, 0, 0, false)};
         } else if ((cd = JitTypeDesc.getNullablePrimitiveClass(type)) != null) {
-            ClassDesc cdStd = builder.ensureClassDesc(type);
+            ClassDesc cdStd = builder.getCCDesc(type);
             apdStdParam = new JitParamDesc[] {
                 new JitParamDesc(type, Widened, cdStd, 0, 0, false)};
             apdOptParam = new JitParamDesc[] {
@@ -70,7 +70,7 @@ public class JitParamDesc extends JitTypeDesc {
                 new JitParamDesc(type, NullablePrimitive, CD_boolean, 0, 0, true)
             };
         } else if ((JitTypeDesc.getXvmPrimitiveClass(type)) != null) {
-            ClassDesc cdStd = builder.ensureClassDesc(type);
+            ClassDesc cdStd = builder.getCCDesc(type);
             apdStdParam = new JitParamDesc[] {
                     new JitParamDesc(type, Specific, cdStd, 0, 0, false)};
             ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(type);
@@ -79,7 +79,7 @@ public class JitParamDesc extends JitTypeDesc {
                 apdOptParam[i] = new JitParamDesc(type, XvmPrimitive, cds[i], 0, i - 1, false);
             }
         } else if ((JitTypeDesc.getNullableXvmPrimitiveClass(type)) != null) {
-            ClassDesc cdStd = builder.ensureClassDesc(type);
+            ClassDesc cdStd = builder.getCCDesc(type);
             apdStdParam = new JitParamDesc[] {
                     new JitParamDesc(type, Widened, cdStd, 0, 0, false)};
             ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(type);
@@ -96,7 +96,7 @@ public class JitParamDesc extends JitTypeDesc {
         } else {
             assert type.isSingleUnderlyingClass(true);
 
-            cd = builder.ensureClassDesc(type);
+            cd = builder.getCCDesc(type);
             apdStdParam = new JitParamDesc[] {
                 new JitParamDesc(type, Specific, cd, 0, 0, false)};
         }
