@@ -437,7 +437,7 @@ public class NameExpression
                     break;
                 }
 
-                tokens.add(0, exprLeft.name);
+                tokens.addFirst(exprLeft.name);
 
                 Expression expr = exprLeft.left;
                 if (!(expr instanceof NameExpression)) {
@@ -661,8 +661,7 @@ public class NameExpression
             // the class could either be identified (in the raw) by an identity
             // constant a relative (pseudo) constant or a typedef
             assert argRaw instanceof IdentityConstant ||
-                   argRaw instanceof PseudoConstant   ||
-                   argRaw instanceof TypedefConstant  ;
+                   argRaw instanceof PseudoConstant;
             constVal = type;
             break;
 
@@ -705,7 +704,8 @@ public class NameExpression
 
             case None: {
                 assert type.isA(pool.typeProperty());
-                assert left == null || left.getType().isA(pool.typeClass());
+                TypeConstant typeClass = pool.typeClass();
+                assert left == null || left.getType().isA(typeClass);
 
                 TypeConstant typeParent = left == null
                         ? ctx.getThisType()
@@ -763,6 +763,7 @@ public class NameExpression
                 break;
 
             case Property: {
+                assert argRaw instanceof PropertyConstant;
                 PropertyConstant idProp = (PropertyConstant) argRaw;
 
                 if (idProp.isFormalType()) {
@@ -811,7 +812,7 @@ public class NameExpression
         }
 
         // if the type could fully be resolved in the current context, do it now
-        if (type != null && type.containsGenericType(true)) {
+        if (type.containsGenericType(true)) {
             TypeConstant typeResolved = type.resolveGenerics(pool, ctx.getThisType());
             if (!typeResolved.containsGenericType(true)) {
                 type = typeResolved;
@@ -1042,7 +1043,8 @@ public class NameExpression
                     break;
 
                 case Left: {
-                    assert !idProp.getComponent().isStatic();
+                    Component component = idProp.getComponent();
+                    assert !component.isStatic();
                     Argument argLeft = left.generateArgument(ctx, code, false, errs);
                     code.add(new P_Get(idProp, argLeft, argLVal));
                     break;
@@ -1590,7 +1592,8 @@ public class NameExpression
             return ctx.getThisRegister();
 
         case Left:
-            assert !idProp.getComponent().isStatic();
+            Component component = idProp.getComponent();
+            assert !component.isStatic();
             return left.generateArgument(ctx, code, true, errs);
 
         default:
@@ -2729,9 +2732,7 @@ public class NameExpression
         case MultiMethod:
             // the constant refers to a method or function
             m_plan = Plan.None;
-            if (typeDesired != null) {
-                // TODO: find the match
-            }
+            // TODO: find a matching overload when typeDesired is available
             log(errs, Severity.ERROR, Compiler.NAME_AMBIGUOUS,
                     ((MultiMethodConstant) constant).getName());
             return null;
@@ -3083,7 +3084,7 @@ public class NameExpression
                         if (idProp.isFormalType()) {
                             ctx.replaceGenericArgument(idProp, branch, new TargetInfo(info, typeNarrow));
                         }
-                    } else if (id instanceof IdentityConstant) {
+                    } else if (id != null) {
                         // narrow the "outer this"
                         ctx.replaceArgument("this", branch, new TargetInfo(info, typeNarrow));
                     }
