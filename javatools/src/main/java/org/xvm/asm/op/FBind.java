@@ -362,7 +362,7 @@ public class FBind
             fOptBefore = fOptAfter;
         }
 
-        ClassDesc cdFn = bctx.builder.ensureClassDesc(typeFn);
+        ClassDesc cdFn = bctx.builder.getCCDesc(typeFn);
         code.new_(cdFn)
             .dup();
         bctx.loadCtx(code);

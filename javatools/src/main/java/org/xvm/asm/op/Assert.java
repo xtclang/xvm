@@ -204,7 +204,7 @@ public class Assert
             Arrays.fill(anArgs, 1, anArgs.length, Op.A_DEFAULT);
 
             bctx.buildNew(code, typeEx, idCtor, A_IGNORE, anArgs);
-            code.getfield(bctx.builder.ensureClassDesc(typeEx), "$exception", CD_nException)
+            code.getfield(bctx.builder.getCCDesc(typeEx), "$exception", CD_nException)
                 .athrow();
         }
         if (!fAlwaysFalse) {

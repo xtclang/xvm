@@ -312,7 +312,7 @@ public class JitMethodDesc {
             if ((cd = JitTypeDesc.getJavaPrimitive(type)) != null) {
                 if (iOrig >= 0) {
                     JitFlavor stdFlavor = fDflt ? SpecificWithDefault : Specific;
-                    ClassDesc cdStd     = builder.ensureClassDesc(type);
+                    ClassDesc cdStd     = builder.getCCDesc(type);
                     stdParamList.add(new JitParamDesc(type, stdFlavor, cdStd, iOrig, iStd++, false));
                 }
 
@@ -396,7 +396,7 @@ public class JitMethodDesc {
 
                 type = resolveMixinAutoNarrowing(type, targetType, pool);
 
-                cd = builder.ensureClassDesc(type);
+                cd = builder.getCCDesc(type);
                 JitFlavor flavor = fDflt ? SpecificWithDefault : Specific;
 
                 if (iOrig >= 0) {
@@ -428,7 +428,7 @@ public class JitMethodDesc {
             }
 
             if ((cd = JitTypeDesc.getJavaPrimitive(type)) != null) {
-                ClassDesc cdStd = builder.ensureClassDesc(type);
+                ClassDesc cdStd = builder.getCCDesc(type);
 
                 stdParamList.add(new JitParamDesc(type, Specific, cdStd, iOrig, ixStdObj++, false));
                 optParamList.add(new JitParamDesc(type, Primitive, cd,   iOrig, ixLong++, false));
@@ -465,7 +465,7 @@ public class JitMethodDesc {
                 assert type.isSingleUnderlyingClass(true);
 
                 type = resolveMixinAutoNarrowing(type, targetType, pool);
-                cd   = builder.ensureClassDesc(type);
+                cd   = builder.getCCDesc(type);
 
                 stdParamList.add(new JitParamDesc(type, Specific, cd, iOrig, ixStdObj++, false));
                 optParamList.add(new JitParamDesc(type, Specific, cd, iOrig, ixOptObj++, false));
@@ -486,7 +486,7 @@ public class JitMethodDesc {
                 : null;
 
         if (isConstructor) {
-            return new JitCtorDesc(targetType, builder.ensureClassDesc(targetType),
+            return new JitCtorDesc(targetType, builder.getCCDesc(targetType),
                     hasFinalizer, /*fAddType*/ false, /*fAddOuter*/ false,
                     stdReturns, stdParams, optReturns, optParams);
         } else {

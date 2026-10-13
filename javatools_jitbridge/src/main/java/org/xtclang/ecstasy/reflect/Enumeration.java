@@ -2,7 +2,6 @@ package org.xtclang.ecstasy.reflect;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.util.Optional;
 
 import org.xtclang.ecstasy.Exception;
 import org.xtclang.ecstasy.collections.ArrayᐸObjectᐳ;
@@ -36,7 +35,7 @@ public abstract class Enumeration extends Class {
      */
     public static nEnum $getEnumValue(Ctx ctx, TypeConstant type, java.lang.String value) {
         TypeSystem       typeSystem = ctx.container.typeSystem;
-        java.lang.String className  = type.ensureJitClassName(typeSystem);
+        java.lang.String className  = type.getJitCCName(typeSystem);
         java.lang.String enumClass  = TypeSystem.enumerationClass(className);
         ArrayᐸObjectᐳ    values;
 

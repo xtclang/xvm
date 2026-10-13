@@ -139,7 +139,7 @@ public class MBind
             } else {
                 Builder.box(code, typeTarget);
             }
-            ClassDesc cdTarget = bctx.builder.ensureClassDesc(typeTarget);
+            ClassDesc cdTarget = bctx.builder.getCCDesc(typeTarget);
             int       slot     = bctx.storeTempValue(code, cdTarget);
             regTarget = new SingleSlot(A_STACK, slot, Specific, typeTarget, cdTarget, "");
         }
@@ -178,7 +178,7 @@ public class MBind
         int slotImm = bctx.storeTempValue(code, CD_boolean);
 
         TypeConstant typeFn = bctx.pool().bindMethodTarget(regMethod.type());
-        ClassDesc    cdFn   = bctx.builder.ensureClassDesc(typeFn);
+        ClassDesc    cdFn   = bctx.builder.getCCDesc(typeFn);
         code.new_(cdFn)
             .dup();
         bctx.loadCtx(code);
