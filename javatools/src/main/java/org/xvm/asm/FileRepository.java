@@ -5,11 +5,8 @@ import java.io.IOException;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-
-import java.util.function.BiConsumer;
 
 import org.xvm.asm.FileStructure.FileInfo;
 
@@ -36,30 +33,10 @@ public class FileRepository
      * @param readOnly  true to make the repository "read-only"
      */
     public FileRepository(File file, boolean readOnly) {
-        this(file, readOnly, (candidate, cause) ->
-                System.out.println("Error reading module file " + candidate + ": " + cause));
-    }
-
-    /**
-     * Construct a repository with an observer for unsuccessful file reads.
-     *
-     * <p>The observer receives the candidate file and original I/O exception synchronously for
-     * each failed read attempt, including an unsupported binary version. It replaces the default
-     * console report; it does not change lookup or fallback. Cached absence produces no report.
-     * A report establishes neither the file's module identity nor why its contents became unreadable.
-     * Write failures continue to be thrown by {@link #storeModule(ModuleStructure)}.
-     * An unchanged failed file remains cached as unavailable until its size or timestamp changes.
-     *
-     * @param file           the file that contains the module(s)
-     * @param readOnly       true to make the repository read-only
-     * @param onReadFailure  the non-null observer; it must not reenter this repository
-     */
-    public FileRepository(File file, boolean readOnly, BiConsumer<File, IOException> onReadFailure) {
         assert file != null && !file.isDirectory();
 
-        this.file          = moduleFile(file);
-        this.readOnly      = readOnly;
-        this.onReadFailure = Objects.requireNonNull(onReadFailure);
+        this.file     = moduleFile(file);
+        this.readOnly = readOnly;
     }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -325,9 +302,9 @@ public class FileRepository
             FileInfo info = FileStructure.readFileInfo(file);
             readFailed = false;
             return info;
-        } catch (IOException e) {
+        } catch (Exception e) {
             readFailed = true;
-            onReadFailure.accept(file, e);
+            System.out.println("Error loading FileInfo from file: " + file + "; " + e.getMessage());
             return null;
         }
     }
@@ -340,9 +317,9 @@ public class FileRepository
             FileStructure structure = new FileStructure(file);
             readFailed = false;
             return structure;
-        } catch (IOException e) {
+        } catch (Exception e) {
             readFailed = true;
-            onReadFailure.accept(file, e);
+            System.out.println("Error loading FileStructure from file: " + file + "; " + e.getMessage());
             return null;
         }
     }
@@ -392,8 +369,6 @@ public class FileRepository
 
     /** A replacement must pass a complete read after a prior failure, not just a header read. */
     private boolean readFailed;
-
-    private final BiConsumer<File, IOException> onReadFailure;
 
     /**
      * Cached file contents: module names and versions thereof.
