@@ -5,7 +5,9 @@ import com.intellij.driver.model.OnDispatcher
 import com.intellij.driver.sdk.Project
 import com.intellij.driver.sdk.singleProject
 import org.eclipse.lsp4j.jsonrpc.messages.ResponseErrorCode
+import java.nio.file.Path
 import java.util.concurrent.CancellationException
+import java.util.concurrent.TimeUnit.SECONDS
 import kotlin.time.Duration.Companion.seconds
 
 internal fun ParityScenarios.progressCases() {
@@ -84,7 +86,24 @@ internal fun ParityScenarios.progressCases() {
             val wrapper = protocol.server()
             val previous = requireNotNull(wrapper.getCurrentProcessId())
             val pending = start(large + "// unsaved restart\n")
-            wrapper.restart()
+            // The CLI must reach the editor, then reuse its normal restart and unsaved-buffer replay.
+            val script =
+                Path
+                    .of(System.getProperty("xtc.playbook.scenarios"))
+                    .parent.parent.parent
+                    .resolve("scripts/xtc-lsp")
+            val project = with(driver) { singleProject().getBasePath() }
+            val restart =
+                ProcessBuilder("python3", script.toString(), "restart", "--project", project, "--ide", "intellij")
+                    .redirectErrorStream(true)
+                    .start()
+            try {
+                check(restart.waitFor(70, SECONDS)) { "CLI restart timed out" }
+                val output = restart.inputStream.bufferedReader().readText()
+                check(restart.exitValue() == 0) { output }
+            } finally {
+                if (restart.isAlive) restart.destroyForcibly()
+            }
             with(driver) {
                 awaitUi("old process exits and pending request retires", 30.seconds) {
                     pending.isDone() && !utility(ProgressUi::class).alive(previous)

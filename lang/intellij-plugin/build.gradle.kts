@@ -601,6 +601,9 @@ val buildPlugin =
 
 // Get typed reference to IntelliJ Platform tasks
 val prepareSandbox = tasks.named<Sync>("prepareSandbox")
+prepareSandbox.configure {
+    from(rootProject.layout.projectDirectory.file("scripts/xtc-lsp")) { into("intellij-plugin/bin") }
+}
 
 // Derive TextMate destination from prepareSandbox's output (works with any IDE version)
 // prepareSandbox.destinationDirectory is the plugins/ directory, we need plugins/<plugin-name>/lib/textmate
@@ -676,6 +679,7 @@ val prepareJarSearchableOptions =
 // so its Sync task owns the complete plugin installation, including the server and grammar.
 val prepareRunIdeSandbox =
     tasks.named<PrepareSandboxTask>("prepareSandbox_runIde") {
+        from(rootProject.layout.projectDirectory.file("scripts/xtc-lsp")) { into("intellij-plugin/bin") }
         from(textMateGrammar) {
             into("intellij-plugin/lib/textmate")
         }
