@@ -1240,7 +1240,11 @@ class XtcTextDocumentService(
                 ?: throw ResponseErrorException(
                     ResponseError(
                         ResponseErrorCode.InvalidParams,
-                        "Rename not allowed at this position",
+                        if (adapter.readOnlyDocument(params.textDocument.uri) != null) {
+                            "Cannot rename a symbol in read-only library source. Open the library's source project to refactor it."
+                        } else {
+                            "Rename not allowed at this position"
+                        },
                         null,
                     ),
                 )
