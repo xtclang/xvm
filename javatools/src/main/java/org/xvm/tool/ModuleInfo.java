@@ -74,8 +74,8 @@ public class ModuleInfo {
      * @param moduleName  the module identity obtained from the host's source snapshot
      */
     protected ModuleInfo(File sourceFile, String moduleName) {
-        this.fileSpec      = Objects.requireNonNull(sourceFile, "sourceFile").getAbsoluteFile();
-        this.moduleName    = Objects.requireNonNull(moduleName, "moduleName");
+        this.fileSpec   = Objects.requireNonNull(sourceFile, "sourceFile").getAbsoluteFile();
+        this.moduleName = Objects.requireNonNull(moduleName, "moduleName");
         if (moduleName.isBlank() || !isExplicitSourceFile(this.fileSpec.getName())) {
             throw new IllegalArgumentException("A module name and .x source root are required");
         }

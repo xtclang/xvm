@@ -4020,7 +4020,7 @@ public abstract class TypeConstant
 
                     if (infoSet != null) {
                         infoSet = infoSet.layerOn(new MethodInfo(new MethodBody(idSet,
-                                idSet.getSignature(), Implementation.Implicit), nRank+1), false, cascade(!fComplete, errs));
+                                idSet.getSignature(), Implementation.Implicit), nRank + 1), false, cascade(!fComplete, errs));
                     }
                 }
 
