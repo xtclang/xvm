@@ -42,6 +42,7 @@ module TestMisc {
 
         testEnums();
         testCircularInitialization();
+        testPotentiallyAmbiguous();
     }
 
     void testInts() {
@@ -894,6 +895,33 @@ module TestMisc {
         static String second() {
             static String value = first();
             return value;
+        }
+    }
+
+    void testPotentiallyAmbiguous() {
+        NonVoid nonVoid = new NonVoid();
+        String  text    = nonVoid.f();
+        Int     number  = nonVoid.f();
+        assert text == "Hello", number == 42;
+
+        WithVoid withVoid = new WithVoid();
+        var value = withVoid.f();
+        withVoid.f();
+        assert value == "Hello" && withVoid.voidCalled;
+
+        class NonVoid {
+            String f() = "Hello";
+            Int    f() = 42;
+        }
+
+        class WithVoid {
+            Boolean voidCalled = False;
+
+            String f() = "Hello";
+
+            void f() {
+                voidCalled = True;
+            }
         }
     }
 }

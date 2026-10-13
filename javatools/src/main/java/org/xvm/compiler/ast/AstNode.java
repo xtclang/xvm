@@ -1087,9 +1087,10 @@ public abstract class AstNode
         // - an invalid argument name error should always be reported
         // - a wrong arity error should be reported only if there are no other errors
         // - a type mismatch error should be reported only if there are no other type mismatch errors
-        int cNameErrs  = 0;
-        int cArityErrs = 0;
-        int cTypeErrs  = 0;
+        int     cNameErrs   = 0;
+        int     cArityErrs  = 0;
+        int     cTypeErrs   = 0;
+        boolean fFoundExact = false;
 
         NextMethod: for (MethodConstant idMethod : setMethods) {
             MethodInfo        infoMethod = infoTarget.getMethodById(idMethod);
@@ -1189,8 +1190,8 @@ public abstract class AstNode
                         ? exprArg.getType()
                         : exprArg.getImplicitType(ctx);
                 if (typeExpr != null && typeExpr.isA(typeParam)) {
-                    fit    = TypeFit.Fit;
-                    fExact = typeExpr.equals(typeParam);
+                    fit     = TypeFit.Fit;
+                    fExact &= typeExpr.equals(typeParam);
                 } else {
                     // if *all* tests fail, report the errors from the first unsuccessful attempt
                     fit    = exprArg.testFit(ctx, typeParam, true, errsTemp);
@@ -1272,9 +1273,15 @@ public abstract class AstNode
             }
 
             if (fExact) {
-                setConvert.clear();
-                setIs.clear();
-                mapMethods.clear();
+                if (!fFoundExact) {
+                    setConvert.clear();
+                    setIs.clear();
+                    mapMethods.clear();
+                    fFoundExact = true;
+                }
+            } else if (fFoundExact) {
+                // discard any non-exact
+                continue; // NextMethod
             }
 
             if (fit.isConverting()) {
@@ -1283,10 +1290,6 @@ public abstract class AstNode
                 setIs.add(idMethod);
             }
             mapMethods.put(idMethod, method);
-
-            if (fExact) {
-                return;
-            }
         }
 
         // if there is any ambiguity, don't report anything; the caller will log a generic

@@ -238,4 +238,18 @@ module TestCompilerErrors {
             }
         }
     }
+
+    package testAmbiguousCall {
+        class Test {
+            void test() {
+                var o = f(); // expect-error: COMPILER-63 (ambiguous return type)
+            }
+            void test2() {
+                f();         // expect-error: COMPILER-63 (ambiguous return type)
+            }
+
+            String f() = "Hello";
+            Int    f() = 42;
+        }
+    }
 }
