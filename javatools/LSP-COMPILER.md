@@ -70,10 +70,10 @@ flowchart TD
     G --> H[LSP response or diagnostic publication]
 ```
 
-The important ownership transition is between **E** and **F**. An immutable collection of AST
-references is still a collection of compiler-owned objects. The host must finish inspecting and
-copying them while it exclusively owns the attempt; it cannot hand the AST or constant pool to
-arbitrary request threads.
+The ownership transition happens when **SemanticModelBuilder copies facts into detached models**.
+An immutable collection of AST references is still a collection of compiler-owned objects. The host
+must finish inspecting and copying them while it exclusively owns the attempt; it cannot hand the
+AST or constant pool to arbitrary request threads.
 
 The production path is visible in these files:
 
