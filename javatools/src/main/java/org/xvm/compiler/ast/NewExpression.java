@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Optional;
+import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
 
 import org.xvm.asm.Annotation;
@@ -26,11 +27,9 @@ import org.xvm.asm.Register;
 
 import org.xvm.asm.constants.AnnotatedTypeConstant;
 import org.xvm.asm.constants.DynamicFormalConstant;
-import org.xvm.asm.constants.ExpressionConstant;
 import org.xvm.asm.constants.MethodConstant;
 import org.xvm.asm.constants.MethodInfo;
 import org.xvm.asm.constants.PropertyConstant;
-import org.xvm.asm.constants.RegisterConstant;
 import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 import org.xvm.asm.constants.TypeInfo.MethodKind;
@@ -255,7 +254,7 @@ public class NewExpression
                 typeTarget = type.ensureTypeConstant(ctx, errs);
             } else {
                 // there must be an anonymous inner class skeleton by this point
-                assert anon != null && anon.getComponent() != null;
+                assert anon.getComponent() != null;
                 return ((ClassStructure) anon.getComponent()).getFormalType();
             }
         }
@@ -621,7 +620,6 @@ public class NewExpression
         if (construction == null) {
             return null;
         }
-        ConstantPool pool       = pool();
         TypeConstant typeResult = construction.result();
         TypeConstant typeTarget = construction.target();
         TypeConstant typeSuper  = construction.superType();
@@ -950,141 +948,136 @@ public class NewExpression
         int            cArgs       = aArgs.length;
         int            cDefaults   = cParams - cArgs;
 
-        if (m_fTupleArg) {
-            // TODO
-            throw notImplemented();
-        } else {
-            if (cDefaults > 0) {
-                Argument[] aArgAll = new Argument[cParams];
-                System.arraycopy(aArgs, 0, aArgAll, 0, cArgs);
-                aArgs = aArgAll;
+        if (cDefaults > 0) {
+            Argument[] aArgAll = new Argument[cParams];
+            System.arraycopy(aArgs, 0, aArgAll, 0, cArgs);
+            aArgs = aArgAll;
 
-                for (int i = 0; i < cDefaults; i++) {
-                    aArgs[cArgs + i] = Register.DEFAULT;
-                }
+            for (int i = 0; i < cDefaults; i++) {
+                aArgs[cArgs + i] = Register.DEFAULT;
             }
+        }
 
-            Argument argOuter = null;
-            if (m_plan == Plan.Child) {
+        Argument argOuter = null;
+        if (m_plan == Plan.Child) {
+            if (left == null) {
+                if (m_nParentSteps == 0) {
+                    argOuter = ctx.getThisRegister();
+                } else {
+                    TypeConstant typeParent = typeTarget.getParentType();
+                    int          cSteps     = m_nParentSteps;
+
+                    argOuter = code.createRegister(typeParent);
+                    code.add(new MoveThis(cSteps, argOuter));
+                }
+            } else {
+                argOuter = left.generateArgument(ctx, code, true, errs);
+            }
+        }
+
+        if (m_plan == Plan.Virtual || m_plan == Plan.Formal) {
+            Register regType;
+            if (m_plan == Plan.Virtual) {
+                Argument argTarget;
                 if (left == null) {
-                    if (m_nParentSteps == 0) {
-                        argOuter = ctx.getThisRegister();
-                    } else {
-                        TypeConstant typeParent = typeTarget.getParentType();
-                        int          cSteps     = m_nParentSteps;
-
-                        argOuter = code.createRegister(typeParent);
-                        code.add(new MoveThis(cSteps, argOuter));
-                    }
+                    argTarget = new Register(ctx.getThisType(), null, Op.A_TARGET);
                 } else {
-                    argOuter = left.generateArgument(ctx, code, true, errs);
+                    argTarget = left.generateArgument(ctx, code, true, errs);
+                }
+
+                regType = code.createRegister(pool().typeType());
+
+                // it's a responsibility of the MoveType op to ensure that the explicit
+                // immutability aspect of the target should not be carried over
+                code.add(new MoveType(argTarget, regType));
+            } else {
+                if (typeTarget.isGenericType()) {
+                    regType = code.createRegister(pool().typeType());
+                    code.add(new L_Get(m_idFormal, regType));
+                } else {
+                    regType = m_regFormal;
                 }
             }
+            switch (cParams) {
+            case 0:
+                code.add(new NewV_0(idConstruct, regType, argResult));
+                break;
 
-            if (m_plan == Plan.Virtual || m_plan == Plan.Formal) {
-                Register regType;
-                if (m_plan == Plan.Virtual) {
-                    Argument argTarget;
-                    if (left == null) {
-                        argTarget = new Register(ctx.getThisType(), null, Op.A_TARGET);
-                    } else {
-                        argTarget = left.generateArgument(ctx, code, true, errs);
-                    }
+            case 1:
+                code.add(new NewV_1(idConstruct, regType, aArgs[0], argResult));
+                break;
 
-                    regType = code.createRegister(pool().typeType());
-
-                    // it's a responsibility of the MoveType op to ensure that the explicit
-                    // immutability aspect of the target should not be carried over
-                    code.add(new MoveType(argTarget, regType));
-                } else {
-                    if (typeTarget.isGenericType()) {
-                        regType = code.createRegister(pool().typeType());
-                        code.add(new L_Get(m_idFormal, regType));
-                    } else {
-                        regType = m_regFormal;
-                    }
-                }
+            default:
+                code.add(new NewV_N(idConstruct, regType, aArgs, argResult));
+                break;
+            }
+        } else if (isTypeRequired(typeTarget)) {
+            if (argOuter == null) {
                 switch (cParams) {
                 case 0:
-                    code.add(new NewV_0(idConstruct, regType, argResult));
+                    code.add(new NewG_0(idConstruct, typeTarget, argResult));
                     break;
 
                 case 1:
-                    code.add(new NewV_1(idConstruct, regType, aArgs[0], argResult));
+                    if (m_fFixedSizeArray) {
+                        Argument[] aArg2 = new Argument[2];
+                        aArg2[0] = aArgs[0];
+                        aArg2[1] = Register.DEFAULT;
+                        idConstruct = ((ArrayTypeExpression) type).getSupplyConstructor();
+
+                        code.add(new NewG_N(idConstruct, typeTarget, aArg2, argResult));
+                    } else {
+                        code.add(new NewG_1(idConstruct, typeTarget, aArgs[0], argResult));
+                    }
                     break;
 
                 default:
-                    code.add(new NewV_N(idConstruct, regType, aArgs, argResult));
+                    code.add(new NewG_N(idConstruct, typeTarget, aArgs, argResult));
                     break;
                 }
-            } else if (isTypeRequired(typeTarget)) {
-                if (argOuter == null) {
-                    switch (cParams) {
-                    case 0:
-                        code.add(new NewG_0(idConstruct, typeTarget, argResult));
-                        break;
+            } else {
+                switch (cParams) {
+                case 0:
+                    code.add(new NewCG_0(idConstruct, argOuter, typeTarget, argResult));
+                    break;
 
-                    case 1:
-                        if (m_fFixedSizeArray) {
-                            Argument[] aArg2 = new Argument[2];
-                            aArg2[0] = aArgs[0];
-                            aArg2[1] = Register.DEFAULT;
-                            idConstruct = ((ArrayTypeExpression) type).getSupplyConstructor();
+                case 1:
+                    code.add(new NewCG_1(idConstruct, argOuter, typeTarget, aArgs[0], argResult));
+                    break;
 
-                            code.add(new NewG_N(idConstruct, typeTarget, aArg2, argResult));
-                        } else {
-                            code.add(new NewG_1(idConstruct, typeTarget, aArgs[0], argResult));
-                        }
-                        break;
+                default:
+                    code.add(new NewCG_N(idConstruct, argOuter, typeTarget, aArgs, argResult));
+                    break;
+                }
+            }
+        } else {
+            if (argOuter == null) {
+                switch (cParams) {
+                case 0:
+                    code.add(new New_0(idConstruct, argResult));
+                    break;
 
-                    default:
-                        code.add(new NewG_N(idConstruct, typeTarget, aArgs, argResult));
-                        break;
-                    }
-                } else {
-                    switch (cParams) {
-                    case 0:
-                        code.add(new NewCG_0(idConstruct, argOuter, typeTarget, argResult));
-                        break;
+                case 1:
+                    code.add(new New_1(idConstruct, aArgs[0], argResult));
+                    break;
 
-                    case 1:
-                        code.add(new NewCG_1(idConstruct, argOuter, typeTarget, aArgs[0], argResult));
-                        break;
-
-                    default:
-                        code.add(new NewCG_N(idConstruct, argOuter, typeTarget, aArgs, argResult));
-                        break;
-                    }
+                default:
+                    code.add(new New_N(idConstruct, aArgs, argResult));
+                    break;
                 }
             } else {
-                if (argOuter == null) {
-                    switch (cParams) {
-                    case 0:
-                        code.add(new New_0(idConstruct, argResult));
-                        break;
+                switch (cParams) {
+                case 0:
+                    code.add(new NewC_0(idConstruct, argOuter, argResult));
+                    break;
 
-                    case 1:
-                        code.add(new New_1(idConstruct, aArgs[0], argResult));
-                        break;
+                case 1:
+                    code.add(new NewC_1(idConstruct, argOuter, aArgs[0], argResult));
+                    break;
 
-                    default:
-                        code.add(new New_N(idConstruct, aArgs, argResult));
-                        break;
-                    }
-                } else {
-                    switch (cParams) {
-                    case 0:
-                        code.add(new NewC_0(idConstruct, argOuter, argResult));
-                        break;
-
-                    case 1:
-                        code.add(new NewC_1(idConstruct, argOuter, aArgs[0], argResult));
-                        break;
-
-                    default:
-                        code.add(new NewC_N(idConstruct, argOuter, aArgs, argResult));
-                        break;
-                    }
+                default:
+                    code.add(new NewC_N(idConstruct, argOuter, aArgs, argResult));
+                    break;
                 }
             }
         }
@@ -1104,24 +1097,7 @@ public class NewExpression
         }
 
         Constant[] aConst = typeAnno.getAnnotationParams();
-        boolean    fDiff  = false;
-        for (int j = 0, c = aConst.length; j < c; j++) {
-            Constant constArg = aConst[j];
-            if (constArg instanceof ExpressionConstant constExpr) {
-                Expression exprArg = constExpr.getExpression();
-                Argument   argArg  = exprArg.generateArgument(ctx, code, true, errs);
-                Register   regArg;
-                if (argArg instanceof Register regA) {
-                    regArg = regA;
-                } else {
-                    regArg = code.createRegister(exprArg.getType());
-                    code.add(new Var(regArg));
-                    code.add(new Move(argArg, regArg));
-                }
-                aConst[j] = new RegisterConstant(pool, regArg);
-                fDiff     = true;
-            }
-        }
+        boolean    fDiff  = generateAnnotationArguments(ctx, code, aConst, errs);
         return fDiff
                 ? pool.ensureAnnotatedTypeConstant(typeAnno.getAnnotationClass(), aConst, typeUnderlying)
                 : typeAnno;
@@ -1179,13 +1155,13 @@ public class NewExpression
             assert m_purposeCurrent == AnonPurpose.None;
             anon = adopt(new TypeCompositionStatement(
                     this,
-                    clone(inner.getAnnotations()),
+                    copyNodes(inner.getAnnotations(), AnnotationExpression::copyTree),
                     inner.getCategory(),
                     tokName,
                     null,
-                    clone(inner.getCompositions()),
-                    clone(args),
-                    (StatementBlock) body.clone(),
+                    copyNodes(inner.getCompositions(), CompositionNode::copyTree),
+                    copyNodes(args, Expression::copyTree),
+                    body.copyTree(),
                     type.getStartPosition(),
                     body.getEndPosition()));
             break;
@@ -1275,23 +1251,10 @@ public class NewExpression
         }
     }
 
-    /**
-     * Helper to clone a list of AST nodes.
-     *
-     * @param list  the list of AST nodes (may be null)
-     *
-     * @return a deeply cloned list
-     */
-    private <T extends AstNode> List<T> clone(List<? extends AstNode> list) {
-        if (list == null || list.isEmpty()) {
-            return (List<T>) list;
-        }
-
-        List listCopy = new ArrayList<>(list.size());
-        for (AstNode node : list) {
-            listCopy.add(node.clone());
-        }
-        return listCopy;
+    /** Copy a homogeneous node list while preserving null and empty optional lists. */
+    private static <T extends AstNode> List<T> copyNodes(List<T> nodes, UnaryOperator<T> copy) {
+        return nodes == null || nodes.isEmpty() ? nodes
+                : nodes.stream().map(copy).collect(Collectors.toCollection(ArrayList::new));
     }
 
     /**
@@ -1650,8 +1613,6 @@ public class NewExpression
     protected long                     lEndPos;
 
     private transient MethodStructure m_constructor;
-    private transient boolean         m_fTupleArg;  // indicates that arguments come from a tuple
-                                                    // (currently not implemented)
 
     private transient AnonPurpose              m_purposeCurrent = AnonPurpose.None;
     private transient TypeCompositionStatement m_anonActualBackup;

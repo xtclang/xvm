@@ -81,22 +81,17 @@ public class NotNullExpression
     @Override
     public TypeConstant getImplicitType(Context ctx) {
         TypeConstant[] atype = expr.getImplicitTypes(ctx);
-        switch (atype.length) {
-        case 0:
-            return null;
-
-        case 1: {
-            TypeConstant type = atype[0];
-            return type.isNullable() ? type.removeNullable() : null;
-        }
-
-        default: {
-            TypeConstant type0 = atype[0];
-            return type0.isA(pool().typeBoolean())
-                    ? atype[1]
-                    : type0.isNullable() ? type0.removeNullable() : null;
-        }
-        }
+        return switch (atype.length) {
+            case 0 -> null;
+            case 1 -> {
+                TypeConstant type = atype[0];
+                yield type.isNullable() ? type.removeNullable() : null;
+            }
+            default -> {
+                TypeConstant type0 = atype[0];
+                yield type0.isA(pool().typeBoolean()) ? atype[1] : type0.isNullable() ? type0.removeNullable() : null;
+            }
+        };
     }
 
     @Override

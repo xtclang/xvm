@@ -125,7 +125,7 @@ public class ListExpression
         ConstantPool pool = pool();
 
         // an empty map looks like an empty list to the parser
-        if (typeRequired.isA(pool.typeMap()) && exprs.isEmpty()) {
+        if (typeRequired != null && typeRequired.isA(pool.typeMap()) && exprs.isEmpty()) {
             MapExpression exprNew = new MapExpression(new NamedTypeExpression(this, typeRequired),
                     Collections.emptyList(), Collections.emptyList(), getEndPosition());
             exprNew.setParent(this);
@@ -228,27 +228,20 @@ public class ListExpression
         if (cExprs > 0) {
             ctx = ctx.enterList();
             for (int i = 0; i < cExprs; ++i) {
-                Expression exprOld = listExprs.get(i);
-                Expression exprNew = exprOld.validate(ctx, typeElement, errs);
+                Expression exprNew = validateElement(ctx, listExprs, i, typeElement, errs);
                 if (exprNew == null) {
                     fit       = TypeFit.NoFit;
                     fConstant = false;
                 } else {
-                    if (exprNew != exprOld) {
-                        listExprs.set(i, exprNew);
-                    }
                     fConstant &= exprNew.isConstant();
                 }
             }
             ctx = ctx.exit();
         }
 
-        // build a constant if it's a known container type and all of the elements are constants
+        // build a constant if it's a known container type and all elements are constants
         Constant constVal = null;
         if (fConstant) {
-            if (typeElement == null) {
-                typeElement = pool.typeObject();
-            }
             TypeConstant typeImpl = pool.ensureImmutableTypeConstant(fSet
                     ? pool.ensureSetType(typeElement)
                     : pool.ensureArrayType(typeElement));
@@ -363,16 +356,7 @@ public class ListExpression
      * Helper method to generate an array of arguments.
      */
     private Argument[] collectArguments(Context ctx, Code code, ErrorListener errs) {
-        List<Expression> listExprs = exprs;
-        int              cArgs     = listExprs.size();
-        Argument[]       aArgs     = new Argument[cArgs];
-
-        for (int i = 0; i < cArgs; ++i) {
-            Expression expr = listExprs.get(i);
-            Argument   arg  = expr.generateArgument(ctx, code, true, errs);
-            aArgs[i] = expr.ensurePointInTime(code, arg, listExprs, i);
-        }
-        return aArgs;
+        return generateElementArguments(ctx, code, exprs, true, errs);
     }
 
     // ----- debugging assistance ------------------------------------------------------------------
