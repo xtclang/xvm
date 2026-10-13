@@ -2,6 +2,17 @@
 
 **Complete implementation reference:** [draft #693](https://github.com/xtclang/xvm/pull/693) contains the distilled compiler-backed LSP and IDE integrations. It is available for testing and later review, and should likely not be merged as is. The bulk of the change is LSP improvements; the assembled product demonstrates why the compiler and embedding mechanisms outside `lang/` are necessary. Existing foundation PRs remain separate.
 
+## Repository review correction — 2026-10-13
+
+[#683](https://github.com/xtclang/xvm/pull/683) now retains repository cache and fallback fixes
+without adding a reporting API. The proposed callback constructors have been removed from Java
+and Ecstasy; their original constructor APIs and tolerant read behavior remain. The compiler-backed
+LSP already reads and validates explicit dependency artifacts into immutable snapshots, so it does
+not need those callbacks and must not infer a missing import from an unrelated failed scan candidate.
+Older descriptions below that mention retained I/O causes or a reporting prerequisite are superseded
+by this correction. #685 has already merged independently; #683 is a cache-correctness fix, not an
+embedding API prerequisite.
+
 ## Readability and partial-package synchronization — 2026-10-12
 
 The full reference includes the cleanup in
