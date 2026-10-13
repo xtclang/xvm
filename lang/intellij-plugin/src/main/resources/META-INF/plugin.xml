@@ -100,6 +100,7 @@
 
         <!-- IconProvider for .x PSI files in contexts that do not ask the file type directly. -->
         <iconProvider implementation="org.xtclang.idea.XtcIconProvider"/>
+        <editorTabTitleProvider implementation="org.xtclang.idea.XtcEditorTabTitleProvider"/>
 
         <!-- Live templates: code snippets triggered by abbreviation + Tab (e.g. cls, fori, sout) -->
         <defaultLiveTemplates>/liveTemplates/XTC</defaultLiveTemplates>
