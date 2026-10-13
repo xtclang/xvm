@@ -214,8 +214,7 @@ public class CmpChainExpression
                 if (fEquality
                         ? !typeCommon.supportsEquals (type, fConst)
                         : !typeCommon.supportsCompare(type, fConst)) {
-                    log(errs, Severity.ERROR, Compiler.TYPES_NOT_COMPARABLE,
-                            typeCommon.getValueString(), type.getValueString());
+                    log(errs, Severity.ERROR, Compiler.TYPES_NOT_COMPARABLE, typeCommon.getValueString(), type.getValueString());
                     return null;
                 }
                 if (fEquality && fConst && m_constEq == null) {
