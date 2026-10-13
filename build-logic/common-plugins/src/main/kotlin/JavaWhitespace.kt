@@ -44,7 +44,9 @@ object JavaWhitespace {
                 val next = code[line + 1]
                 val bareJump = next.trim() in setOf("break;", "continue;", "return;") &&
                     previous.takeWhile(Char::isWhitespace) == next.takeWhile(Char::isWhitespace)
-                !(previous.trimEnd().endsWith(';') && (bareJump || next.trimStart().startsWith("} else")))
+                val statementEnd = previous.trimEnd().endsWith(';')
+                val blockEnd = previous.trim() == "}"
+                !((statementEnd || blockEnd) && bareJump || statementEnd && next.trimStart().startsWith("} else"))
             }
         }.joinToString("\n")
     }

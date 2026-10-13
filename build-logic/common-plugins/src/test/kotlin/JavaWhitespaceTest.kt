@@ -1,5 +1,7 @@
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 
 /** Protects the whitespace rules' boundaries: literal contents, column groups and idempotence. */
 class JavaWhitespaceTest {
@@ -48,6 +50,22 @@ class JavaWhitespaceTest {
         assertEquals(expected.replace("\n", "\r\n"), JavaWhitespace.format(source.replace("\n", "\r\n")))
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = ["break;", "continue;", "return;"])
+    fun `removes blank lines between a closed block and a bare jump`(jump: String) {
+        val source = "        if (ready) {\n            work();\n        }\n\n        $jump\n"
+        val expected = source.replace("}\n\n", "}\n")
+        assertEquals(expected, JavaWhitespace.format(source))
+        assertEquals(expected, JavaWhitespace.format(expected))
+        assertEquals(expected.replace("\n", "\r\n"), JavaWhitespace.format(source.replace("\n", "\r\n")))
+    }
+
+    @Test
+    fun `keeps paragraphs before return values and jumps outside the closed block's scope`() {
+        val source = "        }\n\n    break;\n        }\n\n        return value;\n"
+        assertEquals(source, JavaWhitespace.format(source))
+    }
+
     @Test
     fun `preserves comments strings characters and text blocks`() {
         val quote = "\"\"\""
@@ -60,12 +78,18 @@ class JavaWhitespaceTest {
                     work();
 
                     return;
+                    }
+
+                    break;
                     */
                     String text = $quote
                     Code                 code     = create();
                     work();
 
                     return;
+                    }
+
+                    break;
                     $quote;
                     String escaped = "a\\\"b";
                     char escapedQuote = '\'';
