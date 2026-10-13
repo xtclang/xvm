@@ -386,8 +386,10 @@ The embedding API combines the listener contract, scoped parser/validation repor
 outcomes, cached TypeInfo diagnostic replay, cancellation and host-supplied source snapshots.
 Consumer tests exercise these mechanisms together through the public entry points.
 
-The independent [repository read-failure fix](https://github.com/xtclang/xvm/pull/683) supplies
-retained I/O causes; this API forwards them only after a required dependency search fails.
+The independent [repository cache correction](https://github.com/xtclang/xvm/pull/683) preserves
+tolerant lookup while reusing unchanged successful and failed candidates. It adds no reporting API
+and does not attribute a missing dependency to an unrelated unreadable file. Hosts that require
+validation of specific input files can read those files before constructing their repository.
 [The parser/branch correction](https://github.com/xtclang/xvm/pull/684) supplies the parent-abort,
 default-budget and lexical-rollback behavior preserved here. Empty transient-local retention is
 an independent utility fix. None of these APIs depends on an LSP implementation or editor.
