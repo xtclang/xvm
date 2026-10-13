@@ -12,6 +12,8 @@ import java.util.NoSuchElementException;
  * iterators to continue independently of other mutations on the Set. The underlying storage is a
  * circular array, and deletion from the middle of the sequence of elements is supported without
  * having to copy the remainder of the array. Null is a supported element value.
+ *
+ * @param <E>  the element type
  */
 public class ListSet<E>
         extends AbstractSet<E> {
@@ -27,7 +29,7 @@ public class ListSet<E>
     /**
      * Construct a new ListSet of the specified initial capacity.
      *
-     * @param cInitSize  the initial capacity; negative value indicates an immutable empty set
+     * @param cInitSize  the requested initial capacity
      */
     public ListSet(int cInitSize) {
         // make sure the size is a power of 2
@@ -41,7 +43,10 @@ public class ListSet<E>
      */
     public ListSet(Collection<? extends E> that) {
         this(that.size());
-        addAll(that);
+        // populate storage without invoking subclass overrides before their fields are initialized
+        for (E element : that) {
+            addElement(element);
+        }
     }
 
     // ----- configuration -------------------------------------------------------------------------
@@ -49,6 +54,8 @@ public class ListSet<E>
     /**
      * Configure the Set to use only identity comparisons to determine element equality. This
      * disables the use of the {@link Object#equals} method on elements.
+     *
+     * @return this set for further configuration
      */
     public ListSet<E> useIdentityEquality() {
         assert isEmpty();
@@ -57,8 +64,9 @@ public class ListSet<E>
     }
 
     /**
-     * Configure the Set to avoid hashing for rapid  only identity comparisons to determine element equality. This
-     * disables the use of the {@link Object#equals} method on elements.
+     * Disable the hash index, using linear searches with the configured equality policy instead.
+     *
+     * @return this set for further configuration
      */
     public ListSet<E> disableHashIndex() {
         assert isEmpty();
@@ -68,8 +76,9 @@ public class ListSet<E>
     }
 
     /**
-     * Configure the Set to avoid hashing for rapid  only identity comparisons to determine element equality. This
-     * disables the use of the {@link Object#equals} method on elements.
+     * Reject null values in subsequent calls to {@link #add(Object)}.
+     *
+     * @return this set for further configuration
      */
     public ListSet<E> disallowNulls() {
         assert isEmpty();
@@ -80,7 +89,10 @@ public class ListSet<E>
     // ----- ListSet methods -----------------------------------------------------------------------
 
     /**
+     * Return the first element in insertion order.
+     *
      * @return the first item
+     * @throws IllegalStateException if the set is empty
      */
     public E first() {
         if (isEmpty()) {
@@ -91,7 +103,10 @@ public class ListSet<E>
     }
 
     /**
+     * Return the last element in insertion order.
+     *
      * @return the last added item
+     * @throws IllegalStateException if the set is empty
      */
     public E last() {
         if (isEmpty()) {
@@ -102,8 +117,13 @@ public class ListSet<E>
     }
 
     /**
+     * Look up an element by its position in insertion order.
+     *
+     * @param index  the zero-based position
+     *
      * @return the item at the specified position; this operation could be expensive for indexes
      *         that are not close to either 0 or size()
+     * @throws IllegalArgumentException if the index is outside the set
      */
     public E get(int index) {
         int cSize = size();
@@ -152,13 +172,7 @@ public class ListSet<E>
             throw new IllegalArgumentException("null value is not permitted");
         }
 
-        Object  o    = toInternal(e);
-        boolean fNew = indexOf(o) < 0;
-        if (fNew) {
-            addInternal(o);
-        }
-
-        return fNew;
+        return addElement(e);
     }
 
     @Override
@@ -200,11 +214,27 @@ public class ListSet<E>
     // ----- internal ------------------------------------------------------------------------------
 
     /**
+     * Insert an element without dispatching through overridable collection methods.
+     *
+     * @param element  the element to insert, including null
+     *
+     * @return true if the element was newly added
+     */
+    private boolean addElement(E element) {
+        Object  o    = toInternal(element);
+        boolean fNew = indexOf(o) < 0;
+        if (fNew) {
+            addInternal(o);
+        }
+        return fNew;
+    }
+
+    /**
      * Find the specified element.
      *
      * @param o  the element, in internal format
      *
-     * @return the index of the element, tail <= i < head, or -1 if not found
+     * @return the index of the element, {@code tail <= i < head}, or -1 if not found
      */
     private int indexOf(Object o) {
         // check if the set is empty
@@ -259,9 +289,16 @@ public class ListSet<E>
      *
      * @return an element of type E (including null)
      */
-    private static <E> E toExternal(Object o) {
+    private E toExternal(Object o) {
         assert o != null && !(o instanceof Stop);
-        return o == NULL ? null : (E) o;
+        if (o == NULL) {
+            return null;
+        }
+
+        // add(E) supplies all ordinary stored elements; callers filter out the internal markers.
+        @SuppressWarnings("unchecked")
+        E element = (E) o;
+        return element;
     }
 
     /**
@@ -280,7 +317,7 @@ public class ListSet<E>
         int      iElem = m_iHead;
         if (iElem > m_iTail) {
             Object oPrev = m_aElem[iElem - 1 & nMask];
-            if (oPrev instanceof Stop && ((Stop) oPrev).isDisposable()) {
+            if (oPrev instanceof Stop stop && stop.isDisposable()) {
                 --iElem;
                 --m_cBlank;
             }
@@ -294,7 +331,7 @@ public class ListSet<E>
         if (!m_fSuppressHash && !(o instanceof Stop)) {
             if (indexEnabled()) {
                 indexAdd(o.hashCode(), iElem);
-            } else if (size() >= INDEX_MIN) {
+            } else if (m_iHead - m_iTail - m_cBlank >= INDEX_MIN) {
                 // the set is now large enough to start indexing at this point
                 indexInit();
             }
@@ -309,8 +346,8 @@ public class ListSet<E>
     private Stop ensureStop() {
         if (m_iHead > m_iTail) {
             Object last = m_aElem[m_iHead - 1 & m_aElem.length - 1];
-            if (last instanceof Stop) {
-                return (Stop) last;
+            if (last instanceof Stop stop) {
+                return stop;
             }
         }
 
@@ -512,7 +549,7 @@ public class ListSet<E>
                 if (eCur == eNext) {
                     assert iNext < 0;
                     iNext = iTest;
-                } else if (eCur instanceof Stop && ((Stop) eCur).appliesTo(nStop)) {
+                } else if (eCur instanceof Stop stop && stop.appliesTo(nStop)) {
                     return iNext;
                 }
             }
@@ -550,6 +587,8 @@ public class ListSet<E>
     }
 
     /**
+     * Determine whether lookups currently use the hash index.
+     *
      * @return true iff the ListSet is currently using indexes
      */
     private boolean indexEnabled() {
@@ -783,7 +822,7 @@ public class ListSet<E>
 
     /**
      * Adjust the pointers from the index data structure into the underlying ListSet storage when
-     * the head & tail pointers are adjusted.
+     * the head and tail pointers are adjusted.
      *
      * @param indexDelta  the magnitude of the adjustment for all indexes
      */
@@ -806,7 +845,8 @@ public class ListSet<E>
      */
     private class SafeIterator
             implements Iterator<E>, AutoCloseable {
-        public SafeIterator() {
+        /** Capture the iteration boundary and load the first available element. */
+        private SafeIterator() {
             // obtain a hard-stop and notify it that there is now an additional iterator using it
             m_stop = ensureStop();
             m_stop.beginUse();
@@ -885,8 +925,8 @@ public class ListSet<E>
             int      nMask = aElem.length - 1;
             for (int iLast = m_iHead - 1; iNext <= iLast; ++iNext) {
                 Object eNext = aElem[iNext & nMask];
-                if (eNext instanceof Stop) {
-                    if (((Stop) eNext).appliesTo(m_stop.id())) {
+                if (eNext instanceof Stop stop) {
+                    if (stop.appliesTo(m_stop.id())) {
                         break;
                     }
                 } else if (eNext != null) {
@@ -964,7 +1004,10 @@ public class ListSet<E>
     /**
      * A base class for any special objects stored in the set's underlying storage.
      */
-    private static class Special {}
+    private static class Special {
+        /** Construct an internal storage marker. */
+        private Special() {}
+    }
 
     /**
      * A representation of an Iterator's planned "hard stop" stopping point that can be stored
@@ -982,6 +1025,8 @@ public class ListSet<E>
         }
 
         /**
+         * Return the most recent stop id represented by this marker.
+         *
          * @return an id for this hard-stop
          */
         int id() {
@@ -1046,6 +1091,8 @@ public class ListSet<E>
         }
 
         /**
+         * Determine whether any iterator still needs this marker.
+         *
          * @return true if it is safe to discard this hard-stop as part of ListSet compaction
          */
         boolean isDisposable() {
@@ -1083,6 +1130,9 @@ public class ListSet<E>
      */
     private static class Null
             extends Special {
+        /** Construct the marker for a stored null element. */
+        private Null() {}
+
         @Override
         public int hashCode() {
             return 2147483629;
