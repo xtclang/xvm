@@ -17,7 +17,7 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeInfo;
 
 import org.xvm.javajit.JitMethodDesc;
-import org.xvm.javajit.JitTypeDesc;
+import org.xvm.javajit.TypeSystem;
 
 import static java.lang.constant.ConstantDescs.CD_boolean;
 import static java.lang.constant.ConstantDescs.CD_int;
@@ -41,7 +41,7 @@ public interface EnumBuilderSupport {
      * Assemble the class-specific attributes for the enum.
      */
     default void assembleEnumClass(CommonBuilder builder, ClassBuilder classBuilder) {
-        ClassDesc sequentialCD = builder.ensureClassDesc(builder.pool().typeSequential());
+        ClassDesc sequentialCD = builder.getCCDesc(builder.pool().typeSequential());
 
         classBuilder.withSuperclass(builder.getSuperCD())
                 .withInterfaceSymbols(sequentialCD)
@@ -74,8 +74,9 @@ public interface EnumBuilderSupport {
             return;
         }
 
-        TypeConstant enumType = builder.thisId.getValueType(builder.pool(), null);
-        String       enumName = builder.ensureJitClassName(enumType);
+        TypeConstant enumType = builder.thisType;
+        String       enumName = TypeSystem.enumerationClass(
+                builder.getCCName(enumType));
         ClassDesc    enumCD   = ClassDesc.of(enumName);
 
         classBuilder.withMethodBody(name, jmd.standardMD, ClassFile.ACC_PUBLIC, code ->
@@ -274,7 +275,7 @@ public interface EnumBuilderSupport {
 
                     default:
                         throw new UnsupportedOperationException("Unsupported JIT primitive type "
-                                + builder.thisType.ensureJitClassName(builder.typeSystem));
+                                + builder.thisType.getJitCCName(builder.typeSystem));
                 }
             } else {
                 classBuilder.withMethod(optimizedName, jmd.optimizedMD,
@@ -336,7 +337,7 @@ public interface EnumBuilderSupport {
 
                     default:
                         throw new UnsupportedOperationException("Unsupported JIT primitive type "
-                                + builder.thisType.ensureJitClassName(builder.typeSystem));
+                                + builder.thisType.getJitCCName(builder.typeSystem));
                 }
             } else {
                 classBuilder.withMethod(optimizedName, jmd.optimizedMD,
@@ -396,7 +397,7 @@ public interface EnumBuilderSupport {
 
                     default:
                         throw new UnsupportedOperationException("Unsupported JIT primitive type "
-                                + builder.thisType.ensureJitClassName(builder.typeSystem));
+                                + builder.thisType.getJitCCName(builder.typeSystem));
                 }
             } else {
                 assembleEnumSkip(builder, classBuilder, jmd, optimizedName);
@@ -490,7 +491,7 @@ public interface EnumBuilderSupport {
 
                     default:
                         throw new UnsupportedOperationException("Unsupported JIT primitive type "
-                                + builder.thisType.ensureJitClassName(builder.typeSystem));
+                                + builder.thisType.getJitCCName(builder.typeSystem));
                 }
             } else {
                 int flags = ClassFile.ACC_PUBLIC;

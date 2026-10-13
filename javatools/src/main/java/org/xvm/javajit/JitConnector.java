@@ -84,7 +84,7 @@ public class JitConnector
     }
 
     private void invoke0Impl(MethodStructure methodStructure, String... args) {
-        String typeName = ts.owned[0].module.getIdentityConstant().getType().ensureJitClassName(ts);
+        String typeName = ts.owned[0].module.getIdentityConstant().getType().getJitCCName(ts);
 
         TypeSystemLoader loader    = ts.loader;
         ConstantPool     pool      = ts.pool();

@@ -47,7 +47,7 @@ public class JitTypeDesc {
         return type.isJavaPrimitive()
             ? requireJavaPrimitive(type)
             : type.isSingleUnderlyingClass(true)
-                ? builder.ensureClassDesc(type)
+                ? builder.getCCDesc(type)
                 : CD_Object;
     }
 
@@ -114,7 +114,7 @@ public class JitTypeDesc {
     public static ClassDesc getWidenedClass(Builder builder, TypeConstant type) {
         return type.isSingleUnderlyingClass(true)
                 ? null
-                : ClassDesc.of(type.getJitCCType().ensureJitClassName(builder.typeSystem));
+                : type.getJitCCDesc(builder.typeSystem);
     }
 
     public static ClassDesc getNullableXvmPrimitiveClass(TypeConstant type) {

@@ -40,19 +40,19 @@ public class ArrayBuilder extends AugmentingBuilder {
     protected final boolean isObjectArray;
 
     @Override
-    public ClassDesc ensureClassDesc(TypeConstant type) {
+    public ClassDesc getCCDesc(TypeConstant type) {
         if (isBaseArrayType(type)) {
             return CD_Array;
         }
-        return super.ensureClassDesc(type);
+        return super.getCCDesc(type);
     }
 
     @Override
-    public String ensureJitClassName(TypeConstant type) {
+    public String getCCName(TypeConstant type) {
         if (isBaseArrayType(type)) {
             return N_Array;
         }
-        return super.ensureJitClassName(type);
+        return super.getCCName(type);
     }
 
     protected boolean isBaseArrayType(TypeConstant type) {

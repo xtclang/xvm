@@ -442,7 +442,7 @@ public interface InPlaceSupport
         String         typeName = baseType.getSingleUnderlyingClass(false).getName();
         int            op       = getOpCode();
         int            slot     = reg.slot();
-        ClassDesc      cd       = bctx.builder.ensureClassDesc(baseType);
+        ClassDesc      cd       = bctx.builder.getCCDesc(baseType);
         MethodTypeDesc mdSeqOp  = md(cd, CD_Ctx);
         switch (getOpCode()) {
             case OP_IP_DEC, OP_IIP_DEC, OP_PIP_DEC:
