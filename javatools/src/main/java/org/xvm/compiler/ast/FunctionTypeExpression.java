@@ -146,7 +146,7 @@ public class FunctionTypeExpression
         if (returnValues.isEmpty()) {
             sb.append("void");
         } else if (returnValues.size() == 1) {
-            sb.append(returnValues.get(0));
+            sb.append(returnValues.getFirst());
         } else {
             sb.append(returnValues.stream()
                     .map(Parameter::toString)

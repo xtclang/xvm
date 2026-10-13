@@ -173,14 +173,13 @@ public class FileExpression
             return PATH;
         } else {
             return switch (sType) {
-                case "FileStore"   -> FS;
-                case "Directory"   -> DIR;
-                case "File"        -> FILE;
-                case "Path"        -> PATH;
-                case "String"      -> STRING;
-                case "Array<Byte>" -> BINARY;
-                case "Byte[]"      -> BINARY;
-                default            -> throw new IllegalStateException("type=" + sType);
+                case "FileStore"             -> FS;
+                case "Directory"             -> DIR;
+                case "File"                  -> FILE;
+                case "Path"                  -> PATH;
+                case "String"                -> STRING;
+                case "Array<Byte>", "Byte[]" -> BINARY;
+                default                      -> throw new IllegalStateException("type=" + sType);
             };
         }
     }
@@ -279,7 +278,6 @@ public class FileExpression
             log(errs, Severity.ERROR, Compiler.FATAL_ERROR, e.getMessage());
             fit        = TypeFit.NoFit;
             typeActual = null;
-            constVal   = null;
         }
 
         return finishValidation(ctx, typeRequired, typeActual, fit, constVal, errs);
