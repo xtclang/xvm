@@ -51,6 +51,29 @@ module TestCompilerErrors {
         void testMethod2() {}
     }
 
+    // function types
+    class TestFunctionTypes {
+        <T> T pick(T value) = value;
+        Int plain(Int value) = value;
+
+        // a reference to a generic method binds its type parameter, so all of these fit
+        function Int(Int) pickFn()   = pick;
+        function Int(Int) pickRef()  = &pick;
+        function Int(Int) plainFn()  = plain;
+        function Int(Int) plainRef() = &plain;
+
+        function Int(Int, String) make(function Int(Int, String) fn) = fn;
+
+        Int fits(function Int(Int, String) fn)    = make(fn)(1, "x");
+        Int missing(function Int(Int, String) fn) = make(fn)(1);          // expect-error: COMPILER-84
+        Int excess(function Int(Int, String) fn)  = make(fn)(1, "x", 2);  // expect-error: COMPILER-84
+
+        // a mismatched argument is reported once, for the call; the argument is on a line of its
+        // own, so that a second report for the argument itself would show
+        Int mismatch(function Int(Int, String) fn) = make(fn)(  // expect-error: COMPILER-43
+                True, "x");
+    }
+
     // def assignment
     void defAssign1(String? s = Null, Int i = 0) {
         if ((s != Null) || (i == 0)) {
