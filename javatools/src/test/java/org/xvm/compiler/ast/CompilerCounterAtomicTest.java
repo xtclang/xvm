@@ -27,6 +27,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -34,6 +35,32 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * counter of a method, which counts within that method only.
  */
 public class CompilerCounterAtomicTest {
+    @Test
+    public void orphanedNodeReportsMissingCodeContainer() {
+        var node = new NameExpression(token(Id.IDENTIFIER, "orphan"));
+        var failure = assertThrows(IllegalStateException.class, node::getCodeContainerCounter);
+        assertEquals("No enclosing code container for NameExpression", failure.getMessage());
+    }
+
+    @Test
+    public void nestedNodesShareTheirEnclosingCodeContainerCounter() {
+        var counter = new AtomicInteger();
+        var owner = new NameExpression(token(Id.IDENTIFIER, "owner")) {
+            @Override
+            protected int getCodeContainerCounter() {
+                return counter.getAndIncrement();
+            }
+        };
+        var child = new NameExpression(token(Id.IDENTIFIER, "child"));
+        var nested = new NameExpression(token(Id.IDENTIFIER, "nested"));
+        child.setParent(owner);
+        nested.setParent(child);
+
+        assertEquals(0, nested.getCodeContainerCounter());
+        assertEquals(1, child.getCodeContainerCounter());
+        assertEquals(2, owner.getCodeContainerCounter());
+    }
+
     @Test
     public void staticCompilerCountersAreAtomic()
             throws Exception {
