@@ -28,6 +28,9 @@ spotless {
             )
         })
         lineEndings = LineEnding.PRESERVE
+        custom("binaryOperatorSpacing", object : FormatterFunc, Serializable {
+            override fun apply(input: String): String = JavaBinaryOperatorSpacing.format(input)
+        })
         custom("localPaddingAndControlSpacing", object : FormatterFunc, Serializable {
             override fun apply(input: String): String = JavaWhitespace.format(input)
         })
