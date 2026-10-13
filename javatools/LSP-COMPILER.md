@@ -592,6 +592,27 @@ separate policies, and the adapter still checks input revisions before publishin
 
 ## Preserving semantic facts from successful validation
 
+### Keep binding facts and their writers together
+
+`org.xvm.compiler.ast.bindings` groups `InvocationBinding`, `InitializerBinding`, `CursorBinding`,
+`LambdaBindings` and `AnonymousClassBindings` alongside the `ast.partial` analysis package. These
+classes describe established source associations or inspected cursor candidates; the ordinary AST
+still owns validation and register allocation. The LSP consumes the resulting facts through the
+embedding results and source-node accessors.
+
+Lambda and anonymous-class bindings expose read-only accessors that return immutable collection
+snapshots. Their nested `Collector` classes provide the compiler-facing recording operations and
+retain the method/construction identity used to reject facts requested through a copied node.
+Each writer stays with its existing validation context or construction. It does not introduce a
+global cache, a second capture pass or a new lifecycle for the AST.
+
+The [BindingAst](src/main/java/org/xvm/compiler/ast/BindingAst.java) bridge has one operation:
+associate an existing lambda parameter register with its written declaration and return the name
+token. That operation needs the AST's protected parameter lists and package-private binding setter.
+Keeping it in `ast` preserves their visibility. The other binding classes use public source
+accessors and require no additional AST bridge. The collector and bridge APIs are public for Java
+cross-package access, but are internal compiler operations; embedding hosts read published facts.
+
 ### Names, declarations and source identity
 
 The source AST carries locations that assembled components alone cannot provide. Tooling accessors
@@ -617,7 +638,7 @@ They do not define colors in the compiler or introduce a public graphics/color l
 
 ### Capture selected calls before rewrites obscure them
 
-[InvocationBinding.java](src/main/java/org/xvm/compiler/InvocationBinding.java) records a selected
+[InvocationBinding.java](src/main/java/org/xvm/compiler/ast/bindings/InvocationBinding.java) records a selected
 method identity, its instantiated signature and the association between written argument spans
 and visible parameter indices. Named-argument labels retain their written ranges. Synthetic
 default arguments are not presented as arguments the user wrote. If a rewrite prevents a reliable
@@ -648,7 +669,7 @@ spelling as references to one declaration.
 ### Keep references that constant folding would discard
 
 Successful constant-initializer compilation can discard the temporary method used to validate an
-initializer. [InitializerBinding.java](src/main/java/org/xvm/compiler/InitializerBinding.java)
+initializer. [InitializerBinding.java](src/main/java/org/xvm/compiler/ast/bindings/InitializerBinding.java)
 captures source references, expression types and selected calls before that method disappears,
 and anchors them to the surviving source property.
 
@@ -659,9 +680,9 @@ registers or mutable tokens. The adapter then copies the needed identities into 
 
 ### Relate generated implementation details to written source
 
-[LambdaBindings.java](src/main/java/org/xvm/compiler/ast/LambdaBindings.java) distinguishes written
+[LambdaBindings.java](src/main/java/org/xvm/compiler/ast/bindings/LambdaBindings.java) distinguishes written
 lambda parameters from synthetic capture parameters and maps capture registers back to their
-source registers. [AnonymousClassBindings.java](src/main/java/org/xvm/compiler/ast/AnonymousClassBindings.java)
+source registers. [AnonymousClassBindings.java](src/main/java/org/xvm/compiler/ast/bindings/AnonymousClassBindings.java)
 provides the corresponding origin information for anonymous-class captures. A captured local
 must still rename as the same source variable even when generated methods or properties access it.
 
@@ -729,7 +750,7 @@ placeholder types left by failed validation are not semantic proof.
 
 ### Export scope and candidate facts while the context exists
 
-[CursorBinding.java](src/main/java/org/xvm/compiler/CursorBinding.java) captures narrowed local
+[CursorBinding.java](src/main/java/org/xvm/compiler/ast/bindings/CursorBinding.java) captures narrowed local
 types and readability, the enclosing receiver, visible type names, method/function candidates,
 written argument mappings and compiler-fitted insertion proposals. Written formals can hide outer
 names without being assigned fictitious completed declaration identities.
@@ -906,6 +927,10 @@ should not be mistaken for an LSP wire-format requirement.
 
 ### Java result records and nullable progress
 
+The five source-binding classes now live in `org.xvm.compiler.ast.bindings`. Java/Kotlin consumers
+must update imports and recompile; moving a public class changes its binary name. This is part of
+the planned embedding API migration, not a change to emitted Ecstasy code or the `.xtc` format.
+
 Retained convenience constructors do not preserve a record's old deconstruction shape.
 `CursorBinding` has fourteen components; Java clients using record patterns must adapt to the
 current shape even where an older constructor descriptor remains available. Prefer accessors
@@ -1025,8 +1050,9 @@ that every suite has just been rerun. Current CI results and their artifacts pro
 ## Appendix: file-by-file compiler changes
 
 This inventory records the `javatools` portion of the full implementation review when this guide
-was added: **147 files (97 modified and 50 added)**, including this document. It
-describes what changed in each file and why, rather than restating everything that file does.
+was added and updated for binding-package organization: **148 files (97 modified and 51 added)**,
+including this document. It describes what changed in each file and why, rather than restating
+everything that file does.
 Supporting changes already in the review's base and changes outside `javatools` are discussed
 in the main guide but are not counted again here.
 
@@ -1082,21 +1108,28 @@ source or document in this checkout.
 | File | Change | What changed and why |
 | --- | --- | --- |
 | [Compiler.java](src/main/java/org/xvm/compiler/Compiler.java) | Modified | Owns a final listener and optional invocation/cursor collectors and passes them through compiler stages. Registration recognizes host cancellation without inventing an error or retaining a listener on the file structure. |
-| [CursorBinding.java](src/main/java/org/xvm/compiler/CursorBinding.java) | Added | Defines immutable collections of scope, type, candidate-call and argument-proposal facts for an explicit cursor query. Its collector publishes inspected source sites without presenting candidates as selected executable calls. |
 | [EvalCompiler.java](src/main/java/org/xvm/compiler/EvalCompiler.java) | Modified | Creates its diagnostic buffer at construction so hosts can inspect errors before lambda compilation, with an explicit first-error policy. |
-| [InitializerBinding.java](src/main/java/org/xvm/compiler/InitializerBinding.java) | Added | Captures source references, types and call facts before successful constant folding discards an initializer's temporary method; excludes validation contexts and disposable AST identities from the published provenance. |
-| [InvocationBinding.java](src/main/java/org/xvm/compiler/InvocationBinding.java) | Added | Records selected methods, function types, constructors and source-to-parameter argument associations. Attempt-owned collectors discard stale/trial facts and publish maps keyed by source-node identity. |
 | [Lexer.java](src/main/java/org/xvm/compiler/Lexer.java) | Modified | Uses explicit sites/listeners and checks cancellation even while reading valid tokens. Unterminated string handling stops at EOF instead of repeatedly reporting when no error budget stops it. |
 | [Parser.java](src/main/java/org/xvm/compiler/Parser.java) | Modified | Replaces implicit lookahead listener swapping with scoped attempts; adds bounded syntax recovery and opt-in cursor/header parsing while preserving written positions and later declarations. Unrelated parse errors still block semantic compilation. |
 | [Token.java](src/main/java/org/xvm/compiler/Token.java) | Modified | Migrates token diagnostics to explicit source-span or no-location sites with trailing message arguments; the helper no longer returns an abort decision. |
+
+### Binding facts and collectors
+
+| File | Change | What changed and why |
+| --- | --- | --- |
+| [AnonymousClassBindings.java](src/main/java/org/xvm/compiler/ast/bindings/AnonymousClassBindings.java) | Added | Associates anonymous-class captures and generated properties with their enclosing source registers, so navigation and rename can follow the original declaration. |
+| [CursorBinding.java](src/main/java/org/xvm/compiler/ast/bindings/CursorBinding.java) | Added | Defines immutable collections of scope, type, candidate-call and argument-proposal facts for an explicit cursor query. Its collector publishes inspected source sites without presenting candidates as selected executable calls. |
+| [InitializerBinding.java](src/main/java/org/xvm/compiler/ast/bindings/InitializerBinding.java) | Added | Captures source references, types and call facts before successful constant folding discards an initializer's temporary method; excludes validation contexts and disposable AST identities from the published provenance. |
+| [InvocationBinding.java](src/main/java/org/xvm/compiler/ast/bindings/InvocationBinding.java) | Added | Records selected methods, function types, constructors and source-to-parameter argument associations. Attempt-owned collectors discard stale/trial facts and publish maps keyed by source-node identity. |
+| [LambdaBindings.java](src/main/java/org/xvm/compiler/ast/bindings/LambdaBindings.java) | Added | Maps written lambda parameters and generated capture parameters back to their source registers, distinguishing source declarations from synthetic compiler parameters. |
 
 ### AST ownership, contexts and semantic provenance
 
 | File | Change | What changed and why |
 | --- | --- | --- |
 | [AnonInnerClass.java](src/main/java/org/xvm/compiler/ast/AnonInnerClass.java) | Modified | Enforces the non-null listener contract at construction even when assertions are disabled; this particular edit does not add a new anonymous-class algorithm. |
-| [AnonymousClassBindings.java](src/main/java/org/xvm/compiler/ast/AnonymousClassBindings.java) | Added | Associates anonymous-class captures and generated properties with their enclosing source registers, so navigation and rename can follow the original declaration. |
 | [AstNode.java](src/main/java/org/xvm/compiler/ast/AstNode.java) | Modified | Adds repeatable child traversal and the documented copyTree contract, preserves the legacy clone entry point, supports inherited registered child fields and carries fact collectors into child staging. Reporting requires an explicit destination. |
+| [BindingAst.java](src/main/java/org/xvm/compiler/ast/BindingAst.java) | Added | Supplies the single cross-package operation that associates a lambda parameter with its existing register, keeping AST field/setter visibility unchanged while binding collection lives in ast.bindings. |
 | [CompositionNode.java](src/main/java/org/xvm/compiler/ast/CompositionNode.java) | Modified | Makes source lookup safe for unparented parsed compositions and implicit compositions with no type child, supporting inspection before normal tree adoption. |
 | [Context.java](src/main/java/org/xvm/compiler/ast/Context.java) | Modified | Propagates the attempt's call/cursor collectors through lexical contexts and makes diagnostic/probe ownership explicit during name and this resolution. |
 | [Expression.java](src/main/java/org/xvm/compiler/ast/Expression.java) | Modified | Adds the covariant copyTree result and uses it for exhaustive fit trials. Makes type-fitting probes explicitly silent instead of depending on whether a caller happened to pass null or a reporting listener. |
@@ -1104,7 +1137,6 @@ source or document in this checkout.
 | [ForStatement.java](src/main/java/org/xvm/compiler/ast/ForStatement.java) | Modified | Replaces separate nullable callback fields with ValidationScope and restores the previous scope after normal, early and exceptional validation exits. |
 | [ImportStatement.java](src/main/java/org/xvm/compiler/ast/ImportStatement.java) | Modified | Exposes the written alias, qualified-name tokens and already-resolved import identity without restarting name resolution, giving tooling exact import provenance. |
 | [InvocationExpression.java](src/main/java/org/xvm/compiler/ast/InvocationExpression.java) | Modified | Publishes validated method/function/super call facts and written argument mappings, exposes the invoked expression/selected method and uses explicit probes. Keeps failed argument fitting from being overwritten by successful return-type matching. |
-| [LambdaBindings.java](src/main/java/org/xvm/compiler/ast/LambdaBindings.java) | Added | Maps written lambda parameters and generated capture parameters back to their source registers, distinguishing source declarations from synthetic compiler parameters. |
 | [LambdaExpression.java](src/main/java/org/xvm/compiler/ast/LambdaExpression.java) | Modified | Exposes the arrow token and retained source bindings, carries collectors into generated-method validation and supplies a typed tree copy; diagnostic probes and sites use the explicit listener API. |
 | [MethodDeclarationStatement.java](src/main/java/org/xvm/compiler/ast/MethodDeclarationStatement.java) | Modified | Exposes declaration names and documentation, retains formal-parameter identities and carries collectors through annotation/default/body validation and generated method compilation. |
 | [NameExpression.java](src/main/java/org/xvm/compiler/ast/NameExpression.java) | Modified | Exposes the resolved constant or register and supplies a typed tree copy. Also preserves the callable type and hidden generic bindings of bound method references; speculative resolution selects an explicit probe. |
@@ -1212,7 +1244,7 @@ source or document in this checkout.
 | File | Change | What changed and why |
 | --- | --- | --- |
 | [compiler/CompilerCancellationTest.java](src/test/java/org/xvm/compiler/CompilerCancellationTest.java) | Added | Checks that cancelled structure registration stops without throwing or fabricating a source error. |
-| [compiler/CursorBindingTest.java](src/test/java/org/xvm/compiler/CursorBindingTest.java) | Added | Checks grouped cursor-fact construction, immutable snapshots and independent updates that preserve unrelated call, argument and enclosing-instance facts. |
+| [compiler/ast/bindings/CursorBindingTest.java](src/test/java/org/xvm/compiler/ast/bindings/CursorBindingTest.java) | Added | Checks grouped cursor-fact construction, immutable snapshots and independent updates that preserve unrelated call, argument and enclosing-instance facts. |
 | [compiler/EvalCompilerTest.java](src/test/java/org/xvm/compiler/EvalCompilerTest.java) | Added | Checks that diagnostics can be queried before compilation starts. |
 | [compiler/ParserAttemptTest.java](src/test/java/org/xvm/compiler/ParserAttemptTest.java) | Added | Checks kept/discarded and nested attempts, token rewind, recovery restoration, lexer reports, callback exceptions, caller abort and module-name scanning. |
 | [compiler/ParserDeclarationNameTest.java](src/test/java/org/xvm/compiler/ParserDeclarationNameTest.java) | Added | Checks unfinished declaration-name slots, retained written types/initializers, independent children and following declarations; rejects slots outside supported contexts and honors stopping policies. |
