@@ -88,7 +88,7 @@ module TestLambda {
     void testGenericMethodReference() {
         console.print("\n** testGenericMethodReference()");
 
-        <T> String describe(T value) = $"{T} {value}";
+        static <T> String describe(T value) = $"{T} {value}";
 
         // the reference binds describe's type parameter to Int
         function String(Int) f = describe;

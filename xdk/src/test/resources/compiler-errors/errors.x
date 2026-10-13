@@ -54,13 +54,15 @@ module TestCompilerErrors {
     // function types
     class TestFunctionTypes {
         <T> T pick(T value) = value;
+        static <T> T pickStatic(T value) = value;
         Int plain(Int value) = value;
 
-        // a reference to a generic method binds its type parameter, so all of these fit
-        function Int(Int) pickFn()   = pick;
-        function Int(Int) pickRef()  = &pick;
-        function Int(Int) plainFn()  = plain;
-        function Int(Int) plainRef() = &plain;
+        // a reference to a generic method or function binds its type parameter, so all of these fit
+        function Int(Int) pickFn()       = pick;
+        function Int(Int) pickRef()      = &pick;
+        function Int(Int) pickStaticFn() = pickStatic;
+        function Int(Int) plainFn()      = plain;
+        function Int(Int) plainRef()     = &plain;
 
         function Int(Int, String) make(function Int(Int, String) fn) = fn;
 
