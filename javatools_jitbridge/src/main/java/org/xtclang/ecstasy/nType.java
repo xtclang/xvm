@@ -347,8 +347,8 @@ public class nType
 
         int paramCount   = 2 + valueCount;
         var paramClasses = new java.lang.Class[paramCount];
-        paramClasses[0] = Ctx.class;
-        paramClasses[1] = nType.class;
+        paramClasses[0]  = Ctx.class;
+        paramClasses[1]  = nType.class;
 
         // native classes can provide the concrete funky implementation directly; walk the target
         // hierarchy to account for an implementation inherited from a native Ecstasy superclass

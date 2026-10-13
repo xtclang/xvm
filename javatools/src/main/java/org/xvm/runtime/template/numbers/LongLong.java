@@ -232,11 +232,11 @@ public class LongLong {
             }
 
             if (l1L > 0) {
-                return new LongLong(l1L/l);
+                return new LongLong(l1L / l);
             }
         } else {
             if (l1H == -1 && l1L < 0) {
-                return new LongLong(l1L/l);
+                return new LongLong(l1L / l);
             }
         }
 
@@ -280,7 +280,7 @@ public class LongLong {
             }
 
             if (l1L > 0) {
-                return new LongLong(l1L/l);
+                return new LongLong(l1L / l);
             }
         }
 
@@ -328,11 +328,11 @@ public class LongLong {
             }
 
             if (l1L > 0) {
-                return new LongLong[] {new LongLong(l1L/l), new LongLong(l1L%l)};
+                return new LongLong[] {new LongLong(l1L / l), new LongLong(l1L % l)};
             }
         } else {
             if (l1H == -1 && l1L < 0) {
-                return new LongLong[] {new LongLong(l1L/l), new LongLong(l1H%l)};
+                return new LongLong[] {new LongLong(l1L / l), new LongLong(l1H % l)};
             }
         }
 
@@ -376,7 +376,7 @@ public class LongLong {
             }
 
             if (l1L > 0) {
-                return new LongLong[] {new LongLong(l1L/l), new LongLong(l1L%l)};
+                return new LongLong[] {new LongLong(l1L / l), new LongLong(l1L % l)};
             }
         }
 

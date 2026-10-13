@@ -379,7 +379,7 @@ public abstract class ConditionalConstant
                 }
             }
 
-            int iCondThis = cConds++;
+            int iCondThis    = cConds++;
             terminal.iTest   = iCondThis;
             acond[iCondThis] = terminal;
 

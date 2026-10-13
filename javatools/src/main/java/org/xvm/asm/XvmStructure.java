@@ -349,7 +349,7 @@ public abstract class XvmStructure
 
         // add our condition to the end
         if (cond != null) {
-            conds[conds.length-cConditions] = cond;
+            conds[conds.length - cConditions] = cond;
         }
 
         return conds;

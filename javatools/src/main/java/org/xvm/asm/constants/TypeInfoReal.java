@@ -280,7 +280,7 @@ public class TypeInfoReal
     private ListMap<String, ChildInfo> ensureChildOwnership(
             ListMap<String, ChildInfo> mapChildren) {
         IdentityHashMap<ChildInfo, ChildInfo> mapChildCopies = new IdentityHashMap<>();
-        ListMap<String, ChildInfo>            mapOwned       = new ListMap<>(mapChildren.size());
+        ListMap<String, ChildInfo> mapOwned = new ListMap<>(mapChildren.size());
         for (Entry<String, ChildInfo> entry : mapChildren.entrySet()) {
             ChildInfo child = entry.getValue();
             if (child != null) {
@@ -678,7 +678,7 @@ public class TypeInfoReal
                 Origin           originResult = originThis.isAnchored() & fAnnotation
                                               ? originTrue
                                               : originFalse;
-                Origin originThat = listmapClassChain.get(constId);
+                Origin           originThat   = listmapClassChain.get(constId);
                 if (originThat == null) {
                     // the identity does not already appear in the chain, so add it to the chain
                     listmapClassChain.put(constId, originResult);

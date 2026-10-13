@@ -275,7 +275,7 @@ public abstract class OpGeneral
         MethodTypeDesc md;
 
         if (jmd.isOptimized) {
-            md = jmd.optimizedMD;
+            md        = jmd.optimizedMD;
             sJitName += Builder.OPT;
         } else {
             md = jmd.standardMD;
@@ -304,7 +304,7 @@ public abstract class OpGeneral
         MethodTypeDesc md;
 
         if (jmd.isOptimized) {
-            md = jmd.optimizedMD;
+            md        = jmd.optimizedMD;
             sJitName += Builder.OPT;
         } else {
             md = jmd.standardMD;

@@ -553,7 +553,7 @@ public class PropertyStructure
         if (listMove != null) {
             // go backwards to that the resulting type constant is built up (nested) correctly
             ConstantPool pool = getConstantPool();
-            for (int i = listMove.size()-1; i >= 0; --i) {
+            for (int i = listMove.size() - 1; i >= 0; --i) {
                 Contribution contrib    = listMove.get(i);
                 Annotation   annotation = contrib.getAnnotation();
                 removeContribution(contrib);
@@ -734,7 +734,7 @@ public class PropertyStructure
         int nAccess = in.readByte();
         m_accessVar = nAccess < 0 ? null : Access.valueOf(nAccess);
         m_type      = pool.getConstant(readIndex(in), TypeConstant.class);
-        int nValue = readIndex(in);
+        int nValue  = readIndex(in);
         if (nValue >= 0) {
             m_constVal = pool.getConstant(nValue);
         }

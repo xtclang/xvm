@@ -198,7 +198,7 @@ public class NumberBuilder extends AugmentingBuilder {
             return;
         }
 
-        String         methodName = jmd.isOptimized ? jitName+OPT : jitName;
+        String         methodName = jmd.isOptimized ? jitName + OPT : jitName;
         MethodTypeDesc md         = jmd.isOptimized ? jmd.optimizedMD : jmd.standardMD;
         if (isNativeMethod(methodName, md)) {
             super.assembleMethod(classBuilder, method, jitName, jmd);
@@ -226,7 +226,7 @@ public class NumberBuilder extends AugmentingBuilder {
                                            String jitName, JitMethodDesc jmd,
                                            BiConsumer<CodeBuilder, JitMethodDesc> generator) {
         boolean        isOptimized = jmd.isOptimized;
-        String         methodName  = isOptimized ? jitName+OPT : jitName;
+        String         methodName  = isOptimized ? jitName + OPT : jitName;
         MethodTypeDesc md          = isOptimized ? jmd.optimizedMD : jmd.standardMD;
         boolean        isStatic    = isOptimized ? jmd.isOptimizedStatic : jmd.isStandardStatic;
         int            flags       = ClassFile.ACC_PUBLIC |
@@ -243,8 +243,8 @@ public class NumberBuilder extends AugmentingBuilder {
             TypeConstant  typeDeclared = method.getJitIdentity().getClassIdentity().getType();
             JitMethodDesc jmdDeclared  = method.getJitDesc(this, typeDeclared);
             if (jmdDeclared.isOptimized && !jmdDeclared.isOptimizedStatic &&
-                    !isNativeMethod(jitName+OPT, jmdDeclared.optimizedMD)) {
-                assembleOptimizedCap(classBuilder, jitName+OPT, jitName+OPT, jmdDeclared, jmd);
+                    !isNativeMethod(jitName + OPT, jmdDeclared.optimizedMD)) {
+                assembleOptimizedCap(classBuilder, jitName + OPT, jitName + OPT, jmdDeclared, jmd);
             }
         }
     }
@@ -439,11 +439,11 @@ public class NumberBuilder extends AugmentingBuilder {
 
         generatePrimitiveGetterWrapper(classBuilder, declaredProp, name, jmd);
 
-        if (isNativeMethod(name+OPT, jmd.optimizedMD)) {
+        if (isNativeMethod(name + OPT, jmd.optimizedMD)) {
             // the method has been manually coded so do not generate anything
             return;
         }
-        classBuilder.withMethodBody(name+OPT, jmd.optimizedMD, flags,
+        classBuilder.withMethodBody(name + OPT, jmd.optimizedMD, flags,
                 code -> generator.accept(code, jmd));
     }
 

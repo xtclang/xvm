@@ -924,7 +924,7 @@ public final class DebugConsole
                 resizeTerminal();
 
                 writer.println(hruler(m_cWidth));
-                writer.println(vruler(m_cHeight-2, 3));
+                writer.println(vruler(m_cHeight - 2, 3));
                 writer.println("Current debugger text width=" + m_cWidth +
                                " characters, height= " + m_cHeight + " lines.");
                 return Op.R_REPEAT;
@@ -953,7 +953,7 @@ public final class DebugConsole
                     writer.println("Illegal text width: " + asParts[1]);
                 }
                 writer.println(hruler(m_cWidth));
-                writer.println(vruler(m_cHeight-2, cArgs+3));
+                writer.println(vruler(m_cHeight - 2, cArgs + 3));
                 return Op.R_REPEAT;
             }
             }
@@ -964,7 +964,7 @@ public final class DebugConsole
                 VarDisplay[] aVars    = m_aVars;
                 boolean      fRepaint = false;
                 for (int i = 0; i < cArgs; ++i) {
-                    int iVar = parseNonNegative(asParts[i+1]);
+                    int iVar = parseNonNegative(asParts[i + 1]);
                     if (iVar >= 0 && iVar < aVars.length) {
                         VarDisplay var = aVars[iVar];
                         if (var.canExpand) {
@@ -1061,7 +1061,7 @@ public final class DebugConsole
                 VarDisplay[] aVars    = m_aVars;
                 boolean      fRepaint = false;
                 for (int i = 0; i < cArgs; ++i) {
-                    int iVar = parseNonNegative(asParts[i+1]);
+                    int iVar = parseNonNegative(asParts[i + 1]);
                     if (iVar >= 0 && iVar < aVars.length) {
                         // verify that the referent is available
                         VarDisplay var = aVars[iVar];
@@ -1102,7 +1102,7 @@ public final class DebugConsole
                 VarDisplay[] aVars    = m_aVars;
                 boolean      fRepaint = false;
                 for (int i = 0; i < cArgs; ++i) {
-                    int iVar = parseNonNegative(asParts[i+1]);
+                    int iVar = parseNonNegative(asParts[i + 1]);
                     if (iVar >= 0 && iVar < aVars.length) {
                         // verify that it is not already a watch
                         VarDisplay var = aVars[iVar];
@@ -1121,7 +1121,7 @@ public final class DebugConsole
                         } else if (var.name.startsWith("[")) {
                             // it's an array element
                             VarDisplay parent = aVars[findParentNode(iVar)];
-                            int        index  = Integer.valueOf(var.name.substring(1, var.name.length()-1));
+                            int        index  = Integer.valueOf(var.name.substring(1, var.name.length() - 1));
                             watch   = new Watch("watch:" + var.path, var.path, parent.hVar, index);
                             fGlobal = false;
                         } else if (var.name.startsWith(".")) {
@@ -1154,7 +1154,7 @@ public final class DebugConsole
                 VarDisplay[] aVars    = m_aVars;
                 boolean      fRepaint = false;
                 for (int i = 0; i < cArgs; ++i) {
-                    int iVar = parseNonNegative(asParts[i+1]);
+                    int iVar = parseNonNegative(asParts[i + 1]);
                     if (iVar >= 0 && iVar < aVars.length) {
                         // verify that the var is a watch
                         VarDisplay var   = aVars[iVar];
@@ -1404,7 +1404,7 @@ public final class DebugConsole
      * @return a string for the entire "console" view
      */
     private String renderConsole() {
-        return "Console:\n" + xTerminalConsole.CONSOLE_LOG.render(m_cWidth, m_cHeight-1);
+        return "Console:\n" + xTerminalConsole.CONSOLE_LOG.render(m_cWidth, m_cHeight - 1);
     }
 
     private void resizeTerminal() {
@@ -1417,7 +1417,7 @@ public final class DebugConsole
     private String renderDebugger() {
         String   sFHeader  = "Call stack frames:";
         String[] asFrames  = renderFrames();
-        int      cchFrames = Math.min(Math.max(longestOf(asFrames), sFHeader.length()), m_cWidth/2);
+        int      cchFrames = Math.min(Math.max(longestOf(asFrames), sFHeader.length()), m_cWidth / 2);
 
         String   sVHeader  = "Variables and watches:";
         String[] asVars    = renderVars();
@@ -1458,7 +1458,7 @@ public final class DebugConsole
                 if (cLines > cMid) {
                     // adjust the amount of code and console displayed based on vertical constraints
                     int cAvail = m_cHeight - cBot;
-                    cMid = Math.min(cLines, Math.max(7, Math.max(cAvail-cTop, cAvail/2)));
+                    cMid = Math.min(cLines, Math.max(7, Math.max(cAvail - cTop, cAvail / 2)));
                     cTop = cAvail - cMid;
 
                     // need to show just a portion; nLine is the current (1-based) line of code that
@@ -1599,7 +1599,7 @@ public final class DebugConsole
         }
 
         int      cFrames     = aFrames.length;
-        int      cchFrameNum = numlen(cFrames-1);
+        int      cchFrameNum = numlen(cFrames - 1);
         String[] asFrames    = new String[cFrames];
         for (int i = 0; i < cFrames; ++i) {
             Frame.StackFrame segment = aFrames[i];
@@ -1709,7 +1709,7 @@ public final class DebugConsole
                 for (int i = 0; i < cElements; ++i) {
                     // can't show all the elements; provide a "+ ..." to further expand the array
                     if (i >= cMax) {
-                        addVar(cIndent+1, sPath+"...", "...", hVar, listVars, mapExpand);
+                        addVar(cIndent + 1, sPath + "...", "...", hVar, listVars, mapExpand);
                         break;
                     }
 
@@ -1720,14 +1720,14 @@ public final class DebugConsole
 
                     ObjectHandle hElement = m_frame.popStack();
                     String sElement = "[" + i + "]";
-                    addVar(cIndent+1, sPath+sElement, sElement, hElement, listVars, mapExpand);
+                    addVar(cIndent + 1, sPath + sElement, sElement, hElement, listVars, mapExpand);
                 }
             } else if (hVar instanceof GenericHandle hGeneric && mapLayout != null) {
                 for (Map.Entry<String, FieldInfo> entry : mapLayout.entrySet()) {
                     String sName = entry.getKey();
 
                     ObjectHandle hField = hGeneric.getField(entry.getValue().getIndex());
-                    addVar(cIndent+1, sPath+'.'+sName, sName, hField, listVars, mapExpand);
+                    addVar(cIndent + 1, sPath + '.' + sName, sName, hField, listVars, mapExpand);
                 }
             }
         }
@@ -1997,7 +1997,7 @@ public final class DebugConsole
     }
 
     private static String hruler(int c) {
-        StringBuilder sb1 = new StringBuilder(c*2+1);
+        StringBuilder sb1 = new StringBuilder(c * 2 + 1);
         StringBuilder sb2 = new StringBuilder(c);
         for (int i = 0; i < c; ++i) {
             sb1.append(i % 10 == 0 ? (char) ('0' + (i / 10 % 10)) : ' ');
@@ -2015,7 +2015,7 @@ public final class DebugConsole
         for (int i = skip; i < c; ++i) {
             sb.append(rjust(Integer.toString((i % 10) == 0 ? i : i % 10), digits)).append('\n');
         }
-        return sb.deleteCharAt(sb.length()-1).toString();
+        return sb.deleteCharAt(sb.length() - 1).toString();
     }
 
     private static int parseNonNegative(String sNumber) {
@@ -2288,7 +2288,7 @@ public final class DebugConsole
         String render(int nIndex, int cchIndex) {
             StringBuilder sb = new StringBuilder();
             sb.append(rjust(String.valueOf(nIndex), cchIndex))
-              .append(dup(' ', indent*2 + 1))
+              .append(dup(' ', indent * 2 + 1))
               .append(canExpand ? (expanded ? '-' : '+') : ' ')
               .append(name);
 

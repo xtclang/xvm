@@ -101,17 +101,17 @@ public class xConst
                 findMethod("construct", 1, typeBitArray);
 
             // Time support
-            TIME_CONSTRUCT = f_container.getClassStructure("temporal.Time").
+            TIME_CONSTRUCT      = f_container.getClassStructure("temporal.Time").
                 findMethod("construct", 1, pool.typeString());
-            DATE_CONSTRUCT = f_container.getClassStructure("temporal.Date").
+            DATE_CONSTRUCT      = f_container.getClassStructure("temporal.Date").
                 findMethod("construct", 1, pool.typeString());
             TIMEOFDAY_CONSTRUCT = f_container.getClassStructure("temporal.TimeOfDay").
                 findMethod("construct", 1, pool.typeString());
-            TIMEZONE_CONSTRUCT = f_container.getClassStructure("temporal.TimeZone").
+            TIMEZONE_CONSTRUCT  = f_container.getClassStructure("temporal.TimeZone").
                 findMethod("construct", 1, pool.typeString());
-            DURATION_CONSTRUCT = f_container.getClassStructure("temporal.Duration").
+            DURATION_CONSTRUCT  = f_container.getClassStructure("temporal.Duration").
                 findMethod("construct", 1, pool.typeString());
-            VERSION_CONSTRUCT = f_container.getClassStructure("reflect.Version").
+            VERSION_CONSTRUCT   = f_container.getClassStructure("reflect.Version").
                 findMethod("construct", 1, pool.typeString());
 
             PATH_CONSTRUCT = f_container.getClassStructure("fs.Path").
@@ -532,7 +532,7 @@ public class xConst
                             : hValue2.getField(frameCaller, enid.toString());
 
                 if (h1 == null || h2 == null) {
-                    return frameCaller.raiseException("Unassigned property \"" + field.getName() +'"');
+                    return frameCaller.raiseException("Unassigned property \"" + field.getName() + '"');
                 }
 
                 TypeConstant typeProp = pool.register(clzBase.getFieldType(enid));
@@ -620,7 +620,7 @@ public class xConst
                             : hValue2.getField(frameCaller, enid.toString());
 
                 if (h1 == null || h2 == null) {
-                    return frameCaller.raiseException("Unassigned property \"" + field.getName() +'"');
+                    return frameCaller.raiseException("Unassigned property \"" + field.getName() + '"');
                 }
 
                 TypeConstant typeProp = pool.register(clzBase.getFieldType(enid));

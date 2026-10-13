@@ -81,7 +81,7 @@ class InterpreterControl
             ObjectHandle hConsoleId  = consoleId == null
                     ? xNullable.NULL
                     : xInt64.makeHandle(consoleId);
-            ObjectHandle hRootDir = rootDir == null
+            ObjectHandle hRootDir    = rootDir == null
                     ? xNullable.NULL
                     : xString.makeHandle(rootDir.getAbsolutePath());
 

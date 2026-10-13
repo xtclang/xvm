@@ -163,9 +163,9 @@ public class XvmStructureTest {
 
     @Test
     public void testMutableCopyOwnsContributionInjectionList() {
-        FileStructure   file       = new FileStructure("Test");
-        ConstantPool    pool       = file.getConstantPool();
-        ModuleStructure module     = file.getModule();
+        FileStructure   file           = new FileStructure("Test");
+        ConstantPool    pool           = file.getConstantPool();
+        ModuleStructure module         = file.getModule();
         FileStructure   dependencyFile = new FileStructure("Dependency");
         file.merge(dependencyFile.getModule(), false, false);
         ModuleStructure dependency = (ModuleStructure) file.getChild("Dependency");
@@ -207,9 +207,9 @@ public class XvmStructureTest {
 
     @Test
     public void testCompositeEnsureMutableRebuildsFromFileCopy() {
-        FileStructure   file   = new FileStructure("Test");
-        ModuleStructure module = file.getModule();
-        PackageStructure first = module.createPackage(Access.PUBLIC, "first", null);
+        FileStructure    file   = new FileStructure("Test");
+        ModuleStructure  module = file.getModule();
+        PackageStructure first  = module.createPackage(Access.PUBLIC, "first", null);
         PackageStructure second = module.createPackage(Access.PUBLIC, "second", null);
         CompositeComponent composite =
                 new CompositeComponent(module, List.of(first, second));
@@ -265,10 +265,10 @@ public class XvmStructureTest {
     }
 
     private static Fixture createFixture() {
-        FileStructure   file   = new FileStructure("Test");
-        ConstantPool    pool   = file.getConstantPool();
-        ModuleStructure module = file.getModule();
-        PackageStructure pkg   = module.createPackage(Access.PUBLIC, "example", null);
+        FileStructure    file   = new FileStructure("Test");
+        ConstantPool     pool   = file.getConstantPool();
+        ModuleStructure  module = file.getModule();
+        PackageStructure pkg    = module.createPackage(Access.PUBLIC, "example", null);
         ClassStructure clz = pkg.createClass(Access.PUBLIC, Component.Format.CLASS, "Sample", null);
 
         TypeConstant type = clz.getIdentityConstant().getType();

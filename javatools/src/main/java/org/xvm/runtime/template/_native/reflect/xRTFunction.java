@@ -192,10 +192,10 @@ public class xRTFunction
     public int invokeBind(Frame frame, FunctionHandle hFunc, ObjectHandle hArg, int iReturn) {
         Frame.Continuation stepBind = frameCaller -> {
             try {
-                ArrayHandle haValues   = (ArrayHandle) frameCaller.popStack();
-                ArrayHandle haOrdinals = (ArrayHandle) frameCaller.popStack();
-                FunctionHandle hFuncR  = hFunc;
-                int            ixPrev  = Integer.MAX_VALUE;
+                ArrayHandle    haValues   = (ArrayHandle) frameCaller.popStack();
+                ArrayHandle    haOrdinals = (ArrayHandle) frameCaller.popStack();
+                FunctionHandle hFuncR     = hFunc;
+                int            ixPrev     = Integer.MAX_VALUE;
 
                 ObjectHandle[] ahOrdinal = haOrdinals.getTemplate().toArray(frame, haOrdinals);
                 ObjectHandle[] ahValue   = haValues.getTemplate().toArray(frame, haValues);
@@ -1391,7 +1391,7 @@ public class xRTFunction
             ObjectHandle hParent = null;
             if (f_fParent) {
                 hParent = ahArg[0];
-                System.arraycopy(ahArg, 1, ahArg, 0, ahArg.length-1);
+                System.arraycopy(ahArg, 1, ahArg, 0, ahArg.length - 1);
             }
 
             TypeComposition clzTarget   = f_clzTarget;
@@ -1494,7 +1494,7 @@ public class xRTFunction
 
         ConstantPool pool = frame.poolContext();
 
-        TypeConstant typeParams = typeParent == null
+        TypeConstant typeParams  = typeParent == null
                 ? pool.typeTuple0()
                 : pool.ensureTupleType(typeParent);
         TypeConstant typeReturns = pool.ensureTupleType(typeTarget);

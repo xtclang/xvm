@@ -31,6 +31,6 @@ public final class nUtil {
         }
     }
 
-    private static final int MAX_VAL = 2*1024;
-    private static final int MAX_LEN = 16*1024;
+    private static final int MAX_VAL = 2 * 1024;
+    private static final int MAX_LEN = 16 * 1024;
 }

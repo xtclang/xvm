@@ -1367,7 +1367,7 @@ public class Lexer
 
                         // if the last token was '=', then add the entire expression up to that
                         // point as literal text, and discard the '='
-                        if (cTokens > 1 && aTokens[cTokens-1].getId() == Id.ASN) {
+                        if (cTokens > 1 && aTokens[cTokens - 1].getId() == Id.ASN) {
                             Token[] aTokensOld = aTokens;
                             aTokens = new Token[--cTokens];
                             System.arraycopy(aTokensOld, 0, aTokens, 0, cTokens);
@@ -1428,7 +1428,7 @@ public class Lexer
         int signScalar    = results[1];
 
         // parse optional '.' + value
-        PackedInteger piFraction = null;
+        PackedInteger piFraction       = null;
         int           fractionalDigits = 0;
         if (source.hasNext()) {
             if (source.next() == '.') {
@@ -1512,7 +1512,7 @@ public class Lexer
             }
             if (piExp != null) {
                 long lExp = piExp.getLong();
-                if (lExp > 6144 || lExp < (1-6144)) {
+                if (lExp > 6144 || lExp < (1 - 6144)) {
                     log(Severity.ERROR, ILLEGAL_NUMBER, lStartPos,
                         lStartPos, lPosEnd);
                 } else {
@@ -2139,9 +2139,9 @@ public class Lexer
         long   lStart = source.getPosition();
 
         int  nHour;
-        int  nMin    = 0;
-        int  nSec    = 0;
-        long nPicos  = 0;
+        int  nMin   = 0;
+        int  nSec   = 0;
+        long nPicos = 0;
         int  cDigits;
 
         if ((nHour = eatDigits(2)) >= 0) {
@@ -2535,7 +2535,7 @@ public class Lexer
             //   U+0020  32  SP   Space
             //                                               2               1      0
             //                                               0FEDCBA9876543210FEDCBA9
-            return ch <= 32 && ch >= 9 && ((1 << (ch-9)) & 0b111110100000000000011111) != 0;
+            return ch <= 32 && ch >= 9 && ((1 << (ch - 9)) & 0b111110100000000000011111) != 0;
         }
 
         // this handles the following cases:

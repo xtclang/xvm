@@ -56,7 +56,7 @@ public class OpNameCoverageTest {
 
         Set<String> instantiate = casesIn(source, "public static Op instantiate(",
                                                   "public static String toName(");
-        Set<String> toName = casesIn(source, "public static String toName(", null);
+        Set<String> toName      = casesIn(source, "public static String toName(", null);
 
         assertTrue(instantiate.size() > 200,
                 "sanity: expected to find the instantiate switch, found " + instantiate.size()

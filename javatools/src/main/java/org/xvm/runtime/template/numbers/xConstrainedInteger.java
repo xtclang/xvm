@@ -407,7 +407,7 @@ public abstract class xConstrainedInteger
             if (cBits == 0) {
                 lValue = 0;
             } else if (cBits != f_cNumBits) {
-                lValue = lValue & (0xFFFFFFFFFFFFFFFFL >>> (64-cBits));
+                lValue = lValue & (0xFFFFFFFFFFFFFFFFL >>> (64 - cBits));
             }
 
             return frame.assignValue(iReturn, makeJavaLong(lValue));
@@ -711,7 +711,7 @@ public abstract class xConstrainedInteger
      */
     public static void copyAsBytes(long l, byte[] ab, int of) {
         for (int i = 0, cShift = 56; i < 8; i++, cShift-=8) {
-            ab[of+i] = (byte) (l >> cShift);
+            ab[of + i] = (byte) (l >> cShift);
         }
     }
 
@@ -739,7 +739,7 @@ public abstract class xConstrainedInteger
      * @return the long value
      */
     public static long fromByteArray(byte[] aBytes, int of, int cBytes, boolean fSigned) {
-        long l = fSigned & aBytes[cBytes-1] < 0 ? -1 : 0;
+        long l = fSigned & aBytes[cBytes - 1] < 0 ? -1 : 0;
         for (int i = of; i < cBytes; i++) {
             l = l << 8 | (aBytes[i] & 0xFF);
         }
@@ -767,10 +767,10 @@ public abstract class xConstrainedInteger
             //
             // Note: Long.MIN_VALUE/l2 and Long.MIN_VALUE % l2 are negative values
 
-            return l1L/l2 - Long.MIN_VALUE/l2 + (l1L % l2 - Long.MIN_VALUE % l2)/l2;
+            return l1L / l2 - Long.MIN_VALUE / l2 + (l1L % l2 - Long.MIN_VALUE % l2) / l2;
         }
 
-        return l1/l2;
+        return l1 / l2;
     }
 
     public static long modUnsigned(long l1, long l2) {

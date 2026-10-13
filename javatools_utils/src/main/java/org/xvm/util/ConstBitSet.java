@@ -129,17 +129,17 @@ public class ConstBitSet {
         // unfortunately, we have to jump & walk all the way to the end to find the length
         int idCur = 0;
         while (true) {
-            lIntVal = unpackInt(m_ab, ofCur);
+            lIntVal    = unpackInt(m_ab, ofCur);
             ofCur     += (int) (lIntVal >>> 32);
             int idSkip = (int) lIntVal;
 
             // always skip forward, unless there is no skip
             if (idSkip == 0) {
-                lIntVal = unpackInt(m_ab, ofCur);
+                lIntVal    = unpackInt(m_ab, ofCur);
                 ofCur     += (int) (lIntVal >>> 32);
                 int idNext = (int) lIntVal;
 
-                lIntVal = unpackInt(m_ab, ofCur);
+                lIntVal    = unpackInt(m_ab, ofCur);
                 ofCur     += (int) (lIntVal >>> 32);
                 int cBytes = (int) lIntVal;
 
@@ -162,7 +162,7 @@ public class ConstBitSet {
                 }
             } else {
                 // skip forward to the next node
-                lIntVal = unpackInt(m_ab, ofCur);
+                lIntVal    = unpackInt(m_ab, ofCur);
                 ofCur     += (int) (lIntVal >>> 32);
                 int ofSkip = (int) lIntVal;
 
@@ -209,8 +209,8 @@ public class ConstBitSet {
         boolean fInverse    = false;
         int     cInverseLen = 0;
         if (nCount < 0) {
-            fInverse = true;
-            lIntVal  = unpackInt(m_ab, ofCur);
+            fInverse    = true;
+            lIntVal     = unpackInt(m_ab, ofCur);
             ofCur      += (int) (lIntVal >>> 32);
             cInverseLen = (int) lIntVal;
         }
@@ -218,12 +218,12 @@ public class ConstBitSet {
         int iByte = iBit >>> 3;
         int idCur = 0;
         while (true) {
-            lIntVal = unpackInt(m_ab, ofCur);
+            lIntVal    = unpackInt(m_ab, ofCur);
             ofCur     += (int) (lIntVal >>> 32);
             int idSkip = (int) lIntVal;
 
             if (idSkip != 0) {
-                lIntVal = unpackInt(m_ab, ofCur);
+                lIntVal    = unpackInt(m_ab, ofCur);
                 ofCur     += (int) (lIntVal >>> 32);
                 int ofSkip = (int) lIntVal;
 
@@ -238,11 +238,11 @@ public class ConstBitSet {
             // 1) between the current point and the end of bytes present in this node
             // 2) after this node but before the next node (or there is no next node)
             // 3) somewhere after the start of the next node (i.e. only if there is a next node)
-            lIntVal = unpackInt(m_ab, ofCur);
+            lIntVal    = unpackInt(m_ab, ofCur);
             ofCur     += (int) (lIntVal >>> 32);
             int idNext = (int) lIntVal;
 
-            lIntVal = unpackInt(m_ab, ofCur);
+            lIntVal    = unpackInt(m_ab, ofCur);
             ofCur     += (int) (lIntVal >>> 32);
             int cBytes = (int) lIntVal;
 
@@ -273,7 +273,7 @@ public class ConstBitSet {
     public static BitSet invert(BitSet bs) {
         int    length    = bs.length();
         BitSet bsInverse = new BitSet(length);
-        for (int id = bs.nextClearBit(0); id < length; id = bs.nextClearBit(id+1)) {
+        for (int id = bs.nextClearBit(0); id < length; id = bs.nextClearBit(id + 1)) {
             bsInverse.set(id);
         }
         return bsInverse;
@@ -426,11 +426,11 @@ public class ConstBitSet {
         Node[] aNode  = listNodes.toArray(new Node[0]);
         int    cNodes = aNode.length;
         for (int i = 1; i < cNodes; ++i) {
-            aNode[i-1].next = aNode[i];
+            aNode[i - 1].next = aNode[i];
         }
 
         // link "skip node" pointers
-        createSkips(aNode, 0, aNode.length-1);
+        createSkips(aNode, 0, aNode.length - 1);
 
         // turn the nodes into bytes
         byte[][] aabNode = new byte[cNodes][];
@@ -438,8 +438,8 @@ public class ConstBitSet {
         for (int i = cNodes - 1; i >= 0; --i) {
             Node    node    = aNode[i];
             RawNode nodeRaw = new RawNode();
-            nodeRaw.idNext = nodeNext == null ? 0 : nodeNext.id - node.id;
-            nodeRaw.bits   = node.bits;
+            nodeRaw.idNext  = nodeNext == null ? 0 : nodeNext.id - node.id;
+            nodeRaw.bits    = node.bits;
             assert nodeRaw.bits != null;
 
             Node nodeJmp = node.jmp;
@@ -498,7 +498,7 @@ public class ConstBitSet {
             return;
         }
 
-        int ofJmp = Integer.highestOneBit(cNodes-1);
+        int ofJmp = Integer.highestOneBit(cNodes - 1);
         node.jmp = aNode[iFirst + ofJmp];
 
         createSkips(aNode, iFirst + 1, iFirst + ofJmp - 1);

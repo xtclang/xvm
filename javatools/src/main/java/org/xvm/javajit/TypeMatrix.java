@@ -330,12 +330,12 @@ public class TypeMatrix {
             // 4) UTC(A) + B      -> UTC(merge(A, B)) and register the conditional assignment
             // 5) A      + UTC(B) -> UTC(merge(A, B)) and register the conditional assignment
             // 6) A      + B      -> merge(A, B)
-            TypeConstant currType       = entry.getValue();
-            TypeConstant nextType       = nextView.types.get(regId);
-            boolean      currUnassigned = currType instanceof UnassignedTypeConstant;
-            boolean      nextUnassigned = nextType == null ||
+            TypeConstant currType        = entry.getValue();
+            TypeConstant nextType        = nextView.types.get(regId);
+            boolean      currUnassigned  = currType instanceof UnassignedTypeConstant;
+            boolean      nextUnassigned  = nextType == null ||
                                            nextType instanceof UnassignedTypeConstant;
-            boolean mergeUnassigned = currUnassigned || nextUnassigned;
+            boolean      mergeUnassigned = currUnassigned || nextUnassigned;
             if (currUnassigned == nextUnassigned) {
                 if (currType.equals(nextType)) {
                     continue;

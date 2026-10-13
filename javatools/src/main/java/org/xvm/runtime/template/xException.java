@@ -176,7 +176,7 @@ public class xException
     public static ExceptionHandle outOfBounds(Frame frame, long lIndex, long cSize) {
         return outOfBounds(frame, lIndex < 0 ?
                 "Negative index: " + lIndex :
-                "Index " + lIndex + " out of range 0.." + (cSize-1));
+                "Index " + lIndex + " out of range 0.." + (cSize - 1));
     }
 
     public static ExceptionHandle outOfBounds(Frame frame, String sMsg) {

@@ -100,7 +100,7 @@ public class RTRandom extends nService {
         if (max <= Integer.MAX_VALUE) {
             // it's a 32-bit random, so take a fast path in Java that handles 32-bit values
             return rnd.nextInt((int) max);
-        } else if ((max & (max-1)) == 0) {
+        } else if ((max & (max - 1)) == 0) {
             // it's a power of 2, so avoid the 64-bit modulo
             return rnd.nextLong() & (max - 1);
         } else {

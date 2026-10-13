@@ -179,7 +179,7 @@ public abstract class BaseDecFP
 
         case "toInt64": {
             boolean      fCheckBounds = ahArg[0] == xBoolean.TRUE;
-            ObjectHandle hRound = ahArg[1];
+            ObjectHandle hRound       = ahArg[1];
 
             if (dec.isFinite()) {
                 BigInteger n = roundedInteger(dec, hRound);
@@ -288,8 +288,8 @@ public abstract class BaseDecFP
     public int invokeNativeNN(Frame frame, MethodStructure method, ObjectHandle hTarget, ObjectHandle[] ahArg, int[] aiReturn) {
         switch (method.getName()) {
         case "split": {
-            Decimal dec       = ((DecimalHandle) hTarget).getValue();
-            boolean fSign     = dec.isSigned();
+            Decimal dec   = ((DecimalHandle) hTarget).getValue();
+            boolean fSign = dec.isSigned();
             int     iExp;
             long    lMantissa;
 

@@ -163,11 +163,11 @@ public class CompositeComponent
     public boolean isSynthetic() {
         // this is a legal request iff all of the siblings have the same synthetic
         boolean fSynthetic = false;
-        boolean fFirst    = true;
+        boolean fFirst     = true;
         for (Component sibling : f_siblings) {
             if (fFirst) {
                 fSynthetic = sibling.isSynthetic();
-                fFirst    = false;
+                fFirst     = false;
             } else if (fSynthetic != sibling.isSynthetic()) {
                 throw new UnsupportedOperationException(
                         "can't ask synthetic of a composite with diff synthetic settings");

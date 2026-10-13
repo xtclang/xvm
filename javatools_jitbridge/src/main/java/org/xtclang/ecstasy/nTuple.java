@@ -61,7 +61,7 @@ public class nTuple
      * }</pre>
      */
     public nRef elementAt$p(Ctx ctx, long index) {
-        int            i    = checkIndex(ctx, index);
+        int            i     = checkIndex(ctx, index);
         TypeConstant[] types = $type.getParamTypesArray();
         TypeConstant   type  = i < types.length
                 ? types[i]

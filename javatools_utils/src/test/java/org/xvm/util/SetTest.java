@@ -90,7 +90,7 @@ public class SetTest {
         while (true) {
             set.add(++c);
             if (c % 1000000 == 0) {
-                out((c/1000000) + "m in " + (System.currentTimeMillis()-start) + "ms");
+                out((c / 1000000) + "m in " + (System.currentTimeMillis() - start) + "ms");
                 break;
             }
         }
@@ -98,7 +98,7 @@ public class SetTest {
 
     static void speedTest() {
         for (int i = 0, p=990, c = 1000; i < c; ++i) {
-            speedTest(i>p);
+            speedTest(i > p);
         }
     }
 
@@ -114,7 +114,7 @@ public class SetTest {
         }
         long l2 = System.currentTimeMillis();
         if (fPrint) {
-            out("HashSet @" + (l1-l0) + "ms vs. ListSet @" + (l2-l1) + "ms");
+            out("HashSet @" + (l1 - l0) + "ms vs. ListSet @" + (l2 - l1) + "ms");
         }
     }
 
@@ -126,7 +126,7 @@ public class SetTest {
 
     static boolean randomTest(final int cSteps) {
         ArrayList<Op> listOps = new ArrayList<>(cSteps);
-        Data data = new StringData(1+rnd.nextInt(1+rnd.nextInt(100000)));
+        Data data = new StringData(1 + rnd.nextInt(1 + rnd.nextInt(100000)));
         var setControl = createControlSet();
         var testSets   = createTestSets();
         for (int iStep = 0; iStep < cSteps; ++iStep) {
@@ -194,8 +194,8 @@ public class SetTest {
     static Op parseOp(final String sLine) {
         int of = sLine.indexOf(' ');
         assert of > 0;
-        String   sOp     = sLine.substring(0, of);
-        String   sParams = sLine.substring(of+1).trim();
+        String   sOp      = sLine.substring(0, of);
+        String   sParams  = sLine.substring(of + 1).trim();
         String[] asParams = Handy.parseDelimitedString(sParams, ' ');
 
         Op op = switch (sOp) {

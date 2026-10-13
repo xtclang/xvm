@@ -206,7 +206,7 @@ public class GP_DivRem
 
             MethodTypeDesc md;
             if (jmd.isOptimized) {
-                md = jmd.optimizedMD;
+                md        = jmd.optimizedMD;
                 sJitName += Builder.OPT;
             } else {
                 md = jmd.standardMD;

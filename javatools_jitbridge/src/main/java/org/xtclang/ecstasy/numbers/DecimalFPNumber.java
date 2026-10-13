@@ -80,7 +80,7 @@ public abstract class DecimalFPNumber
         if ((i & ~0x3) != 0) {
             throw new IllegalArgumentException("index out of range: " + i);
         }
-        return (bits >>> ((3 - i)*8)) & 0xFF;
+        return (bits >>> ((3 - i) * 8)) & 0xFF;
     }
 
     /**
@@ -96,7 +96,7 @@ public abstract class DecimalFPNumber
         if ((i & ~0x7) != 0) {
             throw new IllegalArgumentException("index out of range: " + i);
         }
-        return ((int) (bits >>> ((7 - i)*8))) & 0xFF;
+        return ((int) (bits >>> ((7 - i) * 8))) & 0xFF;
     }
 
     /**
@@ -116,7 +116,7 @@ public abstract class DecimalFPNumber
             throw new IllegalArgumentException("index out of range: " + i);
         }
         long lBits = i < 8 ? highBits : lowBits;
-        return ((int) (lBits >>> ((i&7)*8))) & 0xFF;
+        return ((int) (lBits >>> ((i & 7) * 8))) & 0xFF;
     }
 
     /**

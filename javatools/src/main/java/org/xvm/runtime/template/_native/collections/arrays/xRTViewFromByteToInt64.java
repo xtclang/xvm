@@ -52,7 +52,7 @@ public class xRTViewFromByteToInt64
         if (tSource instanceof ByteView tView) {
             long[] alValue = new long[(int) cSize];
             for (int i = 0; i < cSize; i++) {
-                byte[] ab = tView.getBytes(hSource, ofStart + i*8L, 8, fReverse);
+                byte[] ab = tView.getBytes(hSource, ofStart + i * 8L, 8, fReverse);
 
                 alValue[i] = Handy.byteArrayToLong(ab, 0);
             }
@@ -70,7 +70,7 @@ public class xRTViewFromByteToInt64
         ClassTemplate  tSource = hSource.getTemplate();
 
         if (tSource instanceof ByteView tView) {
-            byte[] ab = tView.getBytes(hSource, lIndex*8, 8, false);
+            byte[] ab = tView.getBytes(hSource, lIndex * 8, 8, false);
             long   l  = Handy.byteArrayToLong(ab, 0);
 
             return frame.assignValue(iReturn, xInt64.makeHandle(l));
@@ -89,14 +89,14 @@ public class xRTViewFromByteToInt64
         if (tSource instanceof ByteView tView) {
             long lValue = ((JavaLong) hValue).getValue();
 
-            tView.assignByte(hSource, (lIndex++)*8, (byte) ((lValue >>> 56) & 0xFF));
-            tView.assignByte(hSource, (lIndex++)*8, (byte) ((lValue >>> 48) & 0xFF));
-            tView.assignByte(hSource, (lIndex++)*8, (byte) ((lValue >>> 40) & 0xFF));
-            tView.assignByte(hSource, (lIndex++)*8, (byte) ((lValue >>> 32) & 0xFF));
-            tView.assignByte(hSource, (lIndex++)*8, (byte) ((lValue >>> 24) & 0xFF));
-            tView.assignByte(hSource, (lIndex++)*8, (byte) ((lValue >>> 16) & 0xFF));
-            tView.assignByte(hSource, (lIndex++)*8, (byte) ((lValue >>>  8) & 0xFF));
-            tView.assignByte(hSource, (lIndex  )*8, (byte) ((lValue       ) & 0xFF));
+            tView.assignByte(hSource, (lIndex++) * 8, (byte) ((lValue >>> 56) & 0xFF));
+            tView.assignByte(hSource, (lIndex++) * 8, (byte) ((lValue >>> 48) & 0xFF));
+            tView.assignByte(hSource, (lIndex++) * 8, (byte) ((lValue >>> 40) & 0xFF));
+            tView.assignByte(hSource, (lIndex++) * 8, (byte) ((lValue >>> 32) & 0xFF));
+            tView.assignByte(hSource, (lIndex++) * 8, (byte) ((lValue >>> 24) & 0xFF));
+            tView.assignByte(hSource, (lIndex++) * 8, (byte) ((lValue >>> 16) & 0xFF));
+            tView.assignByte(hSource, (lIndex++) * 8, (byte) ((lValue >>>  8) & 0xFF));
+            tView.assignByte(hSource, (lIndex  ) * 8, (byte) ((lValue       ) & 0xFF));
 
             return Op.R_NEXT;
         }

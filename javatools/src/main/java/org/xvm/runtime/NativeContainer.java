@@ -248,7 +248,7 @@ public class NativeContainer
             sb.append(parts[i])
               .append('.');
         }
-        String sClass = parts[parts.length-1];
+        String sClass = parts[parts.length - 1];
         assert sClass.charAt(0) == 'x';
         assert sClass.endsWith(".class");
         sb.append(sClass, 1, sClass.indexOf('.'));

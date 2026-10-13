@@ -69,7 +69,7 @@ public class PackedIntegerTest {
     public void testReadAndWritePackedLong()
             throws IOException {
         ByteArrayOutputStream outRaw = new ByteArrayOutputStream();
-        DataOutputStream out    = new DataOutputStream(outRaw);
+        DataOutputStream out = new DataOutputStream(outRaw);
         for (long i = -17000000; i < 17000000; ++i) { // cover +/- 2^24 ...
             writeLong(out, i);
         }

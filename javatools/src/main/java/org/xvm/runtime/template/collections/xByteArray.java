@@ -172,7 +172,7 @@ public class xByteArray
 
         if (hDelegate instanceof SliceHandle hSlice) {
             hDelegate =  hSlice.f_hSource;
-            ofDst     += (int) hSlice.f_ofStart;
+            ofDst    += (int) hSlice.f_ofStart;
         }
 
         ClassTemplate tDelegate = hDelegate.getTemplate();

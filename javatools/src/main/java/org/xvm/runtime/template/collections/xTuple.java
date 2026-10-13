@@ -418,7 +418,7 @@ public class xTuple
                     int ix = i;
                     return Utils.callFreeze(frame, hValue, fInPlace, frameCaller -> {
                         ahValue[ix] = frameCaller.popStack();
-                        return freezeValues(frameCaller, ahValue, fInPlace, ix+1);
+                        return freezeValues(frameCaller, ahValue, fInPlace, ix + 1);
                     });
                 }
                 return frame.raiseException("Tuple element [" + i + "] of type \"" +

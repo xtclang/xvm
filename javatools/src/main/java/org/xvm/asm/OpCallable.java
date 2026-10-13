@@ -635,7 +635,7 @@ public abstract class OpCallable extends Op {
                                                 int[] anArgValue) {
         SignatureConstant   sig         = idMethod.getSignature();
         TypeConstant[]      atypeResult = sig.getRawReturns();
-        GenericTypeResolver resolver = null;
+        GenericTypeResolver resolver    = null;
         for (int i = 0, c = atypeResult.length; i < c; i++) {
             TypeConstant type = atypeResult[i];
             if (type.containsTypeParameter(true)) {
@@ -696,8 +696,8 @@ public abstract class OpCallable extends Op {
                 // delegate property instead of looking for executable code on that body
                 TypeConstant typeTarget = bctx.builder.loadProperty(code, bctx.thisType,
                         bodySuper.getPropertyConstant(), false, bctx.ctxSlot(code)).getType();
-                TypeInfo   infoTarget = bctx.getTypeInfo(typeTarget);
-                MethodInfo infoMethod = infoTarget.getMethodBySignature(bodySuper.getSignature());
+                TypeInfo     infoTarget = bctx.getTypeInfo(typeTarget);
+                MethodInfo   infoMethod = infoTarget.getMethodBySignature(bodySuper.getSignature());
 
                 cdTarget   = bctx.builder.ensureClassDesc(typeTarget);
                 sJitName   = infoMethod.ensureJitMethodName(ts);
@@ -722,8 +722,8 @@ public abstract class OpCallable extends Op {
                     TypeConstant typeTarget = bctx.isSpecialized
                             ? idCallee.getFormalType().resolveGenerics(bctx.pool(), bctx.thisType)
                             : idCallee.getType();
-                    cdTarget = bctx.builder.ensureClassDesc(typeTarget);
-                    sJitName = MethodInfo.getJitIdentity(bctx.callChain, nDepth).
+                    cdTarget   = bctx.builder.ensureClassDesc(typeTarget);
+                    sJitName   = MethodInfo.getJitIdentity(bctx.callChain, nDepth).
                             ensureJitMethodName(ts);
                     fInterface = typeTarget.isJitInterface();
                 }
@@ -790,7 +790,7 @@ public abstract class OpCallable extends Op {
 
                 assert typeFunky.isInterfaceType();
 
-                cdTarget = ClassDesc.of(TypeSystem.funkyInterface(
+                cdTarget   = ClassDesc.of(TypeSystem.funkyInterface(
                                 builder.ensureJitClassName(typeFunky)));
                 sJitName   = idFunky.ensureJitMethodName(ts);
                 jmdCall    = bodyFunky.getJitDesc(builder, typeFunky);
@@ -894,7 +894,7 @@ public abstract class OpCallable extends Op {
 
         MethodTypeDesc mdCall;
         if (jmdCall.isOptimized) {
-            mdCall = jmdCall.optimizedMD;
+            mdCall    = jmdCall.optimizedMD;
             sJitName += Builder.OPT;
         } else {
             mdCall = jmdCall.standardMD;
@@ -1007,7 +1007,7 @@ public abstract class OpCallable extends Op {
         MethodTypeDesc mdNew;
         if (jmdNew.isOptimized) {
             jitName += Builder.OPT;
-            mdNew = jmdNew.optimizedMD;
+            mdNew    = jmdNew.optimizedMD;
         } else {
             mdNew = jmdNew.standardMD;
         }
@@ -1072,7 +1072,7 @@ public abstract class OpCallable extends Op {
         boolean fOptimized = jmdCtor.isOptimized;
         MethodTypeDesc md;
         if (fOptimized) {
-            md = jmdCtor.optimizedMD;
+            md        = jmdCtor.optimizedMD;
             sJitCtor += Builder.OPT;
         }
         else {

@@ -1211,7 +1211,7 @@ public class ModuleInfo {
             if (file != null) {
                 String sName = file().getName();
                 if (sName.endsWith(".x")) {
-                    sName = sName.substring(0, sName.length()-2);
+                    sName = sName.substring(0, sName.length() - 2);
                 }
                 return sName;
             }
@@ -1309,7 +1309,7 @@ public class ModuleInfo {
 
             boolean fRequireDir = resPath.endsWith("/");
             if (fRequireDir) {
-                resPath = resPath.substring(0, resPath.length()-1);
+                resPath = resPath.substring(0, resPath.length() - 1);
                 if (resPath.endsWith("/")) {
                     return null;
                 }
@@ -1383,7 +1383,7 @@ public class ModuleInfo {
             if (parent != null) {
                 text = parent.toString();
                 if (text.endsWith("/")) {
-                    text = text.substring(0, text.length()-1);
+                    text = text.substring(0, text.length() - 1);
                 }
             }
 

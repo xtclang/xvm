@@ -53,11 +53,11 @@ public class xRTViewFromByte
         if (hSource instanceof SliceHandle hSlice) {
             // e.g.: bytes.slice().asInt64Array() -> bytes.asInt64Array().slice()
             ViewHandle hView = new ViewHandle(clzView, hSlice.f_hSource,
-                                    hSlice.f_hSource.m_cSize/nBytes, mutability);
+                                    hSlice.f_hSource.m_cSize / nBytes, mutability);
 
-            return slice(hView, hSlice.f_ofStart/nBytes, hSlice.m_cSize/nBytes, hSlice.f_fReverse);
+            return slice(hView, hSlice.f_ofStart / nBytes, hSlice.m_cSize / nBytes, hSlice.f_fReverse);
         }
-        return new ViewHandle(clzView, hSource, hSource.m_cSize/nBytes, mutability);
+        return new ViewHandle(clzView, hSource, hSource.m_cSize / nBytes, mutability);
     }
 
     // ----- handle --------------------------------------------------------------------------------

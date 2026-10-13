@@ -42,8 +42,8 @@ public abstract class LongBasedBitView
             LongArrayHandle hLong = (LongArrayHandle) hSlice.f_hSource;
             int             cBits = getBitsPerValue(hLong);
             ViewHandle      hView = new ViewHandle(clzView,
-                                        hLong, hLong.m_cSize*cBits, mutability);
-            return slice(hView, hSlice.f_ofStart*cBits, hSlice.m_cSize*cBits, false);
+                                        hLong, hLong.m_cSize * cBits, mutability);
+            return slice(hView, hSlice.f_ofStart * cBits, hSlice.m_cSize * cBits, false);
         }
 
         if (hSource instanceof xRTViewFromBit.ViewHandle hView) {
@@ -52,7 +52,7 @@ public abstract class LongBasedBitView
 
         LongArrayHandle hLong = (LongArrayHandle) hSource;
         int             cBits = getBitsPerValue(hLong);
-        return new ViewHandle(clzView, hLong, hSource.m_cSize*cBits, mutability);
+        return new ViewHandle(clzView, hLong, hSource.m_cSize * cBits, mutability);
     }
 
     // ----- RTDelegate API ------------------------------------------------------------------------
@@ -115,7 +115,7 @@ public abstract class LongBasedBitView
 
     @Override
     public byte[] getBytes(DelegateHandle hDelegate, long ofStart, long cBytes, boolean fReverse) {
-        return getBits(hDelegate, ofStart*8, cBytes*8, fReverse);
+        return getBits(hDelegate, ofStart * 8, cBytes * 8, fReverse);
     }
 
     @Override

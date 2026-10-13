@@ -551,7 +551,7 @@ public class PropertyInfo
 
         PropertyBody[]          aBodyOld = m_aBody;
         int                     cBodies  = aBodyOld.length;
-        ArrayList<PropertyBody> listNew = new ArrayList<>(cBodies); // may be smaller than cBodies
+        ArrayList<PropertyBody> listNew  = new ArrayList<>(cBodies); // may be smaller than cBodies
         for (int i = 0; i < cBodies; i++) {
             PropertyBody body = aBodyOld[i];
             if (setFromInto == null || setFromInto.contains(body.getIdentity().getClassIdentity())) {
@@ -656,7 +656,7 @@ public class PropertyInfo
      *         term "last" corresponds to the order of the call chain
      */
     public PropertyBody getTail() {
-        return m_aBody[m_aBody.length-1];
+        return m_aBody[m_aBody.length - 1];
     }
 
     /**
@@ -1416,9 +1416,9 @@ public class PropertyInfo
         ClassStructure    clz          = propTarget.getContainingClass();
         MethodStructure   method       = clz.ensurePropertyDelegation(propDelegate, propTarget,
                                             idMethod.getSignature());
-        MethodConstant    idDelegate  = method.getIdentityConstant();
-        SignatureConstant sigDelegate = idDelegate.getSignature();
-        MethodBody        body        = new MethodBody(idDelegate, sigDelegate,
+        MethodConstant    idDelegate   = method.getIdentityConstant();
+        SignatureConstant sigDelegate  = idDelegate.getSignature();
+        MethodBody        body         = new MethodBody(idDelegate, sigDelegate,
                                             Implementation.Explicit);
         body.setMethodStructure(method);
 

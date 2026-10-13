@@ -109,7 +109,7 @@ public class Decimal128
         }
 
         long lBits = i < 8 ? m_nHBits : m_nLBits;
-        return ((int) (lBits >>> ((i&7)*8))) & 0xFF;
+        return ((int) (lBits >>> ((i & 7) * 8))) & 0xFF;
     }
 
     @Override
@@ -364,10 +364,10 @@ public class Decimal128
             } else if (i == 6) {
                 // split the declet across the high and low bits
                 nLBits |= ((long) nDeclet) << 60;
-                nHBits = nDeclet >>> 4;            // rightmost 4 bits are in the "low bits" long
+                nHBits  = nDeclet >>> 4;            // rightmost 4 bits are in the "low bits" long
             } else {
                 // declet 7 starts at bit 6 of the "high bits" long
-                nHBits |= ((long) nDeclet) << ((i-7) * 10 + 6);
+                nHBits |= ((long) nDeclet) << ((i - 7) * 10 + 6);
             }
 
             bint = abintDivRem[0];

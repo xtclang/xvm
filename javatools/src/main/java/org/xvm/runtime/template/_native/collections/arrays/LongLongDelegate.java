@@ -39,7 +39,7 @@ public abstract class LongLongDelegate
     @Override
     public DelegateHandle createDelegate(Container container, TypeConstant typeElement, int cCapacity,
                                          ObjectHandle[] ahContent, Mutability mutability) {
-        long[] alValue = new long[2*cCapacity];
+        long[] alValue = new long[2 * cCapacity];
         int    cSize   = ahContent.length;
 
         for (int iSrc = 0, iDst = 0; iSrc < cSize; iSrc++) {
@@ -107,7 +107,7 @@ public abstract class LongLongDelegate
         LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
 
         long[] alValue = Arrays.copyOfRange(hDelegate.m_alValue,
-                            (int) ofStart*2, (int) (ofStart*2 + cSize*2));
+                            (int) ofStart * 2, (int) (ofStart * 2 + cSize * 2));
         if (fReverse) {
             alValue = reverseLong2(alValue, (int) cSize);
         }
@@ -118,10 +118,10 @@ public abstract class LongLongDelegate
     protected int extractArrayValueImpl(Frame frame, DelegateHandle hTarget, long lIndex, int iReturn) {
         LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
         long[]          alValue   = hDelegate.m_alValue;
-        int             nIndex    = (int) lIndex*2;
+        int             nIndex    = (int) lIndex * 2;
 
         return frame.assignValue(iReturn,
-                makeElementHandle(new LongLong(alValue[nIndex+1], alValue[nIndex])));
+                makeElementHandle(new LongLong(alValue[nIndex + 1], alValue[nIndex])));
     }
 
     @Override
@@ -131,7 +131,7 @@ public abstract class LongLongDelegate
 
         int    cSize   = (int) hDelegate.m_cSize;
         long[] alValue = hDelegate.m_alValue;
-        int    nIndex  = (int) lIndex*2;
+        int    nIndex  = (int) lIndex * 2;
 
         if (lIndex >= cSize) {
             if (nIndex >= alValue.length) {
@@ -142,8 +142,8 @@ public abstract class LongLongDelegate
         }
 
         LongLong ll = ((LongLongHandle) hValue).getValue();
-        alValue[nIndex]   = ll.getHighValue();
-        alValue[nIndex+1] = ll.getLowValue();
+        alValue[nIndex]     = ll.getHighValue();
+        alValue[nIndex + 1] = ll.getLowValue();
         return Op.R_NEXT;
     }
 
@@ -153,21 +153,21 @@ public abstract class LongLongDelegate
 
         int    cSize   = (int) hDelegate.m_cSize;
         long[] alValue = hDelegate.m_alValue;
-        int    nIndex  = (int) lIndex*2;
+        int    nIndex  = (int) lIndex * 2;
 
-        if (2*cSize == alValue.length) {
+        if (2 * cSize == alValue.length) {
             alValue = hDelegate.m_alValue =
-                    LongBasedDelegate.grow(hDelegate.m_alValue, 2*cSize + 2);
+                    LongBasedDelegate.grow(hDelegate.m_alValue, 2 * cSize + 2);
         }
         hDelegate.m_cSize++;
 
         LongLong ll = ((LongLongHandle) hElement).getValue();
         if (lIndex < cSize) {
             // insert
-            System.arraycopy(alValue, nIndex, alValue, nIndex + 2, 2*cSize - nIndex);
+            System.arraycopy(alValue, nIndex, alValue, nIndex + 2, 2 * cSize - nIndex);
         }
-        alValue[nIndex]   = ll.getHighValue();
-        alValue[nIndex+1] = ll.getLowValue();
+        alValue[nIndex]     = ll.getHighValue();
+        alValue[nIndex + 1] = ll.getLowValue();
     }
 
     @Override
@@ -176,15 +176,15 @@ public abstract class LongLongDelegate
 
         int    cSize   = (int) hDelegate.m_cSize;
         long[] alValue = hDelegate.m_alValue;
-        int    nIndex  = (int) lIndex*2;
+        int    nIndex  = (int) lIndex * 2;
 
         if (lIndex < cSize - 1) {
-            System.arraycopy(alValue, nIndex + 2, alValue, nIndex, 2*cSize - nIndex - 2);
-            nIndex = 2*cSize;
+            System.arraycopy(alValue, nIndex + 2, alValue, nIndex, 2 * cSize - nIndex - 2);
+            nIndex = 2 * cSize;
         }
 
-        alValue[nIndex]   = 0;
-        alValue[nIndex+1] = 0;
+        alValue[nIndex]     = 0;
+        alValue[nIndex + 1] = 0;
         hDelegate.m_cSize--;
     }
 
@@ -196,9 +196,9 @@ public abstract class LongLongDelegate
         long[] alValue = hDelegate.m_alValue;
 
         if (lIndex < cSize - cDelete) {
-            int nIndex  = (int) lIndex*2;
-            int nDelete = (int) cDelete*2;
-            System.arraycopy(alValue, nIndex + nDelete, alValue, nIndex, 2*cSize - nIndex - nDelete);
+            int nIndex  = (int) lIndex * 2;
+            int nDelete = (int) cDelete * 2;
+            System.arraycopy(alValue, nIndex + nDelete, alValue, nIndex, 2 * cSize - nIndex - nDelete);
         }
         hDelegate.m_cSize -= cDelete;
     }
@@ -220,7 +220,7 @@ public abstract class LongLongDelegate
             return frame.assignValue(iReturn, xBoolean.FALSE);
         }
 
-        int cStore = (int) h1.m_cSize*2;
+        int cStore = (int) h1.m_cSize * 2;
         return frame.assignValue(iReturn, xBoolean.makeHandle(
                 Arrays.equals(h1.m_alValue, 0, cStore, h2.m_alValue, 0, cStore)));
     }
@@ -243,10 +243,10 @@ public abstract class LongLongDelegate
     // ----- helper methods ------------------------------------------------------------------------
 
     public static long[] reverseLong2(long[] alValue, int cSize) {
-        long[] alValueR = new long[2*cSize];
+        long[] alValueR = new long[2 * cSize];
         for (int i = 0; i < cSize; i++) {
-            alValueR[i]   = alValue[2*cSize - 2 - i];
-            alValueR[i+1] = alValue[2*cSize - 1 - i];
+            alValueR[i]     = alValue[2 * cSize - 2 - i];
+            alValueR[i + 1] = alValue[2 * cSize - 1 - i];
         }
         return alValueR;
     }

@@ -88,7 +88,7 @@ public class Decimal32
             throw new IllegalArgumentException("index out of range: " + i);
         }
 
-        return (m_nBits >>> (i*8)) & 0xFF;
+        return (m_nBits >>> (i * 8)) & 0xFF;
     }
 
     @Override
@@ -293,7 +293,7 @@ public class Decimal32
             // digit d0 is 8+G4, a value 8 or 9, and the leading biased exponent bits are 2*G2 + G3,
             // a value of 0, 1, or 2
             nExp |= ((nCombo & 0b000110000000) >>> 1);    // shift right 7, but then shift left 6
-            nSig = ((nCombo & 0b000001000000) >>> 6) + 8;
+            nSig  = ((nCombo & 0b000001000000) >>> 6) + 8;
         } else {
             // when the most significant five bits of G are 0xxxx or 10xxx, the leading significand
             // digit d0 is 4*G2 + 2*G3 + G4, a value in the range 0 through 7, and the leading
@@ -301,7 +301,7 @@ public class Decimal32
             // the most significant five bits of G are 00000, 01000, or 10000, then the value is 0:
             //      v = (−1) S * (+0)
             nExp |= (nCombo & 0b011000000000) >>> 3;    // shift right 9, but then shift left 6
-            nSig = (nCombo & 0b000111000000) >>> 6;
+            nSig  = (nCombo & 0b000111000000) >>> 6;
         }
 
         // unbias the exponent

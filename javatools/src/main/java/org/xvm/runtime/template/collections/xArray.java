@@ -344,7 +344,7 @@ public class xArray
                 : 0;
 
         ArrayHandle    hArray = createEmptyArray(clzArray, cCapacity, Mutability.Mutable);
-        ObjectHandle[] ahArg = new ObjectHandle[FILL_FROM_ITERABLE.getMaxVars()];
+        ObjectHandle[] ahArg  = new ObjectHandle[FILL_FROM_ITERABLE.getMaxVars()];
         ahArg[0] = clzArray.getType().getParamType(0).ensureTypeHandle(frame.f_context.f_container);
         ahArg[1] = hArray;
         ahArg[2] = hIterable;

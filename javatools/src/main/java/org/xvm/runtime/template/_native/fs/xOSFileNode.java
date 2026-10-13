@@ -240,7 +240,7 @@ public class xOSFileNode
 
         // strip the exception name from the exception class and prepend to the message
         Class<? extends IOException> clzException = e.getClass();
-        String sException  = clzException == IOException.class
+        String sException = clzException == IOException.class
                 ? ""
                 : clzException.getSimpleName().replace("Exception", "") + ": ";
         return frame.raiseException(

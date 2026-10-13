@@ -135,8 +135,8 @@ public class Frame
                     : hTarget.isStruct()
                         ? hTarget
                         : hTarget.revealOrigin();
-        f_ahVar = ahVar;
-        f_aInfo = new VarInfo[ahVar.length];
+        f_ahVar     = ahVar;
+        f_aInfo     = new VarInfo[ahVar.length];
 
         int cScopes = function == null ? 1 : function.getMaxScopes();
         f_anNextVar = new int[cScopes];
@@ -983,7 +983,7 @@ public class Frame
                     break;
 
                 case Op.R_CALL:
-                    int iNext = i+1;
+                    int iNext = i + 1;
                     m_frameNext.addContinuation(
                         frameCaller -> frameCaller.assignValues(anVar, ahValue, iNext, c));
                     return Op.R_CALL;

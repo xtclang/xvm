@@ -178,7 +178,7 @@ public class xModule
                 ObjectHandle hM = frame.getConstHandle(idDep);
                 ahPaths  [index] = xString.makeHandle(entry.getValue());
                 ahModules[index] = hM;
-                fDeferred |= Op.isDeferred(hM);
+                fDeferred       |= Op.isDeferred(hM);
                 ++index;
             }
         }

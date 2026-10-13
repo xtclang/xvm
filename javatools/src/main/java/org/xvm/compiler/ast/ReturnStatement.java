@@ -70,7 +70,7 @@ public class ReturnStatement
 
     @Override
     public long getEndPosition() {
-        return exprs == null ? keyword.getEndPosition() : exprs.get(exprs.size()-1).getEndPosition();
+        return exprs == null ? keyword.getEndPosition() : exprs.get(exprs.size() - 1).getEndPosition();
     }
 
     @Override

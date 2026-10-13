@@ -672,7 +672,7 @@ public class xRTDelegate
             ahValue[cSize] = hElement;
         } else {
             // insert
-            System.arraycopy(ahValue, nIndex, ahValue, nIndex +1, cSize - nIndex);
+            System.arraycopy(ahValue, nIndex, ahValue, nIndex + 1, cSize - nIndex);
             ahValue[nIndex] = hElement;
         }
     }

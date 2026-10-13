@@ -1056,7 +1056,7 @@ public class ServiceContext {
                     return Utils.callFreeze(frame, hArg, null, frameCaller -> {
                         ahArg[ix] = frameCaller.popStack();
                         return validatePassThroughArgs(
-                                frameCaller, container, typeSupplier, ahArg, cArgs, ix+1, fResponse);
+                                frameCaller, container, typeSupplier, ahArg, cArgs, ix + 1, fResponse);
                     });
                 }
 
@@ -1071,7 +1071,7 @@ public class ServiceContext {
                     frame.m_frameNext.addContinuation(frameCaller -> {
                         ahArg[ix] = frameCaller.popStack();
                         return validatePassThroughArgs(
-                                frameCaller, container, typeSupplier, ahArg, cArgs, ix+1, fResponse);
+                                frameCaller, container, typeSupplier, ahArg, cArgs, ix + 1, fResponse);
                     });
                     return Op.R_CALL;
                 }

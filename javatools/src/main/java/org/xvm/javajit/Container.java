@@ -265,7 +265,7 @@ public class Container
             GetInjector = lookup.findGetter(Container.class, "injector", Injector.class);
             SupplierOf  = lookup.findVirtual(Injector.class, "supplierOf",
                                 MethodType.methodType(Function.class, TypeConstant.class, String.class));
-            Apply = lookup.findVirtual(Function.class, "apply",
+            Apply       = lookup.findVirtual(Function.class, "apply",
                                 MethodType.methodType(Object.class, Object.class));
         } catch (NoSuchFieldException | NoSuchMethodException | IllegalAccessException e) {
             throw new ExceptionInInitializerError(e);

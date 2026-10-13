@@ -253,7 +253,7 @@ public class xPackage
     protected int createPackageHandle(Frame frame, TypeComposition clazz) {
         PackageHandle   hStruct     = new PackageHandle(clazz.ensureAccess(Access.STRUCT));
         MethodStructure constructor = clazz.getTemplate().getStructure().findMethod("construct", 0);
-        ObjectHandle[] ahVar       = Utils.ensureSize(Utils.OBJECTS_NONE, constructor.getMaxVars());
+        ObjectHandle[]  ahVar       = Utils.ensureSize(Utils.OBJECTS_NONE, constructor.getMaxVars());
 
         return proceedConstruction(frame, constructor, true, hStruct, ahVar, Op.A_STACK);
     }

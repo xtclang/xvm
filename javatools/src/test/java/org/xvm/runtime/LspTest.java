@@ -49,7 +49,7 @@ public class LspTest {
         dirJavatools = new File(asArg[1]);
 
         Path dirWork = Files.createTempDirectory("xvm-543-repro");
-        dirOut = Files.createDirectory(dirWork.resolve("lib"));
+        dirOut       = Files.createDirectory(dirWork.resolve("lib"));
         EmbeddingSupport.instance().configure(repo(), null);
 
         testCompile();
@@ -297,7 +297,7 @@ public class LspTest {
 
     private static void testPoolGrows() throws Exception {
         EmbeddingSupport support = EmbeddingSupport.instance();
-        ErrorList  errs    = new ErrorList(256);
+        ErrorList errs = new ErrorList(256);
 
         // each run uses a DISTINCT core parameterized-type combination, so each interns novel
         // constants into the shared native plane - the "many different generic shapes over one

@@ -152,7 +152,7 @@ public class ForStatement
         }
 
         // create, store, and return a label for this specific init/update node
-        Label   label = new Label("ground_" + desc + "_" + index + "_of_" + count + "_for_" + getLabelId());
+        Label   label  = new Label("ground_" + desc + "_" + index + "_of_" + count + "_for_" + getLabelId());
         Label[] labels = fInit ? m_alabelInitGround : m_alabelUpdateGround;
         if (labels == null) {
             labels = new Label[count];

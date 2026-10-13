@@ -210,8 +210,8 @@ public class LiteralConstant
         // (note that the literal may begin with a minus sign)
         String s  = getValue();
         int    of = s.startsWith("-") ? 1 : 0;
-        if (s.length() > of+2 && s.charAt(of) == '0') {
-            switch (s.charAt(of+1)) {
+        if (s.length() > of + 2 && s.charAt(of) == '0') {
+            switch (s.charAt(of + 1)) {
             case 'B':
             case 'b':
                 assert getFormat() == Format.IntLiteral;
@@ -744,8 +744,8 @@ public class LiteralConstant
         case "IntLiteral<<IntLiteral":
         case "IntLiteral>>IntLiteral":
         case "IntLiteral>>>IntLiteral": {
-            PackedInteger piThis   = this.getPackedInteger();
-            PackedInteger piThat   = ((LiteralConstant) that).getPackedInteger();
+            PackedInteger piThis = this.getPackedInteger();
+            PackedInteger piThat = ((LiteralConstant) that).getPackedInteger();
             PackedInteger piResult;
             switch (op) {
             case ADD:
@@ -883,8 +883,8 @@ public class LiteralConstant
         case "IntLiteral&UInt":
         case "IntLiteral|UInt":
         case "IntLiteral^UInt": {
-            PackedInteger piThis   = this.getPackedInteger();
-            PackedInteger piThat   = ((IntConstant) that).getValue();
+            PackedInteger piThis = this.getPackedInteger();
+            PackedInteger piThat = ((IntConstant) that).getValue();
             PackedInteger piResult;
             switch (op) {
             case ADD:

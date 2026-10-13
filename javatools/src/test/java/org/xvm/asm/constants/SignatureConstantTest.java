@@ -20,8 +20,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class SignatureConstantTest {
     @Test
     public void resolvingGenericPropertySignaturePreservesCanonicalInstances() {
-        FileStructure  file   = new FileStructure("test");
-        ConstantPool   pool   = file.getConstantPool();
+        FileStructure file = new FileStructure("test");
+        ConstantPool  pool = file.getConstantPool();
         ModuleStructure module = file.getModule();
 
         ClassStructure actual = module.createClass(

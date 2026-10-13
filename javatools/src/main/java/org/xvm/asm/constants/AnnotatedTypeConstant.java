@@ -593,8 +593,8 @@ public class AnnotatedTypeConstant
 
     @Override
     public ClassTemplate getTemplate(Container container) {
-        TypeConstant     typeBase    = getUnderlyingType();
-        IdentityConstant constIdAnno = (IdentityConstant) getAnnotation().getAnnotationClass();
+        TypeConstant     typeBase     = getUnderlyingType();
+        IdentityConstant constIdAnno  = (IdentityConstant) getAnnotation().getAnnotationClass();
         ClassTemplate    templateAnno = container.getTemplate(constIdAnno);
 
         // if the annotation itself is native, it overrides the base type template (support);

@@ -719,7 +719,7 @@ public class CommonBuilder
 
         case NullablePrimitive:
             classBuilder.withField(jitName, JitTypeDesc.requirePrimitiveFieldClass(prop.getType()), flags);
-            classBuilder.withField(jitName+EXT, CD_boolean, flags);
+            classBuilder.withField(jitName + EXT, CD_boolean, flags);
             break;
 
         case XvmPrimitive:
@@ -727,7 +727,7 @@ public class CommonBuilder
             ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(prop.getType());
             assert cds != null && cds.length > 0;
             for (int i = 0; i < cds.length; i++) {
-                classBuilder.withField(jitName+ "$" + i, cds[i], flags);
+                classBuilder.withField(jitName + "$" + i, cds[i], flags);
             }
             if (jtd.flavor == NullableXvmPrimitive) {
                 classBuilder.withField(jitName + EXT, CD_boolean, flags);
@@ -1327,15 +1327,15 @@ public class CommonBuilder
         String jitGetterName = prop.ensureGetterJitMethodName(typeSystem);
         String jitFieldName  = prop.getIdentity().ensureJitPropertyName(typeSystem);
 
-        ClassDesc CD_this = art.CD();
-        int       flags   = ClassFile.ACC_PUBLIC;
-        JitMethodDesc jmd = prop.getGetterJitDesc(this, thisType);
+        ClassDesc     CD_this = art.CD();
+        int           flags   = ClassFile.ACC_PUBLIC;
+        JitMethodDesc jmd     = prop.getGetterJitDesc(this, thisType);
         if (jmd.isOptimizedStatic) {
             flags |= ClassFile.ACC_STATIC;
         }
         boolean        isOpt   = jmd.isOptimized;
         MethodTypeDesc md      = isOpt ? jmd.optimizedMD : jmd.standardMD;
-        String         jitName = isOpt ? jitGetterName+OPT : jitGetterName;
+        String         jitName = isOpt ? jitGetterName + OPT : jitGetterName;
 
         classBuilder.withMethodBody(jitName, md, flags, code -> {
             int ctxSlot = code.parameterSlot(isOpt ? jmd.optimizedCtx() : jmd.standardCtx());
@@ -1358,12 +1358,12 @@ public class CommonBuilder
                 case NullablePrimitive:
                     if (prop.isConstant()) {
                         code.getstatic(CD_this, jitFieldName, fieldCD)
-                            .getstatic(CD_this, jitFieldName+EXT, CD_boolean);
+                            .getstatic(CD_this, jitFieldName + EXT, CD_boolean);
                     } else {
                         loadPropertyOwner(code, jmd);
                         code.getfield(CD_this, jitFieldName, fieldCD);
                         loadPropertyOwner(code, jmd);
-                        code.getfield(CD_this, jitFieldName+EXT, CD_boolean);
+                        code.getfield(CD_this, jitFieldName + EXT, CD_boolean);
                     }
                     storeToContext(code, CD_boolean, jmd.optimizedReturns[1].altIndex, ctxSlot);
                     normalizePrimitiveField(code, type);
@@ -1434,7 +1434,7 @@ public class CommonBuilder
         JitMethodDesc  jmd     = prop.getSetterJitDesc(this, thisType);
         boolean        isOpt   = jmd.isOptimized;
         MethodTypeDesc md      = isOpt ? jmd.optimizedMD : jmd.standardMD;
-        String         jitName = isOpt ? jitSetterName+OPT : jitSetterName;
+        String         jitName = isOpt ? jitSetterName + OPT : jitSetterName;
         int            flags   = ClassFile.ACC_PUBLIC;
 
         if (jmd.isOptimizedStatic) {
@@ -1478,14 +1478,14 @@ public class CommonBuilder
                         load(code, fieldCD, argSlot);
                         code.putstatic(CD_this, jitFieldName, fieldCD)
                             .iload(extSlot)
-                            .putstatic(CD_this, jitFieldName+EXT, CD_boolean);
+                            .putstatic(CD_this, jitFieldName + EXT, CD_boolean);
                     } else {
                         code.aload(0);
                         load(code, fieldCD, argSlot);
                         code.putfield(CD_this, jitFieldName, fieldCD)
                             .aload(0)
                             .iload(extSlot)
-                            .putfield(CD_this, jitFieldName+EXT, CD_boolean);
+                            .putfield(CD_this, jitFieldName + EXT, CD_boolean);
                     }
                     break;
 
@@ -1523,11 +1523,11 @@ public class CommonBuilder
                     }
                     if (prop.isConstant()) {
                         code.iload(argSlot)
-                                .putstatic(CD_this, jitFieldName+EXT, CD_boolean);
+                                .putstatic(CD_this, jitFieldName + EXT, CD_boolean);
                     } else {
                         code.aload(0)
                                 .iload(argSlot)
-                                .putfield(CD_this, jitFieldName+EXT, CD_boolean);
+                                .putfield(CD_this, jitFieldName + EXT, CD_boolean);
                     }
                     break;
 
@@ -1582,7 +1582,7 @@ public class CommonBuilder
         JitMethodDesc  jmd     = prop.getGetterJitDesc(this, thisType);
         boolean        isOpt   = jmd.isOptimized;
         MethodTypeDesc md      = isOpt ? jmd.optimizedMD : jmd.standardMD;
-        String         jitName = isOpt ? jitGetterName+OPT : jitGetterName;
+        String         jitName = isOpt ? jitGetterName + OPT : jitGetterName;
 
         classBuilder.withMethodBody(jitName, md, flags, code -> {
             // generate the following:
@@ -1604,7 +1604,7 @@ public class CommonBuilder
                 case NullablePrimitive:
                     code.aload(0)
                         .getfield(CD_this, jitFieldName, fieldCD)
-                        .getfield(CD_this, jitFieldName+EXT, CD_boolean);
+                        .getfield(CD_this, jitFieldName + EXT, CD_boolean);
                     throw new UnsupportedOperationException("MultiSlotPrimitive injection");
 
                 case XvmPrimitive:
@@ -1742,7 +1742,7 @@ public class CommonBuilder
             ClassStructure childStruct = (ClassStructure) child.getComponent();
             TypeConstant   childJIC    = childStruct.getFormalType().
                                             resolveGenerics(pool(), childType).getJitICType();
-            TypeInfo infoJIC = childJIC.ensureAccess(Access.PRIVATE).ensureTypeInfo();
+            TypeInfo       infoJIC     = childJIC.ensureAccess(Access.PRIVATE).ensureTypeInfo();
             if (infoJIC.isAbstract()) {
                 continue;
             }
@@ -1762,7 +1762,7 @@ public class CommonBuilder
 
                 String factoryName = childName +
                         baseCtor.ensureJitMethodName(typeSystem).replace("construct", NEW);
-                String instorName = ctor.ensureJitMethodName(typeSystem).replace("construct", NEW);
+                String instorName  = ctor.ensureJitMethodName(typeSystem).replace("construct", NEW);
 
                 JitMethodDesc instorJmd = convertConstructToNew(infoJIC, childCD,
                         (JitCtorDesc) ctor.getJitDesc(this, childJIC));
@@ -2188,11 +2188,11 @@ public class CommonBuilder
             // for primitive classes e.g. Int64, the "this" is actually a Java primitive, and thus
             // the "method" is not a method at all, but a function
             if (jmd.isOptimizedStatic) {
-                code.invokestatic(CD_this, jitName+OPT, jmd.optimizedMD, isInterface);
+                code.invokestatic(CD_this, jitName + OPT, jmd.optimizedMD, isInterface);
             } else if (isInterface) {
-                code.invokeinterface(CD_this, jitName+OPT, jmd.optimizedMD);
+                code.invokeinterface(CD_this, jitName + OPT, jmd.optimizedMD);
             } else {
-                code.invokevirtual(CD_this, jitName+OPT, jmd.optimizedMD);
+                code.invokevirtual(CD_this, jitName + OPT, jmd.optimizedMD);
             }
 
             JitParamDesc[] optReturns     = jmd.optimizedReturns;
@@ -2205,7 +2205,7 @@ public class CommonBuilder
             }
 
             // the natural return is at the top of the stack now; iterate returns in the inverse order
-            for (int optIx = optReturnCount-1, stdIx = stdReturnCount-1; optIx >= 0; optIx--) {
+            for (int optIx = optReturnCount - 1, stdIx = stdReturnCount - 1; optIx >= 0; optIx--) {
                 JitParamDesc optDesc = optReturns[optIx];
                 if (optDesc.extension) {
                     // since we are in the reverse order, the "actual" return will use this value
@@ -3639,7 +3639,7 @@ public class CommonBuilder
         assembleStandardCap(classBuilder, srcName, dstName, jmdSrc, jmdDst);
         if (jmdSrc.isOptimized) {
             assert jmdDst.isOptimized;
-            assembleOptimizedCap(classBuilder, srcName+OPT, dstName+OPT, jmdSrc, jmdDst);
+            assembleOptimizedCap(classBuilder, srcName + OPT, dstName + OPT, jmdSrc, jmdDst);
         }
     }
 
@@ -3960,7 +3960,7 @@ public class CommonBuilder
             jmd.standardMD, extraCount, jmd.standardParams, jmd.standardReturns);
 
         if (jmd.isOptimized) {
-            assembleDelegation(classBuilder, propDelegate, srcName+OPT, dstName+OPT, dstMethod,
+            assembleDelegation(classBuilder, propDelegate, srcName + OPT, dstName + OPT, dstMethod,
                 jmd.optimizedMD, extraCount, jmd.optimizedParams, jmd.optimizedReturns);
         }
     }
@@ -4160,7 +4160,7 @@ public class CommonBuilder
 
             classBuilder.withMethod(jitName, jmd.standardMD, flags, code -> {});
             if (jmd.isOptimized) {
-                classBuilder.withMethod(jitName+OPT, jmd.optimizedMD, flags, code -> {});
+                classBuilder.withMethod(jitName + OPT, jmd.optimizedMD, flags, code -> {});
             }
             return;
         }
@@ -4258,8 +4258,8 @@ public class CommonBuilder
             MethodTypeDesc ctorMd;
             if (jmd.isOptimized) {
                 ctorName += OPT;
-                ctorPds = ctorDesc.optimizedParams;
-                ctorMd  = ctorDesc.optimizedMD;
+                ctorPds   = ctorDesc.optimizedParams;
+                ctorMd    = ctorDesc.optimizedMD;
             } else {
                 ctorPds = ctorDesc.standardParams;
                 ctorMd  = ctorDesc.standardMD;

@@ -206,7 +206,7 @@ public class AugmentingBuilder extends CommonBuilder {
             String        newName = jitName.replace("construct", typeInfo.isSingleton() ? INIT : NEW);
             JitMethodDesc newJmd  = Builder.convertConstructToNew(typeInfo, art.CD(), (JitCtorDesc) jmd);
             MethodModel   newMM   = newJmd.isOptimized
-                    ? findMethod(newName+OPT, newJmd.optimizedMD)
+                    ? findMethod(newName + OPT, newJmd.optimizedMD)
                     : findMethod(newName, newJmd.standardMD);
             if (newMM != null) {
                 // the "new" method has been natively implemented; we should not attempt to generate
@@ -216,7 +216,7 @@ public class AugmentingBuilder extends CommonBuilder {
         }
 
         MethodModel mm = jmd.isOptimized
-                ? findMethod(jitName+OPT, jmd.optimizedMD)
+                ? findMethod(jitName + OPT, jmd.optimizedMD)
                 : findMethod(jitName, jmd.standardMD);
 
         if (mm != null &&
@@ -235,8 +235,8 @@ public class AugmentingBuilder extends CommonBuilder {
                 TypeConstant  typeDeclared = method.getJitIdentity().getClassIdentity().getType();
                 JitMethodDesc jmdDeclared  = method.getJitDesc(this, typeDeclared);
                 if (jmdDeclared.isOptimized && !jmdDeclared.isOptimizedStatic &&
-                        findMethod(jitName+OPT, jmdDeclared.optimizedMD) == null) {
-                    assembleOptimizedCap(classBuilder, jitName+OPT, jitName+OPT, jmdDeclared, jmd);
+                        findMethod(jitName + OPT, jmdDeclared.optimizedMD) == null) {
+                    assembleOptimizedCap(classBuilder, jitName + OPT, jitName + OPT, jmdDeclared, jmd);
                 }
             }
 
@@ -269,7 +269,7 @@ public class AugmentingBuilder extends CommonBuilder {
             ClassBuilder classBuilder, MethodInfo constructor,
             String jitName, JitMethodDesc jmd) {
         MethodModel mm = jmd.isOptimized
-                ? findMethod(jitName+OPT, jmd.optimizedMD)
+                ? findMethod(jitName + OPT, jmd.optimizedMD)
                 : findMethod(jitName, jmd.standardMD);
 
         if (mm != null) {

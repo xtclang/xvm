@@ -129,7 +129,7 @@ public class xRTStringDelegate
                                        ObjectHandle hValue) {
         StringArrayHandle hDelegate = (StringArrayHandle) hTarget;
 
-        int    cSize   = (int) hDelegate.m_cSize;
+        int cSize = (int) hDelegate.m_cSize;
         String[] abValue = hDelegate.m_asValue;
 
         if (lIndex == cSize) {
@@ -171,7 +171,7 @@ public class xRTStringDelegate
 
         if (lIndex < cSize - 1) {
             int nIndex = (int) lIndex;
-            System.arraycopy(asValue, nIndex + 1, asValue, nIndex, cSize - nIndex -1);
+            System.arraycopy(asValue, nIndex + 1, asValue, nIndex, cSize - nIndex - 1);
         }
         asValue[(int) --hDelegate.m_cSize] = null;
     }
@@ -294,7 +294,7 @@ public class xRTStringDelegate
             if (isMutable()) {
                 // purge the unused space
                 String[] as = m_asValue;
-                int    c  = (int) m_cSize;
+                int c = (int) m_cSize;
                 if (as.length != c) {
                     String[] asNew = new String[c];
                     System.arraycopy(as, 0, asNew, 0, c);

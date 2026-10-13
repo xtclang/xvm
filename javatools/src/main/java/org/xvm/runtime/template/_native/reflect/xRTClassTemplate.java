@@ -68,11 +68,11 @@ public class xRTClassTemplate
             CLASS_TEMPLATE_ARRAY_TYPE = pool.ensureArrayType(CLASS_TEMPLATE_TYPE);
             CONTRIBUTION_ARRAY_TYPE   = pool.ensureArrayType(pool.ensureEcstasyTypeConstant(
                                             "reflect.ClassTemplate.Composition.Contribution"));
-            MULTI_METHOD_ARRAY_TYPE = pool.ensureArrayType(pool.ensureEcstasyTypeConstant(
+            MULTI_METHOD_ARRAY_TYPE   = pool.ensureArrayType(pool.ensureEcstasyTypeConstant(
                                             "reflect.MultiMethodTemplate"));
-            METHOD_ARRAY_TYPE = pool.ensureArrayType(pool.ensureEcstasyTypeConstant(
+            METHOD_ARRAY_TYPE         = pool.ensureArrayType(pool.ensureEcstasyTypeConstant(
                                             "reflect.MethodTemplate"));
-            ANNOTATION_ARRAY_TYPE = pool.ensureArrayType(pool.ensureEcstasyTypeConstant(
+            ANNOTATION_ARRAY_TYPE     = pool.ensureArrayType(pool.ensureEcstasyTypeConstant(
                                             "reflect.AnnotationTemplate"));
 
             EMPTY_PARAMETER_ARRAY = pool.ensureArrayConstant(
@@ -323,7 +323,7 @@ public class xRTClassTemplate
                 if (cConstraints > 0) {
                     StringHandle[] ahNames = new StringHandle[cConstraints];
                     TypeHandle[]   ahTypes = new TypeHandle[cConstraints];
-                    int            i = 0;
+                    int            i       = 0;
                     for (Map.Entry<StringConstant, TypeConstant> entry : mapConstraints.entrySet()) {
                         String       sName = entry.getKey().getValue();
                         TypeConstant type  = entry.getValue();

@@ -637,7 +637,7 @@ public class MethodStructure
         m_fNative     = false;
         m_aconstLocal = null;
         m_abOps       = null;
-        m_code = code = new Code(this);
+        m_code        = code = new Code(this);
 
         markModified();
 
@@ -1854,7 +1854,7 @@ public class MethodStructure
         Parameter[] aReturns = new Parameter[cReturns];
         boolean     fCond    = isConditionalReturn();
         for (int i = 0; i < cReturns; ++i) {
-            Parameter param = new Parameter(pool, in, true, i, i==0 && fCond);
+            Parameter param = new Parameter(pool, in, true, i, i == 0 && fCond);
             if (!param.getType().equals(aconstReturnTypes[i])) {
                 throw new IOException("type mismatch between method constant and return " + i + " value type");
             }
@@ -2801,7 +2801,7 @@ public class MethodStructure
             for (int iLine = iFirst; iLine <= iLast; ++iLine) {
                 StringConstant constLine = m_aconstSrc[iLine];
                 if (constLine == null) {
-                    asLine[iLine-iFirst] = "";
+                    asLine[iLine - iFirst] = "";
                 } else {
                     int nIndent = m_anIndents[iLine] - cTrim;
                     if (nIndent != 0) {
@@ -2813,9 +2813,9 @@ public class MethodStructure
                         }
 
                         sb.append(constLine.getValue());
-                        asLine[iLine-iFirst] = sb.toString();
+                        asLine[iLine - iFirst] = sb.toString();
                     } else {
-                        asLine[iLine-iFirst] = constLine.getValue();
+                        asLine[iLine - iFirst] = constLine.getValue();
                     }
                 }
             }
@@ -2837,7 +2837,7 @@ public class MethodStructure
                 for (int iLine = 0; iLine < cLines; ++iLine) {
                     String sLine = asLine[iLine];
                     int    ofEnd = sLine.length();
-                    while (ofEnd > 0 && Character.isWhitespace(sLine.charAt(ofEnd-1))) {
+                    while (ofEnd > 0 && Character.isWhitespace(sLine.charAt(ofEnd - 1))) {
                         --ofEnd;
                     }
 

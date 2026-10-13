@@ -263,7 +263,7 @@ public class ClassConstant
         }
 
         if (cLevels > 1) {
-            constPath = redescend(constPath, constChild.getParentConstant(), cLevels-1);
+            constPath = redescend(constPath, constChild.getParentConstant(), cLevels - 1);
         }
 
         return getConstantPool().ensureChildClassConstant(constPath, constChild.getName());

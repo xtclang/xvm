@@ -700,8 +700,8 @@ public class xRTType
                     for (int i = 0; i < cParams; ++i) {
                         Parameter param = aParams[i];
                         assert !param.isTypeParameter();
-                        aParamsNew[i+1] = new Parameter(pool, param.getType(), param.getName(),
-                                param.getDefaultValue(), false, i+1, false);
+                        aParamsNew[i + 1] = new Parameter(pool, param.getType(), param.getName(),
+                                param.getDefaultValue(), false, i + 1, false);
                     }
 
                     atypeParams = atypeNew;

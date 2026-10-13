@@ -574,7 +574,7 @@ public class VersionTree<V>
             Node[] siblings = parent.kids;
             for (int i = 0, c = siblings.length; i < c; ++i) {
                 if (siblings[i] == this) {
-                    return i < c-1 ? siblings[i+1] : null;
+                    return i < c - 1 ? siblings[i + 1] : null;
                 }
             }
 
@@ -745,7 +745,7 @@ public class VersionTree<V>
                             }
 
                             Node node = kid.part == nPart
-                                    ? kid.findHighestNode(parts, i+1)
+                                    ? kid.findHighestNode(parts, i + 1)
                                     : kid.findHighestNode();
                             if (node != null) {
                                 if (node.getVersion().isGARelease()) {
@@ -895,7 +895,7 @@ public class VersionTree<V>
                         return;
                     }
 
-                    boolean fLast = (i == c-1 || kids[i+1] == null);
+                    boolean fLast = (i == c - 1 || kids[i + 1] == null);
                     cur.render(sb, sIndentNext, fLast ? sIndentLast : sIndentKids);
                 }
             }
@@ -975,7 +975,7 @@ public class VersionTree<V>
 
             // make sure that there's room in the array
             int c = nodes.length;
-            if (nodes[c-1] != null) {
+            if (nodes[c - 1] != null) {
                 // allocate and copy to a new array
                 int    cNew     = c * 2;
                 Node[] nodesNew = new Node[cNew];
@@ -997,7 +997,7 @@ public class VersionTree<V>
 
                 if (nodePart <= cur.part) {
                     assert nodePart != cur.part;
-                    System.arraycopy(nodes, i, nodes, i+1, c-i-1);
+                    System.arraycopy(nodes, i, nodes, i + 1, c - i - 1);
                     nodes[i] = node;
                     return nodes;
                 }

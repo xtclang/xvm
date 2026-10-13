@@ -228,7 +228,7 @@ public class xTerminalConsole
     public static       LineReader     READER;
     public static       Terminal       TERMINAL;
     static {
-        CONSOLE_IN = CONSOLE == null || CONSOLE.reader() == null
+        CONSOLE_IN  = CONSOLE == null || CONSOLE.reader() == null
                 ? new BufferedReader(new InputStreamReader(System.in))
                 : new BufferedReader(CONSOLE.reader());
         CONSOLE_OUT = CONSOLE == null || CONSOLE.writer() == null

@@ -1503,7 +1503,7 @@ public abstract class Component
             // TODO verify visibility
             // TODO verify compatibility of the two components, e.g. must be either class or property, property must match property, can't have interface->class, etc.
             // TODO the possibility of compatibility issues probably implies that an error listener should be passed in
-            Object oResult = child.findVirtualChildSuper(idVirtChild, cDepth-1, setVisited);
+            Object oResult = child.findVirtualChildSuper(idVirtChild, cDepth - 1, setVisited);
             if (oResult != null) {
                 return oResult;
             }
@@ -2680,11 +2680,11 @@ public abstract class Component
          * @param that  the Contribution to copy
          */
         private Contribution(Contribution that) {
-            m_composition = that.m_composition;
-            m_typeContrib = that.m_typeContrib;
-            m_constProp   = that.m_constProp;
-            m_annotation  = that.m_annotation;
-            m_mapParams   = that.m_mapParams == null
+            m_composition   = that.m_composition;
+            m_typeContrib   = that.m_typeContrib;
+            m_constProp     = that.m_constProp;
+            m_annotation    = that.m_annotation;
+            m_mapParams     = that.m_mapParams == null
                     ? null
                     : new ListMap<>(that.m_mapParams);
             m_constInjector = that.m_constInjector;

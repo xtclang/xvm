@@ -133,7 +133,7 @@ public class SwitchStatement
 
                     group.fScope          = ctxBlock.isAnyVarDeclaredInThisScope();
                     group.labelContinueTo = m_labelContinue;
-                    group = null;
+                    group                 = null;
 
                     ctxBlock.exit();
                     ctxBlock = null;

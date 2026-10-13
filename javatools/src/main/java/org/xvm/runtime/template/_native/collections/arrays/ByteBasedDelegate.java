@@ -263,7 +263,7 @@ public abstract class ByteBasedDelegate
             --hDelegate.m_abValue[(int) lIndex];
             return overflow(frame);
         }
-        return frame.assignValue(iReturn, makeElementHandle(bValue+1));
+        return frame.assignValue(iReturn, makeElementHandle(bValue + 1));
     }
 
     @Override
@@ -280,7 +280,7 @@ public abstract class ByteBasedDelegate
             ++hDelegate.m_abValue[(int) lIndex];
             return overflow(frame);
         }
-        return frame.assignValue(iReturn, makeElementHandle(bValue-1));
+        return frame.assignValue(iReturn, makeElementHandle(bValue - 1));
     }
 
     @Override
@@ -409,7 +409,7 @@ public abstract class ByteBasedDelegate
          * @return the number of bits represented by this handle
          */
         public long getBitCount() {
-            return m_cSize*8;
+            return m_cSize * 8;
         }
 
         protected void purgeUnusedSpace() {

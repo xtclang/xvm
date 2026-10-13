@@ -140,7 +140,7 @@ public interface EnumBuilderSupport {
         int               flags     = ClassFile.ACC_PUBLIC | ClassFile.ACC_STATIC;
 
         // Boolean is **the only** optimized type that is an Enum; treat is separately
-        classBuilder.withMethodBody(eqSig.getName()+OPT, eqJmd.optimizedMD, flags,
+        classBuilder.withMethodBody(eqSig.getName() + OPT, eqJmd.optimizedMD, flags,
                 isBoolean ? this::assembleBooleanEquals : this::assembleEquals);
 
         SignatureConstant cmpSig    = pool.sigCompare();
@@ -151,7 +151,7 @@ public interface EnumBuilderSupport {
         if (isBoolean) {
             assert cmpJmd.isOptimized;
             builder.assembleMethodWrapper(classBuilder, cmpName, cmpJmd);
-            classBuilder.withMethodBody(cmpName+OPT, cmpJmd.optimizedMD, flags,
+            classBuilder.withMethodBody(cmpName + OPT, cmpJmd.optimizedMD, flags,
                     code -> assembleBooleanCompare(builder, code));
         } else {
             assert !cmpJmd.isOptimized;

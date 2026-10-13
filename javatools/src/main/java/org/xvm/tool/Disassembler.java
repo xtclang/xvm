@@ -309,8 +309,8 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
             } else {
                 buf.append(' ');
                 // four digit year
-                String s = String.valueOf(10000+time.getYear());
-                buf.append(s.substring(s.length()-4));
+                String s = String.valueOf(10000 + time.getYear());
+                buf.append(s.substring(s.length() - 4));
             }
         }
 
@@ -344,12 +344,12 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
                 int    cKidNodes  = aKidNodes.length;
                 String nextIndent = " |- ";
                 if (!indent.isEmpty()) {
-                    nextIndent = indent.substring(0, indent.length()-4)
+                    nextIndent = indent.substring(0, indent.length() - 4)
                                + (last ? "    " : " |  ")
                                + nextIndent;
                 }
                 for (int i = 0; i < cKidNodes; ++i) {
-                    printNode(aKidNodes[i], nextIndent, i == cKidNodes-1, false, visited, idLen, sizeLen);
+                    printNode(aKidNodes[i], nextIndent, i == cKidNodes - 1, false, visited, idLen, sizeLen);
                 }
             }
             break;

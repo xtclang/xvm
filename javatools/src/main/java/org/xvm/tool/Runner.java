@@ -91,11 +91,11 @@ public class Runner extends Launcher<RunnerOptions> {
             return 1;
         }
 
-        File            fileSpec   = optFileSpec.get();
-        String          filePath   = fileSpec.getPath();
-        File            fileBin    = null;
-        boolean         binExists  = false;
-        ModuleStructure module     = null;
+        File            fileSpec  = optFileSpec.get();
+        String          filePath  = fileSpec.getPath();
+        File            fileBin   = null;
+        boolean         binExists = false;
+        ModuleStructure module    = null;
         String          binLocDesc;
 
         if (isExplicitCompiledFile(filePath) && fileSpec.exists() &&
@@ -175,7 +175,7 @@ public class Runner extends Launcher<RunnerOptions> {
                     log(ERROR, "Runner invoked compilation failed with exit code {}", exitCode);
                     return checkErrors("compilation");
                 }
-                info = new ModuleInfo(fileSpec, opts.mayDeduceLocations(), outFile.orElse(null));
+                info      = new ModuleInfo(fileSpec, opts.mayDeduceLocations(), outFile.orElse(null));
                 fileBin   = info.getBinaryFile();
                 binExists = fileBin != null && fileBin.exists();
                 repo      = configureLibraryRepo(opts.getModulePath());

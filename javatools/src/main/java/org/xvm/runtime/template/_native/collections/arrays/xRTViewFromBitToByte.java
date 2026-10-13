@@ -47,25 +47,25 @@ public class xRTViewFromBitToByte
         if (hSource instanceof SliceHandle hSlice) {
             // bits.slice().asByteArray() -> bits.asByteArray().slice()
             ViewHandle hView = new ViewHandle(clzView,
-                    hSlice.f_hSource, hSlice.f_hSource.m_cSize/8, mutability);
+                    hSlice.f_hSource, hSlice.f_hSource.m_cSize / 8, mutability);
 
-            return slice(hView, hSlice.f_ofStart/8, hSlice.m_cSize/8, hSlice.f_fReverse);
+            return slice(hView, hSlice.f_ofStart / 8, hSlice.m_cSize / 8, hSlice.f_fReverse);
         }
 
         if (hSource instanceof LongBasedBitView.ViewHandle hView) {
-            return new ViewHandle(clzView, hView.f_hSource, hView.m_cSize/8, mutability);
+            return new ViewHandle(clzView, hView.f_hSource, hView.m_cSize / 8, mutability);
         }
 
         if (hSource instanceof xRTViewFromBit.ViewHandle hView) {
-            return new ViewHandle(clzView, hView.f_hSource, hView.m_cSize/8, mutability);
+            return new ViewHandle(clzView, hView.f_hSource, hView.m_cSize / 8, mutability);
         }
 
         if (hSource instanceof ByteBasedDelegate.ByteArrayHandle hDelegate) {
-            return new ViewHandle(clzView, hDelegate, hDelegate.getBitCount()/8, mutability);
+            return new ViewHandle(clzView, hDelegate, hDelegate.getBitCount() / 8, mutability);
         }
 
         if (hSource instanceof xRTViewToBitFromFloat64.ViewHandle hView) {
-            return new ViewHandle(clzView, hView, hView.m_cSize/8, mutability);
+            return new ViewHandle(clzView, hView, hView.m_cSize / 8, mutability);
         }
 
         throw new UnsupportedOperationException();

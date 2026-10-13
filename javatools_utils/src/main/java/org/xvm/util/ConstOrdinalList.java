@@ -152,31 +152,31 @@ public class ConstOrdinalList
         int  nCount  = (int) lIntVal;
         if (index >= nCount) {
             throw new IndexOutOfBoundsException("requested index=" + index
-                    + ", highest legal index=" + (nCount-1));
+                    + ", highest legal index=" + (nCount - 1));
         }
 
-        lIntVal = unpackInt(m_ab, ofCur);
+        lIntVal      = unpackInt(m_ab, ofCur);
         ofCur       += (int) (lIntVal >>> 32);
         int nDefault = (int) lIntVal;
 
-        lIntVal = unpackInt(m_ab, ofCur);
+        lIntVal      = unpackInt(m_ab, ofCur);
         ofCur       += (int) (lIntVal >>> 32);
         int cBitsPer = (int) lIntVal;
 
-        lIntVal = unpackInt(m_ab, ofCur);
-        ofCur       += (int) (lIntVal >>> 32);
+        lIntVal   = unpackInt(m_ab, ofCur);
+        ofCur    += (int) (lIntVal >>> 32);
         int idCur = (int) lIntVal;
 
         if (index < idCur) {
             return nDefault;
         }
         while (true) {
-            lIntVal = unpackInt(m_ab, ofCur);
+            lIntVal    = unpackInt(m_ab, ofCur);
             ofCur     += (int) (lIntVal >>> 32);
             int idSkip = (int) lIntVal;
 
             if (idSkip != 0) {
-                lIntVal = unpackInt(m_ab, ofCur);
+                lIntVal    = unpackInt(m_ab, ofCur);
                 ofCur     += (int) (lIntVal >>> 32);
                 int ofSkip = (int) lIntVal;
 
@@ -191,17 +191,17 @@ public class ConstOrdinalList
             // 1) between the current point and the end of values present in this node
             // 2) after this node but before the next node (or there is no next node)
             // 3) somewhere after the start of the next node (i.e. only if there is a next node)
-            lIntVal = unpackInt(m_ab, ofCur);
+            lIntVal    = unpackInt(m_ab, ofCur);
             ofCur     += (int) (lIntVal >>> 32);
             int idNext = (int) lIntVal;
 
-            lIntVal = unpackInt(m_ab, ofCur);
-            ofCur     += (int) (lIntVal >>> 32);
+            lIntVal  = unpackInt(m_ab, ofCur);
+            ofCur   += (int) (lIntVal >>> 32);
             int nLen = (int) lIntVal;
 
             if (nLen < 0) {
-                lIntVal = unpackInt(m_ab, ofCur);
-                ofCur     += (int) (lIntVal >>> 32);
+                lIntVal  = unpackInt(m_ab, ofCur);
+                ofCur   += (int) (lIntVal >>> 32);
                 int nVal = (int) lIntVal;
 
                 if (index < idCur - nLen) {
@@ -232,16 +232,16 @@ public class ConstOrdinalList
             return Collections.emptyIterator();
         }
 
-        lIntVal = unpackInt(m_ab, ofCur);
+        lIntVal      = unpackInt(m_ab, ofCur);
         ofCur       += (int) (lIntVal >>> 32);
         int nDefault = (int) lIntVal;
 
-        lIntVal = unpackInt(m_ab, ofCur);
+        lIntVal      = unpackInt(m_ab, ofCur);
         ofCur       += (int) (lIntVal >>> 32);
         int cBitsPer = (int) lIntVal;
 
-        lIntVal = unpackInt(m_ab, ofCur);
-        ofCur       += (int) (lIntVal >>> 32);
+        lIntVal     = unpackInt(m_ab, ofCur);
+        ofCur      += (int) (lIntVal >>> 32);
         int idFirst = (int) lIntVal;
         int ofFirst = ofCur;
 
@@ -300,7 +300,7 @@ public class ConstOrdinalList
 
                     idNode += node.idNext;
                     ofNext += fromBytes(node, ab, ofNext, cBitsPer);
-                    iNext = 0;
+                    iNext   = 0;
 
                     if (node.idNext == 0) {
                         // extend the last node to the end of the array by pretending that it has
@@ -349,7 +349,7 @@ public class ConstOrdinalList
             assert n >= 0;
 
             // count incidence of values (outside of runs)
-            mapN.compute(n, (k, v) -> (v==null?0:v) + 1);
+            mapN.compute(n, (k, v) -> (v == null?0:v) + 1);
 
             // determine highest magnitude value
             if (n > nHigh) {
@@ -384,11 +384,11 @@ public class ConstOrdinalList
         Node[] aNode  = list.toArray(new Node[0]);
         int    cNodes = aNode.length;
         for (int i = 1; i < cNodes; ++i) {
-            aNode[i-1].next = aNode[i];
+            aNode[i - 1].next = aNode[i];
         }
 
         // link "skip node" pointers
-        createSkips(aNode, 0, aNode.length-1);
+        createSkips(aNode, 0, aNode.length - 1);
 
         // turn each node into a byte array
         byte[][] aabNode = toBytes(aNode, cBitsPer);
@@ -528,7 +528,7 @@ public class ConstOrdinalList
                     }
                 }
 
-                Node node = new Node();
+                Node node   = new Node();
                 node.rle    = false;
                 node.id     = iFirstN;
                 node.vals   = an;
@@ -539,7 +539,7 @@ public class ConstOrdinalList
 
             if (an[iRun] != nDefault) {
                 // create the RLE node
-                Node node = new Node();
+                Node node  = new Node();
                 node.rle   = true;
                 node.id    = iRun;
                 node.val   = nRun;
@@ -548,7 +548,7 @@ public class ConstOrdinalList
             }
         } else if (iFirstN >= 0) {
             // create an array node
-            Node node = new Node();
+            Node node   = new Node();
             node.rle    = false;
             node.id     = iFirstN;
             node.vals   = an;
@@ -597,7 +597,7 @@ public class ConstOrdinalList
             }
 
             // build the fast node and use it in place of the first node
-            Node nodeFast = new Node();
+            Node nodeFast   = new Node();
             nodeFast.id     = iFirst;
             nodeFast.vals   = an;
             nodeFast.ofVals = iFirst;
@@ -677,7 +677,7 @@ public class ConstOrdinalList
         Node node = aNode[iFirst];
         assert node.jmp == null;
 
-        int ofJmp = Integer.highestOneBit(cNodes-1);
+        int ofJmp = Integer.highestOneBit(cNodes - 1);
         node.jmp = aNode[iFirst + ofJmp];
 
         createSkips(aNode, iFirst + 1, iFirst + ofJmp - 1);
@@ -821,7 +821,7 @@ public class ConstOrdinalList
         byte[] ab     = new byte[cBytes];
 
         for (int i = 0; i < cn; ++i) {
-            int n     = an[of+i];
+            int n     = an[of + i];
             int ofBit = i * cBitsPer;
             while (n != 0) {
                 int ofByte = ofBit / 8;

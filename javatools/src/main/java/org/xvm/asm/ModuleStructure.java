@@ -193,7 +193,7 @@ public class ModuleStructure
             try {
                 DigestOutputStream dos = new DigestOutputStream(OutputStream.nullOutputStream(),
                                             MessageDigest.getInstance("SHA-256"));
-                DataOutputStream out = new DataOutputStream(dos);
+                DataOutputStream   out = new DataOutputStream(dos);
                 assemble(out);
                 assembleChildren(out);
                 out.close();

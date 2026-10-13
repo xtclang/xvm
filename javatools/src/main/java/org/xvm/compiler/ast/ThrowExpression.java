@@ -341,7 +341,7 @@ public class ThrowExpression
             break;
 
         default:
-            throw new IllegalStateException("keyword="+keyword);
+            throw new IllegalStateException("keyword=" + keyword);
         }
         return pool().ensureEcstasyClassConstant(sThrow);
     }

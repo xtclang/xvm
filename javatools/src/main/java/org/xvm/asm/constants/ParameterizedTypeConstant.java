@@ -286,7 +286,7 @@ public class ParameterizedTypeConstant
                 pool == typeResolver.getConstantPool()) {
             fCache       = true;
             typeResolver = typeResolver.removeAccess();
-            long stamp = m_lockPrev.tryOptimisticRead();
+            long stamp   = m_lockPrev.tryOptimisticRead();
             if (stamp != 0) {
                 TypeConstant typeResolvedPrev = m_typeResolvedPrev;
                 if (typeResolver.equals(m_typeResolverPrev) && m_lockPrev.validate(stamp)) {

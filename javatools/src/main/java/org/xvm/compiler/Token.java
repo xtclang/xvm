@@ -649,7 +649,7 @@ public class Token
         }
 
         Id(final String sText, boolean fContextSensitive, boolean fSpecial) {
-            TEXT = sText;
+            TEXT                  = sText;
             this.ContextSensitive = fContextSensitive;
             this.Special          = fSpecial;
         }

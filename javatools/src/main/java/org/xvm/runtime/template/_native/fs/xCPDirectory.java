@@ -36,10 +36,10 @@ public class xCPDirectory
     @Override
     public int createConstHandle(Frame frame, Constant constant) {
         if (constant instanceof FSNodeConstant constDir && constant.getFormat() == Format.FSDir) {
-            TypeComposition clz = ensureClass(frame.f_context.f_container,
+            TypeComposition clz     = ensureClass(frame.f_context.f_container,
                                         getCanonicalType(), frame.poolContext().typeDirectory());
-            GenericHandle  hStruct = new GenericHandle(clz.ensureAccess(Access.STRUCT));
-            ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, s_constructor.getMaxVars());
+            GenericHandle   hStruct = new GenericHandle(clz.ensureAccess(Access.STRUCT));
+            ObjectHandle[]  ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, s_constructor.getMaxVars());
             ahVar[0] = new ConstantHandle(constDir);
 
             return proceedConstruction(frame, s_constructor, true, hStruct, ahVar, Op.A_STACK);

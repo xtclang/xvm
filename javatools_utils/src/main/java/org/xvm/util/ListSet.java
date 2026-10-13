@@ -279,7 +279,7 @@ public class ListSet<E>
         int      nMask = aElem.length - 1;
         int      iElem = m_iHead;
         if (iElem > m_iTail) {
-            Object oPrev = m_aElem[iElem-1 & nMask];
+            Object oPrev = m_aElem[iElem - 1 & nMask];
             if (oPrev instanceof Stop && ((Stop) oPrev).isDisposable()) {
                 --iElem;
                 --m_cBlank;
@@ -288,7 +288,7 @@ public class ListSet<E>
 
         // add the element
         aElem[iElem & nMask] = o;
-        m_iHead = iElem+1;
+        m_iHead = iElem + 1;
 
         // update the index
         if (!m_fSuppressHash && !(o instanceof Stop)) {
@@ -308,7 +308,7 @@ public class ListSet<E>
      */
     private Stop ensureStop() {
         if (m_iHead > m_iTail) {
-            Object last = m_aElem[m_iHead-1 & m_aElem.length-1];
+            Object last = m_aElem[m_iHead - 1 & m_aElem.length - 1];
             if (last instanceof Stop) {
                 return (Stop) last;
             }
@@ -493,7 +493,7 @@ public class ListSet<E>
                 return -1;
             }
 
-            for (int iTest = iNext+1, iLast = m_iHead - 1; iTest <= iLast; ++iTest) {
+            for (int iTest = iNext + 1, iLast = m_iHead - 1; iTest <= iLast; ++iTest) {
                 Object eCur = aElem[iTest & nMask];
                 if (eCur instanceof Stop stop) {
                     if (stop.appliesTo(nStop)) {
@@ -529,7 +529,7 @@ public class ListSet<E>
     private void remove(int i) {
         assert i >= m_iTail && i < m_iHead;
 
-        int    nMask = m_aElem.length-1;
+        int    nMask = m_aElem.length - 1;
         Object o     = m_aElem[i & nMask];
         assert o != null;
 
@@ -565,7 +565,7 @@ public class ListSet<E>
 
         int cBucketsOld = anHashOld == null ? 0 : anHashOld.length;
         int nModuloOld  = cBucketsOld >>> 1;
-        int nModuloNew = INDEX_SIZE[Integer.numberOfTrailingZeros(m_aElem.length)];
+        int nModuloNew  = INDEX_SIZE[Integer.numberOfTrailingZeros(m_aElem.length)];
         assert nModuloNew > 0;
         if (nModuloNew == nModuloOld) {
             return;
@@ -580,7 +580,7 @@ public class ListSet<E>
         if (cBucketsOld == 0) {
             // create the initial entries in the new index structure
             Object[] aElem = m_aElem;
-            int      nMask = aElem.length-1;
+            int      nMask = aElem.length - 1;
             for (int i = m_iTail, c = m_iHead; i < c; ++i) {
                 Object o = aElem[i & nMask];
                 if (o != null && !(o instanceof Stop)) {
@@ -592,13 +592,13 @@ public class ListSet<E>
             for (int iOld = 0, cOld = anHashOld.length; iOld < cOld; iOld += 2) {
                 int iElem = anHashOld[iOld];
                 if (iElem >= 0) {
-                    int nHash = anHashOld[iOld+1];
+                    int nHash = anHashOld[iOld + 1];
                     int iNew  = ((int) ((nHash & 0xFFFFFFFFFL) % nModuloNew)) << 1;
                     while (true) {
                         // use the first empty bucket that we encounter
                         if (anHashNew[iNew] < 0) {
-                            anHashNew[iNew  ] = iElem;
-                            anHashNew[iNew+1] = nHash;
+                            anHashNew[iNew  ]   = iElem;
+                            anHashNew[iNew + 1] = nHash;
                             break;
                         }
 
@@ -628,8 +628,8 @@ public class ListSet<E>
             // use the first empty bucket that we encounter
             int iElem = anIndex[iBucket];
             if (iElem < 0) {
-                anIndex[iBucket  ] = index;
-                anIndex[iBucket+1] = nHash;
+                anIndex[iBucket  ]   = index;
+                anIndex[iBucket + 1] = nHash;
                 return;
             }
 
@@ -659,7 +659,7 @@ public class ListSet<E>
             int iElem = anIndex[iBucket];
             assert iElem >= 0;
             if (iElem == index) {
-                assert anIndex[iBucket+1] == nHash;
+                assert anIndex[iBucket + 1] == nHash;
                 anIndex[iBucket] = -1;
                 break;
             }
@@ -692,15 +692,15 @@ public class ListSet<E>
                 return;
             }
 
-            nHash   = anIndex[iBucketSrc+1];
+            nHash   = anIndex[iBucketSrc + 1];
             iBucket = ((int) ((nHash & 0xFFFFFFFFFL) % nModulo)) << 1;
             if (iBucket != iBucketSrc &&
                     (( fStraddled &&  iBucket > iBucketSrc && iBucket <= iBucketDest ) ||
                      (!fStraddled && (iBucket > iBucketSrc || iBucket <= iBucketDest))   )) {
                 // we have to move the entry
-                anIndex[iBucketDest  ] = iElem;
-                anIndex[iBucketDest+1] = nHash;
-                anIndex[iBucketSrc   ] = -1;
+                anIndex[iBucketDest  ]   = iElem;
+                anIndex[iBucketDest + 1] = nHash;
+                anIndex[iBucketSrc   ]   = -1;
 
                 // next place to deposit an index entry is where we just took one out of
                 iBucketDest = iBucketSrc;
@@ -723,13 +723,13 @@ public class ListSet<E>
         int      nHash    = o.hashCode();
         int      iBucket  = ((int) ((nHash & 0xFFFFFFFFFL) % nModulo)) << 1;
         Object[] aElem    = m_aElem;
-        int      nMask    = aElem.length-1;
+        int      nMask    = aElem.length - 1;
         while (true) {
             // check the bucket (first value is an index into the underlying ListSet storage, second
             // value is the hashcode for the element stored at that index)
             int iElem = anIndex[iBucket];
             if (iElem >= 0) {
-                if (anIndex[iBucket+1] == nHash) {
+                if (anIndex[iBucket + 1] == nHash) {
                     Object oElem = aElem[iElem & nMask];
                     if (o == oElem || !m_fSuppressEquals
                             && o != null && !(o instanceof Special) && oElem.equals(o)) {
@@ -768,7 +768,7 @@ public class ListSet<E>
             int iElem = anIndex[iBucket];
             assert iElem >= 0;
             if (iElem == indexOld) {
-                assert anIndex[iBucket+1] == nHash;
+                assert anIndex[iBucket + 1] == nHash;
                 anIndex[iBucket] = indexNew;
                 return;
             }

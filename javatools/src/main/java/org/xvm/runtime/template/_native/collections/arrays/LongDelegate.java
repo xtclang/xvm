@@ -114,8 +114,8 @@ public abstract class LongDelegate
     @Override
     protected void insertElementImpl(DelegateHandle hTarget, ObjectHandle hElement, long lIndex) {
         LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
-        int            cSize     = (int) hDelegate.m_cSize;
-        long[]         alValue   = hDelegate.m_alValue;
+        int    cSize   = (int) hDelegate.m_cSize;
+        long[] alValue = hDelegate.m_alValue;
 
         if (cSize == alValue.length) {
             alValue = hDelegate.m_alValue = grow(hDelegate.m_alValue, cSize + 1);

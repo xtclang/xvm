@@ -246,7 +246,7 @@ public class Parser {
             }
 
             if (annotations != null) {
-                for (int i = annotations.size()-1; i >= 0; --i) {
+                for (int i = annotations.size() - 1; i >= 0; --i) {
                     exprResult = new AnnotatedTypeExpression(annotations.get(i), exprResult);
                 }
             }
@@ -1163,12 +1163,12 @@ public class Parser {
             MethodDeclarationStatement method = new MethodDeclarationStatement(
                     methodName.getStartPosition(), block.getEndPosition(), null, null, null, null,
                     null, null, methodName, null, params, block, null, null, null);
-            body = new StatementBlock(Collections.singletonList(method),
+            body    = new StatementBlock(Collections.singletonList(method),
                     method.getStartPosition(), method.getEndPosition());
             lEndPos = body.getEndPosition();
         } else if (peek(Id.L_CURLY)) {
             // pretend we're parsing a class (use the property name token as the basis)
-            body = parseTypeCompositionBody(new Token(name.getStartPosition(),
+            body    = parseTypeCompositionBody(new Token(name.getStartPosition(),
                                                name.getEndPosition(), Id.CLASS));
             lEndPos = body.getEndPosition();
         }
@@ -2413,8 +2413,8 @@ public class Parser {
             case SEMICOLON:
             case R_PAREN:
                 if (fAllowExpr) {
-                    long lPos = expr.getStartPosition();
-                          type = new VariableTypeExpression(new Token(lPos, lPos, Id.VAL));
+                    long  lPos    = expr.getStartPosition();
+                          type    = new VariableTypeExpression(new Token(lPos, lPos, Id.VAL));
                     Token tokName = new Token(lPos, lPos, Id.ANY);
                     Token tokAsn  = new Token(lPos, lPos, Id.ASN);
                     VariableDeclarationStatement var = new VariableDeclarationStatement(type, tokName, false);
@@ -4093,7 +4093,7 @@ public class Parser {
                      E_RANGE_E -> current();
                 default        -> expect(Id.I_RANGE_I);
             };
-            Expression expr2 = parseBitwiseExpression(false);
+            Expression expr2     = parseBitwiseExpression(false);
             return new RelOpExpression(expr1, tokDotDot, expr2);
         }
 
@@ -4840,7 +4840,7 @@ public class Parser {
             if (fAllowTypeSequence && peek(Id.COMP_LT)) {
                 Token tokStart = peek();
                 List<TypeExpression> listSeq = parseTypeParameterTypeList(true, false);
-                Token tokEnd   = prev();
+                Token tokEnd = prev();
                 types.add(new TupleTypeExpression(listSeq, tokStart.getStartPosition(), tokEnd.getEndPosition()));
             } else {
                 types.add(parseExtendedTypeExpression());
@@ -5743,14 +5743,14 @@ public class Parser {
         Token token = peek();
         if (token == null) {
             sb.append(' ')
-              .append(source.getLine()+1)
+              .append(source.getLine() + 1)
               .append(':')
-              .append(source.getOffset()+1);
+              .append(source.getOffset() + 1);
         } else {
             sb.append(' ')
-              .append(Source.calculateLine(token.getStartPosition())+1)
+              .append(Source.calculateLine(token.getStartPosition()) + 1)
               .append(':')
-              .append(Source.calculateOffset(token.getStartPosition())+1)
+              .append(Source.calculateOffset(token.getStartPosition()) + 1)
               .append(' ')
               .append(token);
         }

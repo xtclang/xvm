@@ -35,7 +35,7 @@ public class LinkedRepository
      *                      repository can be passed as it is
      */
     public LinkedRepository(boolean fReadThrough, ModuleRepository... repos) {
-        this.repos = Arrays.stream(repos)
+        this.repos       = Arrays.stream(repos)
                                  .filter(Objects::nonNull)
                                  .distinct()
                                  .toArray(ModuleRepository[]::new);

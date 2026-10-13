@@ -114,7 +114,7 @@ public class CmpChainExpression
         List<Expression> listExprs = expressions;
         int              cExprs    = listExprs.size();
 
-        TypeConstant typeCommon = chooseCommonType(ctx, false);
+        TypeConstant typeCommon  = chooseCommonType(ctx, false);
         boolean      fForceFirst = typeCommon == null;
         if (fForceFirst) {
             Expression exprOld = listExprs.get(0);
@@ -231,7 +231,7 @@ public class CmpChainExpression
                     if (fAllConst) {
                         if (i > 0) {
                             try {
-                                constVal = constPrev.apply(operators[i-1].getId(), expr.toConstant());
+                                constVal = constPrev.apply(operators[i - 1].getId(), expr.toConstant());
                             } catch (RuntimeException e) {
                                 constVal  = null;
                                 fAllConst = false;
@@ -524,7 +524,7 @@ public class CmpChainExpression
             sb.append(' ')
               .append(operators[i].getId().TEXT)
               .append(' ')
-              .append(expressions.get(i+1));
+              .append(expressions.get(i + 1));
         }
         return sb.toString();
     }

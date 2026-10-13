@@ -518,7 +518,7 @@ public abstract class Builder {
                     containerCD, jitName, jmd.standardMD);
 
             DirectMethodHandleDesc optMD = jmd.isOptimized
-                    ? MethodHandleDesc.ofMethod(kind, containerCD, jitName+OPT, jmd.optimizedMD)
+                    ? MethodHandleDesc.ofMethod(kind, containerCD, jitName + OPT, jmd.optimizedMD)
                     : null;
 
             if (isFunction) {
@@ -606,7 +606,7 @@ public abstract class Builder {
 
             code.iconst_1() // inPlace = True
                 .iconst_0() // dflt = False
-                .invokestatic(mapCd, ctorName+OPT, newJmd.optimizedMD);
+                .invokestatic(mapCd, ctorName + OPT, newJmd.optimizedMD);
 
             return new SingleSlot(mapType, Specific, mapCd, "");
         }
@@ -946,10 +946,10 @@ public abstract class Builder {
     }
 
     private SingleSlot loadRange(BuildContext bctx, CodeBuilder code, RangeConstant rangeConst) {
-        TypeConstant rangeType = rangeConst.getType();
-        TypeConstant elType    = rangeType.getParamType(0);
-        Constant[]   values    = rangeConst.getValue();
-        MethodConstant idCtor  = rangeType.ensureTypeInfo().findConstructor(
+        TypeConstant   rangeType = rangeConst.getType();
+        TypeConstant   elType    = rangeType.getParamType(0);
+        Constant[]     values    = rangeConst.getValue();
+        MethodConstant idCtor    = rangeType.ensureTypeInfo().findConstructor(
                 elType, elType, pool().typeBoolean(), pool().typeBoolean());
 
         bctx.buildNew(code, rangeType, idCtor, jmdNew -> {
@@ -1038,7 +1038,7 @@ public abstract class Builder {
 
         MethodTypeDesc md;
         if (jmdGet.isOptimized && allowUnboxing) {
-            md = jmdGet.optimizedMD;
+            md          = jmdGet.optimizedMD;
             getterName += OPT;
         } else {
             md = jmdGet.standardMD;
@@ -1696,7 +1696,7 @@ public abstract class Builder {
             } else {
                 code // r = $ctx.iN[returnIndex-8]
                     .getfield(CD_Ctx, "iN", CD_long.arrayType())
-                    .loadConstant(returnIndex-8)
+                    .loadConstant(returnIndex - 8)
                     .aaload();
             }
 
@@ -1723,7 +1723,7 @@ public abstract class Builder {
             } else {
                 code // r = $ctx.oN[returnIndex-8]
                     .getfield(CD_Ctx, "oN", CD_JavaObject.arrayType())
-                    .loadConstant(returnIndex-8)
+                    .loadConstant(returnIndex - 8)
                     .aaload();
             }
             if (!cd.equals(CD_Object)) {
@@ -1785,7 +1785,7 @@ public abstract class Builder {
                 // TODO: replace with a helper "Ctx.storeLong(i-8, value)"
                 code // $ctx.iN[returnIndex-8] = r
                     .getfield(CD_Ctx, "iN", CD_long.arrayType())
-                    .loadConstant(returnIndex-8)
+                    .loadConstant(returnIndex - 8)
                     .aastore();
             }
         } else {
@@ -1796,7 +1796,7 @@ public abstract class Builder {
                 // TODO: replace with a helper "Ctx.storeRef(i-8, value)"
                 code // $ctx.oN[returnIndex-8] = r
                     .getfield(CD_Ctx, "oN", CD_JavaObject.arrayType())
-                    .loadConstant(returnIndex-8)
+                    .loadConstant(returnIndex - 8)
                     .aastore();
             }
         }
@@ -1957,7 +1957,7 @@ public abstract class Builder {
 
             MethodTypeDesc md;
             if (instorMD.isOptimized) {
-                md = instorMD.optimizedMD;
+                md          = instorMD.optimizedMD;
                 instorName += Builder.OPT;
             } else {
                 md = instorMD.standardMD;
@@ -1992,7 +1992,7 @@ public abstract class Builder {
 
             MethodTypeDesc md;
             if (instorMD.isOptimized) {
-                md = instorMD.optimizedMD;
+                md          = instorMD.optimizedMD;
                 instorName += Builder.OPT;
             } else {
                 md = instorMD.standardMD;

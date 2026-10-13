@@ -35,9 +35,9 @@ public class TestNumber {
     @Test
     public void test128Signed() {
         // add
-        assertEquals(new LongLong(1+2), new LongLong(1).addUnchecked(new LongLong(2)), "1+2");
-        assertEquals(new LongLong(-1+2), new LongLong(-1).addUnchecked(new LongLong(2)), "-1+2");
-        assertEquals(new LongLong(-1-2), new LongLong(-1).addUnchecked(new LongLong(-2)), "-1-2");
+        assertEquals(new LongLong(1 + 2), new LongLong(1).addUnchecked(new LongLong(2)), "1+2");
+        assertEquals(new LongLong(-1 + 2), new LongLong(-1).addUnchecked(new LongLong(2)), "-1+2");
+        assertEquals(new LongLong(-1 - 2), new LongLong(-1).addUnchecked(new LongLong(-2)), "-1-2");
         assertEquals(new LongLong(MIN64, 0), new LongLong(MAX64).addUnchecked(new LongLong(1)), "MAX64+1");
         assertEquals(MIN128H, MAX128L.addUnchecked(new LongLong(1)),"MAX64LOW+1");
         assertEquals(MAX128L, MIN128H.addUnchecked(new LongLong(-1)), "MIN128HIGH-1");
@@ -49,9 +49,9 @@ public class TestNumber {
         assertEquals(LongLong.OVERFLOW, MIN128.addChecked(MIN128), "MIN+MIN");
 
         // sub
-        assertEquals(new LongLong(2-1), new LongLong(2).subUnchecked(new LongLong(1)), "2-1");
-        assertEquals(new LongLong(-1+2), new LongLong(-1).subUnchecked(new LongLong(-2)), "-1+2");
-        assertEquals(new LongLong(-1-2), new LongLong(-1).subUnchecked(new LongLong(2)), "-1-2");
+        assertEquals(new LongLong(2 - 1), new LongLong(2).subUnchecked(new LongLong(1)), "2-1");
+        assertEquals(new LongLong(-1 + 2), new LongLong(-1).subUnchecked(new LongLong(-2)), "-1+2");
+        assertEquals(new LongLong(-1 - 2), new LongLong(-1).subUnchecked(new LongLong(2)), "-1-2");
         assertEquals(new LongLong(MIN64, 0), new LongLong(MAX64).subUnchecked(new LongLong(-1)), "MAX64+1");
         assertEquals(MIN128H, MAX128L.subUnchecked(new LongLong(-1)), "MAX128LOW+1");
         assertEquals(MAX128L, MIN128H.subUnchecked(new LongLong(1)), "MIN128HIGH-1");
@@ -106,7 +106,7 @@ public class TestNumber {
         final int SHIFT = 0;
 
         // add
-        assertEquals(1L-2L, longUnsignedAdd(1L, -2L, SHIFT), "1-2");
+        assertEquals(1L - 2L, longUnsignedAdd(1L, -2L, SHIFT), "1-2");
         assertEquals(MIN64H, longUnsignedAdd(MAX63U, 1L, SHIFT), "MAX63+1");
         assertEquals(MAX64U, longUnsignedAdd(MAX63U, MIN64H, SHIFT), "MAX");
         try {

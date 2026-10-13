@@ -500,7 +500,7 @@ public abstract class OpInvocable extends Op {
 
         MethodTypeDesc md;
         if (fOptimized) {
-            md = jmd.optimizedMD;
+            md          = jmd.optimizedMD;
             methodName += Builder.OPT;
         }
         else {

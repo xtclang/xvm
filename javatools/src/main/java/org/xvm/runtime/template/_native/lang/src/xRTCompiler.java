@@ -232,9 +232,9 @@ public class xRTCompiler
 
     private int completeCompilation(Frame frame, CompilerAdapter compiler,
                                     Exception exception, int[] aiReturn) {
-        List<ComponentTemplateHandle> listFiles = new ArrayList<>();
+        List<ComponentTemplateHandle> listFiles  = new ArrayList<>();
         List<String>                  listErrors = compiler.getErrors();
-        boolean      fSuccess;
+        boolean fSuccess;
         if (exception == null) {
             fSuccess = compiler.getSeverity().compareTo(Severity.ERROR) < 0;
             if (fSuccess) {
@@ -261,7 +261,7 @@ public class xRTCompiler
         if (fSuccess) {
             haTemplates = xArray.makeArrayHandle(clzArray, listFiles.size(),
                             listFiles.toArray(Utils.OBJECTS_NONE), Mutability.Constant);
-            haErrors = xString.ensureEmptyArray();
+            haErrors    = xString.ensureEmptyArray();
         } else {
             haTemplates = xArray.makeArrayHandle(clzArray, 0, Utils.OBJECTS_NONE, Mutability.Constant);
             haErrors    = xString.makeArrayHandle(listErrors.toArray(Utils.NO_NAMES));

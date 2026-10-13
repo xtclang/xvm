@@ -531,7 +531,7 @@ public abstract class OpCondJump
                 comparePrimitive(code, cds[i], lblNext);
                 code.labelBinding(lblNext);
             }
-            comparePrimitive(code, cds[cds.length-1], lblJump);
+            comparePrimitive(code, cds[cds.length - 1], lblJump);
         }
 
         case Specific, Widened, Ref -> {

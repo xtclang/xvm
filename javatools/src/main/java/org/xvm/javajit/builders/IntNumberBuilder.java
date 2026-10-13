@@ -182,8 +182,8 @@ public class IntNumberBuilder extends NumberBuilder {
             String name = thisType.getSingleUnderlyingClass(false).getName();
             switch (name) {
                 case "Int128", "UInt128":
-                    int   slotLow  = code.parameterSlot(0);
-                    int   slotHigh = code.parameterSlot(1);
+                    int   slotLow   = code.parameterSlot(0);
+                    int   slotHigh  = code.parameterSlot(1);
                     Label labelHigh = code.newLabel();
 
                     // get the low bits first

@@ -2425,7 +2425,7 @@ public abstract class TypeConstant
             // now that the mixins leading to this mixin are all known, re-walk the dependencies to
             // build the entire set of dependencies minus anything that requires hopping over to
             // this right side column that leads to this mixin
-            setLeft = new HashSet<>(setAll.size()-1);
+            setLeft = new HashSet<>(setAll.size() - 1);
             typeInto.collectContribs(setLeft, setOmit, errs);
             assert !setLeft.contains(idThis);
         } else {
@@ -3606,7 +3606,7 @@ public abstract class TypeConstant
         boolean      fIncomplete = false;
         boolean      fNative     = constId instanceof NativeRebaseConstant;
 
-        for (int i = listProcess.size()-1; i >= 0; --i) {
+        for (int i = listProcess.size() - 1; i >= 0; --i) {
             Contribution contrib = listProcess.get(i);
 
             Map<PropertyConstant, PropertyInfo> mapContribProps;
@@ -3935,7 +3935,7 @@ public abstract class TypeConstant
                                                             Implementation.Native), nRank);
                     if (infoSet != null) {
                         infoSet = new MethodInfo(new MethodBody(idSet, idSet.getSignature(),
-                                                                Implementation.Native), nRank+1);
+                                                                Implementation.Native), nRank + 1);
                     }
                 } else {
                     // layer on "implicit" property accessors on top of the base chains;
@@ -3952,7 +3952,7 @@ public abstract class TypeConstant
 
                     if (infoSet != null) {
                         infoSet = infoSet.layerOn(new MethodInfo(new MethodBody(idSet,
-                                idSet.getSignature(), Implementation.Implicit), nRank+1), false, errs);
+                                idSet.getSignature(), Implementation.Implicit), nRank + 1), false, errs);
                     }
                 }
 
@@ -4832,7 +4832,7 @@ public abstract class TypeConstant
                     MethodBody head = infoCandidate.getHead();
                     if (head.getSignature().equals(sigSub) ||
                             sigSub.isSubstitutableFor(sigCandidate, this)) {
-                        listMatch = lazyAdd(listMatch, nidCandidate);
+                        listMatch   = lazyAdd(listMatch, nidCandidate);
                         fAnyCapped |= infoCandidate.isCapped();
                         continue;
                     }
@@ -4841,7 +4841,7 @@ public abstract class TypeConstant
                         TypeConstant typeInto = head.getIntoMethodInfo().getIdentity().getClassIdentity().getType();
                         if (sigSub.isSubstitutableFor(head.getSignature(), typeInto) ||
                                 sigSub.isSubstitutableFor(head.getIntoMethodInfo().getSignature(), typeInto)) {
-                            listMatch = lazyAdd(listMatch, nidCandidate);
+                            listMatch   = lazyAdd(listMatch, nidCandidate);
                             fAnyCapped |= infoCandidate.isCapped();
                             continue;
                         }
@@ -4854,7 +4854,7 @@ public abstract class TypeConstant
                         if (cParamsSub > cParamsReq && cParamsSub - cDefaults <= cParamsReq) {
                             SignatureConstant sigSubReq = sigSub.truncateParams(0, cParamsReq);
                             if (sigSubReq.isSubstitutableFor(sigCandidate, this)) {
-                                listMatch = lazyAdd(listMatch, nidCandidate);
+                                listMatch   = lazyAdd(listMatch, nidCandidate);
                                 fAnyCapped |= infoCandidate.isCapped();
                             }
                         }
@@ -5501,7 +5501,7 @@ public abstract class TypeConstant
                         sName);
             }
         } else if (fInterface) {
-            impl = Implementation.Declared;
+            impl   = Implementation.Declared;
             fRO   |= fHasRO;
             fRW   |= !fRO | accessVar != null;
             fField = false;
@@ -7673,10 +7673,10 @@ public abstract class TypeConstant
                 default                           -> throw new IllegalStateException();
             };
 
-            TypeConstant typeFormal = isFormalType()
+            TypeConstant  typeFormal = isFormalType()
                                         ? this
                                         : type1.isFormalType() ? type1 : null;
-            boolean       isFormal = typeFormal != null;
+            boolean       isFormal   = typeFormal != null;
             ClassDesc     cd;
             String        sJitName;
             JitMethodDesc jmd;
@@ -7694,7 +7694,7 @@ public abstract class TypeConstant
 
                 assert typeFunky.isJitInterface();
 
-                cd = ClassDesc.of(TypeSystem.funkyInterface(
+                cd         = ClassDesc.of(TypeSystem.funkyInterface(
                                 bctx.builder.ensureJitClassName(typeFunky)));
                 sJitName   = idFunky.ensureJitMethodName(ts);
                 jmd        = bodyFunky.getJitDesc(bctx.builder, typeFunky);
@@ -7714,7 +7714,7 @@ public abstract class TypeConstant
             case Op.OP_IS_EQ,  Op.OP_JMP_EQ, Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> {
                 assert jmd.isOptimized;
                 sJitName += OPT;
-                md = jmd.optimizedMD;
+                md        = jmd.optimizedMD;
             }
             default ->
                 md = jmd.standardMD;

@@ -107,7 +107,7 @@ public class ClassStructure
         if (constPath != null) {
             String sPath = constPath.getValue();
             int of = sPath.lastIndexOf('/');
-            return of >= 0 ? sPath.substring(of+1) : sPath;
+            return of >= 0 ? sPath.substring(of + 1) : sPath;
         }
 
         // best guess: walk up to the first "top level" class
@@ -596,7 +596,7 @@ public class ClassStructure
 
         // invalidate cached types
         m_typeNormalized = null;
-        m_typeFormal    = null;
+        m_typeFormal     = null;
         return prop;
     }
 
@@ -1411,7 +1411,7 @@ public class ClassStructure
             // classes also walk up the parent chain (as long as the chain corresponds to a chain of
             // virtual children and the parent containing them) to find contributions that can lead
             // to the virtual child super
-            oResult = getParent().findVirtualChildSuper(idVirtChild, cDepth+1, setVisited);
+            oResult = getParent().findVirtualChildSuper(idVirtChild, cDepth + 1, setVisited);
         }
 
         return oResult;
@@ -3345,7 +3345,7 @@ public class ClassStructure
 
         // invalidate cached types
         m_typeNormalized = null;
-        m_typeFormal    = null;
+        m_typeFormal     = null;
     }
 
     @Override
@@ -3553,7 +3553,7 @@ public class ClassStructure
 
             Parameter[] aParam = new Parameter[cParams];
             for (int i = 0; i < cParams; i++) {
-                aParam[i] = new Parameter(pool, atypeParam[i], "p"+i, null, false, i, false);
+                aParam[i] = new Parameter(pool, atypeParam[i], "p" + i, null, false, i, false);
             }
 
             Parameter[] aReturn = new Parameter[cReturns];
@@ -3600,8 +3600,8 @@ public class ClassStructure
         // type parameters
         Map<StringConstant, TypeConstant> mapThisParams = this.m_mapParams;
         Map<StringConstant, TypeConstant> mapThatParams = that.m_mapParams;
-        int cThisParams   = mapThisParams == null ? 0 : mapThisParams.size();
-        int cThatParams   = mapThatParams == null ? 0 : mapThatParams.size();
+        int cThisParams = mapThisParams == null ? 0 : mapThisParams.size();
+        int cThatParams = mapThatParams == null ? 0 : mapThatParams.size();
 
         return cThisParams == cThatParams
                 && (cThisParams == 0 || mapThisParams.equals(mapThatParams))

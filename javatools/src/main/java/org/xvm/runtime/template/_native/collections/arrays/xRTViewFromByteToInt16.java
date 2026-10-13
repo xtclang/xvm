@@ -52,8 +52,8 @@ public class xRTViewFromByteToInt16
             int     nSize   = (int) cSize;
             short[] anValue = new short[nSize];
             for (int i = 0; i < nSize; i++) {
-                byte bValue0 = tView.extractByte(hSource, ofStart + i*2L    );
-                byte bValue1 = tView.extractByte(hSource, ofStart + i*2L + 1);
+                byte bValue0 = tView.extractByte(hSource, ofStart + i * 2L    );
+                byte bValue1 = tView.extractByte(hSource, ofStart + i * 2L + 1);
 
                 anValue[i] = (short) (((short) bValue0) << 8 | (bValue1 & 0xFF));
             }
@@ -71,8 +71,8 @@ public class xRTViewFromByteToInt16
         ClassTemplate  tSource = hSource.getTemplate();
 
         if (tSource instanceof ByteView tView) {
-            byte bValue0 = tView.extractByte(hSource, lIndex*2    );
-            byte bValue1 = tView.extractByte(hSource, lIndex*2 + 1);
+            byte bValue0 = tView.extractByte(hSource, lIndex * 2    );
+            byte bValue1 = tView.extractByte(hSource, lIndex * 2 + 1);
 
             // using a "short" intermediary takes care of the sign handling
             short nValue = (short) (((short) bValue0) << 8 | (bValue1 & 0xFF));
@@ -92,8 +92,8 @@ public class xRTViewFromByteToInt16
         if (tSource instanceof ByteView tView) {
             long lValue = ((JavaLong) hValue).getValue();
 
-            tView.assignByte(hSource, lIndex*2 + 1, (byte) ((lValue >>>  8) & 0xFF));
-            tView.assignByte(hSource, lIndex*2    , (byte) ((lValue       ) & 0xFF));
+            tView.assignByte(hSource, lIndex * 2 + 1, (byte) ((lValue >>>  8) & 0xFF));
+            tView.assignByte(hSource, lIndex * 2    , (byte) ((lValue       ) & 0xFF));
 
             return Op.R_NEXT;
         }

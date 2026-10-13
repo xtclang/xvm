@@ -975,7 +975,7 @@ public class ArrayAccessExpression
 
                 assert nLo <= nHi;
             } else {
-                nLo = nHi = index.convertTo(pool.typeInt64()).getIntValue().getInt();
+                nLo      = nHi = index.convertTo(pool.typeInt64()).getIntValue().getInt();
                 fSlice   = false;
                 fReverse = false;
             }
@@ -1195,10 +1195,10 @@ public class ArrayAccessExpression
         Constant[]    aconstVals = constArray.getValue();
         int           cVals      = aconstVals.length;
         PackedInteger piIndex    = constIndex.getValue();
-        if (piIndex.checkRange(0, cVals-1)) {
+        if (piIndex.checkRange(0, cVals - 1)) {
             return aconstVals[piIndex.getInt()];
         } else {
-            log(errs, Severity.ERROR, Compiler.INVALID_INDEX, piIndex, 0, cVals-1);
+            log(errs, Severity.ERROR, Compiler.INVALID_INDEX, piIndex, 0, cVals - 1);
             return null;
         }
     }
@@ -1220,7 +1220,7 @@ public class ArrayAccessExpression
         int           cOldVals = aOldVals.length;
         PackedInteger piIndex1 = constIndex.getEffectiveFirst().getIntValue();
         PackedInteger piIndex2 = constIndex.getEffectiveLast() .getIntValue();
-        if (piIndex1.checkRange(0, cOldVals - 1) && piIndex2.checkRange(0, cOldVals-1)) {
+        if (piIndex1.checkRange(0, cOldVals - 1) && piIndex2.checkRange(0, cOldVals - 1)) {
             int        cNewVals = (int) constIndex.size();
             Constant[] aNewVals = new Constant[cNewVals];
             if (cNewVals > 0) {
@@ -1236,7 +1236,7 @@ public class ArrayAccessExpression
                     ? pool.ensureTupleConstant(typeResult, aNewVals)
                     : pool.ensureArrayConstant(typeResult, aNewVals);
         } else {
-            PackedInteger piIndex = piIndex1.checkRange(0, cOldVals-1) ? piIndex2 : piIndex1;
+            PackedInteger piIndex = piIndex1.checkRange(0, cOldVals - 1) ? piIndex2 : piIndex1;
             log(errs, Severity.ERROR, Compiler.INVALID_INDEX, piIndex, 0, cOldVals - 1);
             return null;
         }
