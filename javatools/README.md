@@ -116,11 +116,12 @@ LSP flag. The separate removal of the abandoned binary AST does not remove the s
 by tooling. The serialized format contains no BAST metadata slot; older `.xtc` files must be
 recompiled with the current compiler.
 
-Repository observation is similarly additive to search behavior: an unreadable candidate can
-still be skipped while another repository supplies the module. A host receives a useful cause
-when a required dependency ultimately cannot be found. The diagnostic guide below explains the
-intentional Java API migrations, the behavior retained for ordinary CLI use and the regression
-evidence; it does not claim universal source or binary compatibility for old Java embedding code.
+Repository lookup remains tolerant: an unreadable candidate can be skipped while another file
+or repository supplies the module. An unrelated failed candidate does not establish why an import
+is missing. The LSP validates its explicitly configured dependency bytes before accepting immutable
+snapshots; it does not infer dependency errors from repository scans. The diagnostic guide below
+explains the intentional Java API migrations, retained CLI behavior and regression evidence;
+it does not claim universal source or binary compatibility for old Java embedding code.
 
 ## Compiler diagnostics and error listeners
 
@@ -464,8 +465,10 @@ The embedding API combines the listener contract, scoped parser/validation repor
 outcomes, cached TypeInfo diagnostic replay, cancellation and host-supplied source snapshots.
 Consumer tests exercise these mechanisms together through the public entry points.
 
-The independent [repository read-failure fix](https://github.com/xtclang/xvm/pull/683) supplies
-retained I/O causes; this API forwards them only after a required dependency search fails.
+The independent [repository cache correction](https://github.com/xtclang/xvm/pull/683) preserves
+tolerant lookup while reusing unchanged successful and failed candidates. It adds no reporting API
+and does not attribute a missing dependency to an unrelated unreadable file. Hosts that require
+validation of specific input files can read those files before constructing their repository.
 [The parser/branch correction](https://github.com/xtclang/xvm/pull/684) supplies the parent-abort,
 default-budget and lexical-rollback behavior preserved here. Empty transient-local retention is
 an independent utility fix. None of these APIs depends on an LSP implementation or editor.
