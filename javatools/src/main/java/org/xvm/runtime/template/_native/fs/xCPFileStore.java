@@ -58,8 +58,8 @@ public class xCPFileStore
             TypeComposition clz = ensureClass(frame.f_context.f_container,
                                         getCanonicalType(), frame.poolContext().typeFileStore());
 
-            GenericHandle   hStruct = new GenericHandle(clz.ensureAccess(Access.STRUCT));
-            ObjectHandle[]  ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, s_constructor.getMaxVars());
+            GenericHandle  hStruct = new GenericHandle(clz.ensureAccess(Access.STRUCT));
+            ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, s_constructor.getMaxVars());
             ahVar[0] = xString.makeHandle(constStore.getPath());
             ahVar[1] = new ConstantHandle(constStore.getValue());
 

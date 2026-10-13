@@ -95,7 +95,7 @@ public class Decimal64
             throw new IllegalArgumentException("index out of range: " + i);
         }
 
-        return ((int) (m_nBits >>> (i*8))) & 0xFF;
+        return ((int) (m_nBits >>> (i * 8))) & 0xFF;
     }
 
     @Override

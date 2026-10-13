@@ -351,7 +351,7 @@ public class Dec128 extends DecimalFPNumber {
         if (finite1 && finite2) {
             BigDecimal target  = $toBigDecimal(low1, high1);
             BigDecimal divisor = $toBigDecimal(low2, high2);
-            BigDecimal bigR = target.remainder(divisor, MathContext.DECIMAL128);
+            BigDecimal bigR    = target.remainder(divisor, MathContext.DECIMAL128);
             return $toLongBits(ctx, bigR.signum() >= 0 ? bigR : bigR.add(divisor));
         }
         // either side is infinity or NaN so return NaN
@@ -711,7 +711,7 @@ public class Dec128 extends DecimalFPNumber {
      */
     public static long $toLongBits(Ctx ctx, BigDecimal dec) {
         // get the sign
-        boolean    fNeg;
+        boolean fNeg;
         switch (dec.signum()) {
             case -1:
                 fNeg = true;
@@ -766,7 +766,7 @@ public class Dec128 extends DecimalFPNumber {
                 nHBits  = nDeclet >>> 4;            // rightmost 4 bits are in the "low bits" long
             } else {
                 // declet 7 starts at bit 6 of the "high bits" long
-                nHBits |= ((long) nDeclet) << ((i-7) * 10 + 6);
+                nHBits |= ((long) nDeclet) << ((i - 7) * 10 + 6);
             }
 
             bint = abintDivRem[0];

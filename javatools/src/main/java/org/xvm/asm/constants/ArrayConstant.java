@@ -285,7 +285,7 @@ public class ArrayConstant
             throws IOException {
         out.writeByte(getFormat().ordinal());
         writeMagnitude(out, m_constType.getPosition());
-        Constant[] aconst  = m_aconstVal;
+        Constant[] aconst = m_aconstVal;
         writePackedLong(out, aconst.length);
         for (Constant constant : aconst) {
             writeMagnitude(out, constant.getPosition());

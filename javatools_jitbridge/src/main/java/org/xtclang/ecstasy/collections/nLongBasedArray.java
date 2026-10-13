@@ -264,7 +264,7 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
         }
 
         int size = $sizeEtc & $SIZE_MASK;
-        if (($storage == null || $storage.length == $cap2len(size)) && !$growInPlace(ctx, size+1)) {
+        if (($storage == null || $storage.length == $cap2len(size)) && !$growInPlace(ctx, size + 1)) {
             // we just transitioned to the "huge model"
             $delegate.add$p(ctx, value);
             return (ArrayType) this;
@@ -564,7 +564,7 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
             if (index == size && ($sizeEtc >>> $MUT_SHIFT) == $MUTABLE) {
                 // index==size up to 2^30 is an append operation within this array's storage;
                 // anything over that requires a transition to the "huge" model
-                if (($storage == null || index >= $storage.length) && !$growInPlace(ctx, index+1)) {
+                if (($storage == null || index >= $storage.length) && !$growInPlace(ctx, index + 1)) {
                     // we just transitioned to the "huge model"
                     $delegate.setElement$pi(ctx, index, value);
                     return;
@@ -742,7 +742,7 @@ public abstract class nLongBasedArray<ArrayType extends nLongBasedArray<ArrayTyp
     @Override protected boolean $growInPlace(Ctx ctx, long minCap) {
         // the caller is responsible for passing valid args; this will not be checked at runtime
         minCap = Long.max(minCap, $cap2len(minCap));
-        assert minCap > 0 && minCap <= $SIZE_MASK+1 && ($storage == null || minCap > $storage.length);
+        assert minCap > 0 && minCap <= $SIZE_MASK + 1 && ($storage == null || minCap > $storage.length);
 
         if ($storage == null) {
             long cap = max($capCfg(ctx), minCap);

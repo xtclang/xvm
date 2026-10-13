@@ -58,8 +58,8 @@ public class IntNBuilder extends IntNumberBuilder {
 
         if (isString) {
             classBuilder.withMethodBody(jitName, jmd.standardMD, flags, code -> {
-                int    ctxSlot    = code.parameterSlot(jmd.optimizedCtx());
-                int    stringSlot = code.parameterSlot(jmd.getImplicitParamCount());
+                int ctxSlot    = code.parameterSlot(jmd.optimizedCtx());
+                int stringSlot = code.parameterSlot(jmd.getImplicitParamCount());
 
                 code.aload(ctxSlot)
                     .aload(stringSlot)

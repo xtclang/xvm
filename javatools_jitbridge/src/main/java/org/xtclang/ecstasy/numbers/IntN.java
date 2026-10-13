@@ -399,7 +399,7 @@ public class IntN extends IntNumber {
         if (bitLength == 0) {
             return this;
         }
-        int distance  = (int) (n % bitLength);
+        int distance = (int) (n % bitLength);
         if (distance == 0) {
             return this;
         }
@@ -424,7 +424,7 @@ public class IntN extends IntNumber {
         if (bitLength == 0) {
             return this;
         }
-        int distance  = (int) (n % bitLength);
+        int distance = (int) (n % bitLength);
         if (distance == 0) {
             return this;
         }

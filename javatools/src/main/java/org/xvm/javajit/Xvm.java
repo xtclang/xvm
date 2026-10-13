@@ -62,7 +62,7 @@ public class Xvm {
         }
         assert ecstasy != null && _native != null;
         this.ecstasyLoader = ecstasy;
-        this.bridgeLoader = _native;
+        this.bridgeLoader  = _native;
         this.ecstasyPool   = ecstasy.module.getConstantPool();
     }
 
@@ -359,7 +359,7 @@ public class Xvm {
         // identical to the TypeSystem being requested; in the case of a shared module, grab the
         // last of the shared module names, just to avoid accidentally grabbing the universally
         // shared "ecstasy.xtclang.org" module
-        String moduleName = (owned.length > 0 ? owned[0] : shared[shared.length-1].module).getName();
+        String moduleName = (owned.length > 0 ? owned[0] : shared[shared.length - 1].module).getName();
 
         // pre-sort the modules so that all type systems will order their modules the same; this
         // makes comparison of type systems much simpler and more efficient

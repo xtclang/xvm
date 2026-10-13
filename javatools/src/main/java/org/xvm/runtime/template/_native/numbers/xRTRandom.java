@@ -113,7 +113,7 @@ public class xRTRandom
                         "size limit (2 billion bits) exceeded: " + cBits));
             }
 
-            byte[] ab = new byte[(int) ((cBits+7)>>>3)];
+            byte[] ab = new byte[(int) ((cBits + 7) >>> 3)];
             rnd(hTarget).nextBytes(ab);
             return frame.assignValue(iReturn, xBitArray.makeBitArrayHandle(ab, (int) cBits, Mutability.Constant));
         }
@@ -237,7 +237,7 @@ public class xRTRandom
 
         if (lMax <= 0) {
             return frame.raiseException(xException.illegalArgument(frame,
-                    "Illegal exclusive maximum (" + lMax +"); maximum must be > 0"));
+                    "Illegal exclusive maximum (" + lMax + "); maximum must be > 0"));
         }
 
         return frame.assignValue(iReturn, xInt64.makeHandle(computeRandom(rnd, lMax)));
@@ -252,7 +252,7 @@ public class xRTRandom
         if (lMax <= Integer.MAX_VALUE) {
             // it's a 32-bit random, so take a fast path in Java that handles 32-bit values
             return rnd.nextInt((int) lMax);
-        } else if ((lMax & (lMax-1)) == 0) {
+        } else if ((lMax & (lMax - 1)) == 0) {
             // it's a power of 2, so avoid the 64-bit modulo
             return rnd.nextLong() & (lMax - 1);
         } else {

@@ -520,14 +520,14 @@ public class xRTType
             }
         }
 
-        TypeInfo                infoTarget = typeTarget.ensureTypeInfo();
-        ConstantPool            poolCtx    = frame.poolContext();
-        Container               container  = frame.f_context.f_container;
-        Map<String, ChildInfo>  mapInfos   = infoTarget.getChildInfosByName();
-        int                     cInfos     = mapInfos.size();
-        StringHandle[]          ahName     = new StringHandle[cInfos];
-        TypeHandle[]            ahType     = new TypeHandle[cInfos];
-        int                     ix         = 0;
+        TypeInfo               infoTarget = typeTarget.ensureTypeInfo();
+        ConstantPool           poolCtx    = frame.poolContext();
+        Container              container  = frame.f_context.f_container;
+        Map<String, ChildInfo> mapInfos   = infoTarget.getChildInfosByName();
+        int                    cInfos     = mapInfos.size();
+        StringHandle[]         ahName     = new StringHandle[cInfos];
+        TypeHandle[]           ahType     = new TypeHandle[cInfos];
+        int                    ix         = 0;
         for (String sName : mapInfos.keySet()) {
             ahName[ix  ] = xString.makeHandle(sName);
             ahType[ix++] = infoTarget.calculateChildType(poolCtx, sName).ensureTypeHandle(container);
@@ -700,8 +700,8 @@ public class xRTType
                     for (int i = 0; i < cParams; ++i) {
                         Parameter param = aParams[i];
                         assert !param.isTypeParameter();
-                        aParamsNew[i+1] = new Parameter(pool, param.getType(), param.getName(),
-                                param.getDefaultValue(), false, i+1, false);
+                        aParamsNew[i + 1] = new Parameter(pool, param.getType(), param.getName(),
+                                param.getDefaultValue(), false, i + 1, false);
                     }
 
                     atypeParams = atypeNew;
@@ -1397,9 +1397,9 @@ public class xRTType
             throw new UnsupportedOperationException();
         }
 
-        ConstantPool   pool         = frame.poolContext();
-        TypeConstant   typeThis     = hType.getDataType();
-        TypeConstant[] atypeParams  = new TypeConstant[cFormalTypes];
+        ConstantPool   pool        = frame.poolContext();
+        TypeConstant   typeThis    = hType.getDataType();
+        TypeConstant[] atypeParams = new TypeConstant[cFormalTypes];
         for (int i = 0; i < cFormalTypes; ++i) {
             TypeHandle   hTypeParam = (TypeHandle) ahFormalTypes[i];
             TypeConstant typeParam  = hTypeParam.getUnsafeDataType();
@@ -1702,7 +1702,7 @@ public class xRTType
         TypeConstant    typeElement = clzElement.getType();
         TypeComposition clzArray    = frame.f_context.f_container.resolveClass(
                 frame.poolContext().ensureArrayType(typeElement));
-        ProxyComposition clzProxy  = new ProxyComposition(clzElement, typeElement);
+        ProxyComposition clzProxy = new ProxyComposition(clzElement, typeElement);
 
         int            cValues = (int) hArray.m_hDelegate.m_cSize;
         ObjectHandle[] ahValue = new ObjectHandle[cValues];

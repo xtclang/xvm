@@ -124,7 +124,7 @@ public class Frame
         f_context   = framePrev.f_context;
         f_iId       = f_context.m_iFrameCounter++;
         f_nDepth    = framePrev.f_nDepth + 1;
-        f_fiber      = framePrev.f_fiber;
+        f_fiber     = framePrev.f_fiber;
         f_framePrev = framePrev;
         f_iPCPrev   = framePrev.m_iPC;
         f_function  = function;
@@ -142,8 +142,8 @@ public class Frame
         f_anNextVar = new int[cScopes];
         f_anNextVar[0] = function == null ? 0 : function.getParamCount();
 
-        f_iReturn   = iReturn;
-        f_aiReturn  = aiReturn;
+        f_iReturn  = iReturn;
+        f_aiReturn = aiReturn;
     }
 
     /**
@@ -174,7 +174,7 @@ public class Frame
         f_context   = framePrev.f_context;
         f_iId       = f_context.m_iFrameCounter++;
         f_nDepth    = framePrev.f_nDepth + 1;
-        f_fiber      = framePrev.f_fiber;
+        f_fiber     = framePrev.f_fiber;
         f_framePrev = framePrev;
         f_iPCPrev   = framePrev.m_iPC;
         f_function  = null;
@@ -983,7 +983,7 @@ public class Frame
                     break;
 
                 case Op.R_CALL:
-                    int iNext = i+1;
+                    int iNext = i + 1;
                     m_frameNext.addContinuation(
                         frameCaller -> frameCaller.assignValues(anVar, ahValue, iNext, c));
                     return Op.R_CALL;

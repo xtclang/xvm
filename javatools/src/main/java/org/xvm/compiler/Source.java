@@ -239,43 +239,43 @@ public class Source
 
             // check for a Unicode escape
             if (ch == '\\' && of + 4 < cch
-                    && isHexit(ach[of+1])
-                    && isHexit(ach[of+2])
-                    && isHexit(ach[of+3])
-                    && isHexit(ach[of+4])) {
+                    && isHexit(ach[of + 1])
+                    && isHexit(ach[of + 2])
+                    && isHexit(ach[of + 3])
+                    && isHexit(ach[of + 4])) {
                 final char chU = ach[of];
                 if (chU == 'u') {
                     // 4-hexit unicode escape
-                    int nch = hexitValue(ach[of+1]) << 12
-                            | hexitValue(ach[of+2]) << 8
-                            | hexitValue(ach[of+3]) << 4
-                            | hexitValue(ach[of+4]);
+                    int nch = hexitValue(ach[of + 1]) << 12
+                            | hexitValue(ach[of + 2]) << 8
+                            | hexitValue(ach[of + 3]) << 4
+                            | hexitValue(ach[of + 4]);
 
-                    ch = (char) nch;
-                    of        += 5;
-                    cchAdjust += 5;
+                    ch                    = (char) nch;
+                    of                   += 5;
+                    cchAdjust            += 5;
                     m_fEscapesEncountered = true;
                 } else if (chU == 'U' && of + 8 < cch
-                        && isHexit(ach[of+5])
-                        && isHexit(ach[of+6])
-                        && isHexit(ach[of+7])
-                        && isHexit(ach[of+8])) {
+                        && isHexit(ach[of + 5])
+                        && isHexit(ach[of + 6])
+                        && isHexit(ach[of + 7])
+                        && isHexit(ach[of + 8])) {
                     // 8-hexit unicode escape
-                    int nch = hexitValue(ach[of+1]) << 28
-                            | hexitValue(ach[of+2]) << 24
-                            | hexitValue(ach[of+3]) << 20
-                            | hexitValue(ach[of+4]) << 16
-                            | hexitValue(ach[of+5]) << 12
-                            | hexitValue(ach[of+6]) << 8
-                            | hexitValue(ach[of+7]) << 4
-                            | hexitValue(ach[of+8]);
+                    int nch = hexitValue(ach[of + 1]) << 28
+                            | hexitValue(ach[of + 2]) << 24
+                            | hexitValue(ach[of + 3]) << 20
+                            | hexitValue(ach[of + 4]) << 16
+                            | hexitValue(ach[of + 5]) << 12
+                            | hexitValue(ach[of + 6]) << 8
+                            | hexitValue(ach[of + 7]) << 4
+                            | hexitValue(ach[of + 8]);
 
                     // unfortunately Java does not support characters with codepoints beyond 16
                     // bits; we could theoretically split this up into a Unicode "surrogate pair",
                     // but that is not supported by this class at this time
-                    ch  = nch > Character.MAX_VALUE ? '?' : (char) nch;
-                    of        += 9;
-                    cchAdjust += 9;
+                    ch                    = nch > Character.MAX_VALUE ? '?' : (char) nch;
+                    of                   += 9;
+                    cchAdjust            += 9;
                     m_fEscapesEncountered = true;
                 }
             }
@@ -312,7 +312,7 @@ public class Source
         // if the line feed is immediately preceded by a carriage return, then
         // back up past them both (they are treated as a single line feed)
         if (isLineTerminator(ch)) {
-            if (ch == '\n' && of > 0 && ach[of-1] == '\r') {
+            if (ch == '\n' && of > 0 && ach[of - 1] == '\r') {
                 --of;
             }
 
@@ -326,17 +326,17 @@ public class Source
 
             if (m_fEscapesEncountered
                     && isHexit(ch) && of >= 5
-                    && isHexit(ach[of-1])
-                    && isHexit(ach[of-2])
-                    && isHexit(ach[of-3])) {
-                if (ach[of-5] == '\\' && ach[of-4] == 'u') {
+                    && isHexit(ach[of - 1])
+                    && isHexit(ach[of - 2])
+                    && isHexit(ach[of - 3])) {
+                if (ach[of - 5] == '\\' && ach[of - 4] == 'u') {
                     of        -= 5;
                     cchAdjust += 5;
-                } else if (of >= 9 && ach[of-9] == '\\' && ach[of-8] == 'U'
-                        && isHexit(ach[of-7])
-                        && isHexit(ach[of-6])
-                        && isHexit(ach[of-5])
-                        && isHexit(ach[of-4])) {
+                } else if (of >= 9 && ach[of - 9] == '\\' && ach[of - 8] == 'U'
+                        && isHexit(ach[of - 7])
+                        && isHexit(ach[of - 6])
+                        && isHexit(ach[of - 5])
+                        && isHexit(ach[of - 4])) {
                     of        -= 9;
                     cchAdjust += 9;
                 }

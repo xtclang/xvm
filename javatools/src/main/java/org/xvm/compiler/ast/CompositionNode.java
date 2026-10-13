@@ -265,7 +265,7 @@ public abstract class CompositionNode
         @Override
         public long getEndPosition() {
             return condition == null && args != null && !args.isEmpty()
-                    ? args.get(args.size()-1).getEndPosition()
+                    ? args.get(args.size() - 1).getEndPosition()
                     : super.getEndPosition();
         }
 

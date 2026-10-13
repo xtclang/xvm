@@ -227,7 +227,7 @@ public class Version
                     break;
                 case 2:
                     // second to last element; last must be >= 0
-                    if (aiParts[i+1] < 0) {
+                    if (aiParts[i + 1] < 0) {
                         err = true;
                     }
                     break;
@@ -235,7 +235,7 @@ public class Version
                     err = true;
                     break;
                 }
-                if (i > 0 && aiParts[i-1] == 0) {
+                if (i > 0 && aiParts[i - 1] == 0) {
                     // previous part must > 0
                     err = true;
                 }

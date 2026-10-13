@@ -286,7 +286,7 @@ public class Dec32 extends DecimalFPNumber {
         if (finite1 && finite2) {
             BigDecimal target  = $toBigDecimal(bits1);
             BigDecimal divisor = $toBigDecimal(bits2);
-            BigDecimal bigR = target.remainder(divisor, MathContext.DECIMAL32);
+            BigDecimal bigR    = target.remainder(divisor, MathContext.DECIMAL32);
             return $toIntBits(ctx, bigR.signum() >= 0 ? bigR : bigR.add(divisor));
         }
         // either side is infinity or NaN so return NaN

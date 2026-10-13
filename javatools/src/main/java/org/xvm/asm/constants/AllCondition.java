@@ -99,23 +99,23 @@ public class AllCondition
         // by convention, the version is placed at the end of the list
         ConditionalConstant[] acondOld = m_aconstCond;
         int                   cConds   = acondOld.length;
-        ConditionalConstant   condLast = acondOld[cConds-1];
+        ConditionalConstant   condLast = acondOld[cConds - 1];
         if (condLast instanceof AnyCondition condAny) {
             if (condAny.isOnlyVersions()) {
                 ConditionalConstant[] acondNew = acondOld.clone();
-                acondNew[cConds-1] = condAny.addVersion(ver);
+                acondNew[cConds - 1] = condAny.addVersion(ver);
                 return new AllCondition(acondNew);
             }
         } else if (condLast instanceof VersionedCondition) {
             ConstantPool          pool     = getConstantPool();
             ConditionalConstant[] acondNew = acondOld.clone();
-            acondNew[cConds-1] = new AnyCondition(pool, condLast, pool.ensureVersionedCondition(ver));
+            acondNew[cConds - 1] = new AnyCondition(pool, condLast, pool.ensureVersionedCondition(ver));
             return new AllCondition(acondNew);
         }
 
         // this is the first version being added
         assert versions().isEmpty();
-        ConditionalConstant[] acondNew = new ConditionalConstant[cConds+1];
+        ConditionalConstant[] acondNew = new ConditionalConstant[cConds + 1];
         System.arraycopy(acondOld, 0, acondNew, 0, cConds);
         acondNew[cConds] = getConstantPool().ensureVersionedCondition(ver);
         return new AllCondition(acondNew);
@@ -130,11 +130,11 @@ public class AllCondition
         // by convention, the version is placed at the end of the list
         ConditionalConstant[] acondOld = m_aconstCond;
         int                   cConds   = acondOld.length;
-        ConditionalConstant   condLast = acondOld[cConds-1];
+        ConditionalConstant   condLast = acondOld[cConds - 1];
         if (condLast instanceof AnyCondition) {
             assert condLast.versions().contains(ver);
             ConditionalConstant[] acondNew = acondOld.clone();
-            acondNew[cConds-1] = condLast.removeVersion(ver);
+            acondNew[cConds - 1] = condLast.removeVersion(ver);
             return new AllCondition(acondNew);
         } else if (condLast instanceof VersionedCondition) {
             assert ver.equals(((VersionedCondition) condLast).getVersion());
@@ -147,8 +147,8 @@ public class AllCondition
                 return acondOld[0];
 
             default:
-                ConditionalConstant[] acondNew = new ConditionalConstant[cConds-1];
-                System.arraycopy(acondOld, 0, acondNew, 0, cConds-1);
+                ConditionalConstant[] acondNew = new ConditionalConstant[cConds - 1];
+                System.arraycopy(acondOld, 0, acondNew, 0, cConds - 1);
                 return new AllCondition(acondNew);
             }
         } else {
@@ -297,7 +297,7 @@ public class AllCondition
         assert aconstCond.length > 1;
 
         // scan the underlying conditions to see if there is anything to merge
-        boolean fAnds   = false;
+        boolean fAnds  = false;
         int     cConds = 0;
         for (ConditionalConstant cond : aconstCond) {
             if (cond instanceof AllCondition) {

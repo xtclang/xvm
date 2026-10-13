@@ -43,7 +43,7 @@ public final class ConstOrdinalListTest {
             validate(list, 0, fDump);
         } else {
             for (int i = 0; i < 1000; ++i) {
-                int nMax = 1+s_rnd.nextInt(1+s_rnd.nextInt(Integer.MAX_VALUE));
+                int nMax = 1 + s_rnd.nextInt(1 + s_rnd.nextInt(Integer.MAX_VALUE));
                 int nDft = s_rnd.nextInt(nMax);
                 test(i, nMax, nDft);
             }
@@ -54,19 +54,19 @@ public final class ConstOrdinalListTest {
         List<Integer> list = new ArrayList<>();
         for (int i = 0; i < 10; ++i) {
             try {
-                validate(list, iTest*10+i, false);
+                validate(list, iTest * 10 + i, false);
 
                 if (s_rnd.nextBoolean()) {
-                    for (int iAdd = 0, cAdd = 1+s_rnd.nextInt(1+s_rnd.nextInt(12)); iAdd < cAdd; ++iAdd) {
+                    for (int iAdd = 0, cAdd = 1 + s_rnd.nextInt(1 + s_rnd.nextInt(12)); iAdd < cAdd; ++iAdd) {
                         list.add(nDft);
                     }
                 } else if (s_rnd.nextBoolean()) {
                     int nVal = s_rnd.nextInt(nMax);
-                    for (int iAdd = 0, cAdd = 1+s_rnd.nextInt(1+s_rnd.nextInt(25)); iAdd < cAdd; ++iAdd) {
+                    for (int iAdd = 0, cAdd = 1 + s_rnd.nextInt(1 + s_rnd.nextInt(25)); iAdd < cAdd; ++iAdd) {
                         list.add(nVal);
                     }
                 } else {
-                    for (int iAdd = 0, cAdd = 1+s_rnd.nextInt(1+s_rnd.nextInt(20)); iAdd < cAdd; ++iAdd) {
+                    for (int iAdd = 0, cAdd = 1 + s_rnd.nextInt(1 + s_rnd.nextInt(20)); iAdd < cAdd; ++iAdd) {
                         list.add(s_rnd.nextInt(nMax));
                     }
                 }

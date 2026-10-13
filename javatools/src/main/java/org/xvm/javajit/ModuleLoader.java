@@ -204,12 +204,12 @@ public class ModuleLoader
         StringBuilder sb = null;
         for (int i = 0, c = s.length(); i < c; ++i) {
             char ch = s.charAt(i);
-            if (ch == '\\' && i + 5 < c && s.charAt(i+1) == 'u' && isHexit(s.charAt(i+2))
-                    && isHexit(s.charAt(i+3)) && isHexit(s.charAt(i+4)) && isHexit(s.charAt(i+5))) {
+            if (ch == '\\' && i + 5 < c && s.charAt(i + 1) == 'u' && isHexit(s.charAt(i + 2))
+                    && isHexit(s.charAt(i + 3)) && isHexit(s.charAt(i + 4)) && isHexit(s.charAt(i + 5))) {
                 if (sb == null) {
                     sb = new StringBuilder(c).append(s, 0, i);
                 }
-                sb.append((char) Integer.parseInt(s, i+2, i+6, 16));
+                sb.append((char) Integer.parseInt(s, i + 2, i + 6, 16));
                 i += 5;
             } else if (sb != null) {
                 sb.append(ch);

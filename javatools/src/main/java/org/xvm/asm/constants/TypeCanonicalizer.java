@@ -202,8 +202,8 @@ class TypeCanonicalizer {
         int i = 0;
         for (TypeConstant constraint : contribution.getTypeParams().values()) {
             if (constraint != null) {
-                TypeConstant parameter = typeMixin.getParamType(i);
-                TypeConstant limit     = constraint.resolveGenerics(pool, resolver);
+                TypeConstant parameter   = typeMixin.getParamType(i);
+                TypeConstant limit       = constraint.resolveGenerics(pool, resolver);
                 TypeConstant actualLimit = actualType(limit, narrowed);
                 Candidate candidate = parameter.isFormalType()
                         ? narrowed.get((FormalConstant) parameter.getDefiningConstant())

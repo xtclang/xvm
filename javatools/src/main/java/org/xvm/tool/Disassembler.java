@@ -96,7 +96,7 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         final var fileModule = opts.getTarget().orElseThrow(); // validated above
         final var sModule    = fileModule.getName();
 
-        Component component  = null;
+        Component component = null;
 
         if (sModule.endsWith(".xtc")) {
             // it's a file
@@ -309,8 +309,8 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
             } else {
                 buf.append(' ');
                 // four digit year
-                String s = String.valueOf(10000+time.getYear());
-                buf.append(s.substring(s.length()-4));
+                String s = String.valueOf(10000 + time.getYear());
+                buf.append(s.substring(s.length() - 4));
             }
         }
 
@@ -340,16 +340,16 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
                 out(buf);
             } else {
                 out(buf);
-                var      aKidNodes  = fsNode.getDirectoryContents();
-                int      cKidNodes  = aKidNodes.length;
-                String   nextIndent = " |- ";
+                var    aKidNodes  = fsNode.getDirectoryContents();
+                int    cKidNodes  = aKidNodes.length;
+                String nextIndent = " |- ";
                 if (!indent.isEmpty()) {
-                    nextIndent = indent.substring(0, indent.length()-4)
+                    nextIndent = indent.substring(0, indent.length() - 4)
                                + (last ? "    " : " |  ")
                                + nextIndent;
                 }
                 for (int i = 0; i < cKidNodes; ++i) {
-                    printNode(aKidNodes[i], nextIndent, i == cKidNodes-1, false, visited, idLen, sizeLen);
+                    printNode(aKidNodes[i], nextIndent, i == cKidNodes - 1, false, visited, idLen, sizeLen);
                 }
             }
             break;
@@ -396,10 +396,10 @@ public class Disassembler extends Launcher<DisassemblerOptions> {
         } catch (IOException ignore) {}
 
         // load the file metadata
-        var    findName     = target.getName();
-        var    findCreated  = requireNonNull(createdTime(target)).toInstant().atOffset(UTC).toString();
-        var    findModified = requireNonNull(modifiedTime(target)).toInstant().atOffset(UTC).toString();
-        int    findSize     = findBytes.length;
+        var findName     = target.getName();
+        var findCreated  = requireNonNull(createdTime(target)).toInstant().atOffset(UTC).toString();
+        var findModified = requireNonNull(modifiedTime(target)).toInstant().atOffset(UTC).toString();
+        int findSize     = findBytes.length;
 
         var pool = component.getConstantPool();
         int matches = 0;

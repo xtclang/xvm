@@ -712,7 +712,7 @@ public class BuildContext {
         if (isConstructor) {
             TypeConstant structType = thisType.ensureAccess(Access.STRUCT);
             registerInfos.put(Op.A_THIS,
-                    new SingleSlot(Op.A_THIS, extraArgs-1, Specific, structType, CD_this, "thi$"));
+                    new SingleSlot(Op.A_THIS, extraArgs - 1, Specific, structType, CD_this, "thi$"));
             typeMatrix.declare(-1, Op.A_THIS, structType);
         } else if (isStatic) {
             typeMatrix.ensureMutableView(0);
@@ -872,7 +872,7 @@ public class BuildContext {
                 } else {
                     // not Null - store the multi-slot primitives (in the reverse order) and "false"
                     assert defaultReg.flavor() == XvmPrimitive;
-                    for (int j = cds.length-1; j >= 0; j--) {
+                    for (int j = cds.length - 1; j >= 0; j--) {
                         slot = code.parameterSlot(extraArgs + i + j);
                         Builder.store(code, cds[j], slot);
                     }
@@ -1600,7 +1600,7 @@ public class BuildContext {
         DirectMethodHandleDesc stdMD = MethodHandleDesc.ofMethod(kind,
                 containerCD, methodJitName, jmd.standardMD);
         DirectMethodHandleDesc optMD = isOptimized
-                ? MethodHandleDesc.ofMethod(kind, containerCD, methodJitName+OPT, jmd.optimizedMD)
+                ? MethodHandleDesc.ofMethod(kind, containerCD, methodJitName + OPT, jmd.optimizedMD)
                 : null;
 
         TypeConstant fnType = bodySuper.getIdentity().getType();
@@ -1740,7 +1740,7 @@ public class BuildContext {
 
                     if (debugInfo) {
                         code.localVariable(slotPrime, name, jtd.cd, varStart, scope.endLabel);
-                        code.localVariable(slotExt,   name+EXT, CD_boolean, varStart, scope.endLabel);
+                        code.localVariable(slotExt,   name + EXT, CD_boolean, varStart, scope.endLabel);
                     }
 
                     yield new ExtendedSlot(regId, slotPrime, slotExt, NullablePrimitive, type, jtd.cd, name);
@@ -1772,7 +1772,7 @@ public class BuildContext {
                     }
                     int slotExt = scope.allocateLocal(regId, TypeKind.BOOLEAN);
                     if (debugInfo) {
-                        code.localVariable(slotExt, name+EXT, CD_boolean, varStart, scope.endLabel);
+                        code.localVariable(slotExt, name + EXT, CD_boolean, varStart, scope.endLabel);
                     }
                     yield new MultiSlot(regId, slots, slotExt, NullableXvmPrimitive, type, jtd.cd, cds, name);
                 }

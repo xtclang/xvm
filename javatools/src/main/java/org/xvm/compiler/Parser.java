@@ -246,7 +246,7 @@ public class Parser {
             }
 
             if (annotations != null) {
-                for (int i = annotations.size()-1; i >= 0; --i) {
+                for (int i = annotations.size() - 1; i >= 0; --i) {
                     exprResult = new AnnotatedTypeExpression(annotations.get(i), exprResult);
                 }
             }
@@ -431,7 +431,7 @@ public class Parser {
                                     constraints.addAll(params);
                                 }
 
-                                paramnames  = new ArrayList<>();
+                                paramnames = new ArrayList<>();
                                 for (Parameter param : params) {
                                     Token       tokName       = param.getNameToken();
                                     List<Token> listParamName = Collections.singletonList(tokName);
@@ -1157,7 +1157,7 @@ public class Parser {
                                                                 stmt.getEndPosition());
                 fNeedsSemi = true;
             } else {
-                block      = parseStatementBlock();
+                block = parseStatementBlock();
             }
 
             MethodDeclarationStatement method = new MethodDeclarationStatement(
@@ -3562,8 +3562,8 @@ public class Parser {
                 List<Parameter> params = new ArrayList<>();
                 params.add(new Parameter(expr.toTypeExpression(), expectNameOrAny()));
                 while (match(Id.R_PAREN, match(Id.COMMA) == null) == null) {
-                    TypeExpression type  = parseTypeExpression();
-                    Token          name  = expectNameOrAny();
+                    TypeExpression type = parseTypeExpression();
+                    Token          name = expectNameOrAny();
                     params.add(new Parameter(type, name));
                 }
 
@@ -4840,7 +4840,7 @@ public class Parser {
             if (fAllowTypeSequence && peek(Id.COMP_LT)) {
                 Token tokStart = peek();
                 List<TypeExpression> listSeq = parseTypeParameterTypeList(true, false);
-                Token tokEnd   = prev();
+                Token tokEnd = prev();
                 types.add(new TupleTypeExpression(listSeq, tokStart.getStartPosition(), tokEnd.getEndPosition()));
             } else {
                 types.add(parseExtendedTypeExpression());
@@ -4886,8 +4886,8 @@ public class Parser {
         }
 
         do {
-            TypeExpression type  = parseTypeExpression();
-            Token          name  = expectNameOrAny();
+            TypeExpression type = parseTypeExpression();
+            Token          name = expectNameOrAny();
             resources.add(new Parameter(type, name));
         } while (match(Id.R_PAREN, (match(Id.COMMA) == null)) == null);
         return resources;
@@ -5743,14 +5743,14 @@ public class Parser {
         Token token = peek();
         if (token == null) {
             sb.append(' ')
-              .append(source.getLine()+1)
+              .append(source.getLine() + 1)
               .append(':')
-              .append(source.getOffset()+1);
+              .append(source.getOffset() + 1);
         } else {
             sb.append(' ')
-              .append(Source.calculateLine(token.getStartPosition())+1)
+              .append(Source.calculateLine(token.getStartPosition()) + 1)
               .append(':')
-              .append(Source.calculateOffset(token.getStartPosition())+1)
+              .append(Source.calculateOffset(token.getStartPosition()) + 1)
               .append(' ')
               .append(token);
         }

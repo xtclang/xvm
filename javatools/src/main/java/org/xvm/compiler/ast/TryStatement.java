@@ -73,7 +73,7 @@ public class TryStatement
         return catchall == null
                 ? catches == null
                         ? block.getEndPosition()
-                        : catches.get(catches.size()-1).getEndPosition()
+                        : catches.get(catches.size() - 1).getEndPosition()
                 : catchall.getEndPosition();
     }
 

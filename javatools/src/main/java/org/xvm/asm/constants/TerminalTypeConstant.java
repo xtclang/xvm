@@ -810,8 +810,8 @@ public class TerminalTypeConstant
                 }
                 if (typeTarget.isVirtualChild()) {
                     // if possible, retain the parent's type parameters
-                    int           nDepth     = constParent.getDepth();
-                    TypeConstant  typeParent = typeTarget.getParentType();
+                    int          nDepth     = constParent.getDepth();
+                    TypeConstant typeParent = typeTarget.getParentType();
                     while (--nDepth > 0) {
                         if (typeParent instanceof VirtualChildTypeConstant) {
                             typeParent = typeParent.getParentType();

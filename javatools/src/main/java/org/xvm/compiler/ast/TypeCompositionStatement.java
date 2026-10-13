@@ -200,7 +200,7 @@ public class TypeCompositionStatement
         this.qualified = Arrays.stream(Handy.parseDelimitedString(module.getName(), '.'))
                 .map(s -> new Token(0, 0, Id.IDENTIFIER, s))
                 .collect(Collectors.toCollection(ArrayList::new));
-        this.typeArgs = new ArrayList<>(List.of(type));
+        this.typeArgs  = new ArrayList<>(List.of(type));
 
         introduceParentage();
         setComponent(module);
@@ -426,7 +426,7 @@ public class TypeCompositionStatement
                     errs.log(Severity.FATAL, Compiler.MODULE_BAD_NAME,
                             new String[] {sModule}, source,
                             qualified.get(0).getStartPosition(),
-                            qualified.get(qualified.size()-1).getEndPosition());
+                            qualified.get(qualified.size() - 1).getEndPosition());
                     return;
                 }
 
@@ -1392,7 +1392,7 @@ public class TypeCompositionStatement
     private void reportAmbiguousConstructor(List<Parameter> listParams, TypeConstant[] atypeParams,
                                             ErrorListener errs) {
         int           cParams = atypeParams.length;
-        StringBuilder sb = new StringBuilder("construct(");
+        StringBuilder sb      = new StringBuilder("construct(");
         for (int i = 0; i < cParams; ++i) {
             if (i > 0) {
                 sb.append(", ");
@@ -2217,7 +2217,7 @@ public class TypeCompositionStatement
                 return false;
             }
 
-            for (int j = i+1; j < c; j++) {
+            for (int j = i + 1; j < c; j++) {
                 Annotation   anno2     = aAnno[j];
                 TypeConstant typeAnno2 = anno2.getAnnotationType();
                 if (typeAnno2.equals(typeAnno)) {
@@ -2469,8 +2469,8 @@ public class TypeCompositionStatement
 
         for (CompositionNode composition : compositions) {
             if (composition instanceof Delegates compDelegate) {
-                String       sProp   = compDelegate.getPropertyName();
-                TypeConstant typePri = pool().ensureAccessTypeConstant(
+                String       sProp    = compDelegate.getPropertyName();
+                TypeConstant typePri  = pool().ensureAccessTypeConstant(
                                             component.getFormalType(), Access.PRIVATE);
                 TypeInfo     infoThis = typePri.ensureTypeInfo(errs);
                 PropertyInfo infoProp = infoThis.findProperty(sProp);

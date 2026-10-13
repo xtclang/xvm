@@ -84,8 +84,8 @@ public class UInt8ArrayConstant
         byte[] abThis = this.m_abVal;
         byte[] abThat = ((UInt8ArrayConstant) that).m_abVal;
 
-        int cbThis  = abThis.length;
-        int cbThat  = abThat.length;
+        int cbThis = abThis.length;
+        int cbThat = abThat.length;
         for (int of = 0, cb = Math.min(cbThis, cbThat); of < cb; ++of) {
             if (abThis[of] != abThat[of]) {
                 return (abThis[of] & 0xFF) - (abThat[of] & 0xFF);

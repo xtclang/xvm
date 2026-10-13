@@ -36,11 +36,11 @@ import org.xvm.runtime.template._native.reflect.xRTFunction.FunctionHandle;
 public class Fiber
         implements Comparable<Fiber> {
     public Fiber(ServiceContext context, Message msgCall) {
-        f_lId        = s_counter.getAndIncrement();
-        f_context    = context;
-        f_iCallerId  = msgCall.f_iCallerId;
-        f_fnCaller   = msgCall.f_fnCaller;
-        m_status     = FiberStatus.Initial;
+        f_lId       = s_counter.getAndIncrement();
+        f_context   = context;
+        f_iCallerId = msgCall.f_iCallerId;
+        f_fnCaller  = msgCall.f_fnCaller;
+        m_status    = FiberStatus.Initial;
 
         Fiber fiberCaller = msgCall.f_fiberCaller;
         if (fiberCaller == null) {

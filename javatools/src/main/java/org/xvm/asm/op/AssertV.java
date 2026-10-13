@@ -185,12 +185,12 @@ public class AssertV
                 return false;
             }
 
-            sb.append(asLabel[index+1]);
+            sb.append(asLabel[index + 1]);
             return true;
         }
 
-        protected static final int MAX_VAL = 2*1024;
-        protected static final int MAX_LEN = 16*1024;
+        protected static final int MAX_VAL = 2 * 1024;
+        protected static final int MAX_LEN = 16 * 1024;
 
         protected final StringBuilder      sb;
         protected final ObjectHandle[]     ahValue;

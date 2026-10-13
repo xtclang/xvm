@@ -55,7 +55,7 @@ public class TupleExpression
         this.type        = null;
         this.exprs       = Arrays.asList(aExprs);
         this.m_lStartPos = expr0.getStartPosition();
-        this.m_lEndPos   = aExprs[cExprs-1].getEndPosition();
+        this.m_lEndPos   = aExprs[cExprs - 1].getEndPosition();
 
         expr0.getParent().adopt(this);
 

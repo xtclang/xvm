@@ -78,7 +78,7 @@ public class xRTCharDelegate
             --hDelegate.m_achValue[(int) lIndex];
             return overflow(frame);
         }
-        return frame.assignValue(iReturn, xChar.makeHandle(chValue+1));
+        return frame.assignValue(iReturn, xChar.makeHandle(chValue + 1));
     }
 
     @Override
@@ -95,7 +95,7 @@ public class xRTCharDelegate
             ++hDelegate.m_achValue[(int) lIndex];
             return overflow(frame);
         }
-        return frame.assignValue(iReturn, xChar.makeHandle(chValue-1));
+        return frame.assignValue(iReturn, xChar.makeHandle(chValue - 1));
     }
 
     @Override

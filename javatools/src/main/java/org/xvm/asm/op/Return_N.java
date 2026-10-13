@@ -49,7 +49,7 @@ public class Return_N
         super.write(out, registry);
 
         if (m_aArg != null) {
-            Argument[] aArg = m_aArg;
+            Argument[] aArg  = m_aArg;
             int        cArgs = aArg.length;
             int[]      anArg = new int[cArgs];
             for (int i = 0; i < cArgs; ++i) {
@@ -68,10 +68,10 @@ public class Return_N
 
     @Override
     public int process(Frame frame, int iPC) {
-        int            cArgs = m_anArg.length;
-        ObjectHandle[] ahArg = new ObjectHandle[cArgs];
-        boolean[]  afDynamic = null;
-        boolean    fAnyProp  = false;
+        int            cArgs     = m_anArg.length;
+        ObjectHandle[] ahArg     = new ObjectHandle[cArgs];
+        boolean[]      afDynamic = null;
+        boolean        fAnyProp  = false;
 
         // retrieve in the reverse order to allow ReturnStatement to use stack collecting the arguments
         for (int i = cArgs - 1; i >= 0; --i) {

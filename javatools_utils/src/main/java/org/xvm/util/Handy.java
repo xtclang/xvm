@@ -173,7 +173,7 @@ public final class Handy {
 
         // convert the remaining pairs of hexits to bytes
         while (ofch < cch) {
-            ab[ofb++] = (byte) (hexitValue(s.charAt(ofch)) << 4 | hexitValue(s.charAt(ofch+1)));
+            ab[ofb++] = (byte) (hexitValue(s.charAt(ofch)) << 4 | hexitValue(s.charAt(ofch + 1)));
             ofch += 2;
         }
 
@@ -209,7 +209,7 @@ public final class Handy {
         char[] ach = new char[cch];
         Arrays.fill(ach, ' ');
         ach[cchAddr] = ':';
-        ach[cch-1]   = '\n';
+        ach[cch - 1]   = '\n';
 
         int           cLines = Math.max((count + cBytesPerLine - 1) / cBytesPerLine, 1);
         StringBuilder sb     = new StringBuilder(cLines * cch);
@@ -339,7 +339,7 @@ public final class Handy {
      */
     public static StringBuilder appendIntAsHex(StringBuilder sb, int n, int cch) {
         assert cch >= 0 && cch <= 8;
-        for (int cBits = (cch-1) * 4; cBits >= 0; cBits -= 4) {
+        for (int cBits = (cch - 1) * 4; cBits >= 0; cBits -= 4) {
             sb.append(nibbleToChar(n >> cBits));
         }
         return sb;
@@ -392,7 +392,7 @@ public final class Handy {
      */
     public static StringBuilder appendLongAsHex(StringBuilder sb, long n, int cch) {
         assert cch >= 0 && cch <= 16;
-        for (int cBits = (cch-1) * 4; cBits >= 0; cBits -= 4) {
+        for (int cBits = (cch - 1) * 4; cBits >= 0; cBits -= 4) {
             sb.append(nibbleToChar((int) (n >> cBits)));
         }
         return sb;
@@ -432,7 +432,7 @@ public final class Handy {
      */
     public static int renderByteToHex(int n, char[] ach, int of) {
         ach[of  ] = nibbleToChar(n >> 4);
-        ach[of+1] = nibbleToChar(n);
+        ach[of + 1] = nibbleToChar(n);
         return of + 2;
     }
 
@@ -450,7 +450,7 @@ public final class Handy {
     public static int renderIntToHex(int n, char[] ach, int of, int cch) {
         int value = n;
         for (int i = 0; i < cch; ++i) {
-            ach[of+cch-i-1] = nibbleToChar(value);
+            ach[of + cch - i - 1] = nibbleToChar(value);
             value >>>= 4;
         }
         return of + cch;
@@ -470,7 +470,7 @@ public final class Handy {
     public static int renderLongToHex(long n, char[] ach, int of, int cch) {
         long value = n;
         for (int i = 0; i < cch; ++i) {
-            ach[of+cch-i-1] = nibbleToChar((int) value);
+            ach[of + cch - i - 1] = nibbleToChar((int) value);
             value >>>= 4;
         }
         return of + cch;
@@ -790,7 +790,7 @@ public final class Handy {
                     return -1;
                 }
 
-                switch (s.charAt(offset+1)) {
+                switch (s.charAt(offset + 1)) {
                 case '\\':
                 case '\'':
                 case '\"':
@@ -829,12 +829,12 @@ public final class Handy {
      */
     public static String unquotedString(String s) {
         int cch = s.length();
-        if (cch < 2 || s.charAt(0) != s.charAt(cch-1) || "\"'`".indexOf(s.charAt(0)) < 0) {
+        if (cch < 2 || s.charAt(0) != s.charAt(cch - 1) || "\"'`".indexOf(s.charAt(0)) < 0) {
             // it's not a quoted string
             return s;
         }
 
-        StringBuilder buf = new StringBuilder(cch-2);
+        StringBuilder buf = new StringBuilder(cch - 2);
         --cch;                              // don't process the closing quote
         for (int of = 1; of < cch; ++of) {  // don't process the opening quote
             char ch = s.charAt(of);

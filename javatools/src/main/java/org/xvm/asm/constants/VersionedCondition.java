@@ -41,7 +41,7 @@ public class VersionedCondition
      */
     public VersionedCondition(ConstantPool pool, VersionConstant constVer) {
         super(pool);
-        m_constVer  = constVer;
+        m_constVer = constVer;
     }
 
     /**

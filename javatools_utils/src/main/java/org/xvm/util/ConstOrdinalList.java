@@ -152,7 +152,7 @@ public class ConstOrdinalList
         int  nCount  = (int) lIntVal;
         if (index >= nCount) {
             throw new IndexOutOfBoundsException("requested index=" + index
-                    + ", highest legal index=" + (nCount-1));
+                    + ", highest legal index=" + (nCount - 1));
         }
 
         lIntVal      = unpackInt(m_ab, ofCur);
@@ -163,9 +163,9 @@ public class ConstOrdinalList
         ofCur       += (int) (lIntVal >>> 32);
         int cBitsPer = (int) lIntVal;
 
-        lIntVal      = unpackInt(m_ab, ofCur);
-        ofCur       += (int) (lIntVal >>> 32);
-        int idCur    = (int) lIntVal;
+        lIntVal   = unpackInt(m_ab, ofCur);
+        ofCur    += (int) (lIntVal >>> 32);
+        int idCur = (int) lIntVal;
 
         if (index < idCur) {
             return nDefault;
@@ -195,14 +195,14 @@ public class ConstOrdinalList
             ofCur     += (int) (lIntVal >>> 32);
             int idNext = (int) lIntVal;
 
-            lIntVal    = unpackInt(m_ab, ofCur);
-            ofCur     += (int) (lIntVal >>> 32);
-            int nLen   = (int) lIntVal;
+            lIntVal  = unpackInt(m_ab, ofCur);
+            ofCur   += (int) (lIntVal >>> 32);
+            int nLen = (int) lIntVal;
 
             if (nLen < 0) {
-                lIntVal    = unpackInt(m_ab, ofCur);
-                ofCur     += (int) (lIntVal >>> 32);
-                int nVal   = (int) lIntVal;
+                lIntVal  = unpackInt(m_ab, ofCur);
+                ofCur   += (int) (lIntVal >>> 32);
+                int nVal = (int) lIntVal;
 
                 if (index < idCur - nLen) {
                     return nVal;
@@ -240,10 +240,10 @@ public class ConstOrdinalList
         ofCur       += (int) (lIntVal >>> 32);
         int cBitsPer = (int) lIntVal;
 
-        lIntVal      = unpackInt(m_ab, ofCur);
-        ofCur       += (int) (lIntVal >>> 32);
-        int idFirst  = (int) lIntVal;
-        int ofFirst  = ofCur;
+        lIntVal     = unpackInt(m_ab, ofCur);
+        ofCur      += (int) (lIntVal >>> 32);
+        int idFirst = (int) lIntVal;
+        int ofFirst = ofCur;
 
         return new Iterator<Integer>() {
             final byte[] ab      = m_ab;
@@ -349,7 +349,7 @@ public class ConstOrdinalList
             assert n >= 0;
 
             // count incidence of values (outside of runs)
-            mapN.compute(n, (k, v) -> (v==null?0:v) + 1);
+            mapN.compute(n, (k, v) -> (v == null?0:v) + 1);
 
             // determine highest magnitude value
             if (n > nHigh) {
@@ -384,11 +384,11 @@ public class ConstOrdinalList
         Node[] aNode  = list.toArray(new Node[0]);
         int    cNodes = aNode.length;
         for (int i = 1; i < cNodes; ++i) {
-            aNode[i-1].next = aNode[i];
+            aNode[i - 1].next = aNode[i];
         }
 
         // link "skip node" pointers
-        createSkips(aNode, 0, aNode.length-1);
+        createSkips(aNode, 0, aNode.length - 1);
 
         // turn each node into a byte array
         byte[][] aabNode = toBytes(aNode, cBitsPer);
@@ -477,11 +477,11 @@ public class ConstOrdinalList
     private static List<Node> buildNodeList(int[] an, int cMinRun, int nDefault) {
         // identify the runs within the array
         // build a sequence of nodes (run length encoded nodes, and compressed array nodes)
-        int cVals     = an.length;
-        int iFirstN   = -1;     // index of first "not picked up into a node" non-default number
-        int iLastN    = -1;     // index of last "not picked up into a node" non-default number
-        int nPrev     = -1;
-        int cRun      = 0;
+        int cVals   = an.length;
+        int iFirstN = -1;     // index of first "not picked up into a node" non-default number
+        int iLastN  = -1;     // index of last "not picked up into a node" non-default number
+        int nPrev   = -1;
+        int cRun    = 0;
         List<Node> list = new ArrayList<>();
         for (int i = 0; i < cVals; ++i) {
             int n = an[i];
@@ -620,7 +620,7 @@ public class ConstOrdinalList
             assert nodeNext == null || nodeNext.id > node.id;
             // REVIEW CP: should not be 0, should be size (i.e. index of first non-existent int beyond end of array)
             //            it works now due to the "ofNext >= ab.length" in "currentNode()" method
-            nodeRaw.idNext  = nodeNext == null ? 0 : nodeNext.id - node.id;
+            nodeRaw.idNext = nodeNext == null ? 0 : nodeNext.id - node.id;
 
             if (node.rle) {
                 nodeRaw.cVals = -node.cVals;
@@ -677,7 +677,7 @@ public class ConstOrdinalList
         Node node = aNode[iFirst];
         assert node.jmp == null;
 
-        int ofJmp = Integer.highestOneBit(cNodes-1);
+        int ofJmp = Integer.highestOneBit(cNodes - 1);
         node.jmp = aNode[iFirst + ofJmp];
 
         createSkips(aNode, iFirst + 1, iFirst + ofJmp - 1);
@@ -687,13 +687,13 @@ public class ConstOrdinalList
     // ----- inner class: RawNode ------------------------------------------------------------------
 
     private static class RawNode {
-        int     idJmp;
-        int     ofJmp;
-        int     idNext;
-        int     cVals;
-        int     nVal;       // run length node only
-        byte[]  abVals;     // value array node only
-        int     ofVals;
+        int    idJmp;
+        int    ofJmp;
+        int    idNext;
+        int    cVals;
+        int    nVal;       // run length node only
+        byte[] abVals;     // value array node only
+        int    ofVals;
     }
 
     private static RawNode readRawNode(DataInputStream in, int cBitsPer)
@@ -821,7 +821,7 @@ public class ConstOrdinalList
         byte[] ab     = new byte[cBytes];
 
         for (int i = 0; i < cn; ++i) {
-            int n     = an[of+i];
+            int n     = an[of + i];
             int ofBit = i * cBitsPer;
             while (n != 0) {
                 int ofByte = ofBit / 8;

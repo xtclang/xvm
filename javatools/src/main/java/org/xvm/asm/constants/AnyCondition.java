@@ -97,7 +97,7 @@ public class AnyCondition
         if (isOnlyVersions()) {
             ConditionalConstant[] acondOld = m_aconstCond;
             int                   cConds   = acondOld.length;
-            ConditionalConstant[] acondNew = new ConditionalConstant[cConds+1];
+            ConditionalConstant[] acondNew = new ConditionalConstant[cConds + 1];
             System.arraycopy(acondOld, 0, acondNew, 0, cConds);
             acondNew[cConds] = getConstantPool().ensureVersionedCondition(ver);
             return new AnyCondition(acondNew);

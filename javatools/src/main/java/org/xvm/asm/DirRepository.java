@@ -241,11 +241,11 @@ public class DirRepository
                     return null;
                 }
 
-                File   file      = new File(m_dir, fileName);
-                long   timestamp = in.readLong();
-                long   size      = in.readLong();
-                boolean err      = in.readBoolean();
-                String name      = err ? null : in.readUTF();
+                File    file      = new File(m_dir, fileName);
+                long    timestamp = in.readLong();
+                long    size      = in.readLong();
+                boolean err       = in.readBoolean();
+                String  name      = err ? null : in.readUTF();
 
                 if (modulesByFile.put(file,
                         new ModuleInfo(file, name, timestamp, size, err)) != null) {

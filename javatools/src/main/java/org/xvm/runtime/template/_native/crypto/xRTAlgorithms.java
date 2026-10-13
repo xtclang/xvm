@@ -107,7 +107,7 @@ public class xRTAlgorithms
     }
 
     private ObjectHandle invokeCreateAlgorithms(Frame frame) {
-        TypeComposition clz     = getCanonicalClass();
+        TypeComposition clz    = getCanonicalClass();
         MethodStructure method = getStructure().findMethod("createAlgorithms", 0);
         CallChain       chain  = clz.getMethodCallChain(method.getIdentityConstant().getSignature());
 

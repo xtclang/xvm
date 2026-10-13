@@ -83,7 +83,7 @@ public class xRTNameService
     @Override
     public int invokeNative1(Frame frame, MethodStructure method, ObjectHandle hTarget,
                              ObjectHandle hArg, int iReturn) {
-        ServiceHandle  hService = (ServiceHandle) hTarget;
+        ServiceHandle hService = (ServiceHandle) hTarget;
 
         ObjectHandle[] ahArg = new ObjectHandle[method.getMaxVars()];
         ahArg[0] = hArg;

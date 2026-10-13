@@ -48,11 +48,11 @@ public class xRTViewFromBitToNibble
         if (hSource instanceof SliceHandle hSlice) {
             // bits.slice().asNibbleArray() -> bits.asNibbleArray().slice()
             ViewHandle hView = new ViewHandle(clzView,
-                    hSlice.f_hSource, hSlice.f_hSource.m_cSize/2, mutability);
+                    hSlice.f_hSource, hSlice.f_hSource.m_cSize / 2, mutability);
 
-            return slice(hView, hSlice.f_ofStart/4, hSlice.m_cSize/4, hSlice.f_fReverse);
+            return slice(hView, hSlice.f_ofStart / 4, hSlice.m_cSize / 4, hSlice.f_fReverse);
         }
-        return new ViewHandle(clzView, hSource, hSource.m_cSize/4, mutability);
+        return new ViewHandle(clzView, hSource, hSource.m_cSize / 4, mutability);
     }
 
     // ----- RTDelegate API ------------------------------------------------------------------------
@@ -65,7 +65,7 @@ public class xRTViewFromBitToNibble
         ClassTemplate  tSource = hSource.getTemplate();
 
         if (tSource instanceof BitView tView) {
-            byte[] abBits = tView.getBytes(hSource, ofStart/2, cSize/2, fReverse);
+            byte[] abBits = tView.getBytes(hSource, ofStart / 2, cSize / 2, fReverse);
 
             return xRTNibbleDelegate.INSTANCE.packHandle(abBits, mutability);
         }

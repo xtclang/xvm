@@ -196,13 +196,13 @@ public class xRTCertificateManager
      */
     private ExceptionHandle invokeCreateCertificate(Frame frame, ServiceHandle hMgr,
                                                     ObjectHandle[] ahArg) {
-        StringHandle hStorePath  = (StringHandle) ahArg[0];
-        StringHandle hPwd        = xRTKeyStore.getPassword(frame, ahArg[1]);
-        String       sName       = ((StringHandle) ahArg[2]).getStringValue();
-        String       sDName      = ((StringHandle) ahArg[3]).getStringValue();
-        String       sProvider   = ((StringHandle) hMgr.getField(0)).getStringValue();
-        String       sStorePath  = osPath(hStorePath);
-        char[]       achPwd      = hPwd.getValue();
+        StringHandle hStorePath = (StringHandle) ahArg[0];
+        StringHandle hPwd       = xRTKeyStore.getPassword(frame, ahArg[1]);
+        String       sName      = ((StringHandle) ahArg[2]).getStringValue();
+        String       sDName     = ((StringHandle) ahArg[3]).getStringValue();
+        String       sProvider  = ((StringHandle) hMgr.getField(0)).getStringValue();
+        String       sStorePath = osPath(hStorePath);
+        char[]       achPwd     = hPwd.getValue();
 
         try {
             KeyStoreOperations.deleteKeyStoreEntry(sStorePath, achPwd, sName);

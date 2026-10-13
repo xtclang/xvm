@@ -6,6 +6,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -20,7 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Tests of the Handy class.
+ * Verifies set contents and iteration through mutation, growth and compaction.
  */
 public class SetTest {
     static void main(final String[] args) {
@@ -90,7 +92,7 @@ public class SetTest {
         while (true) {
             set.add(++c);
             if (c % 1000000 == 0) {
-                out((c/1000000) + "m in " + (System.currentTimeMillis()-start) + "ms");
+                out((c / 1000000) + "m in " + (System.currentTimeMillis() - start) + "ms");
                 break;
             }
         }
@@ -98,7 +100,7 @@ public class SetTest {
 
     static void speedTest() {
         for (int i = 0, p=990, c = 1000; i < c; ++i) {
-            speedTest(i>p);
+            speedTest(i > p);
         }
     }
 
@@ -114,7 +116,7 @@ public class SetTest {
         }
         long l2 = System.currentTimeMillis();
         if (fPrint) {
-            out("HashSet @" + (l1-l0) + "ms vs. ListSet @" + (l2-l1) + "ms");
+            out("HashSet @" + (l1 - l0) + "ms vs. ListSet @" + (l2 - l1) + "ms");
         }
     }
 
@@ -126,7 +128,7 @@ public class SetTest {
 
     static boolean randomTest(final int cSteps) {
         ArrayList<Op> listOps = new ArrayList<>(cSteps);
-        Data data = new StringData(1+rnd.nextInt(1+rnd.nextInt(100000)));
+        Data data = new StringData(1 + rnd.nextInt(1 + rnd.nextInt(100000)));
         var setControl = createControlSet();
         var testSets   = createTestSets();
         for (int iStep = 0; iStep < cSteps; ++iStep) {
@@ -194,8 +196,8 @@ public class SetTest {
     static Op parseOp(final String sLine) {
         int of = sLine.indexOf(' ');
         assert of > 0;
-        String   sOp     = sLine.substring(0, of);
-        String   sParams = sLine.substring(of+1).trim();
+        String   sOp      = sLine.substring(0, of);
+        String   sParams  = sLine.substring(of + 1).trim();
         String[] asParams = Handy.parseDelimitedString(sParams, ' ');
 
         Op op = switch (sOp) {
@@ -271,6 +273,43 @@ public class SetTest {
     @FunctionalInterface
     public interface Data {
         Object rnd();
+    }
+
+    /** Copy construction must finish before a subclass's collection overrides can be invoked. */
+    @Test
+    public void copyConstructionAvoidsSubclassOverrides() {
+        class TrackingSet extends ListSet<String> {
+            private final List<String> calls = new ArrayList<>();
+
+            TrackingSet(Collection<? extends String> values) {
+                super(values);
+            }
+
+            @Override
+            public boolean add(String value) {
+                calls.add("add");
+                return super.add(value);
+            }
+
+            @Override
+            public boolean addAll(Collection<? extends String> values) {
+                calls.add("addAll");
+                return super.addAll(values);
+            }
+
+            @Override
+            public int size() {
+                calls.add("size");
+                return super.size();
+            }
+        }
+
+        var set = new TrackingSet(Arrays.asList("first", null, "first", "last"));
+        assertTrue(set.calls.isEmpty());
+        assertEquals(Arrays.asList("first", null, "last"), new ArrayList<>(set));
+        set.calls.clear();
+        assertTrue(set.addAll(List.of("later")));
+        assertEquals(List.of("addAll", "add"), set.calls);
     }
 
     @Test

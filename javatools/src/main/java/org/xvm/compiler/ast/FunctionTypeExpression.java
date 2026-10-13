@@ -105,7 +105,7 @@ public class FunctionTypeExpression
     private TypeConstant toConditionalTupleType(TypeConstant[] atypes) {
         ConstantPool   pool       = pool();
         int            cTypes     = atypes.length;
-        TypeConstant[] aconstCond = new TypeConstant[cTypes+1];
+        TypeConstant[] aconstCond = new TypeConstant[cTypes + 1];
 
         aconstCond[0] = pool.typeBoolean();
         System.arraycopy(atypes, 0, aconstCond, 1, cTypes);

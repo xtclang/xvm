@@ -125,8 +125,8 @@ public class String
                 tri = tri << 21 | uni21;
                 if (++packed == 3) {
                     data[dest++] = tri;
-                    tri    = 0;
-                    packed = 0;
+                    tri          = 0;
+                    packed       = 0;
                 }
             }
             if (tri != 0) {
@@ -140,7 +140,7 @@ public class String
                 char ch = s.charAt(src);
                 octo = octo << 8 | ch;
                 if ((src & 0b111) == 0b111) {
-                    data[src>>>3] = octo;
+                    data[src >>> 3] = octo;
                     octo = 0;
                 }
             }
@@ -148,7 +148,7 @@ public class String
                 // use `last` as the `src` of the last char in the string
                 // if (last & 0b111) == 1, that means that we have 1 unflushed byte, so << 56
                 int last = utf16len - 1;
-                data[last>>>3] = octo << (~(last & 0b111) << 3);
+                data[last >>> 3] = octo << (~(last & 0b111) << 3);
             }
             end = utf16len;
         }
@@ -178,12 +178,12 @@ public class String
      */
     String(Ctx ctx, long[] data, boolean unicode, long hash, int start, int end, String next) {
         super(ctx);
-        this.data       = data;
-        this.unicode    = unicode;
-        this.hash       = hash;
-        this.start      = start;
-        this.end        = end;
-        this.next       = next;
+        this.data    = data;
+        this.unicode = unicode;
+        this.hash    = hash;
+        this.start   = start;
+        this.end     = end;
+        this.next    = next;
     }
 
     @Override
@@ -200,7 +200,7 @@ public class String
     public static String $new(Ctx ctx,TypeConstant type, ArrayᐸCharᐳ chars) {
         // TODO handle huge arrays
         ArrayᐸCharᐳ content = chars.$isImmut() ? chars : chars.freeze$p(ctx, false, true);
-        long         size    = content.size$get$p(ctx);
+        long size = content.size$get$p(ctx);
         String string = new String(ctx, content.$storage, chars.$utf21, 0, 0, (int) size, null);
         string.chars = content;
         return string;
@@ -263,10 +263,10 @@ public class String
      */
     public ArrayᐸCharᐳ chars$get(Ctx ctx) {
         if (chars == null) {
-            ConstantPool  pool         = ctx.pool();
-            ClassConstant clz          = pool.clzArray();
-            TypeConstant typeChar      = pool.typeChar();
-            TypeConstant typeCharArray = pool.ensureClassTypeConstant(clz, null, typeChar);
+            ConstantPool  pool          = ctx.pool();
+            ClassConstant clz           = pool.clzArray();
+            TypeConstant  typeChar      = pool.typeChar();
+            TypeConstant  typeCharArray = pool.ensureClassTypeConstant(clz, null, typeChar);
             // TODO what if this String has a next continuation?
             assert next == null;
             ArrayᐸCharᐳ array = new ArrayᐸCharᐳ(ctx, typeCharArray, data, size$get$p(ctx), unicode);

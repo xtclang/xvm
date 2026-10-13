@@ -88,7 +88,7 @@ public class Decimal32
             throw new IllegalArgumentException("index out of range: " + i);
         }
 
-        return (m_nBits >>> (i*8)) & 0xFF;
+        return (m_nBits >>> (i * 8)) & 0xFF;
     }
 
     @Override

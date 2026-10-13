@@ -31,7 +31,7 @@ public final class ConstBitSetTest {
 
     static void validate(BitSet bs, ConstBitSet cbs, int iTest, String sTest) {
         System.out.println("Test #" + iTest + sTest
-            + ", size=" + cbs.size() + " (" + (cbs.size()/8) + " bytes)"
+            + ", size=" + cbs.size() + " (" + (cbs.size() / 8) + " bytes)"
             + ", length=" + cbs.length()
             + ", isEmpty=" + cbs.isEmpty()
             + ", cardinality=" + cbs.cardinality()

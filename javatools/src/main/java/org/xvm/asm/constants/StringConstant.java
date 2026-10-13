@@ -34,7 +34,7 @@ public class StringConstant
     public StringConstant(ConstantPool pool, Format format, DataInput in)
             throws IOException {
         super(pool);
-        m_sVal  = readUtf8String(in);
+        m_sVal = readUtf8String(in);
     }
 
     /**
@@ -47,7 +47,7 @@ public class StringConstant
         super(pool);
 
         assert sVal != null;
-        m_sVal  = sVal;
+        m_sVal = sVal;
     }
 
     // ----- type-specific functionality -----------------------------------------------------------

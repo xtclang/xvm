@@ -597,7 +597,7 @@ public class PackedInteger
             // truncate any redundant bytes
             boolean fNeg  = (ab[0] & 0x80) != 0;
             int     bSkip = fNeg ? 0xFF : 0x00;
-            while (of < cb-1 && ab[of] == bSkip && (ab[of+1] & 0x80) == (bSkip & 0x80)) {
+            while (of < cb - 1 && ab[of] == bSkip && (ab[of + 1] & 0x80) == (bSkip & 0x80)) {
                 ++of;
             }
             cb -= of;
@@ -605,7 +605,7 @@ public class PackedInteger
 
             if (cb <= 32) {
                 // large format: length encoded in 6 MSBs of first byte, then the bytes of the int
-                out.writeByte(0xA0 | cb-1);
+                out.writeByte(0xA0 | cb - 1);
             } else {
                 // huge format: first byte is 0, then the length as a packed int, then the bytes
                 out.writeByte(0xA0);
@@ -703,7 +703,7 @@ public class PackedInteger
         }
 
         final int cBytes = (cBits + 7) >>> 3;   // in the range of 2..8 bytes
-        out.writeByte(0xA0 | cBytes-1);
+        out.writeByte(0xA0 | cBytes - 1);
         switch (cBytes) {
         case 2:
             out.writeShort(i);
@@ -779,7 +779,7 @@ public class PackedInteger
         }
 
         // huge format
-        long sizeAndValue = unpackInt(ab, of+1);
+        long sizeAndValue = unpackInt(ab, of + 1);
         return 1 + (int) (sizeAndValue >>> 32) + (int) sizeAndValue;
     }
 
@@ -827,7 +827,7 @@ public class PackedInteger
             cb = 1;
         } else if ((b & 0x20) == 0) {
             // medium format: 13 bit int, combines 5 bits + next byte (and sign extend)
-            n = b << 27 >> 19 | ab[of+1] & 0xFF;
+            n = b << 27 >> 19 | ab[of + 1] & 0xFF;
             cb = 2;
         } else {
             // large format: trail mode: next x+1 (2-32) bytes
@@ -837,13 +837,13 @@ public class PackedInteger
 
             switch (cBytes) {
             case 2:
-                n  = ab[of] << 8 | ab[of+1] & 0xFF;
+                n = ab[of] << 8 | ab[of + 1] & 0xFF;
                 break;
             case 3:
-                n  = ab[of] << 16 | (ab[of+1] & 0xFF) << 8 | ab[of+2] & 0xFF;
+                n = ab[of] << 16 | (ab[of + 1] & 0xFF) << 8 | ab[of + 2] & 0xFF;
                 break;
             case 4:
-                n  = ab[of] << 24 | (ab[of+1] & 0xFF) << 16 | (ab[of+2] & 0xFF) << 8 | ab[of+3] & 0xFF;
+                n = ab[of] << 24 | (ab[of + 1] & 0xFF) << 16 | (ab[of + 2] & 0xFF) << 8 | ab[of + 3] & 0xFF;
                 break;
             default:
                 throw new IllegalStateException("# trailing bytes=" + cBytes);

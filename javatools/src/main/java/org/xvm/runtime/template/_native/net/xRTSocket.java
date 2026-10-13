@@ -195,7 +195,7 @@ public class xRTSocket
                                       byte[] abLocalIP, int nLocalPort)
             throws IOException {
         Socket  socket = new Socket();
-        boolean owned = false;
+        boolean owned  = false;
         try {
             socket.setTcpNoDelay(true);
             socket.setKeepAlive(true);
@@ -217,13 +217,13 @@ public class xRTSocket
 
     protected int constructSocket(Frame frame, Socket socket, byte[] abLocal, int nLocalPort,
                                   byte[] abRemote, int nRemotePort, int[] aiReturn) {
-        ConstantPool     pool         = frame.poolContext();
-        ClassTemplate    template     = this;
-        ClassComposition clz          = template.getCanonicalClass();
-        MethodStructure  constructor  = template.getStructure().findConstructor(
+        ConstantPool     pool        = frame.poolContext();
+        ClassTemplate    template    = this;
+        ClassComposition clz         = template.getCanonicalClass();
+        MethodStructure  constructor = template.getStructure().findConstructor(
                 pool.typeByteArray(), pool.typeUInt16(),
                 pool.typeByteArray(), pool.typeUInt16());
-        ObjectHandle[]   ahParams     = new ObjectHandle[constructor.getMaxVars()];
+        ObjectHandle[]   ahParams    = new ObjectHandle[constructor.getMaxVars()];
         ahParams[0] = xArray.makeByteArrayHandle(abLocal, Mutability.Constant);
         ahParams[1] = xUInt16.INSTANCE.makeJavaLong(nLocalPort);
         ahParams[2] = xArray.makeByteArrayHandle(abRemote, Mutability.Constant);
@@ -275,7 +275,7 @@ public class xRTSocket
 
         long             ldtTimeout = frame.f_fiber.getTimeoutStamp();
         Container        container  = frame.f_context.f_container;
-        Callable<byte[]> task = () -> {
+        Callable<byte[]> task       = () -> {
             // SO_TIMEOUT is only a backstop for the native I/O fibers; allow the Ecstasy timeout
             // to be observed first
             int cTimeoutMillis = ldtTimeout <= 0

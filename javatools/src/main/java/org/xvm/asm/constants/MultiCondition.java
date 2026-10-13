@@ -196,12 +196,12 @@ public abstract class MultiCondition
         }
 
         if (cConds == 2) {
-            return acondOld[-(i-1)];
+            return acondOld[-(i - 1)];
         }
 
-        ConditionalConstant[] acondNew = new ConditionalConstant[cConds-1];
+        ConditionalConstant[] acondNew = new ConditionalConstant[cConds - 1];
         System.arraycopy(acondOld, 0, acondNew, 0, i);
-        System.arraycopy(acondOld, i+1, acondNew, i, cConds - i - 1);
+        System.arraycopy(acondOld, i + 1, acondNew, i, cConds - i - 1);
         return instantiate(acondNew);
     }
 

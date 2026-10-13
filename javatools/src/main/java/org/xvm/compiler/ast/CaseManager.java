@@ -733,7 +733,7 @@ public class CaseManager<CookieType> {
                     // the idea is that if we have ints from 100,000 to 100,100, and there are
                     // 25+ of them, then we should go ahead and use the jump table optimization
                     if (m_listsetCase.size() >= (pintRange.getLong() >>> 2)) {
-                        cRange      = pintRange.getInt() + 1;
+                        cRange        = pintRange.getInt() + 1;
                         m_fUseJumpInt = true;
                     }
                 }
@@ -753,8 +753,8 @@ public class CaseManager<CookieType> {
                         boolean fLastEx  = constRange.isLastExcluded();
                         if (iFirst > iLast) {
                             int iTemp = iFirst;
-                            iFirst = fLastEx  ? iLast+1 : iLast;
-                            iLast  = fFirstEx ? iTemp-1 : iTemp;
+                            iFirst = fLastEx  ? iLast + 1 : iLast;
+                            iLast  = fFirstEx ? iTemp - 1 : iTemp;
                         } else {
                             if (fFirstEx) {
                                 iFirst++;

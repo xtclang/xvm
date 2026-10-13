@@ -273,7 +273,7 @@ public class ConstBitSet {
     public static BitSet invert(BitSet bs) {
         int    length    = bs.length();
         BitSet bsInverse = new BitSet(length);
-        for (int id = bs.nextClearBit(0); id < length; id = bs.nextClearBit(id+1)) {
+        for (int id = bs.nextClearBit(0); id < length; id = bs.nextClearBit(id + 1)) {
             bsInverse.set(id);
         }
         return bsInverse;
@@ -426,11 +426,11 @@ public class ConstBitSet {
         Node[] aNode  = listNodes.toArray(new Node[0]);
         int    cNodes = aNode.length;
         for (int i = 1; i < cNodes; ++i) {
-            aNode[i-1].next = aNode[i];
+            aNode[i - 1].next = aNode[i];
         }
 
         // link "skip node" pointers
-        createSkips(aNode, 0, aNode.length-1);
+        createSkips(aNode, 0, aNode.length - 1);
 
         // turn the nodes into bytes
         byte[][] aabNode = new byte[cNodes][];
@@ -498,7 +498,7 @@ public class ConstBitSet {
             return;
         }
 
-        int ofJmp = Integer.highestOneBit(cNodes-1);
+        int ofJmp = Integer.highestOneBit(cNodes - 1);
         node.jmp = aNode[iFirst + ofJmp];
 
         createSkips(aNode, iFirst + 1, iFirst + ofJmp - 1);

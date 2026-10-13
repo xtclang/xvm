@@ -43,7 +43,7 @@ public abstract class ByteBasedBitView
                     ? new ViewHandle(clzView, hBytes, hBytes.getBitCount(), mutability)
                     : xRTViewToBit.INSTANCE.createBitViewDelegate(hSource, mutability);
 
-            return slice(hView, hSlice.f_ofStart*8, hSlice.m_cSize*8, false);
+            return slice(hView, hSlice.f_ofStart * 8, hSlice.m_cSize * 8, false);
         }
 
         if (hSource instanceof xRTView.ViewHandle hView) {
@@ -116,7 +116,7 @@ public abstract class ByteBasedBitView
 
     @Override
     public byte[] getBytes(DelegateHandle hDelegate, long ofStart, long cBytes, boolean fReverse) {
-        return getBits(hDelegate, ofStart*8, cBytes*8, fReverse);
+        return getBits(hDelegate, ofStart * 8, cBytes * 8, fReverse);
     }
 
     @Override

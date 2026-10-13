@@ -229,10 +229,10 @@ public abstract class BaseBinaryFP
             return frame.assignValue(iReturn, makeHandle(Math.tanh(d)));
 
         case "asinh":
-            return frame.assignValue(iReturn, makeHandle(Math.log(d+Math.sqrt(d*d+1.0))));
+            return frame.assignValue(iReturn, makeHandle(Math.log(d + Math.sqrt(d * d + 1.0))));
 
         case "acosh":
-            return frame.assignValue(iReturn, makeHandle( Math.log(d+Math.sqrt(d*d-1.0))));
+            return frame.assignValue(iReturn, makeHandle( Math.log(d + Math.sqrt(d * d - 1.0))));
 
         case "atanh":
             return frame.assignValue(iReturn, makeHandle(0.5 * Math.log((1.0 + d) / (1.0 - d))));
@@ -272,7 +272,7 @@ public abstract class BaseBinaryFP
         double d1 = ((FloatHandle) hTarget).getValue();
         double d2 = ((FloatHandle) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeHandle(d1+d2));
+        return frame.assignValue(iReturn, makeHandle(d1 + d2));
     }
 
     @Override
@@ -280,7 +280,7 @@ public abstract class BaseBinaryFP
         double d1 = ((FloatHandle) hTarget).getValue();
         double d2 = ((FloatHandle) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeHandle(d1-d2));
+        return frame.assignValue(iReturn, makeHandle(d1 - d2));
     }
 
     @Override
@@ -288,7 +288,7 @@ public abstract class BaseBinaryFP
         double d1 = ((FloatHandle) hTarget).getValue();
         double d2 = ((FloatHandle) hArg).getValue();
 
-        return frame.assignValue(iReturn, makeHandle(d1*d2));
+        return frame.assignValue(iReturn, makeHandle(d1 * d2));
     }
 
     @Override
@@ -300,7 +300,7 @@ public abstract class BaseBinaryFP
             return overflow(frame);
         }
 
-        return frame.assignValue(iReturn, makeHandle(d1/d2));
+        return frame.assignValue(iReturn, makeHandle(d1 / d2));
     }
 
     @Override
@@ -312,7 +312,7 @@ public abstract class BaseBinaryFP
             return overflow(frame);
         }
 
-        return frame.assignValue(iReturn, makeHandle(d1%d2));
+        return frame.assignValue(iReturn, makeHandle(d1 % d2));
     }
 
     @Override

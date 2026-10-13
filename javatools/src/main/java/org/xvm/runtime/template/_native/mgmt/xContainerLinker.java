@@ -98,7 +98,7 @@ public class xContainerLinker
             try {
                 ArrayHandle   hContents  = (ArrayHandle) hArg;
                 byte[]        abContents = xRTUInt8Delegate.getBytes((ByteArrayHandle) hContents.m_hDelegate);
-                FileStructure struct = new FileStructure(new ByteArrayInputStream(abContents));
+                FileStructure struct     = new FileStructure(new ByteArrayInputStream(abContents));
 
                 return frame.assignValue(iReturn, xRTFileTemplate.makeHandle(frame.f_context.f_container, struct));
             } catch (IOException e) {
@@ -182,7 +182,7 @@ public class xContainerLinker
         ObjectHandle            hProvider    = ahArg[3]; // mgmt.ResourceProvider
         ArrayHandle             haShared     = (ArrayHandle) ahArg[4];
         ArrayHandle             haAdditional = (ArrayHandle) ahArg[5];
-        ArrayHandle haCondNames = (ArrayHandle) ahArg[6];
+        ArrayHandle             haCondNames  = (ArrayHandle) ahArg[6];
 
         if (((EnumHandle) hModel).getOrdinal() != 0) {
             return frame.raiseException(

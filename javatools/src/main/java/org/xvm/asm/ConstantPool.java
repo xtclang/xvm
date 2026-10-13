@@ -1190,8 +1190,8 @@ public class ConstantPool
             constParent = constParent instanceof ClassConstant || sName.charAt(0) <= 'Z'
                     ? ensureClassConstant(constParent, sName)
                     : ensurePackageConstant(constParent, sName);
-            ofStart = ofEnd + 1;
-            ofEnd   = sClass.indexOf('.', ofStart);
+            ofStart     = ofEnd + 1;
+            ofEnd       = sClass.indexOf('.', ofStart);
         }
         return ensureClassConstant(constParent, sClass.substring(ofStart));
     }

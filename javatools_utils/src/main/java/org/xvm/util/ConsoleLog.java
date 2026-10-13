@@ -20,9 +20,9 @@ public class ConsoleLog {
             return;
         }
 
-        int    cch     = ach.length;
-        int    ofStart = 0;
-        int    of      = 0;
+        int cch     = ach.length;
+        int ofStart = 0;
+        int of      = 0;
         while (of < cch) {
             char ch = ach[of];
             if (ch == '\n') {
@@ -30,7 +30,7 @@ public class ConsoleLog {
                     append(ach, ofStart, of - ofStart);
                 }
                 advance();
-                ofStart = of+1;
+                ofStart = of + 1;
             } else if (!Character.isDefined(ch) || Character.isISOControl(ch)) {
                 ach = ach.clone();
                 ach[of] = '?';
@@ -85,8 +85,8 @@ public class ConsoleLog {
             return "(No logged output.)";
         }
 
-        int cchWide = width-2;
-        int cHigh   = height-2;
+        int cchWide = width - 2;
+        int cHigh   = height - 2;
 
         StringBuilder sb = new StringBuilder(width);
         sb.append('|')
@@ -96,7 +96,7 @@ public class ConsoleLog {
 
         // render the lines backwards
         ArrayList<String> listLines = new ArrayList<>();
-        int               iNext     = m_asLine[m_iLine] == null ? m_iLine-1 : m_iLine;  // neg?
+        int               iNext     = m_asLine[m_iLine] == null ? m_iLine - 1 : m_iLine;  // neg?
         int               cRemain   = m_cLines;
         String            sChunk    = null;
         for (int iLine = 0; iLine < cHigh; ++iLine) {
@@ -125,8 +125,8 @@ public class ConsoleLog {
                 if (cchChop == 0) {
                     cchChop = cchWide;
                 }
-                sb.append(sChunk.substring(cchChunk-cchChop));
-                sChunk = sChunk.substring(0, cchChunk-cchChop);
+                sb.append(sChunk.substring(cchChunk - cchChop));
+                sChunk = sChunk.substring(0, cchChunk - cchChop);
             } else {
                 sb.append('|');
                 sb.append(sChunk);
@@ -143,7 +143,7 @@ public class ConsoleLog {
         }
 
         int cLines = listLines.size();
-        sb = new StringBuilder((width+1) * (cLines + 2) - 1);
+        sb = new StringBuilder((width + 1) * (cLines + 2) - 1);
         sb.append(sHeader);
         for (int iLine = 0; iLine < cLines; ++iLine) {
             sb.append('\n')

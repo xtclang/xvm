@@ -2425,7 +2425,7 @@ public abstract class TypeConstant
             // now that the mixins leading to this mixin are all known, re-walk the dependencies to
             // build the entire set of dependencies minus anything that requires hopping over to
             // this right side column that leads to this mixin
-            setLeft = new HashSet<>(setAll.size()-1);
+            setLeft = new HashSet<>(setAll.size() - 1);
             typeInto.collectContribs(setLeft, setOmit, errs);
             assert !setLeft.contains(idThis);
         } else {
@@ -3606,7 +3606,7 @@ public abstract class TypeConstant
         boolean      fIncomplete = false;
         boolean      fNative     = constId instanceof NativeRebaseConstant;
 
-        for (int i = listProcess.size()-1; i >= 0; --i) {
+        for (int i = listProcess.size() - 1; i >= 0; --i) {
             Contribution contrib = listProcess.get(i);
 
             Map<PropertyConstant, PropertyInfo> mapContribProps;
@@ -3636,8 +3636,8 @@ public abstract class TypeConstant
                     errs        = ErrorListener.BLACKHOLE;
                 }
 
-                var     listExplode          = new ArrayList<PropertyConstant>();
-                boolean fInterface           = struct.getFormat() == Component.Format.INTERFACE;
+                var     listExplode = new ArrayList<PropertyConstant>();
+                boolean fInterface  = struct.getFormat() == Component.Format.INTERFACE;
                 if (!collectChildInfo(constId, fInterface, struct, mapTypeParams,
                         mapContribProps, mapContribMethods, mapContribChildren, listExplode,
                         mapVirtProps, nBasePropRank, nBaseMethRank, errs)) {
@@ -3935,7 +3935,7 @@ public abstract class TypeConstant
                                                             Implementation.Native), nRank);
                     if (infoSet != null) {
                         infoSet = new MethodInfo(new MethodBody(idSet, idSet.getSignature(),
-                                                                Implementation.Native), nRank+1);
+                                                                Implementation.Native), nRank + 1);
                     }
                 } else {
                     // layer on "implicit" property accessors on top of the base chains;
@@ -3952,7 +3952,7 @@ public abstract class TypeConstant
 
                     if (infoSet != null) {
                         infoSet = infoSet.layerOn(new MethodInfo(new MethodBody(idSet,
-                                idSet.getSignature(), Implementation.Implicit), nRank+1), false, errs);
+                                idSet.getSignature(), Implementation.Implicit), nRank + 1), false, errs);
                     }
                 }
 
@@ -4501,7 +4501,7 @@ public abstract class TypeConstant
 
                     // now we need find a method that would be the unambiguously best choice;
                     // collect the nids into a lookup map (sig->nid)
-                    Map<SignatureConstant, Object> mapNids  = new HashMap<>();
+                    Map<SignatureConstant, Object> mapNids = new HashMap<>();
                     for (Object nid : listMatches) {
                         MethodInfo info = mapVirtMethods.get(nid);
                         if (!info.isCapped()) {
@@ -4692,7 +4692,7 @@ public abstract class TypeConstant
             // method, then cap the nid by redirecting to the narrowed method, otherwise it is
             // an error
             for (Entry<Object, Set<Object>> entry : mapNarrowedNids.entrySet()) {
-                Object nidNarrowed  = entry.getKey();
+                Object nidNarrowed = entry.getKey();
                 if (mapVirtMods.containsKey(nidNarrowed)) {
                     // we ignore every narrowed method signature that did *not* receive a
                     // contribution of its own (i.e. same method signature), because any that did
@@ -5201,9 +5201,9 @@ public abstract class TypeConstant
             // rebase properties should be computed as they were *not* from an interface
             boolean fFromIface = fInterface && !fRebase;
 
-            PropertyConstant  id    = prop.getIdentityConstant();
-            int               nRank = nBasePropRank + mapProps.size();
-            PropertyInfo      info  = createPropertyInfo(prop, constId, fRebase | prop.isNative(),
+            PropertyConstant id    = prop.getIdentityConstant();
+            int              nRank = nBasePropRank + mapProps.size();
+            PropertyInfo     info  = createPropertyInfo(prop, constId, fRebase | prop.isNative(),
                                                          fFromIface, nRank, errs);
             mapProps.put(id, info);
 
@@ -5360,12 +5360,12 @@ public abstract class TypeConstant
         }
 
         // check the methods to see if get() and set() call super
-        MethodStructure  methodInit     = null;
-        MethodStructure  methodGet      = null;
-        MethodStructure  methodSet      = null;
-        MethodStructure  methodBadGet   = null;
-        MethodStructure  methodBadSet   = null;
-        int              cCustomMethods = 0;
+        MethodStructure methodInit     = null;
+        MethodStructure methodGet      = null;
+        MethodStructure methodSet      = null;
+        MethodStructure methodBadGet   = null;
+        MethodStructure methodBadSet   = null;
+        int             cCustomMethods = 0;
         for (Component child : prop.children()) {
             if (child instanceof MultiMethodStructure mms) {
                 for (MethodStructure method : mms.methods()) {
@@ -5446,12 +5446,12 @@ public abstract class TypeConstant
                     sName);
         }
 
-        boolean         fRW       = false;
-        boolean         fRO       = false;
-        boolean         fField    = false;
-        Effect          effectGet = Effect.None;
-        Effect          effectSet = Effect.None;
-        Implementation  impl;
+        boolean        fRW       = false;
+        boolean        fRO       = false;
+        boolean        fField    = false;
+        Effect         effectGet = Effect.None;
+        Effect         effectSet = Effect.None;
+        Implementation impl;
         if (fConstant) {
             impl = Implementation.Native;
 
@@ -7676,7 +7676,7 @@ public abstract class TypeConstant
             TypeConstant  typeFormal = isFormalType()
                                         ? this
                                         : type1.isFormalType() ? type1 : null;
-            boolean       isFormal = typeFormal != null;
+            boolean       isFormal   = typeFormal != null;
             ClassDesc     cd;
             String        sJitName;
             JitMethodDesc jmd;

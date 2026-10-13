@@ -97,12 +97,12 @@ public class PropertyInfo
             aOwned[i] = body.forProperty(this);
         }
 
-        m_infoType       = infoType;
-        m_aBody          = aOwned;
-        m_type           = type;
-        m_fRequireField  = fRequireField;
-        m_fSuppressVar   = fSuppressVar;
-        f_nRank          = nRank;
+        m_infoType      = infoType;
+        m_aBody         = aOwned;
+        m_type          = type;
+        m_fRequireField = fRequireField;
+        m_fSuppressVar  = fSuppressVar;
+        f_nRank         = nRank;
     }
 
     /**
@@ -551,7 +551,7 @@ public class PropertyInfo
 
         PropertyBody[]          aBodyOld = m_aBody;
         int                     cBodies  = aBodyOld.length;
-        ArrayList<PropertyBody> listNew = new ArrayList<>(cBodies); // may be smaller than cBodies
+        ArrayList<PropertyBody> listNew  = new ArrayList<>(cBodies); // may be smaller than cBodies
         for (int i = 0; i < cBodies; i++) {
             PropertyBody body = aBodyOld[i];
             if (setFromInto == null || setFromInto.contains(body.getIdentity().getClassIdentity())) {
@@ -656,7 +656,7 @@ public class PropertyInfo
      *         term "last" corresponds to the order of the call chain
      */
     public PropertyBody getTail() {
-        return m_aBody[m_aBody.length-1];
+        return m_aBody[m_aBody.length - 1];
     }
 
     /**
@@ -1460,8 +1460,8 @@ public class PropertyInfo
 
         // we need to widen the identity of the owner, but not to lose the type information;
         // note that we do not create classes for annotations and mixins
-        IdentityConstant idOwner  = id.getNamespace();
-        Component.Format format   = idOwner.getComponent().getFormat();
+        IdentityConstant idOwner = id.getNamespace();
+        Component.Format format  = idOwner.getComponent().getFormat();
         return switch (format) {
             case MIXIN, ANNOTATION, METHOD, PROPERTY
                     -> typeOwner;

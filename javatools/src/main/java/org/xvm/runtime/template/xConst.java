@@ -532,7 +532,7 @@ public class xConst
                             : hValue2.getField(frameCaller, enid.toString());
 
                 if (h1 == null || h2 == null) {
-                    return frameCaller.raiseException("Unassigned property \"" + field.getName() +'"');
+                    return frameCaller.raiseException("Unassigned property \"" + field.getName() + '"');
                 }
 
                 TypeConstant typeProp = pool.register(clzBase.getFieldType(enid));
@@ -620,7 +620,7 @@ public class xConst
                             : hValue2.getField(frameCaller, enid.toString());
 
                 if (h1 == null || h2 == null) {
-                    return frameCaller.raiseException("Unassigned property \"" + field.getName() +'"');
+                    return frameCaller.raiseException("Unassigned property \"" + field.getName() + '"');
                 }
 
                 TypeConstant typeProp = pool.register(clzBase.getFieldType(enid));

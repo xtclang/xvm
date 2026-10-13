@@ -12,6 +12,8 @@ import java.util.NoSuchElementException;
  * iterators to continue independently of other mutations on the Set. The underlying storage is a
  * circular array, and deletion from the middle of the sequence of elements is supported without
  * having to copy the remainder of the array. Null is a supported element value.
+ *
+ * @param <E>  the element type
  */
 public class ListSet<E>
         extends AbstractSet<E> {
@@ -27,7 +29,7 @@ public class ListSet<E>
     /**
      * Construct a new ListSet of the specified initial capacity.
      *
-     * @param cInitSize  the initial capacity; negative value indicates an immutable empty set
+     * @param cInitSize  the requested initial capacity
      */
     public ListSet(int cInitSize) {
         // make sure the size is a power of 2
@@ -41,7 +43,10 @@ public class ListSet<E>
      */
     public ListSet(Collection<? extends E> that) {
         this(that.size());
-        addAll(that);
+        // populate storage without invoking subclass overrides before their fields are initialized
+        for (E element : that) {
+            addElement(element);
+        }
     }
 
     // ----- configuration -------------------------------------------------------------------------
@@ -49,6 +54,8 @@ public class ListSet<E>
     /**
      * Configure the Set to use only identity comparisons to determine element equality. This
      * disables the use of the {@link Object#equals} method on elements.
+     *
+     * @return this set for further configuration
      */
     public ListSet<E> useIdentityEquality() {
         assert isEmpty();
@@ -57,8 +64,9 @@ public class ListSet<E>
     }
 
     /**
-     * Configure the Set to avoid hashing for rapid  only identity comparisons to determine element equality. This
-     * disables the use of the {@link Object#equals} method on elements.
+     * Disable the hash index, using linear searches with the configured equality policy instead.
+     *
+     * @return this set for further configuration
      */
     public ListSet<E> disableHashIndex() {
         assert isEmpty();
@@ -68,8 +76,9 @@ public class ListSet<E>
     }
 
     /**
-     * Configure the Set to avoid hashing for rapid  only identity comparisons to determine element equality. This
-     * disables the use of the {@link Object#equals} method on elements.
+     * Reject null values in subsequent calls to {@link #add(Object)}.
+     *
+     * @return this set for further configuration
      */
     public ListSet<E> disallowNulls() {
         assert isEmpty();
@@ -80,7 +89,10 @@ public class ListSet<E>
     // ----- ListSet methods -----------------------------------------------------------------------
 
     /**
+     * Return the first element in insertion order.
+     *
      * @return the first item
+     * @throws IllegalStateException if the set is empty
      */
     public E first() {
         if (isEmpty()) {
@@ -91,7 +103,10 @@ public class ListSet<E>
     }
 
     /**
+     * Return the last element in insertion order.
+     *
      * @return the last added item
+     * @throws IllegalStateException if the set is empty
      */
     public E last() {
         if (isEmpty()) {
@@ -102,8 +117,13 @@ public class ListSet<E>
     }
 
     /**
+     * Look up an element by its position in insertion order.
+     *
+     * @param index  the zero-based position
+     *
      * @return the item at the specified position; this operation could be expensive for indexes
      *         that are not close to either 0 or size()
+     * @throws IllegalArgumentException if the index is outside the set
      */
     public E get(int index) {
         int cSize = size();
@@ -152,13 +172,7 @@ public class ListSet<E>
             throw new IllegalArgumentException("null value is not permitted");
         }
 
-        Object  o    = toInternal(e);
-        boolean fNew = indexOf(o) < 0;
-        if (fNew) {
-            addInternal(o);
-        }
-
-        return fNew;
+        return addElement(e);
     }
 
     @Override
@@ -200,11 +214,27 @@ public class ListSet<E>
     // ----- internal ------------------------------------------------------------------------------
 
     /**
+     * Insert an element without dispatching through overridable collection methods.
+     *
+     * @param element  the element to insert, including null
+     *
+     * @return true if the element was newly added
+     */
+    private boolean addElement(E element) {
+        Object  o    = toInternal(element);
+        boolean fNew = indexOf(o) < 0;
+        if (fNew) {
+            addInternal(o);
+        }
+        return fNew;
+    }
+
+    /**
      * Find the specified element.
      *
      * @param o  the element, in internal format
      *
-     * @return the index of the element, tail <= i < head, or -1 if not found
+     * @return the index of the element, {@code tail <= i < head}, or -1 if not found
      */
     private int indexOf(Object o) {
         // check if the set is empty
@@ -259,9 +289,16 @@ public class ListSet<E>
      *
      * @return an element of type E (including null)
      */
-    private static <E> E toExternal(Object o) {
+    private E toExternal(Object o) {
         assert o != null && !(o instanceof Stop);
-        return o == NULL ? null : (E) o;
+        if (o == NULL) {
+            return null;
+        }
+
+        // add(E) supplies all ordinary stored elements; callers filter out the internal markers.
+        @SuppressWarnings("unchecked")
+        E element = (E) o;
+        return element;
     }
 
     /**
@@ -279,8 +316,8 @@ public class ListSet<E>
         int      nMask = aElem.length - 1;
         int      iElem = m_iHead;
         if (iElem > m_iTail) {
-            Object oPrev = m_aElem[iElem-1 & nMask];
-            if (oPrev instanceof Stop && ((Stop) oPrev).isDisposable()) {
+            Object oPrev = m_aElem[iElem - 1 & nMask];
+            if (oPrev instanceof Stop stop && stop.isDisposable()) {
                 --iElem;
                 --m_cBlank;
             }
@@ -288,13 +325,13 @@ public class ListSet<E>
 
         // add the element
         aElem[iElem & nMask] = o;
-        m_iHead = iElem+1;
+        m_iHead = iElem + 1;
 
         // update the index
         if (!m_fSuppressHash && !(o instanceof Stop)) {
             if (indexEnabled()) {
                 indexAdd(o.hashCode(), iElem);
-            } else if (size() >= INDEX_MIN) {
+            } else if (m_iHead - m_iTail - m_cBlank >= INDEX_MIN) {
                 // the set is now large enough to start indexing at this point
                 indexInit();
             }
@@ -308,9 +345,9 @@ public class ListSet<E>
      */
     private Stop ensureStop() {
         if (m_iHead > m_iTail) {
-            Object last = m_aElem[m_iHead-1 & m_aElem.length-1];
-            if (last instanceof Stop) {
-                return (Stop) last;
+            Object last = m_aElem[m_iHead - 1 & m_aElem.length - 1];
+            if (last instanceof Stop stop) {
+                return stop;
             }
         }
 
@@ -493,7 +530,7 @@ public class ListSet<E>
                 return -1;
             }
 
-            for (int iTest = iNext+1, iLast = m_iHead - 1; iTest <= iLast; ++iTest) {
+            for (int iTest = iNext + 1, iLast = m_iHead - 1; iTest <= iLast; ++iTest) {
                 Object eCur = aElem[iTest & nMask];
                 if (eCur instanceof Stop stop) {
                     if (stop.appliesTo(nStop)) {
@@ -512,7 +549,7 @@ public class ListSet<E>
                 if (eCur == eNext) {
                     assert iNext < 0;
                     iNext = iTest;
-                } else if (eCur instanceof Stop && ((Stop) eCur).appliesTo(nStop)) {
+                } else if (eCur instanceof Stop stop && stop.appliesTo(nStop)) {
                     return iNext;
                 }
             }
@@ -529,7 +566,7 @@ public class ListSet<E>
     private void remove(int i) {
         assert i >= m_iTail && i < m_iHead;
 
-        int    nMask = m_aElem.length-1;
+        int    nMask = m_aElem.length - 1;
         Object o     = m_aElem[i & nMask];
         assert o != null;
 
@@ -550,6 +587,8 @@ public class ListSet<E>
     }
 
     /**
+     * Determine whether lookups currently use the hash index.
+     *
      * @return true iff the ListSet is currently using indexes
      */
     private boolean indexEnabled() {
@@ -561,11 +600,11 @@ public class ListSet<E>
      * ListSet, and its contents match the contents of the ListSet.
      */
     private void indexInit() {
-        int[] anHashOld   = m_anHash;
+        int[] anHashOld = m_anHash;
 
-        int   cBucketsOld = anHashOld == null ? 0 : anHashOld.length;
-        int   nModuloOld  = cBucketsOld >>> 1;
-        int   nModuloNew = INDEX_SIZE[Integer.numberOfTrailingZeros(m_aElem.length)];
+        int cBucketsOld = anHashOld == null ? 0 : anHashOld.length;
+        int nModuloOld  = cBucketsOld >>> 1;
+        int nModuloNew  = INDEX_SIZE[Integer.numberOfTrailingZeros(m_aElem.length)];
         assert nModuloNew > 0;
         if (nModuloNew == nModuloOld) {
             return;
@@ -580,7 +619,7 @@ public class ListSet<E>
         if (cBucketsOld == 0) {
             // create the initial entries in the new index structure
             Object[] aElem = m_aElem;
-            int      nMask = aElem.length-1;
+            int      nMask = aElem.length - 1;
             for (int i = m_iTail, c = m_iHead; i < c; ++i) {
                 Object o = aElem[i & nMask];
                 if (o != null && !(o instanceof Stop)) {
@@ -592,13 +631,13 @@ public class ListSet<E>
             for (int iOld = 0, cOld = anHashOld.length; iOld < cOld; iOld += 2) {
                 int iElem = anHashOld[iOld];
                 if (iElem >= 0) {
-                    int nHash = anHashOld[iOld+1];
+                    int nHash = anHashOld[iOld + 1];
                     int iNew  = ((int) ((nHash & 0xFFFFFFFFFL) % nModuloNew)) << 1;
                     while (true) {
                         // use the first empty bucket that we encounter
                         if (anHashNew[iNew] < 0) {
-                            anHashNew[iNew  ] = iElem;
-                            anHashNew[iNew+1] = nHash;
+                            anHashNew[iNew  ]   = iElem;
+                            anHashNew[iNew + 1] = nHash;
                             break;
                         }
 
@@ -628,8 +667,8 @@ public class ListSet<E>
             // use the first empty bucket that we encounter
             int iElem = anIndex[iBucket];
             if (iElem < 0) {
-                anIndex[iBucket  ] = index;
-                anIndex[iBucket+1] = nHash;
+                anIndex[iBucket  ]   = index;
+                anIndex[iBucket + 1] = nHash;
                 return;
             }
 
@@ -648,10 +687,10 @@ public class ListSet<E>
      * @param index  the index into the underlying ListSet storage for the value
      */
     private void indexRemove(int nHash, int index) {
-        int[]    anIndex  = m_anHash;
-        int      cBuckets = anIndex.length;
-        int      nModulo  = cBuckets >>> 1;
-        int      iBucket  = ((int) ((nHash & 0xFFFFFFFFFL) % nModulo)) << 1;
+        int[] anIndex  = m_anHash;
+        int   cBuckets = anIndex.length;
+        int   nModulo  = cBuckets >>> 1;
+        int   iBucket  = ((int) ((nHash & 0xFFFFFFFFFL) % nModulo)) << 1;
         while (true) {
             // check if this is the bucket that we're looking for (first value is an index into the
             // underlying ListSet storage, second value is the hashcode for the element stored at
@@ -659,7 +698,7 @@ public class ListSet<E>
             int iElem = anIndex[iBucket];
             assert iElem >= 0;
             if (iElem == index) {
-                assert anIndex[iBucket+1] == nHash;
+                assert anIndex[iBucket + 1] == nHash;
                 anIndex[iBucket] = -1;
                 break;
             }
@@ -692,15 +731,15 @@ public class ListSet<E>
                 return;
             }
 
-            nHash   = anIndex[iBucketSrc+1];
+            nHash   = anIndex[iBucketSrc + 1];
             iBucket = ((int) ((nHash & 0xFFFFFFFFFL) % nModulo)) << 1;
             if (iBucket != iBucketSrc &&
                     (( fStraddled &&  iBucket > iBucketSrc && iBucket <= iBucketDest ) ||
                      (!fStraddled && (iBucket > iBucketSrc || iBucket <= iBucketDest))   )) {
                 // we have to move the entry
-                anIndex[iBucketDest  ] = iElem;
-                anIndex[iBucketDest+1] = nHash;
-                anIndex[iBucketSrc   ] = -1;
+                anIndex[iBucketDest  ]   = iElem;
+                anIndex[iBucketDest + 1] = nHash;
+                anIndex[iBucketSrc   ]   = -1;
 
                 // next place to deposit an index entry is where we just took one out of
                 iBucketDest = iBucketSrc;
@@ -723,13 +762,13 @@ public class ListSet<E>
         int      nHash    = o.hashCode();
         int      iBucket  = ((int) ((nHash & 0xFFFFFFFFFL) % nModulo)) << 1;
         Object[] aElem    = m_aElem;
-        int      nMask    = aElem.length-1;
+        int      nMask    = aElem.length - 1;
         while (true) {
             // check the bucket (first value is an index into the underlying ListSet storage, second
             // value is the hashcode for the element stored at that index)
             int iElem = anIndex[iBucket];
             if (iElem >= 0) {
-                if (anIndex[iBucket+1] == nHash) {
+                if (anIndex[iBucket + 1] == nHash) {
                     Object oElem = aElem[iElem & nMask];
                     if (o == oElem || !m_fSuppressEquals
                             && o != null && !(o instanceof Special) && oElem.equals(o)) {
@@ -757,10 +796,10 @@ public class ListSet<E>
      * @param indexNew  the new index of the value
      */
     private void indexAdjust(int nHash, int indexOld, int indexNew) {
-        int[]    anIndex  = m_anHash;
-        int      cBuckets = anIndex.length;
-        int      nModulo  = cBuckets >>> 1;
-        int      iBucket  = ((int) ((nHash & 0xFFFFFFFFFL) % nModulo)) << 1;
+        int[] anIndex  = m_anHash;
+        int   cBuckets = anIndex.length;
+        int   nModulo  = cBuckets >>> 1;
+        int   iBucket  = ((int) ((nHash & 0xFFFFFFFFFL) % nModulo)) << 1;
         while (true) {
             // check if this is the bucket that we're looking for (first value is an index into the
             // underlying ListSet storage, second value is the hashcode for the element stored at
@@ -768,7 +807,7 @@ public class ListSet<E>
             int iElem = anIndex[iBucket];
             assert iElem >= 0;
             if (iElem == indexOld) {
-                assert anIndex[iBucket+1] == nHash;
+                assert anIndex[iBucket + 1] == nHash;
                 anIndex[iBucket] = indexNew;
                 return;
             }
@@ -783,7 +822,7 @@ public class ListSet<E>
 
     /**
      * Adjust the pointers from the index data structure into the underlying ListSet storage when
-     * the head & tail pointers are adjusted.
+     * the head and tail pointers are adjusted.
      *
      * @param indexDelta  the magnitude of the adjustment for all indexes
      */
@@ -806,7 +845,8 @@ public class ListSet<E>
      */
     private class SafeIterator
             implements Iterator<E>, AutoCloseable {
-        public SafeIterator() {
+        /** Capture the iteration boundary and load the first available element. */
+        private SafeIterator() {
             // obtain a hard-stop and notify it that there is now an additional iterator using it
             m_stop = ensureStop();
             m_stop.beginUse();
@@ -885,8 +925,8 @@ public class ListSet<E>
             int      nMask = aElem.length - 1;
             for (int iLast = m_iHead - 1; iNext <= iLast; ++iNext) {
                 Object eNext = aElem[iNext & nMask];
-                if (eNext instanceof Stop) {
-                    if (((Stop) eNext).appliesTo(m_stop.id())) {
+                if (eNext instanceof Stop stop) {
+                    if (stop.appliesTo(m_stop.id())) {
                         break;
                     }
                 } else if (eNext != null) {
@@ -964,7 +1004,10 @@ public class ListSet<E>
     /**
      * A base class for any special objects stored in the set's underlying storage.
      */
-    private static class Special {}
+    private static class Special {
+        /** Construct an internal storage marker. */
+        private Special() {}
+    }
 
     /**
      * A representation of an Iterator's planned "hard stop" stopping point that can be stored
@@ -982,6 +1025,8 @@ public class ListSet<E>
         }
 
         /**
+         * Return the most recent stop id represented by this marker.
+         *
          * @return an id for this hard-stop
          */
         int id() {
@@ -1046,6 +1091,8 @@ public class ListSet<E>
         }
 
         /**
+         * Determine whether any iterator still needs this marker.
+         *
          * @return true if it is safe to discard this hard-stop as part of ListSet compaction
          */
         boolean isDisposable() {
@@ -1060,17 +1107,17 @@ public class ListSet<E>
         /**
          * The first of the IDs that this hard-stop represents.
          */
-        int  first;
+        int first;
 
         /**
          * The last of the IDs that this hard-stop represents.
          */
-        int  last;
+        int last;
 
         /**
          * The number of iterators actively using this hard-stop.
          */
-        int  active;
+        int active;
 
         /**
          * The hard-stop to delegate to, if this hard-stop has been merged into another hard-stop.
@@ -1083,6 +1130,9 @@ public class ListSet<E>
      */
     private static class Null
             extends Special {
+        /** Construct the marker for a stored null element. */
+        private Null() {}
+
         @Override
         public int hashCode() {
             return 2147483629;

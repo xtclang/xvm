@@ -201,7 +201,7 @@ public class SwitchExpression
             }
         }
 
-        for (int i = 0, c = 2*cExprs - 1; i < c; ++i) {
+        for (int i = 0, c = 2 * cExprs - 1; i < c; ++i) {
             ctxCase = ctxCase.exit();
         }
 

@@ -58,9 +58,9 @@ public class xRTViewToBitFromFloat64
         if (hSource instanceof SliceHandle hSlice) {
             // doubles.slice().asBitArray() -> doubles.asBitArray().slice()
             DoubleArrayHandle hLong = (DoubleArrayHandle) hSlice.f_hSource;
-            ViewHandle        hView   = new ViewHandle(clzView,
-                                        hLong, hLong.m_cSize*64, mutability);
-            return slice(hView, hSlice.f_ofStart*64, hSlice.m_cSize*64, false);
+            ViewHandle        hView = new ViewHandle(clzView,
+                                        hLong, hLong.m_cSize * 64, mutability);
+            return slice(hView, hSlice.f_ofStart * 64, hSlice.m_cSize * 64, false);
         }
 
         if (hSource instanceof xRTViewFromBit.ViewHandle hView) {
@@ -68,7 +68,7 @@ public class xRTViewToBitFromFloat64
         }
 
         DoubleArrayHandle hLong = (DoubleArrayHandle) hSource;
-        return new ViewHandle(clzView, hLong, hSource.m_cSize*64, mutability);
+        return new ViewHandle(clzView, hLong, hSource.m_cSize * 64, mutability);
     }
 
     // ----- RTDelegate API ------------------------------------------------------------------------
@@ -138,8 +138,8 @@ public class xRTViewToBitFromFloat64
      * @return the byte value
      */
     protected static byte getByte(double[] adValue, long of) {
-        int  ixVal  = (int) (of / 8);
-        int  ofByte = 7 - (int) (of & 7);
+        int ixVal  = (int) (of / 8);
+        int ofByte = 7 - (int) (of & 7);
 
         return (byte) (Double.doubleToRawLongBits(adValue[ixVal]) >>> (ofByte * 8) & 0xFF);
     }
@@ -186,7 +186,7 @@ public class xRTViewToBitFromFloat64
             }
 
             // fill the tail
-            ofStart = ofStart + cVals*64L;
+            ofStart = ofStart + cVals * 64L;
             cBits   = cBits % 64;
         }
 
@@ -229,7 +229,7 @@ public class xRTViewToBitFromFloat64
 
     @Override
     public byte[] getBytes(DelegateHandle hDelegate, long ofStart, long cBytes, boolean fReverse) {
-        return getBits(hDelegate, ofStart*8, cBytes*8, fReverse);
+        return getBits(hDelegate, ofStart * 8, cBytes * 8, fReverse);
     }
 
     @Override

@@ -75,7 +75,7 @@ public class xRTClassTemplate
             ANNOTATION_ARRAY_TYPE     = pool.ensureArrayType(pool.ensureEcstasyTypeConstant(
                                             "reflect.AnnotationTemplate"));
 
-            EMPTY_PARAMETER_ARRAY     = pool.ensureArrayConstant(
+            EMPTY_PARAMETER_ARRAY = pool.ensureArrayConstant(
                                             pool.ensureArrayType(pool.ensureEcstasyTypeConstant(
                                                 "reflect.TypeParameter")),
                                             Constant.NO_CONSTS);
@@ -323,7 +323,7 @@ public class xRTClassTemplate
                 if (cConstraints > 0) {
                     StringHandle[] ahNames = new StringHandle[cConstraints];
                     TypeHandle[]   ahTypes = new TypeHandle[cConstraints];
-                    int            i = 0;
+                    int            i       = 0;
                     for (Map.Entry<StringConstant, TypeConstant> entry : mapConstraints.entrySet()) {
                         String       sName = entry.getKey().getValue();
                         TypeConstant type  = entry.getValue();

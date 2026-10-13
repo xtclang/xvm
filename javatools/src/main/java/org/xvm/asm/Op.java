@@ -343,7 +343,7 @@ public abstract class Op {
             of    -= nAdjust;
             nAddr -= nAdjust;
         }
-        if (aop[nAddr-1] instanceof Nop) {
+        if (aop[nAddr - 1] instanceof Nop) {
             --of;
         }
         return of;

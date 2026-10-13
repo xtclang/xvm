@@ -114,7 +114,7 @@ public class xAtomicIntNumber
     @Override
     protected int getReferentImpl(Frame frame, RefHandle hTarget, boolean fNative, int iReturn) {
         AtomicJavaLongHandle hAtomic = (AtomicJavaLongHandle) hTarget;
-        AtomicLong         atomic  = hAtomic.m_atomicValue;
+        AtomicLong atomic = hAtomic.m_atomicValue;
 
         return atomic == null
             ? frame.raiseException(xException.unassignedReference(frame))
@@ -124,8 +124,8 @@ public class xAtomicIntNumber
     @Override
     protected int setReferentImpl(Frame frame, RefHandle hTarget, boolean fNative, ObjectHandle hValue) {
         AtomicJavaLongHandle hAtomic = (AtomicJavaLongHandle) hTarget;
-        AtomicLong         atomic  = hAtomic.m_atomicValue;
-        long               lValue  = ((JavaLong) hValue).getValue();
+        AtomicLong atomic = hAtomic.m_atomicValue;
+        long       lValue = ((JavaLong) hValue).getValue();
 
         if (atomic == null) {
             hAtomic.m_atomicValue = new AtomicLong(lValue);

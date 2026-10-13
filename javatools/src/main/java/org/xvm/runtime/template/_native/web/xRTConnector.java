@@ -93,7 +93,7 @@ public class xRTConnector
     public TypeConstant getCanonicalType() {
         TypeConstant type = m_typeCanonical;
         if (type == null) {
-            ConstantPool  pool = pool();
+            ConstantPool  pool     = pool();
             ClassConstant idClient = pool.ensureClassConstant(
                     pool.ensureModuleConstant("web.xtclang.org"), "Client");
             m_typeCanonical = type = pool.ensureTerminalTypeConstant(
@@ -321,7 +321,7 @@ public class xRTConnector
                 timeout = null;
                 nSlot   = 0;
             } else {
-                int cApprox = Integer.highestOneBit((int) cTimeoutMillis/1000);
+                int cApprox = Integer.highestOneBit((int) cTimeoutMillis / 1000);
 
                 timeout = Duration.ofSeconds(Math.max(cApprox, 1));
                 nSlot   = Math.min(f_clientPool.length - 1,

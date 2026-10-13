@@ -232,9 +232,9 @@ public class xRTCompiler
 
     private int completeCompilation(Frame frame, CompilerAdapter compiler,
                                     Exception exception, int[] aiReturn) {
-        List<ComponentTemplateHandle> listFiles = new ArrayList<>();
+        List<ComponentTemplateHandle> listFiles  = new ArrayList<>();
         List<String>                  listErrors = compiler.getErrors();
-        boolean      fSuccess;
+        boolean fSuccess;
         if (exception == null) {
             fSuccess = compiler.getSeverity().compareTo(Severity.ERROR) < 0;
             if (fSuccess) {

@@ -675,8 +675,8 @@ public class ModuleStructure
     public ModuleStructure extractVersion(Version version) {
         assert isMainModule() && containsVersion(version);
 
-        String          sName    = getName();
-        ModuleConstant  idModule = getConstantPool().ensureModuleConstant(sName, version);
+        String         sName    = getName();
+        ModuleConstant idModule = getConstantPool().ensureModuleConstant(sName, version);
 
         FileStructure fileClone = new FileStructure(sName);
         fileClone.removeChild(fileClone.getModule());

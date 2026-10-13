@@ -89,8 +89,8 @@ public class xRTSigner
                 signature.update(abData);
                 abSig = signature.sign();
             } else if (hCipher instanceof MacHandle hMac) {
-                Mac     mac    = hMac.f_mac;
-                byte[]  abData = xRTUInt8Delegate.getBytes(haData);
+                Mac    mac    = hMac.f_mac;
+                byte[] abData = xRTUInt8Delegate.getBytes(haData);
 
                 Key privateKey = xRTAlgorithms.extractKey(frame, hKey,
                                         mac.getAlgorithm(), KeyForm.PrivateOrSecret);

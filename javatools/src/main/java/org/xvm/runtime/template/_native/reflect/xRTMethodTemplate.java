@@ -123,9 +123,9 @@ public class xRTMethodTemplate
                                      int[] aiReturn) {
         MethodStructure method = (MethodStructure) hMethod.getComponent();
 
-        Parameter parameter    = method.getParam((int) hIndex.getValue());
-        String    sName        = parameter.getName();
-        boolean   fDefault     = parameter.hasDefaultValue();
+        Parameter parameter = method.getParam((int) hIndex.getValue());
+        String    sName     = parameter.getName();
+        boolean   fDefault  = parameter.hasDefaultValue();
 
         ObjectHandle[] ahReturn = new ObjectHandle[5];
 

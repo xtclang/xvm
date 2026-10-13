@@ -552,8 +552,8 @@ public class JumpVal
                 Constant constant = aConst[iRow];
                 Label    label    = bctx.ensureLabel(code, nThis + aofCase[iRow]);
                 if (constant instanceof RangeConstant range) {
-                    long  lFirst = range.getEffectiveFirst().getIntValue().getLong();
-                    long  lLast  = range.getEffectiveLast().getIntValue().getLong();
+                    long lFirst = range.getEffectiveFirst().getIntValue().getLong();
+                    long lLast  = range.getEffectiveLast().getIntValue().getLong();
 
                     for (long lVal = lFirst; lVal <= lLast; lVal++) {
                         int ix = (int) (lVal - lMin);

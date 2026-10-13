@@ -98,7 +98,7 @@ public class JumpIsA
             Label label = bctx.ensureLabel(code, nThis + aofCase[iRow]);
 
             if (m_anConstCase[iRow] <= CONSTANT_OFFSET) {
-                TypeConstant typeTest   = bctx.getArgumentType(m_anConstCase[iRow]);
+                TypeConstant typeTest = bctx.getArgumentType(m_anConstCase[iRow]);
                 assert typeTest.isTypeOfType();
                 typeTest = typeTest.getParamType(0).getParamType(0);
 

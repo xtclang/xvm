@@ -82,7 +82,7 @@ public class NewG_0
         }
 
         TypeComposition clzTarget = frame.resolveClass(m_nTypeValue);
-        ObjectHandle    hParent  = clzTarget.isInstanceChild() ? frame.getThis() : null;
+        ObjectHandle    hParent   = clzTarget.isInstanceChild() ? frame.getThis() : null;
 
         if (frame.isNextRegister(m_nRetValue)) {
             frame.introduceResolvedVar(m_nRetValue, clzTarget.getType());

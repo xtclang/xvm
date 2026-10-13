@@ -313,7 +313,7 @@ public abstract class OpIndex
 
             TypeConstant typeIndex = bctx.getArgumentType(m_nIndex);
             MethodInfo   method;
-            boolean      fSet = getOpCode() == OP_I_SET;
+            boolean      fSet      = getOpCode() == OP_I_SET;
             if (fSet) {
                 Set<MethodConstant> set = infoTarget.findOpMethods(sName, sOp, 2);
                 if (set.size() != 1) {
@@ -498,7 +498,7 @@ public abstract class OpIndex
         assert javaPrimitive || xvmPrimitive;
 
         // a Java primitive occupies one slot, an XVM primitive may occupy several
-        ClassDesc[] cds = javaPrimitive
+        ClassDesc[] cds  = javaPrimitive
                 ? new ClassDesc[]{JitTypeDesc.requireJavaPrimitive(typeEl)}
                 : JitTypeDesc.getXvmPrimitiveClasses(typeEl);
         ClassDesc   cdEl = cds[0];

@@ -63,7 +63,7 @@ public class Var_CN
             throws IOException {
         super(in, aconst);
 
-        m_nNameId  = readPackedInt(in);
+        m_nNameId   = readPackedInt(in);
         m_nArgValue = readPackedInt(in);
     }
 
@@ -73,7 +73,7 @@ public class Var_CN
         super.write(out, registry);
 
         if (m_argValue != null) {
-            m_nNameId  = encodeArgument(m_constName, registry);
+            m_nNameId   = encodeArgument(m_constName, registry);
             m_nArgValue = encodeArgument(m_argValue, registry);
         }
 

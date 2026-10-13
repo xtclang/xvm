@@ -97,10 +97,10 @@ public class MapConstant
             // TODO other key/value validation?
         }
 
-        m_fmt        = fmt;
-        m_constType  = constType;
-        m_aconstKey  = aconstKey;
-        m_aconstVal  = aconstVal;
+        m_fmt       = fmt;
+        m_constType = constType;
+        m_aconstKey = aconstKey;
+        m_aconstVal = aconstVal;
     }
 
     /**

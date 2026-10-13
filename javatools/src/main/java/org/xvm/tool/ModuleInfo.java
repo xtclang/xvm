@@ -698,8 +698,8 @@ public class ModuleInfo {
             // at least one of the parameters is required
             assert parent != null || file != null;
 
-            m_parent       = parent;
-            m_file         = file;
+            m_parent = parent;
+            m_file   = file;
         }
 
         /**
@@ -1211,7 +1211,7 @@ public class ModuleInfo {
             if (file != null) {
                 String sName = file().getName();
                 if (sName.endsWith(".x")) {
-                    sName = sName.substring(0, sName.length()-2);
+                    sName = sName.substring(0, sName.length() - 2);
                 }
                 return sName;
             }
@@ -1309,7 +1309,7 @@ public class ModuleInfo {
 
             boolean fRequireDir = resPath.endsWith("/");
             if (fRequireDir) {
-                resPath = resPath.substring(0, resPath.length()-1);
+                resPath = resPath.substring(0, resPath.length() - 1);
                 if (resPath.endsWith("/")) {
                     return null;
                 }
@@ -1377,13 +1377,13 @@ public class ModuleInfo {
 
         @Override
         public String toString() {
-            String text   = "";
+            String text = "";
 
-            Node   parent = parent();
+            Node parent = parent();
             if (parent != null) {
                 text = parent.toString();
                 if (text.endsWith("/")) {
-                    text = text.substring(0, text.length()-1);
+                    text = text.substring(0, text.length() - 1);
                 }
             }
 

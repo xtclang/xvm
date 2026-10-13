@@ -262,8 +262,8 @@ public abstract class OpReturn
                     pdExt      = null;
                 }
 
-                RegisterInfo regRet   = retLoaders[i].load(code);
-                ClassDesc    cd       = regRet.cd();
+                RegisterInfo regRet     = retLoaders[i].load(code);
+                ClassDesc    cd         = regRet.cd();
                 String       sTransform = regRet.flavor().name() + "->" + pdRet.flavor.name();
 
                 switch (sTransform) {

@@ -178,7 +178,7 @@ public class ArrayᐸObjectᐳ
             if (index == size && ($sizeEtc >>> $MUT_SHIFT) == $MUTABLE) {
                 // index==size up to 2^30 is an append operation within this array's storage;
                 // anything over that requires a transition to the "huge" model
-                if (($storage == null || index >= $storage.length) && !$growInPlace(ctx, index+1)) {
+                if (($storage == null || index >= $storage.length) && !$growInPlace(ctx, index + 1)) {
                     // we just transitioned to the "huge model"
                     $delegate.setElement$p(ctx, index, value);
                     return;
@@ -259,7 +259,7 @@ public class ArrayᐸObjectᐳ
         }
 
         int size = $sizeEtc & $SIZE_MASK;
-        if (($storage == null || $storage.length == size) && !$growInPlace(ctx, size+1)) {
+        if (($storage == null || $storage.length == size) && !$growInPlace(ctx, size + 1)) {
             // we just transitioned to the "huge model"
             $delegate.add(ctx, element);
             return this;
@@ -267,7 +267,7 @@ public class ArrayᐸObjectᐳ
 
         try {
             $storage[size] = element;
-            $size(size+1);
+            $size(size + 1);
             return this;
         } catch (ArrayIndexOutOfBoundsException e) {
             throw $oob(ctx, size);
@@ -345,7 +345,7 @@ public class ArrayᐸObjectᐳ
      */
     @Override protected boolean $growInPlace(Ctx ctx, long minCap) {
         // the caller is responsible for passing valid args; this will not be checked at runtime
-        assert minCap > 0 && minCap <= $SIZE_MASK+1 && ($storage == null || minCap > $storage.length);
+        assert minCap > 0 && minCap <= $SIZE_MASK + 1 && ($storage == null || minCap > $storage.length);
 
         if ($storage == null) {
             long cap = max($capCfg(ctx), minCap);
@@ -407,8 +407,8 @@ public class ArrayᐸObjectᐳ
 
         if (index < size) {
             // move elements [index..size)
-            arraycopy($storage, (int) index, $storage, (int) (index+count), size-((int) index));
-            Arrays.fill($storage, (int) index, (int) (index+count), null); // <-- might be safe to remove this code (after we test)
+            arraycopy($storage, (int) index, $storage, (int) (index + count), size - ((int) index));
+            Arrays.fill($storage, (int) index, (int) (index + count), null); // <-- might be safe to remove this code (after we test)
         }
         $size(size + (int) count);
     }
@@ -447,13 +447,13 @@ public class ArrayᐸObjectᐳ
                 arraycopy($storage, 0, newArray, 0, moveTo);
             }
             if (oldSize > moveFrom) {
-                arraycopy($storage, moveFrom, newArray, moveTo, oldSize-moveFrom);
+                arraycopy($storage, moveFrom, newArray, moveTo, oldSize - moveFrom);
             }
             $storage = newArray;
         } else {
             if (oldSize > moveFrom) {
                 // move the data
-                arraycopy($storage, moveFrom, $storage, moveTo, oldSize-moveFrom);
+                arraycopy($storage, moveFrom, $storage, moveTo, oldSize - moveFrom);
             }
             // clear the newly "abandoned" portion of the array
             Arrays.fill($storage, newSize, oldSize, null);

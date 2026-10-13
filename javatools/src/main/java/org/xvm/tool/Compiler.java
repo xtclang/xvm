@@ -214,8 +214,8 @@ public class Compiler extends Launcher<CompilerOptions> {
         var     verStamp = opts.getVersion();
         log(INFO, "Output-path={}, force-rebuild={}", outputLoc, fRebuild);
 
-        var       mapTargets     = new LinkedHashMap<File, Node>();
-        int       cSystemModules = 0;
+        var mapTargets     = new LinkedHashMap<File, Node>();
+        int cSystemModules = 0;
         for (ModuleInfo moduleInfo : targets) {
             log(INFO, "Loading and parsing sources for module: {}",
                     moduleInfo.getQualifiedModuleName());

@@ -192,9 +192,9 @@ public class Assert
             code.loadConstant( "Debugger support for jit is not yet implemented");
             code.invokevirtual(CD_Ctx, "log", Ctx.MD_log);
         } else {
-            MethodConstant idCtor  = bctx.getConstant(m_nConstructor, MethodConstant.class);
-            TypeConstant   typeEx  = idCtor.getNamespace().getType();
-            int[]          anArgs  = new int[idCtor.getSignature().getParamCount()];
+            MethodConstant idCtor = bctx.getConstant(m_nConstructor, MethodConstant.class);
+            TypeConstant   typeEx = idCtor.getNamespace().getType();
+            int[]          anArgs = new int[idCtor.getSignature().getParamCount()];
 
             RegisterInfo regMsg = bctx.pushTempRegister(bctx.pool().typeString(), CD_String);
             buildMessage(bctx, code);

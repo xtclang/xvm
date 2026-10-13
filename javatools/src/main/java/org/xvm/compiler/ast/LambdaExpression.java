@@ -590,7 +590,7 @@ public class LambdaExpression
             if (atypeReqParams == null) {
                 errs.log(Severity.ERROR, Compiler.PARAMETER_TYPES_REQUIRED, null,
                         getSource(), paramNames.get(0).getStartPosition(),
-                        paramNames.get(cParams-1).getEndPosition());
+                        paramNames.get(cParams - 1).getEndPosition());
                 fValid = false;
             }
 
@@ -894,7 +894,7 @@ public class LambdaExpression
     }
 
     MethodStructure instantiateLambda(ErrorListener errs) {
-        TypeConstant[] atypes   = null;
+        TypeConstant[] atypes = null;
         String[]       asParams;
         if (paramNames == null) {
             // build an array of types and an array of names

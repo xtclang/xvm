@@ -3,6 +3,8 @@ package org.xtclang.ecstasy;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
+import java.util.Arrays;
+
 import org.xtclang.ecstasy.collections.Hashable;
 
 import org.xtclang.ecstasy.numbers.*;
@@ -336,27 +338,23 @@ public class nType
     }
 
     private Method ensureMethod(Ctx ctx, java.lang.String methodName, int valueCount) {
-        TypeSystem       typeSystem = ctx.container.typeSystem;
-        java.lang.String className  = $dataType.ensureJitClassName(typeSystem);
-        java.lang.Class  targetClass;
+        TypeSystem         typeSystem = ctx.container.typeSystem;
+        java.lang.String   className  = $dataType.ensureJitClassName(typeSystem);
+        java.lang.Class<?> targetClass;
         try {
             targetClass = typeSystem.loader.loadClass(className);
         } catch (ClassNotFoundException e) {
             throw Exception.$unsupported(ctx, "No such class " + className);
         }
 
-        int paramCount   = 2 + valueCount;
-        var paramClasses = new java.lang.Class[paramCount];
-        paramClasses[0]  = Ctx.class;
-        paramClasses[1]  = nType.class;
+        int paramCount   = METHOD_PARAMETER_PREFIX.length + valueCount;
+        var paramClasses = Arrays.copyOf(METHOD_PARAMETER_PREFIX, paramCount);
 
         // native classes can provide the concrete funky implementation directly; walk the target
         // hierarchy to account for an implementation inherited from a native Ecstasy superclass
-        java.lang.Class valueClass = targetClass;
+        java.lang.Class<?> valueClass = targetClass;
         do {
-            for (int i = 2; i < paramCount; i++) {
-                paramClasses[i] = valueClass;
-            }
+            Arrays.fill(paramClasses, METHOD_PARAMETER_PREFIX.length, paramCount, valueClass);
 
             try {
                 return valueClass.getDeclaredMethod(methodName, paramClasses);
@@ -367,17 +365,17 @@ public class nType
 
         // fall through to the class-of-class routing method; its value parameters use the funky
         // declaration types rather than the concrete target type represented by paramClasses
-        java.lang.Class classOfClass = $xvmClass(ctx).getClass();
+        java.lang.Class<?> classOfClass = $xvmClass(ctx).getClass();
         for (Method method : classOfClass.getDeclaredMethods()) {
             if (!method.getName().equals(methodName) ||
                     method.getParameterCount() != paramCount) {
                 continue;
             }
 
-            java.lang.Class[] methodParams = method.getParameterTypes();
-            boolean           matches      = methodParams[0].equals(Ctx.class) &&
-                                             methodParams[1].equals(nType.class);
-            for (int i = 2; matches && i < methodParams.length; i++) {
+            java.lang.Class<?>[] methodParams = method.getParameterTypes();
+            boolean              matches      = methodParams[0].equals(Ctx.class) &&
+                                                methodParams[1].equals(nType.class);
+            for (int i = METHOD_PARAMETER_PREFIX.length; matches && i < methodParams.length; i++) {
                 matches = methodParams[i].isAssignableFrom(targetClass);
             }
             if (matches) {
@@ -388,4 +386,7 @@ public class nType
         throw Exception.$unsupported(ctx,
             "No method " + methodName + " on class " + $dataType.getValueString());
     }
+
+    /** Context and represented type precede the values in equals, compare and hashCode methods. */
+    private static final java.lang.Class<?>[] METHOD_PARAMETER_PREFIX = {Ctx.class, nType.class};
 }

@@ -300,7 +300,7 @@ public interface NumberSupport
     default void buildXvmPrimitiveRemainder(BuildContext bctx, CodeBuilder code,
             RegisterInfo regTarget, int nArgId, int nQuotientId) {
         // perform (b * quotient)
-        RegisterInfo regArg  = bctx.ensureRegister(code, nArgId);
+        RegisterInfo regArg = bctx.ensureRegister(code, nArgId);
         buildXvmPrimitiveMul(bctx, code, regArg, nQuotientId);
         // multiply result is on the stack
         TypeConstant type = regTarget.type();
@@ -637,9 +637,9 @@ public interface NumberSupport
                                            CodeBuilder  code,
                                            RegisterInfo regTarget,
                                            int          nArgId) {
-        RegisterInfo regLoaded  = regTarget.load(code);
-        RegisterInfo regArg     = bctx.loadArgument(code, nArgId);
-        boolean      fUnsigned  = regLoaded.getSingleUnderlyingName().charAt(0) == 'U';
+        RegisterInfo regLoaded = regTarget.load(code);
+        RegisterInfo regArg    = bctx.loadArgument(code, nArgId);
+        boolean      fUnsigned = regLoaded.getSingleUnderlyingName().charAt(0) == 'U';
         return buildPrimitiveShr(bctx, code, regLoaded, regArg, fUnsigned);
     }
 
@@ -658,7 +658,7 @@ public interface NumberSupport
                                                    CodeBuilder  code,
                                                    RegisterInfo regTarget,
                                                    int          nArgId) {
-        RegisterInfo regLoaded  = regTarget.load(code);
+        RegisterInfo regLoaded = regTarget.load(code);
 
         switch (regTarget.getSingleUnderlyingName()) {
             case "Int8", "UInt8"   -> code.sipush(0xFF).iand();

@@ -19,11 +19,18 @@ plugins {
 // Add future language-specific standards here as they are adopted.
 spotless {
     format("javaLayout") {
-        // Gradual adoption: avoid reformatting unrelated legacy Java files.
-        target(providers.fileContents(layout.projectDirectory.file("gradle/java-layout-files.txt")).asText.map { text ->
-            text.lineSequence().map(String::trim).filter { it.isNotEmpty() && !it.startsWith('#') }.toList()
+        // Include new Java sources and optional builds without maintaining a separate file list.
+        target(fileTree(layout.projectDirectory) {
+            include("**/*.java")
+            exclude(
+                "**/build/**", "**/out/**", "**/node_modules/**",
+                "**/.*/**"
+            )
         })
         lineEndings = LineEnding.PRESERVE
+        custom("binaryOperatorSpacing", object : FormatterFunc, Serializable {
+            override fun apply(input: String): String = JavaBinaryOperatorSpacing.format(input)
+        })
         custom("localPaddingAndControlSpacing", object : FormatterFunc, Serializable {
             override fun apply(input: String): String = JavaWhitespace.format(input)
         })
@@ -49,7 +56,7 @@ spotless {
     }
 }
 
-// Both formats cover the enrolled Java files. Apply layout first so the shared whitespace step
+// Both formats cover Java files. Apply layout first so the shared whitespace step
 // reads its output instead of racing to overwrite the same source files.
 tasks.matching { it.name == "spotlessJavaAndXtc" }.configureEach {
     mustRunAfter("spotlessJavaLayoutApply")

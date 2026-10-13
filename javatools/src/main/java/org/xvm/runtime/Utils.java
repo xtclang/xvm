@@ -421,8 +421,8 @@ public abstract class Utils {
     public static class AssignValues
             implements Frame.Continuation {
         public AssignValues(int[] aiReturn, ObjectHandle[] ahValue) {
-            this.aiReturn  = aiReturn;
-            this.ahValue   = ahValue;
+            this.aiReturn = aiReturn;
+            this.ahValue  = ahValue;
         }
 
         public int proceed(Frame frameCaller) {
@@ -1477,8 +1477,8 @@ public abstract class Utils {
 
                     // constructing Argument<Referent extends immutable Const>
                     //                  (Referent value, String? name = Null)
-                    Parameter    param  = constructAnno.getParam(iArg);
-                    TypeConstant type   = param.getType().
+                    Parameter    param = constructAnno.getParam(iArg);
+                    TypeConstant type  = param.getType().
                         resolveGenerics(frameCaller.poolContext(),
                             frameCaller.getGenericsResolver(false));
 
@@ -1589,8 +1589,8 @@ public abstract class Utils {
                 TypeConstant    typeParam = pool.ensureParameterizedTypeConstant(typeRTParameter, type);
                 TypeComposition clzParam  = frameCaller.f_context.f_container.ensureClassComposition(typeParam, template);
 
-                MethodStructure  construct = RT_PARAMETER_CONSTRUCT;
-                ObjectHandle[]   ahArg     = new ObjectHandle[construct.getMaxVars()];
+                MethodStructure construct = RT_PARAMETER_CONSTRUCT;
+                ObjectHandle[]  ahArg     = new ObjectHandle[construct.getMaxVars()];
                 ahArg[0] = xInt64.makeHandle(index); // ordinal
                 ahArg[1] = sName == null ? xNullable.NULL : xString.makeHandle(sName);
                 ahArg[2] = xBoolean.makeHandle(fFormal);
@@ -1698,7 +1698,7 @@ public abstract class Utils {
     public static int constructAnnotationTemplate(Frame frame, ComponentTemplateHandle hClass,
                                                   ObjectHandle[] ahAnnoArg, int iReturn) {
         MethodStructure constructor = ANNOTATION_TEMPLATE_CONSTRUCT;
-        ObjectHandle[]  ahArg = new ObjectHandle[constructor.getMaxVars()];
+        ObjectHandle[]  ahArg       = new ObjectHandle[constructor.getMaxVars()];
         ahArg[0] = hClass;
         ahArg[1] = makeArgumentArrayHandle(frame.f_context.f_container, ahAnnoArg);
 

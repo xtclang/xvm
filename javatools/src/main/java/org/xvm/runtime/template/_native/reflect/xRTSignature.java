@@ -143,8 +143,8 @@ public class xRTSignature
      * Implements formal property: ParamTypes
      */
     protected int getPropertyParamTypes(Frame frame, SignatureHandle hFunc, int iReturn) {
-        int              cParams  = hFunc.getParamCount();
-        ObjectHandle[]   ahType   = new ObjectHandle[cParams];
+        int            cParams = hFunc.getParamCount();
+        ObjectHandle[] ahType  = new ObjectHandle[cParams];
         TypeComposition clzArray = xRTType.ensureTypeArrayComposition(frame.f_context.f_container);
         for (int i = 0; i < cParams; i++) {
             ahType[i] = hFunc.getParamType(i).ensureTypeHandle(frame.f_context.f_container);
@@ -156,8 +156,8 @@ public class xRTSignature
      * Implements formal property: ReturnTypes
      */
     protected int getPropertyReturnTypes(Frame frame, SignatureHandle hFunc, int iReturn) {
-        int              cReturns = hFunc.getReturnCount();
-        ObjectHandle[]   ahType   = new ObjectHandle[cReturns];
+        int            cReturns = hFunc.getReturnCount();
+        ObjectHandle[] ahType   = new ObjectHandle[cReturns];
         TypeComposition clzArray = xRTType.ensureTypeArrayComposition(frame.f_context.f_container);
         for (int i = 0; i < cReturns; i++) {
             ahType[i] = hFunc.getReturnType(i).ensureTypeHandle(frame.f_context.f_container);
@@ -514,7 +514,7 @@ public class xRTSignature
                 TypeConstant type = fRetVals
                         ? hMethod.getReturnType(index)
                         : hMethod.getParamType(index);
-                TypeComposition clz   = fRetVals
+                TypeComposition clz = fRetVals
                         ? ensureRTReturn(frameCaller, type)
                         : ensureRTParameter(frameCaller, type, param.getAnnotations());
                 switch (template.construct(frameCaller, construct, clz, null, ahParams, Op.A_STACK)) {

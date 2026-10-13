@@ -110,7 +110,7 @@ public class StatementBlock
         assert !(fHasEnclosed & fAddEnclosed);
         if (fHasEnclosed) {
             // insert the new statement before the "enclosed" statements
-            stmts.add(stmts.size()-1, stmt);
+            stmts.add(stmts.size() - 1, stmt);
         } else {
             stmts.add(stmt);
             containsEnclosed |= fAddEnclosed;
@@ -1096,7 +1096,7 @@ public class StatementBlock
             TypeConstant typeThis = getThisClass().getFormalType();
             TypeConstant type;
             int          nReg;
-            int          cSteps = 0;
+            int          cSteps   = 0;
             switch (sName) {
             case "this":
                 if (isConstructor()) {
@@ -1134,14 +1134,14 @@ public class StatementBlock
                 break;
 
             case "this:struct":
-                type = pool.ensureIntersectionTypeConstant(pool.typeStruct(),
+                type   = pool.ensureIntersectionTypeConstant(pool.typeStruct(),
                              pool.ensureAccessTypeConstant(typeThis, Access.STRUCT));
                 nReg   = Op.A_STRUCT;
                 cSteps = getMethod().getThisSteps();
                 break;
 
             case "this:class":
-                type = pool.ensureParameterizedTypeConstant(pool.typeClass(),
+                type   = pool.ensureParameterizedTypeConstant(pool.typeClass(),
                         pool.ensureAccessTypeConstant(typeThis, Access.PUBLIC),
                         pool.ensureAccessTypeConstant(typeThis, Access.PROTECTED),
                         pool.ensureAccessTypeConstant(typeThis, Access.PRIVATE),

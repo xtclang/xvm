@@ -36,7 +36,7 @@ public class LoopEnd
     public void resolveAddresses(Op[] aop) {
         if (m_opDest == null) {
             int depth = 1;
-            for (int ip = getAddress()-1; ip >= 0; --ip) {
+            for (int ip = getAddress() - 1; ip >= 0; --ip) {
                 Op  op   = aop[ip];
                 int code = op.getOpCode();
                 if (code == Op.OP_LOOP) {

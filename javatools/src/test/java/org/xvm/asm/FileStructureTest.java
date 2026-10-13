@@ -161,10 +161,10 @@ public class FileStructureTest {
 
     @Test
     public void testMergeAlreadyPresentModuleDoesNotCloneChildrenTwice() {
-        FileStructure   source    = createNestedModule("Test");
-        ModuleStructure sourceMod = source.getModule();
-        Component       sourcePkg = sourceMod.getChildByNameMap().get("util");
-        Component       sourceClz = sourcePkg.getChildByNameMap().get("Helper");
+        FileStructure   source     = createNestedModule("Test");
+        ModuleStructure sourceMod  = source.getModule();
+        Component       sourcePkg  = sourceMod.getChildByNameMap().get("util");
+        Component       sourceClz  = sourcePkg.getChildByNameMap().get("Helper");
         int             sourceKids = sourceMod.getChildrenCount();
 
         FileStructure dest = new FileStructure(sourceMod, false);

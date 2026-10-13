@@ -67,8 +67,8 @@ public class xRTModuleTemplate
         }
 
         case "versionString": {
-            ModuleStructure       module   = hTemplate.getModuleStructure();
-            String                sVersion;
+            ModuleStructure module = hTemplate.getModuleStructure();
+            String          sVersion;
             if (module.isFingerprint()) {
                 VersionTree<Boolean> vtree = module.getFingerprintVersions();
                 sVersion = vtree.isEmpty()

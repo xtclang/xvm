@@ -62,8 +62,8 @@ public class Construct_0
             return iPC + 1;
         }
 
-        ObjectHandle    hStruct = frame.getThis();
-        ObjectHandle[]  ahVar   = new ObjectHandle[constructor.getMaxVars()];
+        ObjectHandle   hStruct = frame.getThis();
+        ObjectHandle[] ahVar   = new ObjectHandle[constructor.getMaxVars()];
 
         frame.chainFinalizer(Utils.makeFinalizer(frame, constructor, ahVar));
 
@@ -78,7 +78,7 @@ public class Construct_0
         if (idConstructor == null) {
             idConstructor = (MethodConstant) aconst[CONSTANT_OFFSET - m_nFunctionId];
         }
-        MethodStructure constructor  = (MethodStructure) idConstructor.getComponent();
+        MethodStructure constructor = (MethodStructure) idConstructor.getComponent();
         return constructor != null && constructor.isNoOp();
     }
 

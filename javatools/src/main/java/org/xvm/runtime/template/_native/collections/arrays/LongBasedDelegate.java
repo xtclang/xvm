@@ -129,9 +129,9 @@ public abstract class LongBasedDelegate
                                             long ofStart, long cSize, boolean fReverse) {
         LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
 
-        long[] alOld  = hDelegate.m_alValue;
+        long[] alOld = hDelegate.m_alValue;
         long[] alNew;
-        if ((ofStart & (f_nValuesPerLong-1)) == 0) {
+        if ((ofStart & (f_nValuesPerLong - 1)) == 0) {
             int nStart = valueIndex(ofStart);
             alNew = Arrays.copyOfRange(alOld, nStart, nStart + storage(cSize));
             if (fReverse) {
@@ -190,7 +190,7 @@ public abstract class LongBasedDelegate
         if (lIndex < cSize) {
             // move over
             for (long i = cSize; i >= lIndex; --i) {
-                setValue(alValue, i+1, getValue(alValue, i));
+                setValue(alValue, i + 1, getValue(alValue, i));
             }
         } else {
             assert lIndex == cSize;
@@ -269,7 +269,7 @@ public abstract class LongBasedDelegate
 
     @Override
     public byte[] getBytes(DelegateHandle hDelegate, long ofStart, long cBytes, boolean fReverse) {
-        return getBits(hDelegate, ofStart*8, cBytes*8, fReverse);
+        return getBits(hDelegate, ofStart * 8, cBytes * 8, fReverse);
     }
 
     @Override
@@ -420,8 +420,8 @@ public abstract class LongBasedDelegate
      * @return the byte value
      */
     protected static byte getByte(long[] alValue, long of) {
-        int  ixVal  = (int) (of / 8);
-        int  ofByte = 7 - (int) (of & 7);
+        int ixVal  = (int) (of / 8);
+        int ofByte = 7 - (int) (of & 7);
 
         return (byte) (alValue[ixVal] >>> (ofByte * 8) & 0xFF);
     }
@@ -467,7 +467,7 @@ public abstract class LongBasedDelegate
             }
 
             // fill the tail
-            ofStart = ofStart + cVals*64L;
+            ofStart = ofStart + cVals * 64L;
             cBits   = cBits % 64;
         }
 

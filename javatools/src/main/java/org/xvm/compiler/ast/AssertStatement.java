@@ -400,7 +400,7 @@ public class AssertStatement
                 }
 
                 if (fAutoMessage) {
-                    Label labelNext = new Label("next"+i);
+                    Label labelNext = new Label("next" + i);
                     code.add(new Jump(labelNext)); // go to the next check
                     code.add(labelAssert);
                     // this code is similar to the auto-message generation below, but in this case
@@ -440,7 +440,7 @@ public class AssertStatement
 
                 fCompletes &= exprCond.isCompletable();
 
-                Label    labelNext = new Label("next"+i);
+                Label    labelNext = new Label("next" + i);
                 Constant valFalse  = pool.valFalse();
 
                 exprCond.generateConditionalJump(ctx, code, labelNext, true, errs);

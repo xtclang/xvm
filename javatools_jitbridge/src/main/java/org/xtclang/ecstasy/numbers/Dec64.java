@@ -287,7 +287,7 @@ public class Dec64 extends DecimalFPNumber {
         if (finite1 && finite2) {
             BigDecimal target  = $toBigDecimal(bits1);
             BigDecimal divisor = $toBigDecimal(bits2);
-            BigDecimal bigR = target.remainder(divisor, MathContext.DECIMAL64);
+            BigDecimal bigR    = target.remainder(divisor, MathContext.DECIMAL64);
             return $toLongBits(ctx, bigR.signum() >= 0 ? bigR : bigR.add(divisor));
         }
         // either side is infinity or NaN so return NaN

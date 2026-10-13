@@ -56,7 +56,7 @@ public abstract class xNumber
                 // construct(Byte[] bytes)
                 ArrayHandle hArray = (ArrayHandle) ahVar[0];
                 byte[]      abVal  = xByteArray.getBytes(hArray);
-                int         cBytes  = (int) hArray.m_hDelegate.m_cSize;
+                int         cBytes = (int) hArray.m_hDelegate.m_cSize;
 
                 return constructFromBytes(frame, abVal, cBytes, iReturn);
             }

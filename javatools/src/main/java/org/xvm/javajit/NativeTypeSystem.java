@@ -62,14 +62,14 @@ public class NativeTypeSystem
     private NativeTypeSystem(Xvm xvm, ModuleLoader[] shared, ModuleStructure[] owned) {
         super(xvm, shared, owned);
 
-        URL  javatoolsURL  = ConstantPool.class.getProtectionDomain().getCodeSource().getLocation();
+        URL  javatoolsURL = ConstantPool.class.getProtectionDomain().getCodeSource().getLocation();
         Path javatoolsPath;
         try {
             javatoolsPath = Path.of(javatoolsURL.toURI());
         } catch (URISyntaxException e) {
             throw new IllegalStateException("Invalid location: " + javatoolsURL, e);
         }
-        Path bridgePath    = Files.isDirectory(javatoolsPath)
+        Path bridgePath = Files.isDirectory(javatoolsPath)
             ? Paths.get(javatoolsPath.toString().replace("javatools", "javatools_jitbridge"))
             : javatoolsPath.resolveSibling("javatools-jitbridge.jar");
         try {
@@ -332,7 +332,7 @@ public class NativeTypeSystem
         nativeByClass.put(pool.clzVar(),       Builder.N_Var);
 
         // various types used by native classes
-        TypeConstant typeChar        = pool.typeChar();
+        TypeConstant typeChar       = pool.typeChar();
         TypeConstant iterableᐸCharᐳ = pool.ensureParameterizedTypeConstant(pool.typeIterable(), typeChar);
         nativeByType.put(iterableᐸCharᐳ, Builder.N_IterableChar);
 
@@ -363,7 +363,7 @@ public class NativeTypeSystem
             nativeByType.put(iterable, "org.xtclang.ecstasy.Iterable" + L_ANGLE + typeName + R_ANGLE);
         }
 
-        TypeConstant typeInt        = pool.typeInt64();
+        TypeConstant typeInt       = pool.typeInt64();
         TypeConstant rangeᐸIntᐳ    = pool.ensureParameterizedTypeConstant(pool.typeRange(), typeInt);
         TypeConstant intervalᐸIntᐳ = pool.ensureParameterizedTypeConstant(pool.typeInterval(), typeInt);
 
