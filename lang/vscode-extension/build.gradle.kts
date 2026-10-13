@@ -183,6 +183,7 @@ val stagePackage =
         from(listOf(copyLspServer, copyDapServer)) { into("server") }
         from(generateIcons) { into("icons") }
         from(npmBundle) { into("out") }
+        from(rootProject.layout.projectDirectory.file("scripts/xtc-lsp")) { into("bin") }
         into(packageDirectory)
 
         val stagedManifest = packageDirectory.map { it.file("package.json") }
