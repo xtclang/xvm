@@ -5,6 +5,7 @@ import java.lang.reflect.Field;
 import java.util.Set;
 
 import org.xvm.asm.Argument;
+import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 
 import org.xvm.asm.constants.ConditionalConstant;
@@ -60,6 +61,20 @@ public abstract class PrefixExpression
     @Override
     protected Field[] getChildFields() {
         return CHILD_FIELDS;
+    }
+
+    /** Complete unary validation, leaving unsupported constant operations for runtime evaluation. */
+    protected Expression finishUnaryValidation(Context ctx, TypeConstant required, TypeConstant actual,
+                                               Expression operand, ErrorListener errs) {
+        Constant value = null;
+        if (actual != null && operand.isConstant()) {
+            try {
+                value = operand.toConstant().apply(operator.getId(), null);
+            } catch (RuntimeException ignored) {
+                // not every constant supports every unary operation
+            }
+        }
+        return finishValidation(ctx, required, actual, actual == null ? TypeFit.NoFit : TypeFit.Fit, value, errs);
     }
 
     // ----- helpers -------------------------------------------------------------------------------

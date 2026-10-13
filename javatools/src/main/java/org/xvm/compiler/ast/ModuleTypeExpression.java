@@ -19,7 +19,7 @@ public class ModuleTypeExpression
      * @param names  the qualified name of the module
      */
     public ModuleTypeExpression(List<Token> names) {
-        super(null, names, null, null, null, names.get(names.size()-1).getEndPosition());
+        super(null, names, null, null, null, names.getLast().getEndPosition());
     }
 
     // ----- compile phases ------------------------------------------------------------------------

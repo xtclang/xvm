@@ -75,19 +75,13 @@ public class ForEachStatement
     public Label ensureContinueLabel(AstNode nodeOrigin, Context ctxOrigin) {
         Context ctxDest = ensureValidationContext();
 
-        // generate a delta of assignment information for the jump
-        Map<String, Assignment> mapAsn = new HashMap<>();
-        Map<String, Argument>   mapArg = new HashMap<>();
-
-        ctxOrigin.prepareJump(ctxDest, mapAsn, mapArg);
-
         // record the jump that landed on this statement by recording its assignment impact
         if (m_listContinues == null) {
             m_listContinues = new ArrayList<>();
         }
 
         Label label = getContinueLabel();
-        m_listContinues.add(new Break(this, mapAsn, mapArg, label));
+        m_listContinues.add(prepareJump(this, ctxOrigin, ctxDest, label));
         return label;
     }
 
@@ -431,7 +425,6 @@ public class ForEachStatement
                     // update "var"/"val" type declarations on the LValues with their actual types
                     TypeConstant[] atypeRVals;
                     switch (plan) {
-                    default:
                     case ITERATOR:
                     case RANGE:
                     case LIST:
@@ -471,6 +464,8 @@ public class ForEachStatement
                             }
                         }
                         break;
+                    default:
+                        throw new IllegalStateException("plan=" + plan);
                     }
 
                     if (fValid) {
@@ -569,7 +564,7 @@ public class ForEachStatement
             ctx = ctx.exit();
 
             // leaving the scope of the for() statement
-            ctx = ctx.exit();
+            ctx.exit();
 
             // lazily created loop vars are only created inside the validation of this statement
             m_labelVars = null;
@@ -618,7 +613,6 @@ public class ForEachStatement
             case LIST     -> emitList(ctx, fCompletes, code, errs);
             case MAP      -> emitMap(ctx, fCompletes, code, errs);
             case ITERABLE -> emitIterable(ctx, fCompletes, code, errs);
-            default       -> throw new IllegalStateException();
         };
 
         code.add(new Exit());
@@ -698,22 +692,7 @@ public class ForEachStatement
             lvalVal.assign(argVal, code, errs);
         }
 
-        // we explicitly do NOT check the block completion, since our completion is not dependent on
-        // the block's ability to complete (since the loop may execute zero times)
-        block.completes(ctx, fReachable, code, errs);
-
-        if (hasContinueLabel()) {
-            code.add(getContinueLabel());
-        }
-        if (m_regFirst != null) {
-            code.add(new Move(pool.valFalse(), m_regFirst));
-        }
-        if (m_regCount != null) {
-            code.add(new IP_Inc(m_regCount));
-        }
-        code.add(new LoopEnd());
-
-        return fReachable;
+        return emitIteratorEnd(ctx, fReachable, code, errs);
     }
 
     /**
@@ -829,7 +808,7 @@ public class ForEachStatement
 
         TypeInfo         infoRange = pool.ensureRangeType(typeSeq).ensureTypeInfo(errs);
         MethodConstant   idLimits  = findWellKnownMethod(infoRange, "effectiveLimits", errs);
-        PropertyConstant idDescend = findWellKnownProperty(infoRange, "descending", errs);
+        PropertyConstant idDescend = findDescendingProperty(infoRange, errs);
 
         if (idLimits == null || idDescend == null) {
             return false;
@@ -997,6 +976,7 @@ public class ForEachStatement
         }
 
         if (m_fTupleLValue) {
+            assert alvalVal != null;
             for (int i = 0, c = alvalVal.length; i < c; i++) {
                 Assignable  lval  = alvalVal[i];
                 IntConstant index = pool.ensureIntConstant(i);
@@ -1006,11 +986,12 @@ public class ForEachStatement
                     Register regTemp = code.createRegister(lval.getType());
                     code.add(new Var(regTemp));
                     code.add(new I_Get(argVal, index, regTemp));
-                    lvalVal.assign(regTemp, code, errs);
+                    lval.assign(regTemp, code, errs);
                 }
             }
         } else {
             if (fTempVal) {
+                assert lvalVal != null;
                 lvalVal.assign(argVal, code, errs);
             }
         }
@@ -1203,22 +1184,23 @@ public class ForEachStatement
             }
         }
 
-        // we explicitly do NOT check the block completion, since our completion is not dependent on
-        // the block's ability to complete (since the loop may execute zero times)
-        block.completes(ctx, fReachable, code, errs);
+        return emitIteratorEnd(ctx, fReachable, code, errs);
+    }
 
+    /** Emit the shared iterator/map loop tail; the body may run zero times. */
+    private boolean emitIteratorEnd(Context ctx, boolean reachable, Code code, ErrorListener errs) {
+        block.completes(ctx, reachable, code, errs);
         if (hasContinueLabel()) {
             code.add(getContinueLabel());
         }
         if (m_regFirst != null) {
-            code.add(new Move(pool.valFalse(), m_regFirst));
+            code.add(new Move(pool().valFalse(), m_regFirst));
         }
         if (m_regCount != null) {
             code.add(new IP_Inc(m_regCount));
         }
         code.add(new LoopEnd());
-
-        return fReachable;
+        return reachable;
     }
 
     /**
@@ -1269,12 +1251,12 @@ public class ForEachStatement
     /**
      * Trivial helper.
      */
-    private PropertyConstant findWellKnownProperty(TypeInfo info, String sPropName, ErrorListener errs) {
-        PropertyInfo prop = info.findProperty(sPropName);
+    private PropertyConstant findDescendingProperty(TypeInfo info, ErrorListener errs) {
+        PropertyInfo prop = info.findProperty("descending");
 
         if (prop == null) {
             log(errs, Severity.ERROR, Compiler.MISSING_METHOD,
-                    sPropName + ".get()", info.getType().getValueString());
+                    "descending.get()", info.getType().getValueString());
             return null;
         }
         return prop.getIdentity();

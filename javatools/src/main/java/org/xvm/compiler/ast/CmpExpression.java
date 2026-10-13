@@ -256,15 +256,10 @@ public class CmpExpression
                                 type1.getValueString(), type2.getValueString());
                     }
                 } else {
-                    SignatureConstant sigCmp  = fEqual ? pool.sigEquals() : pool.sigCompare();
-                    MethodInfo        infoCmp = typeCommon.ensureTypeInfo(errs).getMethodBySignature(sigCmp);
-                    if (infoCmp == null) {
-                        fValid = false;
-                        log(errs, Severity.ERROR, Compiler.MISSING_METHOD,
-                                sigCmp.getName(), typeCommon.getValueString());
-                    } else {
+                    m_idCmp = findComparisonMethod(this, typeCommon, fEqual, errs);
+                    fValid  = m_idCmp != null;
+                    if (fValid) {
                         m_typeCommon = typeCommon;
-                        m_idCmp      = infoCmp.getIdentity();
                     }
                 }
             }
@@ -318,6 +313,18 @@ public class CmpExpression
 
         return finishValidation(ctx, typeRequired, typeResult,
                 fValid ? TypeFit.Fit : TypeFit.NoFit, constVal, errs);
+    }
+
+    /** Resolve the comparison function shared by binary and chained comparisons. */
+    static MethodConstant findComparisonMethod(AstNode node, TypeConstant type, boolean equal, ErrorListener errs) {
+        ConstantPool      pool      = node.pool();
+        SignatureConstant signature = equal ? pool.sigEquals() : pool.sigCompare();
+        MethodInfo        method    = type.ensureTypeInfo(errs).getMethodBySignature(signature);
+        if (method == null) {
+            node.log(errs, Severity.ERROR, Compiler.MISSING_METHOD, signature.getName(), type.getValueString());
+            return null;
+        }
+        return method.getIdentity();
     }
 
     /**
