@@ -1,0 +1,112 @@
+#!/usr/bin/env python3
+"""Restart an editor-owned Ecstasy language server without discarding unsaved buffers."""
+
+import argparse
+import http.client
+import json
+import os
+from pathlib import Path
+import stat
+import sys
+
+
+def request(session, operation, timeout):
+    """Contact only authenticated IPv4 loopback endpoints, without proxy or redirect handling."""
+    port = session.get("port")
+    if type(port) is not int or not 1 <= port <= 65535:
+        raise ValueError("Invalid control port")
+    token = session.get("token")
+    if not isinstance(token, str) or not token or len(token) > 256:
+        raise ValueError("Invalid control token")
+    connection = http.client.HTTPConnection("127.0.0.1", port, timeout=timeout)
+    try:
+        connection.request("POST" if operation == "restart" else "GET", f"/{operation}",
+                           headers={"Authorization": f"Bearer {token}"})
+        response = connection.getresponse()
+        body = response.read(65537)
+        if len(body) > 65536:
+            raise ValueError("Oversized control response")
+        result = json.loads(body)
+        if response.status != 200:
+            raise ValueError(result.get("error", f"Control request failed: HTTP {response.status}"))
+        if result.get("version") != 1 or result.get("id") != session.get("id"):
+            raise ValueError("Control session changed; list sessions again")
+        return result
+    finally:
+        connection.close()
+
+
+def sessions(directory):
+    """Ignore stale discovery records; a live authenticated response establishes session identity."""
+    if not directory.exists():
+        return []
+    if directory.is_symlink():
+        raise ValueError("Control directory must not be a symbolic link")
+    if os.name == "posix":
+        info = directory.stat()
+        if info.st_uid != os.getuid() or info.st_mode & 0o077:
+            raise ValueError("Control directory must be owned by you and accessible only to you")
+    live = []
+    for file in sorted(directory.glob("*.json")):
+        try:
+            info = file.lstat()
+            if not stat.S_ISREG(info.st_mode) or info.st_size > 65536:
+                continue
+            if os.name == "posix" and (info.st_uid != os.getuid() or info.st_mode & 0o077):
+                continue
+            descriptor = json.loads(file.read_text(encoding="utf-8"))
+            if not isinstance(descriptor, dict) or descriptor.get("version") != 1:
+                continue
+            current = request(descriptor, "status", 1)
+            projects = current.get("projects")
+            if current.get("ide") not in ("intellij", "vscode") or not isinstance(projects, list):
+                continue
+            if not all(isinstance(project, str) for project in projects):
+                continue
+            live.append({**descriptor, **current})
+        except (OSError, ValueError, TypeError, AttributeError, http.client.HTTPException):
+            continue
+    return live
+
+
+def describe(session):
+    return f"{session['id']}  {session['ide']}  " + ", ".join(session["projects"])
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("list", help="List live editor sessions (tokens are never printed)")
+    restart = commands.add_parser("restart", help="Restart through the IDE and restore its open buffers")
+    restart.add_argument("--project", type=Path, default=Path.cwd(), help="Exact workspace/project root (default: current directory)")
+    restart.add_argument("--ide", choices=("intellij", "vscode"), help="Select an editor when both have the project open")
+    restart.add_argument("--session", help="Select an exact session ID from 'list'")
+    restart.add_argument("--timeout", type=float, default=65, help="Seconds to wait for restart (default: 65)")
+    args = parser.parse_args()
+    try:
+        directory = Path(os.environ.get("XTC_EDITOR_CONTROL_DIR", Path.home() / ".xtc/editor-control"))
+        live = sessions(directory)
+        if args.command == "list":
+            print("\n".join(map(describe, live)) if live else "No live Ecstasy editor sessions.")
+            return 0
+        if not 0 < args.timeout <= 600:
+            raise ValueError("--timeout must be greater than zero and at most 600 seconds")
+        project = os.path.normcase(str(args.project.resolve()))
+        matches = [session for session in live
+                   if project in [os.path.normcase(os.path.realpath(root)) for root in session["projects"]]
+                   and (args.ide is None or args.ide == session["ide"])
+                   and (args.session is None or args.session == session["id"])]
+        if not matches:
+            raise ValueError(f"No live Ecstasy editor session matches {args.project.resolve()}. Open the project and run 'xtc-lsp list'.")
+        if len(matches) != 1:
+            raise ValueError("Multiple editors match; select --ide or --session:\n" + "\n".join(map(describe, matches)))
+        result = request(matches[0], "restart", args.timeout)
+        print(f"{matches[0]['ide']}: {result['message']}")
+        return 0
+    except (OSError, ValueError, KeyError, http.client.HTTPException) as error:
+        print(f"xtc-lsp: {error}", file=sys.stderr)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

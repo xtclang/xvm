@@ -24,6 +24,7 @@ import { runtimeJvmOptions, runtimeLogArguments } from './runtime-settings';
 import { configuredSettings, configurationProperties } from './settings-report';
 import { supportLogs } from './support-logs';
 import { serviceFailure } from './service-notifications';
+import { ServerControlEndpoint } from './server-control';
 
 function ensureXtcLanguageAssociation(document: vscode.TextDocument): void {
     if (document.fileName.endsWith('.x') && document.languageId !== 'xtc') {
@@ -119,6 +120,25 @@ export function activate(context: vscode.ExtensionContext): void {
     // Setup LSP server
     const serverJar = context.asAbsolutePath(path.join('server', 'lsp-server.jar'));
     const serverExists = fs.existsSync(serverJar);
+
+    // Keep control in the extension host, including when the language-server process has failed.
+    let controlClosed = false;
+    let control: ServerControlEndpoint | undefined;
+    context.subscriptions.push({ dispose: () => {
+        controlClosed = true;
+        void control?.close().catch(error => outputChannel.error(`CLI control cleanup failed: ${error}`));
+    } });
+    void ServerControlEndpoint.start(path.join(os.homedir(), '.xtc', 'editor-control'),
+        () => (vscode.workspace.workspaceFolders ?? []).filter(folder => folder.uri.scheme === 'file')
+            .map(folder => fs.realpathSync(folder.uri.fsPath)),
+        async () => {
+            if (controlClosed) throw new Error('Workspace is closing');
+            if (!serverExists) throw new Error('Ecstasy Language Server JAR not found. Build the extension first.');
+            await restartLanguageClient(context, serverJar, outputChannel);
+        }).then(async endpoint => {
+        control = endpoint;
+        if (controlClosed) await endpoint.close();
+    }).catch(error => outputChannel.error(`CLI control unavailable: ${error}`));
 
     // Register LSP-related commands
     const effectiveOutput = vscode.window.createOutputChannel('Ecstasy Effective Configuration');
