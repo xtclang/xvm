@@ -1,7 +1,6 @@
 package org.xvm.compiler.ast;
 
 import org.xvm.asm.Argument;
-import org.xvm.asm.Constant;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
@@ -39,8 +38,6 @@ public class UnaryComplementExpression
 
     @Override
     protected Expression validate(Context ctx, TypeConstant typeRequired, ErrorListener errs) {
-        TypeFit      fit       = TypeFit.Fit;
-        Constant     constVal  = null;
         Expression   exprRight = expr;
         TypeConstant typeRight = null;
         boolean      fBoolean  = false;
@@ -63,15 +60,7 @@ public class UnaryComplementExpression
             ctx = ctx.exit();
         }
 
-        if (typeRight == null) {
-            fit = TypeFit.NoFit;
-        } else if (exprRight.isConstant()) {
-            try {
-                constVal = exprRight.toConstant().apply(operator.getId(), null);
-            } catch (RuntimeException _) {}
-        }
-
-        return finishValidation(ctx, typeRequired, typeRight, fit, constVal, errs);
+        return finishUnaryValidation(ctx, typeRequired, typeRight, exprRight, errs);
     }
 
     @Override

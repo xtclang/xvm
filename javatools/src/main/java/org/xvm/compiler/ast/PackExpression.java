@@ -14,6 +14,7 @@ import org.xvm.asm.op.Var_T;
 /**
  * A tuple packing expression. This packs the multiple values from the sub-expression into a tuple.
  */
+@SuppressWarnings("unused")
 public class PackExpression
         extends SyntheticExpression {
     // ----- constructors --------------------------------------------------------------------------

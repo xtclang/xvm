@@ -115,6 +115,7 @@ public abstract class GotoStatement
     /**
      * @return the "depth" of the statement that this "goto" statement refers to
      */
+    @SuppressWarnings("unused")
     protected int getTargetDepth() {
         if (!isLabeled()) {
             return 0;
