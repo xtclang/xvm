@@ -699,7 +699,7 @@ public abstract class OpCallable extends Op {
                 TypeInfo     infoTarget = bctx.getTypeInfo(typeTarget);
                 MethodInfo   infoMethod = infoTarget.getMethodBySignature(bodySuper.getSignature());
 
-                cdTarget   = bctx.builder.ensureClassDesc(typeTarget);
+                cdTarget   = bctx.builder.getCCDesc(typeTarget);
                 sJitName   = infoMethod.ensureJitMethodName(ts);
                 jmdCall    = infoMethod.getJitDesc(bctx.builder, typeTarget);
                 fSpecial   = false;
@@ -722,7 +722,7 @@ public abstract class OpCallable extends Op {
                     TypeConstant typeTarget = bctx.isSpecialized
                             ? idCallee.getFormalType().resolveGenerics(bctx.pool(), bctx.thisType)
                             : idCallee.getType();
-                    cdTarget   = bctx.builder.ensureClassDesc(typeTarget);
+                    cdTarget   = bctx.builder.getCCDesc(typeTarget);
                     sJitName   = MethodInfo.getJitIdentity(bctx.callChain, nDepth).
                             ensureJitMethodName(ts);
                     fInterface = typeTarget.isJitInterface();
@@ -776,7 +776,7 @@ public abstract class OpCallable extends Op {
 
             Builder builder = bctx.builder;
 
-            cdTarget   = builder.ensureClassDesc(typeTarget);
+            cdTarget   = builder.getCCDesc(typeTarget);
             jmdCall    = infoMethod.getJitDesc(builder, typeTarget);
             fSpecial   = false;
             fInterface = !typeTarget.isSingleUnderlyingClass(false);
@@ -791,7 +791,7 @@ public abstract class OpCallable extends Op {
                 assert typeFunky.isInterfaceType();
 
                 cdTarget   = ClassDesc.of(TypeSystem.funkyInterface(
-                                builder.ensureJitClassName(typeFunky)));
+                                builder.getCCName(typeFunky)));
                 sJitName   = idFunky.ensureJitMethodName(ts);
                 jmdCall    = bodyFunky.getJitDesc(builder, typeFunky);
                 fInterface = true;
@@ -997,7 +997,7 @@ public abstract class OpCallable extends Op {
         MethodBody   bodyCtor      = infoCtor.getVirtualConstructor();
         TypeConstant typeInterface = bodyCtor.getIdentity().getNamespace().getType();
         TypeInfo     infoInterface = bctx.getTypeInfo(typeInterface);
-        ClassDesc    cdInterface   = bctx.builder.ensureClassDesc(typeInterface);
+        ClassDesc    cdInterface   = bctx.builder.getCCDesc(typeInterface);
 
         JitMethodDesc jmdNew = Builder.convertConstructToNew(infoInterface, cdInterface,
                 (JitCtorDesc) bodyCtor.getJitDesc(bctx.builder, typeInterface));
@@ -1063,7 +1063,7 @@ public abstract class OpCallable extends Op {
             assert origin != null;
 
             typeTarget = origin.getType();
-            cdTarget   = bctx.builder.ensureClassDesc(typeTarget);
+            cdTarget   = bctx.builder.getCCDesc(typeTarget);
             sJitCtor   = infoCtor.ensureJitMethodName(bctx.typeSystem);
         }
 

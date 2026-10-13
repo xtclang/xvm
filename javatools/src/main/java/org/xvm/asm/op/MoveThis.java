@@ -188,7 +188,7 @@ public class MoveThis
             code.getfield(cd, Outer, CD_nObject);
 
             type = type.getParentType();
-            cd   = bctx.builder.ensureClassDesc(type);
+            cd   = bctx.builder.getCCDesc(type);
             code.checkcast(cd);
         }
 

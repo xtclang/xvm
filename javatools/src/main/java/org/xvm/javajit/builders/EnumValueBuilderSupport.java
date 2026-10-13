@@ -95,7 +95,7 @@ public interface EnumValueBuilderSupport {
      */
     default ClassDesc getEnumValueSuperCD(CommonBuilder builder) {
         TypeConstant parent = ((ClassStructure) builder.classStruct.getParent()).getFormalType();
-        String       name   = parent.ensureJitClassName(builder.typeSystem);
+        String       name   = parent.getJitCCName(builder.typeSystem);
         return ClassDesc.of(name);
     }
 
@@ -232,8 +232,8 @@ public interface EnumValueBuilderSupport {
      * @return the {@link ClassDesc} for a {@link ClassStructure}
      */
     static ClassDesc cdForClass(ClassStructure clz, TypeSystem typeSystem) {
-        TypeConstant type = clz.getFormalType().getJitCCType();
-        String       name = type.ensureJitClassName(typeSystem);
+        TypeConstant type = clz.getFormalType();
+        String       name = type.getJitCCName(typeSystem);
         return ClassDesc.of(name);
     }
 }

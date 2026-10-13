@@ -186,8 +186,8 @@ public class EnumerationBuilder
             .putstatic(thisCD, FIELD_NAMES, CD_ArrayObj);
 
         // set the $values array static field
-        String    jitName = enumType.ensureJitClassName(typeSystem);
-        ClassDesc paramCD = enumType.isJitPrimitive() ? ensureClassDesc(enumType) : CD_Object;
+        String    jitName = enumType.getJitCCName(typeSystem);
+        ClassDesc paramCD = enumType.isJitPrimitive() ? getCCDesc(enumType) : CD_Object;
         code.aload(ctxSlot)
             .loadConstant(count)
             .anewarray(paramCD);

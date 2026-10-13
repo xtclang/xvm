@@ -79,8 +79,8 @@ public class CastTypeConstant
     }
 
     @Override
-    public String ensureJitClassName(TypeSystem ts) {
-        return this.getJitCCType().ensureJitClassName(ts);
+    public String getJitCCName(TypeSystem ts) {
+        return this.getJitCCType().getJitCCName(ts);
     }
 
     @Override

@@ -490,7 +490,7 @@ public class TypeSystem {
     }
 
     public String ensureJitClassName(TypeConstant type, ClassfileShape shape) {
-        String classname = type.ensureJitClassName(this);
+        String classname = type.getJitCCName(this);
         if (shape == ClassfileShape.Impl) {
             return classname;
         }
