@@ -16,12 +16,9 @@ import java.nio.file.StandardCopyOption;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
-
-import java.util.function.BiConsumer;
 
 /**
  * A simple ModuleRepository that manages its contents in a directory.
@@ -53,30 +50,10 @@ public class DirRepository
      * @param fReadOnly  true to make the repository "read-only"
      */
     public DirRepository(File dir, boolean fReadOnly) {
-        this(dir, fReadOnly, DirRepository::reportReadFailure);
-    }
-
-    /**
-     * Construct a repository with an observer for unsuccessful candidate reads.
-     *
-     * <p>The observer receives the candidate file and original I/O exception synchronously for
-     * each failed read attempt, including an unsupported binary version. It replaces the default
-     * console report; scanning continues and other files or repositories may supply a module.
-     * Cached absence produces no report. A candidate can be unrelated to the requested module,
-     * and a report does not identify a failed write, corruption or the file's module identity.
-     * Write failures continue to be thrown by {@link #storeModule(ModuleStructure)}.
-     * An unchanged failed candidate remains cached as unavailable until its size or timestamp changes.
-     *
-     * @param dir            the directory that contains the repository contents
-     * @param fReadOnly      true to make the repository read-only
-     * @param onReadFailure  the non-null observer; it must not reenter this repository
-     */
-    public DirRepository(File dir, boolean fReadOnly, BiConsumer<File, IOException> onReadFailure) {
         assert dir != null && dir.isDirectory();
 
-        m_dir           = dir;
-        m_fRO           = fReadOnly;
-        m_onReadFailure = Objects.requireNonNull(onReadFailure);
+        m_dir = dir;
+        m_fRO = fReadOnly;
     }
 
     // ----- accessors -----------------------------------------------------------------------------
@@ -231,7 +208,7 @@ public class DirRepository
      * @return the module information
      */
     protected ModuleInfo createModuleInfo(File file) {
-        return new ModuleInfo(file, m_onReadFailure);
+        return new ModuleInfo(file);
     }
 
     /**
@@ -273,7 +250,7 @@ public class DirRepository
                 String  name      = err ? null : in.readUTF();
 
                 if (modulesByFile.put(file,
-                        new ModuleInfo(file, name, timestamp, size, err, m_onReadFailure)) != null) {
+                        new ModuleInfo(file, name, timestamp, size, err)) != null) {
                     return null;
                 }
             }
@@ -390,14 +367,9 @@ public class DirRepository
 
     protected static class ModuleInfo {
         public ModuleInfo(File file) {
-            this(file, DirRepository::reportReadFailure);
-        }
-
-        private ModuleInfo(File file, BiConsumer<File, IOException> onReadFailure) {
-            this.onReadFailure = onReadFailure;
-            this.file          = file;
-            this.timestamp     = file.lastModified();
-            this.size          = file.length();
+            this.file      = file;
+            this.timestamp = file.lastModified();
+            this.size      = file.length();
 
             ModuleStructure module = tryLoad();
             if (module == null) {
@@ -411,15 +383,13 @@ public class DirRepository
             }
         }
 
-        private ModuleInfo(File file, String name, long timestamp, long size, boolean err,
-                           BiConsumer<File, IOException> onReadFailure) {
-            this.onReadFailure = onReadFailure;
-            this.file          = file;
-            this.name          = name;
-            this.versions      = null;
-            this.timestamp     = timestamp;
-            this.size          = size;
-            this.err           = err;
+        private ModuleInfo(File file, String name, long timestamp, long size, boolean err) {
+            this.file      = file;
+            this.name      = name;
+            this.versions  = null;
+            this.timestamp = timestamp;
+            this.size      = size;
+            this.err       = err;
         }
 
         ModuleStructure tryLoad() {
@@ -427,9 +397,9 @@ public class DirRepository
                 FileStructure struct = new FileStructure(file);
                 readFailed = false;
                 return struct.getModule();
-            } catch (IOException e) {
+            } catch (Exception e) {
                 readFailed = true;
-                onReadFailure.accept(file, e);
+                System.out.println("Error loading module from file: " + file + "; " + e.getMessage());
                 return null;
             }
         }
@@ -461,12 +431,6 @@ public class DirRepository
 
         /** A failed lazy read remains unavailable until changed metadata replaces this entry. */
         private boolean readFailed;
-
-        private final BiConsumer<File, IOException> onReadFailure;
-    }
-
-    private static void reportReadFailure(File file, IOException cause) {
-        System.out.println("Error reading module file " + file + ": " + cause);
     }
 
     // ----- constants -----------------------------------------------------------------------------
@@ -486,7 +450,6 @@ public class DirRepository
 
     private final File    m_dir;
     private final boolean m_fRO;
-    private final BiConsumer<File, IOException> m_onReadFailure;
 
     private       Map<File  , ModuleInfo> modulesByFile = new HashMap<>();
     private final Map<String, ModuleInfo> modulesByName = new TreeMap<>();
