@@ -49,14 +49,14 @@ import org.xvm.asm.op.Var_CN;
 import org.xvm.asm.op.Var_IN;
 
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.CursorBinding;
-import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.NameResolver.Result;
 import org.xvm.compiler.ast.NewExpression.AnonInnerClassContext;
+import org.xvm.compiler.ast.bindings.CursorBinding;
+import org.xvm.compiler.ast.bindings.InvocationBinding;
 
 import org.xvm.util.ListMap;
 import org.xvm.util.Severity;

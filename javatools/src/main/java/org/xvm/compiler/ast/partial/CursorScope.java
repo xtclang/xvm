@@ -27,7 +27,6 @@ import org.xvm.asm.constants.TypeConstant;
 import org.xvm.asm.constants.TypeParameterConstant;
 
 import org.xvm.compiler.Compiler.Stage;
-import org.xvm.compiler.CursorBinding;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 import org.xvm.compiler.ast.AstNode;
@@ -45,6 +44,7 @@ import org.xvm.compiler.ast.StageMgr;
 import org.xvm.compiler.ast.StatementBlock;
 import org.xvm.compiler.ast.TypeCompositionStatement;
 import org.xvm.compiler.ast.TypeExpression;
+import org.xvm.compiler.ast.bindings.CursorBinding;
 
 import static org.xvm.asm.ErrorListener.Silence.PROBE;
 import static org.xvm.asm.ErrorListener.silent;
