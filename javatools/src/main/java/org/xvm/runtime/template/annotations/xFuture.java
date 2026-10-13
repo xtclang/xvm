@@ -51,10 +51,10 @@ public class xFuture
 
     @Override
     public void initNative() {
-        ConstantPool  pool     = pool();
-        ClassConstant idMixin  = (ClassConstant) f_struct.getIdentityConstant();
-        Annotation    anno     = pool.ensureAnnotation(idMixin);
-        TypeConstant  typeVar  = xVar.INSTANCE.getCanonicalType();
+        ConstantPool  pool    = pool();
+        ClassConstant idMixin = (ClassConstant) f_struct.getIdentityConstant();
+        Annotation    anno    = pool.ensureAnnotation(idMixin);
+        TypeConstant  typeVar = xVar.INSTANCE.getCanonicalType();
 
         TYPE       = pool.ensureAnnotatedTypeConstant(typeVar, anno);
         COMPLETION = (xEnum) f_container.getTemplate("annotations.Future.Completion");

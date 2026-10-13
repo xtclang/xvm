@@ -533,7 +533,7 @@ public class TypeSystem {
                 if (sh.prefix.isEmpty() || simple.startsWith(sh.prefix)) {
                     // all suffixes except Impl are of the length 2
                     String pkg = simpleIx < 0 ? "" : suffix.substring(0, simpleIx + 1);
-                    suffix  = pkg + simple.substring(sh.prefix.length());
+                    suffix = pkg + simple.substring(sh.prefix.length());
                     shape = sh;
                     break;
                 }

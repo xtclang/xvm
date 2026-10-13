@@ -139,11 +139,11 @@ public class CompositeComponent
     public boolean isStatic() {
         // this is a legal request iff all of the siblings have the same static
         boolean fStatic = false;
-        boolean fFirst    = true;
+        boolean fFirst  = true;
         for (Component sibling : f_siblings) {
             if (fFirst) {
                 fStatic = sibling.isStatic();
-                fFirst    = false;
+                fFirst  = false;
             } else if (fStatic != sibling.isStatic()) {
                 throw new UnsupportedOperationException(
                         "can't ask static of a composite with diff static settings");

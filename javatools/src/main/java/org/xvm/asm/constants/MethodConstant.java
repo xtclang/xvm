@@ -313,7 +313,7 @@ public class MethodConstant
                 String            prefix = computePrefix(ts);
                 SignatureConstant sigJit = getSignature();
                 if (!prefix.isEmpty()) {
-                    sigJit  = sigJit.getConstantPool().ensureSignatureConstant(
+                    sigJit = sigJit.getConstantPool().ensureSignatureConstant(
                         prefix + sigJit.getName(), sigJit.getRawParams(), sigJit.getRawReturns());
                 }
                 sJitName = sigJit.ensureJitMethodName(ts);

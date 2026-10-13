@@ -261,7 +261,7 @@ public class xRTCompiler
         if (fSuccess) {
             haTemplates = xArray.makeArrayHandle(clzArray, listFiles.size(),
                             listFiles.toArray(Utils.OBJECTS_NONE), Mutability.Constant);
-            haErrors    = xString.ensureEmptyArray();
+            haErrors = xString.ensureEmptyArray();
         } else {
             haTemplates = xArray.makeArrayHandle(clzArray, 0, Utils.OBJECTS_NONE, Mutability.Constant);
             haErrors    = xString.makeArrayHandle(listErrors.toArray(Utils.NO_NAMES));

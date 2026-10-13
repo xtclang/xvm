@@ -55,8 +55,8 @@ public class xString
 
     @Override
     public void initNative() {
-        ConstantPool   pool      = pool();
-        TypeConstant   typeArg   = pool.ensureClassTypeConstant(
+        ConstantPool pool    = pool();
+        TypeConstant typeArg = pool.ensureClassTypeConstant(
                 pool.ensureEcstasyClassConstant("Appender"), null,
                 pool.typeChar());
 
@@ -155,7 +155,7 @@ public class xString
                 ObjectHandle hValue = ahArg[0];
                 ObjectHandle hStart = ahArg[1];
 
-                int  ofStart = hStart == ObjectHandle.DEFAULT
+                int ofStart = hStart == ObjectHandle.DEFAULT
                         ? 0
                         : (int) ((JavaLong) hStart).getValue();
 

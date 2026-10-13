@@ -379,7 +379,7 @@ public abstract class ConditionalConstant
                 }
             }
 
-            int iCondThis    = cConds++;
+            int iCondThis = cConds++;
             terminal.iTest   = iCondThis;
             acond[iCondThis] = terminal;
 
@@ -458,8 +458,8 @@ public abstract class ConditionalConstant
     private void bruteForce(int cConds, long[] amaskSkip, long[] aptrnSkip,
             long[] aResultFF,  long[] aResultFT, long[] aResultTF, long[] aResultTT) {
         assert cConds > 0;
-        int     cSkips    = amaskSkip.length;
-        boolean fSkips    = cSkips > 0;
+        int     cSkips = amaskSkip.length;
+        boolean fSkips = cSkips > 0;
         NextTest: for (long nTest = 0L, cIters = (1L << cConds); nTest < cIters; ++nTest) {
             if (fSkips) {
                 for (int iSkip = 0; iSkip < cSkips; ++iSkip) {

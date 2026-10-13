@@ -596,7 +596,7 @@ public abstract class xConstrainedInteger
 
     protected int invokeRotateL(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         long l = ((JavaLong) hTarget).getValue();
-        int  c  = (int) (((JavaLong) hArg).getValue() % f_cNumBits);
+        int  c = (int) (((JavaLong) hArg).getValue() % f_cNumBits);
 
         long lHead = l << c;
         long lTail = l >>> (f_cNumBits - c);
@@ -606,7 +606,7 @@ public abstract class xConstrainedInteger
 
     protected int invokeRotateR(Frame frame, ObjectHandle hTarget, ObjectHandle hArg, int iReturn) {
         long l = ((JavaLong) hTarget).getValue();
-        int  c  = (int) (((JavaLong) hArg).getValue() % f_cNumBits);
+        int  c = (int) (((JavaLong) hArg).getValue() % f_cNumBits);
 
         long lHead = l << (f_cNumBits - c);
         long lTail = l >>> c;

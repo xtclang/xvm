@@ -226,7 +226,7 @@ class BundlerTest {
         // still be byte-identical
         var timestamp = Instant.parse("2026-01-01T00:00:00Z");
 
-        byte[] abForward  = generateAndBundle(tempDir.resolve("forward"), timestamp,
+        byte[] abForward = generateAndBundle(tempDir.resolve("forward"), timestamp,
                 List.of("MainMod", "LibA", "LibB"));
         byte[] abReversed = generateAndBundle(tempDir.resolve("reversed"), timestamp,
                 List.of("LibB", "LibA", "MainMod"));

@@ -297,11 +297,11 @@ public class AllCondition
         assert aconstCond.length > 1;
 
         // scan the underlying conditions to see if there is anything to merge
-        boolean fAnds   = false;
+        boolean fAnds  = false;
         int     cConds = 0;
         for (ConditionalConstant cond : aconstCond) {
             if (cond instanceof AllCondition) {
-                fAnds   = true;
+                fAnds = true;
                 cConds += mergeAnds(((AllCondition) cond).m_aconstCond).length;
             } else {
                 ++cConds;

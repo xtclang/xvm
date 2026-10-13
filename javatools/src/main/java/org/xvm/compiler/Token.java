@@ -257,7 +257,7 @@ public class Token
         }
 
         // get the location of "this" token
-        long start  = m_lStartPos;
+        long start = m_lStartPos;
 
         // get the location of the end of the new peeled token / start of this token (adjusted)
         long current = source.getPosition();

@@ -218,7 +218,7 @@ public class AnyCondition
         int     cConds = 0;
         for (ConditionalConstant cond : aconstCond) {
             if (cond instanceof AnyCondition) {
-                fOrs    = true;
+                fOrs = true;
                 cConds += mergeOrs(((AnyCondition) cond).m_aconstCond).length;
             } else {
                 ++cConds;

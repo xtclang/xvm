@@ -92,7 +92,7 @@ public class xRTDecryptor
      */
     private int invokeDecrypt(Frame frame, CipherHandle hCipher, ObjectHandle hKey,
                               ByteArrayHandle haData, int iReturn) {
-        byte[] abData  = xRTUInt8Delegate.getBytes(haData);
+        byte[] abData = xRTUInt8Delegate.getBytes(haData);
         Cipher cipher = hCipher.f_cipher;
 
         try {

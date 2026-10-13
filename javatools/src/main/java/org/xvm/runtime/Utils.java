@@ -96,9 +96,9 @@ public abstract class Utils {
         STRING_VALUE_OF               = CONST_HELPER.findMethod("valueOf", 1);
         SIG_FREEZE                    = container.getClassStructure("Freezable").findMethod("freeze", 1).
                                             getIdentityConstant().getSignature();
-        SIG_GET_RESOURCE              = container.getClassStructure("mgmt.ResourceProvider").findMethod("getResource", 2).
+        SIG_GET_RESOURCE = container.getClassStructure("mgmt.ResourceProvider").findMethod("getResource", 2).
                                             getIdentityConstant().getSignature();
-        SIG_INJECT                    = container.getClassStructure("reflect.Injector").findMethod("inject", 3).
+        SIG_INJECT = container.getClassStructure("reflect.Injector").findMethod("inject", 3).
                                             getIdentityConstant().getSignature();
     }
 
@@ -421,8 +421,8 @@ public abstract class Utils {
     public static class AssignValues
             implements Frame.Continuation {
         public AssignValues(int[] aiReturn, ObjectHandle[] ahValue) {
-            this.aiReturn  = aiReturn;
-            this.ahValue   = ahValue;
+            this.aiReturn = aiReturn;
+            this.ahValue  = ahValue;
         }
 
         public int proceed(Frame frameCaller) {
@@ -495,13 +495,13 @@ public abstract class Utils {
                                 getReferent(frameCaller, hRef, Op.A_STACK);
                         switch (iResult) {
                         case Op.R_NEXT:
-                            afDynamic[index]   = false;
+                            afDynamic[index] = false;
                             ahValue  [index--] = frameCaller.popStack();
                             continue;
 
                         case Op.R_CALL:
                             frameCaller.m_frameNext.addContinuation(frame -> {
-                                afDynamic[index]   = false;
+                                afDynamic[index] = false;
                                 ahValue  [index--] = frame.popStack();
                                 return proceed(frame);
                             });
@@ -586,13 +586,13 @@ public abstract class Utils {
                                 getReferent(frameCaller, hRef, Op.A_STACK);
                         switch (iResult) {
                         case Op.R_NEXT:
-                            afDynamic[index]   = false;
+                            afDynamic[index] = false;
                             ahValue  [index--] = frameCaller.popStack();
                             continue;
 
                         case Op.R_CALL:
                             frameCaller.m_frameNext.addContinuation(frame -> {
-                                afDynamic[index]   = false;
+                                afDynamic[index] = false;
                                 ahValue  [index--] = frame.popStack();
                                 return proceed(frame);
                             });
@@ -1477,8 +1477,8 @@ public abstract class Utils {
 
                     // constructing Argument<Referent extends immutable Const>
                     //                  (Referent value, String? name = Null)
-                    Parameter    param  = constructAnno.getParam(iArg);
-                    TypeConstant type   = param.getType().
+                    Parameter    param = constructAnno.getParam(iArg);
+                    TypeConstant type  = param.getType().
                         resolveGenerics(frameCaller.poolContext(),
                             frameCaller.getGenericsResolver(false));
 
@@ -1589,8 +1589,8 @@ public abstract class Utils {
                 TypeConstant    typeParam = pool.ensureParameterizedTypeConstant(typeRTParameter, type);
                 TypeComposition clzParam  = frameCaller.f_context.f_container.ensureClassComposition(typeParam, template);
 
-                MethodStructure  construct = RT_PARAMETER_CONSTRUCT;
-                ObjectHandle[]   ahArg     = new ObjectHandle[construct.getMaxVars()];
+                MethodStructure construct = RT_PARAMETER_CONSTRUCT;
+                ObjectHandle[]  ahArg     = new ObjectHandle[construct.getMaxVars()];
                 ahArg[0] = xInt64.makeHandle(index); // ordinal
                 ahArg[1] = sName == null ? xNullable.NULL : xString.makeHandle(sName);
                 ahArg[2] = xBoolean.makeHandle(fFormal);

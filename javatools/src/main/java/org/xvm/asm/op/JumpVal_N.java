@@ -430,9 +430,9 @@ public class JumpVal_N
 
                 assert !hCase.isMutable();
 
-                TypeConstant typeCase    = hCase.getType();
-                TypeConstant typeColumn  = atypeColumn[iC];
-                boolean      fRange      = typeCase.isA(typeRange) && !typeColumn.isA(typeRange);
+                TypeConstant typeCase   = hCase.getType();
+                TypeConstant typeColumn = atypeColumn[iC];
+                boolean      fRange     = typeCase.isA(typeRange) && !typeColumn.isA(typeRange);
 
                 if (aAlgorithm[iC].isNative()) {
                     if (hCase.isNativeEqual()) {

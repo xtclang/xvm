@@ -1359,7 +1359,7 @@ public class Lexer
                     if (fTemplate) {
                         long lPosStartExpr = source.getPosition();
                         source.rewind();
-                        long lPosEndText   = source.getPosition();
+                        long lPosEndText = source.getPosition();
 
                         // eat from the opening { to the closing } (inclusive of both)
                         Token[] aTokens = eatTemplateExpression(fMultiline);
@@ -2371,7 +2371,7 @@ public class Lexer
                 long lPosTokenEnd = source.getPosition();
                 source.rewind();
                 source.rewind();
-                long lPosTextEnd  = source.getPosition();
+                long lPosTextEnd = source.getPosition();
                 source.setPosition(lPosTokenEnd);
                 return new Token(lPosTokenStart, lPosTokenEnd, Id.ENC_COMMENT,
                         extractSource(lPosTextStart, lPosTextEnd));

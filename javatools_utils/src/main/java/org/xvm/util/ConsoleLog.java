@@ -20,9 +20,9 @@ public class ConsoleLog {
             return;
         }
 
-        int    cch     = ach.length;
-        int    ofStart = 0;
-        int    of      = 0;
+        int cch     = ach.length;
+        int ofStart = 0;
+        int of      = 0;
         while (of < cch) {
             char ch = ach[of];
             if (ch == '\n') {

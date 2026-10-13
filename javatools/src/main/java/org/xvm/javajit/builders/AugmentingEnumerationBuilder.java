@@ -47,9 +47,9 @@ public class AugmentingEnumerationBuilder
     }
 
     protected void assembleAbstractProperty(ClassBuilder classBuilder, String propName) {
-        PropertyInfo   prop = typeInfo.findProperty(propName);
-        String         name = prop.ensureGetterJitMethodName(typeSystem);
-        JitMethodDesc  jmd  = prop.getGetterJitDesc(this);
+        PropertyInfo  prop = typeInfo.findProperty(propName);
+        String        name = prop.ensureGetterJitMethodName(typeSystem);
+        JitMethodDesc jmd  = prop.getGetterJitDesc(this);
 
         int flags = ClassFile.ACC_PUBLIC | ClassFile.ACC_ABSTRACT;
         classBuilder.withMethod(name, jmd.standardMD, flags, code -> {});

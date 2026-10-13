@@ -344,8 +344,8 @@ public abstract class Builder {
                     return loadPropertyValue(code, targetReg, propId, bctx.ctxSlot(code));
                 }
 
-                TypeConstant propType  = singleton.getType();
-                JitTypeDesc  jtd       = propType.getJitDesc(this);
+                TypeConstant propType = singleton.getType();
+                JitTypeDesc  jtd      = propType.getJitDesc(this);
 
                 RegisterInfo singletonReg = new SingleSlot(propType, jtd.flavor, jtd.cd, "");
                 if (isContainerScoped(propInfo)) {
@@ -375,8 +375,8 @@ public abstract class Builder {
                     return singletonReg;
 
                 case XvmPrimitive:
-                    ClassDesc[] cds   = JitTypeDesc.getXvmPrimitiveClasses(propType);
-                    String      name  = propId.ensureJitPropertyName(typeSystem) + "$";
+                    ClassDesc[] cds  = JitTypeDesc.getXvmPrimitiveClasses(propType);
+                    String      name = propId.ensureJitPropertyName(typeSystem) + "$";
                     for (int i = 0; i < cds.length; i++) {
                         code.getstatic(jtd.cd, name + i, cds[i]);
                     }
@@ -1038,7 +1038,7 @@ public abstract class Builder {
 
         MethodTypeDesc md;
         if (jmdGet.isOptimized && allowUnboxing) {
-            md         = jmdGet.optimizedMD;
+            md = jmdGet.optimizedMD;
             getterName += OPT;
         } else {
             md = jmdGet.standardMD;
@@ -1957,7 +1957,7 @@ public abstract class Builder {
 
             MethodTypeDesc md;
             if (instorMD.isOptimized) {
-                md          = instorMD.optimizedMD;
+                md = instorMD.optimizedMD;
                 instorName += Builder.OPT;
             } else {
                 md = instorMD.standardMD;
@@ -1992,7 +1992,7 @@ public abstract class Builder {
 
             MethodTypeDesc md;
             if (instorMD.isOptimized) {
-                md          = instorMD.optimizedMD;
+                md = instorMD.optimizedMD;
                 instorName += Builder.OPT;
             } else {
                 md = instorMD.standardMD;

@@ -26,12 +26,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class ConditionalTest {
     @Test @Disabled
     public void testSimple() {
-        FileStructure       file   = new FileStructure("test");
-        ConstantPool        pool   = file.getConstantPool();
-        NamedCondition      condX  = pool.ensureNamedCondition("X");
-        NamedCondition      condY  = pool.ensureNamedCondition("Y");
-        AllCondition        condB  = pool.ensureAllCondition(condX, condY);
-        AnyCondition        condE  = pool.ensureAnyCondition(condX, condY);
+        FileStructure  file  = new FileStructure("test");
+        ConstantPool   pool  = file.getConstantPool();
+        NamedCondition condX = pool.ensureNamedCondition("X");
+        NamedCondition condY = pool.ensureNamedCondition("Y");
+        AllCondition   condB = pool.ensureAllCondition(condX, condY);
+        AnyCondition   condE = pool.ensureAnyCondition(condX, condY);
 
         assertFalse(condX.isTerminalInfluenceBruteForce());
         assertFalse(condY.isTerminalInfluenceBruteForce());
@@ -71,17 +71,17 @@ public class ConditionalTest {
     @Test @Disabled
     public void testDiamond()
             throws IOException {
-        FileStructure       file   = new FileStructure("test");
-        ConstantPool        pool   = file.getConstantPool();
-        VersionConstant     v1     = pool.ensureVersionConstant(new Version("1"));
-        VersionConstant     v2     = pool.ensureVersionConstant(new Version("2"));
-        VersionedCondition  condV1 = pool.ensureVersionedCondition(v1);
-        VersionedCondition  condV2 = pool.ensureVersionedCondition(v2);
-        AnyCondition        condVB = pool.ensureAnyCondition(condV1, condV2);
-        ModuleStructure     module = file.getModule();
-        ClassStructure      clz    = module.createClass(Constants.Access.PUBLIC, Component.Format.CLASS, "Util", null);
-        PackageStructure    pkg    = module.createPackage(Constants.Access.PUBLIC, "Util", null);
-        MethodStructure     method = clz.createMethod(false, Constants.Access.PUBLIC, null,
+        FileStructure      file   = new FileStructure("test");
+        ConstantPool       pool   = file.getConstantPool();
+        VersionConstant    v1     = pool.ensureVersionConstant(new Version("1"));
+        VersionConstant    v2     = pool.ensureVersionConstant(new Version("2"));
+        VersionedCondition condV1 = pool.ensureVersionedCondition(v1);
+        VersionedCondition condV2 = pool.ensureVersionedCondition(v2);
+        AnyCondition       condVB = pool.ensureAnyCondition(condV1, condV2);
+        ModuleStructure    module = file.getModule();
+        ClassStructure     clz    = module.createClass(Constants.Access.PUBLIC, Component.Format.CLASS, "Util", null);
+        PackageStructure   pkg    = module.createPackage(Constants.Access.PUBLIC, "Util", null);
+        MethodStructure    method = clz.createMethod(false, Constants.Access.PUBLIC, null,
                                         Parameter.NO_PARAMS, "foo", Parameter.NO_PARAMS, true, true);
 
         // module is both v1 and v2

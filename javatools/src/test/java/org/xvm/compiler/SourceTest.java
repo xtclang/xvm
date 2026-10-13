@@ -82,25 +82,25 @@ public class SourceTest {
         Source source = new Source(
                 new File(SourceTest.class.getResource("Source_1.x").getPath()));
 
-        int iLinePre1     = source.getLine();
-        int iOffsetPre1   = source.getOffset();
+        int iLinePre1   = source.getLine();
+        int iOffsetPre1 = source.getOffset();
         StringBuilder sb1 = new StringBuilder();
         while (source.hasNext()) {
             sb1.append(source.next());
         }
-        int iLinePost1    = source.getLine();
-        int iOffsetPost1  = source.getOffset();
+        int iLinePost1   = source.getLine();
+        int iOffsetPost1 = source.getOffset();
 
         source.reset();
 
-        int iLinePre2     = source.getLine();
-        int iOffsetPre2   = source.getOffset();
+        int iLinePre2   = source.getLine();
+        int iOffsetPre2 = source.getOffset();
         StringBuilder sb2 = new StringBuilder();
         while (source.hasNext()) {
             sb2.append(source.next());
         }
-        int iLinePost2    = source.getLine();
-        int iOffsetPost2  = source.getOffset();
+        int iLinePost2   = source.getLine();
+        int iOffsetPost2 = source.getOffset();
 
         assertEquals(iLinePre1     , iLinePre2     );
         assertEquals(iOffsetPre1   , iOffsetPre2   );

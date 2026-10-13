@@ -1710,8 +1710,8 @@ public abstract class Component
                 kid.disassemble(in);
             } else {
                 // some number of components, each with a condition
-                Component    prevSibling = null;
-                int          cSiblings   = readMagnitude(in);
+                Component prevSibling = null;
+                int       cSiblings   = readMagnitude(in);
                 assert cSiblings > 0;
                 for (int i = 0; i < cSiblings; ++i) {
                     ConditionalConstant condition  = pool.getConstant(readIndex(in), ConditionalConstant.class);
@@ -2680,11 +2680,11 @@ public abstract class Component
          * @param that  the Contribution to copy
          */
         private Contribution(Contribution that) {
-            m_composition  = that.m_composition;
-            m_typeContrib  = that.m_typeContrib;
-            m_constProp    = that.m_constProp;
-            m_annotation   = that.m_annotation;
-            m_mapParams    = that.m_mapParams == null
+            m_composition = that.m_composition;
+            m_typeContrib = that.m_typeContrib;
+            m_constProp   = that.m_constProp;
+            m_annotation  = that.m_annotation;
+            m_mapParams   = that.m_mapParams == null
                     ? null
                     : new ListMap<>(that.m_mapParams);
             m_constInjector = that.m_constInjector;
@@ -2710,11 +2710,11 @@ public abstract class Component
                 break;
 
             case Annotation:
-                m_annotation  = pool.getConstant(readIndex(in), Annotation.class);
+                m_annotation = pool.getConstant(readIndex(in), Annotation.class);
                 break;
 
             case Delegates:
-                m_constProp   = pool.getConstant(readIndex(in), PropertyConstant.class);
+                m_constProp = pool.getConstant(readIndex(in), PropertyConstant.class);
                 break;
 
             case Incorporates:

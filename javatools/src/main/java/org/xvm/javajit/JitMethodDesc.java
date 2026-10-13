@@ -54,8 +54,8 @@ public class JitMethodDesc {
         this.isStandardStatic  = isStatic;
         this.isOptimizedStatic = isOptimized &&
                 (isStatic || typeTarget != null && typeTarget.isJitPrimitive());
-        this.standardMD        = computeMethodDesc(standardReturns, standardParams);
-        this.optimizedMD       = isOptimized
+        this.standardMD  = computeMethodDesc(standardReturns, standardParams);
+        this.optimizedMD = isOptimized
                 ? computeMethodDesc(optimizedReturns, optimizedParams)
                 : null;
     }

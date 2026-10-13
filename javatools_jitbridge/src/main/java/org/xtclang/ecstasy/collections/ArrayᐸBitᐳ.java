@@ -630,7 +630,7 @@ public class ArrayᐸBitᐳ
      * @param bits  the size of the array in bits
      */
     public static ArrayᐸBitᐳ $fromLongs(Ctx ctx, Mutability mutability, long bits, long... values) {
-        TypeConstant type  = ctx.pool().typeBitArray();
+        TypeConstant type = ctx.pool().typeBitArray();
         ArrayᐸBitᐳ   array = $new$p(ctx, type, bits, false);
         array.$mut(mutability == null ? $CONSTANT : (int) mutability.$ordinal);
         array.$storage = values;

@@ -165,11 +165,11 @@ public class xRegEx
             return frame.assignValue(aiReturn[0], xBoolean.FALSE);
         }
         case "find": {
-            StringHandle  hText   = (StringHandle) ahArg[0];
-            Pattern       pattern = hRegEx.getPattern();
-            Matcher       matcher = pattern.matcher(hText.getStringValue());
-            ObjectHandle  hStart  = ahArg[1];
-            long          nStart  = hStart instanceof JavaLong hInt
+            StringHandle hText   = (StringHandle) ahArg[0];
+            Pattern      pattern = hRegEx.getPattern();
+            Matcher      matcher = pattern.matcher(hText.getStringValue());
+            ObjectHandle hStart  = ahArg[1];
+            long         nStart  = hStart instanceof JavaLong hInt
                                                 ? hInt.getValue()
                                                 : 0L;
             if (matcher.find((int) nStart)) {

@@ -178,12 +178,12 @@ public class String
      */
     String(Ctx ctx, long[] data, boolean unicode, long hash, int start, int end, String next) {
         super(ctx);
-        this.data       = data;
-        this.unicode    = unicode;
-        this.hash       = hash;
-        this.start      = start;
-        this.end        = end;
-        this.next       = next;
+        this.data    = data;
+        this.unicode = unicode;
+        this.hash    = hash;
+        this.start   = start;
+        this.end     = end;
+        this.next    = next;
     }
 
     @Override
@@ -200,7 +200,7 @@ public class String
     public static String $new(Ctx ctx,TypeConstant type, ArrayᐸCharᐳ chars) {
         // TODO handle huge arrays
         ArrayᐸCharᐳ content = chars.$isImmut() ? chars : chars.freeze$p(ctx, false, true);
-        long         size    = content.size$get$p(ctx);
+        long   size   = content.size$get$p(ctx);
         String string = new String(ctx, content.$storage, chars.$utf21, 0, 0, (int) size, null);
         string.chars = content;
         return string;

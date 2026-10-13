@@ -66,9 +66,9 @@ public interface EnumBuilderSupport {
      * <p>Enumeration<Enum> enumeration;
      */
     default void assembleEnumerationProp(CommonBuilder builder, ClassBuilder classBuilder) {
-        PropertyInfo   prop = builder.typeInfo.findProperty("enumeration");
-        String         name = prop.ensureGetterJitMethodName(builder.typeSystem);
-        JitMethodDesc  jmd  = prop.getGetterJitDesc(builder);
+        PropertyInfo  prop = builder.typeInfo.findProperty("enumeration");
+        String        name = prop.ensureGetterJitMethodName(builder.typeSystem);
+        JitMethodDesc jmd  = prop.getGetterJitDesc(builder);
 
         if (builder.isNativeMethod(name, jmd.standardMD)) {
             return;
@@ -88,9 +88,9 @@ public interface EnumBuilderSupport {
      * <p>Int ordinal;
      */
     default void assembleOrdinalProp(CommonBuilder builder, ClassBuilder classBuilder) {
-        PropertyInfo   prop = builder.typeInfo.findProperty("ordinal");
-        String         name = prop.ensureGetterJitMethodName(builder.typeSystem);
-        JitMethodDesc  jmd  = prop.getGetterJitDesc(builder);
+        PropertyInfo  prop = builder.typeInfo.findProperty("ordinal");
+        String        name = prop.ensureGetterJitMethodName(builder.typeSystem);
+        JitMethodDesc jmd  = prop.getGetterJitDesc(builder);
 
         if (!builder.isNativeMethod(name, jmd.standardMD)) {
             builder.assembleMethodWrapper(classBuilder, name, jmd);
@@ -108,9 +108,9 @@ public interface EnumBuilderSupport {
      * <p>String name;
      */
     default void assembleNameProp(CommonBuilder builder, ClassBuilder classBuilder) {
-        PropertyInfo   prop = builder.typeInfo.findProperty("name");
-        String         name = prop.ensureGetterJitMethodName(builder.typeSystem);
-        JitMethodDesc  jmd  = prop.getGetterJitDesc(builder);
+        PropertyInfo  prop = builder.typeInfo.findProperty("name");
+        String        name = prop.ensureGetterJitMethodName(builder.typeSystem);
+        JitMethodDesc jmd  = prop.getGetterJitDesc(builder);
 
         if (builder.isNativeMethod(name, jmd.standardMD)) {
             return;

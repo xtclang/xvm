@@ -242,11 +242,11 @@ public class Decimal128
 
     @Override
     public byte[] toByteArray() {
-        byte[] ab    = new byte[16];
+        byte[] ab = new byte[16];
 
-        long   nBits = m_nHBits;
-        int    MSB   = (int) (nBits >>> 32);
-        int    LSB   = (int) nBits;
+        long nBits = m_nHBits;
+        int  MSB   = (int) (nBits >>> 32);
+        int  LSB   = (int) nBits;
 
         ab[0x0] = (byte) (MSB >>> 24);
         ab[0x1] = (byte) (MSB >>> 16);
@@ -312,7 +312,7 @@ public class Decimal128
      */
     private void convertBigDecToLongs(BigDecimal dec) {
         // get the sign
-        boolean    fNeg;
+        boolean fNeg;
         switch (dec.signum()) {
         case -1:
             fNeg = true;
@@ -364,7 +364,7 @@ public class Decimal128
             } else if (i == 6) {
                 // split the declet across the high and low bits
                 nLBits |= ((long) nDeclet) << 60;
-                nHBits  = nDeclet >>> 4;            // rightmost 4 bits are in the "low bits" long
+                nHBits = nDeclet >>> 4;            // rightmost 4 bits are in the "low bits" long
             } else {
                 // declet 7 starts at bit 6 of the "high bits" long
                 nHBits |= ((long) nDeclet) << ((i-7) * 10 + 6);

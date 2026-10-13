@@ -521,8 +521,8 @@ public class MethodInfo
     public MethodInfo nestNarrowingIdentity(ConstantPool pool, PropertyConstant idProp) {
         assert isCapped();
 
-        MethodBody bodyCap    = getHead();
-        Object     nidTarget  = idProp.appendNestedIdentity(pool, bodyCap.getNarrowingNestedIdentity()).
+        MethodBody bodyCap   = getHead();
+        Object     nidTarget = idProp.appendNestedIdentity(pool, bodyCap.getNarrowingNestedIdentity()).
                                     resolveNestedIdentity(pool, null);
         MethodBody[] chainNew = getChain().clone();
         chainNew[0] = new MethodBody(bodyCap.getIdentity(), bodyCap.getSignature(),
@@ -641,8 +641,8 @@ public class MethodInfo
      */
     public MethodInfo markImplicitConstructor() {
         assert getHead().isConstructor();
-        MethodBody   bodyOld  = m_aBody[0];
-        MethodBody   bodyNew  = new MethodBody(bodyOld.getIdentity(), bodyOld.getSignature(), Implementation.Implicit, this);
+        MethodBody bodyOld = m_aBody[0];
+        MethodBody bodyNew = new MethodBody(bodyOld.getIdentity(), bodyOld.getSignature(), Implementation.Implicit, this);
         return new MethodInfo(new MethodBody[] {bodyNew}, f_nRank);
     }
 
@@ -1122,7 +1122,7 @@ public class MethodInfo
      * @return true iff the method chain is delegating
      */
     public boolean isDelegating() {
-        MethodBody     head = getHead();
+        MethodBody head = getHead();
         if (head.getImplementation() == Implementation.Union) {
             return head.getUnionLeft().isDelegating() && head.getUnionRight().isDelegating();
         }
@@ -1210,8 +1210,8 @@ public class MethodInfo
             ArrayList<MethodBody> listDefault = null;
             forAll:
             for (int i = 0, c = chain.length; i < c; ++i) {
-                MethodBody      body   = chain[i];
-                Implementation  impl   = body.getImplementation();
+                MethodBody     body = chain[i];
+                Implementation impl = body.getImplementation();
                 if (impl != Implementation.Native) {
                     MethodStructure method = body.getMethodStructure();
                     if (method != null && method.isNative()) {

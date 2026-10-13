@@ -197,10 +197,10 @@ public class xRTNetwork
      * @return one of Op.R_NEXT, Op.R_CALL or Op.R_EXCEPTION values
      */
     protected int instantiateNameService(Frame frame, ServiceHandle hNetwork, int iReturn) {
-        ClassTemplate    templateSvc  = xRTNameService.INSTANCE;
-        ClassComposition clz          = templateSvc.getCanonicalClass();
-        MethodStructure  constructor  = templateSvc.getStructure().findConstructor(getCanonicalType());
-        ObjectHandle[]   ahParams     = new ObjectHandle[constructor.getMaxVars()];
+        ClassTemplate    templateSvc = xRTNameService.INSTANCE;
+        ClassComposition clz         = templateSvc.getCanonicalClass();
+        MethodStructure  constructor = templateSvc.getStructure().findConstructor(getCanonicalType());
+        ObjectHandle[]   ahParams    = new ObjectHandle[constructor.getMaxVars()];
         ahParams[0] = hNetwork;
 
         switch (templateSvc.construct(frame, constructor, clz, null, ahParams, Op.A_STACK)) {

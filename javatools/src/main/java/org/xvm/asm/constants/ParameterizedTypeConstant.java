@@ -286,7 +286,7 @@ public class ParameterizedTypeConstant
                 pool == typeResolver.getConstantPool()) {
             fCache       = true;
             typeResolver = typeResolver.removeAccess();
-            long stamp   = m_lockPrev.tryOptimisticRead();
+            long stamp = m_lockPrev.tryOptimisticRead();
             if (stamp != 0) {
                 TypeConstant typeResolvedPrev = m_typeResolvedPrev;
                 if (typeResolver.equals(m_typeResolverPrev) && m_lockPrev.validate(stamp)) {
@@ -708,8 +708,8 @@ public class ParameterizedTypeConstant
 
     @Override
     public TypeConstant widenEnumValueTypes() {
-        TypeConstant[] aconstOriginal  = m_atypeParams;
-        TypeConstant[] aconstResolved  = aconstOriginal;
+        TypeConstant[] aconstOriginal = m_atypeParams;
+        TypeConstant[] aconstResolved = aconstOriginal;
 
         for (int i = 0, c = aconstOriginal.length; i < c; ++i) {
             aconstResolved = cow(aconstOriginal, aconstResolved, i,
@@ -818,9 +818,9 @@ public class ParameterizedTypeConstant
             return m_typeJitCallable = pool.typeTuple();
         }
 
-        ClassStructure  clz            = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
-        var             listTypeParams = clz.getTypeParamsAsList();
-        var             listContribs   = clz.collectConditionalIncorporates(this);
+        ClassStructure clz            = (ClassStructure) getSingleUnderlyingClass(true).getComponent();
+        var            listTypeParams = clz.getTypeParamsAsList();
+        var            listContribs   = clz.collectConditionalIncorporates(this);
 
         TypeConstant typeOrig = m_constType;
         // TODO: REMOVE - compensation for Array handling in TypeConstant#buildJitClassName

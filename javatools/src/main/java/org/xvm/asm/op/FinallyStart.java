@@ -133,7 +133,7 @@ public class FinallyStart
         java.lang.classfile.Label labelCatch = code.newLabel();
         code.exceptionCatch(scopeGuarded.startLabel, scopeGuarded.endLabel, labelCatch, CD_Throwable);
 
-        int    slotRethrow = bctx.scope.getRethrow();
+        int slotRethrow = bctx.scope.getRethrow();
         assert slotRethrow >= 0;
         code.labelBinding(labelCatch)
             .astore(slotRethrow)

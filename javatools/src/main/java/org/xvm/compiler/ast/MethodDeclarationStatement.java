@@ -222,7 +222,7 @@ public class MethodDeclarationStatement
     @Override
     public Access getDefaultAccess() {
         // methods are *not* taking the parent's access by default
-        Access  access = getAccess(modifiers);
+        Access access = getAccess(modifiers);
         return access == null ? Access.PUBLIC : access;
     }
 
@@ -382,7 +382,7 @@ public class MethodDeclarationStatement
                     return;
                 }
 
-                Access  access = container instanceof MethodStructure
+                Access access = container instanceof MethodStructure
                                         ? Access.PRIVATE
                                         : getDefaultAccess();
                 boolean fUsesSuper = !fFunction && !fFinally && !fValidator
@@ -1105,8 +1105,8 @@ public class MethodDeclarationStatement
      * Used only for setting up conditional break points.
      */
     private String path() {
-        MethodConstant  idMethod  = ((MethodStructure) getComponent()).getIdentityConstant();
-        ModuleStructure module    = (ModuleStructure) idMethod.getModuleConstant().getComponent();
+        MethodConstant  idMethod = ((MethodStructure) getComponent()).getIdentityConstant();
+        ModuleStructure module   = (ModuleStructure) idMethod.getModuleConstant().getComponent();
         return module.getName() + "/" + idMethod.getPathString();
     }
 

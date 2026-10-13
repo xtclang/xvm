@@ -66,9 +66,9 @@ public class xFPLiteral
 
     @Override
     public int createConstHandle(Frame frame, Constant constant) {
-        LiteralConstant constVal    = (LiteralConstant) constant;
-        StringHandle    hText       = (StringHandle) frame.getConstHandle(constVal.getStringConstant());
-        FPNHandle     hFPLiteral  = makeFPLiteral(constVal.getBigDecimal(), hText);
+        LiteralConstant constVal   = (LiteralConstant) constant;
+        StringHandle    hText      = (StringHandle) frame.getConstHandle(constVal.getStringConstant());
+        FPNHandle     hFPLiteral = makeFPLiteral(constVal.getBigDecimal(), hText);
 
         return frame.pushStack(hFPLiteral);
     }

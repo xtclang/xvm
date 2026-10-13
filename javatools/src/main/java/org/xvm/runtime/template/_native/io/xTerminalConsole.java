@@ -176,10 +176,10 @@ public class xTerminalConsole
                            .option(LineReader.Option.HISTORY_TIMESTAMPED, false);
 
                     if (frame != null) {
-                        String   sTmpDir  = System.getProperty("java.io.tmpdir");
-                        String   sAppName = frame.f_context.f_container.getModule().getName();
-                        Path     pathHist = Path.of(sTmpDir,  sAppName + ".history");
-                        History  history  = new LimitedHistory(pathHist, 100);
+                        String  sTmpDir  = System.getProperty("java.io.tmpdir");
+                        String  sAppName = frame.f_context.f_container.getModule().getName();
+                        Path    pathHist = Path.of(sTmpDir,  sAppName + ".history");
+                        History history  = new LimitedHistory(pathHist, 100);
 
                         builder = builder.variable(LineReader.HISTORY_FILE, pathHist)
                                          .history(history);
@@ -228,7 +228,7 @@ public class xTerminalConsole
     public static       LineReader     READER;
     public static       Terminal       TERMINAL;
     static {
-        CONSOLE_IN  = CONSOLE == null || CONSOLE.reader() == null
+        CONSOLE_IN = CONSOLE == null || CONSOLE.reader() == null
                 ? new BufferedReader(new InputStreamReader(System.in))
                 : new BufferedReader(CONSOLE.reader());
         CONSOLE_OUT = CONSOLE == null || CONSOLE.writer() == null

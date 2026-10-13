@@ -277,9 +277,9 @@ public class xTuple
         ObjectHandle[] ahValue = hThis.m_ahValue;
         int            cValues = ahValue.length;
 
-        TypeConstant[] atype     = hThis.getType().getParamTypesArray();
-        int            cTypes    = atype.length;
-        int            cNew      = cValues + 1;
+        TypeConstant[] atype  = hThis.getType().getParamTypesArray();
+        int            cTypes = atype.length;
+        int            cNew   = cValues + 1;
 
         ObjectHandle[] ahNew = new ObjectHandle[cNew];
         System.arraycopy(ahValue, 0, ahNew, 0, cValues);
@@ -453,7 +453,7 @@ public class xTuple
         if (cTypes > 0 && cTypes < ahValue.length) {
             // it shouldn't happen, but not a place to report an error;
             // simply ignore the types
-            atype  = TypeConstant.NO_TYPES;
+            atype = TypeConstant.NO_TYPES;
         }
 
         try {

@@ -227,8 +227,8 @@ public abstract class OpCallable extends Op {
                     !idParentR.equals(clzParentC.getIdentityConstant())) {
                 // find the run-time target's constructor;
                 // note that we don't need to resolve the actual types
-                ClassStructure clzParentR  = (ClassStructure) idParentR.getComponent();
-                ClassStructure clzChild    = clzParentR.getVirtualChild(clzTargetC.getSimpleName());
+                ClassStructure clzParentR = (ClassStructure) idParentR.getComponent();
+                ClassStructure clzChild   = clzParentR.getVirtualChild(clzTargetC.getSimpleName());
                 if (clzChild == null) {
                     return null;
                 }
@@ -488,10 +488,10 @@ public abstract class OpCallable extends Op {
      */
     protected int constructChild(Frame frame, MethodStructure constructor,
                                  ObjectHandle hParent, TypeConstant typeChild, ObjectHandle[] ahVar) {
-        ConstantPool    pool        = frame.poolContext();
-        ClassStructure  structChild = (ClassStructure) constructor.getParent().getParent();
-        TypeConstant    typeParent  = hParent.getComposition().getInceptionType().removeAccess();
-        TypeConstant    typeTarget;
+        ConstantPool   pool        = frame.poolContext();
+        ClassStructure structChild = (ClassStructure) constructor.getParent().getParent();
+        TypeConstant   typeParent  = hParent.getComposition().getInceptionType().removeAccess();
+        TypeConstant   typeTarget;
 
         if (structChild.isVirtualChild()) {
             typeTarget = pool.ensureVirtualChildTypeConstant(typeParent, structChild.getName());
@@ -660,13 +660,13 @@ public abstract class OpCallable extends Op {
      * ComputeType support for NEW_C ops.
      */
     protected void computeChildType(BuildContext bctx, int nParentArg) {
-        TypeConstant   typeParent  = bctx.getArgumentType(nParentArg);
-        MethodConstant idCtor      = bctx.getConstant(m_nFunctionId, MethodConstant.class);
+        TypeConstant   typeParent = bctx.getArgumentType(nParentArg);
+        MethodConstant idCtor     = bctx.getConstant(m_nFunctionId, MethodConstant.class);
         assert idCtor.isConstructor();
 
-        ConstantPool    pool        = bctx.pool();
-        ClassStructure  structChild = (ClassStructure) idCtor.getComponent().getParent().getParent();
-        TypeConstant    typeChild   = structChild.isVirtualChild()
+        ConstantPool   pool        = bctx.pool();
+        ClassStructure structChild = (ClassStructure) idCtor.getComponent().getParent().getParent();
+        TypeConstant   typeChild   = structChild.isVirtualChild()
                 ? pool.ensureVirtualChildTypeConstant(typeParent, structChild.getName())
                 : structChild.getNormalizedType();
 
@@ -696,8 +696,8 @@ public abstract class OpCallable extends Op {
                 // delegate property instead of looking for executable code on that body
                 TypeConstant typeTarget = bctx.builder.loadProperty(code, bctx.thisType,
                         bodySuper.getPropertyConstant(), false, bctx.ctxSlot(code)).getType();
-                TypeInfo     infoTarget = bctx.getTypeInfo(typeTarget);
-                MethodInfo   infoMethod = infoTarget.getMethodBySignature(bodySuper.getSignature());
+                TypeInfo   infoTarget = bctx.getTypeInfo(typeTarget);
+                MethodInfo infoMethod = infoTarget.getMethodBySignature(bodySuper.getSignature());
 
                 cdTarget   = bctx.builder.ensureClassDesc(typeTarget);
                 sJitName   = infoMethod.ensureJitMethodName(ts);
@@ -712,8 +712,8 @@ public abstract class OpCallable extends Op {
 
                 if (format == Format.MIXIN) {
                     // we need to generate a synthetic super
-                    cdTarget   = ClassDesc.of(bctx.className);
-                    sJitName   = MethodInfo.getJitIdentity(bctx.callChain).ensureJitMethodName(ts)
+                    cdTarget = ClassDesc.of(bctx.className);
+                    sJitName = MethodInfo.getJitIdentity(bctx.callChain).ensureJitMethodName(ts)
                                + HASH + nDepth;
 
                     bctx.buildSuper(sJitName, nDepth);
@@ -722,8 +722,8 @@ public abstract class OpCallable extends Op {
                     TypeConstant typeTarget = bctx.isSpecialized
                             ? idCallee.getFormalType().resolveGenerics(bctx.pool(), bctx.thisType)
                             : idCallee.getType();
-                    cdTarget   = bctx.builder.ensureClassDesc(typeTarget);
-                    sJitName   = MethodInfo.getJitIdentity(bctx.callChain, nDepth).
+                    cdTarget = bctx.builder.ensureClassDesc(typeTarget);
+                    sJitName = MethodInfo.getJitIdentity(bctx.callChain, nDepth).
                             ensureJitMethodName(ts);
                     fInterface = typeTarget.isJitInterface();
                 }
@@ -790,7 +790,7 @@ public abstract class OpCallable extends Op {
 
                 assert typeFunky.isInterfaceType();
 
-                cdTarget   = ClassDesc.of(TypeSystem.funkyInterface(
+                cdTarget = ClassDesc.of(TypeSystem.funkyInterface(
                                 builder.ensureJitClassName(typeFunky)));
                 sJitName   = idFunky.ensureJitMethodName(ts);
                 jmdCall    = bodyFunky.getJitDesc(builder, typeFunky);
@@ -894,7 +894,7 @@ public abstract class OpCallable extends Op {
 
         MethodTypeDesc mdCall;
         if (jmdCall.isOptimized) {
-            mdCall  = jmdCall.optimizedMD;
+            mdCall = jmdCall.optimizedMD;
             sJitName += Builder.OPT;
         } else {
             mdCall = jmdCall.standardMD;
@@ -1007,7 +1007,7 @@ public abstract class OpCallable extends Op {
         MethodTypeDesc mdNew;
         if (jmdNew.isOptimized) {
             jitName += Builder.OPT;
-            mdNew    = jmdNew.optimizedMD;
+            mdNew = jmdNew.optimizedMD;
         } else {
             mdNew = jmdNew.standardMD;
         }
@@ -1072,7 +1072,7 @@ public abstract class OpCallable extends Op {
         boolean fOptimized = jmdCtor.isOptimized;
         MethodTypeDesc md;
         if (fOptimized) {
-            md       = jmdCtor.optimizedMD;
+            md = jmdCtor.optimizedMD;
             sJitCtor += Builder.OPT;
         }
         else {

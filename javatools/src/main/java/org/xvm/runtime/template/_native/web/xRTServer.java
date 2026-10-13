@@ -510,11 +510,11 @@ public class xRTServer
      */
     private int invokeReadBody(Frame frame, ObjectHandle[] ahArg, int iResult) {
         HttpContextHandle hCtx = (HttpContextHandle) ahArg[0];
-        long              cb    = ((JavaLong) ahArg[1]).getValue();
+        long              cb   = ((JavaLong) ahArg[1]).getValue();
 
         try {
-            InputStream in    = hCtx.f_exchange.getRequestBody();
-            byte[]      ab    = in.readNBytes((int) Math.min(cb, Integer.MAX_VALUE));
+            InputStream in = hCtx.f_exchange.getRequestBody();
+            byte[]      ab = in.readNBytes((int) Math.min(cb, Integer.MAX_VALUE));
             return frame.assignValue(iResult, ab.length == 0
                     ? xByteArray.ensureEmptyByteArray()
                     : xByteArray.makeByteArrayHandle(ab, Mutability.Constant));
@@ -668,11 +668,11 @@ public class xRTServer
         }
 
         private ObjectHandle[] createArguments(HttpExchange exchange) {
-            ObjectHandle      hBinding  = f_hServer.getBinding();
-            HttpContextHandle hContext  = new HttpContextHandle(exchange);
-            StringHandle      hURI      = xString.makeHandle(exchange.getRequestURI().toASCIIString());
-            StringHandle      hMethod   = xString.makeHandle(exchange.getRequestMethod());
-            BooleanHandle     hTls      = xBoolean.makeHandle(exchange instanceof HttpsExchange);
+            ObjectHandle      hBinding = f_hServer.getBinding();
+            HttpContextHandle hContext = new HttpContextHandle(exchange);
+            StringHandle      hURI     = xString.makeHandle(exchange.getRequestURI().toASCIIString());
+            StringHandle      hMethod  = xString.makeHandle(exchange.getRequestMethod());
+            BooleanHandle     hTls     = xBoolean.makeHandle(exchange instanceof HttpsExchange);
             return new ObjectHandle[]{hBinding, hContext, hURI, hMethod, hTls};
         }
 

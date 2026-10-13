@@ -3636,8 +3636,8 @@ public abstract class TypeConstant
                     errs        = ErrorListener.BLACKHOLE;
                 }
 
-                var     listExplode          = new ArrayList<PropertyConstant>();
-                boolean fInterface           = struct.getFormat() == Component.Format.INTERFACE;
+                var     listExplode = new ArrayList<PropertyConstant>();
+                boolean fInterface  = struct.getFormat() == Component.Format.INTERFACE;
                 if (!collectChildInfo(constId, fInterface, struct, mapTypeParams,
                         mapContribProps, mapContribMethods, mapContribChildren, listExplode,
                         mapVirtProps, nBasePropRank, nBaseMethRank, errs)) {
@@ -4501,7 +4501,7 @@ public abstract class TypeConstant
 
                     // now we need find a method that would be the unambiguously best choice;
                     // collect the nids into a lookup map (sig->nid)
-                    Map<SignatureConstant, Object> mapNids  = new HashMap<>();
+                    Map<SignatureConstant, Object> mapNids = new HashMap<>();
                     for (Object nid : listMatches) {
                         MethodInfo info = mapVirtMethods.get(nid);
                         if (!info.isCapped()) {
@@ -4692,7 +4692,7 @@ public abstract class TypeConstant
             // method, then cap the nid by redirecting to the narrowed method, otherwise it is
             // an error
             for (Entry<Object, Set<Object>> entry : mapNarrowedNids.entrySet()) {
-                Object nidNarrowed  = entry.getKey();
+                Object nidNarrowed = entry.getKey();
                 if (mapVirtMods.containsKey(nidNarrowed)) {
                     // we ignore every narrowed method signature that did *not* receive a
                     // contribution of its own (i.e. same method signature), because any that did
@@ -4832,7 +4832,7 @@ public abstract class TypeConstant
                     MethodBody head = infoCandidate.getHead();
                     if (head.getSignature().equals(sigSub) ||
                             sigSub.isSubstitutableFor(sigCandidate, this)) {
-                        listMatch   = lazyAdd(listMatch, nidCandidate);
+                        listMatch = lazyAdd(listMatch, nidCandidate);
                         fAnyCapped |= infoCandidate.isCapped();
                         continue;
                     }
@@ -4841,7 +4841,7 @@ public abstract class TypeConstant
                         TypeConstant typeInto = head.getIntoMethodInfo().getIdentity().getClassIdentity().getType();
                         if (sigSub.isSubstitutableFor(head.getSignature(), typeInto) ||
                                 sigSub.isSubstitutableFor(head.getIntoMethodInfo().getSignature(), typeInto)) {
-                            listMatch   = lazyAdd(listMatch, nidCandidate);
+                            listMatch = lazyAdd(listMatch, nidCandidate);
                             fAnyCapped |= infoCandidate.isCapped();
                             continue;
                         }
@@ -4854,7 +4854,7 @@ public abstract class TypeConstant
                         if (cParamsSub > cParamsReq && cParamsSub - cDefaults <= cParamsReq) {
                             SignatureConstant sigSubReq = sigSub.truncateParams(0, cParamsReq);
                             if (sigSubReq.isSubstitutableFor(sigCandidate, this)) {
-                                listMatch   = lazyAdd(listMatch, nidCandidate);
+                                listMatch = lazyAdd(listMatch, nidCandidate);
                                 fAnyCapped |= infoCandidate.isCapped();
                             }
                         }
@@ -5201,9 +5201,9 @@ public abstract class TypeConstant
             // rebase properties should be computed as they were *not* from an interface
             boolean fFromIface = fInterface && !fRebase;
 
-            PropertyConstant  id    = prop.getIdentityConstant();
-            int               nRank = nBasePropRank + mapProps.size();
-            PropertyInfo      info  = createPropertyInfo(prop, constId, fRebase | prop.isNative(),
+            PropertyConstant id    = prop.getIdentityConstant();
+            int              nRank = nBasePropRank + mapProps.size();
+            PropertyInfo     info  = createPropertyInfo(prop, constId, fRebase | prop.isNative(),
                                                          fFromIface, nRank, errs);
             mapProps.put(id, info);
 
@@ -5360,12 +5360,12 @@ public abstract class TypeConstant
         }
 
         // check the methods to see if get() and set() call super
-        MethodStructure  methodInit     = null;
-        MethodStructure  methodGet      = null;
-        MethodStructure  methodSet      = null;
-        MethodStructure  methodBadGet   = null;
-        MethodStructure  methodBadSet   = null;
-        int              cCustomMethods = 0;
+        MethodStructure methodInit     = null;
+        MethodStructure methodGet      = null;
+        MethodStructure methodSet      = null;
+        MethodStructure methodBadGet   = null;
+        MethodStructure methodBadSet   = null;
+        int             cCustomMethods = 0;
         for (Component child : prop.children()) {
             if (child instanceof MultiMethodStructure mms) {
                 for (MethodStructure method : mms.methods()) {
@@ -5446,12 +5446,12 @@ public abstract class TypeConstant
                     sName);
         }
 
-        boolean         fRW       = false;
-        boolean         fRO       = false;
-        boolean         fField    = false;
-        Effect          effectGet = Effect.None;
-        Effect          effectSet = Effect.None;
-        Implementation  impl;
+        boolean        fRW       = false;
+        boolean        fRO       = false;
+        boolean        fField    = false;
+        Effect         effectGet = Effect.None;
+        Effect         effectSet = Effect.None;
+        Implementation impl;
         if (fConstant) {
             impl = Implementation.Native;
 
@@ -5501,7 +5501,7 @@ public abstract class TypeConstant
                         sName);
             }
         } else if (fInterface) {
-            impl   = Implementation.Declared;
+            impl = Implementation.Declared;
             fRO   |= fHasRO;
             fRW   |= !fRO | accessVar != null;
             fField = false;
@@ -7673,7 +7673,7 @@ public abstract class TypeConstant
                 default                           -> throw new IllegalStateException();
             };
 
-            TypeConstant  typeFormal = isFormalType()
+            TypeConstant typeFormal = isFormalType()
                                         ? this
                                         : type1.isFormalType() ? type1 : null;
             boolean       isFormal = typeFormal != null;
@@ -7694,7 +7694,7 @@ public abstract class TypeConstant
 
                 assert typeFunky.isJitInterface();
 
-                cd         = ClassDesc.of(TypeSystem.funkyInterface(
+                cd = ClassDesc.of(TypeSystem.funkyInterface(
                                 bctx.builder.ensureJitClassName(typeFunky)));
                 sJitName   = idFunky.ensureJitMethodName(ts);
                 jmd        = bodyFunky.getJitDesc(bctx.builder, typeFunky);
@@ -7714,7 +7714,7 @@ public abstract class TypeConstant
             case Op.OP_IS_EQ,  Op.OP_JMP_EQ, Op.OP_IS_NEQ, Op.OP_JMP_NEQ -> {
                 assert jmd.isOptimized;
                 sJitName += OPT;
-                md        = jmd.optimizedMD;
+                md = jmd.optimizedMD;
             }
             default ->
                 md = jmd.standardMD;

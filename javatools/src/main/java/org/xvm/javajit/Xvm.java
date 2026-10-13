@@ -536,8 +536,8 @@ public class Xvm {
             String moduleName = module.getName();
             String pkg        = moduleToPackageName(moduleName,
                 tsl.typeSystem instanceof NativeTypeSystem ? null : module.getVersion());
-            String unique     = pkg;
-            int    count      = 1;
+            String unique = pkg;
+            int    count  = 1;
             while (moduleLoaders.containsKey(unique)) {
                 unique = pkg + ".alt" + (++count);
             }

@@ -155,28 +155,28 @@ public class ConstOrdinalList
                     + ", highest legal index=" + (nCount-1));
         }
 
-        lIntVal      = unpackInt(m_ab, ofCur);
+        lIntVal = unpackInt(m_ab, ofCur);
         ofCur       += (int) (lIntVal >>> 32);
         int nDefault = (int) lIntVal;
 
-        lIntVal      = unpackInt(m_ab, ofCur);
+        lIntVal = unpackInt(m_ab, ofCur);
         ofCur       += (int) (lIntVal >>> 32);
         int cBitsPer = (int) lIntVal;
 
-        lIntVal      = unpackInt(m_ab, ofCur);
+        lIntVal = unpackInt(m_ab, ofCur);
         ofCur       += (int) (lIntVal >>> 32);
-        int idCur    = (int) lIntVal;
+        int idCur = (int) lIntVal;
 
         if (index < idCur) {
             return nDefault;
         }
         while (true) {
-            lIntVal    = unpackInt(m_ab, ofCur);
+            lIntVal = unpackInt(m_ab, ofCur);
             ofCur     += (int) (lIntVal >>> 32);
             int idSkip = (int) lIntVal;
 
             if (idSkip != 0) {
-                lIntVal    = unpackInt(m_ab, ofCur);
+                lIntVal = unpackInt(m_ab, ofCur);
                 ofCur     += (int) (lIntVal >>> 32);
                 int ofSkip = (int) lIntVal;
 
@@ -191,18 +191,18 @@ public class ConstOrdinalList
             // 1) between the current point and the end of values present in this node
             // 2) after this node but before the next node (or there is no next node)
             // 3) somewhere after the start of the next node (i.e. only if there is a next node)
-            lIntVal    = unpackInt(m_ab, ofCur);
+            lIntVal = unpackInt(m_ab, ofCur);
             ofCur     += (int) (lIntVal >>> 32);
             int idNext = (int) lIntVal;
 
-            lIntVal    = unpackInt(m_ab, ofCur);
+            lIntVal = unpackInt(m_ab, ofCur);
             ofCur     += (int) (lIntVal >>> 32);
-            int nLen   = (int) lIntVal;
+            int nLen = (int) lIntVal;
 
             if (nLen < 0) {
-                lIntVal    = unpackInt(m_ab, ofCur);
+                lIntVal = unpackInt(m_ab, ofCur);
                 ofCur     += (int) (lIntVal >>> 32);
-                int nVal   = (int) lIntVal;
+                int nVal = (int) lIntVal;
 
                 if (index < idCur - nLen) {
                     return nVal;
@@ -232,18 +232,18 @@ public class ConstOrdinalList
             return Collections.emptyIterator();
         }
 
-        lIntVal      = unpackInt(m_ab, ofCur);
+        lIntVal = unpackInt(m_ab, ofCur);
         ofCur       += (int) (lIntVal >>> 32);
         int nDefault = (int) lIntVal;
 
-        lIntVal      = unpackInt(m_ab, ofCur);
+        lIntVal = unpackInt(m_ab, ofCur);
         ofCur       += (int) (lIntVal >>> 32);
         int cBitsPer = (int) lIntVal;
 
-        lIntVal      = unpackInt(m_ab, ofCur);
+        lIntVal = unpackInt(m_ab, ofCur);
         ofCur       += (int) (lIntVal >>> 32);
-        int idFirst  = (int) lIntVal;
-        int ofFirst  = ofCur;
+        int idFirst = (int) lIntVal;
+        int ofFirst = ofCur;
 
         return new Iterator<Integer>() {
             final byte[] ab      = m_ab;
@@ -300,7 +300,7 @@ public class ConstOrdinalList
 
                     idNode += node.idNext;
                     ofNext += fromBytes(node, ab, ofNext, cBitsPer);
-                    iNext   = 0;
+                    iNext = 0;
 
                     if (node.idNext == 0) {
                         // extend the last node to the end of the array by pretending that it has
@@ -477,11 +477,11 @@ public class ConstOrdinalList
     private static List<Node> buildNodeList(int[] an, int cMinRun, int nDefault) {
         // identify the runs within the array
         // build a sequence of nodes (run length encoded nodes, and compressed array nodes)
-        int cVals     = an.length;
-        int iFirstN   = -1;     // index of first "not picked up into a node" non-default number
-        int iLastN    = -1;     // index of last "not picked up into a node" non-default number
-        int nPrev     = -1;
-        int cRun      = 0;
+        int cVals   = an.length;
+        int iFirstN = -1;     // index of first "not picked up into a node" non-default number
+        int iLastN  = -1;     // index of last "not picked up into a node" non-default number
+        int nPrev   = -1;
+        int cRun    = 0;
         List<Node> list = new ArrayList<>();
         for (int i = 0; i < cVals; ++i) {
             int n = an[i];
@@ -528,7 +528,7 @@ public class ConstOrdinalList
                     }
                 }
 
-                Node node   = new Node();
+                Node node = new Node();
                 node.rle    = false;
                 node.id     = iFirstN;
                 node.vals   = an;
@@ -539,7 +539,7 @@ public class ConstOrdinalList
 
             if (an[iRun] != nDefault) {
                 // create the RLE node
-                Node node  = new Node();
+                Node node = new Node();
                 node.rle   = true;
                 node.id    = iRun;
                 node.val   = nRun;
@@ -548,7 +548,7 @@ public class ConstOrdinalList
             }
         } else if (iFirstN >= 0) {
             // create an array node
-            Node node   = new Node();
+            Node node = new Node();
             node.rle    = false;
             node.id     = iFirstN;
             node.vals   = an;
@@ -597,7 +597,7 @@ public class ConstOrdinalList
             }
 
             // build the fast node and use it in place of the first node
-            Node nodeFast   = new Node();
+            Node nodeFast = new Node();
             nodeFast.id     = iFirst;
             nodeFast.vals   = an;
             nodeFast.ofVals = iFirst;
@@ -620,7 +620,7 @@ public class ConstOrdinalList
             assert nodeNext == null || nodeNext.id > node.id;
             // REVIEW CP: should not be 0, should be size (i.e. index of first non-existent int beyond end of array)
             //            it works now due to the "ofNext >= ab.length" in "currentNode()" method
-            nodeRaw.idNext  = nodeNext == null ? 0 : nodeNext.id - node.id;
+            nodeRaw.idNext = nodeNext == null ? 0 : nodeNext.id - node.id;
 
             if (node.rle) {
                 nodeRaw.cVals = -node.cVals;
@@ -687,13 +687,13 @@ public class ConstOrdinalList
     // ----- inner class: RawNode ------------------------------------------------------------------
 
     private static class RawNode {
-        int     idJmp;
-        int     ofJmp;
-        int     idNext;
-        int     cVals;
-        int     nVal;       // run length node only
-        byte[]  abVals;     // value array node only
-        int     ofVals;
+        int    idJmp;
+        int    ofJmp;
+        int    idNext;
+        int    cVals;
+        int    nVal;       // run length node only
+        byte[] abVals;     // value array node only
+        int    ofVals;
     }
 
     private static RawNode readRawNode(DataInputStream in, int cBitsPer)

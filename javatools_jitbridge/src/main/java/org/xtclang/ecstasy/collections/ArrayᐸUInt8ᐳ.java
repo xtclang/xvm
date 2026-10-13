@@ -240,7 +240,7 @@ public class ArrayᐸUInt8ᐳ
      * @param bytes  the size of the array in bytes
      */
     public static ArrayᐸUInt8ᐳ $fromLongs(Ctx ctx, Mutability mutability, long bytes, long... values) {
-        TypeConstant type  = ctx.pool().typeByteArray();
+        TypeConstant type = ctx.pool().typeByteArray();
         ArrayᐸUInt8ᐳ array = $new$p(ctx, type, bytes, false);
         array.$mut(mutability == null ? $CONSTANT : (int) mutability.$ordinal);
         array.$storage = values;

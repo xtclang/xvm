@@ -49,17 +49,17 @@ public class Parameter
             aAnnos[i] = pool.getConstant(readMagnitude(in), Annotation.class);
         }
 
-        int iType      = readMagnitude(in);
-        int iName      = fReturn ? readIndex(in) : readMagnitude(in);
-        int iDefault   = readIndex(in);
+        int iType    = readMagnitude(in);
+        int iName    = fReturn ? readIndex(in) : readMagnitude(in);
+        int iDefault = readIndex(in);
 
         m_aAnnotations = aAnnos;
         m_constType    = pool.getConstant(iType, TypeConstant.class);
         m_constName    = pool.getConstant(iName, StringConstant.class);
         m_constDefault = pool.getConstant(iDefault, Constant.class);
 
-        f_iParam       = fReturn ? -1 - index : index;
-        f_fOrdinary    = !fSpecial;
+        f_iParam    = fReturn ? -1 - index : index;
+        f_fOrdinary = !fSpecial;
     }
 
     /**
@@ -90,8 +90,8 @@ public class Parameter
         m_constName    = sName == null ? null : pool.ensureStringConstant(sName);
         m_constDefault = constDefault;
 
-        f_iParam       = fReturn ? -1 - index : index;
-        f_fOrdinary    = !fSpecial;
+        f_iParam    = fReturn ? -1 - index : index;
+        f_fOrdinary = !fSpecial;
     }
 
     // ----- accessors -----------------------------------------------------------------------------

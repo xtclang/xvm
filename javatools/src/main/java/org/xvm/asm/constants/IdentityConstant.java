@@ -425,7 +425,7 @@ public abstract class IdentityConstant
                     fTop  = false;
                 }
                 iHash ^= oPath.hashCode();
-                id     = id.getNamespace();
+                id = id.getNamespace();
             }
             return iHash;
         }

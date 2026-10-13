@@ -193,7 +193,7 @@ public class CommonBuilder
                 interfaces.add(ensureClassDesc(ifaceId.getType()));
                 virtCtors.add(method);
             } else if (method.getAbstractFunction() instanceof MethodBody funkyBody) {
-                IdentityConstant ifaceId   = funkyBody.getIdentity().getNamespace();
+                IdentityConstant ifaceId = funkyBody.getIdentity().getNamespace();
                 interfaces.add(ClassDesc.of(
                     TypeSystem.funkyInterface(ensureJitClassName(ifaceId.getType()))));
                 funkyImpls.add(method);
@@ -1301,8 +1301,8 @@ public class CommonBuilder
     }
 
     private void assemblePropertySetter(ClassBuilder classBuilder, PropertyInfo prop) {
-        String         jitName = prop.ensureSetterJitMethodName(typeSystem);
-        JitMethodDesc  jmDesc  = prop.getSetterJitDesc(this, thisType);
+        String        jitName = prop.ensureSetterJitMethodName(typeSystem);
+        JitMethodDesc jmDesc  = prop.getSetterJitDesc(this, thisType);
         if (jmDesc.isOptimized) {
             jitName += OPT;
         }
@@ -1742,7 +1742,7 @@ public class CommonBuilder
             ClassStructure childStruct = (ClassStructure) child.getComponent();
             TypeConstant   childJIC    = childStruct.getFormalType().
                                             resolveGenerics(pool(), childType).getJitICType();
-            TypeInfo       infoJIC     = childJIC.ensureAccess(Access.PRIVATE).ensureTypeInfo();
+            TypeInfo infoJIC = childJIC.ensureAccess(Access.PRIVATE).ensureTypeInfo();
             if (infoJIC.isAbstract()) {
                 continue;
             }
@@ -1762,7 +1762,7 @@ public class CommonBuilder
 
                 String factoryName = childName +
                         baseCtor.ensureJitMethodName(typeSystem).replace("construct", NEW);
-                String instorName  = ctor.ensureJitMethodName(typeSystem).replace("construct", NEW);
+                String instorName = ctor.ensureJitMethodName(typeSystem).replace("construct", NEW);
 
                 JitMethodDesc instorJmd = convertConstructToNew(infoJIC, childCD,
                         (JitCtorDesc) ctor.getJitDesc(this, childJIC));
@@ -2889,7 +2889,7 @@ public class CommonBuilder
 
         // if the size of this const is greater than 64 we will generate code to cache the
         // computed hash in a long field.
-        boolean isCaching  = this.implSize > 64;
+        boolean isCaching = this.implSize > 64;
 
         // If the method is not explicitly implemented or the declaring type does not match the
         // current type (i.e. the method is declared on a supe class), then we can build the method
@@ -3515,7 +3515,7 @@ public class CommonBuilder
     protected ClassDesc[] getJitPrimitivePairMethodParams(TypeConstant type) {
         ClassDesc[] cdParams;
         if (type.isXvmPrimitive()) {
-            ClassDesc[] cds  = JitTypeDesc.getXvmPrimitiveClasses(type);
+            ClassDesc[] cds = JitTypeDesc.getXvmPrimitiveClasses(type);
             cdParams = new ClassDesc[cds.length * 2];
             System.arraycopy(cds, 0, cdParams, 0, cds.length);
             System.arraycopy(cds, 0, cdParams, cds.length, cds.length);
@@ -3663,7 +3663,7 @@ public class CommonBuilder
             JitParamDesc[] srcParams = jmdSrc.standardParams;
             JitParamDesc[] dstParams = jmdDst.standardParams;
             for (int i = 0, c = srcParams.length; i < c; i++) {
-                JitParamDesc srcPd        = srcParams[i];
+                JitParamDesc srcPd = srcParams[i];
                 assert srcPd.index != -1;
                 int          srcParamSlot = code.parameterSlot(extraCount + srcPd.index);
                 TypeConstant srcParamType = srcPd.type;
@@ -4258,8 +4258,8 @@ public class CommonBuilder
             MethodTypeDesc ctorMd;
             if (jmd.isOptimized) {
                 ctorName += OPT;
-                ctorPds   = ctorDesc.optimizedParams;
-                ctorMd    = ctorDesc.optimizedMD;
+                ctorPds = ctorDesc.optimizedParams;
+                ctorMd  = ctorDesc.optimizedMD;
             } else {
                 ctorPds = ctorDesc.standardParams;
                 ctorMd  = ctorDesc.standardMD;

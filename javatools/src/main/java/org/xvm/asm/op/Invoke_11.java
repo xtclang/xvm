@@ -62,7 +62,7 @@ public class Invoke_11
 
         if (m_argValue != null) {
             m_nArgValue = encodeArgument(m_argValue, registry);
-            m_nRetValue  = encodeArgument(m_argReturn, registry);
+            m_nRetValue = encodeArgument(m_argReturn, registry);
         }
 
         writePackedLong(out, m_nArgValue);

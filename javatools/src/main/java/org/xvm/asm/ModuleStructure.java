@@ -193,7 +193,7 @@ public class ModuleStructure
             try {
                 DigestOutputStream dos = new DigestOutputStream(OutputStream.nullOutputStream(),
                                             MessageDigest.getInstance("SHA-256"));
-                DataOutputStream   out = new DataOutputStream(dos);
+                DataOutputStream out = new DataOutputStream(dos);
                 assemble(out);
                 assembleChildren(out);
                 out.close();
@@ -675,8 +675,8 @@ public class ModuleStructure
     public ModuleStructure extractVersion(Version version) {
         assert isMainModule() && containsVersion(version);
 
-        String          sName    = getName();
-        ModuleConstant  idModule = getConstantPool().ensureModuleConstant(sName, version);
+        String         sName    = getName();
+        ModuleConstant idModule = getConstantPool().ensureModuleConstant(sName, version);
 
         FileStructure fileClone = new FileStructure(sName);
         fileClone.removeChild(fileClone.getModule());

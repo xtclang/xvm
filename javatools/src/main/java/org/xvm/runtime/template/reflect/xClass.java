@@ -335,7 +335,7 @@ public class xClass
                         xString.ensureEmptyArray(),
                         xRTType.ensureEmptyTypeArray(container), Op.A_STACK);
             } else {
-                StringHandle[] ahNames   = new StringHandle[cParams];
+                StringHandle[] ahNames = new StringHandle[cParams];
                 TypeHandle  [] ahTypes   = new TypeHandle  [cParams];
                 if (fTuple) {
                     TypeConstant[] atypeParam = typeClz.getParamTypesArray();

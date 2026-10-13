@@ -68,14 +68,14 @@ public class xRTClassTemplate
             CLASS_TEMPLATE_ARRAY_TYPE = pool.ensureArrayType(CLASS_TEMPLATE_TYPE);
             CONTRIBUTION_ARRAY_TYPE   = pool.ensureArrayType(pool.ensureEcstasyTypeConstant(
                                             "reflect.ClassTemplate.Composition.Contribution"));
-            MULTI_METHOD_ARRAY_TYPE   = pool.ensureArrayType(pool.ensureEcstasyTypeConstant(
+            MULTI_METHOD_ARRAY_TYPE = pool.ensureArrayType(pool.ensureEcstasyTypeConstant(
                                             "reflect.MultiMethodTemplate"));
-            METHOD_ARRAY_TYPE         = pool.ensureArrayType(pool.ensureEcstasyTypeConstant(
+            METHOD_ARRAY_TYPE = pool.ensureArrayType(pool.ensureEcstasyTypeConstant(
                                             "reflect.MethodTemplate"));
-            ANNOTATION_ARRAY_TYPE     = pool.ensureArrayType(pool.ensureEcstasyTypeConstant(
+            ANNOTATION_ARRAY_TYPE = pool.ensureArrayType(pool.ensureEcstasyTypeConstant(
                                             "reflect.AnnotationTemplate"));
 
-            EMPTY_PARAMETER_ARRAY     = pool.ensureArrayConstant(
+            EMPTY_PARAMETER_ARRAY = pool.ensureArrayConstant(
                                             pool.ensureArrayType(pool.ensureEcstasyTypeConstant(
                                                 "reflect.TypeParameter")),
                                             Constant.NO_CONSTS);

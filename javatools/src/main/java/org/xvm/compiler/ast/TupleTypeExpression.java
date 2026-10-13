@@ -16,9 +16,9 @@ public class TupleTypeExpression
     // ----- constructors --------------------------------------------------------------------------
 
     public TupleTypeExpression(List<TypeExpression> params, long lStartPos, long lEndPos) {
-        this.paramTypes   = params;
-        this.lStartPos    = lStartPos;
-        this.lEndPos      = lEndPos;
+        this.paramTypes = params;
+        this.lStartPos  = lStartPos;
+        this.lEndPos    = lEndPos;
     }
 
     // ----- accessors -----------------------------------------------------------------------------

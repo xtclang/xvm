@@ -484,7 +484,7 @@ public class VersionTree<V>
      * @return the specified node; never null
      */
     private Node<V> ensureNode(Version ver) {
-        Node<V> node  = root;
+        Node<V> node = root;
         for (int part : ver.getIntArray()) {
             node = node.ensureChild(part);
         }
@@ -622,7 +622,7 @@ public class VersionTree<V>
          */
         Node findClosestNode(int[] parts, int iPart) {
             // what is the part that this node is looking for?
-            int nPart  = iPart >= parts.length ? 0 : parts[iPart];
+            int nPart = iPart >= parts.length ? 0 : parts[iPart];
 
             // keep track of the best match that we've found; note that if the next part indicates a
             // pre-release, that means that this part can't match, because it's a pre-release of

@@ -711,7 +711,7 @@ public class Dec128 extends DecimalFPNumber {
      */
     public static long $toLongBits(Ctx ctx, BigDecimal dec) {
         // get the sign
-        boolean    fNeg;
+        boolean fNeg;
         switch (dec.signum()) {
             case -1:
                 fNeg = true;
@@ -763,7 +763,7 @@ public class Dec128 extends DecimalFPNumber {
             } else if (i == 6) {
                 // split the declet across the high and low bits
                 nLBits |= ((long) nDeclet) << 60;
-                nHBits  = nDeclet >>> 4;            // rightmost 4 bits are in the "low bits" long
+                nHBits = nDeclet >>> 4;            // rightmost 4 bits are in the "low bits" long
             } else {
                 // declet 7 starts at bit 6 of the "high bits" long
                 nHBits |= ((long) nDeclet) << ((i-7) * 10 + 6);

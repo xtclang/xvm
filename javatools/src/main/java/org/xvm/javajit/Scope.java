@@ -226,7 +226,7 @@ public class Scope {
             }
             bctx.maxLocal = topLocal = slot + kind.slotSize();
         } else { // topLocal < bctx.maxLocal
-            slot      = topLocal;
+            slot = topLocal;
             topLocal += kind.slotSize();
             if (topLocal > bctx.maxLocal) {
                 bctx.maxLocal = code.allocateLocal(TypeKind.REFERENCE) + 1; // bump the code counter

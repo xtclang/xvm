@@ -253,8 +253,8 @@ public abstract class OpInvocable extends Op {
     private PropertyConstant checkPropertyAccessor(MethodConstant idMethod) {
         IdentityConstant idParent = idMethod.getNamespace();
         if (idParent instanceof PropertyConstant idProp) {
-            SignatureConstant sig    = idMethod.getSignature();
-            String            sName  = sig.getName();
+            SignatureConstant sig   = idMethod.getSignature();
+            String            sName = sig.getName();
 
             if ("get".equals(sName) && sig.getRawReturns()[0].isA(idProp.getType())) {
                 return idProp;
@@ -500,7 +500,7 @@ public abstract class OpInvocable extends Op {
 
         MethodTypeDesc md;
         if (fOptimized) {
-            md          = jmd.optimizedMD;
+            md = jmd.optimizedMD;
             methodName += Builder.OPT;
         }
         else {
@@ -542,9 +542,9 @@ public abstract class OpInvocable extends Op {
             }
         }
 
-        TypeInfo        infoTarget = bctx.getTypeInfo(typeTarget);
-        MethodConstant  idMethod   = bctx.getConstant(m_nMethodId, MethodConstant.class);
-        MethodInfo      infoMethod = infoTarget.getMethodById(idMethod, true); // runtime hack
+        TypeInfo       infoTarget = bctx.getTypeInfo(typeTarget);
+        MethodConstant idMethod   = bctx.getConstant(m_nMethodId, MethodConstant.class);
+        MethodInfo     infoMethod = infoTarget.getMethodById(idMethod, true); // runtime hack
         if (infoMethod == null) {
             SignatureConstant sig    = idMethod.getSignature();
             boolean           fForce = false;

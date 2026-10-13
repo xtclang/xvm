@@ -698,8 +698,8 @@ public class ModuleInfo {
             // at least one of the parameters is required
             assert parent != null || file != null;
 
-            m_parent       = parent;
-            m_file         = file;
+            m_parent = parent;
+            m_file   = file;
         }
 
         /**
@@ -1377,9 +1377,9 @@ public class ModuleInfo {
 
         @Override
         public String toString() {
-            String text   = "";
+            String text = "";
 
-            Node   parent = parent();
+            Node parent = parent();
             if (parent != null) {
                 text = parent.toString();
                 if (text.endsWith("/")) {

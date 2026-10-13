@@ -431,7 +431,7 @@ public class Parser {
                                     constraints.addAll(params);
                                 }
 
-                                paramnames  = new ArrayList<>();
+                                paramnames = new ArrayList<>();
                                 for (Parameter param : params) {
                                     Token       tokName       = param.getNameToken();
                                     List<Token> listParamName = Collections.singletonList(tokName);
@@ -1157,18 +1157,18 @@ public class Parser {
                                                                 stmt.getEndPosition());
                 fNeedsSemi = true;
             } else {
-                block      = parseStatementBlock();
+                block = parseStatementBlock();
             }
 
             MethodDeclarationStatement method = new MethodDeclarationStatement(
                     methodName.getStartPosition(), block.getEndPosition(), null, null, null, null,
                     null, null, methodName, null, params, block, null, null, null);
-            body    = new StatementBlock(Collections.singletonList(method),
+            body = new StatementBlock(Collections.singletonList(method),
                     method.getStartPosition(), method.getEndPosition());
             lEndPos = body.getEndPosition();
         } else if (peek(Id.L_CURLY)) {
             // pretend we're parsing a class (use the property name token as the basis)
-            body    = parseTypeCompositionBody(new Token(name.getStartPosition(),
+            body = parseTypeCompositionBody(new Token(name.getStartPosition(),
                                                name.getEndPosition(), Id.CLASS));
             lEndPos = body.getEndPosition();
         }
@@ -2413,8 +2413,8 @@ public class Parser {
             case SEMICOLON:
             case R_PAREN:
                 if (fAllowExpr) {
-                    long  lPos    = expr.getStartPosition();
-                          type    = new VariableTypeExpression(new Token(lPos, lPos, Id.VAL));
+                    long lPos = expr.getStartPosition();
+                          type = new VariableTypeExpression(new Token(lPos, lPos, Id.VAL));
                     Token tokName = new Token(lPos, lPos, Id.ANY);
                     Token tokAsn  = new Token(lPos, lPos, Id.ASN);
                     VariableDeclarationStatement var = new VariableDeclarationStatement(type, tokName, false);
@@ -3562,8 +3562,8 @@ public class Parser {
                 List<Parameter> params = new ArrayList<>();
                 params.add(new Parameter(expr.toTypeExpression(), expectNameOrAny()));
                 while (match(Id.R_PAREN, match(Id.COMMA) == null) == null) {
-                    TypeExpression type  = parseTypeExpression();
-                    Token          name  = expectNameOrAny();
+                    TypeExpression type = parseTypeExpression();
+                    Token          name = expectNameOrAny();
                     params.add(new Parameter(type, name));
                 }
 
@@ -4093,7 +4093,7 @@ public class Parser {
                      E_RANGE_E -> current();
                 default        -> expect(Id.I_RANGE_I);
             };
-            Expression expr2     = parseBitwiseExpression(false);
+            Expression expr2 = parseBitwiseExpression(false);
             return new RelOpExpression(expr1, tokDotDot, expr2);
         }
 
@@ -4886,8 +4886,8 @@ public class Parser {
         }
 
         do {
-            TypeExpression type  = parseTypeExpression();
-            Token          name  = expectNameOrAny();
+            TypeExpression type = parseTypeExpression();
+            Token          name = expectNameOrAny();
             resources.add(new Parameter(type, name));
         } while (match(Id.R_PAREN, (match(Id.COMMA) == null)) == null);
         return resources;

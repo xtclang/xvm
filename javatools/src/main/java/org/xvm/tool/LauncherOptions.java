@@ -422,7 +422,7 @@ public abstract class LauncherOptions {
     public final String getHelpText() {
         // Add usage line with command syntax
         assert schema != null;
-        final var sb  = new StringBuilder("Usage:\n")
+        final var sb = new StringBuilder("Usage:\n")
             .append("    ")
             .append(buildUsageLine(commandName))
             .append("\n\n");

@@ -273,7 +273,7 @@ public class Source
                     // unfortunately Java does not support characters with codepoints beyond 16
                     // bits; we could theoretically split this up into a Unicode "surrogate pair",
                     // but that is not supported by this class at this time
-                    ch  = nch > Character.MAX_VALUE ? '?' : (char) nch;
+                    ch = nch > Character.MAX_VALUE ? '?' : (char) nch;
                     of        += 9;
                     cchAdjust += 9;
                     m_fEscapesEncountered = true;

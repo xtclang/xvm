@@ -1042,7 +1042,6 @@ public class NameExpression
                             ? new P_Var(idProp, argTarget, argLVal)
                             : new P_Ref(idProp, argTarget, argLVal));
                 }
-
                 return;
             }
 

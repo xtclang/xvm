@@ -837,13 +837,13 @@ public class PackedInteger
 
             switch (cBytes) {
             case 2:
-                n  = ab[of] << 8 | ab[of+1] & 0xFF;
+                n = ab[of] << 8 | ab[of+1] & 0xFF;
                 break;
             case 3:
-                n  = ab[of] << 16 | (ab[of+1] & 0xFF) << 8 | ab[of+2] & 0xFF;
+                n = ab[of] << 16 | (ab[of+1] & 0xFF) << 8 | ab[of+2] & 0xFF;
                 break;
             case 4:
-                n  = ab[of] << 24 | (ab[of+1] & 0xFF) << 16 | (ab[of+2] & 0xFF) << 8 | ab[of+3] & 0xFF;
+                n = ab[of] << 24 | (ab[of+1] & 0xFF) << 16 | (ab[of+2] & 0xFF) << 8 | ab[of+3] & 0xFF;
                 break;
             default:
                 throw new IllegalStateException("# trailing bytes=" + cBytes);

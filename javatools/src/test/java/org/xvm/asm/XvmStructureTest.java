@@ -43,10 +43,10 @@ public class XvmStructureTest {
     public void testEnsureReadOnlyCascadesAndGuardsMutations() {
         Fixture fixture = createFixture();
         assertTrue(!fixture.file.isReadOnly());
-        Parameter[]  params           = fixture.method.getParamArray();
-        Annotation[] methodAnnos      = fixture.method.getAnnotations();
-        Annotation[] parameterAnnos   = fixture.parameter.getAnnotations();
-        Op[]         assembledOps     = fixture.codeMethod.getOps();
+        Parameter[]  params         = fixture.method.getParamArray();
+        Annotation[] methodAnnos    = fixture.method.getAnnotations();
+        Annotation[] parameterAnnos = fixture.parameter.getAnnotations();
+        Op[]         assembledOps   = fixture.codeMethod.getOps();
 
         FileStructure readOnly = fixture.file.ensureReadOnly();
         assertSame(fixture.file, readOnly);

@@ -165,7 +165,7 @@ public class ArrayBuilder extends AugmentingBuilder {
 
         if (jmdBase.isOptimized) {
             jitName += OPT;
-            mdBase   = jmdBase.optimizedMD;
+            mdBase = jmdBase.optimizedMD;
         } else {
             mdBase = jmdBase.standardMD;
         }

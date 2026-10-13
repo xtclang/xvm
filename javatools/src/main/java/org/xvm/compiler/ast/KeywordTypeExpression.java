@@ -20,7 +20,7 @@ public class KeywordTypeExpression
     // ----- constructors --------------------------------------------------------------------------
 
     public KeywordTypeExpression(Token keyword) {
-        this.keyword  = keyword;
+        this.keyword = keyword;
     }
 
     // ----- accessors -----------------------------------------------------------------------------

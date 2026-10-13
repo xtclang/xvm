@@ -561,11 +561,11 @@ public class ListSet<E>
      * ListSet, and its contents match the contents of the ListSet.
      */
     private void indexInit() {
-        int[] anHashOld   = m_anHash;
+        int[] anHashOld = m_anHash;
 
-        int   cBucketsOld = anHashOld == null ? 0 : anHashOld.length;
-        int   nModuloOld  = cBucketsOld >>> 1;
-        int   nModuloNew = INDEX_SIZE[Integer.numberOfTrailingZeros(m_aElem.length)];
+        int cBucketsOld = anHashOld == null ? 0 : anHashOld.length;
+        int nModuloOld  = cBucketsOld >>> 1;
+        int nModuloNew = INDEX_SIZE[Integer.numberOfTrailingZeros(m_aElem.length)];
         assert nModuloNew > 0;
         if (nModuloNew == nModuloOld) {
             return;
@@ -648,10 +648,10 @@ public class ListSet<E>
      * @param index  the index into the underlying ListSet storage for the value
      */
     private void indexRemove(int nHash, int index) {
-        int[]    anIndex  = m_anHash;
-        int      cBuckets = anIndex.length;
-        int      nModulo  = cBuckets >>> 1;
-        int      iBucket  = ((int) ((nHash & 0xFFFFFFFFFL) % nModulo)) << 1;
+        int[] anIndex  = m_anHash;
+        int   cBuckets = anIndex.length;
+        int   nModulo  = cBuckets >>> 1;
+        int   iBucket  = ((int) ((nHash & 0xFFFFFFFFFL) % nModulo)) << 1;
         while (true) {
             // check if this is the bucket that we're looking for (first value is an index into the
             // underlying ListSet storage, second value is the hashcode for the element stored at
@@ -757,10 +757,10 @@ public class ListSet<E>
      * @param indexNew  the new index of the value
      */
     private void indexAdjust(int nHash, int indexOld, int indexNew) {
-        int[]    anIndex  = m_anHash;
-        int      cBuckets = anIndex.length;
-        int      nModulo  = cBuckets >>> 1;
-        int      iBucket  = ((int) ((nHash & 0xFFFFFFFFFL) % nModulo)) << 1;
+        int[] anIndex  = m_anHash;
+        int   cBuckets = anIndex.length;
+        int   nModulo  = cBuckets >>> 1;
+        int   iBucket  = ((int) ((nHash & 0xFFFFFFFFFL) % nModulo)) << 1;
         while (true) {
             // check if this is the bucket that we're looking for (first value is an index into the
             // underlying ListSet storage, second value is the hashcode for the element stored at
@@ -1060,17 +1060,17 @@ public class ListSet<E>
         /**
          * The first of the IDs that this hard-stop represents.
          */
-        int  first;
+        int first;
 
         /**
          * The last of the IDs that this hard-stop represents.
          */
-        int  last;
+        int last;
 
         /**
          * The number of iterators actively using this hard-stop.
          */
-        int  active;
+        int active;
 
         /**
          * The hard-stop to delegate to, if this hard-stop has been merged into another hard-stop.

@@ -217,13 +217,13 @@ public class xRTSocket
 
     protected int constructSocket(Frame frame, Socket socket, byte[] abLocal, int nLocalPort,
                                   byte[] abRemote, int nRemotePort, int[] aiReturn) {
-        ConstantPool     pool         = frame.poolContext();
-        ClassTemplate    template     = this;
-        ClassComposition clz          = template.getCanonicalClass();
-        MethodStructure  constructor  = template.getStructure().findConstructor(
+        ConstantPool     pool        = frame.poolContext();
+        ClassTemplate    template    = this;
+        ClassComposition clz         = template.getCanonicalClass();
+        MethodStructure  constructor = template.getStructure().findConstructor(
                 pool.typeByteArray(), pool.typeUInt16(),
                 pool.typeByteArray(), pool.typeUInt16());
-        ObjectHandle[]   ahParams     = new ObjectHandle[constructor.getMaxVars()];
+        ObjectHandle[] ahParams = new ObjectHandle[constructor.getMaxVars()];
         ahParams[0] = xArray.makeByteArrayHandle(abLocal, Mutability.Constant);
         ahParams[1] = xUInt16.INSTANCE.makeJavaLong(nLocalPort);
         ahParams[2] = xArray.makeByteArrayHandle(abRemote, Mutability.Constant);

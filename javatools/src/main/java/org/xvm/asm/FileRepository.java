@@ -166,9 +166,9 @@ public class FileRepository
             fileStructure.writeTo(workFile);
             file.delete();
             if (workFile.renameTo(file)) {
-                cachedVersionsByName   = fileStructure.buildFileInfo().modules();
-                cachedFileStructure    = fileStructure;
-                cacheOk                = true;
+                cachedVersionsByName = fileStructure.buildFileInfo().modules();
+                cachedFileStructure  = fileStructure;
+                cacheOk              = true;
             }
         } catch (IOException e) {
             throw new IOException("Error writing module to file: " + file, e);

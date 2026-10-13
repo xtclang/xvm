@@ -501,7 +501,7 @@ public abstract class OpIndex
         ClassDesc[] cds = javaPrimitive
                 ? new ClassDesc[]{JitTypeDesc.requireJavaPrimitive(typeEl)}
                 : JitTypeDesc.getXvmPrimitiveClasses(typeEl);
-        ClassDesc   cdEl = cds[0];
+        ClassDesc cdEl = cds[0];
 
         // get the element from the array
         bctx.loadCtx(code);

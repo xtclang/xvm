@@ -156,7 +156,7 @@ public class xOSFileStore
         case "linkAsFile": { // pathString
             StringHandle hPathString = (StringHandle) ahArg[0];
             try {
-                Path path  = xOSFileNode.toOsPath(hPathString.getStringValue());
+                Path path = xOSFileNode.toOsPath(hPathString.getStringValue());
 
                 if (Files.isSymbolicLink(path)) {
                     // TODO: implement native support for link files

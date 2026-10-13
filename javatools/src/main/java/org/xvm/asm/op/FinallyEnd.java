@@ -177,10 +177,10 @@ public class FinallyEnd
 
                 // load the return values (including any extension slots) to the stack
                 for (int idx : retIndexes) {
-                    JitParamDesc pd   = fOptimized ? jmd.optimizedReturns[idx]
+                    JitParamDesc pd = fOptimized ? jmd.optimizedReturns[idx]
                                                    : jmd.standardReturns[idx];
-                    String       name = GuardAll.returnSlotName(pd);
-                    int          slot = scopeGuard.getSynthetic(name, false);
+                    String name = GuardAll.returnSlotName(pd);
+                    int    slot = scopeGuard.getSynthetic(name, false);
                     Builder.load(code, pd.cd, slot);
                 }
 

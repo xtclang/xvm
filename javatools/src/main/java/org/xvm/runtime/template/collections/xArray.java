@@ -482,7 +482,7 @@ public class xArray
                     ? Mutability.Constant
                     : Mutability.Fixed;
 
-            DelegateHandle hView  =
+            DelegateHandle hView =
                     xRTViewToBit.INSTANCE.createBitViewDelegate(hArray.m_hDelegate, mutability);
 
             return frame.assignValue(iReturn,
@@ -559,12 +559,12 @@ public class xArray
             ArrayHandle    hArray    = (ArrayHandle) hTarget;
             DelegateHandle hDelegate = hArray.m_hDelegate;
 
-            ConstantPool   pool      = frame.poolContext();
-            TypeConstant   typeRef   = pool.ensureParameterizedTypeConstant(
+            ConstantPool pool    = frame.poolContext();
+            TypeConstant typeRef = pool.ensureParameterizedTypeConstant(
                                            pool.typeVar(), hDelegate.getType());
 
-            ClassComposition clzRef  = frame.f_context.f_container.ensureClassComposition(typeRef, xRef.INSTANCE);
-            RefHandle        hRef    = new RefHandle(clzRef, "delegate", hDelegate);
+            ClassComposition clzRef = frame.f_context.f_container.ensureClassComposition(typeRef, xRef.INSTANCE);
+            RefHandle        hRef   = new RefHandle(clzRef, "delegate", hDelegate);
 
             return frame.assignValue(iReturn, hRef);
         }

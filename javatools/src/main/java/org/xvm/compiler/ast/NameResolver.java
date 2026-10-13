@@ -517,7 +517,7 @@ public class NameResolver
         if (typeConstraint.isSingleDefiningConstant()) {
             // try to use the constraint type
             // (e.g. CompileType.Key where CompileType is known to be a Map)
-            Constant id         = typeConstraint.getDefiningConstant();
+            Constant id        = typeConstraint.getDefiningConstant();
             Component component = id instanceof IdentityConstant constId
                     ? constId.getComponent()
                     : id instanceof PseudoConstant constPseudo

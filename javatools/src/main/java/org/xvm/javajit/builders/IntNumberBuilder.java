@@ -252,8 +252,8 @@ public class IntNumberBuilder extends NumberBuilder {
 
             switch (cd.descriptorString()) {
                 case "I", "S", "B", "Z":
-                    Label labelEnd  = code.newLabel();
-                    int   adjust    = 32 - bitLength;
+                    Label labelEnd = code.newLabel();
+                    int   adjust   = 32 - bitLength;
                     code.iload(slot)
                         .invokestatic(CD_JavaInteger, "numberOfLeadingZeros", md(CD_int, CD_int))
                         .dup()
@@ -296,14 +296,14 @@ public class IntNumberBuilder extends NumberBuilder {
      */
     protected void generateTrailingZeroCountGet(CodeBuilder code, JitMethodDesc jmd) {
         if (thisType.isJavaPrimitive()) {
-            ClassDesc cd   = JitTypeDesc.requireJavaPrimitive(thisType);
+            ClassDesc cd = JitTypeDesc.requireJavaPrimitive(thisType);
 
             int bitLength = getBitLength();
             int slot      = code.parameterSlot(0);
 
             switch (cd.descriptorString()) {
                 case "I", "S", "B", "Z":
-                    Label labelEnd  = code.newLabel();
+                    Label labelEnd = code.newLabel();
                     code.iload(slot)
                         .invokestatic(CD_JavaInteger, "numberOfTrailingZeros", md(CD_int, CD_int))
                         .dup()
@@ -426,11 +426,11 @@ public class IntNumberBuilder extends NumberBuilder {
             assert !jmd.optimizedParams[checkParams[0]].extension;
             assert jmd.optimizedParams[checkParams[1]].extension;
 
-            int   adjust       = jmd.getImplicitParamCount();
-            int   checkSlot    = code.parameterSlot(checkParams[0] + adjust);
-            int   defaultSlot  = code.parameterSlot(checkParams[1] + adjust);
-            Label convert      = code.newLabel();
-            Label outOfBounds  = code.newLabel();
+            int   adjust      = jmd.getImplicitParamCount();
+            int   checkSlot   = code.parameterSlot(checkParams[0] + adjust);
+            int   defaultSlot = code.parameterSlot(checkParams[1] + adjust);
+            Label convert     = code.newLabel();
+            Label outOfBounds = code.newLabel();
 
             code.iload(defaultSlot)
                 .ifne(convert)

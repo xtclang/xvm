@@ -404,10 +404,10 @@ public class xRTTypeTemplate
         if (type.isSingleDefiningConstant()) {
             Constant constDef = type.getDefiningConstant();
             if (constDef instanceof PropertyConstant idProp) {
-                TypeConstant  typeTarget = idProp.getClassIdentity().getType();
-                TypeInfo      infoTarget = typeTarget.ensureTypeInfo();
-                PropertyInfo  infoProp   = infoTarget.findProperty(idProp, true);
-                ObjectHandle  hProperty  = xRTProperty.makeHandle(frame, typeTarget, infoProp);
+                TypeConstant typeTarget = idProp.getClassIdentity().getType();
+                TypeInfo     infoTarget = typeTarget.ensureTypeInfo();
+                PropertyInfo infoProp   = infoTarget.findProperty(idProp, true);
+                ObjectHandle hProperty  = xRTProperty.makeHandle(frame, typeTarget, infoProp);
 
                 return Op.isDeferred(hProperty)
                     ? hProperty.proceed(frame, frameCaller ->

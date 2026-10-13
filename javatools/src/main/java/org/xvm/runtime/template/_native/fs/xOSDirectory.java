@@ -116,9 +116,9 @@ public class xOSDirectory
         TypeComposition clz = ensureClass(frame.f_context.f_container,
                                     getCanonicalType(), frame.poolContext().typeDirectory());
 
-        NodeHandle     hStruct = new NodeHandle(clz.ensureAccess(Constants.Access.STRUCT),
+        NodeHandle hStruct = new NodeHandle(clz.ensureAccess(Constants.Access.STRUCT),
                                         path.toAbsolutePath(), hOSStore);
-        ObjectHandle[] ahVar   = Utils.ensureSize(Utils.OBJECTS_NONE, s_constructor.getMaxVars());
+        ObjectHandle[] ahVar = Utils.ensureSize(Utils.OBJECTS_NONE, s_constructor.getMaxVars());
 
         return proceedConstruction(frame, s_constructor, true, hStruct, ahVar, iReturn);
     }

@@ -734,7 +734,7 @@ public class PropertyStructure
         int nAccess = in.readByte();
         m_accessVar = nAccess < 0 ? null : Access.valueOf(nAccess);
         m_type      = pool.getConstant(readIndex(in), TypeConstant.class);
-        int nValue  = readIndex(in);
+        int nValue = readIndex(in);
         if (nValue >= 0) {
             m_constVal = pool.getConstant(nValue);
         }

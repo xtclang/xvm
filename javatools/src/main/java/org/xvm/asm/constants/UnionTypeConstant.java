@@ -729,7 +729,7 @@ public class UnionTypeConstant
         SignatureConstant      sigFn           = pool.ensureSignatureConstant(sName,
                   cValues == 1 ? typesOf(typeCompileType, typeValue) : typesOf(typeCompileType, typeValue, typeValue),
                   typesOf(typeReturn));
-        MethodConstant         idFn            = pool.ensureMethodConstant(idThis, sigFn);
+        MethodConstant idFn = pool.ensureMethodConstant(idThis, sigFn);
         typeValue.resolve(new TypeParameterConstant(pool, idFn, "CompileType", 0).getType());
         mapMethods.put(idFn, new MethodInfo(new MethodBody(idFn, sigFn, Implementation.Native), iRank));
         return idFn;

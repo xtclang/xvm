@@ -129,7 +129,7 @@ public abstract class LongBasedDelegate
                                             long ofStart, long cSize, boolean fReverse) {
         LongArrayHandle hDelegate = (LongArrayHandle) hTarget;
 
-        long[] alOld  = hDelegate.m_alValue;
+        long[] alOld = hDelegate.m_alValue;
         long[] alNew;
         if ((ofStart & (f_nValuesPerLong-1)) == 0) {
             int nStart = valueIndex(ofStart);
@@ -420,8 +420,8 @@ public abstract class LongBasedDelegate
      * @return the byte value
      */
     protected static byte getByte(long[] alValue, long of) {
-        int  ixVal  = (int) (of / 8);
-        int  ofByte = 7 - (int) (of & 7);
+        int ixVal  = (int) (of / 8);
+        int ofByte = 7 - (int) (of & 7);
 
         return (byte) (alValue[ixVal] >>> (ofByte * 8) & 0xFF);
     }
