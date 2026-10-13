@@ -34,8 +34,8 @@ import static org.xvm.asm.ErrorListener.silent;
  * instead of selecting a final constructor.
  */
 final class PartialConstructionResolver {
-    static CursorBinding inspect(IncompleteStatement site, NewExpression creation, Context ctx,
-                                 TypeConstant required, ErrorListener errs) {
+
+    static CursorBinding inspect(IncompleteStatement site, NewExpression creation, Context ctx, TypeConstant required, ErrorListener errs) {
         var scope = CursorScope.capture(ctx).withCandidates(List.of());
         if (errs.isAbortDesired()) {
             return scope;
@@ -57,6 +57,7 @@ final class PartialConstructionResolver {
                 || construction.requiresNewable() && !info.isNewable(false, validation)) {
             return scope;
         }
+
         // Keep both declaration and superclass possibilities while arguments are incomplete.
         // Normal validation chooses a constructor and creates a forwarding wrapper only later.
         var targets = anonymous ? List.of(info, construction.superType().ensureTypeInfo(lookup))
@@ -64,8 +65,7 @@ final class PartialConstructionResolver {
         if (lookup.hasSeriousErrors() || lookup.isAbortDesired()) {
             return scope;
         }
-        var methods = targets.stream().flatMap(target -> target.findMethods("construct", -1,
-                        MethodKind.Constructor).stream()
+        var methods = targets.stream().flatMap(target -> target.findMethods("construct", -1, MethodKind.Constructor).stream()
                 // Brackets select the size slot of the real fixed-size array constructor.
                 // Other Array overloads (copy, mutability, capacity) are not dimension syntax.
                 .filter(method -> site.getOperator().getId() != Id.L_SQUARE
