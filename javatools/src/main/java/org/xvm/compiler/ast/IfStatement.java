@@ -3,12 +3,8 @@ package org.xvm.compiler.ast;
 import java.lang.reflect.Field;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-import org.xvm.asm.Argument;
-import org.xvm.asm.Assignment;
 import org.xvm.asm.ErrorListener;
 import org.xvm.asm.MethodStructure.Code;
 
@@ -73,12 +69,7 @@ public class IfStatement
             if (m_listShorts == null) {
                 m_listShorts = new ArrayList<>();
             }
-            Map<String, Assignment> mapAsn = new HashMap<>();
-            Map<String, Argument>   mapArg = new HashMap<>();
-
-            ctxOrigin.prepareJump(ctxDest, mapAsn, mapArg);
-
-            m_listShorts.add(new Break(nodeOrigin, mapAsn, mapArg, label));
+            m_listShorts.add(prepareJump(nodeOrigin, ctxOrigin, ctxDest, label));
         }
 
         return label;
@@ -105,33 +96,11 @@ public class IfStatement
                 ctx = ctx.enterAndIf();
             }
 
-            // the condition is either a boolean expression or a conditional assignment statement
-            // whose R-value is a multi-value with the first value being a boolean
-            if (cond instanceof AssignmentStatement stmtOld) {
-                if (stmtOld.isNegated()) {
-                    ctx = ctx.enterNot();
-                }
-
-                AssignmentStatement stmtNew = (AssignmentStatement) stmtOld.validate(ctx, errs);
-
-                if (stmtOld.isNegated()) {
-                    ctx = ctx.exit();
-                }
-                if (stmtNew == null) {
-                    fValid = false;
-                } else if (stmtNew != stmtOld) {
-                    cond = stmtNew;
-                    conds.set(i, cond);
-                }
-            } else {
-                Expression exprOld = (Expression) cond;
-                Expression exprNew = exprOld.validate(ctx, pool().typeBoolean(), errs);
-                if (exprNew == null) {
-                    fValid = false;
-                } else if (exprNew != exprOld) {
-                    cond = exprNew;
-                    conds.set(i, cond);
-                }
+            AstNode validated = validateCondition(ctx, cond, errs);
+            if (validated == null) {
+                fValid = false;
+            } else if (validated != cond) {
+                conds.set(i, validated);
             }
         }
 
@@ -165,17 +134,7 @@ public class IfStatement
             //           at the point of the short, and assigned by the point that the condition
             //           was fully evaluated, it should be unassigned here, right?
             if (m_listShorts != null) {
-                boolean fContinues = false;
-                for (Break shortInfo : m_listShorts) {
-                    if (!shortInfo.node().isDiscarded()) {
-                        ctx.merge(shortInfo.mapAssign(), shortInfo.mapNarrow());
-                        fContinues = true;
-                    }
-                }
-
-                if (fContinues) {
-                    ctx.setReachable(true);
-                }
+                mergeJumps(ctx, m_listShorts);
             }
 
             Statement stmtElseNew = stmtElse.validate(ctx, errs);
@@ -186,7 +145,7 @@ public class IfStatement
             }
         }
         ctx = ctx.exit(); // "else"
-        ctx = ctx.exit(); // "if"
+        ctx.exit(); // "if"
 
         return fValid ? this : null;
     }
@@ -301,7 +260,7 @@ public class IfStatement
 
         boolean fCompletesThen = fReachesThen;
         if (fReachesThen) {
-            fCompletesThen = stmtThen.completes(ctx, fReachesThen, code, errs);
+            fCompletesThen = stmtThen.completes(ctx, true, code, errs);
             if (stmtElse != null) {
                 code.add(new Jump(labelExit));
             }
@@ -310,7 +269,7 @@ public class IfStatement
         boolean fCompletesElse = fReachesElse;
         code.add(labelElse);
         if (fReachesElse && stmtElse != null) {
-            fCompletesElse = stmtElse.completes(ctx, fReachesElse, code, errs);
+            fCompletesElse = stmtElse.completes(ctx, true, code, errs);
         }
 
         code.add(labelExit);
@@ -328,7 +287,7 @@ public class IfStatement
         StringBuilder sb = new StringBuilder();
 
         sb.append("if (")
-          .append(conds.get(0));
+          .append(conds.getFirst());
         for (int i = 1, c = conds.size(); i < c; ++i) {
             sb.append(", ")
               .append(conds.get(i));

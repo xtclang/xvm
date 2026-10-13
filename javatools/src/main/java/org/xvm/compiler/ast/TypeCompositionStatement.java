@@ -272,39 +272,33 @@ public class TypeCompositionStatement
      */
     public Zone getDeclarationZone() {
         Component structThis = getComponent();
-        switch (structThis.getFormat()) {
-        case MODULE:
-        case PACKAGE:
+        return switch (structThis.getFormat()) {
             // modules and components are always top level
-            return Zone.TopLevel;
-
-        case CLASS, INTERFACE, SERVICE, CONST, ENUM, ANNOTATION, MIXIN:
-            Component structParent = structThis.getParent();
-            return switch (structParent.getFormat()) {
-                case MODULE,
-                     PACKAGE     -> Zone.TopLevel;
-                case CLASS,
-                     INTERFACE,
-                     SERVICE,
-                     CONST,
-                     ENUM,
-                     ENUMVALUE,
-                     ANNOTATION,
-                     MIXIN       -> Zone.InClass;
-                case METHOD      -> Zone.InMethod;
-                case PROPERTY    -> Zone.InProperty;
-
-                default          -> throw new IllegalStateException("this=" + structThis.getFormat()
-                                    + ", parent=" + structParent.getFormat());
-            };
-
-        case ENUMVALUE:
-            // enum values are ALWAYS nested inside an enumeration class
-            return Zone.InClass;
-
-        default:
-            throw new IllegalStateException("this=" + structThis.getFormat());
-        }
+            case MODULE, PACKAGE -> Zone.TopLevel;
+            case CLASS, INTERFACE, SERVICE, CONST, ENUM, ANNOTATION, MIXIN -> {
+                Component structParent = structThis.getParent();
+                yield switch (structParent.getFormat()) {
+                    case MODULE,
+                         PACKAGE -> Zone.TopLevel;
+                    case CLASS,
+                         INTERFACE,
+                         SERVICE,
+                         CONST,
+                         ENUM,
+                         ENUMVALUE,
+                         ANNOTATION,
+                         MIXIN -> Zone.InClass;
+                    case METHOD -> Zone.InMethod;
+                    case PROPERTY -> Zone.InProperty;
+                    default -> throw new IllegalStateException("this=" + structThis.getFormat()
+                            + ", parent=" + structParent.getFormat());
+                };
+            }
+            case ENUMVALUE ->
+                // enum values are ALWAYS nested inside an enumeration class
+                    Zone.InClass;
+            default -> throw new IllegalStateException("this=" + structThis.getFormat());
+        };
     }
 
     @Override
@@ -926,10 +920,10 @@ public class TypeCompositionStatement
             }
         }
 
-        int                  cImports      = 0;
-        boolean              fHasDefault   = false;
-        Format               format        = component.getFormat();
-        ComponentBifurcator  bifurcator    = new ComponentBifurcator(component);
+        int     cImports    = 0;
+        boolean fHasDefault = false;
+        Format  format      = component.getFormat();
+        ComponentBifurcator bifurcator = new ComponentBifurcator(component);
         ConditionalConstant  condPrev      = null;
         List<ClassStructure> componentList = new ArrayList<>();
 
@@ -948,8 +942,7 @@ public class TypeCompositionStatement
             Expression          exprCond = composition.getCondition();
             ConditionalConstant condCur  = exprCond == null ? null : exprCond.toConditionalConstant();
             if (!Handy.equals(condCur, condPrev)) {
-                componentList.clear();
-                bifurcator.collectMatchingComponents(condCur, (List<Component>) (List) componentList);
+                componentList = collectClassComponents(bifurcator, condCur);
                 condPrev = condCur;
             }
 
@@ -1305,8 +1298,7 @@ public class TypeCompositionStatement
         }
 
         // need to go through all components for the next bit
-        componentList.clear();
-        bifurcator.collectMatchingComponents(null, (List<Component>) (List) componentList);
+        componentList = collectClassComponents(bifurcator, null);
 
         // add default "implement" and/or "extend"
         if (!fAlreadyExtends && (typeDefaultImpl != null || typeDefaultSuper != null)) {
@@ -1443,7 +1435,7 @@ public class TypeCompositionStatement
         long lStart = name.getStartPosition();
         long lEnd   = name.getEndPosition();
         if (cParams > 0) {
-            lStart = listParams.get(0).getStartPosition();
+            lStart = listParams.getFirst().getStartPosition();
             lEnd   = listParams.get(cParams - 1).getEndPosition();
         }
         errs.error(Compiler.SIGNATURE_AMBIGUOUS, in(getSource(), lStart, lEnd), sb.toString());
@@ -1557,11 +1549,7 @@ public class TypeCompositionStatement
                 break;
 
             case Implements:
-                if (typeContrib.isExplicitClassIdentity(true)) {
-                    // TODO CP it needs to be an interface, but apparently we don't check that here
-                } else {
-                    // TODO CP this used to be an error, but we need to allow all pure types
-                }
+                // TODO verify interface compatibility while still allowing pure types
                 break;
             }
         }
@@ -1593,7 +1581,7 @@ public class TypeCompositionStatement
             for (CompositionNode composition : compositions) {
                 if (composition instanceof Import compImport) {
                     PackageStructure structPkg = (PackageStructure) component;
-                    ModuleStructure  structMod = structPkg == null ? null : structPkg.getImportedModule();
+                    ModuleStructure  structMod = structPkg.getImportedModule();
                     ModuleStructure  structAct = structMod == null ? null : structMod.getFingerprintOrigin();
                     if (structAct == null) {
                         // this is obviously an error -- we can't compile without the module
@@ -1722,7 +1710,7 @@ public class TypeCompositionStatement
                         // copy this constructor's arguments
                         List<Parameter> listParams = constructorParams;
                         if (listParams != null) {
-                            List<Expression> listArgs = new ArrayList(listParams.size());
+                            List<Expression> listArgs = new ArrayList<>(listParams.size());
                             for (Parameter listParam : listParams) {
                                 listArgs.add(new NameExpression(this, listParam.name, null));
                             }
@@ -1888,7 +1876,7 @@ public class TypeCompositionStatement
             }
         } else {
             if (fModuleImport) {
-                listParams.get(0).log(errs, Severity.ERROR, Compiler.IMPURE_MODULE_IMPORT);
+                listParams.getFirst().log(errs, Severity.ERROR, Compiler.IMPURE_MODULE_IMPORT);
             }
 
             // resolve the type of each constructor parameter
@@ -2037,6 +2025,8 @@ public class TypeCompositionStatement
             constructor.setSynthetic(true);
             constructor.markAsShorthand();
         } else if (component.isSingleton()) {
+            assert constructors != null;
+
             // for a singleton, constructor parameters are not permitted unless they all have
             // default values (since the module is a singleton, and is automatically created,
             // i.e. it has to have all of its construction parameters available)
@@ -2268,6 +2258,13 @@ public class TypeCompositionStatement
         return true;
     }
 
+    /** Bifurcating a class preserves its structure type; narrow the heterogeneous repository API here. */
+    private static List<ClassStructure> collectClassComponents(ComponentBifurcator bifurcator, ConditionalConstant condition) {
+        List<Component> components = new ArrayList<>();
+        bifurcator.collectMatchingComponents(condition, components);
+        return components.stream().map(ClassStructure.class::cast).toList();
+    }
+
     /**
      * If there are any undeclared formal parameters for the Annotation contributions of this class,
      * resolve the corresponding annotation types based on this class's formal type.
@@ -2277,12 +2274,7 @@ public class TypeCompositionStatement
      */
     private void resolveAnnotationTypes(ClassStructure component, ErrorListener errs) {
         for (Contribution contrib : component.getContributionsAsList()) {
-            switch (contrib.getComposition()) {
-            case Annotation:
-                break;
-
-            default:
-                // disregard any other contribution
+            if (contrib.getComposition() != Composition.Annotation) {
                 continue;
             }
 
@@ -2708,14 +2700,14 @@ public class TypeCompositionStatement
             // compute default values at run-time (see TypeConstant#mergeMixinTypeInfo)
             constructor.setShorthandInitialization(idSuper, aconstSuper);
         }
-        return listSuperArgs == null ? Collections.EMPTY_LIST : listSuperArgs;
+        return listSuperArgs == null ? Collections.emptyList() : listSuperArgs;
     }
 
     private void disallowTypeParams(ErrorListener errs) {
         // type parameters are not permitted
         List<Parameter> listParams = typeParams;
         if (listParams != null && !listParams.isEmpty()) {
-            listParams.get(0).log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
+            listParams.getFirst().log(errs, Severity.ERROR, Compiler.TYPE_PARAMS_UNEXPECTED);
         }
     }
 
@@ -2753,7 +2745,7 @@ public class TypeCompositionStatement
         ConstantPool   pool      = pool();
         ClassStructure component = (ClassStructure) getComponent();
         Code           code      = constructor.ensureCode();
-        Context        ctxEmit   = ctxConstruct.emittingContext(code);
+        Context        ctxEmit   = ctxConstruct.emittingContext();
 
         if (args == null) {
             // parameters that don't exist on the super and mixins must be properties on "this"
