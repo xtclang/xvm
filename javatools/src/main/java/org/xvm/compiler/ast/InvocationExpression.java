@@ -46,12 +46,12 @@ import org.xvm.asm.constants.TypeInfo.MethodKind;
 import org.xvm.asm.op.*;
 
 import org.xvm.compiler.Compiler;
-import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Source;
 import org.xvm.compiler.Token;
 import org.xvm.compiler.Token.Id;
 
 import org.xvm.compiler.ast.StatementBlock.TargetInfo;
+import org.xvm.compiler.ast.bindings.InvocationBinding;
 
 import org.xvm.util.Severity;
 
