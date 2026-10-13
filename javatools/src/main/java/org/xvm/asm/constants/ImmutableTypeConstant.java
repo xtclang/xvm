@@ -172,8 +172,13 @@ public class ImmutableTypeConstant
     // ----- JIT support ---------------------------------------------------------------------------
 
     @Override
-    public String ensureJitClassName(TypeSystem ts) {
-        return m_constType.ensureJitClassName(ts);
+    public String getJitCCName(TypeSystem ts) {
+        return m_constType.getJitCCName(ts);
+    }
+
+    @Override
+    public String getJitICName(TypeSystem ts) {
+        return m_constType.getJitICName(ts);
     }
 
     // ----- Constant methods ----------------------------------------------------------------------

@@ -175,7 +175,7 @@ public abstract class OpOptimized
         }
         bctx.loadCtx(code);
         bctx.loadCallArguments(code, jmd, anArgValues);
-        code.invokestatic(bctx.builder.ensureClassDesc(typeTarget), sJitName, jmd.optimizedMD);
+        code.invokestatic(bctx.builder.getCCDesc(typeTarget), sJitName, jmd.optimizedMD);
         return jmd;
     }
 }

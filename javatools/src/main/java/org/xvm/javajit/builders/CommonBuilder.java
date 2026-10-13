@@ -191,12 +191,12 @@ public class CommonBuilder
                     assert virtCtor != null;
                 }
                 IdentityConstant ifaceId = virtCtor.getIdentity().getNamespace();
-                interfaces.add(ensureClassDesc(ifaceId.getType()));
+                interfaces.add(getCCDesc(ifaceId.getType()));
                 virtCtors.add(method);
             } else if (method.getAbstractFunction() instanceof MethodBody funkyBody) {
                 IdentityConstant ifaceId = funkyBody.getIdentity().getNamespace();
                 interfaces.add(ClassDesc.of(
-                    TypeSystem.funkyInterface(ensureJitClassName(ifaceId.getType()))));
+                    TypeSystem.funkyInterface(getCCName(ifaceId.getType()))));
                 funkyImpls.add(method);
             }
         }
@@ -215,7 +215,7 @@ public class CommonBuilder
                 .return_());
 
         TypeConstant targetType = typeInfo.getType();
-        ClassDesc    targetCD   = ensureClassDesc(targetType);
+        ClassDesc    targetCD   = getCCDesc(targetType);
         for (MethodInfo method : funkyImpls) {
             // method contains an implementation of an abstract static (funky) declaration;
             // the class of class needs to create a method with that declaration signature
@@ -252,7 +252,7 @@ public class CommonBuilder
             MethodBody     ctorBody  = method.getVirtualConstructor();
             MethodConstant ctorId    = ctorBody.getIdentity();
             TypeConstant   ifaceType = ctorId.getNamespace().getType();
-            ClassDesc      cdIface   = ensureClassDesc(ifaceType);
+            ClassDesc      cdIface   = getCCDesc(ifaceType);
 
             String        ctorName = ctorId.ensureJitMethodName(typeSystem).replace("construct", NEW);
             JitMethodDesc ctorJmd  = Builder.convertConstructToNew(ifaceType.ensureTypeInfo(), cdIface,
@@ -448,7 +448,7 @@ public class CommonBuilder
                 when literal.getFormat() == Constant.Format.IntLiteral: {
             Integer      index = constants.computeIfAbsent(literal, _ -> constants.size());
             TypeConstant type  = literal.getType();
-            ClassDesc    cd    = ensureClassDesc(type);
+            ClassDesc    cd    = getCCDesc(type);
             code.getstatic(art.CD(), CONST_PROP + index, cd);
             return new SingleSlot(type, JitFlavor.Specific, cd, "");
         }
@@ -457,7 +457,7 @@ public class CommonBuilder
                 when literal.getFormat() == Constant.Format.Duration: {
             Integer      index = constants.computeIfAbsent(literal, _ -> constants.size());
             TypeConstant type  = literal.getType();
-            ClassDesc    cd    = ensureClassDesc(type);
+            ClassDesc    cd    = getCCDesc(type);
             ClassDesc[]  cds   = JitTypeDesc.getXvmPrimitiveClasses(type);
             code.getstatic(art.CD(), CONST_PROP + index, cd);
             unbox(code, type);
@@ -569,13 +569,13 @@ public class CommonBuilder
 //        if (isSpecialized && classStruct.getFormat() == Format.INTERFACE) {
 //            TypeConstant canonicalType = classStruct.getIdentityConstant().getType();
 //            if (shouldAddInterface(canonicalType)) {
-//                interfaces.add(getCallableClassDesc(canonicalType));
+//                interfaces.add(getJitCCDesc(canonicalType));
 //            }
 //        }
 
         if (isInterface && isSpecialized) {
             // make the specialized interface to extend the canonical interface
-            interfaces.add(ensureClassDesc(classStruct.getNormalizedType()));
+            interfaces.add(getCCDesc(classStruct.getNormalizedType()));
         }
 
         for (Contribution contrib : typeInfo.getContributionList()) {
@@ -583,7 +583,7 @@ public class CommonBuilder
                 case Implements, Incorporates:
                     TypeConstant contribType = contrib.getTypeConstant().removeAccess();
                     if  (shouldAddInterface(contribType)) {
-                        interfaces.add(ensureClassDesc(contribType));
+                        interfaces.add(getCCDesc(contribType));
                     }
                     break;
             }
@@ -827,7 +827,7 @@ public class CommonBuilder
                         // instantiate an IntLiteral or Duration using a String generated from a
                         // Java string from the LiteralConstant, and store into the static field
                         TypeConstant   type   = literal.getType();
-                        ClassDesc      cd     = ensureClassDesc(type);
+                        ClassDesc      cd     = getCCDesc(type);
                         MethodConstant ctorId = type.ensureTypeInfo().findConstructor(pool.typeString());
 
                         buildNew(null, code, type, ctorId,
@@ -1017,7 +1017,7 @@ public class CommonBuilder
             case LiteralConstant literal
                     when literal.getFormat() == Constant.Format.IntLiteral ||
                          literal.getFormat() == Constant.Format.Duration ->
-                    ensureClassDesc(literal.getType());
+                    getCCDesc(literal.getType());
             default -> throw new UnsupportedOperationException("unsupported constant: " + constant);
         };
     }
@@ -1077,7 +1077,7 @@ public class CommonBuilder
         for (PropertyInfo prop : props) {
             TypeConstant   type        = prop.getType();
             TypeConstant   baseType    = type.removeNullable();
-            ClassDesc      cdProp      = type.getCallableClassDesc(typeSystem);
+            ClassDesc      cdProp      = type.getJitCCDesc(typeSystem);
             String         jitName     = prop.getIdentity().ensureJitPropertyName(typeSystem);
             MethodConstant initializer = prop.getInitializer();
             Label          doneLbl     = null;
@@ -1120,12 +1120,12 @@ public class CommonBuilder
                 }
 
                 if (baseType.isJitPrimitive()) {
-                    code.checkcast(ensureClassDesc(baseType));
+                    code.checkcast(getCCDesc(baseType));
                     unbox(code, baseType);
                     valueReg = baseType.isJavaPrimitive()
                             ? new SingleSlot(baseType, JitFlavor.Primitive,
                                     JitTypeDesc.requireJavaPrimitive(baseType), "")
-                            : new MultiSlot(JitFlavor.XvmPrimitive, baseType, ensureClassDesc(baseType),
+                            : new MultiSlot(JitFlavor.XvmPrimitive, baseType, getCCDesc(baseType),
                                     JitTypeDesc.getXvmPrimitiveClasses(baseType));
                 } else {
                     valueReg = new SingleSlot(type, JitFlavor.Specific, jmd.standardMD.returnType(), "");
@@ -1749,14 +1749,14 @@ public class CommonBuilder
                 continue;
             }
 
-            ClassDesc childCD   = ensureClassDesc(childJIC);
+            ClassDesc childCD   = getCCDesc(childJIC);
             String    childName = child.getName();
 
             for (MethodConstant ctorId : infoJIC.findMethods("construct", -1, MethodKind.Constructor)) {
                 MethodInfo ctor     = infoJIC.getMethodById(ctorId);
                 MethodInfo baseCtor = ctor.getChildConstructorOrigin();
                 TypeInfo   baseInfo = baseCtor.getTypeInfo();
-                ClassDesc  baseCD   = baseInfo.getType().getCallableClassDesc(typeSystem);
+                ClassDesc  baseCD   = baseInfo.getType().getJitCCDesc(typeSystem);
 
                 // Notes:
                 // 1) baseCD represents the compile-time return type for the factory methods
@@ -2018,7 +2018,7 @@ public class CommonBuilder
                         code.goto_(endIf)
                             .labelBinding(ifNotNull)
                             .aload(stdParamSlot)
-                            .checkcast(ensureClassDesc(primitiveType));
+                            .checkcast(getCCDesc(primitiveType));
                         unbox(code, primitiveType); // unboxed primitive
                         code.iconst_0();            // false
 
@@ -2055,7 +2055,7 @@ public class CommonBuilder
                             .labelBinding(ifNotXvmNull);
 
                         code.aload(stdParamSlot)
-                            .checkcast(ensureClassDesc(primitiveType));
+                            .checkcast(getCCDesc(primitiveType));
                         unbox(code, primitiveType); // unboxed primitive
                         code.iconst_0()             // false
                             .labelBinding(endIf);
@@ -2124,7 +2124,7 @@ public class CommonBuilder
                         code.goto_(endIf)
                             .labelBinding(ifNotNull)
                             .aload(stdParamSlot)
-                            .checkcast(ensureClassDesc(baseType));
+                            .checkcast(getCCDesc(baseType));
 
                         ClassDesc cd = JitTypeDesc.getXvmPrimitiveClass(baseType);
                         assert cd != null;
@@ -2139,7 +2139,7 @@ public class CommonBuilder
 
                     case NullableXvmPrimitiveWithDefault: {
                         TypeConstant baseType = stdParamType.removeNullable();
-                        ClassDesc    baseCD   = ensureClassDesc(baseType);
+                        ClassDesc    baseCD   = getCCDesc(baseType);
 
                         // if the argument is Java `null`, pass default values and `-1`;
                         // if the argument is `Null`, pass default values and `+1`;
@@ -2488,7 +2488,7 @@ public class CommonBuilder
         TypeConstant baseType = getImplementationBase(eqSig);
         if (baseType != null) {
             // found super class with equals method, so call it first
-            ClassDesc      cdBase  = ensureClassDesc(baseType);
+            ClassDesc      cdBase  = getCCDesc(baseType);
             MethodTypeDesc mdSuper = md(CD_boolean, CD_Ctx, CD_nType, cdBase, cdBase);
 
             loadCtx(code);
@@ -2592,7 +2592,7 @@ public class CommonBuilder
                 loadProperty(code, type, propId, true);
                 loadOptimizedReturnsToStack(code, jmd);
 
-                code.invokestatic(ensureClassDesc(propType), XVM_PRIMITIVE_EQUALS, mdEquals)
+                code.invokestatic(getCCDesc(propType), XVM_PRIMITIVE_EQUALS, mdEquals)
                     .ifeq(returnFalse);
             } else if (propType.isA(pool().typeService())) {
                 buildGetIdentityHashCode(code, prop, value1Slot);
@@ -2608,8 +2608,8 @@ public class CommonBuilder
 
                 TypeConstant  targetType = eqTarget.getNamespace().getType();
                 JitMethodDesc eqJmd      = eqMethod.getJitDesc(this, propType);
-                ClassDesc     cdProp     = ensureClassDesc(propType);
-                ClassDesc     cdTarget   = ensureClassDesc(targetType);
+                ClassDesc     cdProp     = getCCDesc(propType);
+                ClassDesc     cdTarget   = getCCDesc(targetType);
 
                 loadCtx(code);
 
@@ -2697,7 +2697,7 @@ public class CommonBuilder
 
         if (baseType != null) {
             // found super class with compare method, so call it first
-            ClassDesc      cdExt   = ensureClassDesc(baseType);
+            ClassDesc      cdExt   = getCCDesc(baseType);
             MethodTypeDesc mdSuper = md(CD_Ordered, CD_Ctx, CD_nType, cdExt, cdExt);
 
             loadCtx(code);
@@ -2808,7 +2808,7 @@ public class CommonBuilder
                 loadProperty(code, type, propId, true);
                 loadOptimizedReturnsToStack(code, jmd);
 
-                code.invokestatic(ensureClassDesc(propType), XVM_PRIMITIVE_COMPARE, mdCompare);
+                code.invokestatic(getCCDesc(propType), XVM_PRIMITIVE_COMPARE, mdCompare);
 
                 // int result on stack: if zero, this property is equal; continue to next
                 // otherwise convert to an Ordered and return
@@ -2845,7 +2845,7 @@ public class CommonBuilder
 
                 // invoke the static compare method
                 IdentityConstant idTarget = cmpMethod.getIdentity().getClassIdentity();
-                ClassDesc        cdTarget = ensureClassDesc(idTarget.getType());
+                ClassDesc        cdTarget = getCCDesc(idTarget.getType());
 
                 // load the values
                 code.aload(value1Slot);
@@ -2953,7 +2953,7 @@ public class CommonBuilder
             boolean           isCaching) {
 
         TypeConstant typeHashable = pool().typeHashable();
-        ClassDesc    cdThis       = ensureClassDesc(type);
+        ClassDesc    cdThis       = getCCDesc(type);
         int          valueSlot    = 2;
         int          resultSlot   = 3;
 
@@ -3008,7 +3008,7 @@ public class CommonBuilder
 
         if (baseType != null) {
             // found super class with hashCode method, so call it first
-            ClassDesc      cdBase  = ensureClassDesc(baseType);
+            ClassDesc      cdBase  = getCCDesc(baseType);
             MethodTypeDesc mdSuper = md(CD_long, CD_Ctx, CD_nType, cdBase);
 
             // load the hash collector to the stack so we can later add the super class hash code
@@ -3086,7 +3086,7 @@ public class CommonBuilder
                 JitMethodDesc hashJmd    = hashMethod.getJitDesc(this, propType);
 
                 IdentityConstant idTarget = hashMethod.getIdentity().getClassIdentity();
-                ClassDesc        cdTarget = ensureClassDesc(idTarget.getType());
+                ClassDesc        cdTarget = getCCDesc(idTarget.getType());
                 ClassDesc        cdValue  = hashJmd.getOptimizedParam(1).cd;
                 code.checkcast(cdValue)
                     .invokestatic(cdTarget, hashOptName, hashJmd.optimizedMD);
@@ -3229,7 +3229,7 @@ public class CommonBuilder
                 propType = propType.removeNullable();
             }
 
-            ClassDesc cdProp = ensureClassDesc(propType);
+            ClassDesc cdProp = getCCDesc(propType);
 
             code.labelBinding(checkProp);
             if (propType.isA(typeStringable)) {
@@ -3377,7 +3377,7 @@ public class CommonBuilder
                 propType = propType.removeNullable();
             }
 
-            ClassDesc cdProp = ensureClassDesc(propType);
+            ClassDesc cdProp = getCCDesc(propType);
 
             code.labelBinding(checkProp);
             if (propType.isA(typeStringable)) {
@@ -3428,7 +3428,7 @@ public class CommonBuilder
         } else {
             loadProperty(code, type, propId, false);
             if (isNullable) {
-                code.checkcast(ensureClassDesc(propType));
+                code.checkcast(getCCDesc(propType));
             }
         }
     }
@@ -3993,9 +3993,9 @@ public class CommonBuilder
             }
 
             if (dstType.isJitInterface() && dstMethod.isAbstract() && !objectDelegation) {
-                code.invokeinterface(ensureClassDesc(dstType), dstName, md);
+                code.invokeinterface(getCCDesc(dstType), dstName, md);
             } else {
-                code.invokevirtual(ensureClassDesc(dstType), dstName, md);
+                code.invokevirtual(getCCDesc(dstType), dstName, md);
             }
 
             if (returns.length == 0) {
@@ -4296,7 +4296,7 @@ public class CommonBuilder
                     assert !typeTarget.isXvmPrimitive();
                     ClassDesc cdTarget = typeTarget == thisType
                             ? CD_this
-                            : ensureClassDesc(typeTarget);
+                            : getCCDesc(typeTarget);
                     String validatorName = depth > 0 && isEmbedded(format)
                             ? validator.ensureJitMethodName(typeSystem) + HASH + depth
                             : validatorId.ensureJitMethodName(typeSystem);

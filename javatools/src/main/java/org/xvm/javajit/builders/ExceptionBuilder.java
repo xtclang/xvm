@@ -76,14 +76,14 @@ public class ExceptionBuilder extends CommonBuilder {
     public void assembleJavaException(String className, ClassBuilder classBuilder) {
         TypeConstant superType = typeInfo.getExtends();
         ClassDesc    superCD   = getJavaExceptionSuperCD();
-        ClassDesc    exCD      = ensureClassDesc(thisType);
+        ClassDesc    exCD      = getCCDesc(thisType);
 
         classBuilder.withFlags(ClassFile.ACC_PUBLIC)
                     .withSuperclass(superCD);
 
         classBuilder.withMethodBody(INIT_NAME, md(CD_void, CD_Throwable, exCD),
                 ClassFile.ACC_PUBLIC, code -> {
-            ClassDesc      superCd = ensureClassDesc(superType);
+            ClassDesc      superCd = getCCDesc(superType);
             MethodTypeDesc superMD = md(CD_void, CD_Throwable, superCd);
             code.aload(0)
                 .aload(1)
@@ -102,6 +102,6 @@ public class ExceptionBuilder extends CommonBuilder {
         TypeConstant superType = typeInfo.getExtends();
         return superType.equals(typeSystem.pool().typeException())
                 ? CD_nException
-                : getShapeDesc(ensureJitClassName(superType), ClassfileShape.Exception);
+                : getShapeDesc(getCCName(superType), ClassfileShape.Exception);
     }
 }

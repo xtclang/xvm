@@ -163,7 +163,7 @@ public class CatchStart
 
         ClassDesc cdEx = typeEx.equals(ts.pool().typeException())
             ? CD_nException
-            : Builder.getShapeDesc(bctx.builder.ensureJitClassName(typeEx), ClassfileShape.Exception);
+            : Builder.getShapeDesc(bctx.builder.getCCName(typeEx), ClassfileShape.Exception);
 
         code.getfield(cdEx, "exception", CD_Exception);
         bctx.storeValue(code, regEx);

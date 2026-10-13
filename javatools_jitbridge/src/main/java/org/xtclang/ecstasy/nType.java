@@ -62,7 +62,7 @@ public class nType
     public Class $xvmClass(Ctx ctx) {
         if (xvmClass == null) {
             TypeSystem       typeSystem  = ctx.container.typeSystem;
-            java.lang.String className   = $dataType.ensureJitClassName(typeSystem);
+            java.lang.String className   = $dataType.getJitCCName(typeSystem);
             java.lang.String classOfType = TypeSystem.classOfClass(className);
             try {
                 java.lang.Class clz;
@@ -114,13 +114,12 @@ public class nType
 
         TypeConstant hasherType = pool.ensureParameterizedTypeConstant(
                 pool.ensureEcstasyTypeConstant("collections.NaturalHasher"), $dataType);
-        TypeSystem       typeSystem = ctx.container.typeSystem;
-        MethodConstant   ctorId     = hasherType.ensureTypeInfo().findConstructor();
-        java.lang.String newName    = ctorId.ensureJitMethodName(typeSystem).replace("construct", NEW);
+        TypeSystem       ts      = ctx.container.typeSystem;
+        MethodConstant   ctorId  = hasherType.ensureTypeInfo().findConstructor();
+        java.lang.String newName = ctorId.ensureJitMethodName(ts).replace("construct", NEW);
         try {
             // use the generated factory so the hasher implements the correct specialized interface
-            java.lang.Class<?> hasherClass = typeSystem.loader.loadClass(
-                    hasherType.getJitCCType().ensureJitClassName(typeSystem));
+            java.lang.Class<?> hasherClass = ts.loader.loadClass(hasherType.getJitICName(ts));
             ctx.o0 = hasherClass.getDeclaredMethod(newName, Ctx.class, TypeConstant.class)
                     .invoke(null, ctx, hasherType);
             return true;
@@ -339,7 +338,7 @@ public class nType
 
     private Method ensureMethod(Ctx ctx, java.lang.String methodName, int valueCount) {
         TypeSystem         typeSystem = ctx.container.typeSystem;
-        java.lang.String   className  = $dataType.ensureJitClassName(typeSystem);
+        java.lang.String   className  = $dataType.getJitCCName(typeSystem);
         java.lang.Class<?> targetClass;
         try {
             targetClass = typeSystem.loader.loadClass(className);
