@@ -88,7 +88,7 @@ public class MapExpression
         // see if there is an implicit key and value type
         int cEntries = keys.size();
         assert cEntries == values.size();
-        if (cEntries > 0 && (typeKey == null || typeVal == null)) {
+        if (cEntries > 0) {
             TypeConstant[] aTypes = new TypeConstant[cEntries];
 
             if (typeKey == null) {
@@ -232,28 +232,20 @@ public class MapExpression
 
         for (int i = 0; i < cExprs; ++i) {
             // validate key
-            Expression exprOld = listKeys.get(i);
-            Expression exprNew = exprOld.validate(ctx, typeKey, errs);
+            Expression exprNew = validateElement(ctx, listKeys, i, typeKey, errs);
             if (exprNew == null) {
                 fit        = TypeFit.NoFit;
                 fConstKeys = false;
             } else {
-                if (exprNew != exprOld) {
-                    listKeys.set(i, exprNew);
-                }
                 fConstKeys &= exprNew.isConstant();
             }
 
             // validate value
-            exprOld = listVals.get(i);
-            exprNew = exprOld.validate(ctx, typeVal, errs);
+            exprNew = validateElement(ctx, listVals, i, typeVal, errs);
             if (exprNew == null) {
                 fit        = TypeFit.NoFit;
                 fConstVals = false;
             } else {
-                if (exprNew != exprOld) {
-                    listVals.set(i, exprNew);
-                }
                 fConstVals &= exprNew.isConstant();
             }
         }
@@ -365,17 +357,7 @@ public class MapExpression
      * Helper method to generate an array of keys or values.
      */
     private Argument[] collectArguments(Context ctx, Code code, boolean fKeys, ErrorListener errs) {
-        List<Expression> listArgs = fKeys ? keys : values;
-        int              cArgs    = listArgs.size();
-        Argument[]       aArg     = new Argument[cArgs];
-
-        for (int i = 0; i < cArgs; ++i) {
-            Expression expr = listArgs.get(i);
-            Argument   arg  = expr.generateArgument(ctx, code, true, errs);
-            aArg[i] = expr.ensurePointInTime(code, arg, listArgs, i);
-        }
-
-        return aArg;
+        return generateElementArguments(ctx, code, fKeys ? keys : values, true, errs);
     }
 
     // ----- internal helpers ----------------------------------------------------------------------

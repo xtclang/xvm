@@ -100,7 +100,7 @@ public class VersionOverride
     /**
      * A token representing "allow", "avoid", or "prefer".
      *
-     * Note: may be null.
+     * <p>>Note: may be null.
      */
     protected Token verb;
 

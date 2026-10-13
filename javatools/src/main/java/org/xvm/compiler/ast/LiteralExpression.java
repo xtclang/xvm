@@ -81,14 +81,13 @@ public class LiteralExpression
             case LIT_UINT64 -> pool.typeUInt64();
             case LIT_UINT128-> pool.typeUInt128();
             case LIT_UINTN  -> pool.typeUIntN();
-            case LIT_DEC    -> pool.typeFPLiteral();
+            case LIT_DEC, LIT_FLOAT -> pool.typeFPLiteral();
             case LIT_DECA   -> pool.typeDec64();
             case LIT_DEC32,
                  LIT_DEC64,
                  LIT_DEC128,
-                 LIT_DECN   -> pool.ensureEcstasyTypeConstant("numbers." + literal.getId().TEXT);
-            case LIT_FLOAT  -> pool.typeFPLiteral();
-            case LIT_FLOAT8E4,
+                 LIT_DECN,
+                 LIT_FLOAT8E4,
                  LIT_FLOAT8E5,
                  LIT_BFLOAT16,
                  LIT_FLOAT16,
@@ -124,11 +123,6 @@ public class LiteralExpression
         boolean fNegate   = tokenPrefix.getId() == Id.SUB;
         Token   tokNumber = literal;
         switch (tokNumber.getId()) {
-        default:
-            tokenPrefix.log(errs, getSource(), Severity.ERROR, Compiler.MISSING_OPERATOR,
-                    tokenPrefix.getValueText(), getImplicitType(null).getValueString());
-            return this;
-
         case LIT_INT:
         case LIT_INT8:
         case LIT_INT16:
@@ -168,6 +162,11 @@ public class LiteralExpression
             // it's just a string
             oValue = getSource().toString(tokenPrefix.getStartPosition(), tokNumber.getEndPosition());
             break;
+
+        default:
+            tokenPrefix.log(errs, getSource(), Severity.ERROR, Compiler.MISSING_OPERATOR,
+                    tokenPrefix.getValueText(), getImplicitType(null).getValueString());
+            return this;
         }
 
         Token tokenMerged = new Token(
@@ -224,7 +223,7 @@ public class LiteralExpression
             break;
 
         case LIT_CHAR:
-            return pool.ensureCharConstant(((Character) literal.getValue()).charValue());
+            return pool.ensureCharConstant((Character) literal.getValue());
 
         case TODO:              // the T0D0 keyword has a String text for the token's value
         case LIT_STRING:

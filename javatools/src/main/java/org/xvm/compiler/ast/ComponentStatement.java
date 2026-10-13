@@ -9,6 +9,8 @@ import org.xvm.asm.Constants.Access;
 
 import org.xvm.compiler.Token;
 
+import static org.xvm.util.Handy.appendString;
+
 /**
  * Represents a statement that corresponds to a Component in an Ecstasy FileStructure.
  */
@@ -109,6 +111,29 @@ public abstract class ComponentStatement
             }
         }
         return null;
+    }
+
+    /** Append declaration modifiers and annotations in source order for diagnostic displays. */
+    protected static StringBuilder appendDeclarationPrefix(StringBuilder sb, List<Token> modifiers,
+                                                           List<AnnotationExpression> annotations) {
+        if (modifiers != null) {
+            modifiers.forEach(token -> sb.append(token.getId().TEXT).append(' '));
+        }
+        if (annotations != null) {
+            annotations.forEach(annotation -> sb.append(annotation).append(' '));
+        }
+        return sb;
+    }
+
+    /** Append an escaped, bounded documentation excerpt to a declaration's diagnostic display. */
+    protected static void appendDocComment(StringBuilder sb, Token doc) {
+        if (doc != null) {
+            String text = String.valueOf(doc.getValue());
+            if (text.length() > 100) {
+                text = text.substring(0, 97) + "...";
+            }
+            appendString(sb.append("/*"), text).append("*/\n");
+        }
     }
 
     // ----- fields --------------------------------------------------------------------------------
