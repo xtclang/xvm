@@ -11,9 +11,10 @@ import org.xvm.asm.ErrorListener;
 import org.xvm.asm.FileStructure;
 
 import org.xvm.compiler.BuildRepository;
-import org.xvm.compiler.CursorBinding;
-import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Source;
+
+import org.xvm.compiler.ast.bindings.CursorBinding;
+import org.xvm.compiler.ast.bindings.InvocationBinding;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;

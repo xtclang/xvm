@@ -39,9 +39,9 @@ import org.xvm.asm.op.P_Var;
 import org.xvm.compiler.Compiler;
 import org.xvm.compiler.Compiler.Stage;
 import org.xvm.compiler.Constants;
-import org.xvm.compiler.InitializerBinding;
-import org.xvm.compiler.InvocationBinding;
 import org.xvm.compiler.Token;
+import org.xvm.compiler.ast.bindings.InitializerBinding;
+import org.xvm.compiler.ast.bindings.InvocationBinding;
 import org.xvm.compiler.ast.partial.PartialSyntax;
 
 import org.xvm.util.ListMap;
