@@ -9,6 +9,8 @@ import org.eclipse.lsp4j.InitializedParams
 import org.eclipse.lsp4j.Location
 import org.eclipse.lsp4j.MonikerParams
 import org.eclipse.lsp4j.Position
+import org.eclipse.lsp4j.PrepareRenameParams
+import org.eclipse.lsp4j.RenameParams
 import org.eclipse.lsp4j.TextDocumentContentCapabilities
 import org.eclipse.lsp4j.TextDocumentContentChangeEvent
 import org.eclipse.lsp4j.TextDocumentContentParams
@@ -19,6 +21,8 @@ import org.eclipse.lsp4j.VersionedTextDocumentIdentifier
 import org.eclipse.lsp4j.jsonrpc.ResponseErrorException
 import org.eclipse.lsp4j.services.LanguageClient
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.mock
@@ -36,6 +40,52 @@ import java.util.concurrent.TimeUnit.SECONDS
  * be read; client-provided paths or presentations cannot replace authoritative source content.
  */
 class LibraryContentProtocolTest {
+    @ParameterizedTest
+    @ValueSource(booleans = [false, true])
+    fun `rename in a library method explains that navigation sources are read only`(virtual: Boolean) {
+        XtcLanguageServer(XdkAdapter()).use { server ->
+            server.connect(mock(LanguageClient::class.java))
+            server
+                .initialize(
+                    editorInitializeParams().apply {
+                        if (virtual) capabilities.workspace.textDocumentContent = TextDocumentContentCapabilities()
+                    },
+                ).join()
+            val uri = "file:///App.x"
+            val text =
+                "module App { package webcli import webcli.xtclang.org; " +
+                    "void run() { webcli.Gateway.getPassword(); } }"
+            val documents = server.textDocumentService
+            documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(uri, "xtc", 1, text)))
+            val target =
+                documents
+                    .definition(
+                        DefinitionParams(TextDocumentIdentifier(uri), Position(0, text.indexOf("getPassword") + 5)),
+                    ).get(30, SECONDS)
+                    .left
+                    .single()
+            val content =
+                if (virtual) {
+                    server.workspaceService
+                        .textDocumentContent(TextDocumentContentParams(target.uri))
+                        .join()
+                        .text
+                } else {
+                    Files.readString(Path.of(URI(target.uri)))
+                }
+            assertThat(content.lines()[target.range.start.line]).contains("getPassword(")
+            documents.didOpen(DidOpenTextDocumentParams(TextDocumentItem(target.uri, "xtc", 1, content)))
+            val middle = Position(target.range.start.line, target.range.start.character + 5)
+            val document = TextDocumentIdentifier(target.uri)
+            assertThatThrownBy { documents.prepareRename(PrepareRenameParams(document, middle)).get(30, SECONDS) }
+                .hasCauseInstanceOf(ResponseErrorException::class.java)
+                .hasRootCauseMessage(
+                    "Cannot rename a symbol in read-only library source. Open the library's source project to refactor it.",
+                )
+            assertThat(documents.rename(RenameParams(document, middle, "readPassword")).get(30, SECONDS)).isNull()
+        }
+    }
+
     @Test
     fun `library content is negotiated per connection and cannot read unregistered or retired URIs`() {
         listOf(false, true).forEach { supported ->
