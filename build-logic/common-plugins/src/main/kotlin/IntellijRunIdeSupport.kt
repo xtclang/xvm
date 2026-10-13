@@ -44,6 +44,14 @@ abstract class RunIdeEnvironmentReportTask : DefaultTask() {
 
     @get:InputDirectory
     @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val sandboxLogDir: DirectoryProperty
+
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
+    abstract val sandboxSystemDir: DirectoryProperty
+
+    @get:InputDirectory
+    @get:PathSensitive(PathSensitivity.RELATIVE)
     abstract val mavenLocalRoot: DirectoryProperty
 
     @get:Input
@@ -55,8 +63,8 @@ abstract class RunIdeEnvironmentReportTask : DefaultTask() {
     @TaskAction
     fun report() {
         val sandbox = sandboxDir.get().asFile
-        val ideaLog = sandbox.resolve("log/idea.log")
-        val systemDir = sandbox.resolve("system")
+        val ideaLog = sandboxLogDir.get().file("idea.log").asFile
+        val systemDir = sandboxSystemDir.get().asFile
         val sandboxIsReused = systemDir.exists() && systemDir.listFiles().orEmpty().isNotEmpty()
         val xtcArtifacts = mavenLocalRoot.get().asFile.resolve("org/xtclang")
 

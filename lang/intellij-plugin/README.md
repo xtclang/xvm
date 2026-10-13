@@ -341,8 +341,8 @@ stale sandbox state, or missing artifacts:
 [runIde]   Path:      .../lang/.intellijPlatform/sandbox/intellij-plugin/IU-2026.2.3
 [runIde]   Status:    reused (existing sandbox with IDE caches/indices)
 [runIde]   Plugins:   [intellij-plugin, lsp4ij]
-[runIde]   IDE log:   .../lang/.intellijPlatform/sandbox/intellij-plugin/IU-2026.2.3/log/idea.log
-[runIde]              tail -f .../lang/.intellijPlatform/sandbox/intellij-plugin/IU-2026.2.3/log/idea.log
+[runIde]   IDE log:   .../lang/.intellijPlatform/sandbox/intellij-plugin/IU-2026.2.3/log_runIde/idea.log
+[runIde]              tail -f .../lang/.intellijPlatform/sandbox/intellij-plugin/IU-2026.2.3/log_runIde/idea.log
 [runIde] ─── mavenLocal XTC Artifacts ───
 [runIde]   ~/.m2/repository/org/xtclang
 [runIde]   xdk: 0.4.4-SNAPSHOT
@@ -390,9 +390,9 @@ These appear with a `[lsp-server]` prefix whenever the LSP server is active.
 noisy (indexing, VFS, GC, etc.). To view them in a separate terminal:
 
 ```bash
-tail -f lang/.intellijPlatform/sandbox/intellij-plugin/IU-2026.2.3/log/idea.log
+tail -f lang/.intellijPlatform/sandbox/intellij-plugin/IU-2026.2.3/log_runIde/idea.log
 # Or filter to XTC-related entries:
-tail -f lang/.intellijPlatform/sandbox/intellij-plugin/IU-2026.2.3/log/idea.log | grep -i "xtc\|lsp"
+tail -f lang/.intellijPlatform/sandbox/intellij-plugin/IU-2026.2.3/log_runIde/idea.log | grep -i "xtc\|lsp"
 ```
 
 **LSP server file log** (always available, even outside `runIde`):
