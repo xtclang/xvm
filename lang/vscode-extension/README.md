@@ -396,6 +396,26 @@ semantic analysis or **Tree-sitter** for syntax-based features without compiler 
 The choice is stored in the window-scoped `xtc.languageService.adapter` setting; changing it
 restarts the server and reopens unsaved buffers. The status bar shows the running adapter.
 
+The extension also bundles `bin/xtc-lsp`, a Python 3 CLI for restarting through the owning editor.
+From this repository, run:
+
+```bash
+python3 lang/scripts/xtc-lsp list
+python3 lang/scripts/xtc-lsp restart --project ~/src/platform --ide vscode
+```
+
+The updated extension must be active in that workspace. The CLI preserves unsaved buffers and uses
+the existing client restart lifecycle. `--project` matches an exact workspace-folder root; in a
+multi-root window, any root selects that window's shared server. Omit `--ide` when the match is unique,
+or select `--session` using an ID from `list` when several windows have the same project open.
+Failures return a nonzero exit code; timeouts never trigger an automatic retry.
+
+Control remains available after a language-server crash. Each editor session publishes a private token
+under `~/.xtc/editor-control` and accepts authenticated requests only on IPv4 loopback. Unix records
+are owner-only; Windows records inherit the user-profile directory's permissions. Closing the window
+removes its record; stale records from crashed editors are ignored. For SSH, containers or WSL, run
+the CLI where the extension host runs.
+
 **Bundled default** (the default setting) honors the server build's choice, normally Compiler.
 Both real adapters are included, so switching does not require rebuilding. Development builds
 can still change the bundled default:
