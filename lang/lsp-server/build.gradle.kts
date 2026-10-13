@@ -259,8 +259,18 @@ tasks.withType<Test>().configureEach {
 tasks.test {
     // Separate JVMs isolate compiler globals while each worker reuses its bundled XDK repository.
     // Do not enable JUnit method concurrency: several regressions deliberately alter compiler state.
-    maxParallelForks = providers.gradleProperty("lspTestForks").orElse("2").get().toInt()
-    val includeHeavy = providers.gradleProperty("lspTestHeavy").orElse("true").get().toBooleanStrict()
+    maxParallelForks =
+        providers
+            .gradleProperty("lspTestForks")
+            .orElse("2")
+            .get()
+            .toInt()
+    val includeHeavy =
+        providers
+            .gradleProperty("lspTestHeavy")
+            .orElse("true")
+            .get()
+            .toBooleanStrict()
     systemProperty(
         "xtc.lsp.retentionCycles",
         providers.gradleProperty("lsp.retentionCycles").orElse("120").get(),
