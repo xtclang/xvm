@@ -97,7 +97,7 @@ final class CursorScope {
                         qualifier, names.subList(1, names.size()), type.getParamTypes(), type.getEndPosition()),
                         scope, site.getCompletionPrefix(), errs);
                 if (names.size() == 2) {
-                    return candidates.stream().filter(c -> c.identity().getComponent() instanceof ClassStructure child && child.isVirtualChild()).toList();
+                    return candidates.stream().filter(candidate -> candidate.identity().getComponent() instanceof ClassStructure child && child.isVirtualChild()).toList();
                 }
                 var bound = formalBound(parameters.get(firstName(type)), scope, parameters, Set.of(), errs);
                 var probe = ErrorListener.cancellable(ErrorListener.collecting(silent(PROBE)::log), errs::isAbortDesired);

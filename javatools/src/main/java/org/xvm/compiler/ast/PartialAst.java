@@ -64,6 +64,7 @@ public final class PartialAst {
      * @param scope  its lexical parent, or null for a trial root
      * @return the same tree with descendant parent links installed
      */
+    @SuppressWarnings("UnusedReturnValue")
     public static <T extends AstNode> T parentTree(T node, AstNode scope) {
         inScope(node, scope).introduceParentage();
         return node;

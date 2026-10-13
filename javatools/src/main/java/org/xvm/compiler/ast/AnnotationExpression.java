@@ -64,6 +64,12 @@ public class AnnotationExpression
         this.lEndPos   = node.getEndPosition();
     }
 
+    /** Return an independent syntax tree with the same node type. */
+    @Override
+    public AnnotationExpression copyTree() {
+        return (AnnotationExpression) super.copyTree();
+    }
+
     // ----- accessors -----------------------------------------------------------------------------
 
     @Override

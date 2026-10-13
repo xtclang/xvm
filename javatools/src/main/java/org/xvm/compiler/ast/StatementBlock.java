@@ -352,7 +352,7 @@ public class StatementBlock
             return false;
         }
 
-        boolean fCompletes = that.completes(ctx.emittingContext(code), true, code, errs);
+        boolean fCompletes = that.completes(ctx.emittingContext(), true, code, errs);
 
         if (fCompletes) {
             TypeConstant[] atypeReturn = code.getMethodStructure().getReturnTypes();
@@ -536,7 +536,7 @@ public class StatementBlock
         sb.append('{');
 
         int firstNonEnum = 0;
-        if (stmts.get(0) instanceof TypeCompositionStatement stmtType
+        if (stmts.getFirst() instanceof TypeCompositionStatement stmtType
                 && stmtType.category.getId() == Token.Id.ENUM_VAL) {
             boolean multiline = false;
             for (Statement stmt : stmts) {
@@ -606,7 +606,7 @@ public class StatementBlock
         public RootContext(StatementBlock stmt, MethodStructure method,
                            InvocationBinding.Collector bindings, CursorBinding.Collector cursors) {
             super(null, false);
-            f_stmt     = stmt;
+            f_stmt     = Objects.requireNonNull(stmt, "stmt");
             f_method   = method;
             f_bindings = Objects.requireNonNull(bindings, "bindings");
             f_cursors  = Objects.requireNonNull(cursors, "cursors");
@@ -836,18 +836,14 @@ public class StatementBlock
             if (arg instanceof Register reg) {
                 return reg.isWritable();
             }
-            if (arg instanceof PropertyConstant) {
-                // the context only answers the question of what the _first_ name is, so
-                // in the case of "a.b.c", this method is called only for "a", so if someone
-                // is asking if it's settable, then obviously there is no ".b.c" following;
-                // it's obviously a local property (since there is no "target." before it),
-                // so the only check to do here is to make sure that it is settable, i.e. not
-                // a calculated property
-                // TODO: check for a calculated property
-                return true;
-            }
-
-            return false;
+            // the context only answers the question of what the _first_ name is, so
+            // in the case of "a.b.c", this method is called only for "a", so if someone
+            // is asking if it's settable, then obviously there is no ".b.c" following;
+            // it's obviously a local property (since there is no "target." before it),
+            // so the only check to do here is to make sure that it is settable, i.e. not
+            // a calculated property
+            // TODO: check for a calculated property
+            return arg instanceof PropertyConstant;
         }
 
         @Override
@@ -1405,11 +1401,9 @@ public class StatementBlock
         /**
          * Generate an emitting context, and emit the preamble, if any.
          *
-         * @param code  the code that is being emitted to
-         *
          * @return a Context that can be used while emitting code
          */
-        public RootContext emittingContext(Code code) {
+        public RootContext emittingContext() {
             if (m_fEmitting) {
                 return this;
             }

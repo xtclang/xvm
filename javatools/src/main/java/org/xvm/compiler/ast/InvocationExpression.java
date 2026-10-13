@@ -228,7 +228,7 @@ public class InvocationExpression
         return expr instanceof NameExpression exprName
                 && "versionMatches".equals(exprName.getName())
                 && args.size() == 1
-                && args.get(0) instanceof LiteralExpression argLit
+                && args.getFirst() instanceof LiteralExpression argLit
                 && argLit.getLiteral().getId() == Id.LIT_VERSION
                 && exprName.getLeftExpression() != null
                 && exprName.isOnlyNames()
@@ -250,7 +250,7 @@ public class InvocationExpression
 
             ConstantPool pool    = pool();
             String       sModule = sb.toString();
-            Version      version = ((LiteralExpression) args.get(0)).getVersion();
+            Version      version = ((LiteralExpression) args.getFirst()).getVersion();
             return pool.ensureImportVersionCondition(
                     pool.ensureModuleConstant(sModule), pool.ensureVersionConstant(version));
         }
@@ -742,7 +742,7 @@ public class InvocationExpression
                     }
                 }
             } else if (m_fBjarne) {
-                listArgs.add(0, exprLeft);
+                listArgs.addFirst(exprLeft);
                 typeLeft = null;
             }
 
@@ -1347,7 +1347,7 @@ public class InvocationExpression
                             } else if (cAll == 1) {
                                 chArgs = '1';
                                 if (cArgs == 1) {
-                                    Expression expr = args.get(0);
+                                    Expression expr = args.getFirst();
                                     arg0 = expr.generateArgument(ctx, code, true, errs);
                                 } else if (cTypeParams == 1) {
                                     arg0 = aargTypeParams[0];
@@ -1562,7 +1562,7 @@ public class InvocationExpression
             case 1:
                 chArgs = '1';
                 if (cArgs == 1) {
-                    Expression expr = args.get(0);
+                    Expression expr = args.getFirst();
                     arg0 = expr.generateArgument(ctx, code, true, errs);
                 } else if (cTypeParams == 1) {
                     arg0 = aargTypeParams[0];
@@ -2456,7 +2456,7 @@ public class InvocationExpression
             // allow for a function on the "left type" to be called (Bjarne'd):
             //    x.f(y, z) -> X.f(x, y, z), where X is the class of x
             List<Expression> listArgs = new ArrayList<>(args);
-            listArgs.add(0, exprLeft);
+            listArgs.addFirst(exprLeft);
 
             ErrorListener errsAlt = errs.branch(this);
 

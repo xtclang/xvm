@@ -69,17 +69,11 @@ public class ForStatement
         Label   label   = getContinueLabel();
 
         if (ctxOrigin.isReachable()) {
-            // generate a delta of assignment information for the jump
-            Map<String, Assignment> mapAsn = new HashMap<>();
-            Map<String, Argument>   mapArg = new HashMap<>();
-
-            ctxOrigin.prepareJump(ctxDest, mapAsn, mapArg);
-
             // record the jump that landed on this statement by recording its assignment impact
             if (m_listContinues == null) {
                 m_listContinues = new ArrayList<>();
             }
-            m_listContinues.add(new Break(nodeOrigin, mapAsn, mapArg, label));
+            m_listContinues.add(prepareJump(nodeOrigin, ctxOrigin, ctxDest, label));
         }
 
         return label;
@@ -143,12 +137,7 @@ public class ForStatement
                 m_listShorts = new ArrayList<>();
             }
 
-            Map<String, Assignment> mapAsn = new HashMap<>();
-            Map<String, Argument>   mapArg = new HashMap<>();
-
-            ctxOrigin.prepareJump(ctxDest, mapAsn, mapArg);
-
-            m_listShorts.add(new Break(nodeOrigin, mapAsn, mapArg, null));
+            m_listShorts.add(prepareJump(nodeOrigin, ctxOrigin, ctxDest, null));
         }
 
         // create, store, and return a label for this specific init/update node
@@ -280,17 +269,7 @@ public class ForStatement
             }
 
             if (m_listShorts != null) {
-                boolean fContinues = false;
-                for (Break shortInfo : m_listShorts) {
-                    if (!shortInfo.node().isDiscarded()) {
-                        ctx.merge(shortInfo.mapAssign(), shortInfo.mapNarrow());
-                        fContinues = true;
-                    }
-                }
-
-                if (fContinues) {
-                    ctx.setReachable(true);
-                }
+                mergeJumps(ctx, m_listShorts);
                 m_listShorts = null;
             }
         }
@@ -354,36 +333,15 @@ public class ForStatement
             for (int i = 0; i < cConds; ++i) {
                 AstNode cond = getCondition(i);
 
-                // the condition is either a boolean expression or an assignment statement whose R-value
-                // is a multi-value with the first value being a boolean
-                if (cond instanceof AssignmentStatement stmtOld) {
-                    if (stmtOld.isNegated()) {
-                        ctx = ctx.enterNot();
-                    }
-
-                    AssignmentStatement stmtNew = (AssignmentStatement) stmtOld.validate(ctx, errs);
-
-                    if (stmtOld.isNegated()) {
-                        ctx = ctx.exit();
-                    }
-
-                    if (stmtNew == null) {
-                        fValid = false;
-                    } else if (stmtNew != stmtOld) {
-                        cond = stmtNew;
-                        conds.set(i, cond);
-                    }
-                } else {
-                    Expression exprOld = (Expression) cond;
-                    Expression exprNew = exprOld.validate(ctx, pool().typeBoolean(), errs);
-                    if (exprNew == null) {
-                        fValid = false;
-                    } else if (exprNew != exprOld) {
-                        cond = exprNew;
-                        conds.set(i, cond);
-                    }
-
-                    fAlwaysTrue = cond instanceof Expression expr && expr.isConstantTrue();
+                AstNode validated = validateCondition(ctx, cond, errs);
+                if (validated == null) {
+                    fValid = false;
+                } else if (validated != cond) {
+                    cond = validated;
+                    conds.set(i, cond);
+                }
+                if (cond instanceof Expression expression) {
+                    fAlwaysTrue = expression.isConstantTrue();
                 }
             }
 
@@ -413,17 +371,7 @@ public class ForStatement
 
             if (m_listContinues != null) {
                 // the last "continue" is translated as a "break"
-                boolean fContinues = false;
-                for (Break continueInfo : m_listContinues) {
-                    if (!continueInfo.node().isDiscarded()) {
-                        ctx.merge(continueInfo.mapAssign(), continueInfo.mapNarrow());
-                        fContinues = true;
-                    }
-                }
-
-                if (fContinues) {
-                    ctx.setReachable(true);
-                }
+                mergeJumps(ctx, m_listContinues);
                 m_listContinues = null;
             }
 
@@ -438,17 +386,7 @@ public class ForStatement
                 }
 
                 if (m_listShorts != null) {
-                    boolean fContinues = false;
-                    for (Break shortInfo : m_listShorts) {
-                        if (!shortInfo.node().isDiscarded()) {
-                            ctx.merge(shortInfo.mapAssign(), shortInfo.mapNarrow());
-                            fContinues = true;
-                        }
-                    }
-
-                    if (fContinues) {
-                        ctx.setReachable(true);
-                    }
+                    mergeJumps(ctx, m_listShorts);
                     m_listShorts = null;
                 }
             }
@@ -576,25 +514,7 @@ public class ForStatement
         } else if (!fAlwaysTrue) {
             for (int i = 0, c = getConditionCount(); i < c; ++i) {
                 AstNode cond = getCondition(i);
-                if (cond instanceof AssignmentStatement stmtCond) {
-                    boolean fNegated = stmtCond.isNegated();
-                    Label   labelNeg = fNegated ? new Label("negated") : null;
-
-                    stmtCond.setConditionFalseLabel(fNegated ? labelNeg : getEndLabel());
-
-                    fBlockReachable &= stmtCond.completes(ctx, fCompletes, code, errs);
-
-                    assert stmtCond.isConditionFalseLabelTaken();
-
-                    if (fNegated) {
-                        code.add(new Jump(getEndLabel()));
-                        code.add(labelNeg);
-                    }
-                } else {
-                    Expression exprCond = (Expression) cond;
-                    exprCond.generateConditionalJump(ctx, code, getEndLabel(), false, errs);
-                    fBlockReachable &= exprCond.isCompletable();
-                }
+                fBlockReachable &= emitCondition(ctx, cond, fCompletes, code, getEndLabel(), errs);
             }
         }
 
