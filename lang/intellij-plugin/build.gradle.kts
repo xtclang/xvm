@@ -9,6 +9,7 @@ import org.gradle.api.tasks.TaskAction
 import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 import org.jetbrains.intellij.platform.gradle.TestFrameworkType
 import org.jetbrains.intellij.platform.gradle.models.ProductRelease
+import org.jetbrains.intellij.platform.gradle.tasks.PrepareSandboxTask
 import org.jetbrains.intellij.platform.gradle.tasks.VerifyPluginTask
 import java.io.File
 
@@ -671,9 +672,20 @@ val prepareJarSearchableOptions =
 // Some bundled plugins have split frontend/backend architectures that fail to
 // load cleanly in the sandbox. Disable them to avoid spurious errors.
 
-// Derive sandbox config dir from prepareSandbox (handles versioned sandbox directories like IU-2025.3.1.1)
-// prepareSandbox.destinationDirectory is the plugins/ directory, config/ is a sibling
-val sandboxConfigDir: Provider<Directory> = prepareSandbox.flatMap { it.destinationDirectory.dir("../config") }
+// The platform plugin gives runIde its own sandbox. Add off-classpath assets to that producer
+// so its Sync task owns the complete plugin installation, including the server and grammar.
+val prepareRunIdeSandbox =
+    tasks.named<PrepareSandboxTask>("prepareSandbox_runIde") {
+        from(textMateGrammar) {
+            into("intellij-plugin/lib/textmate")
+        }
+        from(lspServerJar) {
+            into("intellij-plugin/bin")
+            rename { "xtc-lsp-server.jar" }
+        }
+    }
+
+val sandboxConfigDir: Provider<Directory> = prepareRunIdeSandbox.flatMap { it.sandboxConfigDirectory }
 
 // Plugins to disable in sandbox (Ultimate-only or problematic split-architecture plugins)
 val disabledSandboxPlugins =
@@ -688,9 +700,7 @@ val configureDisabledPlugins =
         group = "intellij platform"
         description = "Disable Ultimate-only plugins in the sandbox IDE"
 
-        // Must run after prepareSandbox creates the directory structure
-        dependsOn(prepareSandbox)
-        mustRunAfter(prepareSandbox)
+        dependsOn(prepareRunIdeSandbox)
 
         val configDir = sandboxConfigDir // Capture for configuration cache
         val pluginsList = disabledSandboxPlugins
@@ -712,8 +722,7 @@ val configureSandboxLogging =
         group = "intellij platform"
         description = "Configure INFO-level logging for XTC plugin in the sandbox IDE"
 
-        dependsOn(prepareSandbox)
-        mustRunAfter(prepareSandbox)
+        dependsOn(prepareRunIdeSandbox)
 
         val configDir = sandboxConfigDir
         outputs.file(configDir.map { it.file("options/log-categories.xml") })
@@ -738,8 +747,7 @@ val configureSandboxAppearance =
         group = "intellij platform"
         description = "Remove broken user-derived color-scheme overrides from the sandbox IDE config"
 
-        dependsOn(prepareSandbox)
-        mustRunAfter(prepareSandbox)
+        dependsOn(prepareRunIdeSandbox)
 
         val configDir = sandboxConfigDir
         doNotTrackState("Removes invalid overrides from user-managed sandbox settings on each IDE launch")
@@ -790,8 +798,7 @@ val runIdeLspLogDirectory =
 val runIdeInfo =
     tasks.register<RunIdeEnvironmentReportTask>("runIdeInfo") {
         dependsOn(
-            copyTextMateToSandbox,
-            copyLspServerToSandbox,
+            prepareRunIdeSandbox,
             configureDisabledPlugins,
             configureSandboxLogging,
             configureSandboxAppearance,
@@ -801,16 +808,17 @@ val runIdeInfo =
         lsp4ijVersion.set(runIdeCapturedLsp4ijVersion)
         pluginVersion.set(runIdeCapturedPluginVersion)
         semanticTokensEnabled.set(runIdeCapturedSemanticTokens)
-        sandboxDir.set(sandboxConfigDir.map { it.dir("..") })
+        sandboxDir.set(prepareRunIdeSandbox.flatMap { it.sandboxDirectory })
+        sandboxLogDir.set(prepareRunIdeSandbox.flatMap { it.sandboxLogDirectory })
+        sandboxSystemDir.set(prepareRunIdeSandbox.flatMap { it.sandboxSystemDirectory })
         val mavenLocalRoot =
             providers
                 .systemProperty("maven.repo.local")
                 .orElse(providers.systemProperty("user.home").map { "$it/.m2/repository" })
         this.mavenLocalRoot.set(layout.dir(mavenLocalRoot.map(::File)))
         pluginNames.set(
-            sandboxConfigDir.map { configDir ->
-                configDir
-                    .dir("../plugins")
+            prepareRunIdeSandbox.flatMap { it.sandboxPluginsDirectory }.map { pluginsDir ->
+                pluginsDir
                     .asFile
                     .listFiles()
                     ?.map { it.name }
@@ -833,14 +841,12 @@ val stopLspLogTail =
         threadName.set("lsp-log-tailer")
     }
 
-// Ensure TextMate files, LSP server JAR, and mavenLocal artifacts are ready before IDE starts
-// NOTE: finalizedBy doesn't guarantee completion, so we need explicit dependsOn
+// Prepare the interactive sandbox and publish its Gradle dependencies before starting the IDE.
 val runIde =
     tasks.named<JavaExec>("runIde") {
         parentPublishLocal.forEach { dependsOn(it) }
         dependsOn(
-            copyTextMateToSandbox,
-            copyLspServerToSandbox,
+            prepareRunIdeSandbox,
             configureDisabledPlugins,
             configureSandboxLogging,
             configureSandboxAppearance,
